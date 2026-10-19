@@ -494,8 +494,15 @@
     <string name="schedule_through_today_summary">हर रन पिछले पूरे दिनों के साथ आज की आंशिक फ़ाइल भी निर्यात करता है, इसलिए दिन के समय चलने पर पिछली रात की नींद भी शामिल हो जाती है। दोनों फ़ाइलों को पूरे दिन ताज़ा रखने के लिए इसे प्रति घंटे आवृत्ति के साथ जोड़ें। उसी दिन की डुप्लिकेट सामग्री से बचने के लिए ओवरराइट या अपडेट राइट मोड का उपयोग करें।</string>
     <string name="profile_schedule_today_refresh">आज का निर्यात रिफ्रेश करें</string>
     <string name="profile_schedule_refresh_interval">रिफ्रेश अंतराल</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d मिनट</string>
+    <string name="profile_schedule_refresh_summary_minutes">आज हर %1$d मिनट में रिफ्रेश करता है</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d घंटे</string>
     <string name="profile_schedule_refresh_summary">आज हर %1$d घंटे में रिफ्रेश करता है</string>
+    <string name="profile_schedule_discard_recovery">लंबित पुनर्प्राप्ति छोड़ें</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s की लंबित पुनर्प्राप्ति छोड़ें</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s की लंबित पुनर्प्राप्ति छोड़ें?</string>
+    <string name="profile_schedule_discard_recovery_body">इस प्रोफ़ाइल का निर्धारित पुनः प्रयास रोकें और इसकी लंबित तिथियाँ व सहेजी गई निर्यात सेटिंग मिटाएँ। अगला निर्धारित रन वर्तमान प्रोफ़ाइल और समय-सारणी का उपयोग करेगा। आपकी प्रोफ़ाइल, API क्रेडेंशियल, निर्यात इतिहास और पहले निर्यात किया गया डेटा सुरक्षित रहेंगे। इससे पहले किए गए अपलोड या लिखी गई फ़ाइल को पूर्ववत नहीं किया जा सकता।</string>
+    <string name="profile_schedule_discard_recovery_failed">लंबित पुनर्प्राप्ति पूरी तरह नहीं छोड़ी जा सकी। प्रोफ़ाइल जाँचें और फिर से प्रयास करें।</string>
     <string name="schedule_date_window_today">आज</string>
     <string name="schedule_export_past_days">पिछले दिनों निर्यात करें</string>
     <string name="schedule_today_summary">हर बार आज का डेटा निर्यात होता है, ताकि मौजूदा दैनिक फ़ाइल अप-टू-डेट रहे। एक ही दिन की सामग्री दो बार जुड़ने से बचाने के लिए Overwrite या Update लेखन मोड का उपयोग करें।</string>
@@ -1375,6 +1382,20 @@
     <string name="fdroid_onboarding_access_body">आधिकारिक F-Droid बिल्ड में सभी स्थानीय एक्सपोर्ट और ऑटोमेशन सुविधाएँ मुफ़्त शामिल हैं।</string>
     <string name="fdroid_onboarding_no_purchase">खरीद, रीस्टोर, कीमत या Play खाते की आवश्यकता नहीं है।</string>
     <string name="fdroid_onboarding_no_play_services">शेड्यूल किए गए एक्सपोर्ट Google Play Billing के बिना काम करते हैं।</string>
+
+    <string name="myself_claim_entry">myself.md का ऐक्सेस पाएँ</string>
+    <string name="myself_claim_entry_subtitle">Google Play की मौजूदा आजीवन खरीद की पुष्टि करें।</string>
+    <string name="myself_claim_title">myself.md ऐक्सेस</string>
+    <string name="myself_claim_intro">आपकी Health.md की आजीवन खरीद में myself.md का मुफ़्त आजीवन ऐक्सेस शामिल है।</string>
+    <string name="myself_claim_disclosure">आगे बढ़ने पर हम Google Play का खरीद प्रमाण पढ़कर पात्रता की जाँच के लिए myself.md को भेजेंगे। आपके स्वास्थ्य और स्थान का डेटा डिवाइस पर ही रहेगा।</string>
+    <string name="myself_claim_account">फिर साइन इन करके ऐक्सेस पाने वाला myself.md खाता चुनें। हर मूल खरीद केवल एक खाते से जोड़ी जा सकती है। केवल मुफ़्त या पुराना बना हुआ Android ऐक्सेस पात्र नहीं है।</string>
+    <string name="myself_claim_verify">खरीद की पुष्टि करके आगे बढ़ें</string>
+    <string name="myself_claim_verifying">खरीद की पुष्टि हो रही है…</string>
+    <string name="myself_claim_awaiting_user">ब्राउज़र में साइन इन करें और ऐक्सेस पाने वाले खाते की पुष्टि करें। फिर myself.md में वही खाता इस्तेमाल करें। पुष्टि से पहले ऐक्सेस नहीं मिलेगा।</string>
+    <string name="myself_claim_no_purchase">Health.md की पूरी हुई आजीवन खरीद नहीं मिली। खरीदने वाला Google Play खाता इस्तेमाल करके फिर कोशिश करें। लंबित खरीद पात्र नहीं है।</string>
+    <string name="myself_claim_store_unavailable">Google Play खरीद नहीं ला सका। कनेक्शन और Google Play खाता जाँचकर फिर कोशिश करें।</string>
+    <string name="myself_claim_verification_failed">खरीद की पुष्टि नहीं हो सकी। कनेक्शन जाँचकर फिर कोशिश करें। समस्या बनी रहे तो सहायता से संपर्क करें; ऐक्सेस नहीं दिया गया है।</string>
+    <string name="myself_claim_browser_unavailable">ब्राउज़र नहीं खुल सका। ब्राउज़र चालू करके खरीद की पुष्टि फिर करें।</string>
     <string name="export_preview_gateway_destination">Agent Data गेटवे</string>
     <string name="export_failure_gateway_format_label">JSON प्रारूप आवश्यक</string>
     <string name="export_guidance_gateway_format">Agent Data गेटवे JSON निर्यात अपलोड करता है। प्रारूप में JSON चुनें और पुनः प्रयास करें।</string>

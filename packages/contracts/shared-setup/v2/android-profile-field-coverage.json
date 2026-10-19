@@ -1410,6 +1410,14 @@
     },
     {
       "source_type": "ScheduledProfileEntry",
+      "serialized_field": "recoveryGeneration",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Local recovery fencing generation prevents discarded or disabled work from restoring progress; it is runtime retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
       "serialized_field": "todayRefreshEnabled",
       "coverage_kind": "descriptor",
       "disposition": "local_only",
@@ -1423,6 +1431,30 @@
       "disposition": "local_only",
       "contract_path": null,
       "evidence": "Today Refresh interval mirrors the Apple 3/6/12-hour set but has no neutral v2 schedule field yet; it stays local until the shared schedule section gains a reviewed refresh field."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "todayRefreshIntervalMinutes",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "todayRefreshPersistenceVersion",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "todayRefreshRequestedV2",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
     },
     {
       "source_type": "ScheduledProfileEntry",

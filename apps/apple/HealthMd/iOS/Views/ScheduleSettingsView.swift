@@ -285,10 +285,10 @@ struct ScheduleSettingsView: View {
 
     private var todayRefreshIntervalBinding: Binding<Int> {
         Binding(
-            get: { schedulingManager.schedule.todayRefreshIntervalHours },
+            get: { schedulingManager.schedule.todayRefreshMinutes },
             set: { newValue in
                 var updated = schedulingManager.schedule
-                updated.todayRefreshIntervalHours = ExportSchedule.clampedTodayRefreshIntervalHours(newValue)
+                updated.todayRefreshMinutes = newValue
                 schedulingManager.schedule = updated
             }
         )
@@ -678,7 +678,7 @@ struct ScheduleSettingsView: View {
 
                 if schedulingManager.schedule.todayRefreshEnabled {
                     statusPill(
-                        label: "Every \(schedulingManager.schedule.todayRefreshIntervalHours)h",
+                        label: ExportSchedule.todayRefreshLabel(schedulingManager.schedule.todayRefreshMinutes),
                         icon: "clock.arrow.circlepath",
                         tint: Color.accent
                     )
@@ -702,8 +702,8 @@ struct ScheduleSettingsView: View {
             if schedulingManager.schedule.todayRefreshEnabled {
                 SchedulingChoicePicker(
                     title: "Today Refresh interval",
-                    choices: ExportSchedule.todayRefreshIntervalOptions.map {
-                        SchedulingChoice(value: $0, title: String(localized: "Every \($0) hours"))
+                    choices: ExportSchedule.todayRefreshMinuteOptions.map {
+                        SchedulingChoice(value: $0, title: ExportSchedule.todayRefreshLabel($0))
                     },
                     selection: todayRefreshIntervalBinding
                 )
@@ -754,7 +754,7 @@ struct ScheduleSettingsView: View {
     }
 
     private var todayRefreshInfoMessage: String {
-        let interval = schedulingManager.schedule.todayRefreshIntervalHours
+        let interval = schedulingManager.schedule.todayRefreshMinutes
         let refreshBehavior: String
         if schedulingManager.schedule.target == .apiEndpoint {
             refreshBehavior = "For API Endpoint exports, each run fetches the day again and sends a complete replacement snapshot. The endpoint should upsert the latest snapshot by date."
@@ -766,7 +766,7 @@ struct ScheduleSettingsView: View {
 
         \(refreshBehavior)
 
-        Every \(interval) hours is relative to your Preferred Time (\(preferredTimeText)). Health.md targets \(preferredTimeText), then every \(interval) hours until midnight. If you enable it after a target time has passed, the next future slot is used.
+        \(ExportSchedule.todayRefreshLabel(interval)) is relative to your Preferred Time (\(preferredTimeText)). Health.md targets \(preferredTimeText), then repeats at that interval until midnight. If you enable it after a target time has passed, the next future slot is used.
 
         Automatic background exports depend on iOS. If Health.md needs your attention, unlock your device and tap the notification to run the pending export.
         """

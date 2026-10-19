@@ -1,0 +1,10 @@
+import org.gradle.api.tasks.testing.Test
+
+// Cache compilation and lint, but execute every JVM test for each CI invocation.
+// Some policy/contract tests read repository files outside their declared inputs.
+allprojects {
+    tasks.withType(Test).configureEach {
+        outputs.doNotCacheIf('CI JVM tests must execute against current repository files') { true }
+        outputs.upToDateWhen { false }
+    }
+}

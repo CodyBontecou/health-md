@@ -612,8 +612,15 @@
     <string name="schedule_through_today_summary">Cada execução exporta os dias completos anteriores mais o arquivo parcial de hoje, então uma execução diurna também captura o sono da última noite. Combine com uma frequência horária para atualizar os dois arquivos o dia todo. Use o modo de gravação Sobrescrever ou Atualizar para evitar conteúdo duplicado no mesmo dia.</string>
     <string name="profile_schedule_today_refresh">Atualizar a exportação de hoje</string>
     <string name="profile_schedule_refresh_interval">Intervalo de atualização</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Atualiza hoje a cada %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Atualiza hoje a cada %1$d h</string>
+    <string name="profile_schedule_discard_recovery">Descartar recuperação pendente</string>
+    <string name="profile_schedule_discard_recovery_named">Descartar recuperação pendente de %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Descartar recuperação pendente de %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Interrompe a nova tentativa agendada deste perfil e remove suas datas pendentes e configurações de exportação salvas. A próxima execução agendada usa o perfil e o agendamento atuais. Seu perfil, credenciais de API, histórico de exportação e dados já exportados são mantidos. Isso não pode desfazer um upload ou um arquivo já gravado.</string>
+    <string name="profile_schedule_discard_recovery_failed">Não foi possível descartar totalmente a recuperação pendente. Verifique o perfil e tente novamente.</string>
     <string name="schedule_date_window_today">Hoje</string>
     <string name="schedule_export_past_days">Exportar dias anteriores</string>
     <string name="schedule_today_summary">Cada execução exporta os dados de hoje para manter seu arquivo diário atualizado. Use o modo de gravação Sobrescrever ou Atualizar para evitar conteúdo duplicado do mesmo dia.</string>
@@ -1449,6 +1456,20 @@
     <string name="fdroid_onboarding_access_body">A versão oficial do F-Droid inclui gratuitamente todos os recursos locais de exportação e automação.</string>
     <string name="fdroid_onboarding_no_purchase">Não é necessário comprar, restaurar, pagar ou ter uma conta do Play.</string>
     <string name="fdroid_onboarding_no_play_services">As exportações agendadas funcionam sem o Google Play Billing.</string>
+
+    <string name="myself_claim_entry">Resgatar acesso ao myself.md</string>
+    <string name="myself_claim_entry_subtitle">Verifique uma compra vitalícia existente do Google Play.</string>
+    <string name="myself_claim_title">Acesso ao myself.md</string>
+    <string name="myself_claim_intro">Sua compra vitalícia do Health.md inclui acesso gratuito vitalício ao myself.md.</string>
+    <string name="myself_claim_disclosure">Ao continuar, leremos seu comprovante de compra do Google Play e o enviaremos ao myself.md para verificação. Seus dados de saúde e localização ficam no dispositivo.</string>
+    <string name="myself_claim_account">Depois, entre para escolher a conta do myself.md que receberá o acesso. Cada compra original pode ser vinculada a uma conta. O acesso Android gratuito ou mantido por direitos anteriores, por si só, não é elegível.</string>
+    <string name="myself_claim_verify">Verificar compra e continuar</string>
+    <string name="myself_claim_verifying">Verificando compra…</string>
+    <string name="myself_claim_awaiting_user">Entre e confirme a conta que receberá o acesso no navegador. Depois, use a mesma conta no myself.md. O acesso só será resgatado após sua confirmação.</string>
+    <string name="myself_claim_no_purchase">Nenhuma compra vitalícia concluída do Health.md foi encontrada. Use a conta do Google Play que fez a compra e tente novamente. Compras pendentes não são elegíveis.</string>
+    <string name="myself_claim_store_unavailable">O Google Play não conseguiu obter sua compra. Verifique a conexão e a conta do Google Play e tente novamente.</string>
+    <string name="myself_claim_verification_failed">Não foi possível verificar sua compra. Confira a conexão e tente novamente. Se continuar, contate o suporte; nenhum acesso foi resgatado.</string>
+    <string name="myself_claim_browser_unavailable">Não foi possível abrir o navegador. Ative um navegador e verifique a compra novamente.</string>
     <string name="export_preview_gateway_destination">Gateway de Agent Data</string>
     <string name="export_failure_gateway_format_label">Formato JSON obrigatório</string>
     <string name="export_guidance_gateway_format">O gateway de Agent Data envia exportações JSON. Selecione JSON em Formatos e tente novamente.</string>

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -69,6 +70,60 @@ def run(arguments: list[str], cwd: Path, env: dict[str, str]) -> None:
     subprocess.run(arguments, cwd=cwd, env=env, check=True)
 
 
+def verification_target(
+    fallback: Path, env: dict[str, str], label: str, rustc: str | Path
+) -> Path:
+    """Opt in to dependency caching without mixing compiler/host identities."""
+    cache = env.get("HEALTHMD_PACKAGED_CACHE_DIR")
+    if not cache:
+        return fallback
+    identity = subprocess.check_output([str(rustc), "-vV"], text=True, env=env)
+    digest = hashlib.sha256(identity.encode()).hexdigest()[:16]
+    return Path(cache).expanduser().resolve() / f"{label}-{digest}"
+
+
+def extract_archives(
+    package_target: Path,
+    extracted: Path,
+    version: str,
+    required_files: dict[str, set[str]] = REQUIRED,
+) -> dict[str, Path]:
+    member_paths: dict[str, Path] = {}
+    for package, required in required_files.items():
+        archive = package_target / "package" / f"{package}-{version}.crate"
+        if not archive.is_file():
+            raise SystemExit(f"missing package archive: {archive}")
+        with tarfile.open(archive, "r:gz") as crate:
+            names = {
+                name.removeprefix(f"{package}-{version}/")
+                for name in crate.getnames()
+                if name.startswith(f"{package}-{version}/")
+            }
+            missing = required - names
+            if missing:
+                raise SystemExit(f"{package} archive missing: {sorted(missing)}")
+            crate.extractall(extracted, filter="data")
+        member_paths[package] = extracted / f"{package}-{version}"
+    return member_paths
+
+
+def clean_packaged_crates(
+    manifest: Path,
+    packages: dict[str, Path],
+    root: Path,
+    env: dict[str, str],
+    cargo: str | Path,
+) -> None:
+    # Restored targets may contain same-version local artifacts. Recompile every
+    # archived crate, including tests/build scripts, while retaining dependencies.
+    run(
+        [str(cargo), "clean", "--manifest-path", str(manifest), "--locked"]
+        + [argument for package in packages for argument in ("-p", package)],
+        root,
+        env,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", required=True)
@@ -80,8 +135,9 @@ def main() -> int:
         temporary = Path(raw_temporary)
         package_target = temporary / "package-target"
         env = os.environ.copy()
-        # Package verification recompiles the complete feature graph in a temporary workspace.
-        # Keep it within the smaller Windows runner disks without changing runtime behavior.
+        # Archive generation and extraction are always fresh. CI may retain only
+        # compiler-separated verification targets; local runs remain ephemeral.
+        # Suppress debug/incremental data on the smaller Windows runner disks.
         env.setdefault("CARGO_INCREMENTAL", "0")
         env.setdefault("CARGO_PROFILE_DEV_DEBUG", "0")
         env.setdefault("CARGO_PROFILE_TEST_DEBUG", "0")
@@ -147,22 +203,7 @@ def main() -> int:
 
         extracted = temporary / "extracted"
         extracted.mkdir()
-        member_paths: dict[str, Path] = {}
-        for package, required in REQUIRED.items():
-            archive = package_target / "package" / f"{package}-{version}.crate"
-            if not archive.is_file():
-                raise SystemExit(f"missing package archive: {archive}")
-            with tarfile.open(archive, "r:gz") as crate:
-                names = {
-                    name.removeprefix(f"{package}-{version}/")
-                    for name in crate.getnames()
-                    if name.startswith(f"{package}-{version}/")
-                }
-                missing = required - names
-                if missing:
-                    raise SystemExit(f"{package} archive missing: {sorted(missing)}")
-                crate.extractall(extracted, filter="data")
-            member_paths[package] = extracted / f"{package}-{version}"
+        member_paths = extract_archives(package_target, extracted, version)
 
         workspace = temporary / "workspace.toml"
         workspace.write_text(
@@ -182,7 +223,9 @@ def main() -> int:
         # Cargo requires the virtual manifest to be named Cargo.toml.
         manifest = temporary / "Cargo.toml"
         workspace.replace(manifest)
-        verified_target = temporary / "verified-target"
+        verified_target = verification_target(
+            temporary / "verified-target", env, "current", env.get("RUSTC", "rustc")
+        )
         env["CARGO_TARGET_DIR"] = str(verified_target)
         toolchain_cargo = Path(
             subprocess.check_output(
@@ -199,6 +242,9 @@ def main() -> int:
             [str(toolchain_cargo.parent), msrv_env.get("PATH", "")]
         )
         msrv_env["RUSTC"] = str(toolchain_rustc)
+        msrv_env["CARGO_TARGET_DIR"] = str(
+            verification_target(temporary / "msrv-target", env, "msrv", toolchain_rustc)
+        )
         run([str(toolchain_rustc), "--version"], root, msrv_env)
         # A fresh lockfile resolution can select crates that no longer compile on the
         # package MSRV. Resolve with the MSRV toolchain so rust-version bounds apply,
@@ -222,6 +268,7 @@ def main() -> int:
             root,
             msrv_env,
         )
+        clean_packaged_crates(manifest, member_paths, root, msrv_env, toolchain_cargo)
         run(
             [
                 str(toolchain_cargo),
@@ -234,6 +281,7 @@ def main() -> int:
             root,
             msrv_env,
         )
+        clean_packaged_crates(manifest, member_paths, root, env, "cargo")
         run(
             [
                 "cargo",
