@@ -725,10 +725,9 @@ struct ExportProfileDetailView: View {
 
                     Button {
                         UIPasteboard.general.string = profile.id.uuidString
+                        // Keep the completion state readable for the lifetime of this detail,
+                        // including accessibility clients that observe after tap synchronization.
                         idCopied = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                            idCopied = false
-                        }
                     } label: {
                         Label(
                             idCopied

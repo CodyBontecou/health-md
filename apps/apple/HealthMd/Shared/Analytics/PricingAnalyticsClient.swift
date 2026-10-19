@@ -140,7 +140,7 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
     private func flushLoop(transport: PricingAnalyticsTransport) async {
         var stoppedAfterFailure = false
 
-        while let payload = nextPayload() {
+        while let payload = nextPayloadOrFinish() {
             do {
                 try await transport.send(payload)
                 removeSentPayload(payload)
@@ -156,26 +156,33 @@ nonisolated private final class PricingAnalyticsClientState: @unchecked Sendable
             }
         }
 
+        // Normal completion retires the task atomically with observing an empty
+        // queue. Only a failed send reaches this retry transition.
+        guard stoppedAfterFailure else { return }
         queue.sync {
             if payloads.isEmpty {
                 flushTask = nil
-            } else if stoppedAfterFailure, retryDelayNanoseconds > 0 {
+            } else if retryDelayNanoseconds > 0 {
                 flushTask = Task.detached(priority: .utility) { [weak self, transport, retryDelayNanoseconds] in
                     try? await Task.sleep(nanoseconds: retryDelayNanoseconds)
                     await self?.flushLoop(transport: transport)
                 }
-            } else if stoppedAfterFailure {
-                flushTask = nil
             } else {
-                flushTask = Task.detached(priority: .utility) { [weak self, transport] in
-                    await self?.flushLoop(transport: transport)
-                }
+                flushTask = nil
             }
         }
     }
 
-    private func nextPayload() -> PricingAnalyticsPayload? {
-        queue.sync { payloads.first }
+    private func nextPayloadOrFinish() -> PricingAnalyticsPayload? {
+        queue.sync {
+            guard let payload = payloads.first else {
+                // An enqueue cannot fall between this empty check and retirement.
+                // Its track() call will either join this drain or start a new one.
+                flushTask = nil
+                return nil
+            }
+            return payload
+        }
     }
 
     private func removeSentPayload(_ payload: PricingAnalyticsPayload) {

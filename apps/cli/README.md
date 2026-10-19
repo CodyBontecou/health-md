@@ -3,7 +3,9 @@
 Standalone, cross-platform command-line access to health exports prepared by the Health.md iOS
 or Android app.
 
-> **Status:** `0.1.0-alpha.7` is a public, explicitly unqualified preview. Deployed iOS export
+> **Status:** `0.1.0-alpha.6` is the published, explicitly unqualified preview.
+> `0.1.0-alpha.7` remains an unpublished draft with no download assets (availability audit: 2026-10-02).
+> Deployed iOS export
 > protocol v1, Android application protocol v2, and capability-gated iPhone query protocol v3 are
 > implemented with automated Swift↔Rust and Kotlin↔Rust compatibility gates. The owner has
 > physically confirmed iPhone and Android direct pairing/connectivity; the complete retained
@@ -92,8 +94,10 @@ build IDs because matching marketing versions or protocol numbers alone is insuf
 
 ## Installation
 
-The `0.1.0-alpha.7` workflow published a checksummed, explicitly unqualified preview. Install it
-with:
+The [published `0.1.0-alpha.6` preview](https://github.com/CodyBontecou/health-md/releases/tag/healthmd-cli/v0.1.0-alpha.6)
+has uploaded installers, archives for all five supported desktop targets, per-archive checksums,
+`sha256.sum`, its Sigstore bundle, and `release-identities.json`. The Homebrew tap currently points
+to that same version (audited 2026-10-02). Install it with:
 
 ```bash
 brew install CodyBontecou/tap/healthmd
@@ -105,8 +109,14 @@ same versioned release. This preview does not qualify a CLI/mobile pair; use the
 mobile build named by release evidence. The tap tracks preview releases until the first qualified
 stable release.
 
+Publication, preview qualification, and stable qualification are separate states. Alpha.7 is a
+pending draft with zero assets, not an installable release; do not substitute its tag in download
+commands. Neither alpha.6 publication nor a successful connection establishes stable qualification.
+The [availability audit](docs/release-availability.md) describes the metadata/checksum check;
+[mobile compatibility](docs/mobile-compatibility.md) tracks the separate physical gate.
+
 PowerShell installer and checksummed `.zip`/`.tar.xz` archives for Windows, Linux, and macOS are
-attached to each release. After an exact version reaches crates.io, Rust users can install it with:
+attached to the published alpha.6 release. After an exact version reaches crates.io, Rust users can install it with:
 
 ```bash
 cargo install healthmd-cli --locked
@@ -133,7 +143,7 @@ manifest for integrity. macOS users may also use the notarized, stapled DMG. Rep
 with the complete version including any prerelease suffix:
 
 ```bash
-VERSION='0.1.0-alpha.7'
+VERSION='0.1.0-alpha.6'
 TAG="healthmd-cli/v$VERSION"
 BASE="https://github.com/CodyBontecou/health-md/releases/download/$TAG"
 curl -fLO "$BASE/healthmd-cli-installer.sh"
@@ -157,7 +167,7 @@ sh healthmd-cli-installer.sh
 ```
 
 ```powershell
-$Version = '0.1.0-alpha.7'
+$Version = '0.1.0-alpha.6'
 $Tag = "healthmd-cli/v$Version"
 $Base = "https://github.com/CodyBontecou/health-md/releases/download/$Tag"
 Invoke-WebRequest "$Base/healthmd-cli-installer.ps1" -OutFile healthmd-cli-installer.ps1

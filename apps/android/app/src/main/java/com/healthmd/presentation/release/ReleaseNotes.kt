@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
 import com.healthmd.R
+import com.healthmd.BuildConfig
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 
@@ -48,7 +49,10 @@ data class AndroidReleaseNotes(
             return AndroidReleaseNotes(
                 versionName = versionName,
                 versionKey = "$versionName+$versionCode",
-                highlights = listOf(
+                highlights = (if (BuildConfig.FLAVOR == "play") listOf(
+                    context.getString(R.string.myself_claim_intro),
+                    context.getString(R.string.myself_claim_entry_subtitle),
+                ) else emptyList()) + listOf(
                     context.getString(R.string.release_notes_highlight_widgets),
                     context.getString(R.string.release_notes_highlight_feedback),
                     context.getString(R.string.release_notes_highlight_export_parity),

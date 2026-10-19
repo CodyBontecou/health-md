@@ -249,7 +249,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             profileID: profileID,
             profileName: "Daily",
             apiDestinationIdentity: ScheduledAPIEndpointIdentity(
-                destination: syntheticScheduledAPIDestination(), bindingID: nil
+                destination: try XCTUnwrap(harness.apiDestination), bindingID: nil
             ),
             calendar: calendar
         )
@@ -1476,6 +1476,27 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             XCTAssertEqual(harness.runnerDates.count, 2)
             XCTAssertEqual(harness.notificationScheduler.allScheduledRequests.last?.recoveryGeneration, 1)
         }
+    }
+
+    func testDiscardRevokesConnectedMacTransferAdmission() throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(
+            defaults: defaults, keychain: keychain, now: now, target: .connectedMac
+        )
+        let request = PendingExportRequest(
+            dates: [date(year: 2026, month: 8, day: 9)], source: .scheduled,
+            scheduledFireDate: date(year: 2026, month: 8, day: 10, hour: 8),
+            exportTarget: .connectedMac, profileID: profileID, attemptedAt: now
+        )
+        try harness.pendingStore.upsert(request)
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        XCTAssertTrue(manager.isScheduledRecoveryAuthorized(jobID: request.id))
+
+        try manager.discardPendingRecovery(profileID: profileID)
+
+        XCTAssertFalse(manager.isScheduledRecoveryAuthorized(jobID: request.id))
+        XCTAssertTrue(harness.runnerDates.isEmpty, "discard must not start a replacement transfer")
     }
 
     func testDiscardIsProfileScopedAndPreservesCredentialsConfigurationAndHistory() async throws {

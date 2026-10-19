@@ -46,6 +46,35 @@ final class A11yFoundationTests: XCTestCase {
         return host.measured()
     }
 
+    func testSettledMeasurementsDoNotRepeatRunLoopWaits() {
+        func text(_ size: DynamicTypeSize) -> some View {
+            Text("Settled measurement").font(.body).fixedSize()
+                .environment(\.dynamicTypeSize, size)
+        }
+        var settlingCount = 0
+        let host = A11yHosting(text(.large), settle: {
+            settlingCount += 1
+            RunLoop.main.run(until: Date().addingTimeInterval(0.03))
+        })
+        defer { host.close() }
+        XCTAssertEqual(settlingCount, 1, "Attachment must still settle the native host")
+
+        let original = host.measured()
+        XCTAssertGreaterThan(original.height, 0)
+        XCTAssertEqual(host.measured(), original)
+        XCTAssertEqual(settlingCount, 1, "Repeated size measurements must not wait again")
+
+        host.update(text(.accessibility5))
+        XCTAssertEqual(settlingCount, 2, "Live root-view changes must still settle")
+        XCTAssertGreaterThan(host.measured().height, original.height * 2)
+        XCTAssertEqual(settlingCount, 2, "Measuring the updated host must not wait again")
+
+        host.layout()
+        XCTAssertEqual(settlingCount, 3, "Explicit native layout must still settle")
+        XCTAssertGreaterThan(host.capture().size.height, 0)
+        XCTAssertEqual(settlingCount, 4, "Native screenshots must still settle")
+    }
+
     func testAllNineteenFontsGrowInViewScopedEnvironment() {
         XCTAssertEqual(tokens.count, 19)
         // Native positive controls guard against a broken measurement environment.

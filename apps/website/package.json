@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "npm run docs:install && npm run build:ci",
-    "build:ci": "npm run three:bundle && npm run i18n:check && npm run docs:check && node scripts/build-site.mjs && npm run visualizations:seo && npm run site:check",
+    "build:ci": "npm run three:bundle && npm run i18n:check && npm run docs:build && node scripts/build-site.mjs && npm run visualizations:seo && npm run site:check",
     "blog:build": "node scripts/build-blog.mjs --output dist",
     "test": "node --test",
     "three:bundle": "node scripts/build-three-hero.mjs",
@@ -26,6 +26,7 @@
     "docs:dev": "npm --prefix docs-src run dev",
     "docs:build": "npm --prefix docs-src run build",
     "docs:check": "npm --prefix docs-src run check",
+    "docs:check-built": "npm --prefix docs-src run check:built",
     "docs:preview": "npm --prefix docs-src run preview",
     "reference:sync": "npm --prefix docs-src run reference:sync --",
     "reference:check": "npm --prefix docs-src run reference:check --",

@@ -63,6 +63,10 @@ class ProductCapabilityManifestTest {
             "planned",
             pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
+        val claimCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
+        }
+        assertEquals("shared", claimCapability.getValue("classification").jsonPrimitive.content)
 
         capabilities.forEach { capability ->
             val id = capability.getValue("id").jsonPrimitive.content
@@ -96,6 +100,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+            "account.myself_lifetime_claim",
             "export.daily-files",
             "export.sleep-summary",
             "export.activity-basics",
@@ -113,6 +118,7 @@ class ProductCapabilityManifestTest {
             "automation.discard-pending-recovery",
             "direct.full_public_authorized_corpus",
             "direct-cli.shared-qr-pairing",
+            "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
         )
 
@@ -143,6 +149,7 @@ class ProductCapabilityManifestTest {
             "export.range-summary",
             "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",
+            "account.myself_lifetime_claim",
         )
     }
 }

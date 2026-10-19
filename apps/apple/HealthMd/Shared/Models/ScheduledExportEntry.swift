@@ -39,6 +39,15 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
     var lookbackDays: Int
     var todayRefreshEnabled: Bool
     var todayRefreshIntervalHours: Int
+    var todayRefreshIntervalMinutes: Int?
+    var todayRefreshMinutes: Int {
+        get { todayRefreshIntervalMinutes ?? todayRefreshIntervalHours * 60 }
+        set {
+            let minutes = ExportSchedule.todayRefreshMinuteOptions.contains(newValue) ? newValue : 180
+            todayRefreshIntervalMinutes = minutes < 180 ? minutes : nil
+            if minutes >= 180 { todayRefreshIntervalHours = minutes / 60 }
+        }
+    }
 
     /// Logical occurrence of the most recent successful completed-day run.
     var lastExportDate: Date?
@@ -63,6 +72,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         lookbackDays: Int? = nil,
         todayRefreshEnabled: Bool = false,
         todayRefreshIntervalHours: Int = ExportSchedule.defaultTodayRefreshIntervalHours,
+        todayRefreshIntervalMinutes: Int? = nil,
         lastExportDate: Date? = nil,
         lastTodayRefreshDate: Date? = nil,
         enabledAt: Date? = nil
@@ -89,8 +99,59 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         self.todayRefreshIntervalHours = ExportSchedule.clampedTodayRefreshIntervalHours(
             todayRefreshIntervalHours
         )
+        self.todayRefreshIntervalMinutes = todayRefreshIntervalMinutes
         self.lastExportDate = lastExportDate
         self.lastTodayRefreshDate = lastTodayRefreshDate
+    }
+
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case profileID
+        case isEnabled
+        case enabledAt
+        case frequency
+        case customInterval
+        case customUnit
+        case customAnchorDate
+        case preferredHour
+        case preferredMinute
+        case weekday
+        case lookbackDays
+        case todayRefreshIntervalHours
+        case lastExportDate
+        case lastTodayRefreshDate
+        case recoveryGeneration
+        case recoveryDiscardedAt
+        case todayRefreshEnabled
+        case todayRefreshIntervalMinutes
+        case todayRefreshRequestedV2
+        case todayRefreshPersistenceVersion
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(profileID, forKey: .profileID)
+        try c.encode(isEnabled, forKey: .isEnabled)
+        try c.encode(enabledAt, forKey: .enabledAt)
+        try c.encode(frequency, forKey: .frequency)
+        try c.encode(customInterval, forKey: .customInterval)
+        try c.encode(customUnit, forKey: .customUnit)
+        try c.encode(customAnchorDate, forKey: .customAnchorDate)
+        try c.encode(preferredHour, forKey: .preferredHour)
+        try c.encode(preferredMinute, forKey: .preferredMinute)
+        try c.encode(weekday, forKey: .weekday)
+        try c.encode(lookbackDays, forKey: .lookbackDays)
+        try c.encode(todayRefreshIntervalHours, forKey: .todayRefreshIntervalHours)
+        try c.encode(lastExportDate, forKey: .lastExportDate)
+        try c.encode(lastTodayRefreshDate, forKey: .lastTodayRefreshDate)
+        try c.encode(recoveryGeneration, forKey: .recoveryGeneration)
+        try c.encode(recoveryDiscardedAt, forKey: .recoveryDiscardedAt)
+        try c.encode(2, forKey: .todayRefreshPersistenceVersion)
+        try c.encode(todayRefreshIntervalMinutes == nil ? todayRefreshEnabled : false, forKey: .todayRefreshEnabled)
+        try c.encode(todayRefreshIntervalMinutes, forKey: .todayRefreshIntervalMinutes)
+        try c.encode(todayRefreshIntervalMinutes.map { _ in todayRefreshEnabled }, forKey: .todayRefreshRequestedV2)
     }
 
     init(from decoder: Decoder) throws {
@@ -109,6 +170,14 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         lookbackDays = try c.decode(Int.self, forKey: .lookbackDays)
         todayRefreshEnabled = try c.decode(Bool.self, forKey: .todayRefreshEnabled)
         todayRefreshIntervalHours = try c.decode(Int.self, forKey: .todayRefreshIntervalHours)
+        todayRefreshIntervalMinutes = try c.decodeIfPresent(Int.self, forKey: .todayRefreshIntervalMinutes)
+        if let minutes = todayRefreshIntervalMinutes {
+            guard [30, 60].contains(minutes) else {
+                throw DecodingError.dataCorruptedError(forKey: .todayRefreshIntervalMinutes, in: c, debugDescription: "Unsupported Today Refresh minute interval")
+            }
+            todayRefreshEnabled = try c.decodeIfPresent(Int.self, forKey: .todayRefreshPersistenceVersion) == 2
+                && (c.decodeIfPresent(Bool.self, forKey: .todayRefreshRequestedV2) ?? false)
+        }
         lastExportDate = try c.decodeIfPresent(Date.self, forKey: .lastExportDate)
         lastTodayRefreshDate = try c.decodeIfPresent(Date.self, forKey: .lastTodayRefreshDate)
         recoveryGeneration = try c.decodeIfPresent(Int.self, forKey: .recoveryGeneration) ?? 0
@@ -132,6 +201,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
             lookbackDays: lookbackDays,
             todayRefreshEnabled: todayRefreshEnabled,
             todayRefreshIntervalHours: todayRefreshIntervalHours,
+            todayRefreshIntervalMinutes: todayRefreshIntervalMinutes,
             lastExportDate: lastExportDate,
             lastTodayRefreshDate: lastTodayRefreshDate,
             enabledAt: recoveryDiscardedAt.map { max(enabledAt ?? $0, $0) } ?? enabledAt
@@ -194,8 +264,16 @@ final class ScheduledExportEntryStore: ObservableObject {
 
     private static func decodeStoredEntries(from userDefaults: UserDefaults) -> [ScheduledExportEntry] {
         guard let data = userDefaults.data(forKey: storageKey),
-              let decoded = try? JSONDecoder().decode([ScheduledExportEntry].self, from: data) else {
+              var decoded = try? JSONDecoder().decode([ScheduledExportEntry].self, from: data) else {
             return []
+        }
+        let archived = userDefaults.dictionary(forKey: "scheduledExportEntries.minuteIntent.v2") ?? [:]
+        if let objects = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            for index in decoded.indices where objects[index]["todayRefreshPersistenceVersion"] == nil && !decoded[index].todayRefreshEnabled {
+                if let minutes = archived[decoded[index].profileID.uuidString] as? Int, [30, 60].contains(minutes) {
+                    decoded[index].todayRefreshIntervalMinutes = minutes
+                }
+            }
         }
         return decoded
     }
@@ -352,6 +430,7 @@ final class ScheduledExportEntryStore: ObservableObject {
             lookbackDays: legacy.lookbackDays,
             todayRefreshEnabled: legacy.todayRefreshEnabled,
             todayRefreshIntervalHours: legacy.todayRefreshIntervalHours,
+            todayRefreshIntervalMinutes: legacy.todayRefreshIntervalMinutes,
             lastExportDate: legacy.lastExportDate,
             lastTodayRefreshDate: legacy.lastTodayRefreshDate,
             enabledAt: legacy.enabledAt
@@ -436,6 +515,10 @@ final class ScheduledExportEntryStore: ObservableObject {
 
     private func persist() {
         if let encoded = try? JSONEncoder().encode(entries) {
+            let minuteIntent = Dictionary(uniqueKeysWithValues: entries.compactMap { entry in
+                entry.todayRefreshIntervalMinutes.map { (entry.profileID.uuidString, $0) }
+            })
+            userDefaults.set(minuteIntent, forKey: "scheduledExportEntries.minuteIntent.v2")
             userDefaults.set(encoded, forKey: Self.storageKey)
         }
     }

@@ -327,16 +327,16 @@ struct ProfileScheduleEditorSheet: View {
                     if draft.todayRefreshEnabled {
                         SchedulingValueMenu(
                             title: "Refresh Interval",
-                            choices: ExportSchedule.todayRefreshIntervalOptions.map {
-                                SchedulingChoice(value: $0, title: String(localized: "Every \($0) hours"))
+                            choices: ExportSchedule.todayRefreshMinuteOptions.map {
+                                SchedulingChoice(value: $0, title: ExportSchedule.todayRefreshLabel($0))
                             },
-                            selection: $draft.todayRefreshIntervalHours
+                            selection: $draft.todayRefreshMinutes
                         )
                     }
                 } header: {
                     Text("Scope")
                 } footer: {
-                    Text("Each run exports the profile's metrics and formats to its own destination. A run consumes one of the 10 free export actions unless you have Full Access.")
+                    Text("Refresh windows are best effort; iOS may delay background runs. Each run exports the profile's metrics and formats to its own destination. A run consumes one of the 10 free export actions unless you have Full Access.")
                 }
             }
             .navigationTitle(profile.name)
