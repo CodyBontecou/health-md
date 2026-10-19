@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isPreparedForScheduledSnapshotRecoveryRelease() {
+    fun appVersion_isPreparedForMyselfClaimRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 41"))
-        assertTrue(buildGradle.contains("versionName = \"1.9.3\""))
+        assertTrue(buildGradle.contains("versionCode = 42"))
+        assertTrue(buildGradle.contains("versionName = \"1.9.4\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeScheduledSnapshotRecoveryRelease() {
+    fun playStoreReleaseNotes_describeMyselfClaimRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -41,14 +41,13 @@ class ReleaseReadinessTest {
 
         releaseNotesByPath.forEach { (path, releaseNotes) ->
             assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
-            assertTrue(releaseNotes.contains("v1.9.3"))
-            assertTrue(releaseNotes.contains("Raw API Snapshot"))
-            assertTrue(releaseNotes.contains("API endpoints and folders"))
-            assertTrue(releaseNotes.contains("lookback and Today Refresh"))
-            assertTrue(releaseNotes.contains("Discard pending recovery"))
-            assertTrue(releaseNotes.contains("profile, credentials, and export history"))
-            assertTrue(releaseNotes.contains("survives interruptions"))
-            assertTrue(releaseNotes.contains("without starting an export"))
+            assertTrue(releaseNotes.contains("v1.9.4"))
+            assertTrue(releaseNotes.contains("Google Play lifetime purchasers"))
+            assertTrue(releaseNotes.contains("complimentary lifetime access to myself.md"))
+            assertTrue(releaseNotes.contains("purchase-proof disclosure"))
+            assertTrue(releaseNotes.contains("confirm the receiving account"))
+            assertTrue(releaseNotes.contains("Health and location data stay on your device"))
+            assertTrue(releaseNotes.contains("Free or grandfathered access alone does not qualify"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }
@@ -63,8 +62,8 @@ class ReleaseReadinessTest {
         val wearManifest = readRepoFile("wear/src/main/AndroidManifest.xml")
         val wearCapabilities = readRepoFile("wear/src/main/res/values/wear.xml")
 
-        assertTrue(releaseScope.contains("\"releaseVersionName\": \"1.9.3\""))
-        assertTrue(releaseScope.contains("\"versionCode\": 41"))
+        assertTrue(releaseScope.contains("\"releaseVersionName\": \"1.9.4\""))
+        assertTrue(releaseScope.contains("\"versionCode\": 42"))
         assertTrue(releaseScope.contains("\"status\": \"deferred\""))
         assertTrue(releaseScope.contains("\"published\": false"))
         assertTrue(releaseScope.contains("\"runtimeAdvertisedByPhone\": false"))
