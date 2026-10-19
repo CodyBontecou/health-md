@@ -6,7 +6,8 @@ Checks every locale under apps/apple/metadata:
   * version/<v>/<locale>.json: keywords length (100 UTF-8 bytes), comma
     formatting, intra-field duplicate terms, exact duplication against the
     visible name/subtitle tokens, required keys, and locale parity with
-    app-info and en-US.
+    app-info and en-US. Entirely whatsNew-only version folders are explicit
+    release-note patches; full metadata folders retain every required-field check.
 
 The gate enforces the mechanical App Store Connect field contract only. It does
 not judge linguistic quality, trademark clearance, or medical-claim boundaries,
@@ -104,18 +105,21 @@ def validate_version(errors: list[str], app_info: dict[str, dict]) -> bool:
               f"version/{version}: missing locales present in app-info: {missing}")
         check(not extra, errors,
               f"version/{version}: locales missing from app-info: {extra}")
-        for path in sorted(version_path.glob("*.json")):
+        documents = [(path, json.loads(path.read_text())) for path in sorted(version_path.glob("*.json"))]
+        notes_only = bool(documents) and all(set(data) == {"whatsNew"} for _, data in documents)
+        required_keys = ("whatsNew",) if notes_only else REQUIRED_VERSION_KEYS
+        text_keys = ("whatsNew",) if notes_only else ("description", "whatsNew")
+        for path, data in documents:
             locale = path.stem
             where = f"version/{version}/{locale}"
-            data = json.loads(path.read_text())
-            for key in REQUIRED_VERSION_KEYS:
+            for key in required_keys:
                 check(key in data, errors, f"{where}: missing key {key!r}")
             keywords = data.get("keywords", "")
             if keywords:
                 info = app_info.get(locale, {})
                 visible = visible_tokens(info.get("name", ""), info.get("subtitle", ""))
                 validate_keywords(where, keywords, visible, errors)
-            for key in ("description", "whatsNew"):
+            for key in text_keys:
                 value = data.get(key, "")
                 check(bool(value.strip()), errors, f"{where}: empty {key}")
     return True

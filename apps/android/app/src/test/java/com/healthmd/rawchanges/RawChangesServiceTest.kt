@@ -119,7 +119,9 @@ class RawChangesServiceTest {
     }
 
     @Test fun generatedArchiveValidatesAgainstPublishedDraft202012Schema() = runTest {
-        val schema = publishedSchema().loadSchema()
+        val schemaFile = repoFile("docs/export-contract/schemas/healthmd.raw_changes.v1.schema.json")
+        val schema = localSchemaFactory().getSchema(schemaFile.toPath().toUri())
+        schema.initializeValidators()
         val cases = listOf(
             emptyList(),
             listOf(
@@ -155,11 +157,11 @@ class RawChangesServiceTest {
 
         assertThat(schema.validate(document)).isEmpty()
 
-        val invalidHeader = document.deepCopy()
+        val invalidHeader = document.deepCopy<ObjectNode>()
         (invalidHeader.get("header") as ObjectNode).put("version", 2)
         assertThat(schema.validate(invalidHeader).any { it.type == "const" }).isTrue()
 
-        val invalidRecord = document.deepCopy()
+        val invalidRecord = document.deepCopy<ObjectNode>()
         (invalidRecord.at("/events/0/record/metadata/lastModifiedTime") as ObjectNode).put("nano", 1_000_000_000)
         val recordErrors = schema.validate(invalidRecord)
         assertThat(recordErrors.any {

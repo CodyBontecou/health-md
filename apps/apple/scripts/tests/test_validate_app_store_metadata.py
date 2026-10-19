@@ -82,6 +82,35 @@ class KeywordFieldTests(unittest.TestCase):
         )
         self.assertEqual((rc, errors), (0, []))
 
+    def test_accepts_release_notes_only_version_metadata(self) -> None:
+        tree = {
+            "app-info/en-US.json": VALID_APP_INFO,
+            "app-info/fr-FR.json": VALID_APP_INFO,
+            "version/3.4.1/en-US.json": VALID_VERSION,
+            "version/3.4.1/fr-FR.json": VALID_VERSION,
+            "version/3.4.3/en-US.json": json.dumps({"whatsNew": "Schedule recovery fixes"}),
+            "version/3.4.3/fr-FR.json": json.dumps({"whatsNew": "Corrections de planification"}),
+        }
+        self.assertEqual(run_against(tree), (0, []))
+
+    def test_notes_only_metadata_still_rejects_empty_notes(self) -> None:
+        rc, errors = run_against({
+            "app-info/en-US.json": VALID_APP_INFO,
+            "version/3.4.3/en-US.json": json.dumps({"whatsNew": " "}),
+        })
+        self.assertEqual(rc, 1)
+        self.assertIn("version/3.4.3/en-US: empty whatsNew", errors)
+
+    def test_mixed_full_and_notes_only_locales_require_complete_metadata(self) -> None:
+        rc, errors = run_against({
+            "app-info/en-US.json": VALID_APP_INFO,
+            "app-info/fr-FR.json": VALID_APP_INFO,
+            "version/3.4.3/en-US.json": VALID_VERSION,
+            "version/3.4.3/fr-FR.json": json.dumps({"whatsNew": "Corrections"}),
+        })
+        self.assertEqual(rc, 1)
+        self.assertIn("version/3.4.3/fr-FR: missing key 'description'", errors)
+
     def test_original_japanese_keywords_over_byte_limit_fail(self) -> None:
         # Frozen version/3.4.1/ja.json counterexample: valid character count,
         # but more than twice the App Store Connect keyword byte budget.
