@@ -125,9 +125,10 @@ class EmulatorReadinessTests(unittest.TestCase):
         prepare = workers.index('name: Prepare instrumentation APKs before the emulator boots')
         boot = workers.index('uses: reactivecircus/android-emulator-runner@')
         self.assertLess(prepare, boot)
-        for task in (':app:assembleFdroidDebug', ':app:assembleFdroidDebugAndroidTest',
-                     ':app:assemblePlayDebug', ':app:assemblePlayDebugAndroidTest'):
+        for task in (':app:assemblePlayDebug', ':app:assemblePlayDebugAndroidTest'):
             self.assertIn(task, workers[prepare:boot])
+        for deferred in (':app:assembleFdroidDebug', ':app:assembleFdroidDebugAndroidTest'):
+            self.assertNotIn(deferred, workers[prepare:boot])
         self.assertLess(workers.index('./scripts/prepare-ci-emulator.sh'),
                         workers.index('./scripts/run-ci-instrumentation.sh'))
         runner = (SCRIPT.parent / 'run-ci-instrumentation.sh').read_text()

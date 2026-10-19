@@ -42,12 +42,14 @@ class NightlyWorkflowTests(unittest.TestCase):
         self.text = NIGHTLY.read_text()
         self.ios = job(self.text, "extended-ios")
         self.mac = job(self.text, "extended-macos")
+        self.prepare = job(self.text, "prepare-ui")
+        self.core = job(self.text, "prepare-shared-core")
 
     def test_both_nightly_jobs_use_the_same_hosted_toolchain_as_apple_ci(self):
         ci_mac = job(CI.read_text(), "test-macos")
         hosted = re.search(r"runs-on: (\S+)", ci_mac).group(1)
         self.assertEqual(hosted, "macos-26")
-        for block in [self.ios, self.mac]:
+        for block in [self.ios, self.mac, self.prepare]:
             self.assertIn(f"runs-on: {hosted}", block)
             self.assertNotIn("self-hosted", block)
             self.assertIn("xcode-version: latest-stable", block)
@@ -73,16 +75,60 @@ class NightlyWorkflowTests(unittest.TestCase):
         self.assertIn("apps/apple/build/logs/build-macos.log", self.mac)
         self.assertIn("retention-days: 30", self.mac)
 
-    def test_shared_core_is_prepared_once_before_each_native_suite(self):
-        for block, suite in [(self.ios, "make test-ios"), (self.mac, "make coverage")]:
-            self.assertEqual(block.count("make prepare-healthmd-core-rust"), 1)
-            self.assertLess(block.index("make prepare-healthmd-core-rust"), block.index(suite))
-            self.assertIn(f"{suite} CORE_RUST_PREPARE=:", block)
+    def test_shared_core_is_validated_once_and_consumers_require_same_run_source(self):
+        self.assertEqual(self.text.count("run: make prepare-healthmd-core-rust"), 1)
+        self.assertIn("run: make prepare-healthmd-core-rust", self.core)
+        share = step(self.core, "Share validated native core from this run")
+        self.assertIn("include-hidden-files: true", share)
+        self.assertIn("if-no-files-found: error", share)
+        self.assertIn(".nightly-source-sha", share)
+        for block in [self.ios, self.mac, self.prepare]:
+            self.assertIn("prepare-shared-core", re.search(r"^    needs: (.+)$", block, re.MULTILINE).group(1))
+            self.assertNotIn("make prepare-healthmd-core-rust", block)
+            download = step(block, "Download validated native core from this run")
+            self.assertIn("name: nightly-shared-core", download)
+            self.assertNotIn("run-id:", download)
+            validate = step(block, "Validate native core source and slices")
+            self.assertIn("github.sha", validate)
+            self.assertIn(".nightly-source-sha", validate)
+            self.assertIn(".healthmd-core-source.sha256", validate)
+            self.assertIn("validate-apple-xcframework.sh", validate)
+            self.assertLess(block.index(download), block.index(validate))
+        self.assertIn("make test-ios CORE_RUST_PREPARE=:", self.ios)
+        self.assertIn("make coverage CORE_RUST_PREPARE=:", self.mac)
+
+    def test_unit_simulator_startup_overlaps_build_after_native_validation(self):
+        boot = step(self.ios, "Select newest compatible iOS Simulator")
+        self.assertIn("apple_nightly_ui.py start-simulator", boot)
+        self.assertLess(self.ios.index("Validate native core source and slices"), self.ios.index(boot))
+        self.assertLess(self.ios.index(boot), self.ios.index("Run iOS unit tests"))
+        self.assertNotIn("bootstatus", boot)
+
+    def test_actual_consumer_rejects_missing_or_wrong_source_before_validation(self):
+        sha = "a" * 40
+        shell = command(step(self.ios, "Validate native core source and slices"))
+        shell = shell.replace("${{ github.sha }}", sha)
+        for receipt in (sha, "b" * 40, None):
+            with self.subTest(receipt=receipt), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                apple = root / "apps/apple"
+                artifacts = apple / "Packages/HealthMdCoreRust/Artifacts"
+                artifacts.mkdir(parents=True)
+                (artifacts / ".healthmd-core-source.sha256").write_text("validated digest")
+                if receipt is not None:
+                    (artifacts / ".nightly-source-sha").write_text(receipt + "\n")
+                validator = root / "packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh"
+                validator.parent.mkdir(parents=True)
+                validator.write_text("#!/bin/sh\ntouch validated-slices\n")
+                validator.chmod(0o755)
+                result = subprocess.run(["bash", "-c", shell], cwd=apple, capture_output=True)
+                self.assertEqual(result.returncode == 0, receipt == sha)
+                self.assertEqual((apple / "validated-slices").exists(), receipt == sha)
 
     def test_native_cache_reuses_apple_ci_key_but_preparation_still_validates_hits(self):
         prepare = job(CI.read_text(), "prepare-shared-core")
         shared_key = prepare.split("          key: >-\n", 1)[1].split("\n\n", 1)[0]
-        for block in [self.ios, self.mac]:
+        for block in [self.core]:
             cached = step(block, "Restore exact-source shared Rust core from Apple CI")
             self.assertIn("uses: actions/cache/restore@v4", cached)
             self.assertNotIn("restore-keys", cached)
@@ -96,7 +142,7 @@ class NightlyWorkflowTests(unittest.TestCase):
                             block.index("make prepare-healthmd-core-rust"))
 
     def test_binding_dependency_cache_never_bypasses_generation_or_validation(self):
-        for block in [self.ios, self.mac]:
+        for block in [self.core]:
             compiler = step(block, "Set up pinned Rust compiler for binding verification")
             self.assertIn("uses: dtolnay/rust-toolchain@1.88.0", compiler)
             cache = step(block, "Cache binding compiler dependencies")
@@ -111,41 +157,65 @@ class NightlyWorkflowTests(unittest.TestCase):
 
     def test_full_ios_unit_and_ui_coverage_and_cancellation_policy_remain(self):
         self.assertIn("make test-ios", self.ios)
-        ui = step(self.ios, "Run full UI test suite (iOS)")
-        self.assertIn("if: ${{ success() }}", ui)
-        self.assertNotIn("continue-on-error", ui)
-        self.assertIn("-scheme HealthMd-UITests-iOS", ui)
-        self.assertNotIn("-only-testing", ui)
-        self.assertNotIn("-skip-testing", ui)
+        self.assertNotIn("-only-testing", self.ios)
+        self.assertNotIn("-skip-testing", self.ios)
+        ui = job(self.text, "ui-shards")
+        suite = step(ui, "Run and audit assigned UI shard")
+        self.assertIn("if: ${{ success() }}", suite)
+        self.assertNotIn("continue-on-error", suite)
+        self.assertIn("python3 scripts/apple_nightly_ui.py run", suite)
         self.assertIn("cancel-in-progress: true", self.text)
         self.assertIn("cron: '0 4 * * *'", self.text)
         self.assertIn("workflow_dispatch:", self.text)
         self.assertIn("scripts/check-warnings.sh build/logs/build-ios.log", self.ios)
 
-    def test_actual_ui_command_preserves_failure_and_appends_raw_log(self):
-        shell = command(step(self.ios, "Run full UI test suite (iOS)"))
+    def test_ui_workers_preserve_failure_and_raw_log_policy(self):
+        ui = job(self.text, "ui-shards")
+        self.assertIn("fail-fast: false", ui)
+        self.assertNotIn("continue-on-error", ui)
+        for name in ("Check UI runtime warnings (strict)", "Upload UI shard diagnostics",
+                     "Upload UI shard inventory"):
+            self.assertIn("if: ${{ !cancelled() }}", step(ui, name))
+        self.assertIn(".xcresult", ui)
+        self.assertIn("retention-days: 30", ui)
+        self.assertIn("if-no-files-found: error", ui)
+
+    def test_ios_native_arch_flags_keep_unfiltered_suite_and_raw_failure_output(self):
+        self.assertIn('IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO"', self.ios)
         for status in (0, 65):
             with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 binary = root / "bin"
                 binary.mkdir()
-                fake = binary / "xcodebuild"
-                fake.write_text(f"#!{sys.executable}\n" + """
-import os, sys
-print('UI suite output')
-print('raw UI diagnostic', file=sys.stderr)
+                xcode = binary / "xcodebuild"
+                xcode.write_text(f"#!{sys.executable}\n" + '''
+import json, os, sys
+from pathlib import Path
+Path('arguments.json').write_text(json.dumps(sys.argv[1:]))
+print('Test Case native suite output')
+print('raw compiler diagnostic', file=sys.stderr)
 sys.exit(int(os.environ['FAKE_STATUS']))
-""")
-                fake.chmod(0o755)
-                log = root / "build/logs/build-ios.log"
-                log.parent.mkdir(parents=True)
-                log.write_text("unit suite output\n")
-                result = subprocess.run(["bash", "-c", shell], cwd=root, text=True,
-                                        capture_output=True, env=dict(os.environ,
-                                        PATH=f"{binary}:{os.environ['PATH']}", FAKE_STATUS=str(status)))
-                self.assertEqual(result.returncode, status, result.stderr)
-                self.assertEqual(set(log.read_text().splitlines()),
-                                 {"unit suite output", "UI suite output", "raw UI diagnostic"})
+''')
+                xcode.chmod(0o755)
+                pretty = binary / "xcpretty"
+                pretty.write_text("#!/bin/sh\ncat\n")
+                pretty.chmod(0o755)
+                result = subprocess.run(["make", "-f", str(REPO / "apps/apple/Makefile"),
+                    "test-ios", "CORE_RUST_PREPARE=:", "IOS_SIM=platform=iOS Simulator,id=fake",
+                    "IOS_TEST_BUILD_FLAGS=ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO"],
+                    cwd=root, text=True, capture_output=True, env=dict(os.environ,
+                    PATH=f"{binary}:{os.environ['PATH']}", FAKE_STATUS=str(status)))
+                self.assertEqual(result.returncode == 0, status == 0)
+                args = json.loads((root / "arguments.json").read_text())
+                self.assertEqual(args[:1], ["test"])
+                self.assertIn("ARCHS=arm64", args)
+                self.assertIn("ONLY_ACTIVE_ARCH=YES", args)
+                self.assertIn("COMPILER_INDEX_STORE_ENABLE=NO", args)
+                self.assertEqual(args[args.index("-scheme") + 1], "HealthMd-Tests-iOS")
+                self.assertFalse(any(a.startswith(("-only-testing", "-skip-testing")) for a in args))
+                raw = (root / "build/logs/xcodebuild-ios-raw.log").read_text()
+                self.assertIn("native suite output", raw)
+                self.assertIn("raw compiler diagnostic", raw)
 
     def test_actual_mac_command_runs_once_and_preserves_failure_and_raw_log(self):
         shell = command(step(self.mac, "Run macOS unit tests with coverage"))

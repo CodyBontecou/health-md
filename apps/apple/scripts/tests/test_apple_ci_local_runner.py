@@ -9,6 +9,10 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[4]
+ANDROID_TASKS = [
+    ':app:testPlayDebugUnitTest', ':app:testPlayReleaseUnitTest', ':app:testPlayE2eUnitTest',
+    ':healthmd-core:testDebugUnitTest', ':wearable-contract:test', ':direct-protocol:test',
+]
 
 FAKE = r'''
 import fcntl, json, os, sys, time
@@ -85,7 +89,7 @@ class LocalRunnerTests(unittest.TestCase):
         self.assertEqual([['test'], ['run', 'check']], [x['args'] for x in starts if x['job'] == 'npm:apps/wake'])
         self.assertIn(['test', '--workspace', '--all-features', '--locked'],
                       [x['args'] for x in starts if x['job'] == 'cargo:packages/healthmd-core-rust'])
-        self.assertEqual(['test', '--max-workers=2', '--init-script', 'scripts/ci-gradle.init.gradle'],
+        self.assertEqual(ANDROID_TASKS + ['--max-workers=2', '--init-script', 'scripts/ci-gradle.init.gradle'],
                          next(x['args'] for x in starts if x['job'] == 'gradlew:apps/android'))
         native = {x['job']: x['args'] for x in starts if x['job'] in ('ios', 'macos')}
         derived = []
@@ -135,7 +139,7 @@ class LocalRunnerTests(unittest.TestCase):
         result, calls = self.run_make('test', 'ANDROID_TEST_ARGS=--init-script scripts/ci-gradle.init.gradle')
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         android = next(c for c in calls if c['job'] == 'gradlew:apps/android')
-        self.assertEqual(['test', '--init-script', 'scripts/ci-gradle.init.gradle'], android['args'])
+        self.assertEqual(ANDROID_TASKS + ['--init-script', 'scripts/ci-gradle.init.gradle'], android['args'])
 
     def test_invalid_job_count_runs_no_gates(self):
         result, calls = self.run_make('test', 'TEST_JOBS=invalid')

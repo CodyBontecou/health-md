@@ -37,6 +37,8 @@ SHELL       := /bin/bash
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
 IOS_SIM     ?=
+# CI can omit unused cross-architecture builds while running the full suite.
+IOS_TEST_BUILD_FLAGS ?=
 MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
 # Root parallel tests opt into independent Xcode build databases. Direct
 # component and hosted CI invocations retain Xcode's existing default paths.
@@ -82,6 +84,7 @@ test-ios: prepare-healthmd-core-rust
 	  $(IOS_DERIVED_DATA_FLAGS) \
 	  -destination "$$ios_sim" \
 	  -configuration Debug-iOS \
+	  $(IOS_TEST_BUILD_FLAGS) \
 	  -resultBundlePath "$(IOS_XCRESULT_PATH)" \
 	  -test-timeouts-enabled NO \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
