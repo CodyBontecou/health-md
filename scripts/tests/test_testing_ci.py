@@ -152,6 +152,8 @@ class CIOrchestrationTests(unittest.TestCase):
         self.assertTrue(any("npm test" in command for command in commands))
         self.assertTrue(any("npm run reference:check" in command for command in commands))
         self.assertTrue(any("npm run visualizations:sync" in command for command in commands))
+        self.assertEqual(commands.count("npm run docs:check-built"), 1)
+        self.assertLess(commands.index("npm run build:ci"), commands.index("npm run docs:check-built"))
 
 
 if __name__ == "__main__":

@@ -36,19 +36,19 @@ test('standalone builds install docs once, then use the CI build route', async t
   assert.deepEqual(calls, ['npm run docs:install', 'npm run build:ci']);
 });
 
-test('CI builds and checks documentation once without reinstalling dependencies', async t => {
+test('CI builds documentation once without reinstalling dependencies', async t => {
   const { status, calls } = await traceRoute(t, 'build:ci');
   assert.equal(status, 0);
-  assert.equal(calls.filter(call => call === 'npm run docs:check').length, 1);
-  assert.ok(!calls.some(call => /docs:install|docs:build/.test(call)));
+  assert.equal(calls.filter(call => call === 'npm run docs:build').length, 1);
+  assert.ok(!calls.some(call => /docs:install|docs:check/.test(call)));
   for (const gate of ['npm run three:bundle', 'npm run i18n:check', 'node scripts/build-site.mjs', 'npm run visualizations:seo', 'npm run site:check']) {
     assert.ok(calls.includes(gate), `missing ${gate}`);
   }
-  assert.ok(calls.indexOf('npm run docs:check') < calls.indexOf('node scripts/build-site.mjs'));
+  assert.ok(calls.indexOf('npm run docs:build') < calls.indexOf('node scripts/build-site.mjs'));
 });
 
-test('documentation check failure prevents later site construction', async t => {
-  const { status, calls } = await traceRoute(t, 'build:ci', 'run docs:check');
+test('documentation build failure prevents later site construction', async t => {
+  const { status, calls } = await traceRoute(t, 'build:ci', 'run docs:build');
   assert.equal(status, 9);
   assert.ok(!calls.includes('node scripts/build-site.mjs'));
   assert.ok(!calls.includes('npm run site:check'));
