@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createBuildLinkCache } from '../../scripts/lib/build-link-cache.mjs';
 import { publishedLocales } from '../../i18n/locales.mjs';
 import { routePath } from '../../i18n/routes.mjs';
 
@@ -36,113 +37,84 @@ async function walk(directory) {
   return files;
 }
 
-function pageUrl(file) {
-  const relative = path.relative(DIST, file).split(path.sep).join('/');
-  if (relative === '404.html') return new URL('/404/', CANONICAL_ORIGIN);
-  if (relative.endsWith('/index.html')) {
-    return new URL(`/${relative.slice(0, -'index.html'.length)}`, CANONICAL_ORIGIN);
-  }
-  return new URL(`/${relative}`, CANONICAL_ORIGIN);
-}
-
-function safeDistPath(pathname) {
-  const decoded = decodeURIComponent(pathname).replace(/^\/+/, '');
-  const candidate = path.resolve(DIST, decoded);
-  if (candidate !== DIST && !candidate.startsWith(`${DIST}${path.sep}`)) {
-    throw new Error(`path escapes docs build: ${pathname}`);
-  }
-  return candidate;
-}
-
-async function exists(file) {
-  try {
-    await fs.access(file);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function targetFile(url) {
-  const base = safeDistPath(url.pathname);
-  const candidates = url.pathname.endsWith('/')
-    ? [path.join(base, 'index.html'), `${base}.html`]
-    : [base, path.join(base, 'index.html'), `${base}.html`];
-  for (const candidate of candidates) {
-    if (await exists(candidate)) return candidate;
-  }
-  return candidates[0];
-}
-
-const allFiles = await walk(DIST);
-const htmlFiles = allFiles.filter((file) => file.endsWith('.html'));
-if (htmlFiles.length === 0) throw new Error(`No HTML files found in ${DIST}`);
-
-const htmlCache = new Map();
-async function htmlFor(file) {
-  if (!htmlCache.has(file)) htmlCache.set(file, await fs.readFile(file, 'utf8'));
-  return htmlCache.get(file);
-}
-
-const failures = [];
-let checked = 0;
-for (const sourceFile of htmlFiles) {
-  const html = await htmlFor(sourceFile);
-  const sourceUrl = pageUrl(sourceFile);
-  const attributes = [...html.matchAll(/\b(?:href|src)=(['"])(.*?)\1/gi)].map((match) => match[2]);
-
-  for (const destination of attributes) {
-    if (!destination || /^(?:mailto:|tel:|data:|javascript:|blob:)/i.test(destination)) continue;
-
-    let resolved;
-    try {
-      resolved = new URL(destination, sourceUrl);
-    } catch {
-      failures.push(`${path.relative(DIST, sourceFile)}: invalid URL ${JSON.stringify(destination)}`);
-      continue;
+export async function checkBuiltDocsLinks(dist = DIST) {
+  function pageUrl(file) {
+    const relative = path.relative(dist, file).split(path.sep).join('/');
+    if (relative === '404.html') return new URL('/404/', CANONICAL_ORIGIN);
+    if (relative.endsWith('/index.html')) {
+      return new URL(`/${relative.slice(0, -'index.html'.length)}`, CANONICAL_ORIGIN);
     }
+    return new URL(`/${relative}`, CANONICAL_ORIGIN);
+  }
 
-    if (!SITE_ORIGINS.has(resolved.origin)) continue;
-    const isBuiltTarget = BUILT_PATHS.has(resolved.pathname)
-      || BUILT_PREFIXES.some((prefix) => resolved.pathname.startsWith(prefix));
-    if (!isBuiltTarget) {
-      const allowed = ALLOWED_SITE_PATHS.has(resolved.pathname)
-        || ALLOWED_SITE_PREFIXES.some((prefix) => resolved.pathname.startsWith(prefix));
-      if (!allowed) {
-        failures.push(`${path.relative(DIST, sourceFile)}: same-origin link escapes supported site paths: ${destination}`);
+  const { exists, targetFile, htmlFor, idsFor } = createBuildLinkCache(dist, 'path escapes docs build');
+
+  const allFiles = await walk(dist);
+  const htmlFiles = allFiles.filter((file) => file.endsWith('.html'));
+  if (htmlFiles.length === 0) throw new Error(`No HTML files found in ${dist}`);
+
+  const failures = [];
+  let checked = 0;
+  for (const sourceFile of htmlFiles) {
+    const html = await htmlFor(sourceFile);
+    const sourceUrl = pageUrl(sourceFile);
+    const attributes = [...html.matchAll(/\b(?:href|src)=(['"])(.*?)\1/gi)].map((match) => match[2]);
+
+    for (const destination of attributes) {
+      if (!destination || /^(?:mailto:|tel:|data:|javascript:|blob:)/i.test(destination)) continue;
+
+      let resolved;
+      try {
+        resolved = new URL(destination, sourceUrl);
+      } catch {
+        failures.push(`${path.relative(dist, sourceFile)}: invalid URL ${JSON.stringify(destination)}`);
+        continue;
       }
-      continue;
-    }
 
-    let target;
-    try {
-      target = await targetFile(resolved);
-    } catch (error) {
-      failures.push(`${path.relative(DIST, sourceFile)}: ${error.message}`);
-      continue;
-    }
+      if (!SITE_ORIGINS.has(resolved.origin)) continue;
+      const isBuiltTarget = BUILT_PATHS.has(resolved.pathname)
+        || BUILT_PREFIXES.some((prefix) => resolved.pathname.startsWith(prefix));
+      if (!isBuiltTarget) {
+        const allowed = ALLOWED_SITE_PATHS.has(resolved.pathname)
+          || ALLOWED_SITE_PREFIXES.some((prefix) => resolved.pathname.startsWith(prefix));
+        if (!allowed) {
+          failures.push(`${path.relative(dist, sourceFile)}: same-origin link escapes supported site paths: ${destination}`);
+        }
+        continue;
+      }
 
-    checked += 1;
-    if (!await exists(target)) {
-      failures.push(`${path.relative(DIST, sourceFile)}: ${destination} -> missing ${path.relative(DIST, target)}`);
-      continue;
-    }
+      let target;
+      try {
+        target = await targetFile(resolved);
+      } catch (error) {
+        failures.push(`${path.relative(dist, sourceFile)}: ${error.message}`);
+        continue;
+      }
 
-    if (resolved.hash && target.endsWith('.html')) {
-      const fragment = decodeURIComponent(resolved.hash.slice(1));
-      const targetHtml = await htmlFor(target);
-      const ids = new Set([...targetHtml.matchAll(/\bid=(['"])(.*?)\1/gi)].map((match) => match[2]));
-      if (!ids.has(fragment)) {
-        failures.push(`${path.relative(DIST, sourceFile)}: ${destination} -> missing fragment #${fragment}`);
+      checked += 1;
+      if (!await exists(target)) {
+        failures.push(`${path.relative(dist, sourceFile)}: ${destination} -> missing ${path.relative(dist, target)}`);
+        continue;
+      }
+
+      if (resolved.hash && target.endsWith('.html')) {
+        const fragment = decodeURIComponent(resolved.hash.slice(1));
+        const ids = await idsFor(target);
+        if (!ids.has(fragment)) {
+          failures.push(`${path.relative(dist, sourceFile)}: ${destination} -> missing fragment #${fragment}`);
+        }
       }
     }
   }
+
+  return { failures, checked, pages: htmlFiles.length };
 }
 
-if (failures.length > 0) {
-  console.error(`Built documentation link check failed with ${failures.length} issue(s):`);
-  for (const failure of failures) console.error(`- ${failure}`);
-  process.exit(1);
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  const { failures, checked, pages } = await checkBuiltDocsLinks();
+  if (failures.length > 0) {
+    console.error(`Built documentation link check failed with ${failures.length} issue(s):`);
+    for (const failure of failures) console.error(`- ${failure}`);
+    process.exitCode = 1;
+  } else console.log(`Built documentation links valid: ${checked} internal targets checked across ${pages} HTML pages.`);
 }
-
-console.log(`Built documentation links valid: ${checked} internal targets checked across ${htmlFiles.length} HTML pages.`);
