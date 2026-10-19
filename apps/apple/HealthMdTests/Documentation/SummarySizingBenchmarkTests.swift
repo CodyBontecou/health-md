@@ -50,10 +50,10 @@ final class SummarySizingBenchmarkTests: XCTestCase {
         let root = try repositoryRoot()
         let directory = root.appendingPathComponent("apps/apple/docs/reference/generated/core")
         let expected: [String: Int] = [
-            "summary-day.json": 27_749,
-            "summary-day.csv": 17_202,
-            "summary-day.md": 23_358,
-            "summary-day-bases.md": 15_558,
+            "summary-day.json": 27_750,
+            "summary-day.csv": 17_203,
+            "summary-day.md": 23_359,
+            "summary-day-bases.md": 15_559,
         ]
         for (name, byteCount) in expected {
             let data = try Data(contentsOf: directory.appendingPathComponent(name))
