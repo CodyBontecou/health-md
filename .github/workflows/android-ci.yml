@@ -9,6 +9,9 @@ on:
   push:
     branches: [main]
     paths:
+      - 'AGENTS.md'
+      - 'Makefile'
+      - '.github/actions/**'
       - 'apps/android/**'
       - 'apps/cli/**'
       - 'packages/contracts/**'
@@ -23,6 +26,11 @@ on:
         description: Exact commit to qualify
         required: false
         type: string
+      full_qualification:
+        description: Run every active job and the full Play accessibility matrix for reusable qualification
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -41,26 +49,98 @@ jobs:
       pull-requests: read
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      test: ${{ steps.detect.outputs.test }}
+      fdroid: ${{ steps.detect.outputs.fdroid }}
+      instrumentation: ${{ steps.detect.outputs.instrumentation }}
+      wear: ${{ steps.detect.outputs.wear }}
+      interop: ${{ steps.detect.outputs.interop }}
+      accessibility_matrix: ${{ steps.detect.outputs.accessibility_matrix }}
     steps:
-      - name: Check out source for the local composite action
+      - name: Check out source for job selection
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Detect whether Android CI must run
+      - name: Detect which Android jobs must run
         id: detect
-        uses: ./.github/actions/component-changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_FULL_QUALIFICATION: ${{ inputs.full_qualification || false }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: python3 apps/android/scripts/android-ci-plan.py --release-sha "$RELEASE_SHA"
+
+  policy:
+    name: Android tooling and release policy
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          component: Android CI
-          paths: |
-            apps/android/**
-            apps/cli/**
-            packages/contracts/**
-            packages/healthmd-core-rust/**
-            docs/migration/**
-            .github/workflows/README.md
-            .github/workflows/android-*.yml
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Install pinned Google Play CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          download="$RUNNER_TEMP/gplay-download"
+          curl -fsSL \
+            https://github.com/tamtom/play-console-cli/releases/download/v0.8.0/gplay-linux-amd64 \
+            -o "$download"
+          echo "ea9d812878dcc61faa0401a306f3f648ab6779d87358e07afb8590e9c96a313a  $download" \
+            | sha256sum --check --strict
+          install -m 0755 "$download" "$RUNNER_TEMP/gplay"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Validate Google Play listing metadata
+        # This entry point also discovers and runs every scripts/tests/test_*.py,
+        # including CI routing, final-gate, and workflow pin regression cases.
+        run: ./scripts/validate-play-listing.sh
+
+      - name: Validate phone-only Android release policy
+        run: ./scripts/test-android-promotion-policy.sh
+
+      - name: Validate Wear audit evidence links
+        run: ./scripts/verify-wear-audit-evidence.sh
+
+      - name: Validate Android release scripts and evidence policies
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/*.sh scripts/tests/*.sh
+          bash scripts/tests/test_check_wear_adb_pair_readiness.sh
+          bash scripts/tests/test_check_github_wear_release_environments.sh
+          bash scripts/tests/test_google_play_generated_apk_policy.sh
+          bash scripts/tests/test_validate_wear_artifact_policy.sh
+          ruby -c fastlane/Fastfile
+          python3 -m py_compile scripts/*.py scripts/tests/*.py
+          bash scripts/tests/test_seal_wear_release_evidence.sh
+          bash scripts/tests/test_verify_android_production_promotion_evidence.sh
+          bash scripts/tests/test_verify_android_production_promotion_recovery_evidence.sh
+
+      - name: Validate Wear screenshots when manual assets are present
+        shell: bash
+        run: |
+          if [[ -f play-store/wear/screenshots/wear-app.png || -f play-store/wear/screenshots/wear-tile.png ]]; then
+            python3 ./scripts/validate-wear-play-assets.py
+          else
+            echo "Manual Wear Play screenshots are pending for the deferred companion qualification."
+          fi
+
+      - name: Test native cache toolchain setup
+        working-directory: ${{ github.workspace }}
+        run: python3 .github/actions/android-native-cache/test_setup_toolchain.py
+
+      - name: Test CI instrumentation and local accessibility runners
+        run: |
+          scripts/test-ci-instrumentation-runner.sh
+          scripts/test-accessibility-ui-runner.sh
 
   test:
     needs: changes
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.test == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     defaults:
@@ -87,75 +167,13 @@ jobs:
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         with:
-          # The action default includes the retired SDK "tools" package.
+          # The action's default also requests the retired SDK 'tools' package.
           packages: platform-tools
 
-      - name: Install pinned Google Play CLI
-        shell: bash
-        run: |
-          set -euo pipefail
-          download="$RUNNER_TEMP/gplay-download"
-          curl -fsSL \
-            https://github.com/tamtom/play-console-cli/releases/download/v0.8.0/gplay-linux-amd64 \
-            -o "$download"
-          echo "ea9d812878dcc61faa0401a306f3f648ab6779d87358e07afb8590e9c96a313a  $download" \
-            | sha256sum --check --strict
-          install -m 0755 "$download" "$RUNNER_TEMP/gplay"
-          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
-
-      - name: Validate Google Play listing metadata
-        run: ./scripts/validate-play-listing.sh
-
-      - name: Validate phone-only Android release policy
-        run: ./scripts/test-android-promotion-policy.sh
-
-      - name: Validate Wear audit evidence links
-        run: ./scripts/verify-wear-audit-evidence.sh
-
-      - name: Validate Android release scripts and evidence policies
-        shell: bash
-        run: |
-          set -euo pipefail
-          bash -n scripts/*.sh scripts/tests/*.sh
-          bash scripts/tests/test_check_wear_adb_pair_readiness.sh
-          bash scripts/tests/test_check_github_wear_release_environments.sh
-          bash scripts/tests/test_google_play_generated_apk_policy.sh
-          bash scripts/tests/test_validate_wear_artifact_policy.sh
-          ruby -c fastlane/Fastfile
-          python3 -m py_compile scripts/*.py scripts/tests/*.py
-          python3 scripts/tests/test_android_workflow_action_pins.py
-          python3 scripts/tests/test_android_release_documentation_policy.py
-          python3 scripts/tests/test_extract_wear_release_evidence_archive.py
-          python3 scripts/tests/test_validate_wear_release_attestation.py
-          bash scripts/tests/test_seal_wear_release_evidence.sh
-          bash scripts/tests/test_verify_android_production_promotion_evidence.sh
-          bash scripts/tests/test_verify_android_production_promotion_recovery_evidence.sh
-          python3 scripts/tests/test_verify_wear_battery_evidence.py
-          python3 scripts/tests/test_verify_wear_paired_qa_evidence.py
-          python3 scripts/tests/test_verify_wear_play_screenshot_evidence.py
-          python3 scripts/tests/test_verify_wear_play_screenshot_upload_evidence.py
-
-      - name: Validate Wear screenshots when manual assets are present
-        shell: bash
-        run: |
-          if [[ -f play-store/wear/screenshots/wear-app.png || -f play-store/wear/screenshots/wear-tile.png ]]; then
-            python3 ./scripts/validate-wear-play-assets.py
-          else
-            echo "Manual Wear Play screenshots are pending for the deferred companion qualification."
-          fi
-
-      - name: Set up pinned Rust Android toolchain
-        working-directory: ${{ github.workspace }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          rustup toolchain install 1.88.0 --profile minimal
-          rustup target add --toolchain 1.88.0 \
-            aarch64-linux-android \
-            armv7-linux-androideabi \
-            x86_64-linux-android \
-            i686-linux-android
-          rustup run 1.88.0 cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Restore pinned Rust toolchain and native build cache
+        uses: ./.github/actions/android-native-cache
+        with:
+          cache-targets: android
 
       - name: Install pinned Android NDK
         shell: bash
@@ -177,50 +195,85 @@ jobs:
         with:
           min-wrapper-count: 1
 
+      - name: Record hosted runner CPU and memory
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import platform
+          import subprocess
+
+          report = pathlib.Path("build/reports/ci/runner.json")
+          report.parent.mkdir(parents=True, exist_ok=True)
+          report.write_text(json.dumps({
+              "system": platform.system(),
+              "kernel": platform.release(),
+              "architecture": platform.machine(),
+              "logical_cpus": os.cpu_count(),
+              "cpu": json.loads(subprocess.check_output(["lscpu", "--json"], text=True)),
+              "memory": pathlib.Path("/proc/meminfo").read_text(),
+          }, indent=2) + "\n")
+          PY
+
+      - name: Verify compilation cache never reuses test results
+        run: |
+          ./gradlew --version
+          python3 scripts/test-ci-gradle-cache.py
+
       - name: Prepare source-built Rust core
-        run: ./gradlew :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
+        run: ./scripts/run-ci-gradle.sh :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
 
-      - name: Test local accessibility runner safety
-        working-directory: apps/android
-        run: scripts/test-accessibility-ui-runner.sh
-
-      - name: Run app variant, wearable contract, Wear, and protocol tests
+      - name: Run Play app, shared contract, core, and protocol tests
         shell: bash
         run: |
           set -euo pipefail
           # Keep Compose compiler peaks bounded and compile one app variant at a time.
-          ./gradlew --no-daemon --max-workers=2 \
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 \
             :app:testPlayDebugUnitTest \
             :healthmd-core:testDebugUnitTest \
             :wearable-contract:test \
-            :wear:testDebugUnitTest \
             :direct-protocol:test \
             --stacktrace
-          ./gradlew --no-daemon --max-workers=2 :app:testPlayReleaseUnitTest --stacktrace
-          ./gradlew --no-daemon --max-workers=2 :app:testPlayE2eUnitTest --stacktrace
-
-      - name: Run Wear lint, assemble, and bundle
-        run: ./gradlew :wear:lintDebug :wear:assembleDebug :wear:bundleDebug --stacktrace
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 :app:testPlayReleaseUnitTest --stacktrace
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 :app:testPlayE2eUnitTest --stacktrace
 
       - name: Run Android lint
-        run: ./gradlew :app:lintPlayDebug --stacktrace
+        run: ./scripts/run-ci-gradle.sh :app:lintPlayDebug --stacktrace
 
-      - name: Assemble debug app and validate packaged pair and retained Play-generated APK policy
+      - name: Assemble Play debug app and validate retained Play-generated APK policy
         run: |
-          ./gradlew :app:assemblePlayDebug :app:bundlePlayDebug --stacktrace
-          ./scripts/test-wear-bundle-manifest-verifier.sh \
-            wear/build/outputs/bundle/debug/wear-debug.aab \
-            app/build/outputs/bundle/playDebug/app-play-debug.aab
+          ./scripts/run-ci-gradle.sh :app:assemblePlayDebug :app:bundlePlayDebug --stacktrace
           bash scripts/tests/test_verify_google_play_generated_apk_evidence.sh
 
-  instrumentation:
-    name: Emulator instrumentation and direct E2E
+      - name: Retain JVM test results, task profiles, and runner diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-jvm-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/android/build/reports/ci/
+            apps/android/build/reports/profile/
+            apps/android/app/build/reports/tests/
+            apps/android/app/build/test-results/
+            apps/android/healthmd-core/build/test-results/
+            apps/android/wearable-contract/build/test-results/
+            apps/android/direct-protocol/build/test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
+  instrumentation-shards:
+    name: Android device shard ${{ matrix.shard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     needs: changes
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.instrumentation == 'true' }}
     runs-on: ubuntu-24.04
-    # The complete accessibility matrix contributes 402 of roughly 440 app tests in
-    # each F-Droid and Play variant, in addition to shared-core and direct CLI checks.
-    # Preserve enough time to finish both variants on a cold hosted runner.
+    # F-Droid instrumentation is paused while that build is not distributed.
+    # Play retains the complete accessibility display matrix.
     timeout-minutes: 100
     defaults:
       run:
@@ -242,18 +295,10 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Set up pinned Rust Android toolchain
-        working-directory: ${{ github.workspace }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          rustup toolchain install 1.88.0 --profile minimal
-          rustup target add --toolchain 1.88.0 \
-            aarch64-linux-android \
-            armv7-linux-androideabi \
-            x86_64-linux-android \
-            i686-linux-android
-          rustup run 1.88.0 cargo install cargo-ndk --version 4.1.2 --locked
+      - name: Restore pinned Rust toolchain and native build cache
+        uses: ./.github/actions/android-native-cache
+        with:
+          cache-targets: android-cli
 
       - name: Install pinned Android NDK
         shell: bash
@@ -270,13 +315,34 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      - name: Prepare source-built Rust core before the emulator boots
-        run: ./gradlew --no-daemon :healthmd-core:prepareRustDebug --stacktrace
+      - name: Prepare instrumentation APKs before the emulator boots
+        # Avoid running Kotlin compilation alongside the emulator's first boot.
+        # In-process compilation leaves no Kotlin daemon holding memory afterward.
+        run: |
+          ./gradlew --no-daemon --max-workers=2 \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            :healthmd-core:prepareRustDebug \
+            :app:assemblePlayDebug :app:assemblePlayDebugAndroidTest --stacktrace
+
+      - name: Prepare core and direct E2E artifacts on shard zero before boot
+        if: ${{ matrix.shard == 0 }}
+        run: |
+          ./gradlew --no-daemon --max-workers=2 \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -PhealthmdInstrumentedTestBuildType=e2e \
+            :healthmd-core:assembleDebugAndroidTest \
+            :app:assemblePlayE2e :app:assemblePlayE2eAndroidTest --stacktrace
+          cd ../cli
+          cargo test --locked -p healthmd-client --test android_live_listener --no-run
 
       - name: Enable KVM access
         run: sudo chmod 666 /dev/kvm
 
-      - name: Run shared-core instrumentation smoke test
+      - name: Run core and Play instrumentation
+        env:
+          HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX: ${{ needs.changes.outputs.accessibility_matrix }}
+          HEALTHMD_ANDROID_SHARD_COUNT: '4'
+          HEALTHMD_ANDROID_SHARD_INDEX: ${{ matrix.shard }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
           api-level: 35
@@ -291,15 +357,76 @@ jobs:
             adb -s emulator-5554 shell settings put secure show_ime_with_hard_keyboard 1
             test "$(adb -s emulator-5554 shell settings get secure show_ime_with_hard_keyboard | tr -d '\r')" = 1
             for attempt in $(seq 1 30); do default_ime=$(adb -s emulator-5554 shell settings get secure default_input_method | tr -d '\r'); if [ -n "$default_ime" ] && [ "$default_ime" != null ] && adb -s emulator-5554 shell ime list -s | tr -d '\r' | grep -Fx "$default_ime"; then exit 0; fi; sleep 1; done; exit 1
-            cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedFdroidDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
-            cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh
+            # Native keyboard and Back tests require a fully unlocked emulator window.
+            # Make that fixture explicit on this owned AVD.
+            adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+            adb -s emulator-5554 shell locksettings set-disabled true
+            test "$(adb -s emulator-5554 shell locksettings get-disabled | tr -d '\r')" = true
+            adb -s emulator-5554 shell wm dismiss-keyguard
+            cd apps/android && bash -o pipefail -c 'mkdir -p build/logs; timeout 90 ./scripts/prepare-ci-emulator.sh 2>&1 | tee build/logs/emulator-readiness.log'
+            cd apps/android && ./scripts/run-ci-instrumentation.sh
+            if [ "${{ matrix.shard }}" = 0 ]; then cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh; fi
 
-  fdroid:
-    name: F-Droid clean build
+      - name: Retain instrumentation reports and per-test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            apps/android/build/logs/emulator-readiness.log
+            apps/android/app/build/reports/androidTests/connected/**
+            apps/android/app/build/outputs/androidTest-results/connected/**
+            apps/android/healthmd-core/build/reports/androidTests/connected/**
+            apps/android/healthmd-core/build/outputs/androidTest-results/connected/**
+
+  instrumentation:
+    # Preserve the release qualification job name and legacy aggregate artifact.
+    name: Emulator instrumentation and direct E2E
+    needs: [changes, instrumentation-shards]
+    if: ${{ always() && needs.changes.outputs.instrumentation == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout report verifier
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+      - name: Collect all shard reports without overwriting matching XML paths
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}-shard-*
+          path: shard-reports
+      - name: Verify every shard and the combined test reports
+        env:
+          SHARDS_RESULT: ${{ needs.instrumentation-shards.result }}
+        run: |
+          set -euo pipefail
+          test "$SHARDS_RESULT" = success
+          python3 apps/android/scripts/verify-ci-instrumentation-shards.py \
+            --reports shard-reports --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}'
+      - name: Retain complete instrumentation evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: shard-reports/
+          retention-days: 7
+          if-no-files-found: error
+
+  fdroid-build:
+    name: F-Droid clean build (${{ matrix.variant }})
     needs: changes
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.fdroid == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      # Independent clean runners overlap debug validation with release shrinking.
+      # Keep both lanes running so one failure cannot cancel the other's coverage.
+      fail-fast: false
+      matrix:
+        variant: [debug, release]
     defaults:
       run:
         working-directory: apps/android
@@ -320,19 +447,17 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Install pinned Rust and Android native toolchains
+      - name: Restore pinned Rust tools without compiled project outputs
+        uses: ./.github/actions/android-native-cache
+        with:
+          cache-targets: none
+
+      - name: Require a clean F-Droid build environment and pinned NDK
         shell: bash
         run: |
           set -euo pipefail
           test ! -e local.properties
           test -z "${HEALTHMD_ANDROID_KEYSTORE_PATH:-}"
-          rustup toolchain install 1.88.0 --profile minimal
-          rustup target add --toolchain 1.88.0 \
-            aarch64-linux-android \
-            armv7-linux-androideabi \
-            x86_64-linux-android \
-            i686-linux-android
-          rustup run 1.88.0 cargo install cargo-ndk --version 4.1.2 --locked
           sdkmanager "ndk;27.1.12297006"
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> "$GITHUB_ENV"
@@ -347,17 +472,54 @@ jobs:
         with:
           min-wrapper-count: 1
 
-      - name: Test, lint, and build both F-Droid artifacts
+      - name: Record F-Droid runner diagnostics
+        shell: bash
         run: |
-          ./gradlew --no-daemon --max-workers=2 \
-            :app:testFdroidDebugUnitTest \
-            :app:lintFdroidDebug \
-            :app:assembleFdroidDebug \
-            :app:assembleFdroidRelease \
-            --stacktrace
-          ./scripts/verify-fdroid-artifact.sh
+          mkdir -p build/reports/ci
+          lscpu > build/reports/ci/cpu.txt
+          cat /proc/meminfo > build/reports/ci/memory-before.txt
+          for resource in cpu memory io; do
+            if [[ -r "/proc/pressure/$resource" ]]; then
+              cat "/proc/pressure/$resource" > "build/reports/ci/$resource-pressure-before.txt"
+            fi
+          done
+
+      - name: Build and validate clean F-Droid lane
+        shell: bash
+        env:
+          FDROID_VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          case "$FDROID_VARIANT" in
+            debug)
+              tasks=(:app:testFdroidDebugUnitTest :app:lintFdroidDebug :app:assembleFdroidDebug)
+              ;;
+            release) tasks=(:app:assembleFdroidRelease) ;;
+            *) echo "Invalid F-Droid CI lane: $FDROID_VARIANT" >&2; exit 2 ;;
+          esac
+          # Keep this inline: reusable qualification may check out an older release_sha.
+          # Neither lane may reuse compiled project outputs or cached test results.
+          /usr/bin/time -v -o build/reports/ci/build-resources.txt \
+            ./gradlew --no-daemon --max-workers=2 --no-build-cache --no-configuration-cache \
+            --profile "${tasks[@]}" --stacktrace
+          if [[ "$FDROID_VARIANT" == release ]]; then
+            ./scripts/verify-fdroid-artifact.sh
+          fi
+
+      - name: Retain final F-Droid runner diagnostics
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          mkdir -p build/reports/ci
+          cat /proc/meminfo > build/reports/ci/memory-after.txt
+          for resource in cpu memory io; do
+            if [[ -r "/proc/pressure/$resource" ]]; then
+              cat "/proc/pressure/$resource" > "build/reports/ci/$resource-pressure-after.txt"
+            fi
+          done
 
       - name: Scan F-Droid release APK
+        if: ${{ matrix.variant == 'release' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -384,7 +546,7 @@ jobs:
           test "$scanner_status" -eq 0
 
       - name: Retain unsigned F-Droid evidence
-        if: ${{ always() }}
+        if: ${{ always() && matrix.variant == 'release' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: android-fdroid-${{ github.run_id }}-${{ github.run_attempt }}
@@ -396,10 +558,40 @@ jobs:
             apps/android/app/build/reports/fdroid-scanner.json
             apps/android/app/build/reports/fdroid-scanner.log
 
+      - name: Retain F-Droid test results, profiles, and runner diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-fdroid-${{ matrix.variant }}-results-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            apps/android/build/reports/ci/
+            apps/android/build/reports/profile/
+            apps/android/app/build/reports/tests/testFdroidDebugUnitTest/
+            apps/android/app/build/test-results/testFdroidDebugUnitTest/
+            apps/android/app/build/reports/lint-results-fdroidDebug.*
+
+  fdroid:
+    # Release recovery requires this exact stable job name. Matrix success means
+    # both clean lanes passed; failure/cancellation/skipping cannot qualify it.
+    name: F-Droid clean build
+    needs: [changes, fdroid-build]
+    if: ${{ always() && needs.changes.outputs.fdroid == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require both clean F-Droid lanes
+        env:
+          FDROID_BUILD_RESULT: ${{ needs.fdroid-build.result }}
+        run: |
+          set -euo pipefail
+          test "$FDROID_BUILD_RESULT" = success
+
   wear-emulator-smoke:
     name: Wear emulator smoke
     needs: changes
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.wear == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -440,7 +632,7 @@ jobs:
   rust-kotlin-direct-interop:
     name: Rust/Kotlin direct interop
     needs: changes
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.interop == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -458,8 +650,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@2eae45db285e407f22119950686d47e1101e071b # 1.88.0
+      - name: Restore Rust host build cache
+        uses: ./.github/actions/android-native-cache
+        with:
+          cache-targets: cli
+          android-toolchain: 'false'
 
       - name: Run live Rust/Kotlin protocol gate
         env:
@@ -513,6 +708,7 @@ jobs:
     if: ${{ always() }}
     needs:
       - changes
+      - policy
       - test
       - fdroid
       - wear-emulator-smoke
@@ -524,20 +720,46 @@ jobs:
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
           CHANGES_RUN: ${{ needs.changes.outputs.run }}
+          POLICY_RESULT: ${{ needs.policy.result }}
+          TEST_RUN: ${{ needs.changes.outputs.test }}
+          FDROID_RUN: ${{ needs.changes.outputs.fdroid }}
+          INTEROP_RUN: ${{ needs.changes.outputs.interop }}
+          WEAR_RUN: ${{ needs.changes.outputs.wear }}
+          INSTRUMENTATION_RUN: ${{ needs.changes.outputs.instrumentation }}
           TEST_RESULT: ${{ needs.test.result }}
           FDROID_RESULT: ${{ needs.fdroid.result }}
           INTEROP_RESULT: ${{ needs.rust-kotlin-direct-interop.result }}
           WEAR_RESULT: ${{ needs.wear-emulator-smoke.result }}
           INSTRUMENTATION_RESULT: ${{ needs.instrumentation.result }}
         run: |
-          set -e
+          set -euo pipefail
           test "$CHANGES_RESULT" = success
-          if [ "$CHANGES_RUN" != "true" ]; then
-            echo "No Android-affecting changes in this pull request; Android CI skipped."
-            exit 0
-          fi
-          test "$TEST_RESULT" = success
-          test "$FDROID_RESULT" = success
-          test "$INTEROP_RESULT" = success
-          test "$WEAR_RESULT" = success
-          test "$INSTRUMENTATION_RESULT" = success
+          case "$CHANGES_RUN" in
+            false)
+              for selected in "$TEST_RUN" "$FDROID_RUN" "$INTEROP_RUN" \
+                "$WEAR_RUN" "$INSTRUMENTATION_RUN"; do
+                test "$selected" = false
+              done
+              for result in "$POLICY_RESULT" "$TEST_RESULT" "$FDROID_RESULT" \
+                "$INTEROP_RESULT" "$WEAR_RESULT" "$INSTRUMENTATION_RESULT"; do
+                test "$result" = skipped
+              done
+              echo "No Android-affecting changes; Android CI skipped."
+              exit 0
+              ;;
+            true) test "$POLICY_RESULT" = success ;;
+            *) echo "Invalid Android CI selection" >&2; exit 1 ;;
+          esac
+          require_job() {
+            local selected="$1" result="$2"
+            case "$selected" in
+              true) test "$result" = success ;;
+              false) test "$result" = skipped ;;
+              *) echo "Missing or invalid Android job selection" >&2; return 1 ;;
+            esac
+          }
+          require_job "$TEST_RUN" "$TEST_RESULT"
+          require_job "$FDROID_RUN" "$FDROID_RESULT"
+          require_job "$INTEROP_RUN" "$INTEROP_RESULT"
+          require_job "$WEAR_RUN" "$WEAR_RESULT"
+          require_job "$INSTRUMENTATION_RUN" "$INSTRUMENTATION_RESULT"

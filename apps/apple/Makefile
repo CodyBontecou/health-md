@@ -26,6 +26,8 @@
 ##   make generate-export-docs
 ##                           regenerate all source-backed export reference artifacts
 ##   make check-export-docs  verify generated artifacts and local documentation links
+##   make check-export-docs-after-tests
+##                           verify CLI docs and links after a successful full macOS test run
 ##   make test-export-lab-tools
 ##                           run host runner and private API sink tests
 ##   make check-export-lab-release
@@ -38,7 +40,15 @@ SHELL       := /bin/bash
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
 IOS_SIM     ?=
+# CI can omit unused cross-architecture builds while running the full suite.
+IOS_TEST_BUILD_FLAGS ?=
 MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
+# Root parallel tests opt into independent Xcode build databases. Direct
+# component and hosted CI invocations retain Xcode's existing default paths.
+IOS_DERIVED_DATA_DIR ?=
+MACOS_DERIVED_DATA_DIR ?=
+IOS_DERIVED_DATA_FLAGS = $(if $(IOS_DERIVED_DATA_DIR),-derivedDataPath "$(IOS_DERIVED_DATA_DIR)")
+MACOS_DERIVED_DATA_FLAGS = $(if $(MACOS_DERIVED_DATA_DIR),-derivedDataPath "$(MACOS_DERIVED_DATA_DIR)")
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 300
 CLI_INSTALL_DIR ?= $(HOME)/.local/bin
@@ -50,7 +60,7 @@ IOS_TEST_RAW_LOG   ?= build/logs/xcodebuild-ios-raw.log
 COVERAGE_DIR       := build/coverage
 XCRESULT_PATH      := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-app-store-metadata check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
+.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-app-store-metadata check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs check-export-docs-after-tests test-cli cli install-cli test-export-lab-tools check-export-lab-release
 
 prepare-healthmd-core-rust:
 	@$(CORE_RUST_PREPARE)
@@ -78,8 +88,10 @@ test-ios: prepare-healthmd-core-rust
 	  xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-iOS \
+	  $(IOS_DERIVED_DATA_FLAGS) \
 	  -destination "$$ios_sim" \
 	  -configuration Debug-iOS \
+	  $(IOS_TEST_BUILD_FLAGS) \
 	  -resultBundlePath "$(IOS_XCRESULT_PATH)" \
 	  -test-timeouts-enabled NO \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
@@ -96,6 +108,7 @@ test-macos: prepare-healthmd-core-rust
 	xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
+	  $(MACOS_DERIVED_DATA_FLAGS) \
 	  -destination '$(MACOS_DEST)' \
 	  $(XCODE_TEST_TIMEOUT_FLAGS) \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
@@ -166,10 +179,14 @@ generate-export-docs:
 	@scripts/check-documentation-links.py
 
 check-export-docs:
-	@scripts/generated-export-docs.sh check
-	@scripts/generated-individual-entry-docs.sh check
-	@scripts/generated-rollup-reference-docs.sh check
-	@scripts/generated-automation-reference-docs.sh check
+	@scripts/check-generated-reference-docs.sh
+	@scripts/generated-cli-reference-docs.sh check
+	@scripts/check-documentation-links.py
+
+# Requires a successful full HealthMdTests run on macOS. That suite already
+# checks core, individual-entry, rollup, and automation documentation for drift.
+# Keep the separate CLI package check and repository link validation here.
+check-export-docs-after-tests:
 	@scripts/generated-cli-reference-docs.sh check
 	@scripts/check-documentation-links.py
 

@@ -47,7 +47,9 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
         scheduleTab.tap()
 
-        let frequencyPicker = app.segmentedControls[UITestLaunchHelper.Schedule.frequencyPicker]
+        // The adaptive frequency control uses native buttons in a container,
+        // with a menu fallback; it is no longer a UIKit segmented control.
+        let frequencyPicker = app.descendants(matching: .any)[UITestLaunchHelper.Schedule.frequencyPicker].firstMatch
         for _ in 0..<4 where !frequencyPicker.exists {
             app.swipeUp()
         }

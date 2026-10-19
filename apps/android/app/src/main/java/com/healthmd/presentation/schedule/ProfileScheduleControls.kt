@@ -43,6 +43,8 @@ internal object ProfileScheduleTags {
     const val ADD = "profileSchedule.add"
     const val DIALOG = "profileSchedule.dialog.content"
     const val DELETE_DIALOG = "profileSchedule.deleteDialog.content"
+    const val DISCARD_RECOVERY = "profileSchedule.discardRecovery"
+    const val DISCARD_RECOVERY_DIALOG = "profileSchedule.discardRecoveryDialog.content"
     const val TITLE = "profileSchedule.dialog.title"
     const val BODY = "profileSchedule.dialog.body"
     const val SAVE = "profileSchedule.dialog.save"
@@ -59,13 +61,15 @@ internal object ProfileScheduleTags {
     const val MENU = ".menu"
 }
 
-/** No surrounding editor click: reading text and three independent actions have their own space. */
+/** No surrounding editor click: reading text and independent actions have their own space. */
 @Composable
 internal fun ProfileScheduleRowContent(
     row: ProfileScheduleRow,
     onToggle: (Boolean) -> Unit,
     onOpenEditor: () -> Unit,
     onDelete: () -> Unit,
+    onDiscardRecovery: () -> Unit,
+    discardEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth().testTag(ProfileScheduleTags.ROW),
@@ -73,8 +77,7 @@ internal fun ProfileScheduleRowContent(
         Text(row.profile.name, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary,
             modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.NAME))
         Text(
-            cadenceSummary(row.entry, stringResource(R.string.profile_schedule_refresh_summary,
-                row.entry?.todayRefreshIntervalHours ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS)),
+            cadenceSummary(row.entry, todayRefreshSummary(row.entry)),
             style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary,
             modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.SUMMARY),
         )
@@ -96,6 +99,18 @@ internal fun ProfileScheduleRowContent(
                 }
             },
         )
+        if (row.entry?.pendingExports?.isNotEmpty() == true) {
+            val description = stringResource(R.string.profile_schedule_discard_recovery_named, row.profile.name)
+            TextButton(
+                onClick = onDiscardRecovery, enabled = discardEnabled,
+                modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
+                    .testTag(ProfileScheduleTags.DISCARD_RECOVERY)
+                    .semantics { contentDescription = description },
+            ) {
+                Text(stringResource(R.string.profile_schedule_discard_recovery),
+                    color = if (discardEnabled) AppColors.error else AppColors.textMuted)
+            }
+        }
         ProfileScheduleToggle(
             label = stringResource(R.string.enabled), checked = row.entry?.isEnabled == true,
             onCheckedChange = onToggle, modifier = Modifier.testTag(ProfileScheduleTags.TOGGLE),

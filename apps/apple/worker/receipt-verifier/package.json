@@ -1,0 +1,7 @@
+{
+  "name": "healthmd-receipt-verifier",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test test/*.test.js test/*.test.mjs" },
+  "engines": { "node": ">=22.13" }
+}

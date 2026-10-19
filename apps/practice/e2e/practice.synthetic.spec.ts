@@ -163,13 +163,20 @@ test.describe("serial real local Wrangler qualification", () => {
     await page.getByLabel("Exclusive end date").fill("2040-01-15");
     await page.getByRole("button", { name: "Validate and preview" }).click();
     await expect(page.getByRole("table", { name: "Canonical request fields" })).toContainText("recurring_collection");
+    const renewedResponse = page.waitForResponse(response => response.url().endsWith("/api/v1/operation") && response.request().postDataJSON()?.operation === "request_renew");
     await page.getByRole("button", { name: "Issue this exact preview" }).click();
+    const successorId = (await (await renewedResponse).json()).data.request.id;
+    expect(successorId).toMatch(/^request_synthetic_/);
     await page.getByRole("button", { name: "Synthetic claim" }).click();
     await page.getByRole("button", { name: "Accept these exact instructions" }).click();
+    // Acceptance commits and refreshes the request list before this status appears.
+    await expect(page.getByText(/Claimant receipt cleared/)).toBeVisible();
     await page.getByRole("link", { name: "Requests" }).click();
     const successor = page.getByRole("row").filter({ hasText: "recurring collection" }).filter({ hasText: "accepted" }).last();
     await successor.getByRole("button", { name: "Open" }).click();
+    const cancellation = page.waitForRequest(request => request.url().endsWith("/api/v1/operation") && request.postDataJSON()?.operation === "request_cancel");
     await page.getByRole("button", { name: "Cancel request" }).click();
+    expect((await cancellation).postDataJSON().payload.requestId).toBe(successorId);
     await expect(page.getByRole("table", { name: "Separate lifecycle facts" })).toContainText("canceled");
 
     await page.getByRole("link", { name: "Packet inbox" }).click();
