@@ -179,6 +179,15 @@ final class ExportJourneyUITests: XCTestCase {
         // Geist dialogs are in-tree SwiftUI overlays rather than native UIAlert instances.
         let permissionTitle = app.staticTexts["Health Permissions Needed"]
         XCTAssertTrue(permissionTitle.waitForExistence(timeout: 5), "Tapping the toast should show permission guidance")
+        let dialogDisappears = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: permissionTitle
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [dialogDisappears], timeout: 9),
+            .timedOut,
+            "Permission guidance must stay open beyond the toast's eight-second expiry"
+        )
         XCTAssertTrue(app.buttons["Request Access"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["Open Health App"].waitForExistence(timeout: 3))
         let biologicalSexGuidance = app.staticTexts.matching(
