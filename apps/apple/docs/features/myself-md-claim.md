@@ -1,0 +1,11 @@
+# Complimentary myself.md claim handoff
+
+On iOS/iPadOS, `healthmd://myself/claim` opens the purchase-disclosure screen. The exact route rejects credentials, ports, query strings and fragments. iPhone Settings → Claim myself.md access presents the same view. Opening either entry point does not read purchase evidence, sync StoreKit, contact myself.md, authenticate or grant access. The owner must choose Verify purchase and continue.
+
+The view reuses the companion iso.me claim implementation. It submits only Apple-signed proof of a purchased base Individual/Family Health.md lifetime product, or the refreshed AppTransaction for an original purchase before the existing April 26, 2026 UTC cutoff. The myself.md server independently verifies product/app/ownership and eligibility, then returns an origin-validated short-lived `/claim#ticket` browser handoff. The owner signs in and explicitly confirms the receiving account. No HealthKit records or exported files are read or transmitted. Shared-family recipients do not qualify independently. Cancellation/errors remain on the disclosure screen and never claim success.
+
+The default HTTPS service is https://myself.md; `MyselfClaimServerURL` can select a separate HTTPS test server. Production rejects sandbox evidence. Existing Health.md purchases, exports and direct CLI/shared setup routes retain their own behavior. The free macOS companion does not prove a paid mobile purchase and has no claim entry point.
+
+Google Play Android now implements the same disclosure, `healthmd://myself/claim` route, completed `health_md_premium_lifetime` evidence submission and owner browser confirmation. See [Android claim behavior and verification](../../../android/docs/features/myself-md-claim.md). F-Droid does not provide purchase proof. The source capability is shared in `packages/contracts/product-capabilities.json`; updated Android distribution and successful real-purchaser verification remain release checks.
+
+Source preparation only: new native builds and a configured claim backend are required. Do not interpret a presented screen or opened URL as a verified entitlement. Poll myself.md `get_lifetime_access` after the explicit user claim to confirm the account grant.

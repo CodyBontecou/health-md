@@ -56,6 +56,18 @@ class AndroidRecoveryCoverageTests(unittest.TestCase):
         self.reject(lambda p: p.update(schema_version=True))
         self.reject(lambda p: p.update(audited_git_base="main"))
 
+    def test_historical_snapshot_bytes_cannot_change(self) -> None:
+        relative = "packages/contracts/portability-inventory/android-agent-recovery/v1/historical-base.json"
+        with tempfile.TemporaryDirectory() as directory, tempfile.NamedTemporaryFile(suffix=".json") as handle:
+            root = Path(directory).resolve()
+            historical = root / relative
+            historical.parent.mkdir(parents=True)
+            historical.write_bytes((ROOT / relative).read_bytes() + b"\n")
+            handle.write(json.dumps(self.payload).encode())
+            handle.flush()
+            with self.assertRaisesRegex(validate.ContractValidationError, "historical ledger bytes changed"):
+                validate.validate_android_recovery_coverage(root, Path(handle.name))
+
     def test_baseline_row_cannot_be_reclassified(self) -> None:
         base = json.loads((ROOT / self.payload["base_inventory"]["path"]).read_text())
         self.reject(lambda p: p.update(fields=[dict(base["fields"][0], disposition="prohibited", contract_path=None)]))

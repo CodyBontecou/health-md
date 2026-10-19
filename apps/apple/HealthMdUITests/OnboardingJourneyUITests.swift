@@ -97,6 +97,7 @@ final class OnboardingJourneyUITests: XCTestCase {
             analyticsTransport: "offline"
         )
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
         let useSharedSetup = app.descendants(matching: .any)[UITestLaunchHelper.SharedSetup.use]
         XCTAssertTrue(useSharedSetup.waitForExistence(timeout: 8))
@@ -128,6 +129,7 @@ final class OnboardingJourneyUITests: XCTestCase {
     func testSettingsProvidesSharedSetupConfigurationCard() throws {
         let app = UITestLaunchHelper.configuredApp(analyticsTransport: "offline")
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
         let controls = openSharedSetupSettings(in: app)
 
         controls.use.tap()
@@ -142,6 +144,7 @@ final class OnboardingJourneyUITests: XCTestCase {
     func testSettingsShareMenuPresentsNativeFileExporter() throws {
         let app = UITestLaunchHelper.configuredApp(analyticsTransport: "offline")
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
         let controls = openSharedSetupSettings(in: app)
 
         controls.share.tap()
@@ -157,6 +160,7 @@ final class OnboardingJourneyUITests: XCTestCase {
     func testSettingsShareMenuPresentsSystemShareSheet() throws {
         let app = UITestLaunchHelper.configuredApp(analyticsTransport: "offline")
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
         let controls = openSharedSetupSettings(in: app)
 
         controls.share.tap()
@@ -176,7 +180,7 @@ final class OnboardingJourneyUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(
-            app.staticTexts["A faster start and gentler upgrade reminders"].waitForExistence(timeout: 8),
+            app.staticTexts["Schedule recovery and clearer reminders"].waitForExistence(timeout: 8),
             "Returning users should still receive the current release notes for an unseen app version."
         )
     }

@@ -475,8 +475,15 @@
     <string name="schedule_through_today_summary">Әр іске қосу өткен толық күндерді және бүгінгі ішінара файлды экспорттайды, сондықтан күндізгі іске қосу түнгі ұйқыны да қамтиды. Екі файлды күні бойы жаңартып тұру үшін сағаттық жиілікпен бірге қолданыңыз. Бір күндегі қайталанатын мазмұннан сақтану үшін Қайта жазу немесе Жаңарту жазу режимін пайдаланыңыз.</string>
     <string name="profile_schedule_today_refresh">Бүгінгі экспортты жаңарту</string>
     <string name="profile_schedule_refresh_interval">Жаңарту аралығы</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d мин</string>
+    <string name="profile_schedule_refresh_summary_minutes">Бүгін әр %1$d мин сайын жаңартады</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d сағ</string>
     <string name="profile_schedule_refresh_summary">Бүгін әр %1$d сағ сайын жаңартады</string>
+    <string name="profile_schedule_discard_recovery">Күтудегі қалпына келтіруден бас тарту</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s үшін күтудегі қалпына келтіруден бас тарту</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s үшін күтудегі қалпына келтіруден бас тарту керек пе?</string>
+    <string name="profile_schedule_discard_recovery_body">Осы профильдің жоспарланған қайталау әрекетін тоқтатып, күтудегі күндері мен сақталған экспорт параметрлерін жояды. Келесі жоспарланған іске қосу ағымдағы профиль мен кестені пайдаланады. Профиль, API тіркелгі деректері, экспорт тарихы және экспортталған деректер сақталады. Бұрын орындалған жүктеп салуды немесе жазылған файлды кері қайтара алмайды.</string>
+    <string name="profile_schedule_discard_recovery_failed">Күтудегі қалпына келтіруден толық бас тарту мүмкін болмады. Профильді тексеріп, қайталап көріңіз.</string>
     <string name="schedule_date_window_today">Бүгін</string>
     <string name="schedule_export_past_days">Өткен күндерді экспорттау</string>
     <string name="schedule_today_summary">Әрбір іске қосу бүгінгі деректерді экспорттайды, осылайша ағымдағы күнделікті файлыңыз жаңартылып отырады. Бір күндік мазмұнның қайталануын болдырмау үшін Қайта жазу немесе Жаңарту жазу режимін пайдаланыңыз.</string>
@@ -1342,9 +1349,18 @@
     <string name="fdroid_onboarding_access_body">Ресми F-Droid нұсқасы барлық жергілікті экспорт және автоматтандыру мүмкіндіктерін тегін қамтиды.</string>
     <string name="fdroid_onboarding_no_purchase">Сатып алу, қалпына келтіру, баға немесе Play аккаунты қажет емес.</string>
     <string name="fdroid_onboarding_no_play_services">Жоспарланған экспорттар Google Play Billing қызметінсіз жұмыс істейді.</string>
-    <string name="profile_schedule_discard_recovery">Күтудегі қалпына келтіруден бас тарту</string>
-    <string name="profile_schedule_discard_recovery_named">%1$s үшін күтудегі қалпына келтіруден бас тарту</string>
-    <string name="profile_schedule_discard_recovery_title">%1$s үшін күтудегі қалпына келтіруден бас тартасыз ба?</string>
-    <string name="profile_schedule_discard_recovery_body">Осы профильдің жоспарланған қайталау әрекетін тоқтатып, күтудегі күндер мен бекітілген экспорт параметрлерін жойыңыз. Келесі жоспарланған іске қосу ағымдағы профиль мен кестені пайдаланады. Профиліңіз, API тіркелгі деректері, экспорт тарихы және экспортталған деректер сақталады. Бұрын орындалған жүктеп жіберуді немесе файл жазуды кері қайтару мүмкін емес.</string>
-    <string name="profile_schedule_discard_recovery_failed">Күтудегі қалпына келтіруден толық бас тарту мүмкін болмады. Профильді тексеріп, қайталап көріңіз.</string>
+
+    <string name="myself_claim_entry">myself.md қолжетімділігін алу</string>
+    <string name="myself_claim_entry_subtitle">Google Play-дегі бұрынғы өмірлік сатып алуды растаңыз.</string>
+    <string name="myself_claim_title">myself.md қолжетімділігі</string>
+    <string name="myself_claim_intro">Health.md өмірлік сатып алуы myself.md қызметіне тегін өмірлік қолжетімділікті қамтиды.</string>
+    <string name="myself_claim_disclosure">Жалғастырғанда Google Play сатып алу дәлелін оқып, тексеру үшін myself.md қызметіне жібереміз. Денсаулық пен орналасқан жер деректері құрылғыда қалады.</string>
+    <string name="myself_claim_account">Содан кейін кіріп, қолжетімділік алатын myself.md есептік жазбасын таңдаңыз. Әр бастапқы сатып алу тек бір жазбаға байланысады. Тегін немесе бұрыннан сақталған Android қолжетімділігі жеткіліксіз.</string>
+    <string name="myself_claim_verify">Сатып алуды тексеріп жалғастыру</string>
+    <string name="myself_claim_verifying">Сатып алу тексерілуде…</string>
+    <string name="myself_claim_awaiting_user">Браузерде кіріп, алушы есептік жазбаны растаңыз. Содан кейін myself.md ішінде сол жазбаны пайдаланыңыз. Растағанға дейін қолжетімділік берілмейді.</string>
+    <string name="myself_claim_no_purchase">Health.md өмірлік сатып алуы табылмады. Сатып алған Google Play жазбасын пайдаланып, қайталап көріңіз. Аяқталмаған сатып алулар жарамсыз.</string>
+    <string name="myself_claim_store_unavailable">Google Play сатып алуды ала алмады. Байланыс пен Google Play жазбасын тексеріп, қайталап көріңіз.</string>
+    <string name="myself_claim_verification_failed">Сатып алу тексерілмеді. Байланысты тексеріп, қайталап көріңіз. Мәселе шешілмесе, қолдау қызметіне хабарласыңыз. Қолжетімділік берілмеді.</string>
+    <string name="myself_claim_browser_unavailable">Браузер ашылмады. Браузерді қосып, сатып алуды қайта тексеріңіз.</string>
 </resources>

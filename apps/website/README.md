@@ -101,6 +101,12 @@ Apple reference sources are read directly from the sibling `apps/apple` componen
 
 The Vercel project must use `apps/website` as its Root Directory. Its build command and output directory remain `npm run build` and `dist`, as configured in `vercel.json`.
 
+`/dashboard` and `/login` (including trailing-slash variants) temporarily redirect to
+`https://account.healthmd.app/dashboard` and `https://account.healthmd.app/login`.
+The browser leaves the marketing website; it does not serve or proxy authenticated
+account pages or health-data APIs. These redirects are published by website
+deployments. Edit `vercel.template.json` and run `npm run i18n:vercel` to update them.
+
 ## License
 
 The website is available under the [MIT License](LICENSE). Other monorepo components have their own terms documented in [`LICENSES.md`](../../LICENSES.md).

@@ -180,7 +180,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
         val base = supplement.getValue("base_inventory").jsonObject
         assertEquals(setOf("path", "sha256"), base.keys)
         assertEquals(BASE_PATH, base.getValue("path").jsonPrimitive.content)
-        val digest = MessageDigest.getInstance("SHA-256").digest(ledgerFile().readBytes())
+        val digest = MessageDigest.getInstance("SHA-256").digest(ledgerFile(HISTORICAL_BASE_PATH).readBytes())
             .joinToString("") { "%02x".format(it.toInt() and 255) }
         assertEquals("Historical portability ledger must remain immutable", BASE_SHA256, digest)
         assertEquals(digest, base.getValue("sha256").jsonPrimitive.content)
@@ -281,6 +281,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     private companion object {
         const val BASE_PATH = "packages/contracts/shared-setup/v2/android-profile-field-coverage.json"
         const val SUPPLEMENT_PATH = "packages/contracts/portability-inventory/android-agent-recovery/v1/inventory.json"
+        const val HISTORICAL_BASE_PATH = "packages/contracts/portability-inventory/android-agent-recovery/v1/historical-base.json"
         const val BASE_SHA256 = "4a539e7e22006bd0f06e63c3dda7a82f41c6fac0d536249573a37eccec8ae789"
         const val DESCRIPTOR = "descriptor"
         const val SUPPLEMENTAL = "supplemental"

@@ -433,7 +433,44 @@ def output_selection_ids(key: str, supported_ids: set[str]) -> list[str]:
     raise ValueError(f"no Android metric mapping for output key {key}")
 
 
-def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, Any]:
+def capability_inventory(
+    known_capability_ids: list[str], metric_capability_ids: set[str]
+) -> dict[str, Any]:
+    # The canonical registry owns its reviewed capability scope. Unrelated product
+    # additions must not change the registry hash or invalidate durable registry pins.
+    # Match validate_metric_registry: require coverage, manifest order, and current states.
+    manifest = json.loads(CAPABILITY_MANIFEST.read_text())
+    capabilities = manifest["capabilities"]
+    known = set(known_capability_ids)
+    if len(known) != len(known_capability_ids):
+        raise ValueError("duplicate registry capability")
+    unknown = known - {capability["id"] for capability in capabilities}
+    if unknown:
+        raise ValueError(f"registry references unknown product capabilities: {sorted(unknown)}")
+    if known_capability_ids != [
+        capability["id"] for capability in capabilities if capability["id"] in known
+    ]:
+        raise ValueError("known capabilities must preserve product-capabilities order")
+    missing = metric_capability_ids - known
+    if missing:
+        raise ValueError(f"metric capabilities missing from registry inventory: {sorted(missing)}")
+    return {
+        "known_capability_ids": known_capability_ids,
+        "available_capability_ids_by_platform": {
+            platform: [
+                capability["id"]
+                for capability in capabilities
+                if capability["id"] in known
+                and capability["platforms"][platform]["state"] == "available"
+            ]
+            for platform in ("apple", "android")
+        },
+    }
+
+
+def build_registry(
+    apple: dict[str, Any], android: dict[str, Any], known_capability_ids: list[str]
+) -> dict[str, Any]:
     ledger = parse_frozen_crosswalk()
     apple_by_id = {metric["selection_id"]: metric for metric in apple["metrics"]}
     supported_ids = {metric["selection_id"] for metric in android["metrics"]}
@@ -595,6 +632,8 @@ def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, 
 
     # Capability lists were included in the original registry's semantic/render digest.
     # Preserve that complete byte identity; current governance has its own index below.
+    # Retain main validation of the reviewed subset without rewriting historical metadata.
+    capability_inventory(known_capability_ids, {metric["capability_id"] for metric in semantic_metrics})
     frozen_capabilities = json.loads(FROZEN_CAPABILITY_BASELINE.read_text())
     return {
         "schema": "healthmd.metric_registry",
@@ -632,7 +671,8 @@ def main() -> None:
     apple_baseline = json.loads(APPLE_BASELINE.read_text())
     apple = parse_apple()
     android = parse_android()
-    registry = build_registry(apple, android)
+    known_capability_ids = json.loads(REGISTRY_PATH.read_text())["known_capability_ids"]
+    registry = build_registry(apple, android, known_capability_ids)
     frozen = json.loads(FROZEN_CAPABILITY_BASELINE.read_text())
     frozen_sha = "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
     if frozen.get("schema") != "healthmd.frozen_capability_index" or frozen.get("schema_version") != 1 or frozen.get("source_registry_sha256") != frozen_sha:

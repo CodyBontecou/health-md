@@ -7,6 +7,13 @@ All notable changes to Health.md will be documented in this file.
 ### Changed
 - Export progress and results now use one bottom status card throughout the iPhone app. The same card updates from preparation and progress to success, warning, cancellation, or failure, while independent settings-lock feedback stacks in the same bottom status area.
 
+## [3.4.3] - 2026-10-07
+
+### Fixed
+- Export-profile schedules restore their notifications when you reopen the app and avoid duplicate catch-up attempts.
+- Improved scheduled notification setup and recovery after temporary delivery errors.
+- Upgrade reminders correctly show how many free exports you have used.
+
 ## [3.4.2] - 2026-09-17
 
 ### Changed

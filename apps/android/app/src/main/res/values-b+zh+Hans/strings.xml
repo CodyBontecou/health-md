@@ -465,8 +465,15 @@
     <string name="schedule_through_today_summary">每次运行会导出过去的完整天数以及今天的部分文件，因此白天运行也能记录昨晚的睡眠。结合每小时的频率可在全天保持两个文件最新。使用覆盖或更新写入模式，避免同一天内容重复。</string>
     <string name="profile_schedule_today_refresh">刷新今天的导出</string>
     <string name="profile_schedule_refresh_interval">刷新间隔</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d 分钟</string>
+    <string name="profile_schedule_refresh_summary_minutes">今天每 %1$d 分钟刷新一次</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d 小时</string>
     <string name="profile_schedule_refresh_summary">今天每 %1$d 小时刷新一次</string>
+    <string name="profile_schedule_discard_recovery">放弃待处理的恢复</string>
+    <string name="profile_schedule_discard_recovery_named">放弃 %1$s 的待处理恢复</string>
+    <string name="profile_schedule_discard_recovery_title">放弃 %1$s 的待处理恢复？</string>
+    <string name="profile_schedule_discard_recovery_body">停止此配置的计划重试，并清除其待处理日期和保存的导出设置。下次计划运行将使用当前配置和计划。您的配置、API 凭据、导出历史和已导出的数据将保留。此操作无法撤销已完成的上传或已写入的文件。</string>
+    <string name="profile_schedule_discard_recovery_failed">无法完全放弃待处理的恢复。请检查配置并重试。</string>
     <string name="schedule_date_window_today">今天</string>
     <string name="schedule_export_past_days">导出过去几天</string>
     <string name="schedule_today_summary">每次运行都会导出今天的数据，以便您当前的每日文件可以保持最新。使用覆盖或更新写入模式以避免重复的当天内容。</string>
@@ -1224,9 +1231,18 @@
     <string name="fdroid_onboarding_access_body">官方 F-Droid 版本免费提供全部本地导出和自动化功能。</string>
     <string name="fdroid_onboarding_no_purchase">无需购买、恢复、价格或 Play 帐号。</string>
     <string name="fdroid_onboarding_no_play_services">定时导出无需 Google Play Billing 即可工作。</string>
-    <string name="profile_schedule_discard_recovery">放弃待恢复任务</string>
-    <string name="profile_schedule_discard_recovery_named">放弃 %1$s 的待恢复任务</string>
-    <string name="profile_schedule_discard_recovery_title">放弃 %1$s 的待恢复任务？</string>
-    <string name="profile_schedule_discard_recovery_body">停止此配置的定时重试，并清除待处理日期及已固定的导出设置。下一次定时运行将使用当前配置和计划。你的配置、API 凭据、导出历史及已导出的数据都会保留。此操作无法撤销已完成的上传或文件写入。</string>
-    <string name="profile_schedule_discard_recovery_failed">无法完全放弃待恢复任务。请检查配置后重试。</string>
+
+    <string name="myself_claim_entry">领取 myself.md 访问权限</string>
+    <string name="myself_claim_entry_subtitle">验证已有的 Google Play 终身购买。</string>
+    <string name="myself_claim_title">myself.md 访问权限</string>
+    <string name="myself_claim_intro">您的 Health.md 终身购买包含免费的 myself.md 终身访问权限。</string>
+    <string name="myself_claim_disclosure">继续后，我们会读取您的 Google Play 购买凭证并发送至 myself.md 验证资格。您的健康和位置数据保留在设备上。</string>
+    <string name="myself_claim_account">然后登录并选择接收权限的 myself.md 账号。每笔原始购买只能关联一个账号。仅有 Android 免费或历史保留的访问权限不符合资格。</string>
+    <string name="myself_claim_verify">验证购买并继续</string>
+    <string name="myself_claim_verifying">正在验证购买…</string>
+    <string name="myself_claim_awaiting_user">请在浏览器中登录并确认接收权限的账号，然后在 myself.md 中使用同一账号。确认前不会领取访问权限。</string>
+    <string name="myself_claim_no_purchase">未找到已完成的 Health.md 终身购买。请使用购买时的 Google Play 账号重试。待处理的购买不符合资格。</string>
+    <string name="myself_claim_store_unavailable">Google Play 无法获取购买记录。请检查网络和 Google Play 账号后重试。</string>
+    <string name="myself_claim_verification_failed">无法验证购买。请检查网络并重试。如问题持续，请联系支持；尚未领取访问权限。</string>
+    <string name="myself_claim_browser_unavailable">无法打开浏览器。请启用浏览器并重新验证购买。</string>
 </resources>

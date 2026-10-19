@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>プレビュー · ポータブル直接接続MCP</strong>
-<p>macOS、Linux、Windows向けの別構成<code>healthmd mcp serve</code>は、19ツールの未認定プレビュー<code>0.1.0-alpha.7</code>として公開されています。クラウドを使わない<code>serve-read-only</code>エントリは、ローカルでのペアリング後、準備状況とクエリに関する13個のツールだけを公開します。macOSまたはLinuxでは<code>brew install CodyBontecou/tap/healthmd</code>でインストールします。</p>
+<p>macOS、Linux、Windows向けの別構成<code>healthmd mcp serve</code>は、19ツールの未認定プレビュー<code>0.1.0-alpha.6</code>（alpha.7 はファイルのない未公開ドラフト）として公開されています。クラウドを使わない<code>serve-read-only</code>エントリは、ローカルでのペアリング後、準備状況とクエリに関する13個のツールだけを公開します。macOSまたはLinuxでは<code>brew install CodyBontecou/tap/healthmd</code>でインストールします。</p>
 </div>
 
 ## Mac同梱版の要件
@@ -116,7 +116,7 @@ Health.mdは、安定版`io.modelcontextprotocol/ui`ネゴシエーションを`
 
 ## 利用可能なツール
 
-同梱Macサーバーは、準備状況／クエリ用13個、生成ファイル用4個、暗号化コンテキスト更新用4個の計21個を公開します。公開済みポータブルプレビュー`0.1.0-alpha.7`は19ツールです。現在の開発ソースは全データと制限付きアーティファクト読み取りを加えた21ツールですが、後続リリースまではその2ツールを前提にしないでください。
+同梱Macサーバーは、準備状況／クエリ用13個、生成ファイル用4個、暗号化コンテキスト更新用4個の計21個を公開します。公開済みポータブルプレビュー`0.1.0-alpha.6`は19ツールです。現在の開発ソースは全データと制限付きアーティファクト読み取りを加えた21ツールですが、後続リリースまではその2ツールを前提にしないでください。
 
 ### 準備状況と検出
 

@@ -15,7 +15,7 @@ Health.md iPhone foreground / active Android direct service → native provider
   → bounded typed results, canonical data, or generated files
 ```
 
-The CLI listens on the computer; the phone connects to the displayed address. It can keep an unavailable request waiting while the user opens Health.md. Published alpha.7 binaries send one best-effort APNs notification when the selected iPhone has enrolled wake material; alpha.6 binaries were wait-only. Android and unenrolled phones remain wait-only. A notification can restore user presence but never authorizes background health access or bypasses app activity, permissions, protected-data controls, quotas, or OS background limits. The CLI is direct-only and has no backend option; it never requires or contacts the Health.md Mac app. Do not add `--transport nearby`.
+The CLI listens on the computer; the phone connects to the displayed address. It can keep an unavailable request waiting while the user opens Health.md. Published alpha.6 binaries are wait-only. Alpha.7 source builds send one best-effort APNs notification when the selected iPhone has enrolled wake material, but its release remains an unpublished draft with no assets. Android and unenrolled phones remain wait-only. A notification can restore user presence but never authorizes background health access or bypasses app activity, permissions, protected-data controls, quotas, or OS background limits. The CLI is direct-only and has no backend option; it never requires or contacts the Health.md Mac app. Do not add `--transport nearby`.
 
 ## Authorization and privacy first
 
@@ -31,7 +31,9 @@ Treat the user's request as authority only for its stated device, operation, met
 
 ## Verify release compatibility
 
-The `0.1.0-alpha.7` package is an explicitly unqualified public preview. Physical QA has confirmed basic iPhone and Android connectivity, but no public CLI/mobile pair has completed and retained the full release qualification matrix yet. Its source snapshot contains these exact counterparts:
+The published `0.1.0-alpha.6` package is an explicitly unqualified public preview with 19 MCP tools. As audited on 2026-10-02, `0.1.0-alpha.7` is a pending, unpublished draft with zero assets; a tag or source build is not binary availability. No public CLI/mobile pair has completed and retained the full release qualification matrix yet.
+
+The following counterparts describe the **alpha.7 source candidate only**, not the published alpha.6 package or a qualified App Store/Play Store pair:
 
 | Mobile source | Protocol | Exact counterpart in the release snapshot | Portable operations |
 |---|---|---|---|
@@ -57,20 +59,20 @@ healthmd --version
 healthmd --help
 ```
 
-On macOS or Linux, install the matching preview binaries together:
+On macOS or Linux, install the matching preview binaries together. The tap currently serves alpha.6; check `healthmd --version` afterward rather than assuming it matches development docs:
 
 ```bash
 brew install CodyBontecou/tap/healthmd
 ```
 
-For Windows or direct archive installation, use the exact `healthmd-cli/v<version>` GitHub Release—not repository `/releases/latest`—and follow that release's checksum, Sigstore, and publisher-verification instructions. Do not mix `healthmd` and `healthmd-mcp` versions.
+For Windows or direct archive installation, use the published `healthmd-cli/v0.1.0-alpha.6` GitHub Release—not repository `/releases/latest`—and follow that release's checksum, Sigstore, and publisher-verification instructions. Before installing any version, require a non-draft release with nonempty uploaded installers/archives, `sha256.sum`, and `sha256.sum.sigstore.json`. Do not mix `healthmd` and `healthmd-mcp` versions. Publication is not stable qualification.
 
-Authorized preview testers may build the exact tag from source:
+Authorized preview testers may build the published tag from source:
 
 ```bash
 git clone https://github.com/CodyBontecou/health-md.git
 cd health-md
-git checkout healthmd-cli/v0.1.0-alpha.7
+git checkout healthmd-cli/v0.1.0-alpha.6
 cd apps/cli
 cargo install --locked --path crates/healthmd-cli
 ```
@@ -146,7 +148,7 @@ operation timeout.
 
 MCP uses `HEALTHMD_WAKE_TIMEOUT` (`0` disables) and may emit `notifications/progress`. Inspect the
 selected device's `wake_window`: alpha.6 binaries do not send push, even if enrollment
-metadata exists. In alpha.7 and later, `available`/`enrolled` for an enrolled iPhone means
+metadata exists. In alpha.7 source builds, `available`/`enrolled` for an enrolled iPhone means
 the wait sends one best-effort APNs notification through Health.md's health-free wake service. Only
 tell the user to expect a notification when both the build and enrollment support it. Android and
 unenrolled iPhones remain wait-only. A local timeout or MCP cancellation ends only the waiter; it is not phone-side
@@ -203,6 +205,10 @@ Dates are illustrative; resolve the user's actual request. `healthmd extract` is
 Check history against the exact app/build/SDK before promising completeness. The current pinned Apple adapter reports `api_unavailable`; absent metadata or `unknown` cannot prove full access, denial or no data. Prefer explicit date ranges with completeness unverified and retain Apple's denied-versus-empty ambiguity. An OS upgrade, earliest sample, pairing or ready transport is not a history grant. `--all` requires both approved scope and verified source support/grants; if unavailable, ask the user to revise scope rather than silently narrowing it. See [current source history limitations](../../../apps/cli/docs/mobile-compatibility.md#current-source-history-limitations); they do not qualify an installed alpha.7 counterpart. Android's historical-read/first-permission-grant window is distinct.
 
 Choose exactly one approved date range: `--yesterday`, `--last N`, `--from/--to`, or verified `--all`. Prefer an approved protected absolute output path so health data does not enter stdout, transcripts, or a repository. In the examples, first set `PRIVATE_HEALTH_DIR` to an existing private absolute directory selected by the user; never guess or create that location silently.
+
+### Complete public, authorized corpus · development source only
+
+This mode and its two MCP raw-artifact tools are not in the published alpha.6 preview or the alpha.7 candidate. Wait for a later published release that explicitly includes them; installing this skill does not make them available.
 
 ### Public authorized types within an approved range
 

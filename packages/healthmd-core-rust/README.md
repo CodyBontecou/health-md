@@ -12,6 +12,7 @@ cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check -p healthmd-core -p healthmd-protocol -p healthmd-core-uniffi --all-features --locked
 python3 scripts/import-native-registry.py --check
+python3 scripts/test_import_native_registry.py
 python3 scripts/generate-registry-adapters.py --check
 python3 ../contracts/validate.py
 ```

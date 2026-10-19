@@ -25,7 +25,8 @@
       "direct-cli.shared-qr-pairing",
       "direct.full_public_authorized_corpus",
       "direct.cli_agent_wake",
-      "core.shared-rust-metric-registry"
+      "core.shared-rust-metric-registry",
+      "account.myself_lifetime_claim"
     ],
     "apple": [
       "export.daily-files",
@@ -55,7 +56,8 @@
       "direct.cli_agent_wake",
       "direct.cli_agent_push_wake",
       "authorization.history-window-detection",
-      "core.shared-rust-metric-registry"
+      "core.shared-rust-metric-registry",
+      "account.myself_lifetime_claim"
     ]
   },
   "known_capability_ids": [
@@ -109,10 +111,11 @@
     "agent.host-schedule-controls",
     "agent.native-schedule-destination-controls",
     "agent.export.zip-packaging",
-    "agent.export.profile-dictionary"
+    "agent.export.profile-dictionary",
+    "account.myself_lifetime_claim"
   ],
   "schema": "healthmd.capability_index",
   "schema_version": 1,
   "source_inventory_path": "packages/contracts/product-capabilities.json",
-  "source_inventory_sha256": "74ee883dce2ba8399080d9acb4b950aa91b037de545b6e7f72e90eaaa198280b"
+  "source_inventory_sha256": "431a6611b987c00fb1cce854ca9efee7bf5d26a87a3ac5407111f680d92427e9"
 }

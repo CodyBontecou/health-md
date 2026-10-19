@@ -35,6 +35,34 @@ import org.junit.rules.TemporaryFolder
 
 /** Fresh-store and corruption boundaries for the profile schedule DataStore payload. */
 class ScheduledProfileEntryStoreTest {
+
+    @Test
+    fun `minute intent survives old writer disabled round trip without losing progress`() = runTest {
+        val e = entry("minute").copy(isEnabled = true, todayRefreshEnabled = true,
+            lastSuccessEpochMillis = 123L, lastRefreshSuccessEpochMillis = 456L)
+            .withTodayRefreshMinutes(30)
+        assertThat(store.upsert(e)).isTrue()
+        assertThat(store.entry("minute")).isEqualTo(e)
+        val raw = dataStore.data.first()[ENTRIES_KEY]!!
+        val json = kotlinx.serialization.json.Json
+        val objects = json.parseToJsonElement(raw) as kotlinx.serialization.json.JsonArray
+        val wire = objects[0] as kotlinx.serialization.json.JsonObject
+        assertThat(wire["todayRefreshEnabled"]?.toString() ?: "false").isEqualTo("false")
+        val old = kotlinx.serialization.json.JsonObject(wire.filterKeys {
+            it !in setOf("todayRefreshIntervalMinutes", "todayRefreshRequestedV2", "todayRefreshPersistenceVersion")
+        })
+        dataStore.edit { it[ENTRIES_KEY] = kotlinx.serialization.json.JsonArray(listOf(old)).toString() }
+        val restored = store.entry("minute")!!
+        assertThat(restored.todayRefreshEnabled).isFalse()
+        assertThat(restored.todayRefreshMinutes).isEqualTo(30)
+        assertThat(restored.lastSuccessEpochMillis).isEqualTo(123L)
+        assertThat(restored.lastRefreshSuccessEpochMillis).isEqualTo(456L)
+        assertThat(store.upsert(restored.withTodayRefreshMinutes(60).copy(todayRefreshEnabled = true))).isTrue()
+        assertThat(store.entry("minute")!!.todayRefreshMinutes).isEqualTo(60)
+        assertThat(store.delete("minute")).isEqualTo(Unit)
+        assertThat(store.getEntries()).isEmpty()
+    }
+
     @get:Rule
     val temporaryFolder = TemporaryFolder()
 

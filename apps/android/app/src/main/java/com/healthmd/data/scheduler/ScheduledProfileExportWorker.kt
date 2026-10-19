@@ -19,6 +19,7 @@ import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.export.RawSnapshotExportRunner
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.distribution.DistributionPolicy
@@ -29,6 +30,7 @@ import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportResult
+import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
@@ -343,12 +345,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         // folder URI is process-global plumbing; see ProfileFolderAdoptionScope).
                         folderAdoption.withProfileFolder(profile) {
                             if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
-                                rawSnapshotExportRunner.exportRange(
-                                    startDate = dates.first(),
-                                    endDate = dates.last(),
-                                    settings = settings,
-                                    target = target,
-                                )
+                                exportRawDates(dates, settings, target)
                             } else if (useDurableFolder) {
                                 ExportOrchestrator(healthRepository, exportRepository)
                                     .exportDatesDurably(
@@ -372,12 +369,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                             // Raw artifacts are not healthmd.api_export compatibility envelopes;
                             // never resume a compatibility journal left by the old profile worker.
-                            rawSnapshotExportRunner.exportRange(
-                                startDate = dates.first(),
-                                endDate = dates.last(),
-                                settings = settings,
-                                target = target,
-                            )
+                            exportRawDates(dates, settings, target)
                         } else {
                             apiEndpointExportRunner.exportDates(
                                 dates = dates,
@@ -532,6 +524,11 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 return Result.retry()
             }
             showFailureNotification(profile.name)
+            // Reconciliation already arms the next ordinary slot. Raw refresh-only failures
+            // must not back off into another capture of this same slot or claim it succeeded.
+            if (!hasCompletedDayWork && settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                return Result.success()
+            }
             return if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
         }
         return Result.success()
@@ -540,6 +537,30 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private fun authorityFailure(): Result = Result.failure(
         workDataOf(OUTPUT_PROFILE_ERROR to "api_recovery_authority_required"),
     )
+    /** Raw providers accept ranges, but recovery and delayed refreshes can request separated days. */
+    private suspend fun exportRawDates(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        target: ExportTarget,
+    ): ExportResult {
+        val ranges = mutableListOf<Pair<LocalDate, LocalDate>>()
+        for (date in dates.distinct().sorted()) {
+            val previous = ranges.lastOrNull()
+            if (previous != null && date == previous.second.plusDays(1)) {
+                ranges[ranges.lastIndex] = previous.first to date
+            } else {
+                ranges += date to date
+            }
+        }
+        val results = mutableListOf<ExportResult>()
+        for ((start, end) in ranges) {
+            kotlin.coroutines.coroutineContext.ensureActive()
+            val result = rawSnapshotExportRunner.exportRange(start, end, settings, target)
+            results += result
+            if (result.wasCancelled) break
+        }
+        return RawSnapshotExportRunner.aggregateProviderResults(results, target)
+    }
 
     private fun ExportResult.warningSummary(): String? = when {
         isPartialSuccess -> "${failedDateDetails.size} failed date(s) pending retry"

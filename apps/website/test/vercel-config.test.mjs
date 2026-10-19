@@ -46,6 +46,18 @@ test("Vercel normalizes duplicate directory and index.html routes", () => {
   });
 });
 
+test("Vercel redirects dashboard and login entry points to the isolated account origin", () => {
+  for (const route of ["dashboard", "login"]) {
+    for (const source of [`/${route}`, `/${route}/`]) {
+      assert.deepEqual(config.redirects.filter((entry) => entry.source === source), [{
+        source,
+        destination: `https://account.healthmd.app/${route}`,
+        permanent: false,
+      }], `missing or duplicate account redirect for ${source}`);
+    }
+  }
+});
+
 test("Vercel redirects clean legal URLs to the canonical html routes", () => {
   for (const locale of publishedLocales('legal')) {
     for (const routeId of ['privacy', 'terms']) {
