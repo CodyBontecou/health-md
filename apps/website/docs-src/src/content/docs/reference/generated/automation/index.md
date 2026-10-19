@@ -32,8 +32,8 @@ This group contains 32 deterministic artifacts. Checksums are SHA-256 hashes of 
 | `mac-export-job.json` | 27691 | `eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `mac-export-result-partial.json` | 1034 | `f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `mac-export-result-success.json` | 585 | `b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `manifest.json` | 5848 | `9ebab703867f8b7f639721cd5ab81f637695e48069ea0e47dbc4aa547a65d27d` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `message-fields.md` | 128492 | `af69cc2021d64e6ec83f3f7e0d38111413b341991543ebc495f97ec23038ff15` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `manifest.json` | 5848 | `5f80a5c7c0ed23c7ee32cbb29cea1e84d70d01ce0651a028871fd340e1497051` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `message-fields.md` | 130127 | `4af01c7c7354abf92655475b0828c9995db1872f8a8643d58142e3b9b918ac89` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
 | `peer-capabilities.json` | 1686 | `66441092056c59e33592b6c1bfc80508405d5e0acf210d6e35a16ae4a25fb015` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `raw-result-complete.json` | 3241 | `bbf8f86a366590cae7823d1e6a2134d1ad14e77d539d26a5ee3ab8e2c96eb338` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `raw-result-partial.json` | 5281 | `05979a293411c09f05f40476d893c2335658f9426d96e2fcf9ee4a48927750cb` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |

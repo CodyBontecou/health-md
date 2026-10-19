@@ -16,10 +16,14 @@ final class HealthHistorySDKAvailabilityTests: XCTestCase {
             let failure = error as NSError
             XCTAssertEqual(failure.domain, "HealthMd.HealthKitCapability")
             XCTAssertEqual(failure.code, 27)
-            XCTAssertEqual(
-                failure.localizedDescription,
-                "Health history authorization boundaries are unavailable in this build."
-            )
+            #if os(macOS)
+            let expectedReason = "Health history authorization boundaries must be queried on the connected iPhone."
+            #elseif HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION
+            let expectedReason = "Health history authorization boundaries require OS 27 or later."
+            #else
+            let expectedReason = "Health history authorization boundaries require a build made with a supported OS 27 HealthKit SDK."
+            #endif
+            XCTAssertEqual(failure.localizedDescription, expectedReason)
         }
     }
 
@@ -46,7 +50,7 @@ final class HealthHistorySDKAvailabilityTests: XCTestCase {
         XCTAssertEqual(manager.historyAuthorizationAssessment, assessment)
         XCTAssertEqual(
             assessment.message,
-            "This build cannot report limited HealthKit history boundaries. Full-history completeness is unverified."
+            "This app build or OS cannot report limited HealthKit history boundaries. Full-history completeness is unverified."
         )
         XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty)
         XCTAssertTrue(store.queriedSumIdentifiers.isEmpty)

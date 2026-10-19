@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "ab9b9a05dcd647ff9ba04275f167f7790428a902",
+  "docs_reference_git_tree": "91e8ffde749ce252333aa6b2539a1cd2150349a1",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "73c78427d19489397f3235e063ff3bd11173bc3070818a8df7ce52d956618386",
+    "digest": "bd9c1e7256cd318ac3c342cf8e0f2277a90afbc820ebc27395bc15957c1967eb",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -396,7 +396,7 @@
     {
       "path": "generated/automation/manifest.json",
       "bytes": 5848,
-      "sha256": "9ebab703867f8b7f639721cd5ab81f637695e48069ea0e47dbc4aa547a65d27d",
+      "sha256": "5f80a5c7c0ed23c7ee32cbb29cea1e84d70d01ce0651a028871fd340e1497051",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -405,8 +405,8 @@
     },
     {
       "path": "generated/automation/message-fields.md",
-      "bytes": 128492,
-      "sha256": "af69cc2021d64e6ec83f3f7e0d38111413b341991543ebc495f97ec23038ff15",
+      "bytes": 130127,
+      "sha256": "4af01c7c7354abf92655475b0828c9995db1872f8a8643d58142e3b9b918ac89",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/automation/message-fields/",
@@ -1349,14 +1349,14 @@
     {
       "path": "public/reference/generated/automation/manifest.json",
       "bytes": 5848,
-      "sha256": "9ebab703867f8b7f639721cd5ab81f637695e48069ea0e47dbc4aa547a65d27d",
+      "sha256": "5f80a5c7c0ed23c7ee32cbb29cea1e84d70d01ce0651a028871fd340e1497051",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
     {
       "path": "public/reference/generated/automation/message-fields.md",
-      "bytes": 128492,
-      "sha256": "af69cc2021d64e6ec83f3f7e0d38111413b341991543ebc495f97ec23038ff15",
+      "bytes": 130127,
+      "sha256": "4af01c7c7354abf92655475b0828c9995db1872f8a8643d58142e3b9b918ac89",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/message-fields.md"
     },
@@ -1909,14 +1909,14 @@
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
       "bytes": 6752,
-      "sha256": "509b21ad218263238f936b1a2a8a7c9046471ba0e3182328cc5d4776c62c1fed",
+      "sha256": "1ebebfba3f7d7276468a9e05f6c94759ac195e867bb9a930aba37b971693a530",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
     {
       "path": "src/content/docs/reference/generated/automation/message-fields.md",
-      "bytes": 128695,
-      "sha256": "31cbcf88962d02d4030c63cc754cce421cfb689296a1309a07cfd3333c12cb25",
+      "bytes": 130330,
+      "sha256": "f158e299ad98965c377a7807fe454754b1fde69e42c54716ee453ab680de3909",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/message-fields/"
     },
@@ -1986,7 +1986,7 @@
     {
       "path": "src/content/docs/reference/generated/index.md",
       "bytes": 20997,
-      "sha256": "7de9d3da4f34b0dd6f77932b46109f3edd68939c83e254fd0d9ee5929df3644b",
+      "sha256": "3b982e2be5448c61a3b8bf8407a39f56c4a31a72174dbb5752b92aa8d0da4f8a",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },
