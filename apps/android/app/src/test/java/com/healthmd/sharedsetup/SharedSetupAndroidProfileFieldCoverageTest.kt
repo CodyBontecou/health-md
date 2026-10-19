@@ -23,8 +23,10 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -33,6 +35,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -203,11 +206,56 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     private fun ledgerObject(): JsonObject {
         val base = Json.parseToJsonElement(ledgerFile().readText()).jsonObject
         val supplement = Json.parseToJsonElement(ledgerFile(SUPPLEMENT_PATH).readText()).jsonObject
-        val combined = base.getValue("fields").jsonArray + supplement.getValue("fields").jsonArray
-        return JsonObject(base + ("fields" to JsonArray(combined.sortedWith(
+        val combined = combineCoverageFields(base.getValue("fields").jsonArray, supplement.getValue("fields").jsonArray)
+        return JsonObject(base + ("fields" to combined))
+    }
+
+    private fun combineCoverageFields(base: JsonArray, supplement: JsonArray): JsonArray {
+        fun key(element: JsonElement): Pair<String, String> = element.jsonObject.let {
+            it.getValue("source_type").jsonPrimitive.content to it.getValue("serialized_field").jsonPrimitive.content
+        }
+        val combined = linkedMapOf<Pair<String, String>, JsonElement>()
+        for (input in listOf(base, supplement)) {
+            val keys = input.map(::key)
+            assertEquals("Each audit must contain unique field rows", keys.size, keys.toSet().size)
+            for (element in input) {
+                val previous = combined[key(element)]
+                if (previous == null) {
+                    combined[key(element)] = element
+                } else {
+                    // Independent audits may review the same private field. Narrative
+                    // evidence can differ; every machine-readable classification must agree.
+                    assertEquals("Overlapping field reviews must agree: ${key(element)}",
+                        previous.jsonObject.filterKeys { it != "evidence" },
+                        element.jsonObject.filterKeys { it != "evidence" })
+                }
+            }
+        }
+        return JsonArray(combined.values.sortedWith(
             compareBy({ it.jsonObject.getValue("source_type").jsonPrimitive.content },
                 { it.jsonObject.getValue("serialized_field").jsonPrimitive.content }),
-        ))))
+        ))
+    }
+
+    @Test
+    fun ledgerCompositionRejectsDuplicateRowsAndConflictingReviews() {
+        val field = Json.parseToJsonElement(ledgerFile().readText()).jsonObject
+            .getValue("fields").jsonArray.first {
+                it.jsonObject.getValue("source_type").jsonPrimitive.content == "ScheduledProfileEntry" &&
+                    it.jsonObject.getValue("serialized_field").jsonPrimitive.content == "recoveryGeneration"
+            }.jsonObject
+        val one = JsonArray(listOf(field))
+        val duplicate = JsonArray(listOf(field, field))
+        assertThrows(AssertionError::class.java) { combineCoverageFields(duplicate, JsonArray(emptyList())) }
+        assertThrows(AssertionError::class.java) { combineCoverageFields(JsonArray(emptyList()), duplicate) }
+        for ((key, value) in mapOf(
+            "coverage_kind" to JsonPrimitive(SUPPLEMENTAL),
+            "disposition" to JsonPrimitive(PORTABLE),
+            "contract_path" to JsonPrimitive("profiles[].name"),
+        )) {
+            val conflicting = JsonArray(listOf(JsonObject(field + (key to value))))
+            assertThrows(AssertionError::class.java) { combineCoverageFields(one, conflicting) }
+        }
     }
 
     /** Mirrors the established Android root-fixture lookup used by Shared Setup contract tests. */
