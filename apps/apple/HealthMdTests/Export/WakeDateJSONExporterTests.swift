@@ -14,6 +14,39 @@ final class WakeDateJSONExporterTests: XCTestCase {
         return customization
     }()
 
+    func testWakeBeforeMidnightKeepsNativeOwnerInsteadOfRoundingIntoNextDate() throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let clock = ExportDateFormatting.utcISO8601Formatter()
+        let owner = try XCTUnwrap(clock.date(from: "2026-11-01T00:00:00Z"))
+        let boundary = owner.addingTimeInterval(86400)
+        let end = boundary.addingTimeInterval(-0.0000001)
+        let start = owner.addingTimeInterval(3600.123456789)
+        let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            sleep: SleepData(totalDuration: end.timeIntervalSince(start), sessionStart: start, sessionEnd: end))
+        let bytes = try day.toJSONDataThrowing(customization: Self.customization, captureContext: context)
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        let sleep = try XCTUnwrap(root["sleep"] as? [String: Any])
+        let wake = try XCTUnwrap(sleep["wakeTimeISO"] as? String)
+        XCTAssertTrue(wake.hasPrefix("2026-11-01T23:59:59."), "An owned wake must not move into the next calendar date in its public timestamp")
+        XCTAssertNotEqual(wake, CanonicalRFC3339UTC.string(from: end), "The historical Unix-double encoder is not the successor's native-precision authority")
+    }
+
+    func testUnrepresentableSourcePrecisionRejectsBeforeSuccessorAuthorityBytes() throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let owner = Date(timeIntervalSinceReferenceDate: 0)
+        let start = Date(timeIntervalSinceReferenceDate: 0.00000000025)
+        let end = Date(timeIntervalSinceReferenceDate: 1)
+        let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            sleep: SleepData(totalDuration: end.timeIntervalSince(start), sessionStart: start, sessionEnd: end))
+        let sink = MemoryExportByteSink(mediaType: "application/json")
+        XCTAssertThrowsError(try day.writeJSONThrowing(to: sink, customization: Self.customization, captureContext: context)) {
+            XCTAssertEqual($0 as? AppleWakeDateJSONError, .incompatibleCaptureAuthority)
+        }
+        XCTAssertTrue(sink.data.isEmpty)
+    }
+
     func testQuantityOnlyDetailsRetainSourcePrecisionWithoutInventingSummaries() throws {
         let zone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)

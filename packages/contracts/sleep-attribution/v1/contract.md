@@ -62,6 +62,18 @@ CSV retains its existing column/header contract and emits `Metadata` rows for `s
 
 Custom/placeholder frontmatter cannot override successor schema/profile/time-context authority. Attribution is independent of metric selection, empty sleep and archive completeness; a day with no sleep is not permission to drop its operation's mode.
 
+## Native workout projection
+
+Successor daily preparation preserves the complete emitted native compatibility-workout objects across JSON, CSV, Markdown and Bases. Workout start-day ownership stays independent of sleep end-day ownership. Source metadata, native type identity, laps/splits, routes and series retain their platform fields. This does not claim canonical HealthKit archive completeness, provider capture or production admission.
+
+Apple's recorded active duration and actual elapsed end remain distinct. Android successor capture uses exact instants for elapsed workout/lap/route-split intervals, including DST folds, without the historical millisecond truncation or local-wall-clock subtraction. Native numeric summaries and source objects avoid historical display rounding. Historical Apple-v8 and Android-v4/v5 writers and reducers retain their existing behavior.
+
+For Apple successor compatibility timestamps, split Foundation's reference-date interval before UTC formatting, and require the public nine-fractional-digit representation to round-trip to the original `Date`. Do not first add the Unix epoch offset as a floating-point value: it can lose a fractional bit and move an instant across midnight. An unrepresentable source rejects with a bounded error; the historical canonical archive/query codec remains unchanged. A reader retains the recorded native elapsed `Double`, allowing only the one-nanosecond endpoint-format rounding bound plus arithmetic rounding. Android exact epoch/nanosecond clocks and elapsed validation remain exact.
+
+Each CSV `Native Detail` / `Workout` row carries a JSON `{metric: "workout", sample: ...}` object and its recorded UTC start. Markdown's `Workout Details` table carries the same object; JSON escaping of table separators preserves the object. Bases uses `native_workout_details`. Native facts are bound to selected workout outputs under the existing bounded render-input-v2 grammar. Readers keep complete source facts when formats are combined and reject conflicting identities, quantities or metadata. Display-only distance strings cannot replace canonical native meters.
+
+Workout requested-range aggregation still requires separately versioned, qualified rules: the immutable registry-v2 snapshot declares sums for workout heart-rate extrema and maximum power. New Apple workout range plans under that authority remain unavailable; daily preparation does not approve those folds or complete the full feature acceptance.
+
 ## API, direct and connected consumers
 
 Existing API envelopes remain independently versioned. Each envelope must declare the actual native daily schema/profile and contain matching records; it cannot retain `daily_record_schema_version: 8`/`4` around successor records. Batch partitions retain one captured profile and timezone, including failure-only batches. Native Android's existing API normalization remains distinct from local analytical presentation, with explicit profile authority and truthful native stage identities.

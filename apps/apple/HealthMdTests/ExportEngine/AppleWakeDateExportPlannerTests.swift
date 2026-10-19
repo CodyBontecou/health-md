@@ -669,6 +669,201 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         XCTAssertEqual((root["activity"] as? [String: Any])?["steps"] as? Int, 123)
     }
 
+    func testWorkoutsReachEverySuccessorFormatWithExactNativeQuantities() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let first = WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000135"),
+            workoutType: .running, startTime: owner.addingTimeInterval(0.125),
+            actualEndDate: owner.addingTimeInterval(1900.875),
+            metadata: ["synthetic": "workout, source"], duration: 1800.5, calories: 320.125, distance: 5000.875,
+            avgHeartRate: 160.125, maxHeartRate: 179.875, minHeartRate: 91.125,
+            avgRunningCadence: 178.625, avgStrideLength: 1.1875, avgGroundContactTime: 245.125,
+            avgVerticalOscillation: 8.4375, avgPower: 240.125, maxPower: 312.875)
+        let second = WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000136"),
+            workoutType: .cycling, startTime: owner.addingTimeInterval(7200.25),
+            duration: 3600.25, calories: 540.875, distance: 25000.125,
+            avgHeartRate: 140.875, maxHeartRate: 172.125, minHeartRate: 100.875,
+            avgCyclingCadence: 85.625, avgPower: 195.875, maxPower: 410.125)
+        let day = HealthData(date: owner,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 0), workouts: [first, second])
+        for preference in [UnitPreference.metric, .imperial] {
+            for (detailName, detail) in [("summary", AppleExportDetailPolicy.summary), ("detailed", .detailedTimeSeries)] {
+                var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                    selectionIDs: ["workouts", "steps"], unitPreference: preference)
+                snapshot.detailPolicy = detail
+                let resolution = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                    settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+                guard case .planned(let operation) = resolution else {
+                    return XCTFail("Selected workouts must reach the concrete successor planner")
+                }
+                XCTAssertEqual(operation.artifacts.count, 4)
+                let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
+                let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: json) as? [String: Any])
+                XCTAssertEqual(root["schema_profile"] as? String, "apple-v11")
+                let workouts = try XCTUnwrap(root["workouts"] as? [[String: Any]])
+                XCTAssertEqual(workouts.count, 2)
+                XCTAssertEqual(workouts[0]["avgHeartRate"] as? Double, 160.125)
+                XCTAssertEqual(workouts[0]["avgRunningCadence"] as? Double, 178.625)
+                XCTAssertEqual(workouts[0]["avgGroundContactTime"] as? Double, 245.125)
+                XCTAssertEqual(workouts[1]["avgPower"] as? Double, 195.875)
+                XCTAssertEqual(workouts[0]["duration"] as? Double, 1800.5)
+                XCTAssertEqual(workouts[0]["elapsedDuration"] as? Double, 1900.75)
+                XCTAssertEqual(workouts[0]["startTimeISO"] as? String, CanonicalRFC3339UTC.string(from: first.startTime))
+                XCTAssertEqual(workouts[0]["endTimeISO"] as? String, CanonicalRFC3339UTC.string(from: first.endTime))
+                let csv = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .csv }).artifact.inlineData, as: UTF8.self)
+                XCTAssertEqual(csv.components(separatedBy: "\n").filter { $0.contains(",Native Detail,Workout,") }.count, 2)
+                let expectedSummary: [String: Double] = [
+                    "Workout Count": 2, "Workout Minutes": 5400.75 / 60, "Workout Calories": 861,
+                    "Workout Distance Km": 30001.0 / 1000, "Workout Distance Mi": 30001.0 / 1609.344,
+                    "Workout Avg Heart Rate": (160.125 * 1800.5 + 140.875 * 3600.25) / 5400.75,
+                    "Workout Max Heart Rate": 179.875, "Workout Min Heart Rate": 91.125,
+                    "Workout Running Cadence": 178.625, "Workout Running Stride Length": 1.1875,
+                    "Workout Running Ground Contact": 245.125, "Workout Running Vertical Oscillation": 8.4375,
+                    "Workout Cycling Cadence": 85.625,
+                    "Workout Avg Power": (240.125 * 1800.5 + 195.875 * 3600.25) / 5400.75,
+                    "Workout Max Power": 410.125,
+                ]
+                for (label, expected) in expectedSummary {
+                    let row = try XCTUnwrap(csv.components(separatedBy: "\n").first { $0.contains(",Workouts,\(label),") })
+                    let actual = try XCTUnwrap(Double(row.components(separatedBy: ",")[3]))
+                    XCTAssertEqual(actual, expected, accuracy: 0.0000000001, label)
+                }
+                XCTAssertTrue(csv.contains("160.125"))
+                XCTAssertTrue(csv.contains("00000000-0000-4000-8000-000000000135"))
+                let markdown = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .markdown }).artifact.inlineData, as: UTF8.self)
+                XCTAssertTrue(markdown.contains("Workout Details"))
+                XCTAssertTrue(markdown.contains("160.125"))
+                let bases = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .obsidianBases }).artifact.inlineData, as: UTF8.self)
+                XCTAssertTrue(bases.contains("native_workout_details:"))
+                XCTAssertTrue(bases.contains("195.875"))
+                if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                    for artifact in operation.artifacts {
+                        let output = URL(fileURLWithPath: directory)
+                            .appendingPathComponent("apple-v11-workouts-\(preference.rawValue)-\(detailName)")
+                            .appendingPathComponent(artifact.artifact.relativePath)
+                        try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                        try artifact.artifact.inlineData.write(to: output)
+                    }
+                }
+            }
+        }
+    }
+
+    func testSDKWorkoutProjectionKeepsStartDayOwnershipAndCompleteDetailsThroughEveryFormat() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let clock = ExportDateFormatting.utcISO8601Formatter()
+        let owner = try XCTUnwrap(clock.date(from: "2026-11-01T04:00:00Z"))
+        let start = try XCTUnwrap(clock.date(from: "2026-11-01T05:30:00Z")).addingTimeInterval(0.123456789)
+        let end = try XCTUnwrap(clock.date(from: "2026-11-01T06:30:00Z")).addingTimeInterval(0.987654321)
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let store = FakeHealthStore()
+        let sourceID = try XCTUnwrap(UUID(uuidString: "00000000-0000-4000-8000-000000000137"))
+        let source = HealthKitSourceRevision(name: "Synthetic workout source", bundleIdentifier: "example.synthetic.workout")
+        let series = WorkoutTimeSeries(heartRate: [TimeSeriesSample(timestamp: start, value: 160.125, metadata: ["synthetic": "sample"])],
+            speed: [TimeSeriesSample(timestamp: start, value: 3.125)], power: [TimeSeriesSample(timestamp: start, value: 240.125)],
+            cadence: [TimeSeriesSample(timestamp: start, value: 178.625)], strideLength: [TimeSeriesSample(timestamp: start, value: 1.1875)],
+            groundContactTime: [TimeSeriesSample(timestamp: start, value: 245.125)],
+            verticalOscillation: [TimeSeriesSample(timestamp: start, value: 8.4375)], altitude: [TimeSeriesSample(timestamp: start, value: 35.125)])
+        store.workoutResults = [
+            WorkoutValue(sourceUUID: sourceID, activityType: HKWorkoutActivityType.running.rawValue,
+                duration: 1800.5, startDate: start, endDate: end, sourceRevision: source,
+                metadata: ["synthetic": "captured | workout"], totalEnergyBurned: 320.125, totalDistance: 5000.875,
+                avgHeartRate: 160.125, avgPower: 240.125,
+                laps: [WorkoutLap(startDate: start, endDate: start.addingTimeInterval(600.75), duration: 600.75, distanceMeters: 1000.125)],
+                splits: [WorkoutSplit(index: 1, startDate: start, duration: 600.75, distanceMeters: 1000.125, avgHeartRate: 160.125)],
+                route: [RoutePoint(timestamp: start, latitude: 0.125, longitude: 0.375, altitudeMeters: 35.125,
+                    speedMps: 3.125, courseDegrees: 45.125, horizontalAccuracyMeters: 1.125)], timeSeries: series),
+            // A workout starting before this owner date must not be reassigned by its end, unlike sleep.
+            WorkoutValue(activityType: HKWorkoutActivityType.running.rawValue, duration: 120,
+                startDate: owner.addingTimeInterval(-60), endDate: owner.addingTimeInterval(60),
+                totalEnergyBurned: 1, totalDistance: 1),
+        ]
+        let manager = HealthKitManager(store: store)
+        let captured = try await manager.fetchWorkoutProjection(for: owner, calendar: calendar)
+        XCTAssertEqual(captured.count, 1)
+        XCTAssertEqual(captured[0].sourceUUID, sourceID)
+        XCTAssertEqual(captured[0].sourceRevision, source)
+        XCTAssertEqual(captured[0].endTime, end)
+        XCTAssertEqual(captured[0].duration, 1800.5)
+        XCTAssertEqual(captured[0].timeSeries, series)
+        let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds), workouts: captured)
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["workouts"])
+        snapshot.detailPolicy = .detailedTimeSeries
+        snapshot.includeMetadata = false
+        let resolution = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+        guard case .planned(let operation) = resolution else { return XCTFail("SDK workout projection must reach the successor planner") }
+        XCTAssertEqual(operation.artifacts.count, 4)
+        let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: json) as? [String: Any])
+        let workout = try XCTUnwrap((root["workouts"] as? [[String: Any]])?.first)
+        XCTAssertEqual(workout["elapsedDuration"] as? Double, end.timeIntervalSince(start))
+        XCTAssertEqual(workout["duration"] as? Double, 1800.5)
+        XCTAssertEqual((workout["splits"] as? [[String: Any]])?.first?["avgHeartRate"] as? Double, 160.125)
+        XCTAssertEqual((workout["route"] as? [[String: Any]])?.first?["timestamp"] as? String, CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: start))
+        let heartSamples = (workout["timeSeries"] as? [String: Any])?["heartRate"] as? [[String: Any]]
+        XCTAssertEqual(heartSamples?.first?["timestamp"] as? String, CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: start))
+        XCTAssertEqual(heartSamples?.first?["value"] as? Double, 160.125)
+        for artifact in operation.artifacts {
+            let text = String(decoding: artifact.artifact.inlineData, as: UTF8.self)
+            XCTAssertTrue(text.contains("160.125"))
+            XCTAssertTrue(text.contains("240.125"))
+        }
+        if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+            for artifact in operation.artifacts {
+                let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-workouts-sdk")
+                    .appendingPathComponent(artifact.artifact.relativePath)
+                try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try artifact.artifact.inlineData.write(to: output)
+            }
+        }
+    }
+
+    func testUnselectedWorkoutDoesNotLeakIntoSuccessorArtifacts() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let workout = WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000138"),
+            workoutType: .running, startTime: ExportFixtures.referenceDate, duration: 1800.5,
+            calories: 320.125, distance: 5000.875, avgHeartRate: 160.125)
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 0), workouts: [workout])
+        let snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["steps"])
+        let resolution = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+        guard case .planned(let operation) = resolution else { return XCTFail("Unselected workouts must not block selected steps") }
+        XCTAssertEqual(operation.artifacts.count, 4)
+        for artifact in operation.artifacts {
+            let text = String(decoding: artifact.artifact.inlineData, as: UTF8.self)
+            XCTAssertFalse(text.contains("00000000-0000-4000-8000-000000000138"))
+            XCTAssertFalse(text.contains("native_workout_details"))
+            XCTAssertFalse(text.contains("workout_count"))
+            XCTAssertFalse(text.contains("160.125"))
+        }
+    }
+
+    func testRegistryTwoWorkoutRangeDoesNotPublishUnqualifiedExtremaRules() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let date = ExportFixtures.referenceDate
+        let day = HealthData(date: date, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            workouts: [WorkoutData(workoutType: .running, startTime: date, duration: 1800.5,
+                calories: 320.125, distance: 5000.875, maxHeartRate: 179.875, minHeartRate: 91.125, maxPower: 312.875)])
+        let snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+            selectionIDs: ["workouts"], rangeSummary: true)
+        do {
+            _ = try await AppleLooseDailyExportPlanner().planRange(healthData: [day],
+                settingsSnapshot: snapshot, surface: .localVaultRangeWithoutSideEffects)
+            XCTFail("Registry 2's original sum folds must not become newly approved workout maxima/minima")
+        } catch {
+            XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
+        }
+    }
+
     private func acceptedSnapshot(
         context: AppleSleepCaptureContext, formats: Set<ExportFormat>, selectionIDs: Set<String>? = nil,
         rangeSummary: Bool = false, unitPreference: UnitPreference = .metric

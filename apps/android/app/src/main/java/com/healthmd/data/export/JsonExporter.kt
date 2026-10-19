@@ -964,7 +964,7 @@ class JsonExporter {
                             }
                             workout.metadata["title"]?.let { put("title", it) }
                             workout.metadata["notes"]?.let { put("notes", it) }
-                            put("duration", workout.duration.inWholeSeconds.toDouble())
+                            put("duration", if (nativeSuccessor) workout.duration.toDouble(kotlin.time.DurationUnit.SECONDS) else workout.duration.inWholeSeconds.toDouble())
                             put("durationFormatted", ExportHelpers.formatDurationShort(workout.duration))
                             workout.distance?.takeIf { it > 0 }?.let {
                                 put("distance", it)
@@ -983,15 +983,15 @@ class JsonExporter {
                             }
                             workout.averageHeartRate?.let {
                                 if (includeLegacyAliases) put("averageHeartRate", it)
-                                put("avgHeartRate", it.roundToInt()) // iOS canonical key
+                                put("avgHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             workout.heartRateMin?.let {
                                 if (includeLegacyAliases) put("heartRateMin", it)
-                                put("minHeartRate", it.roundToInt()) // iOS canonical key
+                                put("minHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             workout.heartRateMax?.let {
                                 if (includeLegacyAliases) put("heartRateMax", it)
-                                put("maxHeartRate", it.roundToInt()) // iOS canonical key
+                                put("maxHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             if (includeAndroidNativeFields) {
                                 workout.averageSpeed?.let {
@@ -1002,23 +1002,23 @@ class JsonExporter {
                             }
                             workout.cyclingCadenceAvg?.let {
                                 if (includeLegacyAliases) put("cyclingCadenceAvg", it)
-                                put("avgCyclingCadence", it.roundToInt()) // iOS canonical key
+                                put("avgCyclingCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
-                            if (includeAndroidNativeFields) workout.cyclingCadenceMax?.let { put("maxCyclingCadence", it.roundToInt()) }
+                            if (includeAndroidNativeFields) workout.cyclingCadenceMax?.let { put("maxCyclingCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) }
                             workout.stepsCadenceAvg?.let {
                                 if (includeLegacyAliases) put("stepsCadenceAvg", it)
                                 if (workout.workoutType == WorkoutType.RUNNING) {
-                                    put("avgRunningCadence", it.roundToInt()) // iOS canonical key
+                                    put("avgRunningCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                                 }
                             }
-                            if (includeAndroidNativeFields) workout.stepsCadenceMax?.let { put("maxStepsCadence", it.roundToInt()) }
+                            if (includeAndroidNativeFields) workout.stepsCadenceMax?.let { put("maxStepsCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) }
                             workout.powerAvg?.let {
                                 if (includeLegacyAliases) put("powerAvg", it)
-                                put("avgPower", it.roundToInt()) // iOS canonical key
+                                put("avgPower", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             workout.powerMax?.let {
                                 if (includeLegacyAliases) put("powerMax", it)
-                                put("maxPower", it.roundToInt()) // iOS canonical key
+                                put("maxPower", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
                             }
                             if (workout.laps.isNotEmpty()) {
                                 putJsonArray("laps") {
@@ -1050,11 +1050,11 @@ class JsonExporter {
                                             put("startTimeISO", split.startTime.toIso8601())
                                             if (includeLegacyAliases) put("endTime", split.endTime.toIso8601())
                                             put("endTimeISO", split.endTime.toIso8601())
-                                            put("duration", split.duration.inWholeSeconds.toDouble())
+                                            put("duration", if (nativeSuccessor) split.duration.toDouble(kotlin.time.DurationUnit.SECONDS) else split.duration.inWholeSeconds.toDouble())
                                             split.distance?.let { put("distance", it) }
                                             split.averageHeartRate?.let {
                                                 if (includeLegacyAliases) put("averageHeartRate", it)
-                                                put("avgHeartRate", it.roundToInt())
+                                                put("avgHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt()))
                                             }
                                             if (analyticalV5 && (includeGranularData || nativeSuccessor)) putExactInterval(split.exactStartTime, split.exactEndTime, split.identity)
                                         }

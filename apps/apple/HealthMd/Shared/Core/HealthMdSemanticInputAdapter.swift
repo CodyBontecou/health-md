@@ -580,6 +580,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
         case "intermenstrual_bleeding": day.reproductiveHealth.intermenstrualBleedingCount
         case "toothbrushing": day.other.toothbrushingCount
         case "handwashing": day.other.handwashingCount
+        case "workout_count": day.workouts.isEmpty ? nil : day.workouts.count
         case "medication_count": day.medications?.medications.count
         case "active_medication_count": day.medications?.activeMedications.count
         case "archived_medication_count": day.medications?.archivedMedications.count
@@ -594,6 +595,24 @@ nonisolated enum HealthMdSemanticInputAdapter {
         }
         let quantity: Double?
         switch outputKey {
+        case "workout_minutes": quantity = day.workouts.reduce(0) { $0 + $1.duration } / 60
+        case "workout_calories": quantity = day.workouts.compactMap(\.calories).reduce(0, +)
+        case "workout_distance_km": quantity = day.workouts.compactMap(\.distance).reduce(0, +) / 1_000
+        case "workout_distance_mi": quantity = day.workouts.compactMap(\.distance).reduce(0, +) / 1_609.344
+        case "workout_avg_heart_rate": quantity = weightedWorkoutValue(day.workouts, value: \.avgHeartRate)
+        case "workout_max_heart_rate": quantity = day.workouts.compactMap(\.maxHeartRate).max()
+        case "workout_min_heart_rate": quantity = day.workouts.compactMap(\.minHeartRate).min()
+        case "workout_running_cadence": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .running }, value: \.avgRunningCadence)
+        case "workout_running_stride_length": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .running }, value: \.avgStrideLength)
+        case "workout_running_ground_contact": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .running }, value: \.avgGroundContactTime)
+        case "workout_running_vertical_oscillation": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .running }, value: \.avgVerticalOscillation)
+        case "workout_cycling_cadence": quantity = weightedWorkoutValue(day.workouts.filter { $0.workoutType == .cycling }, value: \.avgCyclingCadence)
+        case "workout_avg_power": quantity = weightedWorkoutValue(day.workouts, value: \.avgPower)
+        case "workout_max_power": quantity = day.workouts.compactMap(\.maxPower).max()
+        case "workouts":
+            return ["value_type": "text_list", "items": Array(Set(day.workouts.map {
+                $0.workoutTypeName.lowercased().replacingOccurrences(of: " ", with: "-")
+            })).sorted()]
         case "sleep_total_hours": quantity = day.sleep.totalDuration / 3_600
         case "sleep_deep_hours": quantity = day.sleep.deepSleep / 3_600
         case "sleep_rem_hours": quantity = day.sleep.remSleep / 3_600
@@ -754,6 +773,17 @@ nonisolated enum HealthMdSemanticInputAdapter {
         }
         guard let quantity else { throw AdapterError.unavailableWakeDateQuantity }
         return try binary64(quantity, unitID: internalUnitID(unit))
+    }
+
+    /// Retains the native duration-weighted reducer without historical display rounding.
+    private static func weightedWorkoutValue(_ workouts: [WorkoutData], value: KeyPath<WorkoutData, Double?>) -> Double? {
+        let pairs = workouts.compactMap { workout -> (Double, Double)? in
+            guard let value = workout[keyPath: value] else { return nil }
+            return (value, workout.duration)
+        }
+        let weight = pairs.reduce(0) { $0 + $1.1 }
+        guard !pairs.isEmpty, weight > 0 else { return nil }
+        return pairs.reduce(0) { $0 + $1.0 * $1.1 } / weight
     }
 
     private static func semanticValue(

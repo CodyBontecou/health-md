@@ -23,6 +23,45 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class DailyAggregateRustPlannerInstrumentationTest {
     @Test
+    fun packagedCorePlansEverySuccessorWorkoutFormatWithoutClockOrQuantityLoss() = runBlocking {
+        val zone = ZoneId.of("America/New_York")
+        val context = com.healthmd.domain.model.AndroidCaptureContext(zone, com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val start = java.time.Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = java.time.Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val workout = com.healthmd.domain.model.WorkoutData(
+            workoutType = com.healthmd.domain.model.WorkoutType.RUNNING,
+            startTime = start.atZone(zone).toLocalDateTime(), endTime = end.atZone(zone).toLocalDateTime(),
+            duration = kotlin.time.Duration.parse("3600.864197532s"), distance = 5000.875, calories = 320.125,
+            averageHeartRate = 160.125, stepsCadenceAvg = 178.625, powerAvg = 240.125,
+            exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, java.time.ZoneOffset.of("-04:00")),
+            exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, java.time.ZoneOffset.of("-05:00")),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-device-workout"))
+        val data = HealthData(date = LocalDate.of(2026, 11, 1), workouts = listOf(workout))
+        for (preference in listOf(com.healthmd.domain.model.UnitPreference.METRIC, com.healthmd.domain.model.UnitPreference.IMPERIAL)) {
+            val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
+                exportFormats = ExportFormat.entries.toSet(), includeGranularData = true, includeMetadata = false,
+                formatCustomization = FormatCustomization(unitPreference = preference),
+                metricSelection = com.healthmd.domain.model.MetricSelectionState(enabledMetrics = setOf("workouts")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("device-workout-${preference.name}", "device-workout-session-${preference.name}"))
+            val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("cannot borrow an ambient clock") }).plan(request)
+            assertEquals(AndroidExportProfile.android_sleep_v6, result.pin.profile)
+            assertEquals(4, result.plan.items.size)
+            for (item in result.plan.items) {
+                val text = item.content.decodeToString()
+                assertTrue(text.contains("android-sleep-v6"))
+                assertTrue(text.contains("synthetic-device-workout"))
+                assertTrue(text.contains("160.125"))
+                assertTrue(text.contains("178.625"))
+                assertTrue(text.contains("240.125"))
+                assertTrue(text.contains(start.toString()))
+                assertTrue(text.contains(end.toString()))
+            }
+        }
+    }
+
+    @Test
     fun packagedCorePlansExactNativeBytesForBothAndroidProfiles() = runBlocking {
         val day = HealthData(
             date = LocalDate.of(2026, 7, 25),

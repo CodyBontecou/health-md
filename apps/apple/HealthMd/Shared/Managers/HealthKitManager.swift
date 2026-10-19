@@ -1100,7 +1100,7 @@ final class HealthKitManager: ObservableObject {
             try await fetchOtherData(for: date, fetchScope: fetchScope)
         }
         async let workoutsTask = fetchIfEnabled(fetchScope.workouts, fallback: [WorkoutData]()) {
-            try await fetchWorkouts(for: date)
+            try await fetchWorkoutProjection(for: date, calendar: Self.effectiveFetchCalendar)
         }
 
         // Collect results with per-category isolation.
@@ -4054,8 +4054,8 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Workouts
 
-    private func fetchWorkouts(for date: Date) async throws -> [WorkoutData] {
-        let calendar = Self.effectiveFetchCalendar
+    /// Native workout ownership stays start-day based under the captured calendar, independently of sleep attribution.
+    func fetchWorkoutProjection(for date: Date, calendar: Calendar) async throws -> [WorkoutData] {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 

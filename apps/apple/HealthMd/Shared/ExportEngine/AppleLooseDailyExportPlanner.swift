@@ -718,7 +718,12 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
     ) -> Bool {
         (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .preview)
             && !settings.exportFormats.isEmpty && settings.exportFormats.isSubset(of: Set(ExportFormat.allCases))
-            && records.allSatisfy { $0.workouts.isEmpty && $0.providers?.isEmpty != false }
+            && records.allSatisfy { $0.providers?.isEmpty != false }
+            // Registry 2's original workout extrema fold as sums. Keep those immutable rules
+            // out of new workout range planning until separately versioned rules are qualified.
+            && !(settings.generateRangeSummary && settings.appleExportEnginePin?.registryVersion == 2
+                && settings.metricSelection.enabledMetricIDs.contains("workouts")
+                && records.contains { !$0.workouts.isEmpty })
     }
 
     static func supports(

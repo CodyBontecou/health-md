@@ -15,6 +15,7 @@ import com.healthmd.domain.model.deterministicRecordId
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToLong
@@ -78,8 +79,12 @@ internal object CompatibilityHealthMapper {
         route: List<WorkoutRoutePointData>,
         heartSamples: List<TimestampedSample>,
         splitDistanceMeters: Double,
+        capturedZone: ZoneId? = null,
     ): List<WorkoutSplitData> {
         if (route.size < 2 || splitDistanceMeters <= 0.0) return emptyList()
+        if (capturedZone != null) require(route.all { point ->
+            point.exactTime?.instant()?.atZone(capturedZone)?.toLocalDateTime() == point.time
+        }) { "native workout route clock is incompatible" }
         val splits = mutableListOf<WorkoutSplitData>()
         var cumulativeMeters = 0.0
         var nextBoundaryMeters = splitDistanceMeters
@@ -96,9 +101,14 @@ internal object CompatibilityHealthMapper {
 
             while (nextBoundaryMeters <= segmentEndMeters + 1e-7) {
                 val fraction = ((nextBoundaryMeters - cumulativeMeters) / segmentMeters).coerceIn(0.0, 1.0)
-                val splitEndTime = interpolateLocal(previous.time, current.time, fraction) ?: break
-                val splitEndExact = interpolateExact(previous.exactTime, current.exactTime, fraction)
-                val duration = Duration.between(splitStartTime, splitEndTime)
+                val splitEndExact = interpolateExact(previous.exactTime, current.exactTime, fraction, allowOffsetChange = capturedZone != null)
+                val splitEndTime = if (capturedZone != null) requireNotNull(splitEndExact) {
+                    "native workout split clock is unavailable"
+                }.instant().atZone(capturedZone).toLocalDateTime()
+                    else interpolateLocal(previous.time, current.time, fraction) ?: break
+                val duration = if (capturedZone != null) Duration.between(
+                    requireNotNull(splitStartExact) { "native workout split start is unavailable" }.instant(),
+                    requireNotNull(splitEndExact).instant()) else Duration.between(splitStartTime, splitEndTime)
                 if (!duration.isNegative && !duration.isZero) {
                     splits += WorkoutSplitData(
                         index = splitIndex,
@@ -106,7 +116,11 @@ internal object CompatibilityHealthMapper {
                         endTime = splitEndTime,
                         duration = duration.toNanos().nanoseconds,
                         distance = splitDistanceMeters,
-                        averageHeartRate = heartSamples.averageBetween(splitStartTime, splitEndTime),
+                        averageHeartRate = if (capturedZone != null) heartSamples.filter { sample ->
+                            val instant = requireNotNull(sample.exactTime) { "native workout sample clock is unavailable" }.instant()
+                            !instant.isBefore(requireNotNull(splitStartExact).instant()) && !instant.isAfter(requireNotNull(splitEndExact).instant())
+                        }.map { it.value }.takeIf { it.isNotEmpty() }?.average()
+                            else heartSamples.averageBetween(splitStartTime, splitEndTime),
                         exactStartTime = splitStartExact,
                         exactEndTime = splitEndExact,
                         identity = ExactSourceIdentity(
@@ -144,13 +158,15 @@ internal object CompatibilityHealthMapper {
         start: ExactSourceTimestamp?,
         end: ExactSourceTimestamp?,
         fraction: Double,
+        allowOffsetChange: Boolean = false,
     ): ExactSourceTimestamp? {
-        if (start == null || end == null || start.offset != end.offset || !fraction.isFinite()) return null
+        if (start == null || end == null || (!allowOffsetChange && start.offset != end.offset) || !fraction.isFinite()) return null
         return try {
             val nanos = Duration.between(start.instant(), end.instant()).toNanos()
             if (nanos < 0L) null else {
                 val instant = start.instant().plusNanos((nanos * fraction).roundToLong())
-                ExactSourceTimestamp(instant.epochSecond, instant.nano, start.offset)
+                // A synthetic boundary has no observed source offset when its endpoints disagree.
+                ExactSourceTimestamp(instant.epochSecond, instant.nano, start.offset.takeIf { it == end.offset })
             }
         } catch (_: ArithmeticException) {
             null

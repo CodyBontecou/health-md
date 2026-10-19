@@ -386,6 +386,8 @@ enum HealthMdRenderInputAdapter {
                 label = "Bedtime"
             } else if captureContext?.sleepDayAttribution == .morningEnds, outputKey == "sleep_wake" {
                 label = "Wake Time"
+            } else if captureContext?.sleepDayAttribution == .morningEnds, outputKey.hasPrefix("workout_") {
+                label = outputKey.split(separator: "_").map { $0.capitalized }.joined(separator: " ")
             } else {
                 label = metric.referenceName
             }
@@ -394,7 +396,10 @@ enum HealthMdRenderInputAdapter {
                let data = presentationData,
                let instant = outputKey == "sleep_bedtime" ? data.sleep.sessionStart
                     : outputKey == "sleep_wake" ? data.sleep.sessionEnd : nil {
-                timestamp = CanonicalRFC3339UTC.string(from: instant)
+                guard let value = CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: instant) else {
+                    throw AdapterError.invalidPresentation
+                }
+                timestamp = value
             } else {
                 timestamp = NSNull()
             }
@@ -435,7 +440,8 @@ enum HealthMdRenderInputAdapter {
             archiveDiagnostics = NSNull()
         }
         var basesFrontmatterBlocks: [[String: Any]] = []
-        if let snapshot = presentationSnapshot,
+        if captureContext?.sleepDayAttribution != .morningEnds,
+           let snapshot = presentationSnapshot,
            !snapshot.workouts.isEmpty,
            presentationCustomization.frontmatterConfig.isFieldEnabled("workout_details") {
             let outputKey = presentationCustomization.frontmatterConfig.outputKey(for: "workout_details") ?? "workout_details"
@@ -481,6 +487,7 @@ enum HealthMdRenderInputAdapter {
                 let sleepDetails = try sleepStageDetails(stages, ownerDate: ownerDate, selectedOutputKeys: selected)
                 details = mergeDetails(sleepDetails, details)
             }
+            details = mergeDetails(details, try workoutDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected))
             if !(details["output_keys"] as? [String] ?? []).isEmpty { renderedDay["native_details"] = details }
         }
         return renderedDay
@@ -497,7 +504,7 @@ enum HealthMdRenderInputAdapter {
     }
 
     private static let qualifiedDetailPaths: [[String]] = [
-        ["sleep", "sleepStages"], ["heart", "heartRateSamples"], ["heart", "hrvSamples"],
+        ["workouts"], ["sleep", "sleepStages"], ["heart", "heartRateSamples"], ["heart", "hrvSamples"],
         ["vitals", "bloodOxygenSamples"], ["vitals", "bloodGlucoseSamples"], ["vitals", "respiratoryRateSamples"], ["vitals", "bloodPressureSamples"],
     ]
 
@@ -513,6 +520,38 @@ enum HealthMdRenderInputAdapter {
                 }
         }
         return result
+    }
+
+    private static func workoutDetails(_ root: [String: Any], ownerDate: String,
+                                       selectedOutputKeys: [String]) throws -> [String: Any] {
+        let workouts = root["workouts"] as? [[String: Any]] ?? []
+        var rows: [[String: Any]] = []
+        var yaml: [String] = []
+        var lines = ["| Native Record (JSON) |", "|---|"]
+        let owners = ["workout_count", "workouts", "workout_minutes"]
+        let owner = owners.first(where: selectedOutputKeys.contains)
+        for workout in workouts {
+            guard owner != nil, let start = workout["startTimeISO"] as? String,
+                  let end = workout["endTimeISO"] as? String,
+                  start.hasSuffix("Z"), end.hasSuffix("Z"),
+                  let duration = workout["duration"] as? NSNumber, duration.doubleValue.isFinite,
+                  duration.doubleValue >= 0 else { throw AdapterError.invalidPresentation }
+            let record: [String: Any] = ["metric": "workout", "sample": workout]
+            let encoded = String(decoding: try canonicalJSON(record), as: UTF8.self)
+            rows.append(["date": ownerDate, "category": "Native Detail", "metric": "Workout",
+                "value": encoded, "unit": "json", "timestamp": start, "ordinal": rows.count])
+            yaml.append("  - \(encoded)")
+            // Escaping a pipe as a JSON escape keeps the Markdown table and decoded source object intact.
+            lines.append("| \(encoded.replacingOccurrences(of: "|", with: "\\u007c")) |")
+        }
+        return ["output_keys": workouts.isEmpty ? [] : [try unwrapWorkoutOwner(owner)], "csv_rows": rows,
+            "markdown_blocks": workouts.isEmpty ? [] : [["heading": "Workout Details", "lines": lines, "ordinal": 0]],
+            "bases_frontmatter_blocks": yaml.isEmpty ? [] : [["key": "native_workout_details", "lines": yaml, "ordinal": 0]]]
+    }
+
+    private static func unwrapWorkoutOwner(_ value: String?) throws -> String {
+        guard let value else { throw AdapterError.invalidPresentation }
+        return value
     }
 
     private static func quantityDetails(_ root: [String: Any], ownerDate: String,

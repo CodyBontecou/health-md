@@ -412,7 +412,9 @@ object HealthMdRenderInputAdapter {
                 put("label", if (nativeWakeDateContext != null) when (outputKey) {
                     "sleep_bedtime" -> "Bedtime"
                     "sleep_wake" -> "Wake Time"
-                    else -> metric.referenceName
+                    else -> if (outputKey.startsWith("workout_")) outputKey.split('_').joinToString(" ") {
+                        word -> word.replaceFirstChar { it.uppercase() }
+                    } else metric.referenceName
                 } else metric.referenceName)
                 put("frontmatter_key", frontmatterKey)
                 put("json_path", buildJsonArray { add(JsonPrimitive(categoryIdentifier(metric.categoryId))); add(JsonPrimitive(outputKey)) })
@@ -449,20 +451,19 @@ object HealthMdRenderInputAdapter {
             put("bases_frontmatter_fields", JsonArray(basesFrontmatterFields))
             put("bases_frontmatter_blocks", buildJsonArray {})
             put("metrics", JsonArray(metrics))
-            if (nativeWakeDateContext != null && options.includeGranularData &&
-                presentationData != null) {
+            if (nativeWakeDateContext != null && presentationData != null) {
                 val native = json.parseToJsonElement(JsonExporter().export(presentationData,
-                    presentationCustomization, true, captureContext = nativeWakeDateContext)).jsonObject
+                    presentationCustomization, options.includeGranularData, captureContext = nativeWakeDateContext)).jsonObject
                 val sleep = native["sleep"]?.jsonObject ?: buildJsonObject {}
                 val stages = sleep["sleepStages"]?.jsonArray ?: JsonArray(emptyList())
                 val sessions = sleep["sleepSessions"]?.jsonArray ?: JsonArray(emptyList())
-                if (stages.size != presentationData.sleep.stages.size || sessions.size != presentationData.sleep.sessions.size) {
+                if (options.includeGranularData && (stages.size != presentationData.sleep.stages.size || sessions.size != presentationData.sleep.sessions.size)) {
                     throw AdapterException("wake-date native sleep details are incompatible")
                 }
                 val selected = frozenSelectedOutputKeys ?: selectedOutputKeys
-                val quantities = mergeDetails(
+                val quantities = mergeDetails(mergeDetails(
                     mergeDetails(quantityDetails(native, ownerDate, selected), bloodPressureDetails(native, ownerDate, selected)),
-                    activityDetails(native, ownerDate, selected))
+                    activityDetails(native, ownerDate, selected)), workoutDetails(native, ownerDate, selected))
                 val details = if (stages.isNotEmpty() || sessions.isNotEmpty()) {
                     mergeDetails(sleepDetails(stages, sessions, ownerDate, selected), quantities)
                 } else quantities
@@ -491,7 +492,7 @@ object HealthMdRenderInputAdapter {
         else -> false
     }
 
-    private val qualifiedDetailPaths = setOf(listOf("sleep", "sleepStages"), listOf("sleep", "sleepSessions"),
+    private val qualifiedDetailPaths = setOf(listOf("workouts"), listOf("sleep", "sleepStages"), listOf("sleep", "sleepSessions"),
         listOf("heart", "heartRateSamples"), listOf("heart", "hrvSamples"),
         listOf("vitals", "bloodOxygenSamples"), listOf("vitals", "bloodGlucoseSamples"), listOf("vitals", "respiratoryRateSamples"), listOf("vitals", "bloodPressureSamples"),
         listOf("activity", "stepSamples"), listOf("activity", "activityIntensity"))
@@ -503,6 +504,39 @@ object HealthMdRenderInputAdapter {
             put(field, JsonArray((first.getValue(field).jsonArray + second.getValue(field).jsonArray).mapIndexed { index, item ->
                 JsonObject(item.jsonObject.toMutableMap().apply { put("ordinal", JsonPrimitive(index)) })
             }))
+        }
+    }
+
+    private fun workoutDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+        val workouts = root["workouts"]?.jsonArray ?: JsonArray(emptyList())
+        val owner = listOf("workout_count", "workouts", "workout_minutes").firstOrNull(selected::contains)
+        if (workouts.isNotEmpty() && owner == null) throw AdapterException("wake-date native workout selection is incompatible")
+        val rows = mutableListOf<JsonObject>()
+        val lines = mutableListOf("| Native Record (JSON) |", "|---|")
+        val yaml = mutableListOf<String>()
+        for (workout in workouts) {
+            val sample = workout.jsonObject
+            val start = sample["startTimeISO"]?.jsonPrimitive?.content ?: throw AdapterException("wake-date workout clock is missing")
+            val end = sample["endTimeISO"]?.jsonPrimitive?.content ?: throw AdapterException("wake-date workout clock is missing")
+            if (!start.endsWith("Z") || !end.endsWith("Z")) throw AdapterException("wake-date workout clock is incompatible")
+            val record = buildJsonObject { put("metric", "workout"); put("sample", sample) }
+            val encoded = record.toString()
+            rows += buildJsonObject {
+                put("date", ownerDate); put("category", "Native Detail"); put("metric", "Workout")
+                put("value", encoded); put("unit", "json"); put("timestamp", start); put("ordinal", rows.size)
+            }
+            yaml += "  - $encoded"
+            lines += "| ${encoded.replace("|", "\\u007c")} |"
+        }
+        return buildJsonObject {
+            put("output_keys", JsonArray(if (workouts.isEmpty()) emptyList() else listOf(JsonPrimitive(owner))))
+            put("csv_rows", JsonArray(rows))
+            put("markdown_blocks", JsonArray(if (workouts.isEmpty()) emptyList() else listOf(buildJsonObject {
+                put("heading", "Workout Details"); put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
+            })))
+            put("bases_frontmatter_blocks", JsonArray(if (yaml.isEmpty()) emptyList() else listOf(buildJsonObject {
+                put("key", "native_workout_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0)
+            })))
         }
     }
 

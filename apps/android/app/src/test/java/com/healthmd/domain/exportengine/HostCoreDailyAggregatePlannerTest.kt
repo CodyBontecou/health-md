@@ -57,6 +57,156 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
+    fun nativeWorkoutsReachEverySuccessorFormatWithExactQuantitiesAndClocks() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val workout = com.healthmd.domain.model.WorkoutData(
+            workoutType = com.healthmd.domain.model.WorkoutType.RUNNING,
+            startTime = start.atZone(context.zoneId).toLocalDateTime(),
+            endTime = end.atZone(context.zoneId).toLocalDateTime(),
+            duration = kotlin.time.Duration.parse("1800.5s"), calories = 320.125, distance = 5000.875,
+            averageHeartRate = 160.125, heartRateMax = 179.875, heartRateMin = 91.125,
+            stepsCadenceAvg = 178.625, powerAvg = 240.125, powerMax = 312.875,
+            exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.of("-04:00")),
+            exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.of("-05:00")),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-workout"),
+            metadata = mapOf("synthetic" to "workout, source"))
+        val data = HealthData(date = LocalDate.of(2026, 11, 1), workouts = listOf(workout))
+        for (preference in listOf(UnitPreference.METRIC, UnitPreference.IMPERIAL)) {
+            for (granular in listOf(false, true)) {
+                val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+                    includeGranularData = granular,
+                    formatCustomization = FormatCustomization(unitPreference = preference),
+                    metricSelection = MetricSelectionState(enabledMetrics = setOf("workouts")),
+                    executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+                val request = FrozenDailyAggregateExportRequest.capture(data, settings,
+                    AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                    DailyAggregateExportIds("workouts-${preference.name}-$granular", "workouts-session-${preference.name}-$granular"))
+                val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("no ambient clock") }).plan(request).plan
+                assertThat(plan.items).hasSize(4)
+                val native = Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).jsonObject
+                assertThat(native.getValue("schema_profile").jsonPrimitive.content).isEqualTo("android-sleep-v6")
+                val record = native.getValue("workouts").jsonArray.single().jsonObject
+                assertThat(record.getValue("startTimeISO").jsonPrimitive.content).isEqualTo(start.toString())
+                assertThat(record.getValue("endTimeISO").jsonPrimitive.content).isEqualTo(end.toString())
+                assertThat(record.getValue("duration").jsonPrimitive.content.toDouble()).isEqualTo(1800.5)
+                assertThat(record.getValue("elapsedDuration").jsonPrimitive.content.toDouble()).isEqualTo(3600.864197532)
+                assertThat(record.getValue("avgHeartRate").jsonPrimitive.content.toDouble()).isEqualTo(160.125)
+                assertThat(record.getValue("avgRunningCadence").jsonPrimitive.content.toDouble()).isEqualTo(178.625)
+                assertThat(record.getValue("avgPower").jsonPrimitive.content.toDouble()).isEqualTo(240.125)
+                val csv = plan.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString()
+                val minutesRow = csv.lineSequence().first { it.contains(",Workouts,Workout Minutes,") }
+                assertThat(minutesRow.split(',')[3].toDouble()).isEqualTo(1800.5 / 60)
+                val distanceRow = csv.lineSequence().first { it.contains(",Workouts,Workout Distance Km,") }
+                assertThat(distanceRow.split(',')[3].toDouble()).isEqualTo(5000.875 / 1000)
+                assertThat(csv).contains(",Native Detail,Workout,")
+                assertThat(csv).contains("synthetic-workout")
+                assertThat(csv).contains("160.125")
+                val markdown = plan.items.single { it.relativePath.endsWith(".md") && !it.relativePath.contains("-bases") }.content.decodeToString()
+                assertThat(markdown).contains("Workout Details")
+                assertThat(markdown).contains("178.625")
+                val bases = plan.items.single { it.relativePath.contains("-bases") }.content.decodeToString()
+                assertThat(bases).contains("native_workout_details:")
+                assertThat(bases).contains("240.125")
+                System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { directory ->
+                    for (item in plan.items) {
+                        val output = File(File(directory, "android-v6-workouts-${preference.name}-$granular"), item.relativePath)
+                        check(output.parentFile.mkdirs() || output.parentFile.isDirectory)
+                        output.writeBytes(item.content)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun capturedWorkoutIntervalsAndNestedSourcesKeepExactDstElapsedTime() = runTest {
+        val zone = ZoneId.of("America/New_York")
+        val date = LocalDate.of(2026, 11, 1)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val source = Metadata.manualEntry(clientRecordId = "synthetic-workout-captured")
+        for (longRoute in listOf(false, true)) {
+            val route = androidx.health.connect.client.records.ExerciseRoute(listOf(
+                androidx.health.connect.client.records.ExerciseRoute.Location(start, 0.0, 0.0, null, null, null),
+                androidx.health.connect.client.records.ExerciseRoute.Location(end.minusNanos(1), if (longRoute) 0.03 else 0.0001, 0.0, null, null, null)))
+            val session = androidx.health.connect.client.records.ExerciseSessionRecord(startTime = start,
+                startZoneOffset = ZoneOffset.of("-04:00"), endTime = end, endZoneOffset = ZoneOffset.of("-05:00"),
+                exerciseType = androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+                title = "Synthetic workout", notes = "SDK | source", metadata = source, exerciseRoute = route,
+                laps = listOf(androidx.health.connect.client.records.ExerciseLap(start.plusSeconds(900), end.minusSeconds(900),
+                    androidx.health.connect.client.units.Length.meters(1000.125))),
+                segments = listOf(androidx.health.connect.client.records.ExerciseSegment(start.plusSeconds(900), end.minusSeconds(900),
+                    androidx.health.connect.client.records.ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING, 2)))
+            val heart = androidx.health.connect.client.records.HeartRateRecord(startTime = start, startZoneOffset = null,
+                endTime = end, endZoneOffset = null, metadata = Metadata.manualEntry(clientRecordId = "workout-heart"),
+                samples = listOf(androidx.health.connect.client.records.HeartRateRecord.Sample(start.plusSeconds(1000), 160),
+                    androidx.health.connect.client.records.HeartRateRecord.Sample(end.minusSeconds(1000), 161)))
+            val power = androidx.health.connect.client.records.PowerRecord(startTime = start, startZoneOffset = null,
+                endTime = end, endZoneOffset = null, metadata = Metadata.manualEntry(clientRecordId = "workout-power"),
+                samples = listOf(androidx.health.connect.client.records.PowerRecord.Sample(start.plusSeconds(1000),
+                    androidx.health.connect.client.units.Power.watts(240.125))))
+            val client = mockk<HealthConnectClient>()
+            val features = mockk<androidx.health.connect.client.HealthConnectFeatures>()
+            io.mockk.every { client.features } returns features
+            io.mockk.every { features.getFeatureStatus(any()) } returns androidx.health.connect.client.HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
+            val aggregate = mockk<androidx.health.connect.client.aggregate.AggregationResult>()
+            io.mockk.every { aggregate[androidx.health.connect.client.records.StepsRecord.COUNT_TOTAL] } returns null
+            coEvery { client.aggregate(any<androidx.health.connect.client.request.AggregateRequest>()) } returns aggregate
+            coEvery { client.readRecords(any<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()) } answers {
+                val type = firstArg<ReadRecordsRequest<*>>().recordType
+                val records: List<androidx.health.connect.client.records.Record> = when (type) {
+                    androidx.health.connect.client.records.ExerciseSessionRecord::class -> listOf(session)
+                    androidx.health.connect.client.records.HeartRateRecord::class -> listOf(heart)
+                    androidx.health.connect.client.records.PowerRecord::class -> listOf(power)
+                    else -> emptyList()
+                }
+                ReadRecordsResponse(records, null)
+            }
+            val manager = HealthConnectManager(mockk<Context>(relaxed = true), client)
+            for (mode in listOf(SleepDayAttribution.NIGHT_BEGINS, SleepDayAttribution.MORNING_ENDS)) {
+                val captured = manager.fetchHealthDataRange(listOf(date), DataTypeSelection().deselectAll().copy(workouts = true),
+                    true, zone, pinnedCalendarDays = true, sleepDayAttribution = mode).single()
+                val workout = captured.workouts.single()
+                val expected = if (mode == SleepDayAttribution.MORNING_ENDS) 3600.864197532 else 3600.864
+                assertThat(workout.duration.toDouble(kotlin.time.DurationUnit.SECONDS)).isEqualTo(expected)
+                assertThat(workout.averageHeartRate).isEqualTo(160.5)
+                assertThat(workout.powerAvg).isEqualTo(240.125)
+                assertThat(workout.exactStartTime?.instant()).isEqualTo(start)
+                assertThat(workout.exactEndTime?.instant()).isEqualTo(end)
+                if (mode == SleepDayAttribution.NIGHT_BEGINS) continue
+                assertThat(workout.splits).isNotEmpty()
+                if (!longRoute) {
+                    assertThat(workout.splits.single().duration.toDouble(kotlin.time.DurationUnit.SECONDS)).isEqualTo(1800.864197532)
+                    assertThat(workout.splits.single().averageHeartRate).isEqualTo(160.5)
+                }
+                val context = AndroidCaptureContext(zone, mode)
+                val request = FrozenDailyAggregateExportRequest.capture(captured, ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+                    includeMetadata = false, includeGranularData = true, metricSelection = MetricSelectionState(enabledMetrics = setOf("workouts")),
+                    executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
+                    AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                    DailyAggregateExportIds("workout-captured-$longRoute", "workout-captured-session-$longRoute"))
+                val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("no ambient clock") }).plan(request).plan
+                val native = Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).jsonObject
+                val item = native.getValue("workouts").jsonArray.single().jsonObject
+                assertThat(item.getValue("duration").jsonPrimitive.content.toDouble()).isEqualTo(3600.864197532)
+                assertThat(item.getValue("elapsedDuration").jsonPrimitive.content.toDouble()).isEqualTo(3600.864197532)
+                assertThat(item.getValue("avgHeartRate").jsonPrimitive.content.toDouble()).isEqualTo(160.5)
+                assertThat(item.getValue("avgPower").jsonPrimitive.content.toDouble()).isEqualTo(240.125)
+                assertThat(item.getValue("splits").jsonArray).isNotEmpty()
+                System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { directory ->
+                    for (artifact in plan.items) {
+                        val output = File(File(directory, "android-v6-workouts-sdk-$longRoute"), artifact.relativePath)
+                        check(output.parentFile.mkdirs() || output.parentFile.isDirectory)
+                        output.writeBytes(artifact.content)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun capturedActivityIntervalsKeepExactElapsedTimeAcrossDstFold() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
         val date = LocalDate.of(2026, 11, 1)

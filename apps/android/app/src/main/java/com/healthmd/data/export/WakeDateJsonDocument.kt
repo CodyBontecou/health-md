@@ -116,6 +116,16 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
             TIMESTAMP_FIELDS.forEach { (field, exactField) ->
                 if (field in value) children[field] = JsonPrimitive(instant(value[exactField]).toString())
             }
+            if (path.lastOrNull() == "workouts") {
+                val start = instant(value["exactStartTime"])
+                val end = instant(value["exactEndTime"])
+                val duration = (children["duration"] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+                require(end >= start && duration != null && duration.isFinite() && duration >= 0) {
+                    "wake-date native workout interval is incompatible"
+                }
+                val elapsed = Duration.between(start, end)
+                children["elapsedDuration"] = JsonPrimitive(elapsed.seconds.toDouble() + elapsed.nano / 1_000_000_000.0)
+            }
             if (path.lastOrNull() == "segments") {
                 for ((field, exactField) in listOf("startTime" to "exactStartTime", "endTime" to "exactEndTime")) {
                     if (field in value) children[field] = JsonPrimitive(instant(value[exactField]).toString())
