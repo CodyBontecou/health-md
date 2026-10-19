@@ -45,11 +45,41 @@ test("landing page makes local-first health data movement the primary message", 
   assert.match(index, /Health\.md does not store your health data\.[\s\S]*You choose every export destination\./);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
-  assert.equal((index.match(/<section/g) ?? []).length, 5);
+  assert.equal((index.match(/<section/g) ?? []).length, 6);
   assert.match(index, /<section class="export-showcase" id="exports"/);
   assert.match(index, /<section class="download-cta" id="download"/);
   assert.doesNotMatch(index, /id="bridge"|id="automation"|id="interfaces"/);
   assert.match(index, /<footer class="site-footer">/);
+});
+
+test("landing shows attributed App Store excerpts before the download decision", () => {
+  const section = index.slice(index.indexOf('<section class="testimonials"'), index.indexOf('<section class="download-cta"'));
+  assert.match(section, /lang="en" aria-labelledby="reviews-title"/);
+  assert.match(section, /Good words\.<br>From real people\./);
+  assert.equal((section.match(/<figure /g) ?? []).length, 6);
+  assert.equal((section.match(/aria-label="5 out of 5 stars"/g) ?? []).length, 6);
+  assert.equal((section.match(/<figcaption>/g) ?? []).length, 6);
+  assert.match(section, /Manjil/);
+  assert.match(section, /Paul, just Paul \.\.\./);
+  assert.match(section, /pasadental/);
+  assert.match(section, /Works great, I needed a solution to export my health file to markdown locally\. This allows me to have that\./);
+  assert.match(section, /I’ve looked for a long time off and on for a good way to get my Apple Health data to my Mac and analyze it\./);
+  assert.match(section, /Love the idea and implementation\. Extremely fast export, high polished design and extra attentive and engaged author\. Thank you!/);
+  assert.match(section, /Selected reviews\./);
+  assert.match(section, /some are excerpts/);
+  assert.match(section, /id6757763969\?see-all=reviews/);
+  assert.doesNotMatch(section, /aggregateRating|only app|ALL health categories/);
+  assert.match(styles, /\.testimonials-group\s*{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /@media \(max-width: 800px\)[\s\S]*?\.testimonials-group\s*{ grid-template-columns: 1fr;/);
+  assert.match(section, /Woratana/);
+  assert.match(section, /eric00531/);
+  assert.match(section, /thatkidhovs/);
+  assert.match(section, /aria-pressed="false" hidden>Pause scrolling/);
+  assert.match(script, /function setupTestimonials\(\)/);
+  assert.match(script, /copy\.setAttribute\("aria-hidden", "true"\)/);
+  assert.match(script, /copy\.setAttribute\("inert", ""\)/);
+  assert.match(styles, /animation-direction: reverse/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation: none/);
 });
 
 test("landing closes with a localized download decision and compact footer", () => {
