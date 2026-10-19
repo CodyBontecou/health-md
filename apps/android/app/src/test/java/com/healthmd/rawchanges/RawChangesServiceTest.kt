@@ -155,11 +155,11 @@ class RawChangesServiceTest {
         val document = ObjectMapper().readTree(File(result.archive.location)) as ObjectNode
         assertThat(schema.validate(document)).isEmpty()
 
-        val invalidHeader = document.deepCopy<ObjectNode>()
+        val invalidHeader = document.deepCopy()
         (invalidHeader.get("header") as ObjectNode).put("version", 2)
         assertThat(schema.validate(invalidHeader).any { it.type == "const" }).isTrue()
 
-        val invalidRecord = document.deepCopy<ObjectNode>()
+        val invalidRecord = document.deepCopy()
         (invalidRecord.at("/events/0/record/metadata/lastModifiedTime") as ObjectNode).put("nano", 1_000_000_000)
         val recordErrors = schema.validate(invalidRecord)
         assertThat(recordErrors.any {
