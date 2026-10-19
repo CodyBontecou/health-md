@@ -329,12 +329,14 @@ final class CIQualityGateTests: XCTestCase {
             "test-ios": "IOS_RESULT", "test-macos": "MACOS_RESULT",
             "test-ios-ui": "IOS_UI_RESULT", "build-watch": "WATCH_RESULT",
         ]
+        let selectionOutputs = ["test-ios": "ios", "test-macos": "macos", "test-ios-ui": "ios_ui", "build-watch": "watch"]
         let gate = try XCTUnwrap(jobs["gate"])
         XCTAssertTrue(gate.contains("if: ${{ always() }}"))
         for id in consumers.sorted() {
             let job = try XCTUnwrap(jobs[id])
             XCTAssertTrue(job.contains("needs: [changes, prepare-shared-core]"), id)
-            XCTAssertTrue(job.contains("if: ${{ needs.changes.outputs.run == 'true' }}"), id)
+            let selectedOutput = try XCTUnwrap(selectionOutputs[id])
+            XCTAssertTrue(job.contains("if: ${{ needs.changes.outputs.\(selectedOutput) == 'true' }}"), id)
             XCTAssertTrue(job.contains("ref: ${{ inputs.release_sha || github.sha }}"), id)
             XCTAssertEqual(job.components(separatedBy: "actions/download-artifact@v4").count - 1, 1, id)
             XCTAssertEqual(job.components(separatedBy: artifactName).count - 1, 1, id)
@@ -348,7 +350,9 @@ final class CIQualityGateTests: XCTestCase {
             XCTAssertTrue(gate.contains("      - \(id)\n"), id)
             let variable = try XCTUnwrap(resultVariables[id])
             XCTAssertTrue(gate.contains("\(variable): ${{ needs.\(id).result }}"), id)
-            XCTAssertTrue(gate.contains("test \"$\(variable)\" = success"), id)
+            let selectedVariable = variable.replacingOccurrences(of: "_RESULT", with: "_SELECTED")
+            XCTAssertTrue(gate.contains("\(selectedVariable): ${{ needs.changes.outputs.\(selectedOutput) }}"), id)
+            XCTAssertTrue(gate.contains("require_job \"$\(selectedVariable)\" \"$\(variable)\""), id)
         }
         let watch = try XCTUnwrap(jobs["build-watch"])
         XCTAssertTrue(watch.contains("timeout-minutes: 25"))
