@@ -1,6 +1,7 @@
 package com.healthmd.di
 
 import android.content.Context
+import com.healthmd.myselfclaim.MyselfClaimPurchaseSource
 import com.healthmd.data.billing.BillingRepositoryImpl
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.PurchaseRepository
@@ -20,6 +21,10 @@ object BillingModule {
     fun provideBillingRepository(
         @ApplicationContext context: Context,
     ): BillingRepositoryImpl = BillingRepositoryImpl(context)
+
+    @Provides
+    fun provideMyselfClaimPurchaseSource(repository: BillingRepositoryImpl): MyselfClaimPurchaseSource =
+        MyselfClaimPurchaseSource { repository.myselfClaimPurchaseToken() }
 
     @Provides
     fun provideEntitlementRepository(

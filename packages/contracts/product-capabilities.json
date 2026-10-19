@@ -397,7 +397,7 @@
       "id": "export.scheduled-today-refresh",
       "name": "Scheduled exports refresh today's file",
       "classification": "shared",
-      "summary": "A scheduled export keeps the current day's partial file fresh alongside completed-day trailing windows, so a daytime run captures last night's sleep in addition to yesterday. The user outcome is unified; the native mechanism differs: Apple runs best-effort same-day refresh occurrences (3, 6, or 12 hours) beside the completed-day schedule, Android profile schedules mirror those refresh slots exactly, and the Android single schedule offers a 'past complete days + today' window that pairs with its sub-day cadence. Shared Setup v2 carries Today Refresh only in the Apple typed extension today; the neutral schedule section remains review-pending.",
+      "summary": "A scheduled export keeps the current day's partial file fresh alongside completed-day trailing windows, so a daytime run captures last night's sleep in addition to yesterday. The user outcome is unified; the native mechanism differs: Apple and Android profiles offer best-effort same-day refresh windows every 30 or 60 minutes, or 3, 6, or 12 hours, independently of completed-day cadence, and the Android single schedule offers a 'past complete days + today' window that pairs with its sub-day cadence. Shared Setup v2 remains frozen: its Apple typed extension supports only 3/6/12-hour refresh, and sharing a native 30/60-minute choice is explicitly blocked on both platforms rather than rounded or omitted. Local persistence v2 disables minute refresh for older apps and retains the minute choice without reactivating it after downgrade edits.",
       "profiles": [],
       "platforms": {
         "apple": {
@@ -896,22 +896,24 @@
     {
       "id": "account.myself_lifetime_claim",
       "name": "Complimentary myself.md access claim",
-      "classification": "planned",
-      "summary": "On iOS/iPadOS, open a user-reviewed claim screen for eligible original Health.md purchasers, verify only purchase evidence, then hand off to explicit myself.md account confirmation. Opening the screen grants no access. The free macOS companion is not purchase evidence.",
+      "classification": "shared",
+      "summary": "On iOS/iPadOS and Google Play Android, present a user-reviewed claim screen, verify eligible purchase evidence with myself.md, then hand off to explicit browser account confirmation. Opening the screen grants no access. Free macOS companion and F-Droid access do not establish a qualifying purchase.",
       "profiles": [],
       "platforms": {
         "apple": {
           "state": "available"
         },
         "android": {
-          "state": "planned",
-          "target": "Add Play-build healthmd://myself/claim routing, reviewed health_md_premium_lifetime evidence submission, owner browser confirmation, and cold/warm/cancel/retry/wrong-account verification before release; F-Droid remains ineligible."
+          "state": "available"
         }
       },
       "evidence": [
         "apps/apple/docs/features/myself-md-claim.md",
         "apps/apple/HealthMd/iOS/Views/MyselfClaimView.swift",
-        "apps/apple/HealthMd/iOS/HealthMdApp.swift"
+        "apps/apple/HealthMd/iOS/HealthMdApp.swift",
+        "apps/android/docs/features/myself-md-claim.md",
+        "apps/android/app/src/main/java/com/healthmd/myselfclaim/MyselfClaimScreen.kt",
+        "apps/android/app/src/play/java/com/healthmd/data/billing/MyselfClaimPurchase.kt"
       ]
     }
   ]

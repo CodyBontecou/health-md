@@ -1,12 +1,15 @@
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import {
   defaultLocale,
   enabledLocales,
   localeFor,
 } from '../../i18n/locales.mjs';
 import { docsPathForSlug } from '../../i18n/routes.mjs';
+
+const execFileAsync = promisify(execFile);
 
 export function markdownPathForDocsPath(pathname) {
   const clean = String(pathname).split(/[?#]/, 1)[0];
@@ -45,14 +48,15 @@ export async function walkMarkdownSources(contentRoot) {
   return files;
 }
 
-function gitLastModified(repositoryRoot, sourcePath) {
+async function gitLastModified(repositoryRoot, sourcePath) {
   const relative = path.relative(repositoryRoot, sourcePath);
   try {
-    const value = execFileSync(
+    const { stdout } = await execFileAsync(
       'git',
       ['-C', repositoryRoot, 'log', '-1', '--format=%cI', '--', relative],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
-    ).trim();
+      { encoding: 'utf8' },
+    );
+    const value = stdout.trim();
     if (!value) return undefined;
     const date = new Date(value);
     return Number.isNaN(date.valueOf()) ? undefined : date;
@@ -62,14 +66,25 @@ function gitLastModified(repositoryRoot, sourcePath) {
 }
 
 export async function buildDocsMetadataMap({ contentRoot, repositoryRoot }) {
+  const sources = await walkMarkdownSources(contentRoot);
+  const dates = new Array(sources.length);
+  let nextIndex = 0;
+  // Keep the per-file Git history semantics (including merges and renames),
+  // while overlapping process startup and disk reads with bounded concurrency.
+  await Promise.all(Array.from({ length: Math.min(4, sources.length) }, async () => {
+    while (nextIndex < sources.length) {
+      const index = nextIndex++;
+      dates[index] = await gitLastModified(repositoryRoot, sources[index]);
+    }
+  }));
   const metadata = new Map();
-  for (const sourcePath of await walkMarkdownSources(contentRoot)) {
+  for (const [index, sourcePath] of sources.entries()) {
     const relative = path.relative(contentRoot, sourcePath).split(path.sep).join('/');
     const pathname = docsRouteForSource(relative);
     metadata.set(pathname, {
       sourcePath,
       markdownPath: markdownPathForDocsPath(pathname),
-      lastModified: gitLastModified(repositoryRoot, sourcePath),
+      lastModified: dates[index],
     });
   }
   return metadata;
