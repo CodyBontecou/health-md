@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import ast
+import importlib.util
 import os
 import re
 import subprocess
@@ -22,61 +23,96 @@ exec(compile(ast.Module(body=[function], type_ignores=[]), "<component-detector>
 pattern_to_regex = namespace["pattern_to_regex"]
 
 
+SPEC = importlib.util.spec_from_file_location("android_ci_plan", ROOT / "apps/android/scripts/android-ci-plan.py")
+ci = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(ci)
+
+
 class CIOrchestrationTests(unittest.TestCase):
-    def filters(self, flag):
-        expression = JOBS["changes"]["outputs"][flag]
-        step_id = re.search(r"steps\.([\w-]+)\.outputs\.run", expression).group(1)
-        return next(step["with"]["paths"].splitlines() for step in JOBS["changes"]["steps"] if step.get("id") == step_id)
+    def test_cli_sources_keep_device_interop_and_readme_skips_native_jobs(self):
+        for path in ("apps/cli/crates/healthmd-mcp/src/lib.rs", "apps/cli/crates/healthmd-cli/src/main.rs"):
+            selected = ci.plan({path})
+            self.assertTrue(selected["run"])
+            self.assertFalse(selected["test"])
+            self.assertTrue(selected["instrumentation"])
+            self.assertTrue(selected["interop"])
+        self.assertFalse(ci.plan({"apps/cli/README.md"})["run"])
 
-    def selected(self, flag, *paths):
-        return any(pattern_to_regex(pattern.strip()).match(path) for pattern in self.filters(flag) if pattern.strip() for path in paths)
-
-    def test_cli_only_keeps_interop_without_native_matrix(self):
-        for path in ("apps/cli/crates/healthmd-mcp/src/lib.rs", "apps/cli/crates/healthmd-cli/src/main.rs", "apps/cli/README.md"):
+    def test_android_core_and_contract_changes_keep_active_consumers(self):
+        cases = {
+            "apps/android/app/src/main/java/com/healthmd/Example.kt": {"test", "instrumentation"},
+            "apps/android/app/src/androidTest/java/Example.kt": {"test", "instrumentation"},
+            "apps/android/wear/src/main/Example.kt": {"test"},
+            "packages/contracts/direct-protocol/v2/protocol.md": {"test", "instrumentation", "interop"},
+            "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs": {"test", "instrumentation", "interop"},
+            ".github/workflows/android-ci.yml": {"test", "instrumentation", "interop"},
+            "docs/migration/README.md": set(),
+            "apps/cli/crates/healthmd-client/src/direct.rs": {"instrumentation", "interop"},
+            "apps/cli/crates/healthmd-client/tests/android_live_listener.rs": {"instrumentation", "interop"},
+            "apps/cli/Cargo.lock": {"instrumentation", "interop"},
+            "apps/cli/Cargo.toml": {"instrumentation", "interop"},
+            "apps/cli/rust-toolchain.toml": {"instrumentation", "interop"},
+        }
+        for path, expected in cases.items():
             with self.subTest(path=path):
-                self.assertFalse(self.selected("native", path))
-                self.assertTrue(self.selected("run", path))
+                selected = ci.plan({path})
+                self.assertTrue(selected["run"])
+                self.assertEqual({job for job in ci.JOBS if selected[job]}, expected)
 
-    def test_android_core_and_contract_changes_keep_all_checks(self):
-        for path in ("apps/android/app/src/main/java/com/healthmd/Example.kt", "apps/android/app/src/androidTest/java/Example.kt", "apps/android/wear/src/main/Example.kt", "packages/contracts/direct-protocol/v2/protocol.md", "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs", ".github/workflows/android-ci.yml", "docs/migration/README.md", "apps/cli/crates/healthmd-client/src/direct.rs", "apps/cli/crates/healthmd-client/tests/android_live_listener.rs", "apps/cli/Cargo.lock", "apps/cli/Cargo.toml", "apps/cli/rust-toolchain.toml"):
-            with self.subTest(path=path):
-                self.assertTrue(self.selected("native", path))
-                self.assertTrue(self.selected("run", path))
-
-    def test_push_filter_is_union_of_job_filters(self):
+    def test_push_trigger_includes_every_component_consumer(self):
         triggers = WORKFLOW.get("on", WORKFLOW.get(True))
-        self.assertEqual(set(triggers["push"]["paths"]), set(self.filters("run")))
-        for native_pattern in self.filters("native"):
-            self.assertTrue(any(pattern_to_regex(pattern).match(native_pattern) for pattern in self.filters("run")), native_pattern)
+        patterns = triggers["push"]["paths"]
+        for path in ("AGENTS.md", "Makefile", "apps/android/app/src/Main.kt", "apps/cli/Cargo.toml",
+                     "packages/contracts/example.json", "packages/healthmd-core-rust/Cargo.toml",
+                     "docs/migration/README.md", ".github/workflows/android-ci.yml"):
+            self.assertTrue(any(pattern_to_regex(pattern).match(path) for pattern in patterns), path)
+        detector = next(step for step in JOBS["changes"]["steps"] if step.get("id") == "detect")
+        self.assertIn("apps/android/scripts/android-ci-plan.py", detector["run"])
+        for flag in ("run", *ci.JOBS):
+            self.assertEqual(JOBS["changes"]["outputs"][flag], "${{ steps.detect.outputs." + flag + " }}")
 
-    def test_native_jobs_use_native_flag_and_interop_uses_component_flag(self):
-        for job in ("test", "instrumentation", "fdroid", "wear-emulator-smoke"):
-            self.assertEqual(JOBS[job]["if"], "${{ needs.changes.outputs.native == 'true' }}")
-        self.assertEqual(JOBS["rust-kotlin-direct-interop"]["if"], "${{ needs.changes.outputs.run == 'true' }}")
+    def test_each_job_uses_its_own_selection_flag(self):
+        for job, flag in (("test", "test"), ("instrumentation", "instrumentation"),
+                          ("fdroid", "fdroid"), ("wear-emulator-smoke", "wear"),
+                          ("rust-kotlin-direct-interop", "interop")):
+            prefix = "always() && " if job in {"instrumentation", "fdroid"} else ""
+            self.assertEqual(JOBS[job]["if"], "${{ " + prefix + "needs.changes.outputs." + flag + " == 'true' }}")
 
     def gate(self, **overrides):
-        env = {**os.environ, "CHANGES_RESULT": "success", "CHANGES_RUN": "true", "NATIVE_RUN": "true", "TEST_RESULT": "success", "FDROID_RESULT": "success", "INTEROP_RESULT": "success", "WEAR_RESULT": "success", "INSTRUMENTATION_RESULT": "success", **overrides}
+        env = {**os.environ, "CHANGES_RESULT": "success", "CHANGES_RUN": "true", "POLICY_RESULT": "success"}
+        for job in ci.JOBS:
+            env[job.upper() + "_RUN"] = "true"
+            env[job.upper() + "_RESULT"] = "success"
+        env.update(overrides)
         return subprocess.run(["bash", "-c", JOBS["gate"]["steps"][0]["run"]], env=env, capture_output=True).returncode
 
-    def test_gate_accepts_complete_successful_native_qualification(self):
+    def test_gate_accepts_complete_successful_qualification(self):
         self.assertEqual(self.gate(), 0)
 
-    def test_gate_accepts_selected_interop_and_explicitly_skipped_native_jobs(self):
-        self.assertEqual(self.gate(NATIVE_RUN="false", TEST_RESULT="skipped", FDROID_RESULT="skipped", WEAR_RESULT="skipped", INSTRUMENTATION_RESULT="skipped"), 0)
+    def test_gate_accepts_selected_interop_and_explicitly_skipped_jobs(self):
+        overrides = {}
+        for job in ("TEST", "FDROID", "WEAR", "INSTRUMENTATION"):
+            overrides[job + "_RUN"] = "false"
+            overrides[job + "_RESULT"] = "skipped"
+        self.assertEqual(self.gate(**overrides), 0)
 
     def test_gate_rejects_failed_or_skipped_selected_jobs(self):
-        for job in ("TEST_RESULT", "FDROID_RESULT", "INTEROP_RESULT", "WEAR_RESULT", "INSTRUMENTATION_RESULT"):
+        for job in ("POLICY", "TEST", "FDROID", "INTEROP", "WEAR", "INSTRUMENTATION"):
             for result in ("failure", "skipped", "cancelled", ""):
                 with self.subTest(job=job, result=result):
-                    self.assertNotEqual(self.gate(**{job: result}), 0)
+                    self.assertNotEqual(self.gate(**{job + "_RESULT": result}), 0)
 
     def test_gate_rejects_detector_failure_missing_flags_and_inconsistent_scope(self):
-        for changes in ({"CHANGES_RESULT": "failure"}, {"CHANGES_RUN": ""}, {"NATIVE_RUN": ""}, {"NATIVE_RUN": "unexpected"}, {"CHANGES_RUN": "false", "NATIVE_RUN": "true"}):
-            with self.subTest(changes=changes):
-                self.assertNotEqual(self.gate(**changes), 0)
+        for changes in ({"CHANGES_RESULT": "failure"}, {"CHANGES_RUN": ""},
+                        {"TEST_RUN": ""}, {"TEST_RUN": "unexpected"},
+                        {"CHANGES_RUN": "false", "TEST_RUN": "true"}):
+            self.assertNotEqual(self.gate(**changes), 0)
 
     def test_gate_accepts_unaffected_pr_only_with_all_jobs_skipped(self):
-        skipped = dict(CHANGES_RUN="false", NATIVE_RUN="false", TEST_RESULT="skipped", FDROID_RESULT="skipped", INTEROP_RESULT="skipped", WEAR_RESULT="skipped", INSTRUMENTATION_RESULT="skipped")
+        skipped = {"CHANGES_RUN": "false", "POLICY_RESULT": "skipped"}
+        for job in ci.JOBS:
+            skipped[job.upper() + "_RUN"] = "false"
+            skipped[job.upper() + "_RESULT"] = "skipped"
         self.assertEqual(self.gate(**skipped), 0)
         self.assertNotEqual(self.gate(**{**skipped, "INTEROP_RESULT": "failure"}), 0)
 

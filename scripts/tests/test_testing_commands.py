@@ -45,15 +45,18 @@ class TestingCommandTests(unittest.TestCase):
         output = self.dry_run("test-all")
         for expected in ("packages/contracts/validate.py", "cargo test", "xcodebuild test", "./gradlew", "npm"):
             self.assertIn(expected, output)
-        self.assertNotIn("select-ios-simulator", output)
+        # The simulator is selected inside the executed recipe, never while make parses.
+        self.assertIn('ios_sim="$(scripts/select-ios-simulator.sh)"', output)
+        self.assertNotIn("$(shell scripts/select-ios-simulator", (ROOT / "apps/apple/Makefile").read_text())
 
     def test_android_feedback_selects_one_bounded_debug_variant_and_shared_modules(self):
         output = self.dry_run("test", "COMPONENT=android")
-        for task in (":app:testPlayDebugUnitTest", ":healthmd-core:testDebugUnitTest", ":wearable-contract:test", ":wear:testDebugUnitTest", ":direct-protocol:test", "--max-workers=2"):
+        for task in (":app:testPlayDebugUnitTest", ":healthmd-core:testDebugUnitTest", ":wearable-contract:test", ":direct-protocol:test", "--max-workers=2"):
             self.assertIn(task, output)
         self.assertNotIn("./gradlew test", output)
         self.assertNotIn("connected", output)
         self.assertNotIn("testPlayRelease", output)
+        self.assertNotIn(":wear:", output)
 
     def test_all_android_variants_remain_explicitly_available(self):
         self.assertIn("./gradlew test", self.dry_run("test-android-all"))
