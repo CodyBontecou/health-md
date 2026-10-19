@@ -612,8 +612,15 @@
     <string name="schedule_through_today_summary">Cada ejecución exporta los días completos anteriores más el archivo parcial de hoy, de modo que una ejecución diurna también captura el sueño de anoche. Combínalo con una frecuencia horaria para refrescar ambos archivos todo el día. Usa el modo de escritura Sobrescribir o Actualizar para evitar contenido duplicado del mismo día.</string>
     <string name="profile_schedule_today_refresh">Actualizar la exportación de hoy</string>
     <string name="profile_schedule_refresh_interval">Intervalo de actualización</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Actualiza hoy cada %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Actualiza hoy cada %1$d h</string>
+    <string name="profile_schedule_discard_recovery">Descartar recuperación pendiente</string>
+    <string name="profile_schedule_discard_recovery_named">Descartar recuperación pendiente de %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">¿Descartar recuperación pendiente de %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Detiene el reintento programado de este perfil y elimina sus fechas pendientes y ajustes de exportación guardados. La próxima ejecución programada usa el perfil y la programación actuales. Se conservan tu perfil, las credenciales de API, el historial de exportación y los datos ya exportados. Esto no puede deshacer una carga ni un archivo ya escrito.</string>
+    <string name="profile_schedule_discard_recovery_failed">No se pudo descartar por completo la recuperación pendiente. Revisa el perfil e inténtalo de nuevo.</string>
     <string name="schedule_date_window_today">Hoy</string>
     <string name="schedule_export_past_days">Exportar días pasados</string>
     <string name="schedule_today_summary">Cada ejecución exporta los datos de hoy para que su archivo diario actual pueda mantenerse actualizado. Utilice el modo de escritura Sobrescribir o Actualizar para evitar duplicar contenido del mismo día.</string>
@@ -1449,4 +1456,18 @@
     <string name="fdroid_onboarding_access_body">La versión oficial de F-Droid incluye gratis todas las funciones locales de exportación y automatización.</string>
     <string name="fdroid_onboarding_no_purchase">No se requiere compra, restauración, precio ni cuenta de Play.</string>
     <string name="fdroid_onboarding_no_play_services">Las exportaciones programadas funcionan sin Google Play Billing.</string>
+
+    <string name="myself_claim_entry">Reclamar acceso a myself.md</string>
+    <string name="myself_claim_entry_subtitle">Verifica una compra vitalicia existente de Google Play.</string>
+    <string name="myself_claim_title">Acceso a myself.md</string>
+    <string name="myself_claim_intro">Tu compra vitalicia de Health.md incluye acceso gratuito de por vida a myself.md.</string>
+    <string name="myself_claim_disclosure">Al continuar, leeremos tu comprobante de compra de Google Play y lo enviaremos a myself.md para verificarlo. Tus datos de salud y ubicación permanecen en tu dispositivo.</string>
+    <string name="myself_claim_account">Después, inicia sesión para elegir la cuenta de myself.md que recibirá acceso. Cada compra original puede vincularse a una sola cuenta. El acceso gratuito o heredado de Android por sí solo no cumple los requisitos.</string>
+    <string name="myself_claim_verify">Verificar compra y continuar</string>
+    <string name="myself_claim_verifying">Verificando compra…</string>
+    <string name="myself_claim_awaiting_user">Inicia sesión y confirma la cuenta receptora en el navegador. Después usa esa misma cuenta en myself.md. El acceso no se reclama hasta que lo confirmes.</string>
+    <string name="myself_claim_no_purchase">No se encontró una compra vitalicia completada de Health.md. Usa la cuenta de Google Play que realizó la compra e inténtalo de nuevo. Las compras pendientes no cumplen los requisitos.</string>
+    <string name="myself_claim_store_unavailable">Google Play no pudo obtener tu compra. Comprueba la conexión y tu cuenta de Google Play e inténtalo de nuevo.</string>
+    <string name="myself_claim_verification_failed">No se pudo verificar tu compra. Comprueba la conexión e inténtalo de nuevo. Si continúa, contacta con soporte; no se ha reclamado acceso.</string>
+    <string name="myself_claim_browser_unavailable">No se pudo abrir el navegador. Habilita uno y vuelve a verificar la compra.</string>
 </resources>

@@ -14,7 +14,7 @@ tags:
   - archive
 ---
 
-> **Publication hold:** this capability exists in current development source but is not part of the published `0.1.0-alpha.7` CLI preview. Publish this post only after a later `healthmd-cli/v<version>` release names the mobile compatibility matrix and retained QA evidence.
+> **Publication hold:** this capability exists in current development source but is not part of the published `0.1.0-alpha.6` CLI preview or the unpublished alpha.7 candidate. Publish this post only after a later `healthmd-cli/v<version>` release names the mobile compatibility matrix and retained QA evidence.
 
 A selected-metric export is usually the right answer. It is smaller, easier to inspect, and safer to share. Migration, archival, and interoperability work sometimes needs a different operation: ask the paired phone for every public record type it can actually expose.
 
@@ -61,7 +61,7 @@ The phone and CLI bind the immutable request, source, scope, and committed trans
 
 A corpus can contain exact times, routes, clinical text, medications, symptoms, and attachments. Write it to a private path, verify checksums or receipts where provided, and do not paste it into a model conversation.
 
-Current development MCP source also contains two approval-gated corpus tools, but they belong only to the complete local stdio profile. Release documentation must continue to separate those tools from the 19-tool alpha.7 package.
+Current development MCP source also contains two approval-gated corpus tools, but they belong only to the complete local stdio profile. Release documentation must continue to separate those tools from the published 19-tool alpha.6 package and the unpublished alpha.7 candidate.
 
 <div class="cta-row">
 <a class="button" href="/docs/full-corpus-export/">Read the preview guide</a>

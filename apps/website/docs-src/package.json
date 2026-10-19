@@ -11,7 +11,8 @@
     "agent-assets:sync": "node scripts/sync-agent-assets.mjs --write",
     "agent-assets:check": "node scripts/sync-agent-assets.mjs --check",
     "build": "npm run reference:verify && npm run agent-assets:check && astro build && node scripts/stage-public-paths.mjs",
-    "check": "npm run build && node scripts/check-built-links.mjs",
+    "check": "npm run build && npm run check:built",
+    "check:built": "node scripts/check-built-links.mjs",
     "preview": "astro preview --host 127.0.0.1"
   },
   "dependencies": {

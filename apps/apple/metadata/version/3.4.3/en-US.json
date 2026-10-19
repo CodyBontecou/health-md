@@ -1,0 +1,3 @@
+{
+  "whatsNew": "Health.md 3.4.3 improves schedule recovery and makes free-export reminders clearer.\n\n• Export-profile schedules restore their notifications when you reopen the app and avoid duplicate catch-up attempts.\n• Improved scheduled notification setup and recovery after temporary delivery errors.\n• Upgrade reminders correctly show how many free exports you have used."
+}

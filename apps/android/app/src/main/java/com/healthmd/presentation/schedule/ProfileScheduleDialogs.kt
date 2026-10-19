@@ -126,12 +126,13 @@ internal fun ProfileScheduleEditorFields(
     )
     if (draft.todayRefreshEnabled) {
         ProfileScheduleDropdown(
-            draft.todayRefreshIntervalHours,
-            ScheduledProfileEntry.TODAY_REFRESH_INTERVAL_OPTIONS.map { hours ->
-                hours to stringResource(R.string.profile_schedule_refresh_interval_hours, hours)
+            draft.todayRefreshMinutes,
+            ScheduledProfileEntry.TODAY_REFRESH_MINUTE_OPTIONS.map { minutes ->
+                minutes to if (minutes < 180) stringResource(R.string.profile_schedule_refresh_interval_minutes, minutes)
+                else stringResource(R.string.profile_schedule_refresh_interval_hours, minutes / 60)
             },
             stringResource(R.string.profile_schedule_refresh_interval),
-            { onDraftChange(draft.copy(todayRefreshIntervalHours = it)) }, ProfileScheduleTags.REFRESH_INTERVAL,
+            { onDraftChange(draft.withTodayRefreshMinutes(it)) }, ProfileScheduleTags.REFRESH_INTERVAL,
         )
     }
 }
@@ -150,6 +151,26 @@ internal fun ProfileScheduleDeleteDialog(
             destructive = true,
         ) {
             Text(stringResource(R.string.a11y_profiles_delete_body),
+                style = MaterialTheme.typography.bodyMedium, color = AppColors.textPrimary,
+                modifier = Modifier.fillMaxWidth())
+        }
+    }
+}
+
+@Composable
+internal fun ProfileScheduleDiscardRecoveryDialog(
+    profileName: String,
+    onDiscard: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ProfileScheduleDialog(onDismiss) {
+        ProfileScheduleDialogContent(
+            title = stringResource(R.string.profile_schedule_discard_recovery_title, profileName),
+            confirmLabel = stringResource(R.string.profile_schedule_discard_recovery),
+            onConfirm = onDiscard, onDismiss = onDismiss,
+            tag = ProfileScheduleTags.DISCARD_RECOVERY_DIALOG, destructive = true,
+        ) {
+            Text(stringResource(R.string.profile_schedule_discard_recovery_body),
                 style = MaterialTheme.typography.bodyMedium, color = AppColors.textPrimary,
                 modifier = Modifier.fillMaxWidth())
         }

@@ -9,6 +9,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.domain.model.ExportTarget
 import io.mockk.mockk
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,6 +27,34 @@ import org.junit.rules.TemporaryFolder
 
 /** Fresh-store and corruption boundaries for the profile schedule DataStore payload. */
 class ScheduledProfileEntryStoreTest {
+
+    @Test
+    fun `minute intent survives old writer disabled round trip without losing progress`() = runTest {
+        val e = entry("minute").copy(isEnabled = true, todayRefreshEnabled = true,
+            lastSuccessEpochMillis = 123L, lastRefreshSuccessEpochMillis = 456L)
+            .withTodayRefreshMinutes(30)
+        assertThat(store.upsert(e)).isTrue()
+        assertThat(store.entry("minute")).isEqualTo(e)
+        val raw = dataStore.data.first()[ENTRIES_KEY]!!
+        val json = kotlinx.serialization.json.Json
+        val objects = json.parseToJsonElement(raw) as kotlinx.serialization.json.JsonArray
+        val wire = objects[0] as kotlinx.serialization.json.JsonObject
+        assertThat(wire["todayRefreshEnabled"]?.toString() ?: "false").isEqualTo("false")
+        val old = kotlinx.serialization.json.JsonObject(wire.filterKeys {
+            it !in setOf("todayRefreshIntervalMinutes", "todayRefreshRequestedV2", "todayRefreshPersistenceVersion")
+        })
+        dataStore.edit { it[ENTRIES_KEY] = kotlinx.serialization.json.JsonArray(listOf(old)).toString() }
+        val restored = store.entry("minute")!!
+        assertThat(restored.todayRefreshEnabled).isFalse()
+        assertThat(restored.todayRefreshMinutes).isEqualTo(30)
+        assertThat(restored.lastSuccessEpochMillis).isEqualTo(123L)
+        assertThat(restored.lastRefreshSuccessEpochMillis).isEqualTo(456L)
+        assertThat(store.upsert(restored.withTodayRefreshMinutes(60).copy(todayRefreshEnabled = true))).isTrue()
+        assertThat(store.entry("minute")!!.todayRefreshMinutes).isEqualTo(60)
+        assertThat(store.delete("minute")).isEqualTo(Unit)
+        assertThat(store.getEntries()).isEmpty()
+    }
+
     @get:Rule
     val temporaryFolder = TemporaryFolder()
 
@@ -249,6 +279,119 @@ class ScheduledProfileEntryStoreTest {
 
         assertThat(store.getEntries().map { it.profileId })
             .containsExactly("alpha", "beta")
+    }
+
+    @Test
+    fun `discard clears only this profile recovery and admits the current window`() = runTest {
+        val zone = ZoneId.of("UTC")
+        val today = LocalDate.of(2026, 9, 20)
+        val oldFire = today.minusDays(7).atTime(8, 0).atZone(zone).toInstant().toEpochMilli()
+        val pending = ScheduledProfilePendingExport(
+            id = "historical-recovery",
+            ownerEpochDays = (10..12).map { LocalDate.of(2026, 9, it).toEpochDay() },
+            fireAtMillis = oldFire, settingsSnapshotJson = "old-snapshot",
+            target = ExportTarget.API_ENDPOINT, profileName = "Synthetic API",
+            apiEndpointUrl = "https://example.test/export", durableOperationId = "old-operation",
+        )
+        val original = entry("alpha").copy(
+            isEnabled = true, anchorEpochDay = today.minusDays(20).toEpochDay(), lookbackDays = 1,
+            todayRefreshEnabled = true, todayRefreshIntervalHours = 3,
+            lastSuccessEpochMillis = oldFire, pendingExports = listOf(pending),
+        )
+        store.upsert(original)
+        store.upsert(entry("beta"))
+        val now = today.atTime(13, 0).atZone(zone).toInstant().toEpochMilli()
+        assertThat(ScheduledProfileOccurrenceMath.dueOccurrence(store.entry("alpha")!!, now)!!.pendingExport)
+            .isEqualTo(pending)
+
+        assertThat(store.discardPendingRecovery("alpha")).isTrue()
+
+        val cleared = store.entry("alpha")!!
+        assertThat(cleared).isEqualTo(original.copy(pendingExports = emptyList(), recoveryGeneration = 1L))
+        assertThat(store.entry("beta")).isEqualTo(entry("beta"))
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(cleared, now)!!
+        assertThat(due.pendingExport).isNull()
+        assertThat(due.exportDates).containsExactly(today.minusDays(1), today).inOrder()
+    }
+
+    @Test
+    fun `discard fences late retry cancellation success and refresh checkpoints`() = runTest {
+        val original = entry("alpha").copy(lastSuccessEpochMillis = 1_000L, lastRefreshSuccessEpochMillis = 2_000L)
+        store.upsert(original)
+        assertThat(store.discardPendingRecovery("alpha")).isTrue()
+        val pending = ScheduledProfilePendingExport(
+            id = "late-residual", ownerEpochDays = listOf(20_001L), fireAtMillis = 3_000L,
+            settingsSnapshotJson = "old-snapshot", target = ExportTarget.DEVICE_FOLDER, profileName = "Alpha",
+        )
+
+        assertThat(store.recordRetry("alpha", 3_000L, null, listOf(pending), 0L)).isFalse()
+        assertThat(store.recordCancellation("alpha", 3_000L, null, listOf(pending), 0L)).isFalse()
+        store.recordSuccess("alpha", 3_000L, expectedRecoveryGeneration = 0L)
+        store.recordRefreshSuccess("alpha", 4_000L, expectedRecoveryGeneration = 0L)
+        assertThat(store.updateForGeneration("alpha", 0L) { it.copy(hour = 15) }).isFalse()
+
+        assertThat(store.entry("alpha")).isEqualTo(original.copy(recoveryGeneration = 1L))
+        assertThat(store.recordRetry("alpha", 3_000L, null, listOf(pending), 1L)).isTrue()
+        assertThat(store.entry("alpha")!!.pendingExports).containsExactly(pending)
+    }
+
+    @Test
+    fun `stale editor save and schedule toggles cannot undo a discard`() = runTest {
+        val pending = ScheduledProfilePendingExport(
+            id = "stale-draft-residual", ownerEpochDays = listOf(20_001L), fireAtMillis = 1_000L,
+            settingsSnapshotJson = "snapshot", target = ExportTarget.DEVICE_FOLDER, profileName = "Alpha",
+        )
+        val draft = entry("alpha").copy(pendingExports = listOf(pending))
+        store.upsert(draft)
+        store.update("alpha") { it.copy(isEnabled = false) }
+        store.update("alpha") { it.copy(isEnabled = true) }
+        assertThat(store.entry("alpha")!!.pendingExports).containsExactly(pending)
+        store.discardPendingRecovery("alpha")
+
+        store.upsert(draft.copy(hour = 10))
+
+        val stored = store.entry("alpha")!!
+        assertThat(stored.hour).isEqualTo(10)
+        assertThat(stored.pendingExports).isEmpty()
+        assertThat(stored.recoveryGeneration).isEqualTo(1L)
+    }
+
+    @Test
+    fun `concurrent discard and old retry cannot restore recovery`() = runTest {
+        store.upsert(entry("alpha"))
+        val pending = ScheduledProfilePendingExport(
+            id = "racing-residual", ownerEpochDays = listOf(20_001L), fireAtMillis = 1_000L,
+            settingsSnapshotJson = "snapshot", target = ExportTarget.DEVICE_FOLDER, profileName = "Alpha",
+        )
+
+        listOf(
+            async(Dispatchers.Default) { store.discardPendingRecovery("alpha") },
+            async(Dispatchers.Default) { store.recordRetry("alpha", 1_000L, null, listOf(pending), 0L) },
+        ).awaitAll()
+
+        assertThat(store.entry("alpha")!!.pendingExports).isEmpty()
+        assertThat(store.entry("alpha")!!.recoveryGeneration).isEqualTo(1L)
+    }
+
+    @Test
+    fun `discard fails closed for absent or malformed entries`() = runTest {
+        assertThat(store.discardPendingRecovery("missing")).isFalse()
+        dataStore.edit { it[ENTRIES_KEY] = "{not-json" }
+
+        assertThat(store.discardPendingRecovery("alpha")).isFalse()
+
+        assertThat(dataStore.data.first()[ENTRIES_KEY]).isEqualTo("{not-json")
+    }
+
+    @Test
+    fun `entries written before recovery generation existed default to zero`() = runTest {
+        dataStore.edit {
+            it[ENTRIES_KEY] = """[{"profileId":"legacy","anchorEpochDay":20000,"zoneId":"UTC"}]"""
+        }
+
+        assertThat(store.entry("legacy")!!.recoveryGeneration).isEqualTo(0L)
+        assertThat(store.discardPendingRecovery("legacy")).isTrue()
+        assertThat(store.entry("legacy")!!.recoveryGeneration).isEqualTo(1L)
     }
 
     private companion object {
