@@ -1227,10 +1227,10 @@ final class ExportOrchestratorTests: XCTestCase {
             fileSystem.files.first { path, _ in
                 path.hasSuffix("/Health/Rollups/Range/2026-03-15_to_2026-03-15.md")
             }?.value,
-            "Expected range-v9 summary"
+            "Expected current range summary"
         )
         XCTAssertTrue(rangeRollup.contains("schema: healthmd.rollup_summary"))
-        XCTAssertTrue(rangeRollup.contains("schema_version: 9"))
+        XCTAssertTrue(rangeRollup.contains("schema_version: \(HealthRollupExportSchema.currentVersion)"))
         XCTAssertTrue(rangeRollup.contains("rollup_period: range"))
         XCTAssertNotNil(fileSystem.files.first { path, _ in
             path.hasSuffix("/Health/_healthmd_data_dictionary.json")
@@ -1407,10 +1407,10 @@ final class ExportOrchestratorTests: XCTestCase {
             fileSystem.files.first { path, _ in
                 path.hasSuffix("/Health/Rollups/Range/2026-03-15_to_2026-03-15.md")
             }?.value,
-            "Expected range-v9 summary for the successful daily export"
+            "Expected current range summary for the successful daily export"
         )
         XCTAssertTrue(rangeRollup.contains("schema: healthmd.rollup_summary"))
-        XCTAssertTrue(rangeRollup.contains("schema_version: 9"))
+        XCTAssertTrue(rangeRollup.contains("schema_version: \(HealthRollupExportSchema.currentVersion)"))
         XCTAssertTrue(rangeRollup.contains("days_counted: 1"))
         XCTAssertTrue(rangeRollup.contains("| Steps | `steps` | 12,500 | steps | 1/1 | sum |"))
     }
