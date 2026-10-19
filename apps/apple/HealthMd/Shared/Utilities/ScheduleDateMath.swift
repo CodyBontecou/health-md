@@ -218,19 +218,9 @@ enum ScheduleDateMath {
     ) -> Date? {
         guard schedule.isEnabled, schedule.todayRefreshEnabled else { return nil }
 
-        let interval = ExportSchedule.clampedTodayRefreshIntervalHours(schedule.todayRefreshIntervalHours)
         let today = calendar.startOfDay(for: now)
-        var hour = schedule.preferredHour
-
-        while hour < 24 {
-            var components = calendar.dateComponents([.year, .month, .day], from: today)
-            components.hour = hour
-            components.minute = schedule.preferredMinute
-            components.second = 0
-            if let candidate = calendar.date(from: components), candidate > now {
-                return candidate
-            }
-            hour += interval
+        if let next = todayRefreshSlots(schedule: schedule, day: today, calendar: calendar).first(where: { $0 > now }) {
+            return next
         }
 
         guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else { return nil }
@@ -564,6 +554,29 @@ enum ScheduleDateMath {
         return calendar.date(from: components)
     }
 
+    private static func todayRefreshSlots(
+        schedule: ExportSchedule,
+        day: Date,
+        calendar: Calendar
+    ) -> [Date] {
+        let start = calendar.startOfDay(for: day)
+        let interval = schedule.todayRefreshMinutes
+        guard ExportSchedule.todayRefreshMinuteOptions.contains(interval) else { return [] }
+        let firstMinute = schedule.preferredHour * 60 + schedule.preferredMinute
+        let slots = stride(from: firstMinute, to: 1440, by: interval).compactMap { minute -> Date? in
+            guard let slot = calendar.nextDate(
+                after: start.addingTimeInterval(-1),
+                matching: DateComponents(hour: minute / 60, minute: minute % 60, second: 0),
+                matchingPolicy: .nextTimePreservingSmallerComponents,
+                repeatedTimePolicy: .first,
+                direction: .forward
+            ), calendar.isDate(slot, inSameDayAs: start) else { return nil }
+            return slot
+        }
+        // Gap normalization can resolve two civil slots to the same instant.
+        return Array(Set(slots)).sorted()
+    }
+
     private static func latestTodayRefreshOccurrenceDate(
         schedule: ExportSchedule,
         now: Date,
@@ -571,22 +584,6 @@ enum ScheduleDateMath {
     ) -> Date? {
         guard schedule.isEnabled, schedule.todayRefreshEnabled else { return nil }
 
-        let interval = ExportSchedule.clampedTodayRefreshIntervalHours(schedule.todayRefreshIntervalHours)
-        let today = calendar.startOfDay(for: now)
-        var latest: Date?
-        var hour = schedule.preferredHour
-
-        while hour < 24 {
-            var components = calendar.dateComponents([.year, .month, .day], from: today)
-            components.hour = hour
-            components.minute = schedule.preferredMinute
-            components.second = 0
-            if let candidate = calendar.date(from: components), candidate <= now {
-                latest = candidate
-            }
-            hour += interval
-        }
-
-        return latest
+        return todayRefreshSlots(schedule: schedule, day: now, calendar: calendar).last(where: { $0 <= now })
     }
 }

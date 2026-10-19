@@ -170,6 +170,17 @@ internal fun ProfileSchedulesContent(
     }
 }
 
+/** Keep legacy hour summaries while representing the two new minute choices exactly. */
+@Composable
+internal fun todayRefreshSummary(entry: ScheduledProfileEntry?): String {
+    val minutes = entry?.todayRefreshMinutes ?: 180
+    return if (minutes < 180) {
+        stringResource(R.string.profile_schedule_refresh_summary_minutes, minutes)
+    } else {
+        stringResource(R.string.profile_schedule_refresh_summary, minutes / 60)
+    }
+}
+
 internal fun cadenceSummary(entry: ScheduledProfileEntry?, refreshSummary: String? = null): String {
     if (entry == null || !entry.isEnabled) return "Not scheduled. Tap to configure."
     val time = LocalTime.of(entry.hour, entry.minute)
