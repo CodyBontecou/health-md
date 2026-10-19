@@ -259,7 +259,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// before exports or teardown. The snapshot round-trip preserves renderer
     /// authority and timezone provenance.
     func flushEdits() {
-        flushCancellable = nil
+        // Keep observing later edits. This cancellable owns the subscription,
+        // not just the currently debounced save.
         guard let activeID = profileStore.activeProfileID,
               !isProfileExecutionBlocked(activeID) else { return }
         profileStore.updateSettings(
