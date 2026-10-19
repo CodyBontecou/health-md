@@ -807,6 +807,9 @@ fn profile_presentation_categories(
         SemanticProfile::AppleHealthDataV8 => {
             crate::registry::MetricRegistryProfile::AppleHealthDataV8
         }
+        SemanticProfile::AppleHealthDataV10 => {
+            crate::registry::MetricRegistryProfile::AppleHealthDataV10
+        }
         SemanticProfile::AndroidFrozenV4 => crate::registry::MetricRegistryProfile::AndroidFrozenV4,
         SemanticProfile::AndroidAnalyticalV5 => {
             crate::registry::MetricRegistryProfile::AndroidAnalyticalV5
@@ -924,9 +927,7 @@ fn validate_config(
         .rollups
         .iter()
         .any(|rollup| rollup.period == RollupPeriod::Range);
-    if (contains_range
-        && (semantic.profile_revision != 2
-            || semantic.profile != SemanticProfile::AppleHealthDataV8))
+    if (contains_range && (semantic.profile_revision != 2 || !semantic.profile.is_apple()))
         || (semantic.profile_revision == 2
             && semantic
                 .rollups
@@ -935,9 +936,7 @@ fn validate_config(
     {
         return Err(RenderError::InvalidSemanticResult);
     }
-    if config.profile != SemanticProfile::AppleHealthDataV8
-        && (!semantic.rollups.is_empty() || config.rollups.is_some())
-    {
+    if !config.profile.is_apple() && (!semantic.rollups.is_empty() || config.rollups.is_some()) {
         return Err(RenderError::UnsupportedOperation);
     }
     let semantic_rollup_keys = semantic
@@ -1031,7 +1030,7 @@ fn validate_config(
                     || api.external_record_schema.is_some()
                     || api.envelope_version != 1
                     || api.source != "android"))
-            || (config.profile == SemanticProfile::AppleHealthDataV8
+            || (config.profile.is_apple()
                 && ((api.envelope_version == 1
                     && (!api.external_records.is_empty() || api.external_record_schema.is_some()))
                     || (api.envelope_version == 2 && api.external_record_schema.is_none())
@@ -1110,7 +1109,10 @@ fn validate_day(
         return Err(RenderError::LimitExceeded);
     }
     match (config.profile, &day.archive_diagnostics) {
-        (SemanticProfile::AppleHealthDataV8, Some(diagnostics)) => {
+        (
+            SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10,
+            Some(diagnostics),
+        ) => {
             if !matches!(
                 diagnostics.capture_status.as_str(),
                 "complete" | "partial" | "not_requested" | "legacy_unavailable"
@@ -1612,7 +1614,7 @@ fn render_plan(
             }
         }
     }
-    if config.profile == SemanticProfile::AppleHealthDataV8 {
+    if config.profile.is_apple() {
         apple_v8::add_rollups(&mut builder, config, semantic)?;
     }
     if let Some(api) = &config.api {
@@ -1629,7 +1631,9 @@ fn render_day(
     format: RenderFormat,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
-        SemanticProfile::AppleHealthDataV8 => apple_v8::render_day(config, day, format),
+        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10 => {
+            apple_v8::render_day(config, day, format)
+        }
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_day(config, day, format),
         SemanticProfile::AndroidAnalyticalV5 => {
             android_analytical_v5::render_day(config, day, format)
@@ -1640,7 +1644,9 @@ fn render_day(
 fn ordered_formats(profile: SemanticProfile, requested: &[RenderFormat]) -> Vec<RenderFormat> {
     let mut formats = requested.to_vec();
     match profile {
-        SemanticProfile::AppleHealthDataV8 => formats.sort_by_key(|format| format.id()),
+        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10 => {
+            formats.sort_by_key(|format| format.id());
+        }
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => formats
             .sort_by_key(|format| match format {
                 RenderFormat::Markdown => 0,
@@ -1909,7 +1915,9 @@ fn render_api_record(
     day: &RenderDay,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
-        SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_record(config, day),
+        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10 => {
+            apple_v8::render_api_record(config, day)
+        }
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_record(config, day),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
     }
@@ -1921,7 +1929,9 @@ fn render_api_envelope(
     records: &[(String, Vec<u8>)],
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
-        SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_envelope(api, records),
+        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10 => {
+            apple_v8::render_api_envelope(config.profile.public_schema_version(), api, records)
+        }
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_envelope(api, records),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
     }
@@ -1930,6 +1940,7 @@ fn render_api_envelope(
 pub(crate) const fn profile_id(profile: SemanticProfile) -> &'static str {
     match profile {
         SemanticProfile::AppleHealthDataV8 => "apple_health_data_v8",
+        SemanticProfile::AppleHealthDataV10 => "apple_health_data_v10",
         SemanticProfile::AndroidFrozenV4 => "android_frozen_v4",
         SemanticProfile::AndroidAnalyticalV5 => "android_analytical_v5",
     }
@@ -2031,9 +2042,12 @@ mod tests {
                 .unwrap();
             let text = String::from_utf8(json.content.clone()).unwrap();
             match profile {
-                SemanticProfile::AppleHealthDataV8 => {
+                SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10 => {
                     assert!(text.contains("\"schema\" : \"healthmd.health_data\""));
-                    assert!(text.contains("\"schema_version\" : 8"));
+                    assert!(text.contains(&format!(
+                        "\"schema_version\" : {}",
+                        profile.public_schema_version()
+                    )));
                 }
                 SemanticProfile::AndroidFrozenV4 => assert!(!text.contains("schemaProfile")),
                 SemanticProfile::AndroidAnalyticalV5 => {
@@ -2041,6 +2055,49 @@ mod tests {
                     assert!(text.contains("\"schemaVersion\": 5"));
                 }
             }
+        }
+    }
+
+    #[test]
+    fn apple_v10_metadata_is_explicit_and_v8_stays_frozen() {
+        for (profile, version) in [
+            (SemanticProfile::AppleHealthDataV8, 8),
+            (SemanticProfile::AppleHealthDataV10, 10),
+        ] {
+            let plan = complete_plan(profile);
+            assert_eq!(plan.profile, profile);
+            for item in &plan.items {
+                let text = std::str::from_utf8(&item.content).unwrap();
+                let extension = std::path::Path::new(&item.relative_path)
+                    .extension()
+                    .and_then(|value| value.to_str());
+                if extension == Some("json") {
+                    let root: Value = serde_json::from_slice(&item.content).unwrap();
+                    assert_eq!(root["schema_version"], version);
+                    assert_eq!(root["activity"]["steps"].as_f64(), Some(1234.0));
+                } else if extension == Some("csv") {
+                    assert!(text.contains(&format!("Metadata,schema_version,{version},")));
+                } else {
+                    assert!(text.contains(&format!("schema_version: {version}\n")));
+                }
+            }
+            let mut api: ApiSettings = serde_json::from_value(json!({
+                "enabled":true,"envelope_version":1,"exported_at":"2026-07-25T00:00:00Z",
+                "source":"ios","date_range_start":"2026-07-25","date_range_end":"2026-07-25",
+                "failed_date_details":[],"external_record_schema":null,
+                "external_record_schema_version":null,"external_records":[],
+                "max_days_per_batch":7,"max_encoded_bytes":8_388_608
+            }))
+            .unwrap();
+            let bytes = apple_v8::render_api_envelope(version, &api, &[]).unwrap();
+            let root: Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(root["daily_record_schema_version"], version);
+            api.envelope_version = 2;
+            api.external_record_schema = Some("healthmd.external_daily_record".to_owned());
+            api.external_record_schema_version = Some(1);
+            let bytes = apple_v8::render_api_envelope(version, &api, &[]).unwrap();
+            let root: Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(root["daily_record_schema_version"], version);
         }
     }
 

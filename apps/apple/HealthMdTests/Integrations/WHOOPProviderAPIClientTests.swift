@@ -70,6 +70,168 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         }
     }
 
+    func testCycleStepsSurviveSelectedFetchAndExportWithoutChangingAppleSteps() async throws {
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(request.url?.path, "/developer/v2/cycle")
+            return Self.response(request, status: 200, json: ["records": [[
+                "id": 101, "start": "2026-07-13T07:00:00Z", "end": NSNull(),
+                "score_state": "PENDING_SCORE", "step_count": 0
+            ]]])
+        }
+        let record = try await client.fetchDailyRecord(provider: .whoop, date: exportDate,
+            token: token(scope: "read:cycles"), calendar: calendar, whoopResources: [.cycles], now: exportDate)
+        var data = HealthData(date: exportDate, timeContext: ExportTimeContext(calendarTimeZoneIdentifier: calendar.timeZone.identifier))
+        data.activity = ActivityData(steps: 1)
+        data.providers = HealthProviderSections.normalized(from: [record], whoopResources: [.cycles])
+        XCTAssertEqual(data.providers?.whoop?.schemaVersion, 2)
+        XCTAssertEqual(data.providers?.whoop?.cycles.first?.stepCount, 0)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(data.toJSONThrowing().utf8)) as? [String: Any])
+        XCTAssertEqual(json["schema_version"] as? Int, 10)
+        XCTAssertEqual((json["activity"] as? [String: Any])?["steps"] as? Int, 1)
+        XCTAssertTrue(data.toCSV().contains("Physiological-Cycle Steps,0,count,"))
+        let native = String(decoding: try JSONEncoder().encode(record), as: UTF8.self)
+        XCTAssertTrue(native.contains("\"step_count\":0"))
+    }
+
+    func testDocumentedWorkoutZonesSurviveFetchNormalizationAndJSONCSVExports() async throws {
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(request.url?.path, "/developer/v2/activity/workout")
+            return Self.response(request, status: 200, json: ["records": [[
+                "id": "synthetic-workout",
+                "start": "2026-07-13T16:00:00Z",
+                "end": "2026-07-13T17:00:00Z",
+                "sport_name": "running",
+                "score_state": "SCORED",
+                "score": ["zone_durations": ["zone_zero_milli": 0, "zone_one_milli": 600_001]]
+            ]]])
+        }
+        let record = try await client.fetchDailyRecord(
+            provider: .whoop, date: exportDate,
+            token: token(scope: "read:workout"), calendar: calendar,
+            whoopResources: [.workouts], now: exportDate
+        )
+        let providers = try XCTUnwrap(HealthProviderSections.normalized(
+            from: [record], whoopResources: [.workouts]
+        ))
+        XCTAssertEqual(providers.whoop?.captureStatus, .complete)
+        XCTAssertEqual(providers.whoop?.workouts.first?.zoneDurations?.zoneZeroMilliseconds, 0)
+        XCTAssertEqual(providers.whoop?.workouts.first?.zoneDurations?.zoneOneMilliseconds, 600_001)
+
+        var data = HealthData(date: exportDate)
+        data.activity = ActivityData(steps: 1)
+        data.providers = providers
+        let json = try data.toJSONThrowing(outputFormatting: [.sortedKeys])
+        XCTAssertTrue(json.contains("\"zone_zero_milliseconds\":0"))
+        XCTAssertTrue(json.contains("\"zone_one_milliseconds\":600001"))
+        let csv = try data.toCSVThrowing()
+        XCTAssertTrue(csv.contains("\"\"zone_zero_milliseconds\"\":0"))
+        XCTAssertTrue(csv.contains("\"\"zone_one_milliseconds\"\":600001"))
+        let native = String(decoding: try JSONEncoder().encode(record), as: UTF8.self)
+        XCTAssertTrue(native.contains("\"zone_durations\""))
+        XCTAssertFalse(native.contains("\"zone_duration\""))
+    }
+
+    func testSelectedResourcesOnlyContactTheirEndpointsAndRetainAllPages() async throws {
+        var paths: [String] = []
+        var sleepPages = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            let path = try XCTUnwrap(request.url?.path)
+            paths.append(path)
+            if path.hasSuffix("/activity/sleep") {
+                sleepPages += 1
+                if sleepPages == 1 {
+                    let page: [String: Any] = [
+                        "records": [["id": "synthetic-sleep"]],
+                        "next_token": "synthetic-cursor"
+                    ]
+                    return Self.response(request, status: 200, json: page)
+                }
+                return Self.response(request, status: 200, json: ["records": []])
+            }
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let record = try await client.fetchDailyRecord(
+            provider: .whoop, date: exportDate,
+            token: token(scope: "offline read:recovery read:sleep"),
+            calendar: calendar, whoopResources: [.recovery, .sleep], now: exportDate
+        )
+        XCTAssertEqual(paths, ["/developer/v2/recovery", "/developer/v2/activity/sleep", "/developer/v2/activity/sleep"])
+        XCTAssertEqual(record.payloads.map(\.name), ["recovery", "sleep", "sleep_page_2"])
+        XCTAssertTrue(record.payloads.allSatisfy { $0.error == nil })
+    }
+
+    func testAllOffAndHistoricalBodyOnlyDoNotContactWHOOP() async throws {
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let tomorrow = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: exportDate))
+        let selections: [Set<WHOOPResourceName>] = [[], [.body]]
+        for resources in selections {
+            let record = try await client.fetchDailyRecord(
+                provider: .whoop, date: exportDate, token: token(scope: "offline"),
+                calendar: calendar, whoopResources: resources, now: tomorrow
+            )
+            XCTAssertTrue(record.payloads.isEmpty)
+            XCTAssertFalse(record.shouldExport)
+        }
+        XCTAssertEqual(requestCount, 0)
+    }
+
+    func testBodyOnlySelectionUsesCurrentSingletonWithoutCollectionRequests() async throws {
+        var paths: [String] = []
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            paths.append(try XCTUnwrap(request.url?.path))
+            return Self.response(request, status: 200, json: ["weight_kilogram": 75])
+        }
+        let record = try await client.fetchDailyRecord(
+            provider: .whoop, date: exportDate,
+            token: token(scope: "offline read:body_measurement"),
+            calendar: calendar, whoopResources: [.body], now: exportDate
+        )
+        XCTAssertEqual(paths, ["/developer/v2/user/measurement/body"])
+        XCTAssertEqual(record.payloads.map(\.name), ["body_measurements_snapshot"])
+        let section = try XCTUnwrap(HealthProviderSections.normalized(
+            from: [record], whoopResources: [.body]
+        )?.whoop)
+        XCTAssertEqual(section.captureStatus, .complete)
+        XCTAssertEqual(section.resources.map(\.resource), [.body])
+        XCTAssertTrue(section.recordCountsAreValid)
+    }
+
+    func testSelectedMissingScopeRemainsPartialWithoutErrorsForDisabledGroups() async throws {
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let record = try await client.fetchDailyRecord(
+            provider: .whoop, date: exportDate, token: token(scope: "offline"),
+            calendar: calendar, whoopResources: [.recovery], now: exportDate
+        )
+        XCTAssertEqual(requestCount, 0)
+        XCTAssertEqual(record.payloads.map(\.name), ["recovery"])
+        XCTAssertEqual(record.payloads.first?.statusCode, 403)
+        let section = try XCTUnwrap(HealthProviderSections.normalized(
+            from: [record], whoopResources: [.recovery]
+        )?.whoop)
+        XCTAssertEqual(section.captureStatus, .partial)
+        XCTAssertEqual(section.resources.map(\.resource), [.recovery])
+    }
+
+    func testHistoryDiscoveryOnlyRequestsSelectedCollections() async throws {
+        var paths: [String] = []
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            paths.append(try XCTUnwrap(request.url?.path))
+            return Self.response(request, status: 200, json: ["records": [["created_at": "2026-07-13T07:00:00Z"]]])
+        }
+        _ = try await client.discoverEarliestAvailableDate(
+            provider: .whoop, token: token(), whoopResources: [.recovery]
+        )
+        XCTAssertEqual(paths, ["/developer/v2/recovery"])
+    }
+
     func testEmptyCollectionResponsesDoNotProduceExportableSidecar() async throws {
         ExternalIntegrationURLProtocolStub.setHandler { request in
             Self.response(request, status: 200, json: ["records": []])

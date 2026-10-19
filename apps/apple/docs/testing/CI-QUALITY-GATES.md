@@ -1,6 +1,6 @@
 # CI Quality Gates
 
-This document describes all CI quality gates, how to run them locally, and how to update their configuration.
+This document describes all CI quality gates, how to run them locally, and how to update their configuration. These are qualification gates, not a per-edit checklist; use the root [test selection guide](../../../../docs/testing-strategy.md) for development feedback.
 
 ## Overview
 
@@ -73,7 +73,7 @@ Detects targeted compiler warnings (especially Swift concurrency warnings) in bu
 ```bash
 # Build and capture logs
 mkdir -p build/logs
-make test 2>&1 | tee build/logs/build-test.log
+make test-macos 2>&1 | tee build/logs/build-test.log
 
 # Check for targeted warnings
 make check-warnings
@@ -164,10 +164,13 @@ The release workflow runs this guard before App Store submission.
 
 ### PR workflow (`.github/workflows/apple-ci.yml`)
 
-Two jobs run independently on GitHub-hosted `macos-26` runners:
+The Xcode jobs run independently on GitHub-hosted `macos-26` runners, consuming one prepared shared-core artifact:
 
-- **test-ios** — iOS unit tests + UI smoke tests + warning gate + agent-local TDD evidence guard + log artifacts
-- **test-macos** — macOS unit tests + coverage + coverage threshold + warning gate + xcresult/log artifacts
+- **test-ios** — iOS unit tests + warning gate + agent-local TDD evidence guard + raw logs/xcresult
+- **test-ios-ui** — blocking selected iOS/iPad UI regressions
+- **test-macos** — one coverage-enabled macOS suite + generated documentation checks + coverage/warning gates + artifacts
+
+The macOS coverage pass and documentation checks reuse worktree-scoped DerivedData and the same coverage profile; each still uses normal `xcodebuild test`, so changed inputs rebuild. The independent connectivity package gate remains separate from app-hosted tests.
 
 Notelet requires Swift tools 6.3. The `macos-26` image provides Xcode 26.6, so pull-request validation does not depend on a self-hosted Mac.
 
@@ -176,7 +179,7 @@ Notelet requires Swift tools 6.3. The `macos-26` image provides Xcode 26.6, so p
 Runs daily at 4:00 AM UTC. Two parallel jobs with extended checks:
 
 - **extended-ios** — full UI test suite + strict warning gate + 30-day artifact retention
-- **extended-macos** — full test suite + coverage + warning gate + 30-day artifacts
+- **extended-macos** — one full coverage-enabled suite + coverage/warning gates + 30-day artifacts (not separate test and coverage executions)
 
 ### Concurrency
 

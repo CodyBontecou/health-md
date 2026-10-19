@@ -525,8 +525,10 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             }
             showFailureNotification(profile.name)
             // Reconciliation already arms the next ordinary slot. Raw refresh-only failures
-            // must not back off into another capture of this same slot or claim it succeeded.
-            if (!hasCompletedDayWork && settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+            // avoid recapture for folders. API retries retain their immutable recovery authority.
+            if (!hasCompletedDayWork && settings.exportMode == ExportMode.RAW_SNAPSHOT &&
+                target == ExportTarget.DEVICE_FOLDER
+            ) {
                 return Result.success()
             }
             return if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()

@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "431a6611b987c00fb1cce854ca9efee7bf5d26a87a3ac5407111f680d92427e9",
+      "sha256": "7ea65d87c69ea49977b56e17caf9fa907b226dceee7dcecc04b52920e003624d",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -28,7 +28,7 @@
       "id": "healthmd.capability_index",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/capability-index-v1.json",
-      "sha256": "328a11c876d44767f4a9e6ddd45703b56424e8284ce72dd504888dd069a60f28",
+      "sha256": "0a5e48ed9083c7b28dd369410ee98ffe150693f9f5e4da67b1235f4b1eef27a6",
       "implementations": [
         "packages/healthmd-core-rust/scripts/import-native-registry.py",
         "packages/contracts/validate.py"
@@ -44,6 +44,17 @@
         "packages/contracts/test_validate_android_recovery_coverage.py",
         "packages/contracts/portability-inventory/android-agent-recovery/v1/historical-base.json",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupAndroidProfileFieldCoverageTest.kt"
+      ]
+    },
+    {
+      "id": "healthmd.metric_profile_extension",
+      "version": 1,
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/apple-health-data-v10-profile-v1.json",
+      "sha256": "96329b2592dfbc53b72069540a3cf1d5ae470578684c941ba873d27c4c678e59",
+      "implementations": [
+        "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
+        "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
+        "packages/contracts/validate.py"
       ]
     }
   ],
@@ -695,8 +706,13 @@
       "status": "deferred",
       "summary": "B01/B05 deferred foundation for complete intent, stored native/host delegation bootstrap, zero-health candidate-bound control plan/approval relay and immutable execution; partial pure native codecs do not establish native execution or availability.",
       "specification": "packages/contracts/agent-bridge/v1/contract.md",
-      "authorities": ["packages/contracts/agent-bridge/v1/contract.md", "packages/contracts/agent-bridge/v1/agent.schema.json"],
-      "implementations": ["packages/contracts/agent-bridge/v1/validation.py"],
+      "authorities": [
+        "packages/contracts/agent-bridge/v1/contract.md",
+        "packages/contracts/agent-bridge/v1/agent.schema.json"
+      ],
+      "implementations": [
+        "packages/contracts/agent-bridge/v1/validation.py"
+      ],
       "consumers": [
         "packages/contracts/test_validate_agent_bridge.py",
         "apps/apple/HealthMd/iOS/IPhoneDirectFileExportProducer.swift",
@@ -705,7 +721,10 @@
         "apps/cli/crates/healthmd-operations/src/registry.rs",
         "apps/website/external-sources.json"
       ],
-      "documentation": ["packages/contracts/agent-bridge/v1/source-review.md", "packages/contracts/agent-bridge/v1/conformance.md"],
+      "documentation": [
+        "packages/contracts/agent-bridge/v1/source-review.md",
+        "packages/contracts/agent-bridge/v1/conformance.md"
+      ],
       "fixtures": [
         {
           "path": "packages/contracts/agent-bridge/v1/agent.schema.json",
@@ -729,10 +748,22 @@
       "status": "deferred",
       "summary": "B05 fixed source-aware queries with exact native types, source-specific metadata/precision and bounded cursors; B08 explicit projection product/selector approvals, intraday observations and immutable v4 job/transfer binding. Historical queries, pairing and daily profiles are unchanged.",
       "specification": "packages/contracts/agent-bridge/v1/contract.md",
-      "authorities": ["packages/contracts/agent-bridge/v1/query.schema.json", "packages/contracts/agent-bridge/v1/source-review.md"],
-      "implementations": ["packages/contracts/agent-bridge/v1/validation.py"],
-      "consumers": ["packages/contracts/test_validate_agent_bridge.py", "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift", "apps/android/app/src/main/java/com/healthmd/rawexport/HealthConnectRecordCatalog.kt", "apps/cli/crates/healthmd-operations/src/registry.rs"],
-      "documentation": ["packages/contracts/agent-bridge/v1/conformance.md"],
+      "authorities": [
+        "packages/contracts/agent-bridge/v1/query.schema.json",
+        "packages/contracts/agent-bridge/v1/source-review.md"
+      ],
+      "implementations": [
+        "packages/contracts/agent-bridge/v1/validation.py"
+      ],
+      "consumers": [
+        "packages/contracts/test_validate_agent_bridge.py",
+        "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+        "apps/android/app/src/main/java/com/healthmd/rawexport/HealthConnectRecordCatalog.kt",
+        "apps/cli/crates/healthmd-operations/src/registry.rs"
+      ],
+      "documentation": [
+        "packages/contracts/agent-bridge/v1/conformance.md"
+      ],
       "fixtures": [
         {
           "path": "packages/contracts/agent-bridge/v1/query.schema.json",
@@ -762,15 +793,127 @@
       "status": "deferred",
       "summary": "Independently negotiated direct v4 closed agent-control and Android source-query extension over unchanged Apple v1/Android v2 transport and transfer; old peers never receive new cases.",
       "specification": "packages/contracts/direct-protocol/v4/protocol.md",
-      "authorities": ["packages/contracts/direct-protocol/v4/protocol.md", "packages/contracts/direct-protocol/v4/envelope.schema.json"],
-      "implementations": ["packages/contracts/agent-bridge/v1/validation.py"],
-      "consumers": ["packages/contracts/test_validate_agent_bridge.py", "packages/healthmd-core-rust/crates/healthmd-protocol/src/wire.rs", "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectProtocol.swift", "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectCodecs.kt", "apps/cli/crates/healthmd-client/src/direct.rs"],
-      "documentation": ["packages/contracts/agent-bridge/v1/conformance.md"],
+      "authorities": [
+        "packages/contracts/direct-protocol/v4/protocol.md",
+        "packages/contracts/direct-protocol/v4/envelope.schema.json"
+      ],
+      "implementations": [
+        "packages/contracts/agent-bridge/v1/validation.py"
+      ],
+      "consumers": [
+        "packages/contracts/test_validate_agent_bridge.py",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/wire.rs",
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectProtocol.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectCodecs.kt",
+        "apps/cli/crates/healthmd-client/src/direct.rs"
+      ],
+      "documentation": [
+        "packages/contracts/agent-bridge/v1/conformance.md"
+      ],
       "fixtures": [
         {
           "path": "packages/contracts/direct-protocol/v4/envelope.schema.json",
           "sha256": "cce87fba2e478048e06b6c1b4edadb858f7653821a8118440fc9f2d15fd23851",
           "provenance": "Closed v4 discriminator/payload schema candidate; synthetic canonical bytes live in the agent_bridge conformance bundle. Native Rust/Swift/Kotlin conformance and physical negotiation NOT RUN.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.health_data.apple_v10",
+      "version": 10,
+      "status": "canonical",
+      "summary": "Apple daily v10 with unchanged primary metrics and independently versioned WHOOP v2; distinct from frozen Apple v8 and deferred unified daily v9.",
+      "specification": "packages/contracts/apple-export/v10/contract.md",
+      "authorities": [
+        "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift",
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/apple-health-data-v10-profile-v1.json"
+      ],
+      "implementations": [
+        "apps/apple/HealthMd/Shared/Integrations/WHOOPProviderSections.swift",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs"
+      ],
+      "consumers": [
+        "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+        "apps/cloud/src/envelope.ts",
+        "apps/cloud/mcp/reader.ts",
+        "apps/cloud/src/dashboard.ts",
+        "apps/website/scripts/whoop-visualization-samples.mjs"
+      ],
+      "documentation": [
+        "apps/apple/docs/features/export-schema.md"
+      ],
+      "fixtures": [
+        {
+          "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v10.json",
+          "sha256": "7f67bea773f10b8b97ece731c43c343b01a72d9f8a029feb254b07dfe93fad98",
+          "provenance": "Generated by the current native Apple v10 export signature test; includes WHOOP v2 cycle steps without replacing the historical v8 signature.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.provider_sections.whoop_v2",
+      "version": 2,
+      "status": "canonical",
+      "summary": "WHOOP provider v2 adds optional exact physiological-cycle step counts, independent of civil-day primary steps and existing read:cycles scope.",
+      "specification": "packages/contracts/provider-sections/v2/contract.md",
+      "authorities": [
+        "packages/contracts/provider-sections/v2/provider-sections-v2.schema.json"
+      ],
+      "implementations": [
+        "apps/apple/HealthMd/Shared/Integrations/WHOOPProviderSections.swift"
+      ],
+      "consumers": [
+        "apps/apple/HealthMdTests/Export/WHOOPProviderSectionsExportTests.swift"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/provider-sections/v2/fixtures/whoop-complete.providers.json",
+          "sha256": "1780342891ea3975509f43af86a01656f37d503dac9d94ab8fed06650e4c84c3",
+          "provenance": "Synthetic WHOOP v2 fixture retains the v1 measurements and adds 8234 physiological-cycle steps; contains no member payload or credential.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.rollup_summary.apple_v10",
+      "version": 10,
+      "status": "canonical",
+      "summary": "Apple range summary v10 identifies source daily v10 while preserving reduction rules v8; historical range v9 remains frozen.",
+      "specification": "packages/contracts/rollup-summary/v10/contract.md",
+      "authorities": [
+        "packages/contracts/rollup-summary/v10/rollup-summary.schema.json"
+      ],
+      "implementations": [
+        "apps/apple/HealthMd/Shared/Export/HealthRollupModels.swift"
+      ],
+      "consumers": [
+        "apps/apple/HealthMdTests/Export/HealthRollupExporterTests.swift"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/rollup-summary/v10/fixtures/range-v10.json",
+          "sha256": "9b9e8f52cb373deeddf0e8a627e02c0e3401dccfddeacd29386769a656031556",
+          "provenance": "Synthetic native Swift v10 range summary, source daily v10 and unchanged rules v8.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v10/fixtures/range-v10.csv",
+          "sha256": "eb523f58e4a96ea9df3fa3be9665dc53477c879b46029ebaa7c3cc6ad9a1997b",
+          "provenance": "Synthetic native Swift v10 range CSV with versioned provenance and frozen timezone.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v10/fixtures/range-v10.md",
+          "sha256": "c4e48a1110d8f4df6dd234d5c9be8932299a2b67336cded03a908f07a31675cc",
+          "provenance": "Synthetic native Swift v10 range Markdown with unchanged primary reduction rules.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v10/fixtures/range-v10-bases.md",
+          "sha256": "0067cc7cc82a3e9561710cc23f424327834089f986e7508c5c0de0a8496d3fe7",
+          "provenance": "Synthetic native Swift v10 range Bases frontmatter with explicit source daily v10.",
           "mirrors": []
         }
       ]

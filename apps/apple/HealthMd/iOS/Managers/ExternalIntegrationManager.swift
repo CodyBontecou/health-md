@@ -5,6 +5,16 @@ import Foundation
 import Security
 import UIKit
 
+struct ExternalIntegrationConnectionStatus: Equatable, Identifiable {
+    enum Kind: Equatable {
+        case progress, success, warning, error
+    }
+
+    let id = UUID()
+    let kind: Kind
+    let message: String
+}
+
 @MainActor
 final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalIntegrationDailyRecordProviding {
     static let redirectURI = "healthmd://oauth/callback"
@@ -12,13 +22,16 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     @Published private(set) var accounts: [ExternalIntegrationProvider: ExternalIntegrationAccount] = [:]
     @Published private(set) var isConnectingProvider: ExternalIntegrationProvider?
     @Published private(set) var isDisconnectingProvider: ExternalIntegrationProvider?
-    @Published var statusMessage: String?
+    @Published private(set) var connectionStatus: ExternalIntegrationConnectionStatus?
+
+    var statusMessage: String? { connectionStatus?.message }
 
     private let tokenStore: ExternalIntegrationTokenStore
     private let enabledProviders: Set<ExternalIntegrationProvider>
     private let brokerClient: ExternalOAuthBrokerClient
     private let apiClient: ExternalProviderAPIClient
     private var authSession: ASWebAuthenticationSession?
+    private let authenticate: (@MainActor (URL) async throws -> URL)?
     private var refreshTasks: [ExternalIntegrationProvider: Task<ExternalIntegrationToken, Error>] = [:]
     private var exportActionDepth = 0
     private var exportActionDidFail = false
@@ -37,12 +50,14 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         tokenStore: ExternalIntegrationTokenStore,
         enabledProviders: Set<ExternalIntegrationProvider>,
         brokerClient: ExternalOAuthBrokerClient,
-        apiClient: ExternalProviderAPIClient
+        apiClient: ExternalProviderAPIClient,
+        authenticate: (@MainActor (URL) async throws -> URL)? = nil
     ) {
         self.tokenStore = tokenStore
         self.enabledProviders = enabledProviders
         self.brokerClient = brokerClient
         self.apiClient = apiClient
+        self.authenticate = authenticate
         self.accounts = tokenStore.accounts.filter { enabledProviders.contains($0.key) }
         super.init()
     }
@@ -85,17 +100,17 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         commitAllowed: @MainActor () -> Bool = { true }
     ) async {
         guard enabledProviders.contains(provider) else {
-            statusMessage = "\(provider.displayName) is not enabled for this build."
+            setConnectionStatus(.error, "\(provider.displayName) is not enabled for this build.")
             return
         }
         guard brokerClient.isConfigured else {
-            statusMessage = ExternalOAuthBrokerError.notConfigured.localizedDescription
+            setConnectionStatus(.error, ExternalOAuthBrokerError.notConfigured.localizedDescription)
             return
         }
         guard isConnectingProvider == nil, isDisconnectingProvider == nil else { return }
 
         isConnectingProvider = provider
-        statusMessage = "Connecting \(provider.displayName)…"
+        setConnectionStatus(.progress, "Connecting \(provider.displayName)…")
         defer { isConnectingProvider = nil }
 
         do {
@@ -109,7 +124,12 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                 codeChallenge: codeChallenge
             )
 
-            let callbackURL = try await runAuthenticationSession(url: authorize.authorizationURL)
+            let callbackURL: URL
+            if let authenticate {
+                callbackURL = try await authenticate(authorize.authorizationURL)
+            } else {
+                callbackURL = try await runAuthenticationSession(url: authorize.authorizationURL)
+            }
             let callback = try Self.parseCallback(callbackURL, expectedState: state)
             let tokenResponse = try await brokerClient.exchangeCode(
                 provider: provider,
@@ -120,7 +140,7 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
             let token = try validatedToken(from: tokenResponse, provider: provider, replacing: nil)
             guard commitAllowed() else {
                 try? await apiClient.revokeAccess(provider: provider, token: token)
-                statusMessage = "Connection not saved because settings are locked"
+                setConnectionStatus(.warning, "Connection not saved because settings are locked")
                 return
             }
             do {
@@ -132,12 +152,12 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                 throw error
             }
             syncAccounts()
-            statusMessage = "Connected \(provider.displayName)"
+            setConnectionStatus(.success, "Connected \(provider.displayName)")
         } catch {
             if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin {
-                statusMessage = "Cancelled \(provider.displayName) connection"
+                setConnectionStatus(.warning, "Cancelled \(provider.displayName) connection")
             } else {
-                statusMessage = "\(provider.displayName) connection failed: \(error.localizedDescription)"
+                setConnectionStatus(.error, "\(provider.displayName) connection failed: \(error.localizedDescription)")
             }
         }
     }
@@ -151,43 +171,61 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         defer { isDisconnectingProvider = nil }
 
         guard var token = tokenStore.token(for: provider) else {
-            guard commitAllowed() else { return }
+            guard commitAllowed() else {
+                setConnectionStatus(.warning, "Disconnect cancelled because settings are locked")
+                return
+            }
             do {
                 try tokenStore.disconnect(provider: provider)
                 syncAccounts()
-                statusMessage = "Disconnected \(provider.displayName)"
+                setConnectionStatus(.success, "Disconnected \(provider.displayName)")
             } catch {
-                statusMessage = "Could not remove \(provider.displayName) credentials: \(error.localizedDescription)"
+                setConnectionStatus(.error, "Could not remove \(provider.displayName) credentials: \(error.localizedDescription)")
             }
             return
         }
 
-        statusMessage = "Revoking \(provider.displayName) access…"
+        setConnectionStatus(.progress, "Revoking \(provider.displayName) access…")
         do {
             if token.needsRefresh(), token.refreshToken != nil {
                 token = try await refreshToken(for: provider, replacing: token)
             }
-            guard commitAllowed() else { return }
+            guard commitAllowed() else {
+                setConnectionStatus(.warning, "Disconnect cancelled because settings are locked")
+                return
+            }
             do {
                 try await apiClient.revokeAccess(provider: provider, token: token)
             } catch ExternalProviderAPIError.unauthorized where token.refreshToken != nil {
                 token = try await refreshToken(for: provider, replacing: token)
-                guard commitAllowed() else { return }
+                guard commitAllowed() else {
+                    setConnectionStatus(.warning, "Disconnect cancelled because settings are locked")
+                    return
+                }
                 try await apiClient.revokeAccess(provider: provider, token: token)
             }
         } catch {
-            statusMessage = "Could not revoke \(provider.displayName) access: \(error.localizedDescription) Try again before removing access in WHOOP."
+            setConnectionStatus(.error, "Could not revoke \(provider.displayName) access: \(error.localizedDescription) Try again before removing access in \(provider.displayName).")
             return
         }
 
         do {
             try tokenStore.disconnect(provider: provider)
             syncAccounts()
-            statusMessage = "Disconnected \(provider.displayName) and revoked access"
+            setConnectionStatus(.success, "Disconnected \(provider.displayName) and revoked access")
         } catch {
             syncAccounts()
-            statusMessage = "\(provider.displayName) access was revoked, but local Keychain cleanup failed: \(error.localizedDescription)"
+            setConnectionStatus(.error, "\(provider.displayName) access was revoked, but local Keychain cleanup failed: \(error.localizedDescription)")
         }
+    }
+
+    func dismissConnectionStatus(id: UUID) {
+        guard connectionStatus?.id == id, connectionStatus?.kind != .progress else { return }
+        connectionStatus = nil
+    }
+
+    private func setConnectionStatus(_ kind: ExternalIntegrationConnectionStatus.Kind, _ message: String) {
+        connectionStatus = ExternalIntegrationConnectionStatus(kind: kind, message: message)
     }
 
     func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
@@ -217,12 +255,40 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         providerIDs: Set<String>,
         calendar: Calendar
     ) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(
+            for: date, providerIDs: providerIDs, calendar: calendar,
+            whoopResources: Set(WHOOPResourceName.allCases)
+        )
+    }
+
+    func fetchDailyRecords(
+        for date: Date,
+        calendar: Calendar,
+        whoopResources: Set<WHOOPResourceName>
+    ) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(
+            for: date, providerIDs: Set(accounts.keys.map(\.id)),
+            calendar: calendar, whoopResources: whoopResources
+        )
+    }
+
+    func fetchDailyRecords(
+        for date: Date,
+        providerIDs: Set<String>,
+        calendar: Calendar,
+        whoopResources: Set<WHOOPResourceName>
+    ) async -> [ExternalDailyRecord] {
         guard !providerIDs.isEmpty, !enabledProviders.isEmpty else { return [] }
         var records: [ExternalDailyRecord] = []
         let dateString = ExternalProviderAPIClient.dayString(date, calendar: calendar)
         for provider in enabledProviders
             .filter({ providerIDs.contains($0.id) })
             .sorted(by: { $0.displayName < $1.displayName }) {
+            // Skip before reading credentials or refreshing a rotating token.
+            if provider == .whoop {
+                let planned = whoopResources.requested(for: date, calendar: calendar)
+                guard !planned.isEmpty else { continue }
+            }
             guard accounts[provider] != nil, isDisconnectingProvider != provider else {
                 records.append(ExternalDailyRecord(
                     provider: provider,
@@ -254,7 +320,8 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                         provider: provider,
                         date: date,
                         token: token,
-                        calendar: calendar
+                        calendar: calendar,
+                        whoopResources: whoopResources
                     )
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     records.append(record)
@@ -268,7 +335,8 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                         provider: provider,
                         date: date,
                         token: token,
-                        calendar: calendar
+                        calendar: calendar,
+                        whoopResources: whoopResources
                     )
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     records.append(record)
@@ -289,6 +357,17 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     func discoverEarliestAvailableDate(
         providerIDs: Set<String>
     ) async -> ExternalProviderHistoryDiscovery {
+        await discoverEarliestAvailableDate(
+            providerIDs: providerIDs, whoopResources: Set(WHOOPResourceName.allCases)
+        )
+    }
+
+    func discoverEarliestAvailableDate(
+        providerIDs: Set<String>,
+        whoopResources: Set<WHOOPResourceName>
+    ) async -> ExternalProviderHistoryDiscovery {
+        let providerIDs = whoopResources.subtracting([.body]).isEmpty
+            ? providerIDs.subtracting(["whoop"]) : providerIDs
         let requestedProviders = Set(accounts.keys.filter {
             providerIDs.contains($0.id)
                 && enabledProviders.contains($0)
@@ -312,13 +391,15 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                 do {
                     candidate = try await apiClient.discoverEarliestAvailableDate(
                         provider: provider,
-                        token: token
+                        token: token,
+                        whoopResources: whoopResources
                     )
                 } catch ExternalProviderAPIError.unauthorized where token.refreshToken != nil {
                     token = try await refreshToken(for: provider, replacing: token)
                     candidate = try await apiClient.discoverEarliestAvailableDate(
                         provider: provider,
-                        token: token
+                        token: token,
+                        whoopResources: whoopResources
                     )
                 }
                 if let candidate, earliest == nil || candidate < earliest! {
@@ -418,7 +499,8 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     }
 
     private func runAuthenticationSession(url: URL) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
+        defer { authSession = nil }
+        return try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "healthmd") { callbackURL, error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -450,24 +532,40 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
               components.path == "/callback",
               components.user == nil,
               components.password == nil,
-              components.port == nil else {
+              components.port == nil,
+              components.fragment == nil else {
             throw ExternalOAuthBrokerError.brokerRejected("OAuth redirect was rejected.")
         }
         var items: [String: String] = [:]
-        for item in components.queryItems ?? [] where items[item.name] == nil {
-            items[item.name] = item.value ?? ""
+        // OAuth queries use form encoding. Decode '+' before percent escapes so
+        // a literal plus encoded as %2B is preserved in the authorization code.
+        for item in components.percentEncodedQueryItems ?? [] {
+            let name = Self.decodeFormValue(item.name)
+            guard items[name] == nil else {
+                throw ExternalOAuthBrokerError.brokerRejected("OAuth callback contained duplicate parameters.")
+            }
+            items[name] = Self.decodeFormValue(item.value ?? "")
         }
-        guard items["state"] == expectedState else {
+        guard !expectedState.isEmpty, items["state"] == expectedState else {
             throw ExternalOAuthBrokerError.brokerRejected("OAuth state mismatch.")
         }
+        guard items["code"] == nil || items["error"] == nil else {
+            throw ExternalOAuthBrokerError.invalidResponse
+        }
         if let error = items["error"], !error.isEmpty {
-            let description = items["error_description"]?.trimmingCharacters(in: .whitespacesAndNewlines)
-            throw ExternalOAuthBrokerError.brokerRejected(description?.isEmpty == false ? description! : error)
+            // Upstream descriptions/hints can contain credentials or internal
+            // request details. Only expose a stable, actionable message.
+            throw ExternalOAuthBrokerError.authorizationRejected(error)
         }
         guard let code = items["code"], !code.isEmpty else {
             throw ExternalOAuthBrokerError.invalidResponse
         }
         return OAuthCallback(code: code)
+    }
+
+    private static func decodeFormValue(_ value: String) -> String {
+        let formValue = value.replacingOccurrences(of: "+", with: " ")
+        return formValue.removingPercentEncoding ?? formValue
     }
 
     static func makeState(for provider: ExternalIntegrationProvider) -> String {

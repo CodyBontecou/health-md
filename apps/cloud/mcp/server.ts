@@ -52,7 +52,7 @@ function createTools(reader: HealthDataReader, principal: ReadPrincipal): McpSer
     }
   };
   server.registerTool("health_list_metrics", {
-    title: "List available health metrics", description: "List metric IDs present in the authenticated user's most recent 365 Apple v8 daily snapshots, with units, category and observed dates in that window. Older days remain queryable with exact metric IDs and a bounded range. No raw records or archives.",
+    title: "List available health metrics", description: "List metric IDs present in the authenticated user's most recent 365 reviewed Apple v8/v10 daily snapshots, with units, category and observed dates in that window. Older days remain queryable with exact metric IDs and a bounded range. No raw records or archives.",
     inputSchema: {},
   }, async () => execute("health_list_metrics", async () => ({ metrics: await reader.listMetrics(principal) })));
   server.registerTool("health_get_latest", {
@@ -82,7 +82,7 @@ function createTools(reader: HealthDataReader, principal: ReadPrincipal): McpSer
       inputSchema: {},
     }, async () => execute("health_export_guide", async () => ({
       scope: "full_export", origin: "Retained healthmd.api_export v1/v2 JSON envelopes uploaded to this account, not live device data",
-      coverage: ["Apple daily v8 (all retained summary fields, optional HealthKit archive, optional typed provider sections)",
+      coverage: ["Apple daily v8/v10 (all retained summary fields, optional HealthKit archive, optional typed WHOOP v1/v2 provider sections; physiological-cycle steps never replace daily steps)",
         "Android compatibility daily v4/v5 when uploaded", "v2 external provider sidecars", "failed-date details",
         "every retained historical revision and separate supplement, not just the current daily snapshot"],
       notAvailable: ["Health data never exported or already deleted", "Android Raw API Snapshot artifacts (not ingested here)",

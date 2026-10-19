@@ -51,6 +51,8 @@
       "automation.cancel-active-export",
       "apple.hearing-and-symptoms",
       "apple.typed-whoop-provider-section",
+      "export.whoop-physiological-cycle-steps",
+      "export.whoop-resource-selection",
       "direct-cli.shared-qr-pairing",
       "direct.full_public_authorized_corpus",
       "direct.cli_agent_wake",
@@ -92,6 +94,8 @@
     "android.contextual-source-fields",
     "android.skin-temperature",
     "apple.typed-whoop-provider-section",
+    "export.whoop-physiological-cycle-steps",
+    "export.whoop-resource-selection",
     "source.private-platform-database",
     "direct-cli.shared-qr-pairing",
     "direct.full_public_authorized_corpus",
@@ -117,5 +121,5 @@
   "schema": "healthmd.capability_index",
   "schema_version": 1,
   "source_inventory_path": "packages/contracts/product-capabilities.json",
-  "source_inventory_sha256": "431a6611b987c00fb1cce854ca9efee7bf5d26a87a3ac5407111f680d92427e9"
+  "source_inventory_sha256": "7ea65d87c69ea49977b56e17caf9fa907b226dceee7dcecc04b52920e003624d"
 }

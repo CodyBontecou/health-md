@@ -670,10 +670,13 @@ extension HealthMetrics {
 class MetricSelectionState: ObservableObject, Codable {
     @Published var enabledMetrics: Set<String>
     @Published var enabledCategories: Set<String>
+    /// Provider selection is independent of Apple Health metric/permission state.
+    @Published var enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
 
     enum CodingKeys: String, CodingKey {
         case enabledMetrics
         case enabledCategories
+        case enabledWHOOPResources
     }
 
     init() {
@@ -745,12 +748,16 @@ class MetricSelectionState: ObservableObject, Codable {
 
         enabledMetrics = decoded.subtracting(pendingMetricIds).subtracting(unavailableMetricIds)
         enabledCategories = decodedCategories.subtracting(pendingCategoryNames)
+        enabledWHOOPResources = try container.decodeIfPresent(
+            Set<WHOOPResourceName>.self, forKey: .enabledWHOOPResources
+        ) ?? Set(WHOOPResourceName.allCases)
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(enabledMetrics, forKey: .enabledMetrics)
         try container.encode(enabledCategories, forKey: .enabledCategories)
+        try container.encode(enabledWHOOPResources, forKey: .enabledWHOOPResources)
     }
 
     func isMetricEnabled(_ metricId: String) -> Bool {

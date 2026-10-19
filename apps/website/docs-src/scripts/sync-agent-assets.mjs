@@ -18,6 +18,8 @@ const SKILL_V6_SHA256 = 'f1f6340ba0dafeee4f3c549b186a78cca1ee6676b4c219d2252bfa2
 
 const SKILL_V7_SHA256 = 'c25037d7f43818925769eb2093c319c0465bfa3ed1d2454287cefcd8f8261c48';
 
+const SKILL_V8_SHA256 = 'ec4c48f223a69f24ab4a517f2efb164c6d574cd2cfd19c8d24300d03e097a0cc';
+
 const SOURCES = {
   cliIndex: path.join(DOCS_ROOT, 'agent-docs/cli-llms.txt'),
   provenance: path.join(DOCS_ROOT, 'reference-source.json'),
@@ -31,6 +33,7 @@ const SOURCES = {
   skillV5: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v5/SKILL.md'),
   skillV6: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v6/SKILL.md'),
   skillV7: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v7/SKILL.md'),
+  skillV8: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v8/SKILL.md'),
 };
 
 const OUTPUTS = {
@@ -46,6 +49,7 @@ const OUTPUTS = {
   skillV6: 'agents/skills/healthmd-cli/v6/SKILL.md',
   skillV7: 'agents/skills/healthmd-cli/v7/SKILL.md',
   skillV8: 'agents/skills/healthmd-cli/v8/SKILL.md',
+  skillV9: 'agents/skills/healthmd-cli/v9/SKILL.md',
   skillManifest: 'agents/skills/healthmd-cli/manifest.json',
   agentManifest: 'agents/manifest.json',
 };
@@ -106,7 +110,7 @@ function parseToolCatalog(buffer, label, expectedCount) {
 }
 
 async function expectedOutputs() {
-  const [cliIndex, provenance, macTools, portableTools, skill, skillV1, skillV2, skillV3, skillV4, skillV5, skillV6, skillV7] = await Promise.all([
+  const [cliIndex, provenance, macTools, portableTools, skill, skillV1, skillV2, skillV3, skillV4, skillV5, skillV6, skillV7, skillV8] = await Promise.all([
     readRequired(SOURCES.cliIndex, 'CLI agent index'),
     readRequired(SOURCES.provenance, 'reference provenance manifest'),
     readRequired(SOURCES.macTools, 'generated Mac MCP tool catalog'),
@@ -119,10 +123,11 @@ async function expectedOutputs() {
     readRequired(SOURCES.skillV5, 'immutable Health.md CLI skill v5'),
     readRequired(SOURCES.skillV6, 'immutable Health.md CLI skill v6'),
     readRequired(SOURCES.skillV7, 'immutable Health.md CLI skill v7'),
+    readRequired(SOURCES.skillV8, 'immutable Health.md CLI skill v8'),
   ]);
 
   const macToolNames = parseToolCatalog(macTools, 'Mac MCP tool catalog', 21);
-  const portableToolNames = parseToolCatalog(portableTools, 'portable MCP tool catalog', 21);
+  const portableToolNames = parseToolCatalog(portableTools, 'portable MCP tool catalog', 23);
   if (sha256(skillV1) !== SKILL_V1_SHA256) {
     throw new Error('Published Health.md CLI skill v1 was modified; versioned assets are immutable.');
   }
@@ -143,6 +148,9 @@ async function expectedOutputs() {
   }
   if (sha256(skillV7) !== SKILL_V7_SHA256) {
     throw new Error('Published Health.md CLI skill v7 was modified; versioned assets are immutable.');
+  }
+  if (sha256(skillV8) !== SKILL_V8_SHA256) {
+    throw new Error('Published Health.md CLI skill v8 was modified; versioned assets are immutable.');
   }
   const skillV1Artifact = artifact('/agents/skills/healthmd-cli/v1/SKILL.md', skillV1, {
     version: 1,
@@ -165,16 +173,17 @@ async function expectedOutputs() {
   const skillV7Artifact = artifact('/agents/skills/healthmd-cli/v7/SKILL.md', skillV7, {
     version: 7,
   });
-  const skillV8Artifact = artifact('/agents/skills/healthmd-cli/v8/SKILL.md', skill, {
+  const skillV8Artifact = artifact('/agents/skills/healthmd-cli/v8/SKILL.md', skillV8, {
     version: 8,
   });
+  const skillV9Artifact = artifact('/agents/skills/healthmd-cli/v9/SKILL.md', skill, { version: 9 });
   const skillManifest = canonicalJSON({
     schema: 'healthmd.agent_skill_manifest',
     schema_version: 1,
     name: 'healthmd-cli',
     availability: 'public_preview',
     install_as: 'healthmd-cli/SKILL.md',
-    latest: skillV8Artifact,
+    latest: skillV9Artifact,
     versions: [
       skillV1Artifact,
       skillV2Artifact,
@@ -184,6 +193,7 @@ async function expectedOutputs() {
       skillV6Artifact,
       skillV7Artifact,
       skillV8Artifact,
+      skillV9Artifact,
     ],
     source: {
       repository: 'https://github.com/CodyBontecou/health-md',
@@ -241,7 +251,8 @@ async function expectedOutputs() {
     [OUTPUTS.skillV5, skillV5],
     [OUTPUTS.skillV6, skillV6],
     [OUTPUTS.skillV7, skillV7],
-    [OUTPUTS.skillV8, skill],
+    [OUTPUTS.skillV8, skillV8],
+    [OUTPUTS.skillV9, skill],
     [OUTPUTS.skillManifest, skillManifest],
     [OUTPUTS.agentManifest, agentManifest],
   ]);

@@ -9,10 +9,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[4]
-ANDROID_TASKS = [
-    ':app:testPlayDebugUnitTest', ':app:testPlayReleaseUnitTest', ':app:testPlayE2eUnitTest',
-    ':healthmd-core:testDebugUnitTest', ':wearable-contract:test', ':direct-protocol:test',
-]
+ANDROID_TASKS = ['test']
 
 FAKE = r'''
 import fcntl, json, os, sys, time
@@ -101,7 +98,7 @@ class LocalRunnerTests(unittest.TestCase):
         self.assertEqual(2, len(set(derived)))
 
     def test_default_parallel_run_preserves_every_gate_and_separates_xcode_databases(self):
-        result, calls = self.run_make('test', LATCH='1')
+        result, calls = self.run_make('test-all', LATCH='1')
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assert_all_gates(calls)
         active = maximum = 0
@@ -112,7 +109,7 @@ class LocalRunnerTests(unittest.TestCase):
         self.assertEqual(4, maximum)
 
     def test_serial_override_runs_same_commands_without_overlap(self):
-        result, calls = self.run_make('test', 'TEST_JOBS=1')
+        result, calls = self.run_make('test-all', 'TEST_JOBS=1')
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assert_all_gates(calls)
         active = maximum = 0
@@ -125,7 +122,7 @@ class LocalRunnerTests(unittest.TestCase):
         for failure in ('contracts', 'ios', 'macos'):
             with self.subTest(failure=failure):
                 (self.root / 'calls.jsonl').unlink(missing_ok=True)
-                result, calls = self.run_make('test', FAIL_JOB=failure)
+                result, calls = self.run_make('test-all', FAIL_JOB=failure)
                 self.assertNotEqual(0, result.returncode)
                 self.assert_all_gates(calls)
 
@@ -136,13 +133,13 @@ class LocalRunnerTests(unittest.TestCase):
         self.assertNotIn('-derivedDataPath', native['args'])
 
     def test_optional_gradle_arguments_reach_android_gate(self):
-        result, calls = self.run_make('test', 'ANDROID_TEST_ARGS=--init-script scripts/ci-gradle.init.gradle')
+        result, calls = self.run_make('test-all', 'ANDROID_TEST_ARGS=--init-script scripts/ci-gradle.init.gradle')
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         android = next(c for c in calls if c['job'] == 'gradlew:apps/android')
         self.assertEqual(ANDROID_TASKS + ['--init-script', 'scripts/ci-gradle.init.gradle'], android['args'])
 
     def test_invalid_job_count_runs_no_gates(self):
-        result, calls = self.run_make('test', 'TEST_JOBS=invalid')
+        result, calls = self.run_make('test-all', 'TEST_JOBS=invalid')
         self.assertNotEqual(0, result.returncode)
         self.assertEqual([], calls)
 

@@ -445,6 +445,35 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(job.dateRangeEnd, Calendar.current.startOfDay(for: end))
     }
 
+    func testBuildUsesFrozenWHOOPSelectionForTypedAndSidecarRecords() async throws {
+        let settings = makeSettings()
+        settings.metricSelection.enabledWHOOPResources = [.recovery]
+        let frozen = ExportSettingsSnapshot.from(settings)
+        settings.metricSelection.enabledWHOOPResources = Set(WHOOPResourceName.allCases)
+        let date = Self.day(2026, 5, 12)
+        let job = try await MacExportJobBuilder.build(
+            sourceDeviceName: "Test iPhone", startDate: date, endDate: date,
+            settings: settings, destinationDisplayName: "MacVault", frozenSettingsSnapshot: frozen,
+            fetchHealthData: { date, _ in HealthData(date: date, activity: ActivityData(steps: 1)) },
+            fetchExternalDailyRecords: { _ in
+                [ExternalDailyRecord(
+                    provider: .whoop, date: "2026-05-12",
+                    payloads: [ExternalProviderPayload(
+                        name: "recovery", endpoint: "https://redacted.invalid", statusCode: 200,
+                        data: .object(["records": .array([.object(["cycle_id": .number(101)])])])
+                    ), ExternalProviderPayload(
+                        name: "workouts", endpoint: "https://redacted.invalid", statusCode: 403,
+                        error: "Synthetic unselected permission error"
+                    )]
+                )]
+            }
+        )
+        XCTAssertEqual(job.settingsSnapshot.metricSelection.enabledWHOOPResources, [.recovery])
+        XCTAssertEqual(job.records.first?.providers?.whoop?.captureStatus, .complete)
+        XCTAssertEqual(job.records.first?.providers?.whoop?.resources.map(\.resource), [.recovery])
+        XCTAssertEqual(job.externalDailyRecords.first?.payloads.map(\.name), ["recovery"])
+    }
+
     func testBuild_noncontiguousRequestedDatesDoesNotReinsertCompletedMiddleDay() async throws {
         let settings = makeSettings()
         settings.generateWeeklyRollups = false

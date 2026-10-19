@@ -860,7 +860,12 @@ struct ContentView: View {
 
     private var manualExportStatusCard: some View {
         let progress = isExporting && exportProgress > 0 ? exportProgress : nil
-        let dismissAction: (() -> Void)? = isExporting ? nil : { dismissStatus() }
+        let dismissAction: (() -> Void)?
+        if isExporting {
+            dismissAction = nil
+        } else {
+            dismissAction = { dismissStatus() }
+        }
         return ExportActivityBanner(
             title: manualExportCardTitle,
             systemImage: manualExportCardIcon,
@@ -1833,12 +1838,14 @@ struct ContentView: View {
                 let providerTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
                 var providerCalendar = Calendar(identifier: .gregorian)
                 providerCalendar.timeZone = providerTimeZone
+                let whoopResources = advancedSettings.metricSelection.enabledWHOOPResources
                 let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
                 if ConnectedAppsFeature.isEnabled, externalIntegrationManager.connectedProviderCount > 0 {
                     externalRecordFetcher = { date in
                         await externalIntegrationManager.fetchDailyRecords(
                             for: date,
-                            calendar: providerCalendar
+                            calendar: providerCalendar,
+                            whoopResources: whoopResources
                         )
                     }
                 } else {
@@ -2154,8 +2161,13 @@ struct ContentView: View {
                        metadata.requestedDays.contains(day),
                        advancedSettings.writesExternalProviderSidecars,
                        let externalRecordFetcher {
+                        let whoopResources = metadata.settingsSnapshot.metricSelection.enabledWHOOPResources
+                            .requested(for: date, calendar: sourceCalendar)
                         let providerRecords = await externalRecordFetcher(date)
-                        record.providers = HealthProviderSections.normalized(from: providerRecords)
+                            .compactMap { $0.selectingWHOOPResources(whoopResources) }
+                        record.providers = HealthProviderSections.normalized(
+                            from: providerRecords, whoopResources: whoopResources
+                        )
                         externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
                     }
                     records.append(record)
@@ -3282,8 +3294,6 @@ struct SettingsTabView: View {
                 icon: "link.circle.fill",
                 title: "Third-Party Integrations",
                 subtitle: "Fitbit, Oura, WHOOP, Withings, and Strava",
-                status: externalIntegrationManager.connectedProviderCount == 0 ? "None" : "\(externalIntegrationManager.connectedProviderCount)",
-                statusTone: externalIntegrationManager.connectedProviderCount == 0 ? .muted : .success,
                 isActive: externalIntegrationManager.connectedProviderCount > 0,
                 accessibilityHint: "Double tap to connect or disconnect third-party health providers",
                 action: { showExternalIntegrations = true }

@@ -50,7 +50,7 @@
       "availability": "public_preview",
       "catalog_version": 1,
       "profile": "local_direct",
-      "tool_count": 21,
+      "tool_count": 23,
       "tool_names": [
         "healthmd_status",
         "healthmd_doctor",
@@ -67,6 +67,8 @@
         "healthmd_evidence_packet",
         "healthmd_pairing_start",
         "healthmd_pairing_status",
+        "healthmd_export_plan",
+        "healthmd_export_approval",
         "healthmd_export_files",
         "healthmd_export_raw",
         "healthmd_raw_artifact_read",
@@ -76,8 +78,8 @@
       ],
       "path": "/agents/mcp/portable-tools-v1.json",
       "media_type": "application/json",
-      "bytes": 116261,
-      "sha256": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d"
+      "bytes": 134784,
+      "sha256": "e0a1c4c2a6cba861b61b0116896dcd434c86b3e24a56aa7d5d76d0cc394132f4"
     },
     {
       "id": "healthmd_cli_skill_manifest",
@@ -85,8 +87,8 @@
       "manifest_version": 1,
       "path": "/agents/skills/healthmd-cli/manifest.json",
       "media_type": "application/json",
-      "bytes": 2411,
-      "sha256": "120ec2c4839e9e33f1ac024de991222bee5765a38e3d49fe00b53c993f11feb0"
+      "bytes": 2643,
+      "sha256": "107ca7fd60b515eeb77a2336ea376db8ff1a840dff7d44156add0e2f9f3f63fe"
     },
     {
       "id": "reference_provenance",
@@ -94,8 +96,8 @@
       "manifest_version": 1,
       "path": "/docs/reference/source-manifest.json",
       "media_type": "application/json",
-      "bytes": 80288,
-      "sha256": "1ddeba3bbd989ec729d8d065b315fbb0ff70f7169d4601b9d87867397d468dcc"
+      "bytes": 80290,
+      "sha256": "f7f6bb80182e3353729d988fbf5a2ba3c53e7efc0b26a2c6567c97038a5c9034"
     }
   ]
 }

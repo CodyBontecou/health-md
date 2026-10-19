@@ -1,10 +1,11 @@
 import { decryptExport, encryptedExportByteCount, sha256Hex } from "./crypto";
+import { isReviewedAppleDailyVersion } from "./apple-daily-profile";
 import { resolveExportKey } from "./account-export-keys";
 import { HttpError, json, readJson, assertSameOrigin } from "./http";
 import type { Env } from "./types";
 import registry from "../../../packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json" with { type: "json" };
 
-// These are the eleven reviewed Apple-v8 daily-summary bindings used by the
+// These are the eleven reviewed Apple-v8/v10 primary daily-summary bindings used by the
 // separate MCP reader. Android and provider-native statistics are NOT aliases.
 const projections = [
   { id: "steps", section: "activity", field: "steps", key: "steps", divisor: 1 },
@@ -38,7 +39,7 @@ export interface EnvelopeRow {
   keyId: string; digest: string; byteCount: number; envelopeVersion: number; recordCount: number;
 }
 interface DayRow extends EnvelopeRow { date: string; recordIndex: number }
-type Profile = "all" | "apple_v8" | "android_compat";
+type Profile = "all" | "apple_v8" | "apple_v10" | "android_compat";
 type DayStatus = "not_uploaded" | "available" | "unsupported_profile" | "filtered_profile" | "read_limit";
 
 export function object(value: unknown): Record<string, unknown> | null {
@@ -116,10 +117,11 @@ async function chartDays(env: Env, userId: string, start: string, end: string,
     const evidence = includePointers ? { source: row.source, dailyVersion: row.dailyVersion,
       exportId: row.exportId, recordIndex: row.recordIndex } : {};
     if ((profile === "apple_v8" && (row.source !== "ios" || row.dailyVersion !== 8)) ||
+        (profile === "apple_v10" && (row.source !== "ios" || row.dailyVersion !== 10)) ||
         (profile === "android_compat" && row.source !== "android")) {
       days.push({ date, status: "filtered_profile", values, ...evidence }); continue;
     }
-    if (row.source !== "ios" || row.dailyVersion !== 8) {
+    if (row.source !== "ios" || !isReviewedAppleDailyVersion(row.dailyVersion)) {
       days.push({ date, status: "unsupported_profile", values, ...evidence }); continue;
     }
     if (!Number.isSafeInteger(row.recordIndex) || row.recordIndex < 0 || row.recordIndex >= row.recordCount) {
@@ -136,7 +138,7 @@ async function chartDays(env: Env, userId: string, start: string, end: string,
       cache.set(row.exportId, envelope);
     }
     const record = object((envelope.records as unknown[])[row.recordIndex]);
-    if (record?.schema !== "healthmd.health_data" || record.schema_version !== 8 || record.date !== date) {
+    if (record?.schema !== "healthmd.health_data" || record.schema_version !== row.dailyVersion || record.date !== date) {
       throw new HttpError(503, "unavailable_data", "A retained daily record is unavailable.");
     }
     days.push({ date, status: "available", values: project(record, metrics), ...evidence });
@@ -146,7 +148,7 @@ async function chartDays(env: Env, userId: string, start: string, end: string,
 
 export function exploreCatalog(): Response {
   return json({ version: 1, metrics: catalog, profileNote:
-    "Reviewed Apple v8 daily summaries only. Android and provider values remain available in original retained JSON." });
+    "Reviewed Apple v8/v10 primary daily summaries only. Android and provider values, including physiological-cycle steps, remain available in original retained JSON." });
 }
 
 export async function dashboardTrends(env: Env, userId: string): Promise<Response> {
@@ -176,7 +178,7 @@ export async function exploreChart(request: Request, env: Env, userId: string): 
       !body.metrics.every((id: unknown) => projections.some((binding) => binding.id === id))) {
     throw new HttpError(400, "invalid_metrics", "Choose distinct, reviewed Apple daily metrics.");
   }
-  if (body.profile !== "all" && body.profile !== "apple_v8" && body.profile !== "android_compat") {
+  if (body.profile !== "all" && body.profile !== "apple_v8" && body.profile !== "apple_v10" && body.profile !== "android_compat") {
     throw new HttpError(400, "invalid_profile", "Choose a supported source/schema filter.");
   }
   const metrics = body.metrics as MetricId[];
