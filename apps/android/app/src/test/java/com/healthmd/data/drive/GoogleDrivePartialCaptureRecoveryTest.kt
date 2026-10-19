@@ -255,9 +255,16 @@ class GoogleDrivePartialCaptureRecoveryTest {
             .setInputData(workDataOf(ScheduledProfileExportWorker.INPUT_PROFILE_ID to profile.id))
             .setWorkerFactory(object : WorkerFactory() {
                 override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters): ListenableWorker =
-                    ScheduledProfileExportWorker(appContext, workerParameters, current, health, FakeExportRepository(), history,
-                        mockk(), profiles, entries, snapshots, mockk(), Lazy { mockk(relaxed = true) }, orchestrator(), mockk(),
-                        FakeBillingRepository(true), DistributionPolicy.play())
+                    ScheduledProfileExportWorker(
+                        appContext = appContext, workerParams = workerParameters,
+                        settingsRepository = current, healthRepository = health,
+                        exportRepository = FakeExportRepository(), exportHistoryRepository = history,
+                        apiEndpointExportRunner = mockk(), rawSnapshotExportRunner = mockk(),
+                        profileRepository = profiles, entryStore = entries, snapshotFactory = snapshots,
+                        folderAdoption = mockk(), profileScheduler = Lazy { mockk(relaxed = true) },
+                        googleDriveExportOrchestrator = orchestrator(),
+                        entitlementRepository = FakeBillingRepository(true), distributionPolicy = DistributionPolicy.play(),
+                    )
             }).build()
         health.fetchBehavior = { date -> if (date == second) error("synthetic capture failure") else data(date) }
         worker().doWork()

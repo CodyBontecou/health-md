@@ -55,7 +55,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let ledger = try loadLedger()
 
         XCTAssertEqual(ledger.schema, "healthmd.shared_setup.apple_profile_field_coverage")
-        XCTAssertEqual(ledger.schemaVersion, 2)
+        XCTAssertEqual(ledger.schemaVersion, 3)
         let drive = try XCTUnwrap(ledger.fields.first {
             $0.sourceType == "ExportProfile" && $0.field == "googleDriveDestinationID"
         })
@@ -168,7 +168,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while directory.path != "/" {
             let candidate = directory.appendingPathComponent(
-                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
+                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v3.json"
             )
             if FileManager.default.fileExists(atPath: candidate.path) {
                 return candidate
@@ -584,6 +584,6 @@ private enum CoverageTestError: LocalizedError {
     case ledgerNotFound
 
     var errorDescription: String? {
-        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
+        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage-v3.json"
     }
 }

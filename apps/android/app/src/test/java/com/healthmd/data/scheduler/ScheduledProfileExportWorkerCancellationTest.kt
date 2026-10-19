@@ -327,7 +327,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             assertThat(harness.history.captured.exportMode).isEqualTo(ExportMode.RAW_SNAPSHOT)
             assertThat(harness.history.captured.target).isEqualTo(target)
             coVerify(exactly = 1) {
-                harness.rawRunner.exportRange(any(), any(), harness.runSettings, target, null, false)
+                harness.rawRunner.exportRange(any(), any(), harness.runSettings, target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false)
             }
             coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { harness.exportRepository.exportHealthData(any(), any()) }
@@ -548,7 +548,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val rawStart = slot<LocalDate>()
         val rawEnd = slot<LocalDate>()
         val rawRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
-        coEvery { rawRunner.exportRange(capture(rawStart), capture(rawEnd), settings, target, null, false) } coAnswers {
+        coEvery { rawRunner.exportRange(capture(rawStart), capture(rawEnd), settings, target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false) } coAnswers {
             rawRanges += rawStart.captured to rawEnd.captured
             result(rawStart.captured.datesUntil(rawEnd.captured.plusDays(1)).toList())
         }
@@ -724,7 +724,6 @@ class ScheduledProfileExportWorkerCancellationTest {
                 folderAdoption = folderAdoption,
                 profileScheduler = Lazy { profileScheduler },
                 googleDriveExportOrchestrator = mockk(relaxed = true),
-                rawSnapshotService = mockk(relaxed = true),
                 entitlementRepository = FakeBillingRepository(),
                 distributionPolicy = DistributionPolicy.play(),
             )

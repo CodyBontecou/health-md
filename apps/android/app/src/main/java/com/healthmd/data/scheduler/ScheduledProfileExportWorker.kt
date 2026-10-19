@@ -49,7 +49,6 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
-import com.healthmd.rawexport.ExportMode
 import timber.log.Timber
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -98,7 +97,6 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val folderAdoption: ProfileFolderAdoptionScope,
     private val profileScheduler: dagger.Lazy<ScheduledProfileScheduler>,
     private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
-    private val rawSnapshotService: RawSnapshotService,
     private val entitlementRepository: EntitlementRepository,
     private val distributionPolicy: DistributionPolicy,
 ) : CoroutineWorker(appContext, workerParams) {
@@ -298,13 +296,16 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             ScheduledExportCancellationCoordinator.run(id) {
                 if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                     val runRaw: suspend () -> ExportResult = {
-                        rawSnapshotService.exportRange(
-                            startDate = dates.first(), endDate = dates.last(), settings = settings,
-                            target = target,
-                            googleDriveDestinationId = profile.destinationId.takeIf { target == ExportTarget.GOOGLE_DRIVE },
-                            googleDriveProfileId = profile.id.takeIf { target == ExportTarget.GOOGLE_DRIVE },
-                            googleDriveOperationId = durableOperationId.takeIf { target == ExportTarget.GOOGLE_DRIVE },
-                        )
+                        if (target == ExportTarget.GOOGLE_DRIVE) {
+                            rawSnapshotExportRunner.exportRange(
+                                startDate = dates.first(), endDate = dates.last(), settings = settings,
+                                target = target, googleDriveDestinationId = profile.destinationId,
+                                googleDriveProfileId = profile.id, googleDriveOperationId = durableOperationId,
+                            )
+                        } else {
+                            // Preserve the existing owner-date retry grouping for local/API raw exports.
+                            exportRawDates(dates, settings, target)
+                        }
                     }
                     if (target == ExportTarget.DEVICE_FOLDER) folderAdoption.withProfileFolder(profile) { runRaw() }
                     else runRaw()
