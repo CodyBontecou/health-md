@@ -168,6 +168,15 @@ class GeneratedApkReceiptTest(unittest.TestCase):
         result = run("--phone-only")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Phone APK signature and release-scope identity verified", result.stdout)
+        scope["googlePlay"]["wear"].update(status="release_candidate", runtimeAdvertisedByPhone=True)
+        (android / "release-scope.json").write_text(json.dumps(scope))
+        result = run("--phone-only")
+        self.assertNotEqual(result.returncode, 0, "Paired release scope must require paired validation")
+        self.assertIn("Phone-only CI requires deferred Wear", result.stderr)
+        scope = json.loads((ANDROID / "release-scope.json").read_text())
+        scope["releaseVersionName"] = "2.3.4"
+        scope["googlePlay"]["phone"]["versionCode"] = 55
+        (android / "release-scope.json").write_text(json.dumps(scope))
         self.assertNotEqual(run().returncode, 0, "Default paired mode must still require Wear")
         self.assertNotEqual(run("--unknown").returncode, 0)
         for field, value in (("package", "other.package"), ("code", 56),

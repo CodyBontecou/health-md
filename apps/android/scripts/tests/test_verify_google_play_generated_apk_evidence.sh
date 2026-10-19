@@ -51,6 +51,10 @@ wear_mode=$(android_release_wear_mode release-scope.json "$phone_version_name" "
   echo 'Release scope is invalid or differs from the built phone APK' >&2; exit 1;
 }
 if [[ "$mode" == phone ]]; then
+  [[ "$wear_mode" == deferred ]] || {
+    echo 'Phone-only CI requires deferred Wear; restore paired APK validation for a paired release' >&2
+    exit 1
+  }
   (( phone_code < 1000000 )) || { echo 'Phone APK versionCode is outside its reserved range' >&2; exit 1; }
   echo 'Phone APK signature and release-scope identity verified; paired receipt checks require a Wear build'
   exit 0
