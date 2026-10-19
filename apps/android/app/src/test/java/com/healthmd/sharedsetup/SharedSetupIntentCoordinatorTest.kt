@@ -73,8 +73,11 @@ class SharedSetupIntentCoordinatorTest {
             byteArrayOf(1)
         }
         io.mockk.every { store.read(secondUri) } returns byteArrayOf(2)
+        // This test uses real IO threads/latches, so its timeout must use wall time.
         // Publish immediately where the read completes so the test observes results
         // without idling a paused Robolectric main looper.
+        // Provider reads run on real IO threads: runTest would advance the timeout
+        // and post-release delay in virtual time before those threads can finish.
         val coordinator = SharedSetupCoordinator(store, publishDispatcher = Dispatchers.Unconfined)
 
         try {

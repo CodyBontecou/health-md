@@ -55,6 +55,10 @@ make test-cloud
 make test-website
 ```
 
+`make test-all` runs all component gates with at most four Make jobs, including separate iOS and macOS Xcode build directories. It completes independent gates after a failure and returns a failing exit status. Use `make test-all TEST_JOBS=1` for serial execution or set `TEST_JOBS` to another positive limit. Android defaults to two Gradle workers to bound Kotlin compiler memory and reuses the component init script so JVM tests execute against current repository files while compiled outputs remain reusable. Other component tools may use their own compiler or test workers within each Make job.
+
+Additional Gradle options can be supplied with `ANDROID_TEST_ARGS='--max-workers=2 --init-script scripts/ci-gradle.init.gradle --info'`. These arguments are evaluated from `apps/android`.
+
 See each component's README and `AGENTS.md` for platform-specific setup and release instructions. Cloud prototype production gates are recorded in [`ADR-0007`](docs/architecture/adr-0007-healthmd-cloud.md); current app releases still send to user-selected destinations, not to a Health.md-operated cloud by default.
 
 ## Cross-platform product policy

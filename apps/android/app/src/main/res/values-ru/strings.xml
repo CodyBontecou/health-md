@@ -622,13 +622,15 @@
     <string name="schedule_through_today_summary">Каждый запуск экспортирует прошедшие полные дни и сегодняшний неполный файл, поэтому дневной запуск охватывает и прошлую ночь. Сочетайте с почасовой частотой, чтобы оба файла обновлялись весь день. Используйте режим записи «Перезаписать» или «Обновить», чтобы избежать дублирования содержимого за один день.</string>
     <string name="profile_schedule_today_refresh">Обновлять сегодняшний экспорт</string>
     <string name="profile_schedule_refresh_interval">Интервал обновления</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d мин</string>
+    <string name="profile_schedule_refresh_summary_minutes">Обновляет сегодня каждые %1$d мин</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d ч</string>
     <string name="profile_schedule_refresh_summary">Обновляет сегодня каждые %1$d ч</string>
-    <string name="profile_schedule_discard_recovery">Отбросить ожидающее восстановление</string>
-    <string name="profile_schedule_discard_recovery_named">Отбросить ожидающее восстановление для %1$s</string>
-    <string name="profile_schedule_discard_recovery_title">Отбросить ожидающее восстановление для %1$s?</string>
-    <string name="profile_schedule_discard_recovery_body">Остановите запланированную повторную попытку для этого профиля и удалите ожидающие даты и зафиксированные настройки экспорта. При следующем запуске будут использованы текущие профиль и расписание. Профиль, учетные данные API, история экспорта и уже экспортированные данные сохранятся. Это действие не может отменить уже выполненную отправку или запись файла.</string>
-    <string name="profile_schedule_discard_recovery_failed">Не удалось полностью отбросить ожидающее восстановление. Проверьте профиль и повторите попытку.</string>
+    <string name="profile_schedule_discard_recovery">Отменить ожидающее восстановление</string>
+    <string name="profile_schedule_discard_recovery_named">Отменить ожидающее восстановление для %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Отменить ожидающее восстановление для %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Останавливает запланированную повторную попытку этого профиля и удаляет его ожидающие даты и сохранённые настройки экспорта. Следующий запланированный запуск использует текущие профиль и расписание. Ваш профиль, учётные данные API, история экспорта и уже экспортированные данные сохраняются. Это не может отменить уже выполненную загрузку или записанный файл.</string>
+    <string name="profile_schedule_discard_recovery_failed">Не удалось полностью отменить ожидающее восстановление. Проверьте профиль и повторите попытку.</string>
     <string name="schedule_date_window_today">Сегодня</string>
     <string name="schedule_export_past_days">Экспортировать прошлые дни</string>
     <string name="schedule_today_summary">При каждом прогоне экспортируются текущие данные, поэтому ваш текущий ежедневный файл может оставаться актуальным. Используйте режим записи «Перезаписать» или «Обновить», чтобы избежать дублирования контента в тот же день.</string>
@@ -1508,4 +1510,18 @@
     <string name="fdroid_onboarding_access_body">Официальная версия F-Droid бесплатно включает все локальные функции экспорта и автоматизации.</string>
     <string name="fdroid_onboarding_no_purchase">Покупка, восстановление, цена и аккаунт Play не требуются.</string>
     <string name="fdroid_onboarding_no_play_services">Экспорт по расписанию работает без Google Play Billing.</string>
+
+    <string name="myself_claim_entry">Получить доступ к myself.md</string>
+    <string name="myself_claim_entry_subtitle">Подтвердите бессрочную покупку в Google Play.</string>
+    <string name="myself_claim_title">Доступ к myself.md</string>
+    <string name="myself_claim_intro">Бессрочная покупка Health.md включает бесплатный пожизненный доступ к myself.md.</string>
+    <string name="myself_claim_disclosure">При продолжении мы прочитаем подтверждение покупки Google Play и отправим его в myself.md для проверки. Данные о здоровье и местоположении останутся на устройстве.</string>
+    <string name="myself_claim_account">Затем войдите и выберите аккаунт myself.md для доступа. Каждую исходную покупку можно связать с одним аккаунтом. Одного бесплатного или сохранённого ранее доступа Android недостаточно.</string>
+    <string name="myself_claim_verify">Проверить покупку и продолжить</string>
+    <string name="myself_claim_verifying">Проверка покупки…</string>
+    <string name="myself_claim_awaiting_user">Войдите и подтвердите аккаунт получателя в браузере. Затем используйте тот же аккаунт в myself.md. Доступ не предоставляется до вашего подтверждения.</string>
+    <string name="myself_claim_no_purchase">Завершённая бессрочная покупка Health.md не найдена. Используйте аккаунт Google Play, с которого она сделана, и повторите попытку. Незавершённые покупки не подходят.</string>
+    <string name="myself_claim_store_unavailable">Google Play не удалось получить покупку. Проверьте подключение и аккаунт Google Play, затем повторите попытку.</string>
+    <string name="myself_claim_verification_failed">Не удалось проверить покупку. Проверьте подключение и повторите попытку. Если ошибка сохраняется, обратитесь в поддержку. Доступ не предоставлен.</string>
+    <string name="myself_claim_browser_unavailable">Не удалось открыть браузер. Включите браузер и снова проверьте покупку.</string>
 </resources>

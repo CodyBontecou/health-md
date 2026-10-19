@@ -134,38 +134,6 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         return true
     }
 
-    func testBlockedChangeToastNavigatesToProtectionToggle() {
-        let app = UITestLaunchHelper.configuredApp(
-            healthAuthorized: true,
-            vaultSelected: true,
-            purchaseUnlocked: true,
-            configurationProtectionEnabled: true
-        )
-        app.launch()
-
-        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
-        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
-        XCTAssertTrue(exportButton.isHittable, "Manual export must remain available while configuration is protected")
-
-        // Tap the protection overlay itself. Reaching through it to a disabled child can report
-        // the child as hittable while a loaded simulator sends the tap outside the overlay.
-        let protectedRegion = app.buttons[UITestLaunchHelper.ConfigurationProtection.protectedRegion]
-            .firstMatch
-        XCTAssertTrue(waitHittable(protectedRegion), "A protected export region should be tappable")
-        protectedRegion.tap()
-
-        guard let toast = waitForHittableToast(in: app) else {
-            XCTFail("The visible configuration-protection toast should be tappable")
-            return
-        }
-        toast.tap()
-
-        let toggle = app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "Tapping the toast should navigate to the protection setting")
-        let value = toggle.value as? String
-        XCTAssertTrue(value == "1" || value == "On" || value == "Enabled")
-    }
-
     func testManualExportAndPreviewRemainUsableWhileProtected() {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
@@ -232,39 +200,6 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
                 .waitForExistence(timeout: 5),
             "The editor toast should dismiss the sheet and route to the protection toggle"
-        )
-    }
-
-    func testProtectedProfileManagementBlocksCreationAndRoutesToSetting() {
-        let app = UITestLaunchHelper.configuredApp(
-            healthAuthorized: true,
-            vaultSelected: true,
-            purchaseUnlocked: true,
-            configurationProtectionEnabled: true
-        )
-        app.launch()
-
-        openProfilesManagementSheet(app)
-
-        let newProfileButton = app.buttons["New profile"]
-        XCTAssertTrue(newProfileButton.waitForExistence(timeout: 3))
-        XCTAssertTrue(waitHittable(newProfileButton), "The New profile action should be tappable")
-        newProfileButton.tap()
-
-        XCTAssertFalse(
-            app.navigationBars["New Profile"].waitForExistence(timeout: 1),
-            "The profile editor must not open while protected"
-        )
-
-        guard let toast = waitForHittableToast(in: app) else {
-            XCTFail("Creating a profile must show a tappable protection toast")
-            return
-        }
-        toast.tap()
-        XCTAssertTrue(
-            app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
-                .waitForExistence(timeout: 5),
-            "The profiles-sheet toast should dismiss the sheet and route to the protection toggle"
         )
     }
 

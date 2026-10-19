@@ -602,12 +602,14 @@
     <string name="schedule_through_today_summary">Jeder Lauf exportiert die zurückliegenden vollständigen Tage plus die heutige Teildatei, sodass ein Lauf tagsüber auch den Schlaf der letzten Nacht erfasst. Kombinieren Sie dies mit einer stündlichen Häufigkeit, um beide Dateien den ganzen Tag aufzufrischen. Verwenden Sie den Schreibmodus Überschreiben oder Aktualisieren, um doppelte Inhalte für denselben Tag zu vermeiden.</string>
     <string name="profile_schedule_today_refresh">Heutigen Export aktualisieren</string>
     <string name="profile_schedule_refresh_interval">Aktualisierungsintervall</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Aktualisiert heute alle %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Aktualisiert heute alle %1$d h</string>
     <string name="profile_schedule_discard_recovery">Ausstehende Wiederherstellung verwerfen</string>
     <string name="profile_schedule_discard_recovery_named">Ausstehende Wiederherstellung für %1$s verwerfen</string>
     <string name="profile_schedule_discard_recovery_title">Ausstehende Wiederherstellung für %1$s verwerfen?</string>
-    <string name="profile_schedule_discard_recovery_body">Beendet den geplanten Wiederholungsversuch dieses Profils und verwirft die ausstehenden Daten und eingefrorenen Exporteinstellungen. Beim nächsten geplanten Lauf werden das aktuelle Profil und der aktuelle Zeitplan verwendet. Profil, API-Zugangsdaten, Exportverlauf und bereits exportierte Daten bleiben erhalten. Ein bereits erfolgter Upload oder eine bereits geschriebene Datei kann dadurch nicht rückgängig gemacht werden.</string>
+    <string name="profile_schedule_discard_recovery_body">Stoppt den geplanten Wiederholungsversuch dieses Profils und entfernt seine ausstehenden Tage und gespeicherten Exporteinstellungen. Der nächste geplante Lauf verwendet das aktuelle Profil und den aktuellen Zeitplan. Dein Profil, deine API-Zugangsdaten, der Exportverlauf und bereits exportierte Daten bleiben erhalten. Ein bereits erfolgter Upload oder eine bereits geschriebene Datei kann dadurch nicht rückgängig gemacht werden.</string>
     <string name="profile_schedule_discard_recovery_failed">Die ausstehende Wiederherstellung konnte nicht vollständig verworfen werden. Prüfe das Profil und versuche es erneut.</string>
     <string name="schedule_date_window_today">Heute</string>
     <string name="schedule_export_past_days">Vergangene Tage exportieren</string>
@@ -1406,4 +1408,18 @@
     <string name="fdroid_onboarding_access_body">Die offizielle F-Droid-Version enthält alle lokalen Export- und Automatisierungsfunktionen kostenlos.</string>
     <string name="fdroid_onboarding_no_purchase">Kein Kauf, keine Wiederherstellung, kein Preis und kein Play-Konto erforderlich.</string>
     <string name="fdroid_onboarding_no_play_services">Geplante Exporte funktionieren ohne Google Play Billing.</string>
+
+    <string name="myself_claim_entry">myself.md-Zugang beanspruchen</string>
+    <string name="myself_claim_entry_subtitle">Einen bestehenden Google Play-Lebenszeitkauf bestätigen.</string>
+    <string name="myself_claim_title">myself.md-Zugang</string>
+    <string name="myself_claim_intro">Dein Health.md-Lebenszeitkauf umfasst kostenlosen lebenslangen Zugang zu myself.md.</string>
+    <string name="myself_claim_disclosure">Wenn du fortfährst, lesen wir deinen Google Play-Kaufnachweis und senden ihn zur Prüfung an myself.md. Gesundheits- und Standortdaten bleiben auf deinem Gerät.</string>
+    <string name="myself_claim_account">Melde dich danach an und wähle das myself.md-Konto für den Zugang. Jeder ursprüngliche Kauf kann nur einem Konto zugeordnet werden. Kostenloser oder bestandsgeschützter Android-Zugang allein reicht nicht aus.</string>
+    <string name="myself_claim_verify">Kauf prüfen und fortfahren</string>
+    <string name="myself_claim_verifying">Kauf wird geprüft…</string>
+    <string name="myself_claim_awaiting_user">Melde dich im Browser an und bestätige das Empfängerkonto. Verwende danach dasselbe Konto in myself.md. Erst nach deiner Bestätigung wird der Zugang beansprucht.</string>
+    <string name="myself_claim_no_purchase">Kein abgeschlossener Health.md-Lebenszeitkauf gefunden. Verwende das Google Play-Konto des Käufers und versuche es erneut. Ausstehende Käufe reichen nicht aus.</string>
+    <string name="myself_claim_store_unavailable">Google Play konnte deinen Kauf nicht abrufen. Prüfe Verbindung und Google Play-Konto und versuche es erneut.</string>
+    <string name="myself_claim_verification_failed">Dein Kauf konnte nicht geprüft werden. Prüfe die Verbindung und versuche es erneut. Falls das Problem bleibt, kontaktiere den Support. Es wurde kein Zugang beansprucht.</string>
+    <string name="myself_claim_browser_unavailable">Der Browser konnte nicht geöffnet werden. Aktiviere einen Browser und prüfe den Kauf erneut.</string>
 </resources>

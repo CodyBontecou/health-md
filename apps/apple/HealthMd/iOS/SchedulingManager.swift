@@ -1706,6 +1706,9 @@ class SchedulingManager: ObservableObject {
                 )
             }
 
+            // Capture may suspend past discard; do not admit the newly built transfer afterward.
+            try Task.checkCancellation()
+            guard isScheduledRecoveryAuthorized(jobID: jobID) else { throw CancellationError() }
             guard syncService.canExportToConnectedMac(requiring: settings) else {
                 syncService.isSyncing = false
                 return scheduledFailureResult(
@@ -1774,6 +1777,14 @@ class SchedulingManager: ObservableObject {
             scheduledMacExportTransferTasks[jobID] = Task { @MainActor [weak self, weak syncService] in
                 guard let self, let syncService else { return }
                 do {
+                    try Task.checkCancellation()
+                    guard self.isScheduledRecoveryAuthorized(jobID: jobID) else {
+                        _ = self.completeScheduledMacExport(with: MacExportFailure(
+                            jobID: jobID, reason: .cancelled,
+                            message: "Scheduled recovery was invalidated."
+                        ))
+                        return
+                    }
                     _ = try await IPhoneConnectedCorpusProducer.sendFileExport(
                         jobID: jobID,
                         startDate: startDate,
@@ -1872,6 +1883,14 @@ class SchedulingManager: ObservableObject {
             scheduledMacExportTransferTasks[job.jobID] = Task { @MainActor [weak self, weak syncService] in
                 guard let self, let syncService else { return }
                 do {
+                    try Task.checkCancellation()
+                    guard self.isScheduledRecoveryAuthorized(jobID: job.jobID) else {
+                        _ = self.completeScheduledMacExport(with: MacExportFailure(
+                            jobID: job.jobID, reason: .cancelled,
+                            message: "Scheduled recovery was invalidated."
+                        ))
+                        return
+                    }
                     let preparedFile = try ConnectedTransferFile.encode(job)
                     defer { preparedFile.remove() }
                     guard self.scheduledMacExportContexts[job.jobID] != nil else { return }
@@ -1889,6 +1908,8 @@ class SchedulingManager: ObservableObject {
                     if case .failure(let abort) = transferResult {
                         _ = self.handleScheduledConnectedTransferAbort(abort)
                     }
+                } catch is CancellationError {
+                    // The cancellation/result path owns continuation completion.
                 } catch {
                     _ = self.completeScheduledMacExport(with: MacExportFailure(
                         jobID: job.jobID,
@@ -2446,11 +2467,19 @@ class SchedulingManager: ObservableObject {
     /// Checks for and exports any missed days since last export
     /// Call this when the app becomes active
     @MainActor func performCatchUpExportIfNeeded() async {
-        guard schedule.isEnabled else {
-            logger.info("Schedule disabled, skipping catch-up")
+        guard schedule.isEnabled || hasEnabledProfileEntries else {
+            logger.info("Scheduling disabled, skipping catch-up")
             return
         }
-        _ = await performCatchUpExportInternal()
+        if hasEnabledProfileEntries {
+            // The app-active drain already handles persisted recovery. Only
+            // discover unqueued occurrences here, rather than retrying a
+            // just-failed drain or bypassing a deferred Connected Mac target.
+            await runDueProfileOccurrences(skippingPendingRecovery: true)
+        }
+        if schedule.isEnabled {
+            _ = await performCatchUpExportInternal()
+        }
     }
 
     /// Internal method that performs catch-up export and returns result for UI display
@@ -2481,6 +2510,7 @@ class SchedulingManager: ObservableObject {
         do {
             let alreadyPending = try pendingExportStore.loadAll().contains { request in
                 request.source == .scheduled
+                    && request.profileID == nil
                     && request.scheduledFireDate == fireDate
                     && request.scheduledKind == .completedDay
             }
@@ -2682,8 +2712,33 @@ class SchedulingManager: ObservableObject {
     /// HealthKit delivery calls this. Local-folder runs serialize on the
     /// folder gate (persisted vault state is global); all other targets run
     /// concurrently.
-    @MainActor func runDueProfileOccurrences() async {
-        let due = scheduledEntryStore.dueOccurrences(now: now())
+    @MainActor func runDueProfileOccurrences(skippingPendingRecovery: Bool = false) async {
+        // Restore the next wake-up even when opening the app before a due
+        // occurrence. Local notifications are one-shot and may need re-arming
+        // after a relaunch or reboot without another schedule-editor save.
+        // Preserve attempted recovery and already-armed request identities.
+        defer {
+            if systemSideEffectsEnabled, !TestMode.isUITesting {
+                scheduleBackgroundTask(cancelPendingFallbacks: false)
+            }
+        }
+        var due = scheduledEntryStore.dueOccurrences(now: now())
+        if skippingPendingRecovery {
+            do {
+                let pending = try pendingExportStore.loadAll()
+                due.removeAll { occurrence in
+                    pending.contains { request in
+                        request.source == .scheduled
+                            && request.profileID == occurrence.profileID
+                            && request.scheduledFireDate == occurrence.fireDate
+                            && request.scheduledKind == occurrence.kind
+                    }
+                }
+            } catch {
+                logger.error("Profile catch-up could not inspect pending work: \(error.localizedDescription)")
+                return
+            }
+        }
         guard !due.isEmpty else { return }
 
         await withTaskGroup(of: Void.self) { group in
@@ -2692,16 +2747,6 @@ class SchedulingManager: ObservableObject {
                     await self?.runProfileOccurrence(occurrence)
                 }
             }
-        }
-
-        // Re-arm the wake-up for the next occurrence across all entries.
-        // cancelPendingFallbacks:false mirrors the legacy run body: the runs
-        // above may have just preserved retry requests (device-locked or
-        // partial outcomes) whose fallback windows are still open, and the
-        // bulk cancel would delete the recovery surface milliseconds after
-        // it was advertised.
-        if systemSideEffectsEnabled, !TestMode.isUITesting {
-            scheduleBackgroundTask(cancelPendingFallbacks: false)
         }
     }
 
@@ -2996,7 +3041,8 @@ class SchedulingManager: ObservableObject {
                 profile: profile, dates: dates, target: target, settings: settings,
                 originalRequestedDates: pendingRequest.originalRequestedDates,
                 originalCalendarTimeZoneIdentifier: pendingRequest.originalCalendarTimeZoneIdentifier,
-                quotaJobID: pendingRequest.id, request: pendingRequest
+                quotaJobID: pendingRequest.id,
+                notificationOperationID: pendingRequest.id, request: pendingRequest
             )
         }
 
