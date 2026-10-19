@@ -494,8 +494,15 @@
     <string name="schedule_through_today_summary">ਹਰੇਕ ਰਨ ਪਿਛਲੇ ਪੂਰੇ ਦਿਨਾਂ ਨਾਲ ਅੱਜ ਦੀ ਅੰਸ਼ਕ ਫਾਈਲ ਵੀ ਨਿਰਯਾਤ ਕਰਦਾ ਹੈ, ਇਸ ਲਈ ਦਿਨ ਵੇਲੇ ਚਲਾਉਣ ਨਾਲ ਪਿਛਲੀ ਰਾਤ ਦੀ ਨੀਂਦ ਵੀ ਸ਼ਾਮਲ ਹੁੰਦੀ ਹੈ। ਦੋਵਾਂ ਫਾਈਲਾਂ ਨੂੰ ਸਾਰਾ ਦਿਨ ਤਾਜ਼ਾ ਰੱਖਣ ਲਈ ਇਸ ਨੂੰ ਹਰ ਘੰਟੇ ਦੀ ਬਾਰੰਬਾਰਤਾ ਨਾਲ ਜੋੜੋ। ਉਸੇ ਦਿਨ ਦੀ ਡੁਪਲੀਕੇਟ ਸਮੱਗਰੀ ਤੋਂ ਬਚਣ ਲਈ ਓਵਰਰਾਈਟ ਜਾਂ ਅੱਪਡੇਟ ਰਾਈਟ ਮੋਡ ਵਰਤੋ।</string>
     <string name="profile_schedule_today_refresh">ਅੱਜ ਦਾ ਨਿਰਯਾਤ ਰਿਫਰੈਸ਼ ਕਰੋ</string>
     <string name="profile_schedule_refresh_interval">ਰਿਫਰੈਸ਼ ਅੰਤਰਾਲ</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d ਮਿੰਟ</string>
+    <string name="profile_schedule_refresh_summary_minutes">ਅੱਜ ਹਰ %1$d ਮਿੰਟ ਬਾਅਦ ਰਿਫਰੈਸ਼ ਕਰਦਾ ਹੈ</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d ਘੰਟੇ</string>
     <string name="profile_schedule_refresh_summary">ਅੱਜ ਹਰ %1$d ਘੰਟੇ ਬਾਅਦ ਰਿਫਰੈਸ਼ ਕਰਦਾ ਹੈ</string>
+    <string name="profile_schedule_discard_recovery">ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰੋ</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s ਲਈ ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰੋ</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s ਲਈ ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰਨੀ ਹੈ?</string>
+    <string name="profile_schedule_discard_recovery_body">ਇਸ ਪ੍ਰੋਫਾਈਲ ਦੀ ਅਨੁਸੂਚਿਤ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਬੰਦ ਕਰੋ ਅਤੇ ਇਸ ਦੀਆਂ ਬਕਾਇਆ ਮਿਤੀਆਂ ਅਤੇ ਸੰਭਾਲੀਆਂ ਨਿਰਯਾਤ ਸੈਟਿੰਗਾਂ ਮਿਟਾਓ। ਅਗਲਾ ਅਨੁਸੂਚਿਤ ਰਨ ਮੌਜੂਦਾ ਪ੍ਰੋਫਾਈਲ ਅਤੇ ਅਨੁਸੂਚੀ ਵਰਤੇਗਾ। ਤੁਹਾਡੀ ਪ੍ਰੋਫਾਈਲ, API ਪ੍ਰਮਾਣ-ਪੱਤਰ, ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਅਤੇ ਪਹਿਲਾਂ ਨਿਰਯਾਤ ਕੀਤਾ ਡਾਟਾ ਰੱਖਿਆ ਜਾਵੇਗਾ। ਇਹ ਪਹਿਲਾਂ ਕੀਤੇ ਅੱਪਲੋਡ ਜਾਂ ਲਿਖੀ ਫਾਈਲ ਨੂੰ ਵਾਪਸ ਨਹੀਂ ਲੈ ਸਕਦਾ।</string>
+    <string name="profile_schedule_discard_recovery_failed">ਬਕਾਇਆ ਰਿਕਵਰੀ ਪੂਰੀ ਤਰ੍ਹਾਂ ਰੱਦ ਨਹੀਂ ਹੋ ਸਕੀ। ਪ੍ਰੋਫਾਈਲ ਦੀ ਜਾਂਚ ਕਰੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="schedule_date_window_today">ਅੱਜ</string>
     <string name="schedule_export_past_days">ਪਿਛਲੇ ਦਿਨਾਂ ਨੂੰ ਨਿਰਯਾਤ ਕਰੋ</string>
     <string name="schedule_today_summary">ਹਰ ਵਾਰ ਅੱਜ ਦਾ ਡੇਟਾ ਨਿਰਯਾਤ ਹੁੰਦਾ ਹੈ, ਤਾਂ ਜੋ ਮੌਜੂਦਾ ਰੋਜ਼ਾਨਾ ਫਾਈਲ ਅੱਪ-ਟੂ-ਡੇਟ ਰਹੇ। ਇੱਕੋ ਦਿਨ ਦੀ ਸਮੱਗਰੀ ਦੋ ਵਾਰ ਜੁੜਨ ਤੋਂ ਬਚਾਉਣ ਲਈ Overwrite ਜਾਂ Update ਲਿਖਣ ਮੋਡ ਵਰਤੋ।</string>
@@ -1375,4 +1382,18 @@
     <string name="fdroid_onboarding_access_body">ਅਧਿਕਾਰਤ F-Droid ਬਿਲਡ ਵਿੱਚ ਸਾਰੀਆਂ ਲੋਕਲ ਐਕਸਪੋਰਟ ਅਤੇ ਆਟੋਮੇਸ਼ਨ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਮੁਫ਼ਤ ਸ਼ਾਮਲ ਹਨ।</string>
     <string name="fdroid_onboarding_no_purchase">ਖਰੀਦ, ਰੀਸਟੋਰ, ਕੀਮਤ ਜਾਂ Play ਖਾਤੇ ਦੀ ਲੋੜ ਨਹੀਂ ਹੈ।</string>
     <string name="fdroid_onboarding_no_play_services">ਤਹਿ ਕੀਤੇ ਐਕਸਪੋਰਟ Google Play Billing ਤੋਂ ਬਿਨਾਂ ਕੰਮ ਕਰਦੇ ਹਨ।</string>
+
+    <string name="myself_claim_entry">myself.md ਪਹੁੰਚ ਪ੍ਰਾਪਤ ਕਰੋ</string>
+    <string name="myself_claim_entry_subtitle">Google Play ਦੀ ਪਹਿਲਾਂ ਕੀਤੀ ਜੀਵਨ ਭਰ ਦੀ ਖਰੀਦ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ।</string>
+    <string name="myself_claim_title">myself.md ਪਹੁੰਚ</string>
+    <string name="myself_claim_intro">ਤੁਹਾਡੀ Health.md ਦੀ ਜੀਵਨ ਭਰ ਦੀ ਖਰੀਦ ਵਿੱਚ myself.md ਲਈ ਮੁਫ਼ਤ ਜੀਵਨ ਭਰ ਦੀ ਪਹੁੰਚ ਸ਼ਾਮਲ ਹੈ।</string>
+    <string name="myself_claim_disclosure">ਅੱਗੇ ਵਧਣ ਤੇ ਅਸੀਂ Google Play ਦੀ ਖਰੀਦ ਦਾ ਸਬੂਤ ਪੜ੍ਹ ਕੇ ਯੋਗਤਾ ਜਾਂਚਣ ਲਈ myself.md ਨੂੰ ਭੇਜਾਂਗੇ। ਸਿਹਤ ਅਤੇ ਟਿਕਾਣੇ ਦਾ ਡਾਟਾ ਤੁਹਾਡੇ ਡਿਵਾਈਸ ਉੱਤੇ ਰਹੇਗਾ।</string>
+    <string name="myself_claim_account">ਫਿਰ ਸਾਈਨ ਇਨ ਕਰਕੇ ਪਹੁੰਚ ਲੈਣ ਵਾਲਾ myself.md ਖਾਤਾ ਚੁਣੋ। ਹਰ ਮੂਲ ਖਰੀਦ ਸਿਰਫ਼ ਇੱਕ ਖਾਤੇ ਨਾਲ ਜੋੜੀ ਜਾ ਸਕਦੀ ਹੈ। ਸਿਰਫ਼ ਮੁਫ਼ਤ ਜਾਂ ਪਹਿਲਾਂ ਤੋਂ ਬਰਕਰਾਰ Android ਪਹੁੰਚ ਯੋਗ ਨਹੀਂ ਹੈ।</string>
+    <string name="myself_claim_verify">ਖਰੀਦ ਦੀ ਪੁਸ਼ਟੀ ਕਰਕੇ ਅੱਗੇ ਵਧੋ</string>
+    <string name="myself_claim_verifying">ਖਰੀਦ ਦੀ ਪੁਸ਼ਟੀ ਹੋ ਰਹੀ ਹੈ…</string>
+    <string name="myself_claim_awaiting_user">ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਸਾਈਨ ਇਨ ਕਰਕੇ ਪਹੁੰਚ ਲੈਣ ਵਾਲੇ ਖਾਤੇ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ। ਫਿਰ myself.md ਵਿੱਚ ਉਹੀ ਖਾਤਾ ਵਰਤੋ। ਪੁਸ਼ਟੀ ਤੋਂ ਪਹਿਲਾਂ ਪਹੁੰਚ ਨਹੀਂ ਮਿਲੇਗੀ।</string>
+    <string name="myself_claim_no_purchase">Health.md ਦੀ ਪੂਰੀ ਹੋਈ ਜੀਵਨ ਭਰ ਦੀ ਖਰੀਦ ਨਹੀਂ ਮਿਲੀ। ਖਰੀਦ ਕਰਨ ਵਾਲਾ Google Play ਖਾਤਾ ਵਰਤ ਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ। ਬਕਾਇਆ ਖਰੀਦਾਂ ਯੋਗ ਨਹੀਂ ਹਨ।</string>
+    <string name="myself_claim_store_unavailable">Google Play ਖਰੀਦ ਪ੍ਰਾਪਤ ਨਹੀਂ ਕਰ ਸਕਿਆ। ਕਨੈਕਸ਼ਨ ਅਤੇ Google Play ਖਾਤਾ ਜਾਂਚ ਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="myself_claim_verification_failed">ਖਰੀਦ ਦੀ ਪੁਸ਼ਟੀ ਨਹੀਂ ਹੋ ਸਕੀ। ਕਨੈਕਸ਼ਨ ਜਾਂਚ ਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ। ਸਮੱਸਿਆ ਜਾਰੀ ਰਹੇ ਤਾਂ ਸਹਾਇਤਾ ਨਾਲ ਸੰਪਰਕ ਕਰੋ; ਪਹੁੰਚ ਨਹੀਂ ਦਿੱਤੀ ਗਈ।</string>
+    <string name="myself_claim_browser_unavailable">ਬ੍ਰਾਊਜ਼ਰ ਨਹੀਂ ਖੁੱਲ੍ਹ ਸਕਿਆ। ਬ੍ਰਾਊਜ਼ਰ ਚਾਲੂ ਕਰਕੇ ਖਰੀਦ ਦੀ ਮੁੜ ਪੁਸ਼ਟੀ ਕਰੋ।</string>
 </resources>

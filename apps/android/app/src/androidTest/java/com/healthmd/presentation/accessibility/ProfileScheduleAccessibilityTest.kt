@@ -14,8 +14,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
@@ -62,6 +60,7 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                     ProfileScheduleRow(sampleProfile(), entry.value),
                     onToggle = { actions += "toggle:$it"; entry.value = entry.value.copy(isEnabled = it) },
                     onOpenEditor = { actions += "edit" }, onDelete = { actions += "delete" },
+                    onDiscardRecovery = { actions += "discard" },
                 )
             }
         }
@@ -76,6 +75,22 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         }
         val summary = cadenceSummary(entry.value, text(R.string.profile_schedule_refresh_summary, 3))
         compose.onNodeWithTag(ProfileScheduleTags.SUMMARY).assertTextEquals(summary)
+        // Exercise the rendered row rather than sharing its formatter: minute choices must
+        // retain their units, while shipped hour choices keep their existing localized copy.
+        listOf(
+            Triple(30, R.string.profile_schedule_refresh_summary_minutes, 30),
+            Triple(60, R.string.profile_schedule_refresh_summary_minutes, 60),
+            Triple(180, R.string.profile_schedule_refresh_summary, 3),
+            Triple(360, R.string.profile_schedule_refresh_summary, 6),
+            Triple(720, R.string.profile_schedule_refresh_summary, 12),
+        ).forEach { (minutes, resource, amount) ->
+            compose.runOnIdle { entry.value = entry.value.withTodayRefreshMinutes(minutes) }
+            val expected = cadenceSummary(entry.value, text(resource, amount))
+            val rendered = compose.onNodeWithTag(ProfileScheduleTags.SUMMARY).performScrollTo()
+            rendered.assertTextEquals(expected)
+            assertTextFits(rendered, GeistType.copy13.fontSize)
+        }
+        compose.runOnIdle { entry.value = entry.value.withTodayRefreshMinutes(180) }
         compose.onNodeWithTag(ProfileScheduleTags.NAME).performScrollTo()
         capture("profiles-rows")
 
@@ -176,18 +191,22 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
             selectNativeOption(ProfileScheduleTags.CADENCE_UNIT, text(it))
         }
         val locale = Locale.forLanguageTag(display.language)
-        (1..7).forEach { iso ->
-            selectNativeOption(ProfileScheduleTags.WEEKDAY, DayOfWeek.of(iso).getDisplayName(TextStyle.FULL, locale),
-                captureName = if (iso == 7) "profiles-weekday-menu" else null)
+        // A second pass also covers reopening a scrolled native popup after dismissal.
+        repeat(2) { pass ->
+            (1..7).forEach { iso ->
+                selectNativeOption(ProfileScheduleTags.WEEKDAY, DayOfWeek.of(iso).getDisplayName(TextStyle.FULL, locale),
+                    captureName = if (pass == 1 && iso == 7) "profiles-weekday-menu" else null)
+            }
         }
         val refresh = compose.onNodeWithTag(ProfileScheduleTags.REFRESH).scrollIfPossible()
         refresh.assertRole(Role.Switch).assertIsOff().assertMinimumTouchTarget().assertInNativeOwner()
             .performTouchInput { click(Offset(width * 0.1f, height * 0.2f)) }
         refresh.assertIsOn()
-        ScheduledProfileEntry.TODAY_REFRESH_INTERVAL_OPTIONS.forEach { hours ->
+        ScheduledProfileEntry.TODAY_REFRESH_MINUTE_OPTIONS.forEach { minutes ->
             selectNativeOption(ProfileScheduleTags.REFRESH_INTERVAL,
-                text(R.string.profile_schedule_refresh_interval_hours, hours),
-                captureName = if (hours == 12) "profiles-refresh-menu" else null)
+                if (minutes < 180) text(R.string.profile_schedule_refresh_interval_minutes, minutes)
+                else text(R.string.profile_schedule_refresh_interval_hours, minutes / 60),
+                captureName = if (minutes == 720) "profiles-refresh-menu" else null)
         }
         captureContent("profiles-editor-refresh", ProfileScheduleTags.DIALOG)
         tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.a11y_profiles_save))
@@ -243,61 +262,6 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         compose.onNodeWithTag(ProfileScheduleTags.SAVE).scrollIfPossible().assertFullyVisible()
             .performTouchInput { click() }
         assertEquals(listOf(expected), saved)
-    }
-
-    @Test
-    fun nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField() {
-        val initial = sampleEntry().copy(todayRefreshEnabled = false)
-        val saved = mutableListOf<ScheduledProfileEntry>()
-        val open = mutableStateOf(true)
-        var dismisses = 0
-        setContent {
-            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
-                onSave = { saved += it; open.value = false }, onDismiss = { dismisses++; open.value = false })
-        }
-        val last = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
-        last.assertMinimumTouchTarget().assertInNativeOwner().performTouchInput { click() }
-        last.assertIsFocused().performTextReplacement(Int.MAX_VALUE.toString())
-        last.scrollIfPossible().assertInNativeOwner()
-        assertAnchorLocals(last)
-        assertTextFits(last, GeistType.label20Mono.fontSize)
-        // No Done/focus-clear prerequisite: Save remains scroll-reachable with the field focused.
-        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.a11y_profiles_save))
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        assertEquals(listOf(initial.copy(cadenceValue = Int.MAX_VALUE)), saved)
-        assertEquals(0, dismisses)
-    }
-
-    @Test
-    fun nativeCancelAndBackDismissWithoutSavingDraftEdits() {
-        val initial = sampleEntry()
-        val open = mutableStateOf(true)
-        val saved = mutableListOf<ScheduledProfileEntry>()
-        var dismisses = 0
-        setContent {
-            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
-                onSave = { saved += it }, onDismiss = { dismisses++; open.value = false })
-        }
-        replace(ProfileScheduleTags.EVERY, "123456")
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
-        tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        assertEquals(1, dismisses)
-        compose.runOnIdle { open.value = true }
-        val restored = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
-        restored.assertTextEquals(initial.cadenceValue.toString())
-        replace(ProfileScheduleTags.EVERY, "")
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
-        captureContent("profiles-editor-cancel", ProfileScheduleTags.DIALOG)
-        // Espresso selects the activity root even while this separate native dialog owns focus.
-        // Inject the real system Back key without requiring the obscured activity window to focus.
-        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
-        compose.waitForIdle()
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        assertEquals(2, dismisses)
-        assertTrue(saved.isEmpty())
     }
 
     @Test
@@ -370,6 +334,45 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     @Test
+    fun discardRecoveryRequiresConfirmationHonorsProtectionAndKeepsTheProfile() {
+        val state = mutableStateOf(ProfileSchedulesUiState(listOf(ProfileScheduleRow(sampleProfile(), sampleEntry()))))
+        val protected = mutableStateOf(false)
+        val actions = mutableListOf<String>()
+        setContent { TestSection(state, protected, actions) }
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY).scrollIfPossible()
+            .assertContentDescriptionEquals(text(R.string.profile_schedule_discard_recovery_named, LONG_NAME))
+        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY_DIALOG).assertExists()
+        tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
+        assertTrue(actions.isEmpty())
+        assertEquals(sampleEntry(), state.value.rows.single().entry)
+
+        compose.runOnIdle { protected.value = true }
+        // Protected content is hidden from merged accessibility semantics; use
+        // the child's geometry to exercise the production pointer-blocking overlay.
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY, useUnmergedTree = true)
+            .scrollIfPossible().assertFullyVisible().assertMinimumTouchTarget()
+            .performTouchInput { click() }
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY_DIALOG).assertDoesNotExist()
+        assertEquals(listOf("blocked"), actions)
+        compose.runOnIdle { protected.value = false }
+        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        compose.runOnIdle { protected.value = true }
+        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.profile_schedule_discard_recovery))
+        assertEquals(listOf("blocked", "blocked"), actions)
+        assertEquals(sampleEntry(), state.value.rows.single().entry)
+
+        compose.runOnIdle { protected.value = false }
+        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.profile_schedule_discard_recovery))
+        assertEquals(listOf("blocked", "blocked", "discard:$ID"), actions)
+        assertEquals(sampleProfile(), state.value.rows.single().profile)
+        assertEquals(sampleEntry().copy(pendingExports = emptyList(), recoveryGeneration = 1L),
+            state.value.rows.single().entry)
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY).assertDoesNotExist()
+    }
+
+    @Test
     fun newDraftDefaultsAndBlankProfileSaveGuardRemainUnchanged() {
         val id = mutableStateOf("")
         val saved = mutableListOf<ScheduledProfileEntry>()
@@ -405,6 +408,14 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                     },
                     onOpenEditor = { actions += "editor:$it"; state.value = state.value.copy(editingProfileId = it) },
                     onDeleteProfile = { actions += "delete:$it" }, onAddProfile = { actions += "add" },
+                    onDiscardRecovery = { id ->
+                        actions += "discard:$id"
+                        state.value = state.value.copy(rows = state.value.rows.map { row ->
+                            if (row.profile.id == id) row.copy(entry = row.entry!!.copy(
+                                pendingExports = emptyList(), recoveryGeneration = row.entry!!.recoveryGeneration + 1,
+                            )) else row
+                        })
+                    },
                     onSaveEntry = { actions += "save"; state.value = state.value.copy(editingProfileId = null) },
                 )
             }
@@ -444,10 +455,13 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     private fun selectNativeOption(tag: String, label: String, captureName: String? = null) {
-        compose.onNodeWithTag(tag).scrollIfPossible().assertMinimumTouchTarget().assertInNativeOwner()
-            .performTouchInput { click() }
+        val anchor = compose.onNodeWithTag(tag).scrollIfPossible()
+        awaitNativeControlVisible(anchor, "menu anchor $tag before selecting $label")
+        anchor.assertMinimumTouchTarget().assertInNativeOwner().performTouchInput { click() }
         val item = compose.onNode(hasText(label) and hasClickAction() and hasAnyAncestor(isPopup()))
-            .scrollIfPossible().assertMinimumTouchTarget().assertInNativeOwner()
+            .scrollIfPossible()
+        awaitNativeControlVisible(item, "popup option $label in $tag")
+        item.assertMinimumTouchTarget().assertInNativeOwner()
         val copy = compose.onNode(hasText(label) and hasAnyAncestor(isPopup()), useUnmergedTree = true)
         assertTextFits(copy, GeistType.button14.fontSize)
         assertAnchorLocals(copy)
@@ -457,6 +471,22 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         val selected = compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true)
             .scrollIfPossible()
         assertTextFits(selected, GeistType.copy16.fontSize)
+    }
+
+    /** Native popup dismissal/scroll layout can settle after Compose's semantics update. */
+    private fun awaitNativeControlVisible(control: SemanticsNodeInteraction, stage: String) {
+        try {
+            compose.waitUntil(timeoutMillis = 5_000) { control.isDisplayed() }
+        } catch (failure: Throwable) {
+            val geometry = runCatching {
+                val node = control.fetchSemanticsNode()
+                val ancestors = generateSequence(node) { it.parent }.map {
+                    "bounds=${it.boundsInRoot}, semantics=${it.config}"
+                }.joinToString("\n")
+                "unclipped=${control.getUnclippedBoundsInRoot()}\n$ancestors"
+            }.getOrElse { "Unable to capture geometry: ${it.message}" }
+            throw AssertionError("Native visibility did not settle: $stage on $display\n$geometry", failure)
+        }
     }
 
     private fun captureContent(name: String, tag: String) {

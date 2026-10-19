@@ -42,6 +42,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SharedSetupV2CodecMapperTest {
+    @Test
+    fun `minute schedules cannot be silently rounded or omitted from frozen v2`() {
+        val f = mappedFixture()
+        for (minutes in listOf(30, 60)) {
+            val schedules = f.schedules.map { it.withTodayRefreshMinutes(minutes) }
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                mapper.export(f.profiles, f.profiles.first().id, schedules, "2.0-synthetic")
+            }
+            assertTrue(error.message!!.contains("Shared Setup v2"))
+        }
+    }
+
     private val registry = FixtureRegistry
     private val codec = SharedSetupV2Codec(registry)
     private val mapper = SharedSetupV2Mapper(registry)
