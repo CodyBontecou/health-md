@@ -3,7 +3,7 @@ import XCTest
 
 final class PluginVisualizationResourceTests: XCTestCase {
     // Reviewed producer pin in apps/website/external-sources.json; bundled bytes are checked below.
-    private let pinnedPluginRevision = "c33dcbe935d681216faca78c5dae251344cb4014"
+    private let pinnedPluginRevision = "fd5356c4dd032fed975122f4d691d0fdf6fd804f"
 
     func testOnboardingResourcesMatchPinnedWebsitePluginAndSamples() throws {
         let root = try repositoryRoot()
