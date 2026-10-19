@@ -113,6 +113,10 @@ class DirectCliReleaseReadinessTest {
             assertThat(route.attributes.length).isEqualTo(3)
             assertThat(route.getAttributeNS(android, "host")).isEqualTo("cloud")
             assertThat(route.getAttributeNS(android, "path")).isEqualTo("/requests")
+            val filter = route.parentNode as Element
+            assertThat(filter.getElementsByTagName("data").length).isEqualTo(1)
+            assertThat((filter.parentNode as Element).getAttributeNS(android, "name"))
+                .isEqualTo(".presentation.MainActivity")
         }
 
         val build = read("app/build.gradle.kts")
