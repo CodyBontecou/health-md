@@ -413,6 +413,17 @@ class ConsumerSkillDocumentationTests(unittest.TestCase):
         self.assertIn("existing user-approved absolute non-symlink destination", text)
 
 
+class PackagedTestSupportTests(unittest.TestCase):
+    def test_cli_adapter_support_is_self_contained_and_matches_client_tracer(self) -> None:
+        crates = MODULE_PATH.resolve().parents[1] / "crates"
+        client_support = crates / "healthmd-client/tests/support/agent.rs"
+        cli_support = crates / "healthmd-cli/src/agent_direct_test_support.rs"
+        self.assertEqual(cli_support.read_bytes(), client_support.read_bytes())
+        adapter_tests = (crates / "healthmd-cli/src/agent_direct_tests.rs").read_text()
+        self.assertIn('#[path = "agent_direct_test_support.rs"]', adapter_tests)
+        self.assertNotIn('../../healthmd-client/tests/support/agent.rs', adapter_tests)
+
+
 class DevelopmentQASkillDocumentationTests(unittest.TestCase):
     """Static skill gate/scope instructions, not compiled or physical qualification."""
 

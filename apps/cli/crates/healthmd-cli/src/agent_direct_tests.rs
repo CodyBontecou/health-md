@@ -3,7 +3,8 @@
 #![cfg(unix)] // Positive store/adapter tracers do not imply Windows issuer support.
 use super::*;
 use healthmd_client as client_crate;
-#[path = "../../healthmd-client/tests/support/agent.rs"]
+// The byte-identical packaged mirror is enforced by the release regression gate.
+#[path = "agent_direct_test_support.rs"]
 mod support;
 use healthmd_client::{
     agent_host::{NativeProtectedHostKey, ProtectedHostSecret},
