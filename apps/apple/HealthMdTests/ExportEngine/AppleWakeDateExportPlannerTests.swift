@@ -274,6 +274,107 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    func testSelectedNativeQuantityFamiliesKeepPrecisionAndCanonicalUnits() async throws {
+        let suite = "WakeDateQuantityMatrix.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        var day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        day.activity.swimmingDistance = 12.345678
+        day.activity.wheelchairDistance = 12_345.678
+        day.activity.downhillSnowSportsDistance = 12_345.678
+        day.activity.standTimeMinutes = 12.345678
+        day.heart.atrialFibrillationBurden = 0.12345678
+        day.vitals.bodyTemperatureAvg = 36.123456
+        day.vitals.basalBodyTemperature = 36.234567
+        day.vitals.wristTemperature = 36.345678
+        day.vitals.forcedVitalCapacity = 3.123456
+        day.vitals.forcedExpiratoryVolume1 = 2.123456
+        day.vitals.peakExpiratoryFlowRate = 123.456789
+        day.body.bodyFatPercentage = 0.12345678
+        day.body.waistCircumference = 0.92345678
+        day.mobility.walkingStepLength = 0.72345678
+        day.mobility.walkingDoubleSupportPercentage = 0.12345678
+        day.mobility.walkingAsymmetryPercentage = 0.02345678
+        day.mobility.walkingSteadiness = 0.92345678
+        day.mobility.runningVerticalOscillation = 7.123456
+        day.cyclingPerformance.cyclingSpeed = 7.123456
+        day.vitamins.vitaminA = 123.456789
+        day.vitamins.vitaminB12 = 2.123456
+        day.minerals.iodine = 123.456789
+        day.nutrition.water = 2.123456
+        // Independently stated canonical values: source ratios become percentages,
+        // source metres become centimetres/kilometres, and temperatures stay Celsius.
+        let cases: [(selection: String, key: String, value: Double)] = [
+            ("distance_swimming", "swimming_m", 12.345678),
+            ("distance_wheelchair", "wheelchair_km", 12.345678),
+            ("distance_downhill_snow", "downhill_snow_km", 12.345678),
+            ("stand_time", "stand_time_minutes", 12.345678),
+            ("afib_burden", "afib_burden_percent", 12.345678),
+            ("body_temperature", "body_temperature_avg", 36.123456),
+            ("basal_body_temperature", "basal_body_temperature", 36.234567),
+            ("wrist_temperature", "wrist_temperature", 36.345678),
+            ("forced_vital_capacity", "forced_vital_capacity_l", 3.123456),
+            ("fev1", "fev1_l", 2.123456),
+            ("peak_expiratory_flow", "peak_expiratory_flow", 123.456789),
+            ("body_fat", "body_fat_percent", 12.345678),
+            ("waist_circumference", "waist_circumference_cm", 92.345678),
+            ("walking_step_length", "step_length_cm", 72.345678),
+            ("walking_double_support", "double_support_percent", 12.345678),
+            ("walking_asymmetry", "walking_asymmetry_percent", 2.345678),
+            ("walking_steadiness", "walking_steadiness_percent", 92.345678),
+            ("running_vertical_oscillation", "running_vertical_oscillation_cm", 7.123456),
+            ("cycling_speed", "cycling_speed", 7.123456),
+            ("vitamin_a", "vitamin_a_ug", 123.456789),
+            ("vitamin_b12", "vitamin_b12_ug", 2.123456),
+            ("iodine", "iodine_ug", 123.456789),
+            ("dietary_water", "water_l", 2.123456),
+        ]
+        for units: UnitPreference in [.metric, .imperial] {
+            for item in cases {
+                var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                    selectionIDs: [item.selection], unitPreference: units)
+                // The native field ledger is explicit: less common quantities are
+                // absent from the default list. Request this field before testing it.
+                if !snapshot.formatCustomization.frontmatterConfig.fields.contains(where: { $0.originalKey == item.key }) {
+                    snapshot.formatCustomization.frontmatterConfig.fields.append(CustomFrontmatterField(originalKey: item.key))
+                }
+                let result = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                    settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+                guard case .planned(let operation) = result else {
+                    XCTFail("Selected native quantity must reach every format: \(item.selection)")
+                    continue
+                }
+                XCTAssertEqual(operation.artifacts.count, 4, item.selection)
+                let settings = snapshot.makeAdvancedExportSettings(userDefaults: defaults)
+                Self.retainedSettings.append(settings)
+                let expectedJSON = try day.preparedExport(settings: settings).filteredData
+                    .toJSONDataThrowing(customization: settings.formatCustomization, captureContext: context)
+                let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
+                XCTAssertEqual(try JSONSerialization.jsonObject(with: json) as? NSDictionary,
+                    try JSONSerialization.jsonObject(with: expectedJSON) as? NSDictionary, item.selection)
+                let csv = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .csv }).artifact.inlineData, as: UTF8.self)
+                let csvValues = csv.components(separatedBy: "\n").compactMap { line -> Double? in
+                    let fields = line.components(separatedBy: ",")
+                    guard fields.count == 6, fields[1] != "Metadata" else { return nil }
+                    return Double(fields[3])
+                }
+                XCTAssertTrue(csvValues.contains { abs($0 - item.value) < 1e-10 }, "CSV quantity \(item.selection), \(units)")
+                for artifact in operation.artifacts where artifact.format == .markdown || artifact.format == .obsidianBases {
+                    let text = String(decoding: artifact.artifact.inlineData, as: UTF8.self)
+                    let line = try XCTUnwrap(text.components(separatedBy: "\n").first { $0.hasPrefix("\(item.key): ") }, "\(item.selection), \(units), \(artifact.format)")
+                    let value = try XCTUnwrap(Double(line.dropFirst(item.key.count + 2)), item.selection)
+                    XCTAssertEqual(value, item.value, accuracy: 1e-10, "\(item.selection), \(units)")
+                    for other in cases where other.selection != item.selection {
+                        XCTAssertFalse(text.contains("\n\(other.key): "), "Unselected quantity leaked: \(other.key)")
+                    }
+                }
+            }
+        }
+    }
+
     func testRequestedHumanUnitsKeepAllFourMachineArtifactsCanonical() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
