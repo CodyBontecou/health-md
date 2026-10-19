@@ -17,7 +17,10 @@ FROZEN_REGISTRY_SHA256 = "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da803
 class NativeRegistryImportTests(unittest.TestCase):
     def regenerate(self):
         return importer.canonical_bytes(
-            importer.build_registry(importer.parse_apple(), importer.parse_android())
+            importer.build_registry(
+                importer.parse_apple(), importer.parse_android(),
+                json.loads(importer.CAPABILITY_BASELINE.read_text())["known_capability_ids"],
+            )
         )
 
     def test_reconstruction_preserves_shipped_registry_bytes_and_hash(self):
@@ -30,15 +33,29 @@ class NativeRegistryImportTests(unittest.TestCase):
 
         def evolved_ledger(path, *args, **kwargs):
             if path.name == "product-capabilities.json":
-                return json.dumps({"capabilities": [{
+                ledger = json.loads(read_text(path, *args, **kwargs))
+                ledger["capabilities"].append({
                     "id": "future.available-capability",
                     "platforms": {"apple": {"state": "available"},
                                   "android": {"state": "available"}},
-                }]})
+                })
+                return json.dumps(ledger)
             return read_text(path, *args, **kwargs)
 
         with patch.object(Path, "read_text", evolved_ledger):
             self.assertEqual(self.regenerate(), importer.REGISTRY_PATH.read_bytes())
+
+    def test_removed_referenced_capabilities_still_fail_closed(self):
+        read_text = Path.read_text
+
+        def missing_capabilities(path, *args, **kwargs):
+            if path.name == "product-capabilities.json":
+                return json.dumps({"capabilities": []})
+            return read_text(path, *args, **kwargs)
+
+        with patch.object(Path, "read_text", missing_capabilities):
+            with self.assertRaisesRegex(ValueError, "unknown product capabilities"):
+                self.regenerate()
 
     def test_frozen_capability_projection_has_independent_provenance(self):
         baseline = json.loads(importer.CAPABILITY_BASELINE.read_text())
