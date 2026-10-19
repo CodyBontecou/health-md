@@ -88,10 +88,9 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             }
 
             if row.fieldKind == .encodedOnly || row.fieldKind == .decodeOnly {
-                XCTAssertEqual(
-                    row.disposition,
-                    .derivedOrLegacy,
-                    "Serialization-only compatibility fields cannot become v2 authority."
+                XCTAssertTrue(
+                    row.disposition == .derivedOrLegacy || row.disposition == .prohibited,
+                    "Serialization-only compatibility fields may be legacy or explicitly prohibited, never v2 authority."
                 )
             }
 

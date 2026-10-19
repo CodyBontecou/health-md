@@ -53,26 +53,8 @@ import org.junit.Rule
 import java.io.File
 import java.util.Locale
 
-/** Shared geometry only: fixture callbacks must never read or mutate real health/settings state. */
-data class AccessibilityDisplayCase(
-    val width: Int,
-    val height: Int,
-    val fontScale: Float,
-    val language: String = "en",
-    val dark: Boolean = false,
-)
-
-fun accessibilityDisplays(): List<Array<AccessibilityDisplayCase>> = listOf(
-    AccessibilityDisplayCase(411, 720, 1f),
-    AccessibilityDisplayCase(320, 640, 1f),
-    AccessibilityDisplayCase(320, 480, 1.3f),
-    AccessibilityDisplayCase(320, 480, 2f),
-    AccessibilityDisplayCase(320, 640, 2f),
-    AccessibilityDisplayCase(568, 280, 2f),
-    AccessibilityDisplayCase(640, 280, 2f),
-    AccessibilityDisplayCase(320, 480, 2f, language = "de", dark = true),
-    AccessibilityDisplayCase(320, 480, 2f, language = "ar", dark = true),
-    AccessibilityDisplayCase(320, 640, 2f, language = "ja"),
+fun accessibilityDisplays(): List<Array<AccessibilityDisplayCase>> = accessibilityDisplayCases(
+    InstrumentationRegistry.getArguments().getString(ACCESSIBILITY_MATRIX_ARGUMENT),
 ).map { arrayOf(it) }
 
 /**
@@ -80,7 +62,10 @@ fun accessibilityDisplays(): List<Array<AccessibilityDisplayCase>> = listOf(
  * No device-wide font/display/locale settings, app storage, or permissions are changed.
  * Native popup/dialog windows are separate owners: check their own bounds and density explicitly.
  */
-abstract class AccessibilityTestHarness(protected val display: AccessibilityDisplayCase) {
+abstract class AccessibilityTestHarness(
+    protected val display: AccessibilityDisplayCase,
+    private val wakeWithUiAutomation: Boolean = true,
+) {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
@@ -88,7 +73,9 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
 
     @Before
     fun keepTestActivityAwake() {
-        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wakeUp()
+        // Activity.setTurnScreenOn below can wake app-only fixtures without claiming the
+        // exclusive UiAutomation connection already owned by a device-control bridge.
+        if (wakeWithUiAutomation) UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wakeUp()
         withNativeInputDiagnostics("Native test activity could not prepare for input") {
             compose.runOnUiThread {
                 val activity = compose.activity
@@ -268,9 +255,20 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
                 .firstOrNull { Regex("displayId=$display(?:,|\\s)").containsMatchIn(it) }
             if (record == null) "none" else focusOwnerCategory(record, packageName)
         }
+        // The normal diagnostics intentionally classify other owners without naming
+        // them. Only disposable hosted emulators opt into the exact platform title,
+        // captured here before ActivityScenario tears down the failed host.
+        val hostedIdentity = if (
+            InstrumentationRegistry.getArguments().getString("healthmd.ciInputDiagnostics") == "true" &&
+            Build.HARDWARE in setOf("ranchu", "goldfish")
+        ) {
+            "; hostedCurrentFocus=${currentFocus?.take(256)}"
+        } else {
+            ""
+        }
         "nativePolicy=window(currentFocus=${focusOwnerCategory(currentFocus, packageName)}, " +
             "focusedApp=${focusOwnerCategory(focusedApp, packageName)}, focusedSurface=$surface); " +
-            "input(focusedDisplay=${display ?: "unavailable"}, focusedWindow=$focusedWindow)"
+            "input(focusedDisplay=${display ?: "unavailable"}, focusedWindow=$focusedWindow)$hostedIdentity"
     }.getOrElse { "nativePolicy unavailable: ${it.javaClass.simpleName}" }
 
     private fun focusOwnerCategory(record: String?, packageName: String): String = when {

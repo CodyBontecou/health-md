@@ -21,7 +21,7 @@ Data Detail defaults to Summary for new installs. Detailed Time-Series adds sele
 2. Grant notification permission for recovery.
 3. Choose Daily, Weekly, or Custom; then set the time, lookback, and destination. Custom schedules also have an interval unit and start date that establishes the repeating phase.
 4. Configure metrics, formats, and Data Detail on Export.
-5. Optional: enable Today Refresh every 3/6/12 hours.
+5. Optional: enable Today Refresh every 30/60 minutes or 3/6/12 hours.
 
 On launch, Health.md restores local fallback notifications, HealthKit background delivery, and APNs registration for both legacy and profile schedules. Opening the app also re-arms the next profile occurrence even when nothing is due yet; it does not start a future export. App-open catch-up evaluates due profile schedules when the legacy schedule is disabled, while already-queued recovery remains owned by the pending drain rather than being immediately attempted twice.
 
@@ -125,3 +125,13 @@ Connected Mac schedules require an open, compatible, ready Mac to begin; they do
 - `SchedulingManager` runs local/API/bounded Connected Mac pipelines with frozen pending settings, current opt-in/generation checks, and verified API destination identity.
 - `ExportNotificationScheduler` uses deterministic pending identifiers.
 - Worker silent pushes carry routing/schedule metadata only.
+
+## Minute Today Refresh compatibility
+
+Today Refresh offers 30/60/180/360/720-minute windows, separately from completed-day cadence and lookback. These are requested background windows, not guaranteed timers or near-real-time Obsidian delivery. The preferred local time sets the phase; windows stop at midnight and restart at the next local day's preferred time. Spring-forward gaps move forward preserving minutes, colliding instants are deduplicated, and repeated fall-back times use their first occurrence only. Next is exclusive and due is inclusive; success markers prevent duplicate wake-ups from rerunning a satisfied window.
+
+Local persistence v2 retains the shipped integer-hour field. For minute choices, it writes the legacy refresh flag as false and uses a separate v2 activation flag. Older apps therefore leave minute refresh off while completed-day schedules remain usable. A separate local preference retains the minute choice if an older writer drops v2 fields; upgrading after such an edit preserves that choice **disabled**, requiring explicit opt-in. Progress and frozen residual work are unchanged. Deleting a schedule does not recreate it from a saved preference.
+
+Shared Setup v2 cannot represent minute refresh. Sharing a 30/60-minute profile choice fails with an explanation; choose a 3/6/12-hour interval before sharing. Existing public v2 schema/fixture bytes and daily health export schemas are unchanged. New windows refresh the same owner-day output, not a new export format.
+
+Each new durable export request with dates counts toward the existing free-export quota; retries of that request retain their identity. Faster windows can exhaust the quota sooner. The deployed push metadata remains hour-only: minute refresh does not advertise a rounded three-hour interval. Completed-day push nudges remain; minute windows use existing native background/app-open recovery paths and remain subject to iOS data-lock and background-delivery constraints.
