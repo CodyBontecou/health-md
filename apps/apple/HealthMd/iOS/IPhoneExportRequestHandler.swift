@@ -272,7 +272,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         return
                     }
                     let providerDiscovery = await externalIntegrations
-                        .discoverEarliestAvailableDate(providerIDs: selectedProviderIDs)
+                        .discoverEarliestAvailableDate(
+                            providerIDs: selectedProviderIDs,
+                            whoopResources: settings.metricSelection.enabledWHOOPResources
+                        )
                     guard providerDiscovery.isComplete else {
                         syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                             jobID: request.jobID,
@@ -366,7 +369,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     await enabledExternalIntegrations.fetchDailyRecords(
                         for: date,
                         providerIDs: selectedContextProviderIDs,
-                        calendar: sourceCalendar
+                        calendar: sourceCalendar,
+                        whoopResources: settings.metricSelection.enabledWHOOPResources
                     )
                 }
             } else {
@@ -377,7 +381,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             externalRecordFetcher = { date in
                 await enabledExternalIntegrations.fetchDailyRecords(
                     for: date,
-                    calendar: sourceCalendar
+                    calendar: sourceCalendar,
+                    whoopResources: settings.metricSelection.enabledWHOOPResources
                 )
             }
         } else {
@@ -1583,7 +1588,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 fetchExternalDailyRecords: { date in
                     await externalIntegrations?.fetchDailyRecords(
                         for: date,
-                        calendar: providerCalendar
+                        calendar: providerCalendar,
+                        whoopResources: settings.metricSelection.enabledWHOOPResources
                     ) ?? []
                 }
             )

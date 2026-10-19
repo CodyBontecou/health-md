@@ -73,6 +73,29 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(snapshot.metricSelection.enabledCategoryIDs, [HealthMetricCategory.activity.rawValue, HealthMetricCategory.sleep.rawValue])
     }
 
+    func testSnapshotPreservesAndFreezesWHOOPSelectionForProfileAndRecovery() throws {
+        let settings = makeConfiguredSettings()
+        settings.metricSelection.enabledWHOOPResources = [.recovery, .sleep]
+        let snapshot = ExportSettingsSnapshot.from(settings)
+        settings.metricSelection.enabledWHOOPResources = []
+        XCTAssertEqual(snapshot.metricSelection.enabledWHOOPResources, [.recovery, .sleep])
+
+        let decoded = try JSONDecoder().decode(
+            ExportSettingsSnapshot.self, from: JSONEncoder().encode(snapshot)
+        )
+        let restored = decoded.makeAdvancedExportSettings()
+        Self.retainedSettings.append(restored)
+        XCTAssertEqual(restored.metricSelection.enabledWHOOPResources, [.recovery, .sleep])
+        XCTAssertEqual(decoded, snapshot)
+
+        var allOff = snapshot
+        allOff.metricSelection.enabledWHOOPResources = []
+        let recovered = try JSONDecoder().decode(
+            ExportSettingsSnapshot.self, from: JSONEncoder().encode(allOff)
+        )
+        XCTAssertTrue(recovered.metricSelection.enabledWHOOPResources.isEmpty)
+    }
+
     func testSnapshot_roundTripsThroughJSON() throws {
         let snapshot = ExportSettingsSnapshot.from(
             makeConfiguredSettings(),
@@ -163,6 +186,15 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(decoded.detailPolicy, .detailedTimeSeries)
         XCTAssertFalse(decoded.includeGranularData)
         XCTAssertEqual(reencoded["includeGranularData"] as? Bool, false)
+    }
+
+    func testLosslessPresetUsesShortTitleWithoutChangingIdentityOrPolicy() {
+        let preset = AppleExportDetailPreset.losslessHealthRecords
+
+        XCTAssertEqual(preset.localizedTitle, String(localized: "Lossless"))
+        XCTAssertEqual(preset.rawValue, "lossless_health_records")
+        XCTAssertEqual(preset.policy, .lossless)
+        XCTAssertEqual(AppleExportDetailPreset(policy: .lossless), preset)
     }
 
     func testDetailPolicyHistoryTokensCoverAllFourStates() {

@@ -85,6 +85,36 @@ describe("split production Worker profiles", () => {
     expect(requested).toEqual(["/style.css"]);
   });
 
+  it.each([
+    ["app-icon.png", "image/png"], ["favicon.png", "image/png"], ["favicon.ico", "image/x-icon"],
+  ] as const)("serves public %s branding only through the account asset allowlist", async (name, type) => {
+    const env = profile("account", "https://account.healthmd.app");
+    const bytes = readFileSync(new URL(`../public/${name}`, import.meta.url));
+    let assetCalls = 0;
+    env.ASSETS = {
+      fetch: async () => {
+        assetCalls += 1;
+        return new Response(Uint8Array.from(bytes).buffer, { headers: { "Content-Type": type } });
+      },
+    } as unknown as Fetcher;
+    const response = await accountWorker.fetch(new Request(`${env.PUBLIC_ORIGIN}/${name}`), env);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe(type);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("content-security-policy")).toContain("img-src 'self'");
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes);
+    for (const request of [
+      new Request(`${env.PUBLIC_ORIGIN}/${name}`, { method: "POST" }),
+      new Request(`${env.PUBLIC_ORIGIN}/${name}?version=1`),
+      new Request(`https://alternate.example.test/${name}`),
+    ]) expect((await accountWorker.fetch(request, env)).status).toBe(404);
+    expect(assetCalls).toBe(1);
+    expect((await ingestWorker.fetch(new Request(`https://api.healthmd.app/${name}`),
+      profile("ingest", "https://api.healthmd.app"))).status).toBe(404);
+    expect((await maintenanceWorker.fetch(new Request(`https://maintenance.healthmd.app/${name}`),
+      profile("maintenance", "https://maintenance.healthmd.app"))).status).toBe(404);
+  });
+
   it("disables persisted Worker logs, invocation logs, traces and Logpush", () => {
     for (const name of ["ingest", "account", "maintenance"]) {
       const config = readFileSync(new URL(`../wrangler.${name}.toml`, import.meta.url), "utf8");

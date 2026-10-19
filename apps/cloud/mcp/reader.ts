@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { decryptExport, parseExportKeyring, sha256Hex } from "../src/crypto";
+import { isReviewedAppleDailyVersion } from "../src/apple-daily-profile";
 import registry from "../../../packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json" with { type: "json" };
 
 export class ReaderError extends Error {
@@ -50,7 +51,7 @@ export interface HealthDataReader {
 
 type ScalarPath = readonly [string, string];
 interface Binding { id: string; path: ScalarPath; outputKey: string; divisor?: number }
-// Only verified Apple-v8 summary projections are exposed. Source archive,
+// Only verified Apple-v8/v10 primary summary projections are exposed. Source archive,
 // provider text, metadata, UUIDs and time-series arrays are never returned.
 // These IDs, labels, units and categories come from the shared metric registry;
 // paths alone are adapter-specific. Android v4 is not falsely projected into
@@ -80,7 +81,7 @@ const bindings = new Map(BINDINGS.map((binding) => {
 interface StoredExport {
   objectKey: string; exportId: string; encryptionKeyId: string; byteCount: number; plaintextSha256: string;
 }
-interface DayRow extends StoredExport { date: string; recordIndex: number }
+interface DayRow extends StoredExport { date: string; recordIndex: number; schemaVersion: number }
 interface ExportMetadata extends StoredExport {
   source: string; envelopeSchemaVersion: number; dailyRecordSchemaVersion: number;
   exportedAt: string; receivedAt: string; dateStart: string; dateEnd: string;
@@ -214,15 +215,20 @@ export class VmHealthDataReader implements HealthDataReader {
   }
   close(): void { this.db.close(); }
 
+  // Filter reviewed current profiles before applying catalog/latest limits.
+  // Unsupported snapshots remain discoverable through the full-export tools;
+  // never fall back to an older Apple revision for an unsupported current day.
   private rows(userId: string, start?: string, end?: string,
     limit = MAX_CATALOG_DAYS + 1, descending = false): DayRow[] {
     const where = start && end ? "AND d.owner_date BETWEEN ? AND ?" : "";
-    const sql = `SELECT d.owner_date AS date, d.record_index AS recordIndex,
+    const sql = `SELECT d.owner_date AS date, d.record_index AS recordIndex, d.schema_version AS schemaVersion,
       e.object_key AS objectKey, e.id AS exportId, e.encryption_key_id AS encryptionKeyId,
       e.byte_count AS byteCount, e.plaintext_sha256 AS plaintextSha256
       FROM daily_records d JOIN exports e ON e.id = d.export_id AND e.user_id = d.user_id
       JOIN users u ON u.id = d.user_id AND u.status = 'active'
-      WHERE d.user_id = ? ${where} ORDER BY d.owner_date ${descending ? "DESC" : "ASC"} LIMIT ?`;
+      WHERE d.user_id = ? AND e.source = 'ios' AND e.envelope_schema_version IN (1, 2)
+        AND e.daily_record_schema_version IN (8, 10) AND d.schema_version = e.daily_record_schema_version
+        ${where} ORDER BY d.owner_date ${descending ? "DESC" : "ASC"} LIMIT ?`;
     return this.db.prepare(sql).all(userId, ...(start && end ? [start, end] : []), limit) as unknown as DayRow[];
   }
 
@@ -259,10 +265,11 @@ export class VmHealthDataReader implements HealthDataReader {
     try {
       const envelope = asObject(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)));
       if (envelope?.schema !== "healthmd.api_export" || ![1, 2].includes(Number(envelope.schema_version)) ||
-          envelope.source !== "ios" || envelope.daily_record_schema_version !== 8 ||
+          envelope.source !== "ios" || !isReviewedAppleDailyVersion(envelope.daily_record_schema_version) ||
+          envelope.daily_record_schema_version !== row.schemaVersion ||
           !Array.isArray(envelope.records)) throw new Error("unsupported");
       const day = asObject(envelope.records[row.recordIndex]);
-      if (day?.schema !== "healthmd.health_data" || day.schema_version !== 8 || day.date !== row.date) {
+      if (day?.schema !== "healthmd.health_data" || day.schema_version !== row.schemaVersion || day.date !== row.date) {
         throw new Error("wrong record");
       }
       return day as DailyRecord;
@@ -423,7 +430,7 @@ export class VmHealthDataReader implements HealthDataReader {
 
   async listMetrics(principal: ReadPrincipal): Promise<MetricInfo[]> {
     // An unlimited-retention account may hold years of exports. Intentionally
-    // catalog only the most recent 365 snapshots; do not permanently disable
+    // catalog only the most recent 365 supported snapshots; do not permanently disable
     // discovery when day 366 arrives or pretend the window is all history.
     const rows = this.rows(principal.userId, undefined, undefined, MAX_CATALOG_DAYS, true).reverse();
     const seen = new Map<string, MetricInfo>();
@@ -466,7 +473,7 @@ export class VmHealthDataReader implements HealthDataReader {
 
   async getDailySummary(principal: ReadPrincipal, date: string): Promise<DailySummary> {
     const [day] = await this.summaries(principal, validDate(date), date);
-    if (!day) throw new ReaderError("unavailable_data", "No export is available for that date.");
+    if (!day) throw new ReaderError("unavailable_data", "No supported daily summary is available for that date.");
     return day;
   }
 
@@ -476,7 +483,7 @@ export class VmHealthDataReader implements HealthDataReader {
     validDate(start);
     const end = nextDay(start, 6);
     const days = await this.summaries(principal, start, end);
-    if (days.length === 0) throw new ReaderError("empty_range", "No exports are available in this week.");
+    if (days.length === 0) throw new ReaderError("empty_range", "No supported daily summaries are available in this week.");
     const available = new Set(days.map((day) => day.date));
     const missingDates = Array.from({ length: 7 }, (_, index) => nextDay(start, index))
       .filter((date) => !available.has(date));

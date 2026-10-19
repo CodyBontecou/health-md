@@ -26,7 +26,8 @@ import { decodeBase64, parseExportKeyring } from "./crypto";
 import type { Env } from "./types";
 
 const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
-  "/repair", "/repair.js", "/repair-panel", "/deletion-status", "/deletion-status.js", "/style.css"]);
+  "/repair", "/repair.js", "/repair-panel", "/deletion-status", "/deletion-status.js", "/style.css",
+  "/app-icon.png", "/favicon.png", "/favicon.ico"]);
 const STATIC_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
 function normalizedKeyMaterial(encoded: string): string {

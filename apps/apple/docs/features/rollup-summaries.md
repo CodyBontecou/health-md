@@ -1,6 +1,6 @@
 # Range summary and historical roll-ups
 
-Health.md can generate one range summary covering exactly the requested civil dates. The range grammar is the independently versioned public contract `healthmd.rollup_summary` v9; daily Apple exports remain `healthmd.health_data` v8.
+Health.md can generate one range summary covering exactly the requested civil dates. The range grammar is the independently versioned public contract `healthmd.rollup_summary` v10; current daily Apple exports identify `healthmd.health_data` v10. Historical range-summary v9 sourced from daily v8 remains frozen and readable.
 
 ## User promise
 
@@ -15,7 +15,7 @@ Health/
     Range/2026-03-10_to_2026-03-15-bases.md
 ```
 
-With **Organize by File Type**, the format folder precedes `Range`. Range files are derived from Apple-v8 daily aggregate facts and do not embed the canonical HealthKit archive.
+With **Organize by File Type**, the format folder precedes `Range`. Range files are derived from Apple-v10 daily aggregate facts and do not embed the canonical HealthKit archive.
 
 The requested IANA calendar timezone and inclusive start/end dates are frozen before capture. `period_id`, `start_date`, `end_date`, `calendar_timezone`, and `days_expected` never shrink when the first or last query fails. `source_dates` contains distinct successfully captured owner dates, including successful empty days; `days_counted` and coverage therefore expose missing captures rather than changing artifact identity. Missing edge days never suppress the artifact when captured metrics remain. A range is limited to 10,000 cumulative owner dates (about 27 years), while capture and render batches retain their smaller bounded limits.
 
@@ -24,16 +24,16 @@ The requested IANA calendar timezone and inclusive start/end dates are frozen be
 Every new JSON, CSV, Markdown, and Obsidian Bases range artifact identifies:
 
 - `schema: healthmd.rollup_summary`
-- `schema_version: 9`
+- `schema_version: 10`
 - `source_schema: healthmd.health_data`
-- `source_schema_version: 8`
+- `source_schema_version: 10`
 - `rollup_rules_version: 8`
 - `calendar_timezone: <captured IANA identifier>`
 - `rollup_period: range`
 
-JSON carries `calendar_timezone` as a required top-level member, Markdown and Bases carry it in frontmatter, and CSV carries it in the stable leading columns on every row. Daily JSON, CSV, Markdown, and Bases outputs remain Apple v8 and are not altered by enabling a range summary. Provider-native WHOOP facts remain available in daily v8 records but have no roll-up rule and are excluded from range v9.
+JSON carries `calendar_timezone` as a required top-level member, Markdown and Bases carry it in frontmatter, and CSV carries it in the stable leading columns on every row. Daily JSON, CSV, Markdown, and Bases outputs identify Apple v10 and are not altered by enabling a range summary. WHOOP facts, including physiological-cycle steps, remain available in daily records but have no roll-up rule and are excluded from range v10.
 
-The normative contract and canonical synthetic fixtures are under `packages/contracts/rollup-summary/v9`. All four fixtures are copied byte-for-byte from the production Swift generator/renderers, pinned by SHA-256, schema/shape validated, and reproduced byte-for-byte by the Rust production range renderer.
+The normative contract and current canonical synthetic fixtures are under `packages/contracts/rollup-summary/v10`; frozen v9 fixtures remain under their historical directory. All four fixtures are copied byte-for-byte from the production Swift generator/renderers, pinned by SHA-256, schema/shape validated, and reproduced byte-for-byte by the Rust production range renderer.
 
 ## Settings and migration
 

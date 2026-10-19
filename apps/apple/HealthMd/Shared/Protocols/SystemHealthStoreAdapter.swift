@@ -345,10 +345,9 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     var supportsHistoryAuthorizationBoundaries: Bool {
-        // Xcode 26 can parse OS 27 availability checks but its HealthKit SDK does
-        // not declare this API. Compile the call only once the matching Swift
-        // toolchain ships; older builds must continue to fail closed.
-        #if compiler(>=6.4)
+        // SDK presence and runtime availability are separate requirements. An
+        // older-SDK binary cannot assess history even when run on a newer OS.
+        #if !os(macOS) && HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION
         if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
             return true
         }
@@ -383,29 +382,27 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     func earliestAuthorizedSampleDates(for types: Set<HKObjectType>) async throws -> [String: Date] {
-        #if compiler(>=6.4)
+        #if os(macOS)
+        throw NSError(
+            domain: "HealthMd.HealthKitCapability",
+            code: 27,
+            userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries must be queried on the connected iPhone."]
+        )
+        #elseif HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION
         guard #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) else {
-            throw historyAuthorizationBoundaryUnavailableError()
+            throw NSError(domain: "HealthMd.HealthKitCapability", code: 27, userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries require OS 27 or later."])
         }
         let boundaries = try await store.earliestAuthorizedSampleDate(for: types)
         return Dictionary(uniqueKeysWithValues: boundaries.map { type, date in
             (type.identifier, date)
         })
         #else
-        _ = types
-        throw historyAuthorizationBoundaryUnavailableError()
-        #endif
-    }
-
-    private func historyAuthorizationBoundaryUnavailableError() -> NSError {
-        NSError(
+        throw NSError(
             domain: "HealthMd.HealthKitCapability",
             code: 27,
-            userInfo: [
-                NSLocalizedDescriptionKey:
-                    "Health history authorization boundaries require an OS 27 SDK and runtime."
-            ]
+            userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries require a build made with a supported OS 27 HealthKit SDK."]
         )
+        #endif
     }
 
     func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus {

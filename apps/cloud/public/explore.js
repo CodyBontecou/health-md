@@ -1,3 +1,4 @@
+(() => {
 "use strict";
 // First-party, session-only explorer. No selected fields, credentials, or
 // readings are stored in URLs, localStorage, third-party scripts or logs.
@@ -17,6 +18,27 @@ let librarySequence = 0;
 let selectedExport = null;
 let selectedPointer = "";
 let selectedOffset = 0;
+let nodeSequence = 0;
+let disabled = false;
+let supplementsAvailable = false;
+function emptyTable(body, columns, text) {
+  const row = element("tr"); const cell = element("td", text, "table-empty");
+  cell.colSpan = columns; row.append(cell); body.replaceChildren(row);
+}
+function clearInspector() {
+  for (const id of ["inspector-value", "inspector-children", "inspector-path"]) $(id).replaceChildren();
+  for (const id of ["inspector-root", "inspector-up", "inspector-more", "inspector-previous", "inspector-download"]) $(id).hidden = true;
+  $("inspector-download").removeAttribute("href");
+  $("inspector-children").closest(".table-scroll").hidden = true;
+}
+function clearExplorer() {
+  disabled = true; chartSequence++; librarySequence++; nodeSequence++;
+  selectedExport = null; selectedPointer = ""; selectedOffset = 0; supplementsAvailable = false;
+  clearInspector();
+  for (const id of ["explore-charts", "library-list", "metric-options", "chart-summary", "inspector-meta", "library-status"]) $(id).replaceChildren();
+  $("library-more").hidden = true;
+  $("chart-settings").open = false;
+}
 
 async function api(path, body) {
   const response = await fetch(path, { method: body === undefined ? "GET" : "POST", credentials: "same-origin",
@@ -57,14 +79,14 @@ function chartCard(metric, first, second, chartType, axisMode) {
   const card = element("article", undefined, "chart-card");
   const title = element("h3", `${metric.label} · ${metric.unit}`);
   const periods = [first, ...(second ? [second] : [])];
-  const readings = periods.flatMap((period) => period.days.map((day) => day.values?.[metric.id])
+  const readings = periods.flatMap((period) => period.days.filter((day) => day.status === "available").map((day) => day.values?.[metric.id])
     .filter((value) => typeof value === "number" && Number.isFinite(value)));
   const minValue = readings.length ? Math.min(...readings) : 0;
   const maxValue = readings.length ? Math.max(...readings) : 0;
   const low = axisMode === "zero" ? Math.min(0, minValue) : minValue;
   const high = axisMode === "zero" ? Math.max(0, maxValue) : maxValue;
   const span = Math.max(1, high - low);
-  const latest = [...first.days].reverse().find((day) => typeof day.values?.[metric.id] === "number");
+  const latest = [...first.days].reverse().find((day) => day.status === "available" && typeof day.values?.[metric.id] === "number" && Number.isFinite(day.values[metric.id]));
   const headline = element("p", latest ? `${display(latest.values[metric.id])} ${metric.unit}` : "—", "chart-value");
   const detail = element("p", latest ? `Latest in selected period · ${latest.date}` : "No observation in selected period", "chart-subtitle");
   const scale = element("p", `${axisMode === "zero" ? "Zero-based" : "Data-range"} axis · ${display(low)}–${display(high)} ${metric.unit}${second ? " · shared between periods" : ""}`, "chart-scale");
@@ -99,10 +121,10 @@ function chartCard(metric, first, second, chartType, axisMode) {
     draw();
   }
   plot.append(picture);
-  const legend = element("p", `${first.window.start}–${first.window.end} · ${first.days.filter((day) => typeof day.values?.[metric.id] === "number").length}/${first.days.length} observed${second ? `  |  comparison ${second.window.start}–${second.window.end} · ${second.days.filter((day) => typeof day.values?.[metric.id] === "number").length}/${second.days.length} observed` : ""}`, "chart-coverage");
+  const legend = element("p", `${first.window.start}–${first.window.end} · ${first.days.filter((day) => day.status === "available" && Number.isFinite(day.values?.[metric.id])).length}/${first.days.length} observed${second ? `  |  comparison ${second.window.start}–${second.window.end} · ${second.days.filter((day) => day.status === "available" && Number.isFinite(day.values?.[metric.id])).length}/${second.days.length} observed` : ""}`, "chart-coverage");
   const details = element("details", undefined, "chart-table");
   details.append(element("summary", "Dates, missingness & inspect"));
-  const table = element("table");
+  const table = element("table", undefined, "data-table");
   table.append(element("caption", `${metric.label} · source dates (not upload timestamps)`));
   const thead = element("thead");
   const heading = element("tr");
@@ -128,7 +150,7 @@ function chartCard(metric, first, second, chartType, axisMode) {
       source.append(inspectButton(second.days[index].exportId,
         `/records/${second.days[index].recordIndex}`, `Inspect ${second.days[index].date}`));
     }
-    for (const inspected of new Set([day?.date, second?.days[index]?.date].filter(Boolean))) {
+    for (const inspected of supplementsAvailable ? new Set([day?.date, second?.days[index]?.date].filter(Boolean)) : []) {
       const button = element("button", `Review ${inspected} supplements`, "subtle");
       button.type = "button";
       button.addEventListener("click", () => document.dispatchEvent(
@@ -154,6 +176,7 @@ function chartCard(metric, first, second, chartType, axisMode) {
 }
 async function renderCharts(event) {
   event?.preventDefault();
+  if (disabled) return;
   const ids = [...$("metric-options").querySelectorAll("input:checked")].map((input) => input.value);
   if (!ids.length) { note("Choose at least one metric."); return; }
   const start = $("chart-start").value;
@@ -178,14 +201,15 @@ async function renderCharts(event) {
         end: $("compare-end").value, metrics: ids, profile }) : Promise.resolve(null),
     ]);
     if (seq !== chartSequence) return;
-    const grid = $("explore-charts"); grid.replaceChildren();
+    const grid = $("explore-charts"); grid.replaceChildren(); grid.setAttribute("aria-busy", "false");
     for (const metric of first.metrics) grid.append(chartCard(metric, first, second,
       $("chart-type").value, $("chart-axis").value));
     $("chart-summary").textContent = `${start} – ${end}${second ? ` compared with ${second.window.start} – ${second.window.end}` : ""} · ${profile === "android_compat" ? "Android records remain inspectable below; no Apple summary mapping" : "Apple v8 metric semantics only"}`;
     note("");
   } catch (error) {
-    if (seq === chartSequence) { $("chart-summary").textContent = "View unavailable. Previous charts cleared.";
-      $("explore-charts").replaceChildren(); note(error.message); }
+    if (seq === chartSequence && !disabled) { $("chart-summary").textContent = "Daily summaries are temporarily unavailable, not empty.";
+      $("explore-charts").setAttribute("aria-busy", "false");
+      $("explore-charts").replaceChildren(element("p", "Retained summaries could not be loaded. Retry your view, or browse original exports.", "chart-empty")); note(error.message); }
   }
 }
 function libraryFilter(offset) {
@@ -195,6 +219,7 @@ function libraryFilter(offset) {
     end: $("library-end").value || null, offset };
 }
 async function showLibrary(offset = 0) {
+  if (disabled) return;
   const seq = ++librarySequence;
   $("library-status").textContent = "Reading retained export metadata…";
   try {
@@ -203,14 +228,21 @@ async function showLibrary(offset = 0) {
     const list = $("library-list");
     if (offset === 0) list.replaceChildren();
     for (const item of page.exports) {
-      const row = element("li");
-      const role = item.retentionRole === "supplemental" ? "Separate supplement · not a current snapshot" :
-        item.retentionRole === "current" ? "Current for at least one day" : "Unreferenced / older revision";
-      const description = element("span", `${item.source === "ios" ? "Apple" : "Android"} v${item.dailyVersion} · ${role} · ${item.dateStart}–${item.dateEnd} · ${item.recordCount} retained day record(s), ${item.failureCount} failed date(s) in envelope, ${item.externalRecordCount} sidecar(s) · received ${new Date(item.receivedAt).toLocaleString()}`);
-      const actions = element("span", undefined, "library-actions");
+      const row = element("tr");
+      const role = item.retentionRole === "supplemental" ? "Separate supplement" :
+        item.retentionRole === "current" ? "Current for ≥1 day" : ["revision", "unreferenced"].includes(item.retentionRole) ? "Revision / unreferenced" : "Not reported";
+      const source = item.source === "ios" ? "Apple" : item.source === "android" ? "Android" : "Not reported";
+      const count = (value) => Number.isSafeInteger(value) && value >= 0 ? String(value) : "—";
+      row.append(element("td", item.dateStart && item.dateEnd ? `${item.dateStart} – ${item.dateEnd}` : "No declared days", "date-cell"),
+        element("td", `${source} · ${Number.isSafeInteger(item.dailyVersion) ? `v${item.dailyVersion}` : "Schema not reported"}`));
+      const roleCell = element("td"); roleCell.append(element("span", role, "evidence-badge"));
+      row.append(roleCell, element("td", count(item.recordCount), "numeric-cell"),
+        element("td", `${count(item.failureCount)} / ${count(item.externalRecordCount)}`, "numeric-cell"),
+        element("td", new Date(item.receivedAt).toLocaleString()));
+      const actions = element("td", undefined, "row-actions");
       if (uuid.test(item.id)) {
         actions.append(inspectButton(item.id, "", "Explore fields"));
-        const download = element("a", "Download JSON");
+        const download = element("a", "Download JSON", "subtle-link");
         download.href = `/api/exports/${item.id}/download`;
         actions.append(download);
       }
@@ -227,23 +259,30 @@ async function showLibrary(offset = 0) {
           source: item.source, entireDay: true }));
         actions.append(button);
       }
-      row.append(description, actions); list.append(row);
+      row.append(actions); list.append(row);
     }
+    if (offset === 0 && !page.exports.length) emptyTable(list, 7, "No matching retained envelopes. Try broadening your filters.");
     $("library-more").dataset.offset = page.nextOffset ?? "";
     $("library-more").hidden = page.nextOffset === null;
-    $("library-status").textContent = page.exports.length ? `Showing ${list.children.length} matching retained envelope(s). Results may change during uploads.` :
+    $("library-status").textContent = page.exports.length ? `Showing ${list.querySelectorAll('tr').length} matching retained envelope(s). Results may change during uploads.` :
       offset === 0 ? "No matching retained envelopes. Try broadening your filters." : "No more matching envelopes.";
     note("");
-  } catch (error) { if (seq === librarySequence) { $("library-status").textContent = "Export library unavailable."; note(error.message); } }
+  } catch (error) { if (seq === librarySequence && !disabled) {
+    $("library-status").textContent = "Export library temporarily unavailable, not empty.";
+    emptyTable($("library-list"), 7, "Retained export metadata could not be loaded.");
+    $("library-more").hidden = true; note(error.message);
+  } }
 }
 async function openNode(exportId, pointer, offset = 0) {
-  if (!uuid.test(exportId)) return;
+  if (disabled || !uuid.test(exportId)) return;
+  const seq = ++nodeSequence;
   selectedExport = exportId; selectedPointer = pointer; selectedOffset = offset;
-  $("inspector-section").scrollIntoView({ behavior: "smooth", block: "start" });
+  HealthMdAccount.activate("fields", { history: true, focus: true });
+  clearInspector();
   $("inspector-meta").textContent = "Reading requested field…";
   try {
     const result = await api("/api/explore/node", { exportId, pointer, offset });
-    if (selectedExport !== exportId || selectedPointer !== pointer || selectedOffset !== offset) return;
+    if (disabled || seq !== nodeSequence || selectedExport !== exportId || selectedPointer !== pointer || selectedOffset !== offset) return;
     $("inspector-meta").textContent = "Original retained JSON · text may contain sensitive health details. Previews may omit bytes.";
     $("inspector-path").textContent = pointer || "(envelope root)";
     $("inspector-root").hidden = pointer === "";
@@ -256,17 +295,19 @@ async function openNode(exportId, pointer, offset = 0) {
     list.replaceChildren();
     if (result.type === "array" || result.type === "object") {
       $("inspector-value").textContent = `${result.type} · ${result.totalChildren} child(ren) · page of 20`;
+      $("inspector-children").closest(".table-scroll").hidden = false;
       for (const item of result.items) {
-        const li = element("li");
+        const row = element("tr");
         const description = item.preview !== undefined ? String(item.preview) : item.value !== undefined ?
           `${String(item.value)}${item.approximate ? " (decimal may be rounded)" : ""}` :
           item.exactValueUnavailable ? "Exact unsafe integer: download original" : item.type === "null" ? "null" :
             `${item.type} · ${item.length ?? 0} child(ren)`;
-        li.append(element("span", `${item.key} · ${item.type} · ${description}`, "inspector-entry"));
-        if (item.type === "array" || item.type === "object" || item.type === "string")
-          li.append(inspectButton(exportId, item.pointer, "Open"));
-        list.append(li);
+        row.append(element("td", item.key, "inspector-entry"), element("td", item.type), element("td", description, "inspector-entry"));
+        const action = element("td", undefined, "row-actions");
+        if (item.type === "array" || item.type === "object" || item.type === "string") action.append(inspectButton(exportId, item.pointer, "Open"));
+        row.append(action); list.append(row);
       }
+      if (!result.items.length) emptyTable(list, 4, "No child fields in this container.");
       $("inspector-more").dataset.offset = result.nextOffset ?? "";
       $("inspector-more").hidden = result.nextOffset === null;
       $("inspector-previous").hidden = offset === 0;
@@ -279,9 +320,16 @@ async function openNode(exportId, pointer, offset = 0) {
           result.type === "null" ? "null" : `${String(result.value)}${result.approximate ? " (decimal may be rounded; download original for exact digits)" : ""}`;
     }
     note("");
-  } catch (error) { $("inspector-meta").textContent = "Field unavailable. You can still download the original export if it exists."; note(error.message); }
+  } catch (error) { if (seq === nodeSequence && !disabled) {
+    clearInspector(); $("inspector-meta").textContent = "Field temporarily unavailable. Browse the library to download the original export if it exists."; note(error.message);
+  } }
 }
 async function init() {
+  // An old HTML request can straddle a static rollout; reload before binding
+  // new table markup or introducing a second global controller scope.
+  if (typeof HealthMdAccount === "undefined" || !$("account-nav")) { location.reload(); return; }
+  HealthMdAccount.init("explore");
+  $("browse-library").addEventListener("click", () => HealthMdAccount.activate("library", { history: true, focus: true }));
   $("chart-form").addEventListener("submit", renderCharts);
   $("compare-enabled").addEventListener("change", () => {
     const enabled = $("compare-enabled").checked;
@@ -315,7 +363,9 @@ async function init() {
   });
   try {
     await api("/api/account"); // A session is required before loading any data.
-    const [inventory, catalog] = await Promise.all([api("/api/exports"), api("/api/explore/catalog")]);
+    const [inventory, catalog, supplementGuard] = await Promise.all([api("/api/exports"), api("/api/explore/catalog"), HealthMdAccount.probe("supplements")]);
+    if (disabled) return;
+    supplementsAvailable = supplementGuard === 401;
     const end = inventory.days?.[0]?.date || new Date().toISOString().slice(0, 10);
     $("chart-end").value = end;
     $("chart-start").value = shiftDay(end, -29);
@@ -328,18 +378,14 @@ async function init() {
     }
     await Promise.all([renderCharts(), showLibrary()]);
   } catch (error) {
+    if (disabled) return;
     if (error.message === "Sign in to continue.") location.replace("/login");
     else note(error.message);
   }
 }
 if (document.body.dataset.page === "explore") {
-  window.addEventListener("pagehide", () => {
-    selectedExport = null;
-    $("inspector-value").replaceChildren();
-    $("inspector-children").replaceChildren();
-    $("explore-charts").replaceChildren();
-    $("library-list").replaceChildren();
-  });
-  window.addEventListener("pageshow", (event) => { if (event.persisted) location.reload(); });
+  document.addEventListener("healthmd:account-clear", clearExplorer);
+  window.addEventListener("pagehide", clearExplorer);
   void init();
 }
+})();

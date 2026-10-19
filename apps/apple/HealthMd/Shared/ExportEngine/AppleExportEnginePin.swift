@@ -17,23 +17,28 @@ nonisolated enum ExportEngineMode: String, CaseIterable, Codable, Sendable {
 /// Immutable provenance required to resume an Apple export with the exact renderer contract that
 /// planned it. The pin contains no health values, dates, destination paths, or credentials.
 nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
-    static let profileID = "apple_health_data_v8"
-    // Exact authority embedded at the v3.4.2 source tag, before capability-only additions.
+    static let profileID = "apple_health_data_v10"
+    static let publicProfileID = "apple-v10"
     static let historicalRegistrySHA256 = "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
 
-    var coreProfile: CoreMetricRegistryProfile { .appleHealthDataV8 }
+    var coreProfile: CoreMetricRegistryProfile {
+        profile == "apple_health_data_v8" ? .appleHealthDataV8 : .appleHealthDataV10
+    }
 
     static func supportsRegistry(_ registry: CoreMetricRegistrySnapshot) -> Bool {
-        registry.registryVersion == 1
-            && registry.profileRevision == 1
-            && registry.publicSchema == HealthMdExportSchema.identifier
-            && registry.profileId == profileID
-            && registry.publicProfileId == "apple-v8"
-            && registry.publicSchemaVersion == 8
-            && (registry.registrySha256 == HealthMetrics.registrySHA256
-                || registry.registrySha256 == historicalRegistrySHA256)
+        guard registry.registryVersion == 1, registry.profileRevision == 1,
+              registry.publicSchema == HealthMdExportSchema.identifier else { return false }
+        switch (registry.profileId, registry.publicProfileId, registry.publicSchemaVersion) {
+        case (profileID, publicProfileID, 10):
+            return registry.registrySha256 == historicalRegistrySHA256
+        case ("apple_health_data_v8", "apple-v8", 8):
+            return registry.registrySha256 == historicalRegistrySHA256
+                || registry.registrySha256 == HealthMetrics.registrySHA256
+        default:
+            return false
+        }
     }
-    private static let supportedCoreAPIVersion: UInt32 = 4
+    private static let supportedCoreAPIVersion: UInt32 = 5
     private static let supportedRenderInputVersion: UInt32 = 1
     private static let supportedArtifactPlanVersion: UInt32 = 1
     private static let supportedSemanticProfileRevision: UInt32 = 1
@@ -100,7 +105,8 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     }
 
     /// Validates both the persisted values and agreement between the packaged build and the
-    /// adapter-provided registry snapshot. Callers must resolve any failure to legacy authority.
+    /// adapter-provided registry snapshot. New-operation eligibility may resolve to legacy;
+    /// a present incompatible durable pin must fail closed, never be silently re-rendered.
     func validateCompatibility(
         buildInfo: CoreBuildInfo,
         registrySnapshot: CoreMetricRegistrySnapshot
@@ -108,19 +114,18 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
         guard Self.isIANAIdentifier(calendarTimeZoneIdentifier) else {
             throw CompatibilityError.invalidCalendarTimeZone
         }
-        guard profile == Self.profileID,
-              registrySnapshot.profileId == Self.profileID,
-              registrySnapshot.publicProfileId == "apple-v8" else {
+        guard Self.supportsRegistry(registrySnapshot),
+              profile == registrySnapshot.profileId else {
             throw CompatibilityError.invalidProfile
         }
         guard publicSchema == HealthMdExportSchema.identifier,
-              publicSchemaVersion == UInt32(HealthMdExportSchema.version),
               registrySnapshot.publicSchema == publicSchema,
               registrySnapshot.publicSchemaVersion == publicSchemaVersion else {
             throw CompatibilityError.incompatiblePublicSchema
         }
-        guard coreAPIVersion == Self.supportedCoreAPIVersion,
-              coreAPIVersion == buildInfo.coreApiVersion else {
+        guard buildInfo.coreApiVersion == Self.supportedCoreAPIVersion,
+              coreAPIVersion == buildInfo.coreApiVersion
+                || (profile == "apple_health_data_v8" && coreAPIVersion == 4) else {
             throw CompatibilityError.incompatibleCoreAPI
         }
         guard semanticInputVersion == HealthMdSemanticInputAdapter.semanticInputVersion,

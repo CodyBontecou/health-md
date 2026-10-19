@@ -1,6 +1,8 @@
 # Production backup and recovery runbook
 
-Status: proposed; blocked on provider, region, retention, RPO/RTO, key-custody and operations approval. No production backup exists. The disposable VM pilot remains intentionally unbacked and is not covered by this runbook.
+Status: earlier recoverable-service proposal, **outside the selected unbacked public MVP**; no provider, region, retention, custody or operations approval for a backed service. No production backup exists. The disposable VM pilot remains intentionally unbacked and is not covered by this runbook.
+
+**Interview scope update:** [Q18/Q21–Q22/Q26](production-design-interview.md) decline formal numeric recovery targets, select **no Health.md backups**, require exclusively US MVP compute/storage and permit D1 automatic history subject to reviewed copy terms. D1 is not selected/provisioned or US/deletion-qualified; history alone is not consistent object/account/historical-key recovery. Q35–Q56 select decimal monthly/annual 1 GB/50 GB/100 GB/1 TB tiers and a **10 GB lifetime-linked benefit/no general free tier**. Q48–Q53 settle verified paid-expiry clock, 30-day archive-grace reads/downloads, days 0/7/21/29 email plus persistent warnings, service-warning-failure holds and archive-only primary erasure with old grants revoked/minimal account state retained. This is not revision age expiry or instant provider-history purge. Included-capacity continuation, external store reductions and exact copy terms remain open; Q50 does not authorize automatic still-paid retirement. Renewal/account recovery cannot restore erased exports. [Checked billing/copy facts](native-subscription-and-large-export-research.md) inform the remaining policy. Q56 withdraws the $100 spending envelope, not loss warnings or no-resurrection safeguards; profitability is assumed, not proven. Permanent-loss disclosure stays. Earlier backup/escrow/restore and 15-minute/four-hour proposals below are not MVP gates, passed evidence or authority to back up either service. Any future provider recovery must reconcile deleted data/revoked grants and fail closed without suppression evidence. A later backed product needs a separately accepted recovery policy and real isolated restore evidence.
 
 ## Evidence currently available
 
@@ -56,7 +58,7 @@ Run at the approved interval and after storage/migration/key/region changes:
 
 Primary account deletion is ciphertext-first and immediate authority revocation. Source paths verify exact-key absence through metadata-only R2 reads before erasing account/intent metadata; unreadable or false-success outcomes remain retryable rather than claiming deletion. Recovery media/PITR may retain deleted ciphertext until the disclosed expiry. The product/privacy owners must set and publish that maximum, and restore automation must replay deletion tombstones/jobs so a restore does not make deleted data active. A key must not be destroyed until references are zero in primary and restored evidence and the recovery window has expired; conversely, key retention must not exceed the approved legal/security policy without escalation.
 
-## Blocked decisions
+## Blocked decisions for a future backed service
 
 - Cloudflare recovery mechanism and contractual retention for each service;
 - independent key escrow/provider and two-person access;
@@ -67,4 +69,4 @@ Primary account deletion is ciphertext-first and immediate authority revocation.
 - failover DNS/status communication; and
 - cost ceiling for backup/restore storage and exercises.
 
-Until these are approved and a provider-backed synthetic drill passes, recovery remains a production launch blocker.
+Until a backed service is separately selected, these decisions approved and a provider-backed synthetic drill passes, its recovery claims remain blocked. This is not an archive-restore gate for the intentionally unbacked MVP, nor permission to open signup or remove permanent-loss disclosure.

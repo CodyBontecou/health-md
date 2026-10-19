@@ -12,7 +12,7 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
         XCTAssertEqual(info.crateVersion, "0.1.0-alpha.7")
         XCTAssertFalse(info.coreSourceRevision.isEmpty)
         XCTAssertEqual(info.registrySha256.count, 64)
-        XCTAssertEqual(info.coreApiVersion, 4)
+        XCTAssertEqual(info.coreApiVersion, 5)
         XCTAssertEqual(info.semanticInputVersion, 1)
         XCTAssertEqual(info.canonicalModelVersion, 1)
         XCTAssertEqual(info.registryVersion, 1)
@@ -43,6 +43,18 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
         XCTAssertEqual(snapshot.publicSchemaVersion, 8)
         XCTAssertEqual(snapshot.metrics.count, 230)
         XCTAssertEqual(snapshot.outputs.count, 226)
+    }
+
+    func testV10RegistryIsDistinctWithoutChangingV8PrimaryMetrics() throws {
+        let old = try service.metricRegistryAtAuthority(profile: .appleHealthDataV8,
+            registrySHA256: "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99")
+        let current = try service.metricRegistry(profile: .appleHealthDataV10)
+        XCTAssertEqual(current.profileId, "apple_health_data_v10")
+        XCTAssertEqual(current.publicSchemaVersion, 10)
+        XCTAssertEqual(old.publicSchemaVersion, 8)
+        XCTAssertEqual(current.registrySha256, old.registrySha256)
+        XCTAssertEqual(current.metrics, old.metrics)
+        XCTAssertEqual(current.outputs, old.outputs)
     }
 
     func testLegacyMarkdownMergeUsesAppleProfileAndRejectsAmbiguousYAML() throws {

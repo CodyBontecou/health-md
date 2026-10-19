@@ -56,7 +56,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         }
         let plan = try renderSession.finish()
 
-        XCTAssertEqual(plan.profile, .appleHealthDataV8)
+        XCTAssertEqual(plan.profile, .appleHealthDataV10)
         XCTAssertEqual(plan.items.count, 4)
         XCTAssertEqual(
             plan.items.map(\.relativePath),
@@ -76,7 +76,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         XCTAssertEqual(plan.items.first(where: { $0.relativePath.hasSuffix(".json") })?.writeMode, .overwrite)
     }
 
-    func testAppleAllFormatsMatchNativeV8RendererAcrossSyntheticCases() throws {
+    func testAppleAllFormatsMatchNativeV10RendererAcrossSyntheticCases() throws {
         let imperial = FormatCustomization()
         imperial.unitPreference = .imperial
         let custom = FormatCustomization()

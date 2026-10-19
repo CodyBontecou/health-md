@@ -3003,6 +3003,10 @@ public enum CoreMetricRegistryProfile: Equatable, Hashable {
      * Android analytical v5.
      */
     case androidAnalyticalV5
+    /**
+     * Apple v10, with provider-native WHOOP v2 supplementation.
+     */
+    case appleHealthDataV10
 
 
 
@@ -3030,6 +3034,8 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         
         case 3: return .androidAnalyticalV5
         
+        case 4: return .appleHealthDataV10
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -3048,6 +3054,10 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         
         case .androidAnalyticalV5:
             writeInt(&buf, Int32(3))
+        
+        
+        case .appleHealthDataV10:
+            writeInt(&buf, Int32(4))
         
         }
     }

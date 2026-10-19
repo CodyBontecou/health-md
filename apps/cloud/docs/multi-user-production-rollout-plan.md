@@ -1,8 +1,12 @@
 # Multi-user production rollout plan
 
-**Status:** proposal only. This document does not approve deployment, public signup, migration of pilot data, or production claims.
+**Status:** earlier recoverable-service proposal only; not the selected public-MVP checklist or rollout approval. This document does not approve deployment, signup, migration of pilot data or production claims.
 
-## Decision summary
+**Product-scope follow-up:** the [design interview](production-design-interview.md) selects public self-service for self-attested US adults, essential MCP/backend decryption, shared as-needed until-revoked grants, future-upload All access, grandfathered limits, three proven-platform tasks, consumer Muse/adapters, conditional provider consent and passkeys/recovery codes. Q35–Q56 select monthly/annual **decimal 1 GB, 50 GB, 100 GB and 1 TB** tiers, retained-original-byte accounting and **10 GB lifetime-linked capacity/no general free tier**. Native checkout is required; web is not a launch blocker. Paid Cloud-target manual/scheduled exports need no second lifetime purchase; iOS/Android Play get explicit enrollment, while F-Droid has no first-class integration but retains authorized generic API access. Verified paid-access expiry starts 30-day archive grace preserving downloads/existing MCP/security/deletion, not unentitled uploads; email plus persistent notices at days 0/7/21/29 precede archive-only primary erasure/revoked old grants. Stop on billing uncertainty or Health.md's inability to attempt required warnings. No age expiry under valid entitlement or silent quota eviction. Q50 requires prior deliberate usage reduction for downgrades, not still-paid automatic retirement. Q46 selects bounded resumable within-allowance logical exports; Q47 selects JSON only with schema families open. Eligible rights/stacking/continuation, prices/trials, external-store reductions/deletion granularity and provider-copy terms remain open; see [checked facts](native-subscription-and-large-export-research.md). **Q56 withdraws the $100 spending envelope; profitability is assumed by the owner, not measured or spending authorization.** **No Health.md backups and exclusively US MVP hosting remain selected; D1 history is permitted subject to review and permanent-loss disclosure stays.** Topology/custody/copy terms and clients are unqualified. Earlier invite-first/MCP-deferred, finite-expiry, backup/escrow/restore and numeric recovery proposals below are historical, not selected MVP policy. Reconcile after overall design confirmation; no deployment/security/zero-knowledge approval, no passed declined gate and no external-provider US-only claim.
+
+The [public-MVP backend and dashboard backlog](production-experience-roadmap.md) records the changed unbacked outcome, pending capabilities and synthetic acceptance criteria. Neither it nor this original plan constitutes architecture or rollout approval.
+
+## Decision summary (earlier proposal)
 
 Build the multi-user service as a new Cloudflare production profile, not by scaling the current EXE.dev VM. Preserve the VM, its account, credentials, storage, Tunnels, and disposable-pilot risk acceptance as an isolated legacy pilot until the owner explicitly migrates or retires it.
 
@@ -264,7 +268,7 @@ At each cohort, review availability, latency, failure classes, queue age, orphan
 - During rollback, disable signup and token issuance first, preserve account reads/deletion, and make ingest fail closed with no-store `503` responses. Never acknowledge data that was not durably committed.
 - Retain keys and stored objects through incident resolution. DNS rollback must go to a reviewed maintenance/fail-closed service, not to the single-user pilot.
 
-## Release acceptance checklist
+## Release acceptance checklist (earlier recoverable-service proposal)
 
 A production rollout is blocked until all are true:
 
@@ -282,9 +286,9 @@ A production rollout is blocked until all are true:
 - [ ] Apple and Android physical-device tests pass without schema/parity misrepresentation.
 - [ ] Signup remains closed until the final explicit rollout approval.
 
-## Product decisions still required
+## Earlier proposal's product decision list
 
-Recommended defaults are shown in parentheses:
+Historical recommended defaults are shown below; several have been explicitly replaced or declined. Use the [interview's current frontier](production-design-interview.md#design-tree-and-next-round), not this list, for unresolved MVP decisions:
 
 1. Launch regions and residency commitment (single documented region/provider boundary initially).
 2. Identity and recovery model (passkeys plus verified email and recovery codes).

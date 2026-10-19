@@ -125,3 +125,32 @@ fn historical_clients_reject_unknown_and_crossed_authorities() {
         );
     }
 }
+
+#[test]
+fn v10_uses_its_frozen_base_and_rejects_foundation_registry_relabeling() {
+    use healthmd_core::registry::{
+        MetricRegistryProfile, metric_registry_snapshot, metric_registry_snapshot_at_authority,
+    };
+    let current = metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV10, 1).unwrap();
+    assert_eq!(current.public_schema_version, 10);
+    assert_eq!(
+        current.registry_sha256,
+        healthmd_core::authority::HISTORICAL_REGISTRY_SHA256
+    );
+    assert!(
+        metric_registry_snapshot_at_authority(
+            MetricRegistryProfile::AppleHealthDataV10,
+            1,
+            healthmd_core::REGISTRY_SHA256
+        )
+        .is_err()
+    );
+    let retained = metric_registry_snapshot_at_authority(
+        MetricRegistryProfile::AppleHealthDataV8,
+        1,
+        healthmd_core::authority::HISTORICAL_REGISTRY_SHA256,
+    )
+    .unwrap();
+    assert_eq!(retained.public_schema_version, 8);
+    assert_eq!(retained.metrics, current.metrics);
+}

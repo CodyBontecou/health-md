@@ -1629,6 +1629,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.records[].providers.whoop.cycles[].max_heart_rate_bpm` | integer |
 | `$.records[].providers.whoop.cycles[].score_state` | string |
 | `$.records[].providers.whoop.cycles[].start_time` | string |
+| `$.records[].providers.whoop.cycles[].step_count` | integer |
 | `$.records[].providers.whoop.cycles[].strain_score` | number |
 | `$.records[].providers.whoop.cycles[].timezone_offset` | string |
 | `$.records[].providers.whoop.fetched_at` | string |

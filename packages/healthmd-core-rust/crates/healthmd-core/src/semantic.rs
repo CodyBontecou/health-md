@@ -46,6 +46,7 @@ pub enum SemanticProfile {
     AppleHealthDataV8,
     AndroidFrozenV4,
     AndroidAnalyticalV5,
+    AppleHealthDataV10,
 }
 
 impl SemanticProfile {
@@ -54,12 +55,34 @@ impl SemanticProfile {
             Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
+            Self::AppleHealthDataV10 => "apple_health_data_v10",
+        }
+    }
+
+    pub(crate) const fn is_apple(self) -> bool {
+        matches!(self, Self::AppleHealthDataV8 | Self::AppleHealthDataV10)
+    }
+
+    pub(crate) const fn public_schema_version(self) -> u32 {
+        match self {
+            Self::AppleHealthDataV8 => 8,
+            Self::AndroidFrozenV4 => 4,
+            Self::AndroidAnalyticalV5 => 5,
+            Self::AppleHealthDataV10 => 10,
+        }
+    }
+
+    fn registry_base_id(self) -> &'static str {
+        if self == Self::AppleHealthDataV10 {
+            Self::AppleHealthDataV8.id()
+        } else {
+            self.id()
         }
     }
 
     fn platform(self) -> &'static str {
         match self {
-            Self::AppleHealthDataV8 => "apple",
+            Self::AppleHealthDataV8 | Self::AppleHealthDataV10 => "apple",
             Self::AndroidFrozenV4 | Self::AndroidAnalyticalV5 => "android",
         }
     }
@@ -421,8 +444,7 @@ impl SemanticSession {
         {
             return Err(CoreError::InvalidSemanticConfig);
         }
-        if config.profile != SemanticProfile::AppleHealthDataV8 && !config.rollup_periods.is_empty()
-        {
+        if !config.profile.is_apple() && !config.rollup_periods.is_empty() {
             return Err(CoreError::UnsupportedSemanticOperation);
         }
         Ok(Self {
@@ -876,7 +898,7 @@ impl SemanticSession {
         if self.config.rollup_periods.is_empty() {
             return Ok(Some(Vec::new()));
         }
-        if self.config.profile != SemanticProfile::AppleHealthDataV8 {
+        if !self.config.profile.is_apple() {
             return Err(CoreError::UnsupportedSemanticOperation);
         }
         let mut results = Vec::new();
@@ -1089,7 +1111,7 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
             && (config.rollup_periods.len() != 1
                 || config.semantic_input_version != SEMANTIC_INPUT_VERSION
                 || config.profile_revision != 2
-                || config.profile != SemanticProfile::AppleHealthDataV8))
+                || !config.profile.is_apple()))
     {
         return Err(CoreError::InvalidSemanticConfig);
     }
@@ -1110,6 +1132,13 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
 }
 
 fn build_profile_index(profile: SemanticProfile, hash: &str) -> Result<ProfileIndex, CoreError> {
+    if profile == SemanticProfile::AppleHealthDataV10 {
+        crate::registry::metric_registry_snapshot_at_authority(
+            crate::registry::MetricRegistryProfile::AppleHealthDataV10,
+            REGISTRY_VERSION,
+            hash,
+        )?;
+    }
     let bytes = crate::authority::registry_bytes(hash, profile.id())?;
     let registry: RawRegistry =
         serde_json::from_slice(bytes).map_err(|_| CoreError::InvalidRegistry)?;
@@ -1134,7 +1163,7 @@ fn build_profile_index(profile: SemanticProfile, hash: &str) -> Result<ProfileIn
     let raw_profile = registry
         .profiles
         .into_iter()
-        .find(|candidate| candidate.id == profile.id())
+        .find(|candidate| candidate.id == profile.registry_base_id())
         .ok_or(CoreError::UnsupportedRegistryProfile)?;
     let outputs = raw_profile
         .outputs

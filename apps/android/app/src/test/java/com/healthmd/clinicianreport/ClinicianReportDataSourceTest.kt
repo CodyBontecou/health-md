@@ -8,16 +8,12 @@ import com.healthmd.data.clinicianreport.DefaultClinicianReportDataSource
 import com.healthmd.data.clinicianreport.SystemClinicianReportDateProvider
 import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.data.health.HealthConnectManager
-import com.healthmd.data.health.HealthProviderRegistry
-import com.healthmd.data.health.HealthRepositoryImpl
 import com.healthmd.domain.clinicianreport.*
 import com.healthmd.domain.model.*
-import com.healthmd.domain.repository.HealthRepository
-import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,7 +29,7 @@ class ClinicianReportDataSourceTest {
     private val day = LocalDate.of(2026, 5, 1)
 
     @Test fun requestsOnlyRelevantDomainsWithGranularDataAndPreservesBloodPressurePair() = runTest {
-        val repository = FakeHealthRepository(listOf(HealthData(
+        val repository = RecordingHealthConnect(listOf(HealthData(
             date = day,
             vitals = VitalsData(bloodPressureSamples = listOf(BloodPressureSample(
                 time = LocalDateTime.of(2026, 5, 1, 8, 30), systolic = 123.0, diastolic = 77.0,
@@ -57,22 +53,17 @@ class ClinicianReportDataSourceTest {
         assertThat(input.bloodPressureObservations.single().stableId).contains("bp-1")
     }
 
-    @Test fun forwardsPinnedZoneThroughRepositoryProviderAndManager() = runTest {
+    @Test fun forwardsPinnedZoneThroughLocalProviderAndManager() = runTest {
         val pinnedZone = ZoneId.of("Pacific/Chatham")
         val manager = mockk<HealthConnectManager>()
         val provider = HealthConnectDataProvider(manager)
-        val registry = mockk<HealthProviderRegistry>()
-        val settings = mockk<SettingsRepository>()
-        coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
-        every { registry.providerFor("health_connect") } returns provider
         coEvery {
             manager.fetchHealthDataRange(any(), any(), true, pinnedZone, true)
         } answers {
             firstArg<List<LocalDate>>().map { date -> HealthData(date) }
         }
 
-        val repository = HealthRepositoryImpl(registry, settings)
-        source(repository).load(
+        source(provider).load(
             ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.HEART_RATE)),
             pinnedZone,
         )
@@ -99,7 +90,7 @@ class ClinicianReportDataSourceTest {
         val pinnedToday = LocalDate.of(2026, 1, 2)
         val ambientToday = LocalDate.of(2026, 1, 1)
         assertThat(ambientToday).isNotEqualTo(pinnedToday)
-        val repository = FakeHealthRepository()
+        val repository = RecordingHealthConnect()
         val pinnedDateProvider = ClinicianReportDateProvider { zoneId ->
             assertThat(zoneId).isEqualTo(pinnedZone)
             pinnedToday
@@ -119,7 +110,7 @@ class ClinicianReportDataSourceTest {
     }
 
     @Test fun usesDailyFallbackWithoutInventingSourceAndPrefersGranularScalar() = runTest {
-        val repository = FakeHealthRepository(listOf(HealthData(
+        val repository = RecordingHealthConnect(listOf(HealthData(
             date = day,
             heart = HeartData(restingHeartRate = 61.0, averageHeartRate = 70.0, samples = listOf(
                 TimestampedSample(LocalDateTime.of(2026, 5, 1, 10, 0), 72.0, source = "sensor.app"),
@@ -135,7 +126,7 @@ class ClinicianReportDataSourceTest {
     }
 
     @Test fun aggregateScalarFallbackRemainsDateOnlyAndManualEntryNeedsNoOrigin() = runTest {
-        val repository = FakeHealthRepository(listOf(HealthData(
+        val repository = RecordingHealthConnect(listOf(HealthData(
             date = day,
             vitals = VitalsData(
                 bloodGlucoseAvg = 104.0,
@@ -160,7 +151,7 @@ class ClinicianReportDataSourceTest {
             duration = 30.minutes,
             id = "synthetic-model-id",
         )
-        val input = source(FakeHealthRepository(listOf(HealthData(day, workouts = listOf(workout, workout))))).load(
+        val input = source(RecordingHealthConnect(listOf(HealthData(day, workouts = listOf(workout, workout))))).load(
             ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.WORKOUTS)),
             ZoneId.of("UTC"),
         )
@@ -168,53 +159,73 @@ class ClinicianReportDataSourceTest {
         assertThat(input.workoutObservations.map { it.stableId }).containsExactly(null, null)
     }
 
-    @Test fun repositoryFailureBecomesPartialWarningInsteadOfThrowing() = runTest {
-        val source = source(FakeHealthRepository(error = IllegalStateException("private value must not leak")))
+    @Test fun localReadFailureBecomesPartialWarningInsteadOfThrowing() = runTest {
+        val source = source(RecordingHealthConnect(error = IllegalStateException("private value must not leak")))
         val input = source.load(ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.BLOOD_GLUCOSE)), ZoneId.of("UTC"))
         assertThat(input.warnings).isNotEmpty()
         assertThat(input.warnings.joinToString()).doesNotContain("private value")
         assertThat(input.scalarObservations).isEmpty()
     }
 
+    @Test fun emptyLocalCaptureDoesNotInventZeroReadings() = runTest {
+        val input = source(RecordingHealthConnect()).load(
+            ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.STEPS, ReportMetric.HEART_RATE)),
+            ZoneId.of("UTC"),
+        )
+        assertThat(input.dailyValues).isEmpty()
+        assertThat(input.scalarObservations).isEmpty()
+        assertThat(input.warnings).isEmpty()
+    }
+
+    @Test fun localCancellationPropagatesInsteadOfBecomingMissingData() = runTest {
+        val cancellation = CancellationException("synthetic cancellation")
+        val cancelled = try {
+            source(RecordingHealthConnect(error = cancellation)).load(
+                ReportConfiguration(ReportDateRange(day, day), setOf(ReportMetric.STEPS)),
+                ZoneId.of("UTC"),
+            )
+            null
+        } catch (error: CancellationException) {
+            error
+        }
+        assertThat(cancelled).isSameInstanceAs(cancellation)
+    }
+
     private fun source(
-        repository: HealthRepository,
+        capture: RecordingHealthConnect,
+        dateProvider: ClinicianReportDateProvider = SystemClinicianReportDateProvider(),
+    ) = source(HealthConnectDataProvider(capture.manager), dateProvider)
+
+    private fun source(
+        healthConnect: HealthConnectDataProvider,
         dateProvider: ClinicianReportDateProvider = SystemClinicianReportDateProvider(),
     ) = DefaultClinicianReportDataSource(
-        repository,
+        healthConnect,
         ClinicianReportSourceLabelResolver(ApplicationProvider.getApplicationContext()),
         dateProvider,
     )
 
-    private class FakeHealthRepository(
-        private val data: List<HealthData> = emptyList(),
-        private val error: Exception? = null,
-    ) : HealthRepository {
+    private class RecordingHealthConnect(
+        data: List<HealthData> = emptyList(),
+        error: Exception? = null,
+    ) {
+        val manager = mockk<HealthConnectManager>()
         var requestedTypes: DataTypeSelection? = null
         var requestedDates: List<LocalDate>? = null
         var requestedZoneId: ZoneId? = null
         var includeGranular = false
         var pinnedCalendarDays = false
-        override suspend fun fetchHealthData(date: LocalDate) = data.firstOrNull { it.date == date } ?: HealthData(date)
-        override suspend fun fetchHealthDataRange(
-            dates: List<LocalDate>,
-            dataTypes: DataTypeSelection,
-            includeGranularData: Boolean,
-            zoneId: ZoneId,
-            pinnedCalendarDays: Boolean,
-        ): List<HealthData> {
-            requestedTypes = dataTypes
-            requestedDates = dates
-            requestedZoneId = zoneId
-            includeGranular = includeGranularData
-            this.pinnedCalendarDays = pinnedCalendarDays
-            error?.let { throw it }
-            return data
+
+        init {
+            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any()) } answers {
+                requestedDates = firstArg()
+                requestedTypes = secondArg()
+                includeGranular = thirdArg()
+                requestedZoneId = arg(3)
+                pinnedCalendarDays = arg(4)
+                error?.let { throw it }
+                data
+            }
         }
-        override suspend fun isAvailable() = true
-        override suspend fun hasPermissions() = true
-        override suspend fun hasHistoricalReadPermission() = true
-        override suspend fun hasBackgroundReadPermission() = true
-        override suspend fun getEarliestDataDate(): LocalDate? = data.minOfOrNull { it.date }
-        override fun isBeforeFirstUnlock() = false
     }
 }

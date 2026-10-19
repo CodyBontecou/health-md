@@ -1,4 +1,6 @@
 #if os(iOS)
+import AuthenticationServices
+import CryptoKit
 import XCTest
 @testable import HealthMd
 
@@ -29,6 +31,129 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         secureStore = nil
         tokenStore = nil
         super.tearDown()
+    }
+
+    func testConnectCarriesPKCEThroughBrowserAndExchangeBeforeReportingSuccess() async throws {
+        var challenge: String?
+        var verifier: String?
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.externalIntegrationHTTPBody()) as? [String: Any])
+            if request.url?.path == "/v1/oauth/authorize-url" {
+                challenge = try XCTUnwrap(body["code_challenge"] as? String)
+                XCTAssertEqual(challenge?.count, 43)
+                let state = try XCTUnwrap(body["state"] as? String)
+                return Self.response(request, status: 200, json: [
+                    "provider": "whoop",
+                    "authorization_url": "https://api.prod.whoop.com/oauth/oauth2/auth?state=\(state)&code_challenge=\(challenge!)&code_challenge_method=S256"
+                ])
+            }
+            XCTAssertEqual(request.url?.path, "/v1/oauth/token")
+            XCTAssertEqual(body["code"] as? String, "code+with space")
+            XCTAssertEqual(body["redirect_uri"] as? String, ExternalIntegrationManager.redirectURI)
+            verifier = try XCTUnwrap(body["code_verifier"] as? String)
+            return Self.response(request, status: 200, json: [
+                "access_token": "access-new",
+                "refresh_token": "refresh-new",
+                "expires_in": 3600,
+                "scope": "offline read:cycles"
+            ])
+        }
+        weak var connectingManager: ExternalIntegrationManager?
+        let manager = makeManager { url in
+            XCTAssertEqual(connectingManager?.connectionStatus?.kind, .progress)
+            if let status = connectingManager?.connectionStatus {
+                connectingManager?.dismissConnectionStatus(id: status.id)
+                XCTAssertNotNil(connectingManager?.connectionStatus, "In-flight progress cannot be dismissed")
+            }
+            let state = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "state" }?.value)
+            return URL(string: "healthmd://oauth/callback?code=code%2Bwith+space&state=\(state)")!
+        }
+        connectingManager = manager
+        await manager.connect(provider: .whoop)
+
+        let digest = SHA256.hash(data: Data(try XCTUnwrap(verifier).utf8))
+        let expectedChallenge = Data(digest).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        XCTAssertEqual(challenge, expectedChallenge)
+        XCTAssertTrue(manager.isConnected(.whoop))
+        XCTAssertTrue(makeManager().isConnected(.whoop), "Success must survive reloading account metadata")
+        XCTAssertEqual(tokenStore.token(for: .whoop)?.refreshToken, "refresh-new")
+        XCTAssertEqual(manager.connectionStatus?.kind, .success)
+        XCTAssertNil(manager.isConnectingProvider)
+
+        let status = try XCTUnwrap(manager.connectionStatus)
+        manager.dismissConnectionStatus(id: UUID())
+        XCTAssertEqual(manager.connectionStatus?.id, status.id, "A stale timer must not clear a newer notice")
+        manager.dismissConnectionStatus(id: status.id)
+        XCTAssertNil(manager.connectionStatus)
+    }
+
+    func testProviderRejectionShowsSafeErrorWithoutExchangingCodeOrSavingCredentials() async throws {
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            return try Self.authorizationResponse(request)
+        }
+        let manager = makeManager { url in
+            let state = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "state" }?.value)
+            return URL(string: "healthmd://oauth/callback?error=invalid_request&error_description=The+request+is+malformed+secret-token&error_hint=client_secret%3Dsecret&state=\(state)")!
+        }
+        await manager.connect(provider: .whoop)
+
+        XCTAssertEqual(requestCount, 1)
+        XCTAssertFalse(manager.isConnected(.whoop))
+        XCTAssertNil(tokenStore.token(for: .whoop))
+        XCTAssertEqual(manager.connectionStatus?.kind, .error)
+        XCTAssertTrue(manager.statusMessage?.contains("Try connecting again") == true)
+        XCTAssertFalse(manager.statusMessage?.contains("+") == true)
+        XCTAssertFalse(manager.statusMessage?.contains("secret") == true)
+        XCTAssertNil(manager.isConnectingProvider)
+    }
+
+    func testBrowserCancellationIsWarningRatherThanConnectionFailure() async throws {
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            try Self.authorizationResponse(request)
+        }
+        let manager = makeManager { _ in
+            throw ASWebAuthenticationSessionError(.canceledLogin)
+        }
+        await manager.connect(provider: .whoop)
+
+        XCTAssertEqual(manager.connectionStatus?.kind, .warning)
+        XCTAssertEqual(manager.statusMessage, "Cancelled WHOOP connection")
+        XCTAssertNil(manager.isConnectingProvider)
+        XCTAssertFalse(manager.isConnected(.whoop))
+    }
+
+    func testConnectionIsNotSuccessfulWhenCredentialPersistenceFails() async throws {
+        secureStore.failAccountWrites = true
+        var revoked = false
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            if request.url?.path == "/v1/oauth/authorize-url" {
+                return try Self.authorizationResponse(request)
+            }
+            if request.httpMethod == "DELETE" {
+                revoked = true
+                return Self.response(request, status: 204, text: "")
+            }
+            return Self.response(request, status: 200, json: [
+                "access_token": "access-new",
+                "refresh_token": "refresh-new"
+            ])
+        }
+        let manager = makeManager { url in
+            let state = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "state" }?.value)
+            return URL(string: "healthmd://oauth/callback?code=code&state=\(state)")!
+        }
+        await manager.connect(provider: .whoop)
+
+        XCTAssertTrue(revoked)
+        XCTAssertFalse(manager.isConnected(.whoop))
+        XCTAssertNil(tokenStore.token(for: .whoop))
+        XCTAssertEqual(manager.connectionStatus?.kind, .error)
+        XCTAssertNil(manager.isConnectingProvider)
     }
 
     func testManagerUsesSuppliedExportCalendarForProviderDayOwnership() async throws {
@@ -273,6 +398,50 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         XCTAssertEqual(requestCount, 0)
     }
 
+    func testAllOffSelectionSkipsExpiredTokenRefreshAndHistoryThroughProtocol() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(
+            accessToken: "expired", refreshToken: "rotating-refresh",
+            scope: "offline read:cycles read:recovery read:sleep read:workout",
+            expiresAt: Date().addingTimeInterval(-60)
+        ), provider: .whoop)
+        let manager: any ExternalIntegrationDailyRecordProviding = makeManager()
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            return Self.response(request, status: 500, json: [:])
+        }
+        let records = await manager.fetchDailyRecords(
+            for: Self.day(2026, 7, 12), calendar: .current, whoopResources: []
+        )
+        let discovery = await manager.discoverEarliestAvailableDate(
+            providerIDs: ["whoop"], whoopResources: []
+        )
+        XCTAssertTrue(records.isEmpty)
+        XCTAssertTrue(discovery.isComplete)
+        XCTAssertNil(discovery.earliestDate)
+        XCTAssertEqual(requestCount, 0, "Neither the WHOOP API nor the OAuth broker may be contacted")
+        XCTAssertNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt)
+    }
+
+    func testResourceSelectionIsHonoredThroughProtocol() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(
+            accessToken: "access", refreshToken: "refresh", scope: "offline read:recovery",
+            expiresAt: Date().addingTimeInterval(3_600)
+        ), provider: .whoop)
+        var paths: [String] = []
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            paths.append(try XCTUnwrap(request.url?.path))
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let manager: any ExternalIntegrationDailyRecordProviding = makeManager()
+        let records = await manager.fetchDailyRecords(
+            for: Self.day(2026, 7, 12), providerIDs: ["whoop"],
+            calendar: .current, whoopResources: [.recovery]
+        )
+        XCTAssertEqual(paths, ["/developer/v2/recovery"])
+        XCTAssertEqual(records.first?.payloads.map(\.name), ["recovery"])
+    }
+
     func testScopedFetchAndHistoryReportRequestedDisconnectedProvider() async throws {
         var requestCount = 0
         ExternalIntegrationURLProtocolStub.setHandler { request in
@@ -389,6 +558,7 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         XCTAssertNil(tokenStore.token(for: .whoop))
         XCTAssertFalse(manager.isConnected(.whoop))
         XCTAssertEqual(manager.statusMessage, "Disconnected WHOOP and revoked access")
+        XCTAssertEqual(manager.connectionStatus?.kind, .success)
     }
 
     func testFailedRevocationPreservesCredentialsForRetry() async throws {
@@ -411,6 +581,8 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         XCTAssertNotNil(tokenStore.token(for: .whoop))
         XCTAssertTrue(manager.isConnected(.whoop))
         XCTAssertTrue(manager.statusMessage?.contains("Try again") == true)
+        XCTAssertEqual(manager.connectionStatus?.kind, .error)
+        XCTAssertNil(manager.isDisconnectingProvider)
     }
 
     func testLateUnauthorizedCallerReusesAlreadyRotatedStoredPair() async throws {
@@ -562,7 +734,45 @@ final class ExternalIntegrationManagerTests: XCTestCase {
             URL(string: "healthmd://oauth/callback?error=access_denied&error_description=Permission%20denied&state=\(state)")!,
             expectedState: state
         )) { error in
-            XCTAssertEqual(error as? ExternalOAuthBrokerError, .brokerRejected("Permission denied"))
+            XCTAssertEqual(error as? ExternalOAuthBrokerError, .authorizationRejected("access_denied"))
+        }
+    }
+
+    func testWHOOPAuthorizationUsesPKCEInAdditionToBrokerHeldClientSecret() {
+        XCTAssertTrue(ExternalIntegrationProvider.whoop.usesPKCE)
+    }
+
+    func testOAuthCallbackDecodesFormEncodedValuesWithoutChangingLiteralPluses() throws {
+        let callback = try ExternalIntegrationManager.parseCallback(
+            URL(string: "healthmd://oauth/callback?code=code%2Bwith+space&state=12345678")!,
+            expectedState: "12345678"
+        )
+        XCTAssertEqual(callback.code, "code+with space")
+
+        XCTAssertThrowsError(try ExternalIntegrationManager.parseCallback(
+            URL(string: "healthmd://oauth/callback?error=invalid_request&error_description=The+request+is+missing+a+required+parameter&state=12345678")!,
+            expectedState: "12345678"
+        )) { error in
+            XCTAssertEqual(
+                error as? ExternalOAuthBrokerError,
+                .authorizationRejected("invalid_request")
+            )
+            XCTAssertFalse(error.localizedDescription.contains("+"))
+            XCTAssertTrue(error.localizedDescription.contains("Try connecting again"))
+        }
+    }
+
+    func testOAuthCallbackRejectsDuplicateSecurityParameters() {
+        for query in [
+            "state=12345678&state=wrong123&code=code",
+            "state=12345678&code=first&code=second",
+            "state=12345678&error=access_denied&error=invalid_request",
+            "state=12345678&code=code&error=access_denied"
+        ] {
+            XCTAssertThrowsError(try ExternalIntegrationManager.parseCallback(
+                URL(string: "healthmd://oauth/callback?\(query)")!,
+                expectedState: "12345678"
+            ))
         }
     }
 
@@ -583,7 +793,9 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         ))
     }
 
-    private func makeManager() -> ExternalIntegrationManager {
+    private func makeManager(
+        authenticate: (@MainActor (URL) async throws -> URL)? = nil
+    ) -> ExternalIntegrationManager {
         ExternalIntegrationManager(
             tokenStore: tokenStore,
             enabledProviders: [.whoop],
@@ -592,8 +804,18 @@ final class ExternalIntegrationManagerTests: XCTestCase {
                 clientToken: "client-token",
                 session: session
             ),
-            apiClient: ExternalProviderAPIClient(session: session)
+            apiClient: ExternalProviderAPIClient(session: session),
+            authenticate: authenticate
         )
+    }
+
+    private static func authorizationResponse(_ request: URLRequest) throws -> (HTTPURLResponse, Data) {
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.externalIntegrationHTTPBody()) as? [String: Any])
+        let state = try XCTUnwrap(body["state"] as? String)
+        return response(request, status: 200, json: [
+            "provider": "whoop",
+            "authorization_url": "https://api.prod.whoop.com/oauth/oauth2/auth?state=\(state)"
+        ])
     }
 
     private static func day(_ year: Int, _ month: Int, _ day: Int) -> Date {

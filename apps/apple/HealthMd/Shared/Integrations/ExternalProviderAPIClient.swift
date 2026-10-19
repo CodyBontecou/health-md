@@ -98,6 +98,7 @@ struct ExternalProviderAPIClient: Sendable {
         date: Date,
         token: ExternalIntegrationToken,
         calendar: Calendar = .current,
+        whoopResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases),
         now: Date = Date()
     ) async throws -> ExternalDailyRecord {
         #if DEBUG
@@ -131,7 +132,8 @@ struct ExternalProviderAPIClient: Sendable {
                         requestedDate: date,
                         now: now,
                         calendar: calendar,
-                        token: token
+                        token: token,
+                        resources: whoopResources
                     )
                 case .withings:
                     return try await fetchWithings(day: day, dateString: dateString, token: token)
@@ -164,7 +166,8 @@ struct ExternalProviderAPIClient: Sendable {
     /// without guessing a distant sentinel date.
     func discoverEarliestAvailableDate(
         provider: ExternalIntegrationProvider,
-        token: ExternalIntegrationToken
+        token: ExternalIntegrationToken,
+        whoopResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
     ) async throws -> Date? {
         switch provider {
         case .whoop:
@@ -175,7 +178,8 @@ struct ExternalProviderAPIClient: Sendable {
                 WHOOPCollection(name: "workouts", path: "/activity/workout", requiredScope: "read:workout")
             ]
             var earliest: Date?
-            for collection in collections where token.grants(collection.requiredScope) {
+            for collection in collections where token.grants(collection.requiredScope)
+                && whoopResources.contains(collection.resource) {
                 if let candidate = try await discoverEarliestWHOOPDate(
                     collection: collection,
                     token: token
@@ -246,6 +250,11 @@ struct ExternalProviderAPIClient: Sendable {
         let name: String
         let path: String
         let requiredScope: String
+
+        var resource: WHOOPResourceName {
+            // All collection names are defined alongside their native v2 endpoint.
+            WHOOPResourceName(rawValue: name)!
+        }
     }
 
     private func fetchWHOOP(
@@ -253,7 +262,8 @@ struct ExternalProviderAPIClient: Sendable {
         requestedDate: Date,
         now: Date,
         calendar: Calendar,
-        token: ExternalIntegrationToken
+        token: ExternalIntegrationToken,
+        resources: Set<WHOOPResourceName>
     ) async throws -> [ExternalProviderPayload] {
         let collections = [
             WHOOPCollection(name: "cycles", path: "/cycle", requiredScope: "read:cycles"),
@@ -263,7 +273,7 @@ struct ExternalProviderAPIClient: Sendable {
         ]
 
         var payloads: [ExternalProviderPayload] = []
-        for collection in collections {
+        for collection in collections where resources.contains(collection.resource) {
             guard token.grants(collection.requiredScope) else {
                 payloads.append(Self.missingScopePayload(
                     name: collection.name,
@@ -295,7 +305,7 @@ struct ExternalProviderAPIClient: Sendable {
         // WHOOP's body measurement endpoint is a current profile singleton and
         // has no measurement timestamp. Export it only with today's sidecar so
         // historical range exports do not repeat today's value for every day.
-        if calendar.isDate(requestedDate, inSameDayAs: now) {
+        if resources.contains(.body), calendar.isDate(requestedDate, inSameDayAs: now) {
             let endpoint = "\(Self.whoopBaseURL)/user/measurement/body"
             if token.grants("read:body_measurement") {
                 do {
