@@ -34,6 +34,7 @@ object SubRoutes {
     const val SHARED_SETUP = "shared_setup"
     const val EXPORT_PROFILES = "export_profiles"
     const val DIAGNOSTICS = "diagnostics"
+    const val MYSELF_CLAIM = "myself_claim"
     const val PAYWALL = "paywall"
 }
 

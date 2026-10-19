@@ -11,6 +11,52 @@ import XCTest
 
 final class ScheduleDateMathTests: XCTestCase {
 
+    func testMinuteRefreshBoundariesDeduplicateWithoutAdvancingCompletedDays() throws {
+        for minutes in [30, 60] {
+            let start = date(2026, 3, 15, 8, 15)
+            var schedule = ExportSchedule(isEnabled: true, preferredHour: 8, preferredMinute: 15,
+                todayRefreshEnabled: true, todayRefreshIntervalMinutes: minutes,
+                lastExportDate: start, lastTodayRefreshDate: start)
+            let next = start.addingTimeInterval(Double(minutes * 60))
+            XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+                now: start, calendar: Self.cal), next)
+            XCTAssertFalse(ScheduleDateMath.dueScheduledOccurrences(schedule: schedule,
+                now: next.addingTimeInterval(-0.001), calendar: Self.cal).contains { $0.kind == .todayRefresh })
+            let due = ScheduleDateMath.dueScheduledOccurrences(schedule: schedule, now: next, calendar: Self.cal)
+            XCTAssertEqual(due.filter { $0.kind == .todayRefresh }.map(\.fireDate), [next])
+            schedule.lastTodayRefreshDate = next
+            XCTAssertFalse(ScheduleDateMath.dueScheduledOccurrences(schedule: schedule,
+                now: next.addingTimeInterval(0.001), calendar: Self.cal).contains { $0.kind == .todayRefresh })
+            XCTAssertEqual(schedule.lastExportDate, start)
+            XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+                now: date(2026, 3, 15, 23, 59), calendar: Self.cal), date(2026, 3, 16, 8, 15))
+            schedule.todayRefreshEnabled = false
+            XCTAssertNil(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+                now: start, calendar: Self.cal))
+        }
+    }
+
+    func testMinuteRefreshCivilDSTGapFoldAndTimezoneChange() throws {
+        var calendar = Self.cal
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        let iso = ISO8601DateFormatter()
+        func instant(_ value: String) throws -> Date { try XCTUnwrap(iso.date(from: value)) }
+        let schedule = ExportSchedule(isEnabled: true, preferredHour: 0, preferredMinute: 30,
+            todayRefreshEnabled: true, todayRefreshIntervalMinutes: 30)
+        // Gap slots move forward preserving minutes, then deduplicate/sort with real03:00/03:30.
+        XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+            now: try instant("2026-03-08T09:30:00Z"), calendar: calendar), try instant("2026-03-08T10:00:00Z"))
+        // First fold occurrence is canonical; never run the repeated01:00/01:30 a second time.
+        XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+            now: try instant("2026-11-01T08:30:00Z"), calendar: calendar), try instant("2026-11-01T10:00:00Z"))
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Kolkata"))
+        let now = try instant("2026-03-15T08:01:00Z")
+        let next = try XCTUnwrap(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+            now: now, calendar: calendar))
+        XCTAssertEqual(calendar.component(.minute, from: next), 0)
+    }
+
+
     private static let cal: Calendar = {
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "UTC")!
@@ -19,6 +65,98 @@ final class ScheduleDateMathTests: XCTestCase {
 
     private func date(_ year: Int, _ month: Int, _ day: Int, _ hour: Int = 0, _ minute: Int = 0) -> Date {
         Self.cal.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
+    }
+
+    // MARK: - Legacy Today Refresh characterization (visualizations issue #9)
+
+    func testLegacyRefreshCannotMakeThirtyOrSixtyMinuteBoundaryDue() {
+        var schedule = ExportSchedule(
+            isEnabled: true, preferredHour: 8,
+            todayRefreshEnabled: true, todayRefreshIntervalHours: 1,
+            lastTodayRefreshDate: date(2026, 3, 15, 8)
+        )
+        for now in [date(2026, 3, 15, 8, 30), date(2026, 3, 15, 9)] {
+            XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(
+                schedule: schedule, kind: .todayRefresh, now: now, calendar: Self.cal
+            ), date(2026, 3, 15, 11))
+            XCTAssertFalse(ScheduleDateMath.dueScheduledOccurrences(
+                schedule: schedule, now: now, calendar: Self.cal
+            ).contains { $0.kind == .todayRefresh })
+        }
+        let boundary = date(2026, 3, 15, 11)
+        XCTAssertTrue(ScheduleDateMath.dueScheduledOccurrences(
+            schedule: schedule, now: boundary, calendar: Self.cal
+        ).contains { $0.kind == .todayRefresh && $0.fireDate == boundary })
+        schedule.lastTodayRefreshDate = boundary
+        XCTAssertFalse(ScheduleDateMath.dueScheduledOccurrences(
+            schedule: schedule, now: boundary, calendar: Self.cal
+        ).contains { $0.kind == .todayRefresh })
+        XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(
+            schedule: schedule, kind: .todayRefresh, now: boundary, calendar: Self.cal
+        ), date(2026, 3, 15, 14))
+    }
+
+    func testLegacyRefreshSlotsRetainPreferredMinuteAndRestartAtPreferredTimeNextDay() {
+        for hours in [3, 6, 12] {
+            let schedule = ExportSchedule(
+                isEnabled: true, preferredHour: 8, preferredMinute: 15,
+                todayRefreshEnabled: true, todayRefreshIntervalHours: hours
+            )
+            XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(
+                schedule: schedule, kind: .todayRefresh,
+                now: date(2026, 3, 15, 8, 15), calendar: Self.cal
+            ), date(2026, 3, 15, 8 + hours, 15))
+            XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(
+                schedule: schedule, kind: .todayRefresh,
+                now: date(2026, 3, 15, 23, 59), calendar: Self.cal
+            ), date(2026, 3, 16, 8, 15))
+            XCTAssertNil(ScheduleDateMath.latestScheduledOccurrenceDate(
+                schedule: schedule, kind: .todayRefresh,
+                now: date(2026, 3, 16, 0, 30), calendar: Self.cal
+            ))
+        }
+    }
+
+    func testLegacyRefreshDSTSlotsAreCivilTimesNotFixedElapsedDurations() throws {
+        var calendar = Self.cal
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        let schedule = ExportSchedule(
+            isEnabled: true, preferredHour: 0, preferredMinute: 30,
+            todayRefreshEnabled: true, todayRefreshIntervalHours: 3
+        )
+        for (month, day, elapsedHours) in [(3, 8, 2), (11, 1, 4)] {
+            let start = try XCTUnwrap(calendar.date(from: DateComponents(
+                year: 2026, month: month, day: day, hour: 0, minute: 30
+            )))
+            let next = try XCTUnwrap(ScheduleDateMath.calculateNextRunDate(
+                schedule: schedule, kind: .todayRefresh, now: start, calendar: calendar
+            ))
+            XCTAssertEqual(calendar.component(.hour, from: next), 3)
+            XCTAssertEqual(calendar.component(.minute, from: next), 30)
+            XCTAssertEqual(next.timeIntervalSince(start), TimeInterval(elapsedHours * 3_600))
+            XCTAssertEqual(ScheduleDateMath.latestScheduledOccurrenceDate(
+                schedule: schedule, kind: .todayRefresh, now: next, calendar: calendar
+            ), next)
+        }
+    }
+
+    func testRefreshSelectsTodayWithoutReplacingCompletedLookbackAtDayRollover() {
+        let schedule = ExportSchedule(
+            isEnabled: true, frequency: .weekly, preferredHour: 8, lookbackDays: 7,
+            todayRefreshEnabled: true
+        )
+        let fire = date(2026, 3, 15, 23)
+        XCTAssertEqual(ScheduleDateMath.exportDates(
+            for: .todayRefresh, schedule: schedule, fireDate: fire, calendar: Self.cal
+        ), [date(2026, 3, 15)])
+        let completed = ScheduleDateMath.exportDates(
+            for: .completedDay, schedule: schedule, fireDate: fire, calendar: Self.cal
+        )
+        XCTAssertEqual(completed.count, 7)
+        XCTAssertEqual(completed.first, date(2026, 3, 8))
+        XCTAssertEqual(completed.last, date(2026, 3, 14))
+        // Exact dates are anchored to fire, not a delayed wake after midnight.
+        XCTAssertFalse(completed.contains(date(2026, 3, 15)))
     }
 
     // MARK: - calculateNextRunDate

@@ -393,6 +393,8 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
+    env:
+      HEALTHMD_PACKAGED_CACHE_DIR: ${{ github.workspace }}/apps/cli/target/packaged-crates
     steps:
       - uses: actions/checkout@v4
         with:
@@ -400,19 +402,38 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.88.0
       - name: Install package MSRV toolchain
         run: rustup toolchain install 1.85.0 --profile minimal
-      - uses: Swatinem/rust-cache@v2
+      - name: Identify both package-verification compilers
+        id: package-compilers
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import os
+          import subprocess
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              for label, toolchain in (("current", "1.88.0"), ("msrv", "1.85.0")):
+                  identity = subprocess.check_output(["rustup", "run", toolchain, "rustc", "-vV"])
+                  output.write(f"{label}={hashlib.sha256(identity).hexdigest()}\n")
+          PY
+      - uses: actions/cache@v4
+        # The smoke script opts into these targets, cleans all five packaged
+        # crates, and reuses only their dependencies across fresh extractions.
         with:
-          shared-key: packaged-crates
-          workspaces: |
-            apps/cli -> target
-            packages/healthmd-core-rust -> target
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/registry/src/
+            ~/.cargo/git/db/
+            apps/cli/target/packaged-crates/
+          key: ${{ runner.os }}-${{ runner.arch }}-packaged-crates-v1-${{ steps.package-compilers.outputs.current }}-${{ steps.package-compilers.outputs.msrv }}-${{ hashFiles('apps/cli/**/Cargo.toml', 'apps/cli/Cargo.lock', 'apps/cli/rust-toolchain.toml', 'apps/cli/.cargo/**', 'apps/cli/**/build.rs', 'packages/healthmd-core-rust/**/Cargo.toml', 'packages/healthmd-core-rust/Cargo.lock', 'packages/healthmd-core-rust/rust-toolchain.toml', 'packages/healthmd-core-rust/.cargo/**', 'packages/healthmd-core-rust/**/build.rs', '.cargo/**', '.github/workflows/cli-ci.yml', 'apps/cli/scripts/smoke-crate-packages.py') }}
       - name: Verify release version closure and channel policy
         run: |
           python3 -m unittest \
             apps/cli/scripts/test_verify_generated_release_metadata.py \
             apps/cli/scripts/test_verify_release.py \
             apps/cli/scripts/test_qualify_exact_ci.py \
-            apps/cli/scripts/test_watch_cli_release.py
+            apps/cli/scripts/test_watch_cli_release.py \
+            apps/cli/scripts/test_smoke_crate_packages.py
           python3 apps/cli/scripts/verify-release.py
       - name: Build and execute packaged source archives
         run: |

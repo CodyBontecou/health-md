@@ -79,6 +79,11 @@ internal fun legacyMigrationEntry(
             )
             else -> ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS
         },
+        todayRefreshIntervalMinutes = when (settings.scheduleCadenceUnit) {
+            ScheduleCadenceUnit.MINUTES -> settings.scheduleCadenceValue.takeIf { it in listOf(30, 60) }
+            ScheduleCadenceUnit.HOURS -> 60.takeIf { settings.scheduleCadenceValue == 1 }
+            else -> null
+        },
         zoneId = zone.id,
     )
 }

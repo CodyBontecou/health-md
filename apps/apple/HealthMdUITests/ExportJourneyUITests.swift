@@ -56,6 +56,12 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
 
+        let finishBatch = app.buttons[UITestLaunchHelper.Export.finishSimulatedBatch]
+        XCTAssertTrue(
+            finishBatch.waitForExistence(timeout: 5),
+            "The fixture should publish its per-file result and wait before finishing the batch"
+        )
+
         XCTAssertTrue(
             app.buttons[UITestLaunchHelper.Export.cancelExportButton].waitForExistence(timeout: 1),
             "The simulated multi-file export should still be running"
@@ -73,10 +79,14 @@ final class ExportJourneyUITests: XCTestCase {
 
         let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertFalse(
-            statusBadge.waitForExistence(timeout: 0.8),
+            statusBadge.waitForExistence(timeout: 5),
             "A per-file completion must not show the success view while the batch is running"
         )
         XCTAssertFalse(app.buttons["View Exported File"].exists)
+
+        // Explicitly release the batch after every intermediate-state assertion.
+        XCTAssertTrue(finishBatch.isHittable, "The fixture's completion control should remain accessible")
+        finishBatch.tap()
 
         XCTAssertTrue(
             statusBadge.waitForExistence(timeout: 5),
@@ -126,6 +136,7 @@ final class ExportJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_ARCHIVE_EXPORTS"] = "true"
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
@@ -217,6 +228,7 @@ final class ExportJourneyUITests: XCTestCase {
             useHealthKitExportPreviewFixtures: true
         )
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
         XCTAssertTrue(previewButton.waitForExistence(timeout: 5))
@@ -337,6 +349,7 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true
         )
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
@@ -547,14 +560,7 @@ final class ExportJourneyUITests: XCTestCase {
         app.launch()
 
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        scrollUntilHittable(customPreset, in: app, swipingUp: true)
-        // A partially visible SwiftUI button can report isHittable while its center remains below
-        // the bottom tab bar. Move the preset row a bounded distance into the viewport.
-        let scrollView = app.scrollViews.firstMatch
-        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
-            forDuration: 0.05,
-            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
-        )
+        scrollDatePresetIntoView(customPreset, in: app)
         XCTAssertTrue(customPreset.exists, "Custom preset should be visible")
         XCTAssertTrue(customPreset.isHittable, "Custom preset should be tappable")
         customPreset.tap()
@@ -636,6 +642,34 @@ final class ExportJourneyUITests: XCTestCase {
         let scrollView = app.scrollViews.firstMatch
         for _ in 0..<6 where !element.isHittable {
             swipingUp ? scrollView.swipeUp() : scrollView.swipeDown()
+        }
+    }
+
+    private func scrollDatePresetIntoView(_ preset: XCUIElement, in app: XCUIApplication) {
+        let scrollView = app.scrollViews.firstMatch
+        let tabBar = app.tabBars.firstMatch
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        // SwiftUI can report a row as hittable while its tap point is underneath
+        // the floating export controls. Keep the entire row inside the clear
+        // viewport, and scroll in either direction so a swipe cannot strand it
+        // above the visible content.
+        for _ in 0..<6 {
+            let viewport = scrollView.frame.intersection(app.frame)
+            var visibleBottom = viewport.maxY
+            if tabBar.exists { visibleBottom = min(visibleBottom, tabBar.frame.minY) }
+            if exportButton.exists { visibleBottom = min(visibleBottom, exportButton.frame.minY - 24) }
+            let visibleTop = viewport.minY + 24
+            if preset.exists && preset.isHittable
+                && preset.frame.minY >= visibleTop && preset.frame.maxY <= visibleBottom {
+                return
+            }
+            let above = preset.exists && preset.frame.midY < visibleTop
+            // Start in the clear middle of the viewport, away from the floating
+            // action bar, rather than dragging across the export button.
+            scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? 0.35 : 0.6)).press(
+                forDuration: 0.05,
+                thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? 0.6 : 0.35))
+            )
         }
     }
 

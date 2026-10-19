@@ -81,6 +81,7 @@ fun HealthMdNavigation(
     settingsRepository: SettingsRepository,
     sharedSetupCoordinator: SharedSetupCoordinator,
     initialRoute: String? = null,
+    myselfClaimRequestId: Long = 0L,
     scheduledRecoveryPromptRequestId: Long = 0L,
 ) {
     val navController = rememberNavController()
@@ -165,6 +166,12 @@ fun HealthMdNavigation(
     }
 
     val settingsViewModel: SettingsViewModel = hiltViewModel()
+    LaunchedEffect(myselfClaimRequestId) {
+        if (myselfClaimRequestId > 0 && settingsViewModel.distributionPolicy.purchasesAvailable) {
+            navController.currentBackStackEntryFlow.first()
+            navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
+        }
+    }
     val debugStartRoutes = if (BuildConfig.DEBUG) {
         listOf(
             SubRoutes.ONBOARDING,
@@ -295,12 +302,21 @@ fun HealthMdNavigation(
                             navController.navigate(PaywallEntryPoint.UPGRADE.route)
                         }
                     },
+                    onNavigateToMyselfClaim = {
+                        navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
+                    },
                     onNavigateToExportProfiles = { navController.navigate(SubRoutes.EXPORT_PROFILES) },
                     onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
                     onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
                     onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
                     onNavigateToDiagnostics = { navController.navigate(SubRoutes.DIAGNOSTICS) },
                 )
+            }
+
+            if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                composable(SubRoutes.MYSELF_CLAIM) {
+                    com.healthmd.myselfclaim.MyselfClaimScreen(onBack = { navController.popBackStack() })
+                }
             }
 
             // Sub-screens
