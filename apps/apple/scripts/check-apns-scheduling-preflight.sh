@@ -138,6 +138,7 @@ source_contains "${PUSH_REGISTRATION_MANAGER}" "let userId: String" "Worker payl
 source_contains "${PUSH_REGISTRATION_MANAGER}" "let platform: String" "Worker payload includes platform"
 source_contains "${PUSH_REGISTRATION_MANAGER}" "let apnsToken: String" "Worker payload includes APNs token"
 source_contains "${PUSH_REGISTRATION_MANAGER}" "let bundleId: String" "Worker payload includes bundleId"
+source_contains "${PUSH_REGISTRATION_MANAGER}" "let apnsEnvironment: APNsEnvironment" "Worker payload includes the device's signing APNs environment"
 source_contains "${PUSH_REGISTRATION_MANAGER}" "let timezone: String" "Schedule payload includes timezone"
 source_contains "${PUSH_REGISTRATION_MANAGER}" "let isEnabled: Bool" "Schedule payload includes enabled state"
 source_contains "${PUSH_REGISTRATION_MANAGER}" "let frequency: String" "Schedule payload includes frequency"

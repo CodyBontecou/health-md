@@ -2,11 +2,14 @@
 
 ANDROID_HOME ?= $(HOME)/Library/Android/sdk
 CORE_RUST_DIR := packages/healthmd-core-rust
+TEST_JOBS ?= 4
+ANDROID_TEST_ARGS ?= --max-workers=2 --init-script scripts/ci-gradle.init.gradle
+APPLE_TEST_DERIVED_DATA_DIR ?= $(CURDIR)/apps/apple/build/local-test-derived-data
 CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
 TEST_COMPONENTS := contracts core apple android cli practice wake cloud website
 .DEFAULT_GOAL := help
 
-.PHONY: help test test-all test-testing-tools test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
+.PHONY: help test test-components test-all test-testing-tools test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
         test-apple test-android test-android-all test-cli test-practice test-wake test-cloud test-website apple-ios apple-macos cli-build \
         android-build android-play-debug android-fdroid-debug android-fdroid-release \
         practice-build cloud-build website-build
@@ -29,7 +32,10 @@ else
 	$(MAKE) test-$(COMPONENT)
 endif
 
-test-all: test-contracts test-core test-apple test-android-all test-cli test-practice test-wake test-cloud test-website
+test-all:
+	$(MAKE) --jobs="$(TEST_JOBS)" --keep-going test-components
+
+test-components: test-contracts test-core test-apple test-android-all test-cli test-practice test-wake test-cloud test-website
 
 test-testing-tools:
 	python3 -m unittest discover -s scripts/tests -p 'test_testing_*.py'
@@ -68,16 +74,18 @@ check-core-bindings:
 	diff -ru "$$check_dir/first" "$$check_dir/second"
 
 test-apple:
-	$(MAKE) -C apps/apple test
+	$(MAKE) -C apps/apple test-platforms \
+	  IOS_DERIVED_DATA_DIR="$(APPLE_TEST_DERIVED_DATA_DIR)/ios" \
+	  MACOS_DERIVED_DATA_DIR="$(APPLE_TEST_DERIVED_DATA_DIR)/macos"
 
 # Local regressions compile one app variant; CI still qualifies every flavor.
 test-android:
 	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew --no-daemon --max-workers=2 \
 		:app:testPlayDebugUnitTest :healthmd-core:testDebugUnitTest \
-		:wearable-contract:test :wear:testDebugUnitTest :direct-protocol:test
+		:wearable-contract:test :direct-protocol:test
 
 test-android-all:
-	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew test
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew test $(ANDROID_TEST_ARGS)
 
 test-cli:
 	cd apps/cli && cargo test --workspace --all-features --locked

@@ -49,6 +49,7 @@ struct ContentView: View {
     @State private var showPostOnboardingPaywall = false
     @AppStorage("pricing.paywall.postOnboarding.shown.v1") private var hasSeenPostOnboardingPaywall = false
     @State private var isExporting = false
+    @State private var isTestExportWaitingForCompletion = false
     @State private var isRequestingHealthAuthorization = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
@@ -263,6 +264,16 @@ struct ContentView: View {
                 )
             } else if wasExporting && !nowExporting, !exportStatusMessage.isEmpty {
                 UIAccessibility.post(notification: .announcement, argument: exportStatusMessage)
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                if TestMode.isUITesting && isTestExportWaitingForCompletion {
+                    Button("Finish simulated export") {
+                        isTestExportWaitingForCompletion = false
+                    }
+                    .accessibilityIdentifier("uitest.export.finishBatch")
+                }
             }
         }
         .sheet(isPresented: $showFolderPicker) {
@@ -1317,6 +1328,16 @@ struct ContentView: View {
             apiExportSettings: apiExportSettings,
             initialTarget: exportTargetSelection
         )
+        #if DEBUG
+        // Seed only after normal migration has frozen settings and destination
+        // bindings. Reuse real duplication semantics, leave Default active,
+        // and do not add further copies if this coordinator is reconstructed.
+        if TestMode.duplicateExportProfile,
+           coordinator.profileStore.profiles.count == 1,
+           let sourceID = coordinator.profileStore.activeProfileID {
+            _ = coordinator.duplicateProfile(id: sourceID)
+        }
+        #endif
         profileCoordinator = coordinator
         // The Shared Setup v2 review flow runs above this view; register the
         // single production instance so its injected confirmation closures
@@ -2730,6 +2751,7 @@ struct ContentView: View {
         exportTask = Task {
             defer {
                 isExporting = false
+                isTestExportWaitingForCompletion = false
                 exportProgress = 0.0
                 exportTask = nil
             }
@@ -2751,7 +2773,16 @@ struct ContentView: View {
                 }
                 exportStatusMessage = "Exporting 2026-03-29... (2/2)"
                 exportProgress = 0.5
-                try? await Task.sleep(for: .seconds(3))
+                // Let the UI test inspect the intermediate state for as long as
+                // it needs. A wall-clock delay races XCTest accessibility queries.
+                isTestExportWaitingForCompletion = true
+                while isTestExportWaitingForCompletion {
+                    do {
+                        try await Task.sleep(for: .milliseconds(100))
+                    } catch {
+                        return
+                    }
+                }
             }
 
             switch result {
@@ -2989,6 +3020,7 @@ struct SettingsTabView: View {
     @Binding var showClinicianReport: Bool
     @State private var showMailCompose = false
     @State private var showPaywall = false
+    @State private var showMyselfClaim = false
     @State private var showExternalIntegrations = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
@@ -3090,6 +3122,9 @@ struct SettingsTabView: View {
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
         }
+        .sheet(isPresented: $showMyselfClaim) {
+            MyselfClaimView(app: "health.md")
+        }
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: .settings)
                 .presentationDetents([.large])
@@ -3165,6 +3200,18 @@ struct SettingsTabView: View {
                 isActive: purchaseManager.isUnlocked,
                 accessibilityHint: "Double tap to manage purchases and Family Sharing",
                 action: { showPaywall = true }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "gift.fill",
+                title: "Claim myself.md access",
+                subtitle: "Verify an eligible purchase for complimentary Lifetime access.",
+                isActive: true,
+                accessibilityHint: "Double tap to review purchase verification for myself.md",
+                accessibilityIdentifier: "settings-myself-claim",
+                action: { showMyselfClaim = true }
             )
 
             SettingsRowDivider()

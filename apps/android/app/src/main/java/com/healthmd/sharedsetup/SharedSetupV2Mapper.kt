@@ -65,6 +65,9 @@ class SharedSetupV2Mapper(
         require(relevantSchedules.groupBy { it.profileId }.values.none { it.size > 1 }) {
             "An export profile has more than one schedule entry."
         }
+        require(relevantSchedules.none { it.todayRefreshMinutes < 180 }) {
+            "Shared Setup v2 cannot represent 30-minute or hourly Today Refresh. Choose a 3/6/12-hour interval before sharing this profile."
+        }
         val scheduleByNativeId = relevantSchedules.associateBy { it.profileId }
 
         val mappedProfiles = profiles.mapIndexed { index, profile ->

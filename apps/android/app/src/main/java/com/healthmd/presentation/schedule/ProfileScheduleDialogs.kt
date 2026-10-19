@@ -126,12 +126,13 @@ internal fun ProfileScheduleEditorFields(
     )
     if (draft.todayRefreshEnabled) {
         ProfileScheduleDropdown(
-            draft.todayRefreshIntervalHours,
-            ScheduledProfileEntry.TODAY_REFRESH_INTERVAL_OPTIONS.map { hours ->
-                hours to stringResource(R.string.profile_schedule_refresh_interval_hours, hours)
+            draft.todayRefreshMinutes,
+            ScheduledProfileEntry.TODAY_REFRESH_MINUTE_OPTIONS.map { minutes ->
+                minutes to if (minutes < 180) stringResource(R.string.profile_schedule_refresh_interval_minutes, minutes)
+                else stringResource(R.string.profile_schedule_refresh_interval_hours, minutes / 60)
             },
             stringResource(R.string.profile_schedule_refresh_interval),
-            { onDraftChange(draft.copy(todayRefreshIntervalHours = it)) }, ProfileScheduleTags.REFRESH_INTERVAL,
+            { onDraftChange(draft.withTodayRefreshMinutes(it)) }, ProfileScheduleTags.REFRESH_INTERVAL,
         )
     }
 }

@@ -455,7 +455,9 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         ) -> Void)?,
         produceItem: @escaping ConnectedCorpusDurableSender.ItemProducer
     ) async throws -> ConnectedCorpusDurableSender.Result {
-        if activeJobID == jobID, let activeTask { return try await activeTask.value }
+        if activeJobID == jobID, let activeTask {
+            return try await awaitSenderTask(activeTask, origin: origin)
+        }
         guard activeTask == nil else {
             if origin == .interactiveIPhone {
                 let activeJournal = activeJobID.flatMap {
@@ -495,7 +497,28 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                 if shouldResume { _ = resumeEligibleJob() }
             }
         }
-        return try await task.value
+        return try await awaitSenderTask(task, origin: origin)
+    }
+
+    /// Cancel Export owns a scheduled attempt, not the durable logical job. Propagate its
+    /// cancellation to the sender so the existing interruption path retains a paused journal.
+    /// Interactive and Mac/CLI jobs keep their independent caller-disconnection semantics.
+    private func awaitSenderTask(
+        _ task: Task<ConnectedCorpusDurableSender.Result, Error>,
+        origin: ConnectedCorpusOutboundOrigin
+    ) async throws -> ConnectedCorpusDurableSender.Result {
+        guard origin == .scheduledIPhone else { return try await task.value }
+        let jobID = activeJobID
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                if self?.activeJobID == jobID {
+                    self?.resumeWhenActiveTaskFinishes = false
+                }
+                task.cancel()
+            }
+        }
     }
 
     private func rejectConflictingExport(

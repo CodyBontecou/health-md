@@ -277,18 +277,18 @@ struct iPadScheduleView: View {
 
                         if schedulingManager.schedule.todayRefreshEnabled {
                             Picker("Refresh interval", selection: Binding(
-                                get: { schedulingManager.schedule.todayRefreshIntervalHours },
+                                get: { schedulingManager.schedule.todayRefreshMinutes },
                                 set: { hours in
                                     var schedule = schedulingManager.schedule
-                                    schedule.todayRefreshIntervalHours = ExportSchedule.clampedTodayRefreshIntervalHours(hours)
+                                    schedule.todayRefreshMinutes = hours
                                     schedulingManager.schedule = schedule
                                 }
                             )) {
-                                ForEach(ExportSchedule.todayRefreshIntervalOptions, id: \.self) { hours in
-                                    Text("Every \(hours) hours").tag(hours)
+                                ForEach(ExportSchedule.todayRefreshMinuteOptions, id: \.self) { hours in
+                                    Text(ExportSchedule.todayRefreshLabel(hours)).tag(hours)
                                 }
                             }
-                            .pickerStyle(.segmented)
+                            .pickerStyle(.menu)
                             .configurationChangesProtected()
 
                             VStack(alignment: .leading, spacing: Spacing.s2) {
@@ -373,11 +373,11 @@ struct iPadScheduleView: View {
     }
 
     private var todayRefreshInfoMessage: String {
-        let interval = schedulingManager.schedule.todayRefreshIntervalHours
+        let interval = schedulingManager.schedule.todayRefreshMinutes
         return """
         Today Refresh rewrites today's export while the day is still in progress.
 
-        Every \(interval) hours is relative to your Preferred Time (\(preferredTimeText)). Health.md targets \(preferredTimeText), then every \(interval) hours until midnight. If you enable it after a target time has passed, the next future slot is used.
+        \(ExportSchedule.todayRefreshLabel(interval)) is relative to your Preferred Time (\(preferredTimeText)). Health.md targets \(preferredTimeText), then repeats at that interval until midnight. If you enable it after a target time has passed, the next future slot is used.
 
         Automatic background exports depend on iOS. If Health.md needs your attention, unlock your device and tap the notification to run the pending export.
         """

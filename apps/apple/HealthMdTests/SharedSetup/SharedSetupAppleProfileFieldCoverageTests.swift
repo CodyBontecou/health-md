@@ -124,10 +124,9 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             }
 
             if row.fieldKind == .encodedOnly || row.fieldKind == .decodeOnly {
-                XCTAssertEqual(
-                    row.disposition,
-                    .derivedOrLegacy,
-                    "Serialization-only compatibility fields cannot become v2 authority."
+                XCTAssertTrue(
+                    row.disposition == .derivedOrLegacy || row.disposition == .prohibited,
+                    "Serialization-only compatibility fields may be legacy or explicitly prohibited, never v2 authority."
                 )
             }
 
@@ -331,7 +330,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             updatedAt: fixedDate.addingTimeInterval(60),
             isMigrationDefault: true
         )
-        let schedule = ScheduledExportEntry(
+        var schedule = ScheduledExportEntry(
             id: scheduleID,
             profileID: profileID,
             isEnabled: true,
@@ -349,6 +348,8 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             lastTodayRefreshDate: fixedDate.addingTimeInterval(-3_600),
             enabledAt: fixedDate.addingTimeInterval(-604_800)
         )
+        schedule.recoveryGeneration = 3
+        schedule.recoveryDiscardedAt = fixedDate.addingTimeInterval(-120)
         let vaultIdentity = VaultFolderIdentity(
             volumeUUIDString: "synthetic-volume",
             fileIdentifier: 42

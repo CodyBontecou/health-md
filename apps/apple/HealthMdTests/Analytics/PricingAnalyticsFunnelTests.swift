@@ -198,41 +198,45 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
     }
 
     func testMacOnboardingStepsOmitIrrelevantQuotaState() async {
-        let transport = RecordingPricingAnalyticsTransport()
-        let client = PricingAnalyticsClient(
-            transport: transport,
-            defaults: FakeUserDefaults(),
-            queueKey: "pricing.analytics.test.mac-onboarding",
-            maxQueueSize: 5,
-            isEnabled: true
-        )
+        // Exercise the enqueue/drain retirement boundary in one fast test process.
+        // A single flush used to return before the final completion was recorded.
+        for _ in 0..<5_000 {
+            let transport = RecordingPricingAnalyticsTransport()
+            let client = PricingAnalyticsClient(
+                transport: transport,
+                defaults: FakeUserDefaults(),
+                queueKey: "pricing.analytics.test.mac-onboarding",
+                maxQueueSize: 5,
+                isEnabled: true
+            )
 
-        client.trackOnboardingStarted()
-        client.trackOnboardingStepViewed(.macHowItWorks)
-        client.trackOnboardingStepViewed(.macIPhoneApp)
-        client.trackOnboardingStepViewed(.macConnect)
-        client.trackOnboardingCompleted()
-        await client.flushAndWait()
+            client.trackOnboardingStarted()
+            client.trackOnboardingStepViewed(.macHowItWorks)
+            client.trackOnboardingStepViewed(.macIPhoneApp)
+            client.trackOnboardingStepViewed(.macConnect)
+            client.trackOnboardingCompleted()
+            await client.flushAndWait()
 
-        let payloads = await transport.payloadsValue()
-        XCTAssertEqual(payloads.map(\.eventName), [
-            "pricing_onboarding_started",
-            "pricing_onboarding_step_viewed",
-            "pricing_onboarding_step_viewed",
-            "pricing_onboarding_step_viewed",
-            "pricing_onboarding_completed",
-        ])
-        XCTAssertEqual(
-            payloads.compactMap { payload -> String? in
-                guard case let .string(value) = payload.properties[.onboardingStep] else { return nil }
-                return value
-            },
-            ["welcome", "mac_how_it_works", "mac_iphone_app", "mac_connect", "ready"]
-        )
-        XCTAssertTrue(payloads.allSatisfy { payload in
-            payload.properties[.freeExportsUsed] == nil &&
-                payload.properties[.freeExportsRemaining] == nil
-        })
+            let payloads = await transport.payloadsValue()
+            XCTAssertEqual(payloads.map(\.eventName), [
+                "pricing_onboarding_started",
+                "pricing_onboarding_step_viewed",
+                "pricing_onboarding_step_viewed",
+                "pricing_onboarding_step_viewed",
+                "pricing_onboarding_completed",
+            ])
+            XCTAssertEqual(
+                payloads.compactMap { payload -> String? in
+                    guard case let .string(value) = payload.properties[.onboardingStep] else { return nil }
+                    return value
+                },
+                ["welcome", "mac_how_it_works", "mac_iphone_app", "mac_connect", "ready"]
+            )
+            XCTAssertTrue(payloads.allSatisfy { payload in
+                payload.properties[.freeExportsUsed] == nil &&
+                    payload.properties[.freeExportsRemaining] == nil
+            })
+        }
     }
 
     func testUpgradePromptFunnelCarriesQuotaDerivedMilestone() async {
