@@ -1,4 +1,5 @@
 import Foundation
+import HealthMdConnectionCore
 import HealthMdCoreRust
 import XCTest
 @testable import HealthMd
@@ -11,38 +12,150 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedManagers: [VaultManager] = []
 
-    func testOriginalAuthorityUnmaterializedJobsResumeWithoutUpgradingTheirPin() async throws {
+    func testOriginalShadowDailyJobsResumeWithoutUpgradingTheirPin() async throws {
+        let mode = ExportEngineMode.shadow
+        let current = try makeSyntheticAppleExportEnginePin(engine: mode, calendarTimeZoneIdentifier: "UTC")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+        // Exact original authority from c77024b87170260531f8df8fc5b604ad35375466.
+        object["profile"] = "apple_health_data_v7"
+        object["public_schema_version"] = 7
+        object["registry_sha256"] = "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b"
+        object["render_profile_revision"] = 1
+        object["core_source_revision"] = "c77024b87170260531f8df8fc5b604ad35375466"
+        let original = try JSONDecoder().decode(AppleExportEnginePin.self, from: JSONSerialization.data(withJSONObject: object))
+        let settings = makeSimpleSettings(formats: [.json])
+        let pending = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            appleExportEnginePin: original,
+            calendarTimeZoneIdentifier: "UTC"
+        )
+        var encoded = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(pending)) as? [String: Any])
+        encoded.removeValue(forKey: "generateRangeSummary")
+        for key in ["generateWeeklyRollups", "generateMonthlyRollups", "generateYearlyRollups"] { encoded[key] = false }
+        // Restore the original snapshot shape, then checkpoint it once as pending work does.
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: JSONSerialization.data(withJSONObject: encoded))
+        let snapshot = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: JSONEncoder().encode(decoded))
+        let planner = AppleLooseDailyExportPlanner(identitySource: fixedIdentitySource)
+        for surface in [AppleExportOperationSurface.localVaultWithoutSideEffects, .directGeneratedFilesWithoutSideEffects, .connectedReceivedFilesWithoutSideEffects] {
+            let operation = try unwrapPlanned(try await planner.plan(
+                healthData: ExportFixtures.partialDay,
+                settingsSnapshot: snapshot,
+                surface: surface
+            ))
+            XCTAssertEqual(operation.pin, original)
+            XCTAssertEqual(operation.authority, mode)
+            let body = try XCTUnwrap(String(data: operation.selectedPlan.artifacts[0].inlineData, encoding: .utf8))
+            XCTAssertTrue(body.contains("\"schema_version\" : 7"))
+            XCTAssertFalse(body.contains("\"schema_version\" : 8"))
+        }
+    }
+
+    func testOriginalCalendarSummariesRetainTheirDecodedPeriodsAndAuthority() async throws {
         for mode in [ExportEngineMode.shadow, .rust] {
-            let current = try makeSyntheticAppleExportEnginePin(engine: mode, calendarTimeZoneIdentifier: "UTC")
-            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
-            // Exact original authority from c77024b87170260531f8df8fc5b604ad35375466.
-            object["profile"] = "apple_health_data_v7"
-            object["public_schema_version"] = 7
-            object["registry_sha256"] = "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b"
-            object["render_profile_revision"] = 1
-            let original = try JSONDecoder().decode(AppleExportEnginePin.self, from: JSONSerialization.data(withJSONObject: object))
-            let settings = makeSimpleSettings(formats: [.json])
-            var snapshot = ExportSettingsSnapshot.from(
-                settings,
-                healthSubfolder: "Health",
-                appleExportEnginePin: original,
-                calendarTimeZoneIdentifier: "UTC"
+            try await assertOriginalCalendarRecovery(mode: mode)
+        }
+    }
+
+    private func assertOriginalCalendarRecovery(mode: ExportEngineMode) async throws {
+        let current = try makeSyntheticAppleExportEnginePin(engine: mode, calendarTimeZoneIdentifier: "UTC")
+        var pin = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+        pin["profile"] = "apple_health_data_v7"
+        pin["public_schema_version"] = 7
+        pin["registry_sha256"] = AppleExportEnginePin.historicalRegistrySHA256
+        pin["render_profile_revision"] = 1
+        pin["core_source_revision"] = "c77024b87170260531f8df8fc5b604ad35375466"
+        let settings = makeSimpleSettings(formats: Set(ExportFormat.allCases))
+        settings.summaryOnlyExport = true
+        var encoded = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(
+            ExportSettingsSnapshot.from(settings, healthSubfolder: "Health", calendarTimeZoneIdentifier: "UTC")
+        )) as? [String: Any])
+        encoded["appleExportEnginePin"] = pin
+        encoded.removeValue(forKey: "generateRangeSummary")
+        let periods: [HealthRollupPeriod] = [.weekly, .monthly, .yearly]
+        let keys = ["generateWeeklyRollups", "generateMonthlyRollups", "generateYearlyRollups"]
+        let diagnostics = M6DiagnosticRecorder()
+        let planner = AppleLooseDailyExportPlanner(
+            identitySource: fixedIdentitySource,
+            nativeRendererPreflight: {
+                if mode == .rust { XCTFail("Rust recovery must not invoke the native renderer.") }
+            },
+            diagnosticSink: { await diagnostics.record($0) }
+        )
+        for mask in 1...7 {
+            for (index, key) in keys.enumerated() { encoded[key] = mask & (1 << index) != 0 }
+            let selected = periods.enumerated().compactMap { mask & (1 << $0.offset) != 0 ? $0.element : nil }
+            let snapshot = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: JSONSerialization.data(withJSONObject: encoded))
+            XCTAssertFalse(snapshot.generateRangeSummary, "A frozen calendar job must not acquire the new range grammar.")
+            let checkpoint = try JSONEncoder().encode(snapshot)
+            let stored = try XCTUnwrap(JSONSerialization.jsonObject(with: checkpoint) as? [String: Any])
+            XCTAssertNil(stored["generateRangeSummary"])
+            XCTAssertNil(stored["historicalCalendarRollupPeriods"], "Recovery adds no new wire key.")
+            for key in keys { XCTAssertEqual(stored[key] as? Bool, encoded[key] as? Bool) }
+            let restored = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: checkpoint)
+            XCTAssertEqual(restored.operationRollupPeriods, selected)
+            let materialized = restored.makeAdvancedExportSettings()
+            Self.retainedSettings.append(materialized)
+            XCTAssertFalse(materialized.generateRangeSummary)
+            XCTAssertEqual(materialized.enabledRollupPeriods, selected)
+            XCTAssertTrue(materialized.summaryOnlyModeEnabled)
+#if os(iOS)
+            let record = ExportFixtures.partialDay
+            let staged = try IPhoneDirectFileExportProducer.rangePlanningInput(
+                capturedDays: [IPhoneDirectCapturedDay(
+                    sourceDate: record.date, sourceDateIdentifier: "2026-03-15", isRequestedDate: false,
+                    relativePath: "captured-00000000.json", succeeded: true
+                )],
+                payloads: [ConnectedCorpusHealthDayPayload(
+                    sourceDate: record.date, isRequestedDate: false, record: record,
+                    externalDailyRecords: [], failure: nil
+                )],
+                settings: materialized, settingsSnapshot: restored
             )
-            // The scheduled and direct recovery boundary is the decoded frozen settings snapshot.
-            snapshot = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: JSONEncoder().encode(snapshot))
-            let planner = AppleLooseDailyExportPlanner(identitySource: fixedIdentitySource)
-            for surface in [AppleExportOperationSurface.localVaultWithoutSideEffects, .directGeneratedFilesWithoutSideEffects, .connectedReceivedFilesWithoutSideEffects] {
-                let operation = try unwrapPlanned(try await planner.plan(
-                    healthData: ExportFixtures.partialDay,
-                    settingsSnapshot: snapshot,
-                    surface: surface
+            XCTAssertEqual(staged.records.count, 1, "Previously captured support days belong to the original calendar authority.")
+            XCTAssertTrue(staged.dailyOutputOwnerDates.isEmpty)
+#endif
+            for surface in [AppleExportOperationSurface.localVaultRangeWithoutSideEffects, .directGeneratedFilesWithoutSideEffects, .connectedReceivedRangeWithoutSideEffects] {
+                let operation = try unwrapPlanned(try await planner.planRange(
+                    healthData: [ExportFixtures.partialDay], dailyOutputOwnerDates: [],
+                    settingsSnapshot: restored, surface: surface
                 ))
-                XCTAssertEqual(operation.pin, original)
                 XCTAssertEqual(operation.authority, mode)
-                let body = try XCTUnwrap(String(data: operation.selectedPlan.artifacts[0].inlineData, encoding: .utf8))
-                XCTAssertTrue(body.contains("\"schema_version\" : 7"))
-                XCTAssertFalse(body.contains("\"schema_version\" : 8"))
+                XCTAssertEqual(operation.pin, snapshot.appleExportEnginePin)
+                if mode == .rust { XCTAssertNil(operation.nativePlan) }
+                else { XCTAssertEqual(operation.selectedPlan, try XCTUnwrap(operation.nativePlan)) }
+                XCTAssertEqual(operation.artifacts.count, selected.count * ExportFormat.allCases.count)
+                for artifact in operation.artifacts where artifact.format == .json {
+                    let body = try XCTUnwrap(JSONSerialization.jsonObject(with: artifact.artifact.inlineData) as? [String: Any])
+                    XCTAssertEqual(body["schema_version"] as? Int, 7)
+                    XCTAssertEqual(body["source_schema_version"] as? Int, 7)
+                    XCTAssertTrue(selected.map(\.rawValue).contains(try XCTUnwrap(body["rollup_period"] as? String)))
+                    XCTAssertFalse(artifact.artifact.relativePath.contains("/Range/"))
+                }
             }
+        }
+        if mode == .shadow {
+            let events = await diagnostics.values()
+            XCTAssertEqual(events.count, 21)
+            for event in events {
+                guard case .comparisonCompleted(let result) = event else {
+                    XCTFail("Historical shadow recovery must complete the core comparison without fallback.")
+                    continue
+                }
+                XCTAssertTrue(result.matches)
+                XCTAssertEqual(result.mismatchCount, 0)
+            }
+            return
+        }
+        // The original release never admitted daily Rust authority. Recovery must not widen it.
+        encoded["summaryOnlyExport"] = false
+        for key in keys { encoded[key] = false }
+        let unsupported = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: JSONSerialization.data(withJSONObject: encoded))
+        do {
+            _ = try await planner.plan(healthData: ExportFixtures.partialDay, settingsSnapshot: unsupported, surface: .directGeneratedFilesWithoutSideEffects)
+            XCTFail("Historical daily Rust authority must remain unsupported.")
+        } catch {
+            XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
         }
     }
 

@@ -4,6 +4,17 @@ import XCTest
 
 @MainActor
 final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
+    func testRecoveryAuditRetainsEveryFrozenV1Classification() throws {
+        let currentURL = try ledgerURL()
+        let oldURL = currentURL.deletingLastPathComponent().appendingPathComponent("apple-profile-field-coverage.json")
+        let old = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: oldURL)) as? [String: Any])
+        let current = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: currentURL)) as? [String: Any])
+        let previousRows = try XCTUnwrap(old["fields"] as? [NSDictionary])
+        let currentRows = try XCTUnwrap(current["fields"] as? [NSDictionary])
+        XCTAssertEqual(Array(currentRows.prefix(previousRows.count)), previousRows)
+        XCTAssertEqual(currentRows.count, previousRows.count + 1)
+    }
+
     func testLedgerExactlyCoversCurrentStoredAndEncodedFields() throws {
         let ledger = try loadLedger()
         let inventories = try makeNativeInventories()
@@ -18,7 +29,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
 
         for inventory in inventories {
             let rows = ledger.fields.filter { $0.sourceType == inventory.sourceType }
-            let storedRows = rows.filter { $0.fieldKind == .stored }
+            let storedRows = rows.filter { $0.fieldKind == .stored || $0.fieldKind == .storedOnly }
             let expectedStoredFields = Set(storedRows.map(\.field))
             XCTAssertEqual(
                 inventory.storedFields,
@@ -33,7 +44,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             let encodedRows = rows.filter {
                 $0.fieldKind == .stored || $0.fieldKind == .encodedOnly
             }
-            let expectedEncodedKeys = Set(encodedRows.map(\.serializedKey))
+            let expectedEncodedKeys = Set(encodedRows.compactMap(\.serializedKey))
             XCTAssertEqual(
                 inventory.encodedKeys,
                 expectedEncodedKeys,
@@ -55,7 +66,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let ledger = try loadLedger()
 
         XCTAssertEqual(ledger.schema, "healthmd.shared_setup.apple_profile_field_coverage")
-        XCTAssertEqual(ledger.schemaVersion, 1)
+        XCTAssertEqual(ledger.schemaVersion, 2)
         XCTAssertEqual(ledger.targetContract.schema, "healthmd.shared_setup")
         XCTAssertEqual(ledger.targetContract.schemaVersion, 2)
         XCTAssertEqual(Set(ledger.fieldKinds), Set(FieldKind.allCases))
@@ -87,6 +98,14 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
                 )
             }
 
+            if row.fieldKind == .storedOnly {
+                XCTAssertEqual(row.disposition, .prohibited)
+                XCTAssertEqual(row.field, "historicalCalendarRollupPeriods")
+                XCTAssertNil(row.serializedKey)
+            } else {
+                XCTAssertFalse(try XCTUnwrap(row.serializedKey).isEmpty)
+            }
+
             if row.fieldKind == .encodedOnly || row.fieldKind == .decodeOnly {
                 XCTAssertTrue(
                     row.disposition == .derivedOrLegacy || row.disposition == .prohibited,
@@ -116,7 +135,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let actualAliases = Set(
             ledger.fields
                 .filter { $0.fieldKind == .decodeOnly }
-                .map { "\($0.sourceType).\($0.serializedKey)" }
+                .map { "\($0.sourceType).\($0.serializedKey ?? "")" }
         )
         let expectedAliases: Set<String> = [
             "ExportSettingsSnapshot.archiveMarkdownExports",
@@ -163,7 +182,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while directory.path != "/" {
             let candidate = directory.appendingPathComponent(
-                "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json"
+                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
             )
             if FileManager.default.fileExists(atPath: candidate.path) {
                 return candidate
@@ -532,7 +551,7 @@ private struct CoverageLedger: Decodable {
         let sourceType: String
         let field: String
         let fieldKind: FieldKind
-        let serializedKey: String
+        let serializedKey: String?
         let disposition: Disposition
         let contractPath: String?
         let reason: String
@@ -560,6 +579,7 @@ private struct CoverageLedger: Decodable {
 
 private enum FieldKind: String, Decodable, CaseIterable {
     case stored
+    case storedOnly = "stored_only"
     case encodedOnly = "encoded_only"
     case decodeOnly = "decode_only"
 }

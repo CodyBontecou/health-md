@@ -101,10 +101,16 @@ enum HealthMdRenderInputAdapter {
             }
             return lines.joined(separator: "\n")
         case .csv:
+            let calendarHeader = "Period,Period ID,Start Date,End Date,Days Expected,Days Counted,Coverage Percent,Category,Metric,Key,Canonical Key,Primary Value,Unit,Metric Days Counted,Rule,Statistic,Statistic Value,Notes\n"
+            if content.hasPrefix(calendarHeader) {
+                // Calendar CSV has no schema metadata, but its exact 18-column grammar
+                // still needs validation. Daily CSV remains restricted to five/six columns.
+                _ = try parseCSV(content, allowedColumnCounts: [18])
+                return content
+            }
             // CSV can contain quoted multiline source values. Only a parsed metadata row owns
             // this version, and the simple-operation gate excludes source archives/providers.
             let rows = try parseCSV(content)
-            if rows.first?.first == "Period" { return content } // Calendar roll-up CSV has no schema metadata.
             guard rows.count > 2, rows[2].count == 6,
                   rows[2][1] == "Metadata", rows[2][2] == "schema_version", rows[2][3] == "8" else {
                 throw AdapterError.invalidPresentation
@@ -522,7 +528,7 @@ enum HealthMdRenderInputAdapter {
         ]
     }
 
-    private static func parseCSV(_ value: String) throws -> [[String]] {
+    private static func parseCSV(_ value: String, allowedColumnCounts: Set<Int> = [5, 6]) throws -> [[String]] {
         var rows: [[String]] = []
         var row: [String] = []
         var cell = ""
@@ -554,7 +560,7 @@ enum HealthMdRenderInputAdapter {
             row.append(cell)
             rows.append(row)
         }
-        guard rows.allSatisfy({ $0.count == 5 || $0.count == 6 }) else {
+        guard rows.allSatisfy({ allowedColumnCounts.contains($0.count) }) else {
             throw AdapterError.invalidPresentation
         }
         return rows

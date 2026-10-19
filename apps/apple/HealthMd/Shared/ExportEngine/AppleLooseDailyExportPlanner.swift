@@ -344,7 +344,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             requestedRange = nil
         }
         guard Set(ownerDates).count == ownerDates.count,
-              (!dailyOutputOwnerDates.isEmpty || requestedRange != nil),
+              (!dailyOutputOwnerDates.isEmpty || !settingsSnapshot.operationRollupPeriods.isEmpty),
               dailyOutputOwnerDates.isSubset(of: Set(ownerDates)),
               requestedRange?.calendarTimeZoneIdentifier == nil
                 || requestedRange?.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier else {
@@ -475,7 +475,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 healthSubfolder: settingsSnapshot.healthSubfolder ?? "",
                 generatedAt: identity.capturedAt,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
-                requestedRange: requestedRange
+                requestedRange: requestedRange,
+                historicalCalendarPeriods: settingsSnapshot.historicalCalendarRollupPeriods
             )
             guard let planned = try? Self.makeNativePlan(
                 outputs: expectedOutputs,
@@ -501,7 +502,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 customization: frozenSettings.formatCustomization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
                 retainPlatformExtensions: false,
-                rollupPeriods: frozenSettings.enabledRollupPeriods,
+                rollupPeriods: settingsSnapshot.operationRollupPeriods,
                 requestedRange: requestedRange
             )
             let semanticBatches = try HealthMdSemanticInputAdapter.boundedBatches(
@@ -537,7 +538,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             }
             renderOptions.rawCaptureStatus = captureStatus
             renderOptions.writeMode = "overwrite"
-            if !frozenSettings.enabledRollupPeriods.isEmpty {
+            if !settingsSnapshot.operationRollupPeriods.isEmpty {
                 renderOptions.rollupGeneratedAt = HealthRollupDateFormatting.timestampString(
                     identity.capturedAt
                 )
@@ -706,7 +707,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         settingsSnapshot: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface
     ) -> Bool {
-        let hasConfiguredRollups = settingsSnapshot.generateRangeSummary
+        let hasConfiguredRollups = !settingsSnapshot.operationRollupPeriods.isEmpty
         let isRangeSurface = surface == .localVaultRangeWithoutSideEffects
             || surface == .directGeneratedFilesWithoutSideEffects
             || surface == .connectedReceivedRangeWithoutSideEffects
@@ -774,7 +775,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         healthSubfolder: String,
         generatedAt: Date,
         calendarTimeZoneIdentifier: String,
-        requestedRange: HealthRollupRangeRequest?
+        requestedRange: HealthRollupRangeRequest?,
+        historicalCalendarPeriods: [HealthRollupPeriod]? = nil
     ) throws -> [ExpectedOutput] {
         let root = URL(fileURLWithPath: "/__HealthMdPlanningRoot__", isDirectory: true)
         let daily = try preparedExports.flatMap { preparedExport -> [ExpectedOutput] in
@@ -800,14 +802,22 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 )
             }
         }
-        guard !settings.enabledRollupPeriods.isEmpty,
-              let requestedRange else { return daily }
-        let summaries = HealthRollupExporter.makeSummaries(
-            from: sourceHealthData,
-            requestedRange: requestedRange,
-            settings: settings,
-            generatedAt: generatedAt
-        )
+        let summaries: [HealthRollupSummary]
+        if let periods = historicalCalendarPeriods, !periods.isEmpty {
+            var calendar = Calendar.current
+            calendar.timeZone = TimeZone(identifier: calendarTimeZoneIdentifier) ?? .gmt
+            summaries = HealthRollupExporter.makeSummaries(
+                from: sourceHealthData, settings: settings, periods: periods,
+                generatedAt: generatedAt, calendar: calendar
+            )
+        } else if let requestedRange, !settings.enabledRollupPeriods.isEmpty {
+            summaries = HealthRollupExporter.makeSummaries(
+                from: sourceHealthData, requestedRange: requestedRange,
+                settings: settings, generatedAt: generatedAt
+            )
+        } else {
+            return daily
+        }
         let rollups = HealthRollupExporter.outputTargets(
             for: summaries,
             healthSubfolder: healthSubfolder,
