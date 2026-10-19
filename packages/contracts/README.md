@@ -32,6 +32,9 @@ python3 packages/contracts/validate.py
 # or
 make test-contracts
 
+# Shared Setup public-payload and inventory-freeze regression tests
+(cd packages/contracts && python3 -m unittest test_validate_shared_setup.py)
+
 # Product capability/profile parity only
 make test-product-parity
 ```
@@ -51,6 +54,8 @@ The manifest distinguishes three states:
 The current Apple daily export contract is version 8. Android's compatibility exporter remains frozen at version 4, while Android's additive local analytical profile is version 5. They are deliberately separate shipped inventory entries: moving them into one package without reconciling their semantics would hide real version and unit differences. Apple v8 adds the reviewed `providers.whoop` section and provider-prefixed Markdown, Bases/frontmatter, CSV, and data-dictionary projections. Android v4/v5 contracts remain unchanged.
 
 `healthmd.shared_setup` v2 is a separate pre-canonical public configuration contract candidate, deferred pending physical-device interoperability and accessibility QA. It is the one and only version of the contract family: the pre-canonical version 1 was removed by deliberate owner decision on 2026-09-05 with no in-the-wild consumers, and version 1 input fails closed as unsupported. The v2 contract carries only explicitly allowlisted portable preferences, exact registry semantic metric IDs, typed native extensions, and disabled schedule/API intent. It never carries health data, credentials, folder grants, purchases, or runtime state and does not bump any health export schema or direct protocol.
+
+Shared Setup v2's public schema and fixtures remain byte-frozen. Its [native field-coverage policy](shared-setup/v2/contract.md#native-field-coverage-freeze) permits only additive `prohibited` audit entries with a null contract path and exclusion evidence; every already approved row and portable mapping remains frozen. The validator enforces a byte-pinned [inventory baseline](shared-setup/v2/field-coverage-baseline-v1.json), not a regenerated expectation from current native models.
 
 A unified cross-platform successor is now specified as a **deferred `healthmd.health_data` v9 proposal**. It cannot use v8 because Apple v8 already identifies a different shipped grammar. The proposal does not enable writers or alter current output profiles; acceptance remains gated by RFC-0004, mapping review, dual-read consumers, privacy/security review, and release evidence.
 

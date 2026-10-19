@@ -622,8 +622,15 @@
     <string name="schedule_through_today_summary">Кожен запуск експортує повні минулі дні та сьогоднішній частковий файл, тому денний запуск охоплює й минулу ніч. Поєднуйте з погодинною частотою, щоб обидва файли залишалися актуальними цілий день. Використовуйте режим запису «Перезаписати» або «Оновити», щоб уникнути дублювання вмісту за той самий день.</string>
     <string name="profile_schedule_today_refresh">Оновлювати сьогоднішній експорт</string>
     <string name="profile_schedule_refresh_interval">Інтервал оновлення</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d хв</string>
+    <string name="profile_schedule_refresh_summary_minutes">Оновлює сьогодні кожні %1$d хв</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d год</string>
     <string name="profile_schedule_refresh_summary">Оновлює сьогодні кожні %1$d год</string>
+    <string name="profile_schedule_discard_recovery">Скасувати очікуване відновлення</string>
+    <string name="profile_schedule_discard_recovery_named">Скасувати очікуване відновлення для %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Скасувати очікуване відновлення для %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Зупиняє заплановану повторну спробу цього профілю та видаляє його очікувані дати й збережені налаштування експорту. Наступний запланований запуск використовує поточні профіль і розклад. Ваш профіль, облікові дані API, історія експорту та вже експортовані дані зберігаються. Це не може скасувати вже виконане завантаження або записаний файл.</string>
+    <string name="profile_schedule_discard_recovery_failed">Не вдалося повністю скасувати очікуване відновлення. Перевірте профіль і спробуйте ще раз.</string>
     <string name="schedule_date_window_today">Сьогодні</string>
     <string name="schedule_export_past_days">Експортувати минулі дні</string>
     <string name="schedule_today_summary">Кожен запуск експортує сьогоднішні дані, щоб ваш поточний щоденний файл залишався актуальним. Використовуйте режим запису «Перезаписати» або «Оновити», щоб уникнути дублювання вмісту того ж дня.</string>
@@ -1503,4 +1510,18 @@
     <string name="fdroid_onboarding_access_body">Офіційна версія F-Droid безкоштовно включає всі локальні функції експорту й автоматизації.</string>
     <string name="fdroid_onboarding_no_purchase">Купівля, відновлення, ціна й обліковий запис Play не потрібні.</string>
     <string name="fdroid_onboarding_no_play_services">Експорт за розкладом працює без Google Play Billing.</string>
+
+    <string name="myself_claim_entry">Отримати доступ до myself.md</string>
+    <string name="myself_claim_entry_subtitle">Підтвердьте безстрокову покупку в Google Play.</string>
+    <string name="myself_claim_title">Доступ до myself.md</string>
+    <string name="myself_claim_intro">Безстрокова покупка Health.md включає безкоштовний довічний доступ до myself.md.</string>
+    <string name="myself_claim_disclosure">Якщо продовжити, ми прочитаємо підтвердження покупки Google Play і надішлемо його до myself.md для перевірки. Дані про здоров’я та місцеперебування залишаться на пристрої.</string>
+    <string name="myself_claim_account">Потім увійдіть і виберіть обліковий запис myself.md для доступу. Кожну початкову покупку можна пов’язати з одним записом. Самого безкоштовного чи збереженого раніше доступу Android недостатньо.</string>
+    <string name="myself_claim_verify">Перевірити покупку й продовжити</string>
+    <string name="myself_claim_verifying">Перевірка покупки…</string>
+    <string name="myself_claim_awaiting_user">Увійдіть і підтвердьте обліковий запис отримувача в браузері. Потім використовуйте той самий запис у myself.md. Доступ не надається до підтвердження.</string>
+    <string name="myself_claim_no_purchase">Завершену безстрокову покупку Health.md не знайдено. Використайте обліковий запис Google Play покупця й повторіть спробу. Незавершені покупки не підходять.</string>
+    <string name="myself_claim_store_unavailable">Google Play не вдалося отримати покупку. Перевірте підключення й обліковий запис Google Play та повторіть спробу.</string>
+    <string name="myself_claim_verification_failed">Не вдалося перевірити покупку. Перевірте підключення й повторіть спробу. Якщо помилка залишається, зверніться до підтримки. Доступ не надано.</string>
+    <string name="myself_claim_browser_unavailable">Не вдалося відкрити браузер. Увімкніть браузер і знову перевірте покупку.</string>
 </resources>

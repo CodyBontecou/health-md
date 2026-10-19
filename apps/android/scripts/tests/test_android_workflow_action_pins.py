@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 WORKFLOWS = sorted((ROOT / ".github/workflows").glob("android-*.yml"))
+NATIVE_CACHE = ROOT / ".github/actions/android-native-cache/action.yml"
 USES = re.compile(r"^\s*(?:-\s*)?uses:\s*([^\s#]+)", re.MULTILINE)
 PINNED = re.compile(r"^[^./][^@]*@[0-9a-f]{40}$")
 
@@ -14,7 +15,7 @@ PINNED = re.compile(r"^[^./][^@]*@[0-9a-f]{40}$")
 class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
     def test_every_external_action_in_release_and_provenance_path_is_commit_pinned(self) -> None:
         failures: list[str] = []
-        for workflow in WORKFLOWS:
+        for workflow in [*WORKFLOWS, NATIVE_CACHE]:
             for reference in USES.findall(workflow.read_text()):
                 if reference.startswith("./"):
                     continue
@@ -128,33 +129,34 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         self.assertIn("id-token: write", workflow)
         self.assertNotIn("PLAY_CONSOLE_KEY_JSON", workflow)
 
-    def test_ci_sdk_setup_does_not_request_the_retired_tools_package(self) -> None:
-        for filename in ("android-ci.yml",):
-            lines = (ROOT / ".github/workflows" / filename).read_text().splitlines()
-            setups = 0
-            for index, line in enumerate(lines):
-                if "uses: android-actions/setup-android@" not in line:
-                    continue
-                setups += 1
-                block: list[str] = []
-                for following in lines[index + 1:]:
-                    if re.match(r"^\s*-\s+(?:name|uses|run):", following):
-                        break
-                    block.append(following)
-                self.assertIn(
-                    "packages: platform-tools", "\n".join(block),
-                    f"{filename}:{index + 1} inherits the action's retired tools package",
-                )
-            self.assertGreater(setups, 0, f"No SDK setup exercised in {filename}")
+    def test_ci_sdk_setup_explicitly_installs_supported_packages(self) -> None:
+        for name in ("android-ci.yml", "practice-ci.yml"):
+            workflow = (ROOT / ".github/workflows" / name).read_text()
+            sdk_steps = [
+                step
+                for step in re.split(r"(?m)^      - ", workflow)
+                if re.search(r"(?m)^\s*uses: android-actions/setup-android@", step)
+            ]
+            self.assertTrue(sdk_steps, f"{name} must set up the SDK")
+            for step in sdk_steps:
+                with self.subTest(workflow=name, step=step.splitlines()[0]):
+                    packages = re.search(r"(?m)^\s+packages:\s*([^\n#]+)", step)
+                    self.assertIsNotNone(
+                        packages,
+                        "Override setup-android's obsolete 'tools platform-tools' default",
+                    )
+                    self.assertEqual(["platform-tools"], packages.group(1).split())
 
     def test_instrumentation_unlocks_the_synthetic_emulator_and_retains_failure_reports(self) -> None:
         workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()
-        instrumentation = workflow.index(":app:connectedFdroidDebugAndroidTest")
+        instrumentation = workflow.index("./scripts/run-ci-instrumentation.sh")
+        runner = (ROOT / "apps/android/scripts/run-ci-instrumentation.sh").read_text()
+        self.assertIn(":app:connectedPlayDebugAndroidTest", runner)
         for command in ("shell input keyevent KEYCODE_WAKEUP", "shell wm dismiss-keyguard"):
             self.assertLess(workflow.index(command), instrumentation)
-        diagnostics = workflow.split("- name: Retain synthetic instrumentation diagnostics", 1)[1].split("\n  fdroid:", 1)[0]
+        diagnostics = workflow.split("- name: Retain instrumentation reports and per-test results", 1)[1].split("\n  instrumentation:", 1)[0]
         for required in (
-            "if: always()", "if-no-files-found: warn", "retention-days: 7",
+            "if: ${{ always() }}", "if-no-files-found: warn", "retention-days: 7",
             "apps/android/healthmd-core/build/outputs/androidTest-results/",
             "apps/android/app/build/outputs/androidTest-results/",
         ):
@@ -165,7 +167,7 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         setting = "settings put secure show_ime_with_hard_keyboard 1"
         readiness = "settings get secure default_input_method"
         enabled = "shell ime list -s"
-        instrumentation = ":app:connectedFdroidDebugAndroidTest"
+        instrumentation = "./scripts/run-ci-instrumentation.sh"
         for requirement in (setting, readiness, enabled, instrumentation):
             self.assertIn(requirement, workflow)
         self.assertLess(workflow.index(setting), workflow.index(instrumentation))

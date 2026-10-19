@@ -3,6 +3,42 @@ import XCTest
 
 final class ScheduledExportEntryStoreTests: XCTestCase {
 
+    func testMinuteCadencePersistenceDowngradeRetainsDisabledIntentAndProgress() throws {
+        let store = makeStore()
+        let profile = UUID()
+        let success = fixedNow.addingTimeInterval(-3600)
+        var entry = ScheduledExportEntry(profileID: profile, isEnabled: true,
+            todayRefreshEnabled: true, todayRefreshIntervalMinutes: 30,
+            lastExportDate: success, lastTodayRefreshDate: fixedNow)
+        XCTAssertTrue(store.upsert(entry))
+        XCTAssertEqual(makeStore().entry(profileID: profile)?.todayRefreshMinutes, 30)
+        XCTAssertEqual(makeStore().entry(profileID: profile)?.todayRefreshEnabled, true)
+        let data = try XCTUnwrap(defaults.data(forKey: "scheduledExportEntries.list"))
+        var wire = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [[String: Any]])
+        XCTAssertEqual(wire[0]["todayRefreshEnabled"] as? Bool, false)
+        XCTAssertEqual(wire[0]["todayRefreshIntervalHours"] as? Int, 3)
+        // A shipped older writer drops unknown fields. Its disabled flag is authoritative.
+        for key in ["todayRefreshIntervalMinutes", "todayRefreshRequestedV2", "todayRefreshPersistenceVersion"] {
+            wire[0].removeValue(forKey: key)
+        }
+        defaults.set(try JSONSerialization.data(withJSONObject: wire), forKey: "scheduledExportEntries.list")
+        let downgraded = try XCTUnwrap(makeStore().entry(profileID: profile))
+        XCTAssertFalse(downgraded.todayRefreshEnabled)
+        XCTAssertEqual(downgraded.todayRefreshMinutes, 30)
+        XCTAssertEqual(downgraded.lastExportDate, success)
+        XCTAssertEqual(downgraded.lastTodayRefreshDate, fixedNow)
+        entry = downgraded
+        entry.todayRefreshMinutes = 60
+        entry.todayRefreshEnabled = true
+        XCTAssertTrue(store.upsert(entry))
+        XCTAssertEqual(makeStore().entry(profileID: profile)?.dateMathProjection.todayRefreshMinutes, 60)
+        entry.todayRefreshMinutes = 360
+        XCTAssertTrue(store.upsert(entry))
+        XCTAssertNil(makeStore().entry(profileID: profile)?.todayRefreshIntervalMinutes)
+        XCTAssertEqual(makeStore().entry(profileID: profile)?.todayRefreshMinutes, 360)
+    }
+
+
     // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
     // back-deployed task path on older runtimes (CI's iOS 26.2 simulator)
     // where nested store release aborts; retain for the process lifetime.
@@ -142,7 +178,106 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
         XCTAssertFalse(store.recordSuccess(profileID: profileID, kind: .completedDay, occurrenceDate: occurrence))
     }
 
+    func testStaleEditorSavePreservesRuntimeProgressAndOtherProfiles() throws {
+        let ui = makeStore()
+        let first = makeEntry { $0.enabledAt = makeDate(year: 2026, month: 8, day: 1) }
+        let other = makeEntry()
+        ui.upsert(first)
+        ui.upsert(other)
+        var draft = try XCTUnwrap(ui.entry(profileID: first.profileID))
+        let runtime = makeStore()
+        runtime.recordSuccess(profileID: first.profileID, kind: .completedDay, occurrenceDate: fixedNow)
+        runtime.recordSuccess(profileID: first.profileID, kind: .todayRefresh, occurrenceDate: fixedNow)
+        runtime.recordSuccess(profileID: other.profileID, kind: .completedDay, occurrenceDate: fixedNow)
+        draft.lookbackDays = 7
+        XCTAssertTrue(ui.upsert(draft))
+        let saved = try XCTUnwrap(runtime.entry(profileID: first.profileID))
+        XCTAssertEqual(saved.lookbackDays, 7)
+        XCTAssertEqual(saved.lastExportDate, fixedNow)
+        XCTAssertEqual(saved.lastTodayRefreshDate, fixedNow)
+        XCTAssertEqual(saved.enabledAt, first.enabledAt)
+        XCTAssertEqual(runtime.entry(profileID: other.profileID)?.lastExportDate, fixedNow)
+        draft.lastExportDate = fixedNow.addingTimeInterval(86_400)
+        draft.lastTodayRefreshDate = fixedNow.addingTimeInterval(86_400)
+        XCTAssertTrue(ui.upsert(draft))
+        XCTAssertEqual(runtime.entry(profileID: first.profileID)?.lastExportDate, fixedNow,
+                       "an editor cannot synthesize runtime success either")
+        XCTAssertEqual(runtime.entry(profileID: first.profileID)?.lastTodayRefreshDate, fixedNow)
+    }
+
+    func testDiscardFenceSurvivesStaleEditorAndRestartWithoutMovingSuccessMarkers() throws {
+        let ui = makeStore()
+        let entry = makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+            $0.lastExportDate = makeDate(year: 2026, month: 8, day: 9, hour: 8)
+        }
+        ui.upsert(entry)
+        var draft = try XCTUnwrap(ui.entry(profileID: entry.profileID))
+        let runtime = makeStore()
+        XCTAssertTrue(runtime.discardPendingRecovery(profileID: entry.profileID))
+        draft.lookbackDays = 14
+        XCTAssertTrue(ui.upsert(draft))
+        let restarted = makeStore()
+        let saved = try XCTUnwrap(restarted.entry(profileID: entry.profileID))
+        XCTAssertEqual(saved.recoveryGeneration, 1)
+        XCTAssertEqual(saved.recoveryDiscardedAt, fixedNow)
+        XCTAssertEqual(saved.lastExportDate, entry.lastExportDate)
+        XCTAssertEqual(saved.lastTodayRefreshDate, entry.lastTodayRefreshDate)
+        XCTAssertEqual(saved.enabledAt, entry.enabledAt)
+        XCTAssertFalse(restarted.recordSuccess(profileID: entry.profileID, kind: .completedDay,
+            occurrenceDate: fixedNow, expectedRecoveryGeneration: 0))
+        XCTAssertTrue(restarted.dueOccurrences(now: fixedNow, calendar: calendar).isEmpty)
+        let next = try XCTUnwrap(restarted.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 11, hour: 9), calendar: calendar).first)
+        XCTAssertEqual(next.recoveryGeneration, 1)
+        XCTAssertEqual(next.fireDate, makeDate(year: 2026, month: 8, day: 11, hour: 8))
+    }
+
+    func testLegacyEntryWithoutRecoveryFieldsDecodesInGenerationZero() throws {
+        let original = makeEntry()
+        let data = try JSONEncoder().encode(original)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "recoveryGeneration")
+        object.removeValue(forKey: "recoveryDiscardedAt")
+        let decoded = try JSONDecoder().decode(ScheduledExportEntry.self,
+            from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(decoded, original)
+        XCTAssertEqual(decoded.recoveryGeneration, 0)
+    }
+
     // MARK: - Legacy migration
+
+    func testLegacyRefreshMigrationPreservesAllSupportedIntervalsAndProgressAcrossReload() throws {
+        for hours in [3, 6, 12] {
+            let suite = "ScheduledExportEntryStoreTests.cadence.\(UUID().uuidString)"
+            let isolated = try XCTUnwrap(UserDefaults(suiteName: suite))
+            addTeardownBlock { isolated.removePersistentDomain(forName: suite) }
+            let store = ScheduledExportEntryStore(userDefaults: isolated)
+            Self.retainedStores.append(store)
+            let profileID = UUID()
+            let completed = makeDate(year: 2026, month: 8, day: 9, hour: 8)
+            let refresh = makeDate(year: 2026, month: 8, day: 9, hour: 20)
+            let legacy = ExportSchedule(
+                isEnabled: true, frequency: .weekly, preferredHour: 8, weekday: 1,
+                lookbackDays: 7, todayRefreshEnabled: true, todayRefreshIntervalHours: hours,
+                lastExportDate: completed, lastTodayRefreshDate: refresh,
+                enabledAt: makeDate(year: 2026, month: 8, day: 1)
+            )
+            XCTAssertTrue(store.migrateLegacyScheduleIfNeeded(legacy: legacy, defaultProfileID: profileID))
+            let reloaded = ScheduledExportEntryStore(userDefaults: isolated)
+            Self.retainedStores.append(reloaded)
+            let entry = try XCTUnwrap(reloaded.entry(profileID: profileID))
+            XCTAssertEqual(entry.todayRefreshIntervalHours, hours)
+            XCTAssertEqual(entry.lastExportDate, completed)
+            XCTAssertEqual(entry.lastTodayRefreshDate, refresh)
+            XCTAssertEqual(entry.enabledAt, legacy.enabledAt)
+            XCTAssertEqual(entry.lookbackDays, 7)
+            XCTAssertEqual(entry.frequency, .weekly)
+            XCTAssertTrue(entry.todayRefreshEnabled)
+            XCTAssertFalse(reloaded.migrateLegacyScheduleIfNeeded(legacy: legacy, defaultProfileID: UUID()))
+            XCTAssertEqual(reloaded.allEntries(), [entry])
+        }
+    }
 
     func testLegacyScheduleMigratesOnceIntoDefaultProfileEntry() {
         let store = makeStore()

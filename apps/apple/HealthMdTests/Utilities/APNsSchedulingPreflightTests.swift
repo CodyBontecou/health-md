@@ -30,7 +30,7 @@ final class APNsSchedulingPreflightTests: XCTestCase {
         XCTAssertEqual(
             entitlements["aps-environment"] as? String,
             "production",
-            "HealthMd/HealthMd.entitlements must use production APNs before release; sandbox/development tokens break server-driven scheduled exports."
+            "HealthMd/HealthMd.entitlements must use production APNs before release; development installs register their signed profile's environment separately."
         )
     }
 
@@ -83,6 +83,8 @@ final class APNsSchedulingPreflightTests: XCTestCase {
             appDelegateSource,
             relativePath: "HealthMd/iOS/HealthMdApp.swift",
             contains: [
+                "if SchedulingManager.shared.isSchedulingActive",
+                "SchedulingManager.shared.refreshScheduledAutomation()",
                 "didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data",
                 "PushRegistrationManager.shared.submitDeviceToken(deviceToken)",
                 "didReceiveRemoteNotification userInfo: [AnyHashable: Any]",
@@ -107,6 +109,7 @@ final class APNsSchedulingPreflightTests: XCTestCase {
                 "let platform: String",
                 "let apnsToken: String",
                 "let bundleId: String",
+                "let apnsEnvironment: APNsEnvironment",
                 "let timezone: String",
                 "let isEnabled: Bool",
                 "let frequency: String",

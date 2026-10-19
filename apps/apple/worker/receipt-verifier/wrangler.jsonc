@@ -1,0 +1,14 @@
+{
+  "name": "healthmd-receipt-verifier",
+  "main": "src/index.js",
+  "workers_dev": true,
+  "preview_urls": true,
+  "compatibility_date": "2025-01-01",
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": { "APNS_HOST": "api.push.apple.com", "DEBUG_FORCE_LEGACY": "false" },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_id": "af7b4ec6-5417-49e9-8f44-2c1c2ed23a50",
+    "migrations_dir": "migrations"
+  }]
+}
