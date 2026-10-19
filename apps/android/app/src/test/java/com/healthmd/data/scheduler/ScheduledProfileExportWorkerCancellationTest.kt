@@ -339,6 +339,58 @@ class ScheduledProfileExportWorkerCancellationTest {
     }
 
     @Test
+    fun `delayed raw cadence and Today Refresh do not capture intervening days`() = runTest {
+        val today = LocalDate.now(ZoneId.of("UTC"))
+        for (target in ExportTarget.entries) {
+            val harness = rawHarness(
+                target = target,
+                todayRefresh = true,
+                entryTransform = { entry ->
+                    entry.copy(anchorEpochDay = today.minusDays(2).toEpochDay(), cadenceValue = 7)
+                },
+            ) {
+                ExportResult(1, 1, target = target, exportMode = ExportMode.RAW_SNAPSHOT)
+            }
+
+            assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.success())
+
+            assertThat(harness.rawRanges).containsExactly(
+                today.minusDays(4) to today.minusDays(3), today to today,
+            ).inOrder()
+            assertThat(harness.history.captured.successCount).isEqualTo(2)
+        }
+    }
+
+    @Test
+    fun `raw recovery captures separated owner dates without exporting completed gaps`() = runTest {
+        val today = LocalDate.now(ZoneId.of("UTC"))
+        val first = today.minusDays(10)
+        val second = today.minusDays(7)
+        for (target in ExportTarget.entries) {
+            val pending = ScheduledProfilePendingExport(
+                id = "separated-raw-retry",
+                ownerEpochDays = listOf(first.toEpochDay(), second.toEpochDay()),
+                fireAtMillis = 1_000L,
+                settingsSnapshotJson = "frozen-raw-snapshot",
+                target = target,
+                profileName = "Frozen raw profile",
+                apiEndpointUrl = "https://example.test/raw",
+                folderUri = "content://synthetic/profile",
+            )
+            val harness = rawHarness(target = target, pending = pending) {
+                ExportResult(1, 1, target = target, exportMode = ExportMode.RAW_SNAPSHOT)
+            }
+
+            assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.success())
+
+            assertThat(harness.rawRanges).containsExactly(first to first, second to second).inOrder()
+            assertThat(harness.history.captured.successCount).isEqualTo(2)
+            assertThat(harness.history.captured.totalCount).isEqualTo(2)
+            assertThat(harness.history.captured.fileCount).isEqualTo(2)
+        }
+    }
+
+    @Test
     fun `raw retry ignores a compatibility operation left by the old profile worker`() = runTest {
         val pending = ScheduledProfilePendingExport(
             id = "old-raw-retry",
@@ -405,7 +457,7 @@ class ScheduledProfileExportWorkerCancellationTest {
     }
 
     @Test
-    fun `raw refresh-only failure leaves no historical residual or completed-day checkpoint`() = runTest {
+    fun `raw refresh-only failure waits for the next slot without a historical checkpoint`() = runTest {
         val harness = rawHarness(todayRefresh = true, refreshOnly = true) { dates ->
             ExportResult(
                 successCount = 0, totalCount = 1,
@@ -414,7 +466,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             )
         }
 
-        assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.retry())
+        assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.success())
 
         assertThat(harness.replacements.captured).isEmpty()
         coVerify(exactly = 1) { harness.entryStore.recordRetry(any(), null, null, emptyList(), 0L) }
@@ -456,16 +508,17 @@ class ScheduledProfileExportWorkerCancellationTest {
         pending: ScheduledProfilePendingExport? = null,
         todayRefresh: Boolean = false,
         refreshOnly: Boolean = false,
+        entryTransform: (ScheduledProfileEntry) -> ScheduledProfileEntry = { it },
         result: (List<LocalDate>) -> ExportResult,
     ): RawHarness {
         val today = LocalDate.now(ZoneId.of("UTC"))
-        val entry = ScheduledProfileEntry(
+        val entry = entryTransform(ScheduledProfileEntry(
             profileId = "raw-profile", isEnabled = true, anchorEpochDay = today.toEpochDay(),
             hour = 0, minute = 0, lookbackDays = 2, zoneId = "UTC",
             todayRefreshEnabled = todayRefresh, todayRefreshIntervalHours = 3,
             lastSuccessEpochMillis = if (refreshOnly) today.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli() else null,
             pendingExports = listOfNotNull(pending),
-        )
+        ))
         val profile = ExportProfile(
             id = entry.profileId, name = "Raw profile", settingsSnapshotJson = "raw-profile-snapshot",
             target = target, apiEndpointUrl = "https://example.test/raw",
@@ -494,7 +547,9 @@ class ScheduledProfileExportWorkerCancellationTest {
         val rawRunner = mockk<RawSnapshotService>(relaxed = true)
         val rawStart = slot<LocalDate>()
         val rawEnd = slot<LocalDate>()
+        val rawRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
         coEvery { rawRunner.exportRange(capture(rawStart), capture(rawEnd), settings, target, null, false) } coAnswers {
+            rawRanges += rawStart.captured to rawEnd.captured
             result(rawStart.captured.datesUntil(rawEnd.captured.plusDays(1)).toList())
         }
         val apiRunner = mockk<APIEndpointExportRunner>(relaxed = true)
@@ -511,7 +566,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             folderAdoption = ProfileFolderAdoptionScope(settingsRepository, profileRepository),
         )
         return RawHarness(worker, entry, entryStore, settings, settingsRepository, healthRepository,
-            rawRunner, apiRunner, exportRepository, rawStart, rawEnd, replacements, history)
+            rawRunner, apiRunner, exportRepository, rawStart, rawEnd, rawRanges, replacements, history)
     }
 
     private data class RawHarness(
@@ -526,6 +581,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val exportRepository: ExportRepository,
         val rawStart: CapturingSlot<LocalDate>,
         val rawEnd: CapturingSlot<LocalDate>,
+        val rawRanges: List<Pair<LocalDate, LocalDate>>,
         val replacements: CapturingSlot<List<ScheduledProfilePendingExport>>,
         val history: CapturingSlot<ExportHistoryEntry>,
     )

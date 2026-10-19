@@ -40,7 +40,13 @@ class ProductCapabilityManifestTest {
         assertEquals(appleCapabilities + "source.private-platform-database", idsWithState(states, "unavailable"))
         assertEquals(
             setOf(
+                "cloud.opt-in-export-receiver",
+                "cloud.read-only-mcp",
+                "account.optional-native-sign-in",
+                "account.selected-portable-profile-sync",
+                "account.local-revision-approval",
                 "core.shared-rust-profile-engine",
+                "automation.api-recovery-authority",
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
@@ -62,6 +68,10 @@ class ProductCapabilityManifestTest {
             "planned",
             pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
+        val claimCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
+        }
+        assertEquals("shared", claimCapability.getValue("classification").jsonPrimitive.content)
 
         capabilities.forEach { capability ->
             val id = capability.getValue("id").jsonPrimitive.content
@@ -95,6 +105,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+            "account.myself_lifetime_claim",
             "export.daily-files",
             "export.sleep-summary",
             "export.activity-basics",
@@ -109,7 +120,10 @@ class ProductCapabilityManifestTest {
             "export.scheduled-today-refresh",
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
+            "automation.discard-pending-recovery",
+            "direct.full_public_authorized_corpus",
             "direct-cli.shared-qr-pairing",
+            "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
         )
 
@@ -120,6 +134,7 @@ class ProductCapabilityManifestTest {
             "apple.wrist-temperature",
             "apple.hearing-and-symptoms",
             "apple.typed-whoop-provider-section",
+            "authorization.history-window-detection",
         )
 
         val androidCapabilities = setOf(
@@ -133,11 +148,18 @@ class ProductCapabilityManifestTest {
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+            "cloud.opt-in-export-receiver",
+            "cloud.read-only-mcp",
+            "account.optional-native-sign-in",
+            "account.selected-portable-profile-sync",
+            "account.local-revision-approval",
             "source.private-platform-database",
+            "automation.api-recovery-authority",
             "direct.cli_agent_push_wake",
             "export.range-summary",
             "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",
+            "account.myself_lifetime_claim",
         )
     }
 }

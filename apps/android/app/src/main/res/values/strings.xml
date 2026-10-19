@@ -518,6 +518,8 @@
     <string name="schedule_through_today_summary">Each run exports the trailing complete days plus today’s partial file, so a daytime run also captures last night’s sleep. Combine with an hourly frequency to refresh both files all day. Use Overwrite or Update write mode to avoid duplicate same-day content.</string>
     <string name="profile_schedule_today_refresh">Refresh today’s export</string>
     <string name="profile_schedule_refresh_interval">Refresh interval</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Refreshes today every %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Refreshes today every %1$d h</string>
     <string name="profile_schedule_discard_recovery">Discard Pending Recovery</string>
@@ -557,11 +559,11 @@
     <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
     <string name="release_notes_open_settings">Open Settings</string>
     <string name="release_notes_got_it">Got it</string>
-    <string name="release_notes_highlight_widgets">Pair with the Health.md desktop CLI by scanning its QR code in the Direct CLI screen.</string>
-    <string name="release_notes_highlight_feedback">Direct CLI sessions reconnect automatically after brief desktop disconnects, so exports finish reliably.</string>
-    <string name="release_notes_highlight_export_parity">Desktop wake-window commands wait up to 120 seconds for you to open the app and connect — no push notifications involved.</string>
-    <string name="release_notes_highlight_templates">Manual pairing still works with the computer address, port, and 20-digit code, including older CLI versions.</string>
-    <string name="release_notes_highlight_workouts">Includes reliability and compatibility fixes across setup, exports, schedules, and connections.</string>
+    <string name="release_notes_highlight_widgets">Scheduled Raw API Snapshot exports use your profile’s raw format for API endpoints and folders.</string>
+    <string name="release_notes_highlight_feedback">Scheduled snapshots include your selected lookback and Today Refresh.</string>
+    <string name="release_notes_highlight_export_parity">Clear a stuck scheduled backlog with Discard pending recovery in the profile schedule.</string>
+    <string name="release_notes_highlight_templates">Your profile, API credentials, and export history stay in place when you discard pending recovery.</string>
+    <string name="release_notes_highlight_workouts">Interrupted recovery cleanup restores the next scheduled run without starting an export.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">Scheduled Exports</string>
@@ -1455,4 +1457,17 @@
     <string name="fdroid_onboarding_access_body">The official F-Droid build includes every local export and automation feature at no charge.</string>
     <string name="fdroid_onboarding_no_purchase">No purchase, restore, price, or Play account is required.</string>
     <string name="fdroid_onboarding_no_play_services">Scheduled exports work without Google Play Billing.</string>
+    <string name="myself_claim_entry">Claim myself.md access</string>
+    <string name="myself_claim_entry_subtitle">Verify an existing Google Play lifetime purchase.</string>
+    <string name="myself_claim_title">myself.md access</string>
+    <string name="myself_claim_intro">Your Health.md lifetime purchase includes complimentary lifetime access to myself.md.</string>
+    <string name="myself_claim_disclosure">When you continue, we’ll read your Google Play purchase proof and send it to myself.md to verify eligibility. Your health and location data stay on your device.</string>
+    <string name="myself_claim_account">Then sign in to choose the myself.md account that receives access. Each original purchase can be linked to one account. Free or grandfathered Android access alone does not qualify.</string>
+    <string name="myself_claim_verify">Verify purchase and continue</string>
+    <string name="myself_claim_verifying">Verifying purchase…</string>
+    <string name="myself_claim_awaiting_user">Finish signing in and confirm the receiving account in your browser. Then sign in with that same account in myself.md. Access is not claimed until you confirm.</string>
+    <string name="myself_claim_no_purchase">No completed Health.md lifetime purchase was found. Use the Google Play account that bought it, then try again. Pending purchases do not qualify.</string>
+    <string name="myself_claim_store_unavailable">Google Play could not retrieve your purchase. Check your connection and Google Play account, then try again.</string>
+    <string name="myself_claim_verification_failed">Your purchase could not be verified. Check your connection and try again. If it continues, contact support; no access has been claimed.</string>
+    <string name="myself_claim_browser_unavailable">The claim browser could not open. Enable a browser, then verify your purchase again to continue.</string>
 </resources>

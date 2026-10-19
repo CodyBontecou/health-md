@@ -60,6 +60,7 @@ import com.healthmd.presentation.common.GeistCardClickable
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.schedule.ProfileCadenceEditorDialog
 import com.healthmd.presentation.schedule.cadenceSummary
+import com.healthmd.presentation.schedule.todayRefreshSummary
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 
@@ -362,11 +363,7 @@ private fun ProfileCard(
                 Text(
                     text = cadenceSummary(
                         row.entry,
-                        stringResource(
-                            R.string.profile_schedule_refresh_summary,
-                            row.entry?.todayRefreshIntervalHours
-                                ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
-                        ),
+                        todayRefreshSummary(row.entry),
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (row.entry?.isEnabled == true) {
@@ -506,11 +503,7 @@ private fun ProfileDetailDialog(
                     "Schedule",
                     cadenceSummary(
                         row.entry,
-                        stringResource(
-                            R.string.profile_schedule_refresh_summary,
-                            row.entry?.todayRefreshIntervalHours
-                                ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
-                        ),
+                        todayRefreshSummary(row.entry),
                     ),
                 )
                 val snapshot = row.snapshot

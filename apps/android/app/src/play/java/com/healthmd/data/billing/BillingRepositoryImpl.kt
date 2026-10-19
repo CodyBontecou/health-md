@@ -4,6 +4,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import com.android.billingclient.api.*
+import com.healthmd.myselfclaim.MyselfClaimException
+import com.healthmd.myselfclaim.MyselfClaimFailure
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import com.healthmd.BuildConfig
 import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.billing.FreemiumPolicy
@@ -85,6 +90,7 @@ class BillingRepositoryImpl(
 
     // Connection admission is confined to [scope], whose dispatcher is Main.
     private var hasCompletedInitialSetup = false
+    private val claimBillingReady = MutableStateFlow(false)
     private var isConnecting = false
     private var initialConnectionRetryAttempts = 0
     private var initialConnectionRetryJob: Job? = null
@@ -162,6 +168,7 @@ class BillingRepositoryImpl(
         if (result.responseCode == BillingClient.BillingResponseCode.OK) {
             Timber.d("Billing client connected successfully")
             hasCompletedInitialSetup = true
+            claimBillingReady.value = true
             initialConnectionRetryAttempts = 0
             initialConnectionRetryJob?.cancel()
             initialConnectionRetryJob = null
@@ -329,6 +336,22 @@ class BillingRepositoryImpl(
             return false
         }
         return result
+    }
+
+    /** Fresh Play evidence only: cached unlocks, debug overrides and legacy installs never qualify. */
+    suspend fun myselfClaimPurchaseToken(): String = withContext(Dispatchers.Main) {
+        if (!hasCompletedInitialSetup) {
+            startInitialConnectionIfNeeded()
+            if (withTimeoutOrNull(15_000) { claimBillingReady.first { it } } != true) {
+                throw MyselfClaimException(MyselfClaimFailure.STORE_UNAVAILABLE)
+            }
+        }
+        val result = queryPurchases("verify myself.md claim purchase")
+        if (result.billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
+            throw MyselfClaimException(MyselfClaimFailure.STORE_UNAVAILABLE)
+        }
+        myselfClaimPurchaseToken(result.purchasesList)
+            ?: throw MyselfClaimException(MyselfClaimFailure.NO_PURCHASE)
     }
 
     private suspend fun refreshPurchaseStatus() {

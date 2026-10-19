@@ -1,0 +1,67 @@
+name: Android native dependency cache
+description: Reuse pinned Rust tooling and Cargo work without skipping source builds.
+inputs:
+  cache-targets:
+    description: 'Cargo build directories to reuse: android, android-cli, cli, or none (clean-source builds).'
+    required: false
+    default: android
+  android-toolchain:
+    description: Install Android Rust targets and pinned cargo-ndk; set false for host-only CLI tests.
+    required: false
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - name: Select native cache paths
+      id: paths
+      shell: bash
+      env:
+        CACHE_TARGETS: ${{ inputs.cache-targets }}
+        ANDROID_TOOLCHAIN: ${{ inputs.android-toolchain }}
+      run: bash "$GITHUB_ACTION_PATH/configure.sh"
+
+    # Only successful main pushes publish caches. PRs and release qualification
+    # runs can reuse main's dependencies without writing back their build state.
+    - name: Cache native dependencies on main
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      with:
+        path: ${{ steps.paths.outputs.dependencies }}
+        key: android-native-v1-${{ runner.os }}-${{ runner.arch }}-rust1.88.0-ndk27.1.12297006-cargo-ndk4.1.2-android-tools${{ inputs.android-toolchain }}-deps-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}
+        restore-keys: |
+          android-native-v1-${{ runner.os }}-${{ runner.arch }}-rust1.88.0-ndk27.1.12297006-cargo-ndk4.1.2-android-tools${{ inputs.android-toolchain }}-deps-
+
+    - name: Restore native dependencies without publishing
+      if: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+      uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      with:
+        path: ${{ steps.paths.outputs.dependencies }}
+        key: android-native-v1-${{ runner.os }}-${{ runner.arch }}-rust1.88.0-ndk27.1.12297006-cargo-ndk4.1.2-android-tools${{ inputs.android-toolchain }}-deps-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}
+        restore-keys: |
+          android-native-v1-${{ runner.os }}-${{ runner.arch }}-rust1.88.0-ndk27.1.12297006-cargo-ndk4.1.2-android-tools${{ inputs.android-toolchain }}-deps-
+
+    # Cache Cargo's actual target directories, not generated JNI output or Gradle
+    # task state. Gradle still invokes Cargo and copies a freshly validated library.
+    - name: Cache Cargo build directories on main
+      if: ${{ inputs.cache-targets != 'none' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      with:
+        path: ${{ steps.paths.outputs.targets }}
+        key: android-native-v1-${{ runner.os }}-${{ runner.arch }}-rust1.88.0-ndk27.1.12297006-cargo-ndk4.1.2-targets-${{ inputs.cache-targets }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-${{ steps.paths.outputs.source }}
+        restore-keys: |
+          android-native-v1-${{ runner.os }}-${{ runner.arch }}-rust1.88.0-ndk27.1.12297006-cargo-ndk4.1.2-targets-${{ inputs.cache-targets }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-
+
+    - name: Restore Cargo build directories without publishing
+      if: ${{ inputs.cache-targets != 'none' && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+      uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      with:
+        path: ${{ steps.paths.outputs.targets }}
+        key: android-native-v1-${{ runner.os }}-${{ runner.arch }}-rust1.88.0-ndk27.1.12297006-cargo-ndk4.1.2-targets-${{ inputs.cache-targets }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-${{ steps.paths.outputs.source }}
+        restore-keys: |
+          android-native-v1-${{ runner.os }}-${{ runner.arch }}-rust1.88.0-ndk27.1.12297006-cargo-ndk4.1.2-targets-${{ inputs.cache-targets }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-
+
+    - name: Verify and install pinned Rust tooling
+      shell: bash
+      env:
+        ANDROID_TOOLCHAIN: ${{ inputs.android-toolchain }}
+      run: bash "$GITHUB_ACTION_PATH/setup-toolchain.sh"

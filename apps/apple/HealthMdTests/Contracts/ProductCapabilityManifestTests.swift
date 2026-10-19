@@ -30,7 +30,15 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            ["core.shared-rust-profile-engine", "setup.share-portable-configuration"]
+            [
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+                "cloud.opt-in-export-receiver",
+                "cloud.read-only-mcp",
+                "account.optional-native-sign-in",
+                "account.selected-portable-profile-sync",
+                "account.local-revision-approval",
+            ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
         XCTAssertEqual(
@@ -40,6 +48,10 @@ final class ProductCapabilityManifestTests: XCTestCase {
         XCTAssertEqual(
             inventory.capabilities.first { $0.id == "direct.cli_agent_push_wake" }?.classification,
             "planned"
+        )
+        XCTAssertEqual(
+            inventory.capabilities.first { $0.id == "account.myself_lifetime_claim" }?.classification,
+            "shared"
         )
 
         for capability in inventory.capabilities {
@@ -84,6 +96,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
     }
 
     private static let sharedCapabilities: Set<String> = [
+        "account.myself_lifetime_claim",
         "export.daily-files",
         "export.sleep-summary",
         "export.activity-basics",
@@ -98,7 +111,10 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.scheduled-today-refresh",
         "core.shared-rust-metric-registry",
         "automation.cancel-active-export",
+        "automation.discard-pending-recovery",
+        "direct.full_public_authorized_corpus",
         "direct-cli.shared-qr-pairing",
+        "direct.full_public_authorized_corpus",
         "direct.cli_agent_wake",
     ]
 
@@ -109,6 +125,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
+        "automation.api-recovery-authority",
         "direct.cli_agent_push_wake",
         "export.range-summary",
         "authorization.history-window-detection",
@@ -128,7 +145,16 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "core.shared-rust-profile-engine", "setup.share-portable-configuration"])
+            .union([
+                "source.private-platform-database",
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+                "cloud.opt-in-export-receiver",
+                "cloud.read-only-mcp",
+                "account.optional-native-sign-in",
+                "account.selected-portable-profile-sync",
+                "account.local-revision-approval",
+            ])
     }
 
     private enum ManifestError: Error {
