@@ -1041,6 +1041,9 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertThrowsError(try store.updateState(jobID: fixture.session.jobID, state: .paused, message: "synthetic stale checkpoint"))
         XCTAssertEqual(try Data(contentsOf: destination), winner)
         XCTAssertEqual(try store.load(jobID: fixture.session.jobID)?.origin, .scheduledIPhone)
+        XCTAssertThrowsError(try store.updateState(jobID: fixture.session.jobID, state: .paused,
+            message: "Observing a winner grants no replacement write authority"))
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
     }
 
     func testExpiryCheckpointConflictRetainsWinningJournalAndSpool() throws {
@@ -1173,9 +1176,32 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
     func testRecoveredProducerUsesPersistedSleepContextInBothMutationDirectionsAndRetainsMissingJournal() async throws {
         let changes: [(SleepDayAttribution?, SleepDayAttribution)] = [(.nightBegins, .morningEnds), (.morningEnds, .nightBegins), (nil, .nightBegins)]
         for (saved, current) in changes {
-            let fixture = try makeFixture(dayCount: 1, sleepAttribution: saved)
+            // An unpinned Morning ends draft models pre-existing disk state; it
+            // must not be admitted as a new successor operation by today's store.
+            let fixture = try makeFixture(dayCount: 1, sleepAttribution: saved == .morningEnds ? .nightBegins : saved)
+            let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            let url = directory.appendingPathComponent("journal.json")
+            let marker = try Data(contentsOf: directory.appendingPathComponent(".journal-generation"))
+            if saved == .morningEnds {
+                var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+                var manifest = try XCTUnwrap(object["exportManifest"] as? [String: Any])
+                var snapshot = try XCTUnwrap(manifest["settingsSnapshot"] as? [String: Any])
+                snapshot["sleepCaptureContext"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(
+                    AppleSleepCaptureContext(timeZone: .current, sleepDayAttribution: .morningEnds)))
+                manifest["settingsSnapshot"] = snapshot
+                object["exportManifest"] = manifest
+                try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]).write(to: url)
+            }
+            let retainedBytes = try Data(contentsOf: url)
             let relaunchedStore = ConnectedCorpusOutboundStore(rootURL: fixture.root)
-            let journal = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            let journal: ConnectedCorpusOutboundJournal
+            if saved == .morningEnds {
+                XCTAssertThrowsError(try relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+                XCTAssertTrue(relaunchedStore.resumableJournals().isEmpty)
+                journal = try JSONDecoder().decode(ConnectedCorpusOutboundJournal.self, from: retainedBytes)
+            } else {
+                journal = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            }
             XCTAssertEqual(journal.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution, saved)
             let healthStore = FakeHealthStore()
             let counter = SleepRecoveryQueryCounter()
@@ -1202,7 +1228,18 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
                 }
                 XCTAssertEqual(counter.count, 0)
             }
-            let retained = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            let retained: ConnectedCorpusOutboundJournal
+            if saved == .morningEnds {
+                retained = try JSONDecoder().decode(ConnectedCorpusOutboundJournal.self, from: Data(contentsOf: url))
+            } else {
+                retained = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            }
+            if saved == .morningEnds {
+                XCTAssertEqual(try Data(contentsOf: url), retainedBytes)
+            } else {
+                XCTAssertEqual(retained.state, .paused, "Disconnected recognized jobs retain ordinary recovery bookkeeping")
+            }
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent(".journal-generation")), marker)
             XCTAssertEqual(retained.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution, saved)
             XCTAssertEqual(retained.session.requestFingerprint, journal.session.requestFingerprint)
             XCTAssertEqual(healthManager.sleepDayAttribution, current)

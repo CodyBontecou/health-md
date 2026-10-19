@@ -175,11 +175,237 @@ enum ConnectedCorpusOutboundStoreError: Error, Equatable {
     case jobNotFound
 }
 
+/// Routes each immutable operation to a fixed namespace store. Accepted bindings
+/// never follow a replacement job into another namespace or generation.
+@MainActor
+final class ConnectedCorpusOutboundStore {
+    nonisolated static let retentionInterval: TimeInterval = 7 * 24 * 60 * 60
+    private struct Identity: Equatable {
+        let namespace: AppleExportJobNamespace
+        let origin: ConnectedCorpusOutboundOrigin
+        let session: ConnectedCorpusTransferSession
+        let manifest: ConnectedCorpusExportManifest
+        let macRequest: IPhoneExportRequest?
+        init(_ journal: ConnectedCorpusOutboundJournal, namespace: AppleExportJobNamespace) {
+            self.init(namespace: namespace, origin: journal.origin, session: journal.session,
+                manifest: journal.exportManifest, macRequest: journal.macRequest)
+        }
+        init(namespace: AppleExportJobNamespace, origin: ConnectedCorpusOutboundOrigin,
+             session: ConnectedCorpusTransferSession, manifest: ConnectedCorpusExportManifest,
+             macRequest: IPhoneExportRequest?) {
+            self.namespace = namespace
+            self.origin = origin
+            self.session = session
+            self.manifest = manifest
+            self.macRequest = macRequest
+        }
+    }
+    private let historicalRoot: URL
+    private let successorRoot: URL
+    private let historical: ConnectedCorpusOutboundNamespaceStore
+    private let successor: ConnectedCorpusOutboundNamespaceStore
+    private let fileManager: FileManager
+    private let available: Bool
+    private var identities: [UUID: Identity] = [:]
+    private var retiredIDs: Set<UUID> = []
+    private var admissionLock: URL {
+        historicalRoot.deletingLastPathComponent().appendingPathComponent(".\(historicalRoot.lastPathComponent).journal.lock")
+    }
+
+    init(rootURL: URL? = nil, fileManager: FileManager = .default,
+         now: @escaping () -> Date = Date.init,
+         directorySync: @escaping (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory) {
+        self.fileManager = fileManager
+        let root: URL
+        let durability: URL
+        if let rootURL {
+            root = rootURL
+            durability = rootURL.deletingLastPathComponent()
+            available = true
+        } else if let support = try? fileManager.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: false) {
+            root = support.appendingPathComponent("Health.md/ConnectedCorpusOutbound", isDirectory: true)
+            durability = support
+            available = true
+        } else {
+            // No fallback storage admission when the durable container is unavailable.
+            root = fileManager.temporaryDirectory.appendingPathComponent("UnavailableConnectedCorpusOutbound")
+            durability = fileManager.temporaryDirectory
+            available = false
+        }
+        historicalRoot = root
+        successorRoot = root.deletingLastPathComponent()
+            .appendingPathComponent(root.lastPathComponent + "SleepAttribution", isDirectory: true)
+        historical = ConnectedCorpusOutboundNamespaceStore(rootURL: root, durabilityRootURL: durability,
+            namespace: .historical, fileManager: fileManager, now: now, directorySync: directorySync)
+        successor = ConnectedCorpusOutboundNamespaceStore(rootURL: successorRoot, durabilityRootURL: durability,
+            namespace: .wakeDate, fileManager: fileManager, now: now, directorySync: directorySync)
+    }
+    nonisolated deinit {}
+    var storageRootURL: URL { historicalRoot }
+
+    @discardableResult
+    func createOrRestore(origin: ConnectedCorpusOutboundOrigin, session: ConnectedCorpusTransferSession,
+                         manifest: ConnectedCorpusExportManifest, macRequest: IPhoneExportRequest? = nil,
+                         expiresAt: Date? = nil) throws -> ConnectedCorpusOutboundJournal {
+        guard available, !retiredIDs.contains(session.jobID) else { throw ConnectedCorpusOutboundStoreError.requestChanged }
+        try manifest.validate()
+        let namespace = try ConnectedCorpusOutboundNamespaceStore.namespace(for: manifest)
+        guard macRequest.map({ $0.jobID == session.jobID }) ?? true,
+              session.protocolVersion >= 2, session.peerBinding != nil,
+              session.requestFingerprint == (try ConnectedCorpusRequestFingerprint.make(for: manifest)) else {
+            throw ConnectedCorpusOutboundStoreError.invalidJournal
+        }
+        let identity = Identity(namespace: namespace, origin: origin, session: session, manifest: manifest, macRequest: macRequest)
+        if let bound = identities[session.jobID], bound != identity { throw ConnectedCorpusOutboundStoreError.requestChanged }
+        if let existing = try existingNamespace(session.jobID), existing != namespace { throw ConnectedCorpusOutboundStoreError.requestChanged }
+        var attributes: [FileAttributeKey: Any] = [.posixPermissions: 0o700]
+        #if os(iOS)
+        attributes[.protectionKey] = FileProtectionType.complete
+        #endif
+        try fileManager.createDirectory(at: historicalRoot.deletingLastPathComponent(),
+            withIntermediateDirectories: true, attributes: attributes)
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: admissionLock)
+        defer { transaction.close() }
+        if let existing = try existingNamespace(session.jobID), existing != namespace { throw ConnectedCorpusOutboundStoreError.requestChanged }
+        let store = namespace == .historical ? historical : successor
+        if let saved = try store.peekJournal(jobID: session.jobID), Identity(saved, namespace: namespace) != identity {
+            throw ConnectedCorpusOutboundStoreError.requestChanged
+        }
+        let result = try store.createOrRestore(origin: origin, session: session, manifest: manifest,
+            macRequest: macRequest, expiresAt: expiresAt)
+        identities[session.jobID] = identity
+        return result
+    }
+
+    func load(jobID: UUID, allowExpired: Bool = false) throws -> ConnectedCorpusOutboundJournal? {
+        guard available else { throw ConnectedCorpusOutboundStoreError.invalidJournal }
+        guard try existingNamespace(jobID) != nil else { return nil }
+        do { return try withStore(jobID, loadIfUnbound: false, observationOnly: true) { try $0.load(jobID: jobID, allowExpired: allowExpired) } }
+        catch ConnectedCorpusOutboundStoreError.jobNotFound { return nil }
+    }
+
+    func resumableJournals() -> [ConnectedCorpusOutboundJournal] {
+        ((try? jobIDs()) ?? []).compactMap { id in
+            guard let journal = try? load(jobID: id), !journal.state.isTerminal else { return nil }
+            return journal
+        }.sorted { $0.updatedAt < $1.updatedAt }
+    }
+
+    func adoptItem(_ item: ConnectedCorpusSpoolItem, expectedIndex: Int, jobID: UUID) throws -> ConnectedCorpusOutboundJournal {
+        try withStore(jobID) { try $0.adoptItem(item, expectedIndex: expectedIndex, jobID: jobID) }
+    }
+    func spoolItems(for journal: ConnectedCorpusOutboundJournal) throws -> [ConnectedCorpusDurablePartitionBuilder.Source] {
+        try withStore(journal.jobID, expected: journal) { try $0.spoolItems(for: journal) }
+    }
+    func adoptPendingPartition(_ partition: ConnectedCorpusPreparedPartition, jobID: UUID) throws -> ConnectedCorpusOutboundJournal {
+        try withStore(jobID) { try $0.adoptPendingPartition(partition, jobID: jobID) }
+    }
+    func preparedPendingPartition(for journal: ConnectedCorpusOutboundJournal) throws -> ConnectedCorpusPreparedPartition? {
+        try withStore(journal.jobID, expected: journal) { try $0.preparedPendingPartition(for: journal) }
+    }
+    func commitPendingPartition(jobID: UUID) throws -> ConnectedCorpusOutboundJournal {
+        try withStore(jobID) { try $0.commitPendingPartition(jobID: jobID) }
+    }
+    func updateState(jobID: UUID, state: ConnectedCorpusOutboundState, message: String?, currentDate: Date? = nil) throws -> ConnectedCorpusOutboundJournal {
+        try withStore(jobID) { try $0.updateState(jobID: jobID, state: state, message: message, currentDate: currentDate) }
+    }
+    func complete(jobID: UUID, acknowledgement: ConnectedCorpusTransferFinalAck) throws -> ConnectedCorpusOutboundJournal {
+        try withStore(jobID) { try $0.complete(jobID: jobID, acknowledgement: acknowledgement) }
+    }
+    @discardableResult
+    func markCompletionRecorded(jobID: UUID) throws -> Bool {
+        try withStore(jobID) { try $0.markCompletionRecorded(jobID: jobID) }
+    }
+    func cancel(jobID: UUID, expired: Bool = false) throws {
+        try withStore(jobID) { try $0.cancel(jobID: jobID, expired: expired) }
+    }
+    func remove(jobID: UUID) throws {
+        guard try existingNamespace(jobID) != nil else { return }
+        try withStore(jobID) { try $0.remove(jobID: jobID) }
+        retiredIDs.insert(jobID)
+        identities[jobID] = nil
+    }
+    @discardableResult
+    func cleanupExpired(now timestamp: Date? = nil) -> [UUID] {
+        guard let ids = try? jobIDs(), !ids.isEmpty,
+              let transaction = try? AtomicFileWriter.beginPublicationTransaction(at: admissionLock) else { return [] }
+        defer { transaction.close() }
+        var eligible: [AppleExportJobNamespace: Set<UUID>] = [:]
+        for id in ids {
+            if (try? withStore(id, operation: { _ in true })) == true, let identity = identities[id] {
+                eligible[identity.namespace, default: []].insert(id)
+            }
+        }
+        var expired: [UUID] = []
+        for (namespace, allowed) in eligible {
+            expired += (namespace == .historical ? historical : successor).cleanupExpired(now: timestamp, allowedJobIDs: allowed)
+        }
+        for id in Array(identities.keys) {
+            do {
+                if try existingNamespace(id) == nil { retiredIDs.insert(id)
+                identities[id] = nil }
+            } catch { /* Unreadable storage is not absence. */ }
+        }
+        return expired
+    }
+    func totalInternalSpoolBytes(jobID: UUID) -> Int64 {
+        (try? withStore(jobID) { $0.totalInternalSpoolBytes(jobID: jobID) }) ?? 0
+    }
+
+    private func root(_ namespace: AppleExportJobNamespace) -> URL { namespace == .historical ? historicalRoot : successorRoot }
+    private func existingNamespace(_ jobID: UUID) throws -> AppleExportJobNamespace? {
+        guard available else { throw ConnectedCorpusOutboundStoreError.invalidJournal }
+        var selected: AppleExportJobNamespace?
+        for namespace in AppleExportJobNamespace.allCases {
+            if try AppleExportJournalRecovery.hasExistingJobDirectory(at:
+                root(namespace).appendingPathComponent(jobID.uuidString.lowercased()), fileManager: fileManager) {
+                guard selected == nil else { throw ConnectedCorpusOutboundStoreError.invalidJournal }
+                selected = namespace
+            }
+        }
+        return selected
+    }
+    private func jobIDs() throws -> Set<UUID> {
+        guard available else { throw ConnectedCorpusOutboundStoreError.invalidJournal }
+        var result: Set<UUID> = []
+        for namespace in AppleExportJobNamespace.allCases {
+            let directory = root(namespace)
+            guard try AppleExportJournalRecovery.hasExistingJobDirectory(at: directory, fileManager: fileManager) else { continue }
+            for entry in try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+                if let id = UUID(uuidString: entry.lastPathComponent), id.uuidString.lowercased() == entry.lastPathComponent { result.insert(id) }
+            }
+        }
+        return result
+    }
+    private func withStore<Result>(_ jobID: UUID, expected: ConnectedCorpusOutboundJournal? = nil,
+                                  loadIfUnbound: Bool = true, observationOnly: Bool = false,
+                                  operation: (ConnectedCorpusOutboundNamespaceStore) throws -> Result) throws -> Result {
+        guard available, !retiredIDs.contains(jobID) else { throw ConnectedCorpusOutboundStoreError.requestChanged }
+        guard let first = try existingNamespace(jobID) else { throw ConnectedCorpusOutboundStoreError.jobNotFound }
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: admissionLock)
+        defer { transaction.close() }
+        guard try existingNamespace(jobID) == first else { throw ConnectedCorpusOutboundStoreError.requestChanged }
+        if let bound = identities[jobID], bound.namespace != first { throw ConnectedCorpusOutboundStoreError.requestChanged }
+        let store = first == .historical ? historical : successor
+        guard let journal = try store.peekJournal(jobID: jobID) else { throw ConnectedCorpusOutboundStoreError.jobNotFound }
+        let identity = Identity(journal, namespace: first)
+        if let bound = identities[jobID], bound != identity {
+            guard observationOnly, bound.namespace == identity.namespace,
+                  bound.session == identity.session, bound.manifest == identity.manifest,
+                  bound.macRequest == identity.macRequest else { throw ConnectedCorpusOutboundStoreError.requestChanged }
+        }
+        if let expected, Identity(expected, namespace: first) != identity { throw ConnectedCorpusOutboundStoreError.requestChanged }
+        if identities[jobID] == nil { identities[jobID] = identity }
+        return try store.withOwnership(jobID: jobID, loadIfUnbound: loadIfUnbound) { try operation(store) }
+    }
+}
+
 /// Protected, atomically journaled storage for resumable iPhone corpus senders.
 /// The type is shared so recovery invariants can be tested on macOS, while the
 /// production root is the iPhone Application Support container.
 @MainActor
-final class ConnectedCorpusOutboundStore {
+private final class ConnectedCorpusOutboundNamespaceStore {
     nonisolated static let retentionInterval: TimeInterval = 7 * 24 * 60 * 60
 
     private let rootURL: URL
@@ -189,35 +415,21 @@ final class ConnectedCorpusOutboundStore {
     private let directorySync: (URL) throws -> Void
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
-    private var checkpointBytes: [UUID: Data] = [:]
+    private var checkpoints: [UUID: AppleExportJournalCheckpoint] = [:]
+    private let namespace: AppleExportJobNamespace
     private var publicationLockURL: URL {
         rootURL.deletingLastPathComponent().appendingPathComponent(".\(rootURL.lastPathComponent).journal.lock")
     }
 
-    init(
-        rootURL: URL? = nil,
-        fileManager: FileManager = .default,
-        now: @escaping () -> Date = Date.init,
-        directorySync: @escaping (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory
-    ) {
+    init(rootURL: URL, durabilityRootURL: URL, namespace: AppleExportJobNamespace,
+         fileManager: FileManager, now: @escaping () -> Date,
+         directorySync: @escaping (URL) throws -> Void) {
+        self.rootURL = rootURL
+        self.durabilityRootURL = durabilityRootURL
+        self.namespace = namespace
         self.fileManager = fileManager
         self.now = now
         self.directorySync = directorySync
-        if let rootURL {
-            self.rootURL = rootURL
-            self.durabilityRootURL = rootURL.deletingLastPathComponent()
-        } else {
-            let support = (try? fileManager.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
-            )) ?? fileManager.temporaryDirectory
-            self.durabilityRootURL = support
-            self.rootURL = support
-                .appendingPathComponent("Health.md", isDirectory: true)
-                .appendingPathComponent("ConnectedCorpusOutbound", isDirectory: true)
-        }
         let encoder = JSONEncoder()
         encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -296,25 +508,34 @@ final class ConnectedCorpusOutboundStore {
 
         let url = journalURL(jobID: jobID)
         var journal: ConnectedCorpusOutboundJournal
+        var validationFailure: Error?
         do {
-            guard let saved: ConnectedCorpusOutboundJournal = try AppleExportJournalRecovery.load(
-                at: url, fileManager: fileManager, decoder: decoder,
-                directoryDurability: .required(upTo: durabilityRootURL),
-                directorySync: directorySync,
-                didLoadBytes: { checkpointBytes[jobID] = $0 },
-                isSupported: { saved in
-                    saved.jobID == jobID && (1...ConnectedCorpusOutboundJournal.currentVersion).contains(saved.version)
-                }
-            ) else { return nil }
-            journal = saved
+            try validateCachedGeneration(jobID: jobID)
+            guard let saved: (journal: ConnectedCorpusOutboundJournal, checkpoint: AppleExportJournalCheckpoint) =
+                try AppleExportJournalRecovery.loadOwned(at: url, lockURL: publicationLockURL,
+                    durabilityRoot: durabilityRootURL, fileManager: fileManager, decoder: decoder,
+                    attributes: protectedAttributes(permissions: 0o600), directorySync: directorySync,
+                    legacyCompletionIdentity: { $0.jobID }, isSupported: { saved in
+                        guard saved.jobID == jobID,
+                              (1...ConnectedCorpusOutboundJournal.currentVersion).contains(saved.version) else { return false }
+                        do {
+                            var current = saved
+                            current.version = ConnectedCorpusOutboundJournal.currentVersion
+                            try self.validate(current)
+                            try self.validateFiles(current)
+                            return true
+                        } catch {
+                            validationFailure = error
+                            return false
+                        }
+                    }) else { return nil }
+            checkpoints[jobID] = saved.checkpoint
+            journal = saved.journal
             let requiresMigration = journal.version < ConnectedCorpusOutboundJournal.currentVersion
             journal.version = ConnectedCorpusOutboundJournal.currentVersion
-            try validate(journal)
-            try validateFiles(journal)
             if requiresMigration { try persist(&journal) }
-        } catch let error as ConnectedCorpusOutboundStoreError {
-            throw error
         } catch {
+            if let failure = (validationFailure ?? error) as? ConnectedCorpusOutboundStoreError { throw failure }
             throw ConnectedCorpusOutboundStoreError.invalidJournal
         }
         if !allowExpired, journal.expiresAt <= now(), !journal.state.isTerminal {
@@ -651,11 +872,11 @@ final class ConnectedCorpusOutboundStore {
             try fileManager.removeItem(at: directory)
         }
         if fileManager.fileExists(atPath: rootURL.path) { try synchronizeStorageDirectory(rootURL) }
-        checkpointBytes[jobID] = nil
+        checkpoints[jobID] = nil
     }
 
     @discardableResult
-    func cleanupExpired(now timestamp: Date? = nil) -> [UUID] {
+    func cleanupExpired(now timestamp: Date? = nil, allowedJobIDs: Set<UUID>) -> [UUID] {
         guard let transaction = try? beginStoreTransaction() else { return [] }
         defer { transaction.close() }
 
@@ -668,6 +889,7 @@ final class ConnectedCorpusOutboundStore {
         var expired: [UUID] = []
         for directory in directories {
             guard let jobID = UUID(uuidString: directory.lastPathComponent),
+                  allowedJobIDs.contains(jobID),
                   var journal = try? load(jobID: jobID, allowExpired: true),
                   journal.expiresAt <= timestamp else { continue }
             if journal.state == .expired {
@@ -774,6 +996,9 @@ final class ConnectedCorpusOutboundStore {
             throw ConnectedCorpusOutboundStoreError.invalidJournal
         }
         try journal.exportManifest.validate()
+        guard try Self.namespace(for: journal.exportManifest) == namespace else {
+            throw ConnectedCorpusOutboundStoreError.invalidJournal
+        }
         if journal.state == .completed {
             guard journal.items.isEmpty,
                   journal.pendingPartition == nil,
@@ -838,21 +1063,69 @@ final class ConnectedCorpusOutboundStore {
         let data = try encoder.encode(journal)
         let destination = journalURL(jobID: journal.jobID)
         do {
-            try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
-                attributes: protectedAttributes(permissions: 0o600),
-                commitPolicy: freshAdmission ? .requireAbsent : .replaceIfUnchanged(try expectedCheckpointBytes(jobID: journal.jobID)),
-                transactionLockURL: publicationLockURL,
-                directoryDurability: .required(upTo: durabilityRootURL),
-                directorySync: directorySync)
-            checkpointBytes[journal.jobID] = data
+            var checkpoint = freshAdmission ? AppleExportJournalCheckpoint() : try expectedCheckpoint(jobID: journal.jobID)
+            try checkpoint.publish(data, to: destination, freshAdmission: freshAdmission,
+                lockURL: publicationLockURL, durabilityRoot: durabilityRootURL, fileManager: fileManager,
+                attributes: protectedAttributes(permissions: 0o600), directorySync: directorySync)
+            checkpoints[journal.jobID] = checkpoint
         } catch let error as POSIXError where error.code == .EAGAIN || (freshAdmission && error.code == .EEXIST) {
             throw ConnectedCorpusOutboundStoreError.requestChanged
         }
     }
 
-    private func expectedCheckpointBytes(jobID: UUID) throws -> Data {
-        guard let bytes = checkpointBytes[jobID] else { throw ConnectedCorpusOutboundStoreError.invalidJournal }
-        return bytes
+    private func expectedCheckpoint(jobID: UUID) throws -> AppleExportJournalCheckpoint {
+        guard let checkpoint = checkpoints[jobID] else { throw ConnectedCorpusOutboundStoreError.invalidJournal }
+        return checkpoint
+    }
+
+    private func validateCachedGeneration(jobID: UUID) throws {
+        guard let checkpoint = checkpoints[jobID] else { return }
+        do { try checkpoint.validateGeneration(fileManager: fileManager) }
+        catch {
+            guard (try? fileManager.attributesOfItem(atPath: journalURL(jobID: jobID).path)[.type] as? FileAttributeType) == .typeRegular else {
+                throw ConnectedCorpusOutboundStoreError.invalidJournal
+            }
+            throw ConnectedCorpusOutboundStoreError.requestChanged
+        }
+    }
+
+    func withOwnership<Result>(jobID: UUID, loadIfUnbound: Bool, operation: () throws -> Result) throws -> Result {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+        try validateCachedGeneration(jobID: jobID)
+        if checkpoints[jobID] == nil, loadIfUnbound {
+            guard try load(jobID: jobID, allowExpired: true) != nil else { throw ConnectedCorpusOutboundStoreError.jobNotFound }
+        }
+        return try operation()
+    }
+
+    func peekJournal(jobID: UUID) throws -> ConnectedCorpusOutboundJournal? {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+        do {
+            try validateCachedGeneration(jobID: jobID)
+            guard let journal: ConnectedCorpusOutboundJournal = try AppleExportJournalRecovery.load(
+                at: journalURL(jobID: jobID), fileManager: fileManager, decoder: decoder,
+                isSupported: { $0.jobID == jobID && (1...ConnectedCorpusOutboundJournal.currentVersion).contains($0.version) }) else { return nil }
+            var current = journal
+            current.version = ConnectedCorpusOutboundJournal.currentVersion
+            try validate(current)
+            return journal
+        } catch let error as ConnectedCorpusOutboundStoreError { throw error }
+        catch { throw ConnectedCorpusOutboundStoreError.invalidJournal }
+    }
+
+    static func namespace(for manifest: ConnectedCorpusExportManifest) throws -> AppleExportJobNamespace {
+        let selected = try AppleExportJobNamespace.resolve(manifest.settingsSnapshot)
+        if selected == .wakeDate {
+            let context = try manifest.settingsSnapshot.validatedSleepCaptureContext()
+            guard manifest.effectiveAppleExportEnginePin == manifest.settingsSnapshot.appleExportEnginePin,
+                  manifest.effectiveOriginalCalendarTimeZoneIdentifier == context.calendarTimeZoneIdentifier,
+                  manifest.sourceTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))?.identifier == context.calendarTimeZoneIdentifier else {
+                throw ConnectedCorpusOutboundStoreError.invalidJournal
+            }
+        }
+        return selected
     }
 
     private func prepareDirectories(jobID: UUID) throws {

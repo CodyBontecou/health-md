@@ -1,9 +1,21 @@
 import Foundation
 
 /// Private storage identities; these never enter a journal or protocol payload.
-nonisolated enum AppleDirectJobNamespace: CaseIterable, Equatable, Sendable {
+nonisolated enum AppleExportJobNamespace: CaseIterable, Hashable, Sendable {
     case historical
     case wakeDate
+
+    @MainActor
+    static func resolve(_ snapshot: ExportSettingsSnapshot) throws -> Self {
+        let context = snapshot.sleepCaptureContext
+        if context?.sleepDayAttribution == .morningEnds
+            || context?.exportProfileID == "apple-v11" || snapshot.appleExportEnginePin?.isWakeDate == true {
+            let validated = try snapshot.validatedSleepCaptureContext()
+            guard validated.sleepDayAttribution == .morningEnds else { throw POSIXError(.EAGAIN) }
+            return .wakeDate
+        }
+        return .historical
+    }
 }
 
 nonisolated enum AppleDirectJobKind: Equatable, Sendable {
@@ -16,36 +28,29 @@ struct AppleDirectJobStorage {
     let support: URL
     let fileManager: FileManager
 
-    func namespace(for snapshot: ExportSettingsSnapshot) throws -> AppleDirectJobNamespace {
-        let context = snapshot.sleepCaptureContext
-        if context?.sleepDayAttribution == .morningEnds
-            || context?.exportProfileID == "apple-v11" || snapshot.appleExportEnginePin?.isWakeDate == true {
-            let validated = try snapshot.validatedSleepCaptureContext()
-            guard validated.sleepDayAttribution == .morningEnds else { throw POSIXError(.EAGAIN) }
-            return .wakeDate
-        }
-        return .historical
+    func namespace(for snapshot: ExportSettingsSnapshot) throws -> AppleExportJobNamespace {
+        try AppleExportJobNamespace.resolve(snapshot)
     }
 
-    func root(_ namespace: AppleDirectJobNamespace) -> URL {
+    func root(_ namespace: AppleExportJobNamespace) -> URL {
         support.appendingPathComponent("Health.md", isDirectory: true)
             .appendingPathComponent(namespace == .historical ? "DirectCLIOutbound" : "DirectCLIOutboundSleepAttribution", isDirectory: true)
             .appendingPathComponent("v1", isDirectory: true)
     }
 
-    func lock(_ namespace: AppleDirectJobNamespace) -> URL {
+    func lock(_ namespace: AppleExportJobNamespace) -> URL {
         root(namespace).deletingLastPathComponent().appendingPathComponent(".v1.journal.lock")
     }
 
-    func job(_ jobID: UUID, namespace: AppleDirectJobNamespace, kind: AppleDirectJobKind) -> URL {
+    func job(_ jobID: UUID, namespace: AppleExportJobNamespace, kind: AppleDirectJobKind) -> URL {
         let directory = root(namespace).appendingPathComponent(jobID.uuidString.lowercased(), isDirectory: true)
         return kind == .files ? directory.appendingPathComponent("files", isDirectory: true) : directory
     }
 
     /// Includes partial/unknown job directories. Ambiguity is never fresh work.
-    func existingNamespace(jobID: UUID) throws -> AppleDirectJobNamespace? {
-        var result: AppleDirectJobNamespace?
-        for namespace in AppleDirectJobNamespace.allCases {
+    func existingNamespace(jobID: UUID) throws -> AppleExportJobNamespace? {
+        var result: AppleExportJobNamespace?
+        for namespace in AppleExportJobNamespace.allCases {
             if try AppleExportJournalRecovery.hasExistingJobDirectory(
                 at: job(jobID, namespace: namespace, kind: .raw), fileManager: fileManager) {
                 guard result == nil else { throw AppleExportJournalRecovery.RecoveryError.unreadableJournal }
@@ -55,7 +60,7 @@ struct AppleDirectJobStorage {
         return result
     }
 
-    func existingDirectory(jobID: UUID, kind: AppleDirectJobKind) throws -> (AppleDirectJobNamespace, URL)? {
+    func existingDirectory(jobID: UUID, kind: AppleDirectJobKind) throws -> (AppleExportJobNamespace, URL)? {
         guard let namespace = try existingNamespace(jobID: jobID) else { return nil }
         let directory = job(jobID, namespace: namespace, kind: kind)
         guard try AppleExportJournalRecovery.hasExistingJobDirectory(at: directory, fileManager: fileManager) else { return nil }
@@ -69,7 +74,7 @@ struct AppleDirectJobStorage {
         return try AtomicFileWriter.beginPublicationTransaction(at: directory.appendingPathComponent(".direct-job-namespaces.lock"))
     }
 
-    func prepareDirectory(jobID: UUID, kind: AppleDirectJobKind, snapshot: ExportSettingsSnapshot) throws -> (AppleDirectJobNamespace, URL) {
+    func prepareDirectory(jobID: UUID, kind: AppleDirectJobKind, snapshot: ExportSettingsSnapshot) throws -> (AppleExportJobNamespace, URL) {
         let selected = try namespace(for: snapshot)
         if let existing = try existingNamespace(jobID: jobID), existing != selected { throw POSIXError(.EAGAIN) }
         let directory = job(jobID, namespace: selected, kind: kind)
@@ -82,7 +87,7 @@ struct AppleDirectJobStorage {
 
     /// Continuations retain their accepted location; discovery cannot redirect an old receipt.
     func boundDirectory(jobID: UUID, kind: AppleDirectJobKind, snapshot: ExportSettingsSnapshot,
-                        checkpoint: AppleExportJournalCheckpoint) throws -> (AppleDirectJobNamespace, URL) {
+                        checkpoint: AppleExportJournalCheckpoint) throws -> (AppleExportJobNamespace, URL) {
         let selected = try namespace(for: snapshot)
         guard try existingNamespace(jobID: jobID) == selected,
               let saved = checkpoint.journalURL, let savedLock = checkpoint.publicationLockURL else { throw POSIXError(.EAGAIN) }
