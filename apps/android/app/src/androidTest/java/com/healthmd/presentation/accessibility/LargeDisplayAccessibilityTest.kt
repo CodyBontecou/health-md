@@ -74,7 +74,7 @@ import java.io.File
 
 /** Real Compose measurements and pointer taps; no health, storage, or billing side effects. */
 @RunWith(Parameterized::class)
-class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
+class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCase) {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
@@ -122,32 +122,13 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         }
     }
 
-    data class DisplayCase(
-        val width: Int,
-        val height: Int,
-        val fontScale: Float,
-        val language: String = "en",
-        val dark: Boolean = false,
-    )
-
     companion object {
         private const val VIEWPORT = "accessibility.viewport"
         private const val LAST_ACTION = "Last action"
 
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun displays() = listOf(
-            DisplayCase(411, 720, 1f),
-            DisplayCase(320, 640, 1f), // enlarged display with the default font setting
-            DisplayCase(320, 480, 1.3f),
-            DisplayCase(320, 480, 2f),
-            DisplayCase(320, 640, 2f),
-            DisplayCase(568, 280, 2f),
-            DisplayCase(640, 280, 2f),
-            DisplayCase(320, 480, 2f, language = "de", dark = true),
-            DisplayCase(320, 480, 2f, language = "ar", dark = true),
-            DisplayCase(320, 640, 2f, language = "ja"), // period-before-hour locale
-        ).map { arrayOf(it) }
+        fun displays() = accessibilityDisplays()
     }
 
     private fun configuration(base: Configuration) = Configuration(base).apply {

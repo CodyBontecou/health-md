@@ -134,6 +134,9 @@ enum SharedSetupV2Mapper {
             semanticUnion.formUnion(individualSemantic.keys)
 
             let scheduledEntry = scheduleByProfile[nativeProfile.id]
+            if let entry = scheduledEntry, entry.todayRefreshMinutes < 180 {
+                throw SharedSetupV2Error.invalid("Shared Setup v2 cannot represent 30-minute or hourly Today Refresh. Choose a 3/6/12-hour interval before sharing this profile.")
+            }
             let schedule = try scheduledEntry.map {
                 try scheduleIntent(from: $0, calendar: calendar)
             }

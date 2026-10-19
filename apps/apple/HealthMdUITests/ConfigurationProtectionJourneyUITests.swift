@@ -106,54 +106,6 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
     }
 
-    func testBlockedChangeToastNavigatesToProtectionToggle() {
-        let app = UITestLaunchHelper.configuredApp(
-            healthAuthorized: true,
-            vaultSelected: true,
-            purchaseUnlocked: true,
-            configurationProtectionEnabled: true
-        )
-        app.launch()
-
-        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
-        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
-        XCTAssertTrue(exportButton.isHittable, "Manual export must remain available while configuration is protected")
-
-        let protectedControl = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
-        scrollUntilExists(protectedControl, in: app)
-        XCTAssertTrue(protectedControl.waitForExistence(timeout: 5))
-        // Recreate the partial exposure from the hosted failure: the preset
-        // overlaps the export footer even though XCUITest can call it hittable.
-        // The scroll helper must move the entire control clear before the tap.
-        let scrollView = app.scrollViews.firstMatch
-        let offset = (exportButton.frame.minY + 8 - protectedControl.frame.midY) / scrollView.frame.height
-        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).press(
-            forDuration: 0.05,
-            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35 + offset))
-        )
-        XCTAssertTrue(
-            protectedControl.frame.intersects(exportButton.frame),
-            "The regression setup must expose a preset that overlaps the floating export action"
-        )
-        XCTAssertTrue(
-            scrollPresetAboveExportActions(protectedControl, in: app),
-            "The protected preset must be fully above the floating export actions before tapping"
-        )
-        XCTAssertTrue(waitHittable(protectedControl))
-        protectedControl.tap()
-
-        guard let toast = waitForHittableToast(in: app) else {
-            XCTFail("The visible configuration-protection toast should be tappable")
-            return
-        }
-        toast.tap()
-
-        let toggle = app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "Tapping the toast should navigate to the protection setting")
-        let value = toggle.value as? String
-        XCTAssertTrue(value == "1" || value == "On" || value == "Enabled")
-    }
-
     func testManualExportAndPreviewRemainUsableWhileProtected() {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,

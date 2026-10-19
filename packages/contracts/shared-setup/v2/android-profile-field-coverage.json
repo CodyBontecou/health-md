@@ -1434,6 +1434,30 @@
     },
     {
       "source_type": "ScheduledProfileEntry",
+      "serialized_field": "todayRefreshIntervalMinutes",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "todayRefreshPersistenceVersion",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "todayRefreshRequestedV2",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
       "serialized_field": "weekdayIso",
       "coverage_kind": "descriptor",
       "disposition": "schedule_intent",

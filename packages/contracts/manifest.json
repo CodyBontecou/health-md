@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "4262bac3adc95734509ab9aef94d123baca78604bb10b40d928c9c3ba136577f",
+      "sha256": "239e1f20af03c938f2426ebe1f2bd3c14f29c275f3f56d3afa395eed421ad0e8",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",

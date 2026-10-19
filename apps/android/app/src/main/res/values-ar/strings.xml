@@ -648,6 +648,8 @@
     <string name="schedule_through_today_summary">كل عملية تشغيل تصدّر الأيام الكاملة السابقة بالإضافة إلى ملف اليوم الجزئي، لذا فإن التشغيل أثناء النهار يلتقط أيضًا نوم الليلة الماضية. ادمجها مع تكرار كل ساعة لتحديث الملفين طوال اليوم. استخدم وضع الكتابة «استبدال» أو «تحديث» لتجنب تكرار محتوى اليوم نفسه.</string>
     <string name="profile_schedule_today_refresh">تحديث تصدير اليوم</string>
     <string name="profile_schedule_refresh_interval">فاصل التحديث</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d د</string>
+    <string name="profile_schedule_refresh_summary_minutes">يحدّث اليوم كل %1$d د</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d س</string>
     <string name="profile_schedule_refresh_summary">يحدّث اليوم كل %1$d س</string>
     <string name="profile_schedule_discard_recovery">إلغاء الاستعادة المعلّقة</string>
@@ -1605,4 +1607,18 @@
     <string name="fdroid_onboarding_access_body">يتضمن إصدار F-Droid الرسمي جميع ميزات التصدير المحلي والأتمتة مجانًا.</string>
     <string name="fdroid_onboarding_no_purchase">لا يلزم شراء أو استعادة أو سعر أو حساب Play.</string>
     <string name="fdroid_onboarding_no_play_services">تعمل عمليات التصدير المجدولة بدون Google Play Billing.</string>
+
+    <string name="myself_claim_entry">المطالبة بالوصول إلى myself.md</string>
+    <string name="myself_claim_entry_subtitle">تحقق من عملية شراء دائمة سابقة عبر Google Play.</string>
+    <string name="myself_claim_title">الوصول إلى myself.md</string>
+    <string name="myself_claim_intro">تتضمن عملية شراء Health.md الدائمة وصولاً مجانياً مدى الحياة إلى myself.md.</string>
+    <string name="myself_claim_disclosure">عند المتابعة، سنقرأ إثبات شراء Google Play ونرسله إلى myself.md للتحقق من الأهلية. تبقى بيانات صحتك وموقعك على جهازك.</string>
+    <string name="myself_claim_account">ثم سجّل الدخول لاختيار حساب myself.md الذي سيحصل على الوصول. يمكن ربط كل عملية شراء أصلية بحساب واحد. الوصول المجاني أو المحتفظ به من إصدار Android قديم وحده لا يؤهل.</string>
+    <string name="myself_claim_verify">التحقق من الشراء والمتابعة</string>
+    <string name="myself_claim_verifying">جارٍ التحقق من الشراء…</string>
+    <string name="myself_claim_awaiting_user">أكمل تسجيل الدخول وأكّد الحساب المستلم في المتصفح. ثم استخدم الحساب نفسه في myself.md. لن يُمنح الوصول قبل تأكيدك.</string>
+    <string name="myself_claim_no_purchase">لم يُعثر على عملية شراء دائمة مكتملة لـ Health.md. استخدم حساب Google Play الذي اشترى التطبيق وحاول مجدداً. المشتريات المعلّقة غير مؤهلة.</string>
+    <string name="myself_claim_store_unavailable">تعذّر على Google Play جلب عملية الشراء. تحقق من الاتصال وحساب Google Play وحاول مجدداً.</string>
+    <string name="myself_claim_verification_failed">تعذّر التحقق من الشراء. تحقق من الاتصال وحاول مجدداً. إذا استمرت المشكلة، تواصل مع الدعم؛ لم يُمنح أي وصول.</string>
+    <string name="myself_claim_browser_unavailable">تعذّر فتح المتصفح. فعّل متصفحاً وأعد التحقق من الشراء للمتابعة.</string>
 </resources>

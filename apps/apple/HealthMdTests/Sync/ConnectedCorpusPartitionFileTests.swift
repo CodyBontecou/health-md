@@ -959,7 +959,10 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
             peak = ConnectedCorpusPartitionFileTests.currentResidentBytes()
             lock.unlock()
             group.enter()
-            DispatchQueue.global(qos: .utility).async { [self] in
+            // XCTest runs this synchronous test at user-interactive QoS. Match
+            // the waiting thread so stop() does not introduce a priority
+            // inversion or trigger expensive runtime-issue diagnostics.
+            DispatchQueue.global(qos: .userInteractive).async { [self] in
                 defer { group.leave() }
                 while true {
                     lock.lock()

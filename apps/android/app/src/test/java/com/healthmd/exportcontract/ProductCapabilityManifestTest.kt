@@ -45,7 +45,6 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
-                "account.myself_lifetime_claim",
                 "settings.sleep-attribution",
             ),
             idsWithState(states, "planned"),
@@ -78,7 +77,7 @@ class ProductCapabilityManifestTest {
         val claimCapability = capabilities.single {
             it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
         }
-        assertEquals("planned", claimCapability.getValue("classification").jsonPrimitive.content)
+        assertEquals("shared", claimCapability.getValue("classification").jsonPrimitive.content)
 
         capabilities.forEach { capability ->
             val id = capability.getValue("id").jsonPrimitive.content
@@ -112,6 +111,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+            "account.myself_lifetime_claim",
             "export.daily-files",
             "export.sleep-summary",
             "export.activity-basics",

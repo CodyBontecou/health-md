@@ -9,11 +9,20 @@ on:
     # pull requests are path-filtered by the changes job so the stable gate
     # still reports a conclusive context on every PR.
     paths:
+      - 'AGENTS.md'
+      - '.github/actions/**'
       - 'apps/apple/**'
+      - 'apps/website/external-sources.json'
+      - 'apps/website/assets/healthmd-plugin-visualizations.js'
+      - 'apps/website/assets/visualizations-data/health-sample.json'
+      - 'apps/website/assets/visualizations-data/health-rollups.json'
       - 'packages/contracts/**'
       - 'packages/healthmd-core-rust/**'
       - 'Makefile'
+      - '.github/workflows/README.md'
       - '.github/workflows/apple-ci.yml'
+      - '.github/workflows/apple-nightly.yml'
+      - '.github/workflows/release-ios.yml'
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -22,6 +31,11 @@ on:
         description: Exact commit to qualify
         required: false
         type: string
+      full_qualification:
+        description: Run every job when qualifying a reusable workflow caller
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,25 +51,33 @@ jobs:
       pull-requests: read
     outputs:
       run: ${{ steps.detect.outputs.run }}
+      prepare: ${{ steps.detect.outputs.prepare }}
+      ios: ${{ steps.detect.outputs.ios }}
+      ios_ui: ${{ steps.detect.outputs.ios_ui }}
+      macos: ${{ steps.detect.outputs.macos }}
+      connectivity: ${{ steps.detect.outputs.connectivity }}
     steps:
-      - name: Check out source for the local composite action
+      - name: Check out source for job selection
         uses: actions/checkout@v6
-      - name: Detect whether Apple CI must run
-        id: detect
-        uses: ./.github/actions/component-changes
         with:
-          component: Apple CI
-          paths: |
-            apps/apple/**
-            packages/contracts/**
-            packages/healthmd-core-rust/**
-            Makefile
-            .github/workflows/apple-ci.yml
+          ref: ${{ inputs.release_sha || github.sha }}
+      - name: Test Apple PR routing and final gate
+        run: python3 -m unittest discover -s apps/apple/scripts/tests -p 'test_apple_ci_*.py'
+      - name: Validate Apple documentation links
+        # Links can target any repository file, including files in skipped jobs.
+        run: python3 apps/apple/scripts/check-documentation-links.py
+      - name: Detect which Apple jobs must run
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_FULL_QUALIFICATION: ${{ inputs.full_qualification || false }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: python3 apps/apple/scripts/apple-ci-plan.py --release-sha "$RELEASE_SHA"
 
   prepare-shared-core:
     name: Prepare shared Rust core once
     needs: changes
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.prepare == 'true' }}
     runs-on: macos-26
     timeout-minutes: 20
     defaults:
@@ -114,7 +136,7 @@ jobs:
 
   test-ios:
     needs: [changes, prepare-shared-core]
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.ios == 'true' }}
     # Notelet requires Swift tools 6.3. The macos-26 hosted image includes
     # Xcode 26.6, so PR validation does not depend on a self-hosted runner.
     runs-on: macos-26
@@ -263,7 +285,7 @@ jobs:
 
   test-macos:
     needs: [changes, prepare-shared-core]
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.macos == 'true' }}
     # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
     runs-on: macos-26
     timeout-minutes: 75
@@ -301,6 +323,9 @@ jobs:
       - name: Validate macOS localizations
         run: make check-macos-localizations
 
+      - name: Test reference documentation runner policy
+        run: python3 -m unittest discover -s scripts/tests -p 'test_reference_docs_runner.py'
+
       - name: Run macOS unit tests with coverage
         timeout-minutes: 45
         run: |
@@ -310,7 +335,7 @@ jobs:
 
       - name: Verify generated export documentation
         if: ${{ success() }}
-        run: make check-export-docs
+        run: make check-export-docs-after-tests
 
       - name: Coverage summary
         if: ${{ !cancelled() }}
@@ -343,7 +368,7 @@ jobs:
   test-ios-ui:
     name: iOS UI regressions
     needs: [changes, prepare-shared-core]
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.ios_ui == 'true' }}
     runs-on: macos-26
     timeout-minutes: 60
     defaults:
@@ -447,7 +472,6 @@ jobs:
             -xctestrun '${{ steps.ui_artifacts.outputs.xctestrun }}' \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -resultBundlePath build/test-results/HealthMd-UI-Profiles-iPhone.xcresult \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard \
@@ -480,7 +504,7 @@ jobs:
   connectivity-package:
     name: HealthMdConnectivity package
     needs: changes
-    if: ${{ needs.changes.outputs.run == 'true' }}
+    if: ${{ needs.changes.outputs.connectivity == 'true' }}
     runs-on: macos-14
     timeout-minutes: 15
     steps:
@@ -507,21 +531,27 @@ jobs:
       - name: Require Apple checks
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
-          CHANGES_RUN: ${{ needs.changes.outputs.run }}
+          PREPARE_SELECTED: ${{ needs.changes.outputs.prepare }}
           PREPARE_RESULT: ${{ needs.prepare-shared-core.result }}
+          IOS_SELECTED: ${{ needs.changes.outputs.ios }}
           IOS_RESULT: ${{ needs.test-ios.result }}
+          IOS_UI_SELECTED: ${{ needs.changes.outputs.ios_ui }}
           IOS_UI_RESULT: ${{ needs.test-ios-ui.result }}
+          MACOS_SELECTED: ${{ needs.changes.outputs.macos }}
           MACOS_RESULT: ${{ needs.test-macos.result }}
+          CONNECTIVITY_SELECTED: ${{ needs.changes.outputs.connectivity }}
           CONNECTIVITY_RESULT: ${{ needs.connectivity-package.result }}
         run: |
-          set -e
+          set -euo pipefail
           test "$CHANGES_RESULT" = success
-          if [ "$CHANGES_RUN" != "true" ]; then
-            echo "No Apple-affecting changes in this pull request; Apple CI skipped."
-            exit 0
-          fi
-          test "$PREPARE_RESULT" = success
-          test "$IOS_RESULT" = success
-          test "$IOS_UI_RESULT" = success
-          test "$MACOS_RESULT" = success
-          test "$CONNECTIVITY_RESULT" = success
+          require_job() {
+            case "$1:$2" in
+              true:success|false:skipped|false:success) ;;
+              *) echo "::error::$3 has selection '$1' and result '$2'; selected checks must succeed."; exit 1 ;;
+            esac
+          }
+          require_job "$PREPARE_SELECTED" "$PREPARE_RESULT" "shared core"
+          require_job "$IOS_SELECTED" "$IOS_RESULT" "iOS unit tests"
+          require_job "$IOS_UI_SELECTED" "$IOS_UI_RESULT" "iOS UI regressions"
+          require_job "$MACOS_SELECTED" "$MACOS_RESULT" "macOS coverage and documentation"
+          require_job "$CONNECTIVITY_SELECTED" "$CONNECTIVITY_RESULT" "standalone connectivity package"

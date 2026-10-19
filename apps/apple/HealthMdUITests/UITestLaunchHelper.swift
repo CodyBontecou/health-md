@@ -52,6 +52,15 @@ enum UITestLaunchHelper {
         return true
     }
 
+    /// Detach system file/Quick Look view services before the next scenario
+    /// relaunches this bundle. Terminating their foreground host can leave
+    /// the subsequent document picker without its accessibility tree.
+    static func finishSystemPresentation(in app: XCUIApplication) {
+        guard app.state != .notRunning else { return }
+        XCUIDevice.shared.press(.home)
+        app.terminate()
+    }
+
     // MARK: - Accessibility Identifiers (mirrored from AccessibilityID)
 
     enum Tab {
@@ -78,6 +87,7 @@ enum UITestLaunchHelper {
         static let customEndDatePicker = "export.dateRange.custom.endDate"
         static let pathPreview = "export.pathPreview"
         static let activityBanner = "export.activityBanner"
+        static let finishSimulatedBatch = "uitest.export.finishBatch"
         static let filenameEditorButton = "export.filenameEditorButton"
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
         static let sleepDayAttributionPicker = "export.sleepDayAttribution.picker"

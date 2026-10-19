@@ -618,6 +618,8 @@
     <string name="schedule_through_today_summary">Fiecare rulare exportă zilele complete anterioare plus fișierul parțial de astăzi, astfel încât o rulare în timpul zilei capturează și somnul de aseară. Combină cu o frecvență orară pentru a actualiza ambele fișiere toată ziua. Folosește modul de scriere Suprascriere sau Actualizare pentru a evita duplicarea conținutului din aceeași zi.</string>
     <string name="profile_schedule_today_refresh">Reîmprospătează exportul de astăzi</string>
     <string name="profile_schedule_refresh_interval">Interval de reîmprospătare</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Reîmprospătează astăzi la fiecare %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Reîmprospătează astăzi la fiecare %1$d h</string>
     <string name="profile_schedule_discard_recovery">Renunțați la recuperarea în așteptare</string>
@@ -1460,4 +1462,18 @@
     <string name="fdroid_onboarding_access_body">Versiunea oficială F-Droid include gratuit toate funcțiile locale de export și automatizare.</string>
     <string name="fdroid_onboarding_no_purchase">Nu sunt necesare cumpărarea, restaurarea, un preț sau un cont Play.</string>
     <string name="fdroid_onboarding_no_play_services">Exporturile programate funcționează fără Google Play Billing.</string>
+
+    <string name="myself_claim_entry">Solicită acces la myself.md</string>
+    <string name="myself_claim_entry_subtitle">Verifică o achiziție pe viață existentă din Google Play.</string>
+    <string name="myself_claim_title">Acces la myself.md</string>
+    <string name="myself_claim_intro">Achiziția ta Health.md pe viață include acces gratuit pe viață la myself.md.</string>
+    <string name="myself_claim_disclosure">Când continui, citim dovada achiziției Google Play și o trimitem la myself.md pentru verificare. Datele de sănătate și localizare rămân pe dispozitiv.</string>
+    <string name="myself_claim_account">Apoi autentifică-te pentru a alege contul myself.md care primește accesul. Fiecare achiziție inițială poate fi asociată unui singur cont. Accesul Android gratuit sau păstrat dintr-o versiune veche nu este suficient.</string>
+    <string name="myself_claim_verify">Verifică achiziția și continuă</string>
+    <string name="myself_claim_verifying">Se verifică achiziția…</string>
+    <string name="myself_claim_awaiting_user">Autentifică-te și confirmă contul beneficiar în browser. Apoi folosește același cont în myself.md. Accesul nu este acordat până nu confirmi.</string>
+    <string name="myself_claim_no_purchase">Nu s-a găsit o achiziție Health.md pe viață finalizată. Folosește contul Google Play cu care ai cumpărat și reîncearcă. Achizițiile în așteptare nu sunt eligibile.</string>
+    <string name="myself_claim_store_unavailable">Google Play nu a putut prelua achiziția. Verifică conexiunea și contul Google Play, apoi reîncearcă.</string>
+    <string name="myself_claim_verification_failed">Achiziția nu a putut fi verificată. Verifică conexiunea și reîncearcă. Dacă problema persistă, contactează asistența; nu s-a acordat acces.</string>
+    <string name="myself_claim_browser_unavailable">Browserul nu a putut fi deschis. Activează un browser și verifică din nou achiziția.</string>
 </resources>
