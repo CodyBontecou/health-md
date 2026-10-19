@@ -455,7 +455,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
                 ?? settings.exportTimeZoneOverride?.identifier
         )
         snapshot.sleepCaptureContext = settings.executionSleepCaptureContext
-            ?? AppleSleepCaptureContext.pinned.wrappedValue
+            ?? (settings.executionSleepCaptureContextIsFrozen ? nil : AppleSleepCaptureContext.pinned.wrappedValue)
         return snapshot
     }
 
@@ -496,6 +496,12 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         policyResolver: AppleExportEnginePolicyResolver = AppleExportEnginePolicyResolver(),
         coreExecutor: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor()
     ) async -> ExportSettingsSnapshot {
+        if settings.executionSleepCaptureContextIsFrozen, settings.executionSleepCaptureContext == nil {
+            // A frozen missing context cannot borrow a parent operation's clock,
+            // attribution or new renderer authority. Preserve the stored settings.
+            return from(settings, healthSubfolder: healthSubfolder,
+                appleExportEngineAuthorityIsFrozen: true)
+        }
         let resolvedTimeZone = settings.executionSleepCaptureContext?.timeZone
             ?? AppleSleepCaptureContext.pinned.wrappedValue?.timeZone
             ?? calendarTimeZone ?? settings.exportTimeZoneOverride ?? .current
@@ -516,6 +522,19 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         // This factory is only for new work, but preserve an injected execution pin defensively so
         // an accidental call during resume can never replace persisted authority with today's flag.
         if snapshot.appleExportEnginePin != nil {
+            return snapshot
+        }
+        if snapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds {
+            // Wake-date semantics have one renderer authority: explicit Apple-v11
+            // Rust. Apple-v8 rollout flags cannot select or retag this profile.
+            // Durable frozen nil authority and old draft markers retain their identity.
+            guard !(settings.executionAppleExportEngineAuthorityIsFrozen
+                        && settings.executionSleepCaptureContextIsFrozen),
+                  !hasNativeOnlyCompanionAction,
+                  AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(
+                      settingsSnapshot: snapshot, surface: surface) else { return snapshot }
+            snapshot.appleExportEnginePin = await policyResolver.pinForNewWakeDateOperation(
+                calendarTimeZoneIdentifier: identifier, coreExecutor: coreExecutor)
             return snapshot
         }
         guard !hasNativeOnlyCompanionAction,

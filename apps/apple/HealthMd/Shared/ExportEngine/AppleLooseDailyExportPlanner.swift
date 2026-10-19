@@ -753,11 +753,36 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         settingsSnapshot: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface
     ) -> Bool {
+        supportsSettings(settingsSnapshot: settingsSnapshot, surface: surface,
+            allowsUnpinnedWakeDateDetails: false)
+    }
+
+    /// Configuration preflight before acquiring a fresh successor pin. Actual
+    /// artifact planning still requires the complete compatible immutable pin.
+    static func supportsNewWakeDateSettings(
+        settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface
+    ) -> Bool {
+        guard settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds,
+              settingsSnapshot.sleepCaptureContext?.exportProfileID == "apple-v11",
+              settingsSnapshot.appleExportEnginePin == nil,
+              surface == .localVaultWithoutSideEffects
+                || surface == .localVaultRangeWithoutSideEffects || surface == .preview else { return false }
+        return supportsSettings(settingsSnapshot: settingsSnapshot, surface: surface,
+            allowsUnpinnedWakeDateDetails: true)
+    }
+
+    private static func supportsSettings(
+        settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface,
+        allowsUnpinnedWakeDateDetails: Bool
+    ) -> Bool {
         let supportsWakeDateDetails = settingsSnapshot.detailPolicy == .detailedTimeSeries
             && settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
             && settingsSnapshot.sleepCaptureContext?.exportProfileID == "apple-v11"
-            && settingsSnapshot.appleExportEnginePin?.isWakeDate == true
-            && settingsSnapshot.appleExportEnginePin?.engine == .rust
+            && (allowsUnpinnedWakeDateDetails
+                || (settingsSnapshot.appleExportEnginePin?.isWakeDate == true
+                    && settingsSnapshot.appleExportEnginePin?.engine == .rust))
             && (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .preview)
         let hasConfiguredRollups = settingsSnapshot.generateRangeSummary
         let isRangeSurface = surface == .localVaultRangeWithoutSideEffects
