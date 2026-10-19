@@ -119,12 +119,15 @@ nonisolated private final class HealthKitQueryAdmissionWaiter: @unchecked Sendab
 /// timed-out workers accounted for until their actual completion, and opens a
 /// per-operation/type circuit after the first timeout.
 nonisolated final class HealthKitQueryExecutionController: @unchecked Sendable {
+    typealias DiagnosticSink = @Sendable (String, String, Int64, String) -> Void
+
     private enum AdmissionResolution {
         case admitted(HealthKitQueryAdmissionWaiter)
         case failed(HealthKitQueryAdmissionWaiter, NSError)
     }
 
     let configuration: HealthKitQueryExecutionConfiguration
+    private let diagnosticSink: DiagnosticSink
 
     private let lock = NSLock()
     private var activeQueries = 0
@@ -132,8 +135,28 @@ nonisolated final class HealthKitQueryExecutionController: @unchecked Sendable {
     private var waiters: [HealthKitQueryAdmissionWaiter] = []
     private var openCircuits: Set<HealthKitQueryExecutionKey> = []
 
-    init(configuration: HealthKitQueryExecutionConfiguration = .production) {
+    init(
+        configuration: HealthKitQueryExecutionConfiguration = .production,
+        diagnosticSink: DiagnosticSink? = nil
+    ) {
         self.configuration = configuration
+        self.diagnosticSink = diagnosticSink ?? { operation, typeIdentifier, elapsed, outcome in
+            HealthKitQueryLiveDiagnostics.emit(
+                operation: operation,
+                typeIdentifier: typeIdentifier,
+                elapsedMilliseconds: elapsed,
+                outcome: outcome
+            )
+        }
+    }
+
+    fileprivate func emitDiagnostic(
+        operation: String,
+        typeIdentifier: String,
+        elapsedMilliseconds: Int64,
+        outcome: String
+    ) {
+        diagnosticSink(operation, typeIdentifier, elapsedMilliseconds, outcome)
     }
 
     static func withController<T>(
@@ -373,13 +396,6 @@ nonisolated private final class HealthKitQueryLifecycle<T>: @unchecked Sendable 
     }
 
     func launch() {
-        HealthKitQueryLiveDiagnostics.emit(
-            operation: key.operation,
-            typeIdentifier: key.typeIdentifier,
-            elapsedMilliseconds: 0,
-            outcome: "start"
-        )
-
         let worker = Task { [lifecycle = self] in
             await lifecycle.runQuery()
         }
@@ -420,6 +436,14 @@ nonisolated private final class HealthKitQueryLifecycle<T>: @unchecked Sendable 
     }
 
     private func runQuery() async {
+        // Start diagnostics belong to the existing physical worker. A stalled
+        // sink must not prevent the caller's independent deadline from starting.
+        controller.emitDiagnostic(
+            operation: key.operation,
+            typeIdentifier: key.typeIdentifier,
+            elapsedMilliseconds: elapsedMilliseconds(),
+            outcome: "start"
+        )
         let result: Result<T, Error>
         do {
             result = .success(try await query())
@@ -475,19 +499,21 @@ nonisolated private final class HealthKitQueryLifecycle<T>: @unchecked Sendable 
             lock.unlock()
             return
         }
-        HealthKitQueryLiveDiagnostics.emit(
+        let elapsed = elapsedMilliseconds()
+        lock.unlock()
+        controller.emitDiagnostic(
             operation: key.operation,
             typeIdentifier: key.typeIdentifier,
-            elapsedMilliseconds: elapsedMilliseconds(),
+            elapsedMilliseconds: elapsed,
             outcome: "slow"
         )
-        lock.unlock()
     }
 
     private func deadlineReached() {
         let continuation: CheckedContinuation<Result<T, Error>, Never>?
         let worker: Task<Void, Never>?
         let slow: Task<Void, Never>?
+        let elapsed: Int64
         let result = Result<T, Error>.failure(
             HealthKitQueryExecutionError.make(.timedOut)
         )
@@ -505,19 +531,20 @@ nonisolated private final class HealthKitQueryLifecycle<T>: @unchecked Sendable 
         worker = workerTask
         slow = slowTask
         controller.workerTimedOut(for: key)
-        // The lifecycle lock prevents physical completion until this event has
-        // been emitted, so timeout is observable while the worker is outstanding.
-        HealthKitQueryLiveDiagnostics.emit(
-            operation: key.operation,
-            typeIdentifier: key.typeIdentifier,
-            elapsedMilliseconds: elapsedMilliseconds(),
-            outcome: "timeout"
-        )
+        // Capture the event at its authoritative transition. Emitting it must
+        // neither hold the ownership lock nor delay delivery to the caller.
+        elapsed = elapsedMilliseconds()
         lock.unlock()
 
         worker?.cancel()
         slow?.cancel()
         continuation?.resume(returning: result)
+        controller.emitDiagnostic(
+            operation: key.operation,
+            typeIdentifier: key.typeIdentifier,
+            elapsedMilliseconds: elapsed,
+            outcome: "timeout"
+        )
     }
 
     private func callerCancelled() {
@@ -555,6 +582,7 @@ nonisolated private final class HealthKitQueryLifecycle<T>: @unchecked Sendable 
         let deadline: Task<Void, Never>?
         let slow: Task<Void, Never>?
         let wasUnresolved: Bool
+        let elapsed: Int64
 
         lock.lock()
         guard !workerFinished else {
@@ -579,12 +607,7 @@ nonisolated private final class HealthKitQueryLifecycle<T>: @unchecked Sendable 
         workerTask = nil
         deadlineTask = nil
         slowTask = nil
-        HealthKitQueryLiveDiagnostics.emit(
-            operation: key.operation,
-            typeIdentifier: key.typeIdentifier,
-            elapsedMilliseconds: elapsedMilliseconds(),
-            outcome: "completion"
-        )
+        elapsed = elapsedMilliseconds()
         lock.unlock()
 
         deadline?.cancel()
@@ -592,6 +615,12 @@ nonisolated private final class HealthKitQueryLifecycle<T>: @unchecked Sendable 
         if let resultForCaller {
             continuation?.resume(returning: resultForCaller)
         }
+        controller.emitDiagnostic(
+            operation: key.operation,
+            typeIdentifier: key.typeIdentifier,
+            elapsedMilliseconds: elapsed,
+            outcome: "completion"
+        )
     }
 
     private func elapsedMilliseconds() -> Int64 {
