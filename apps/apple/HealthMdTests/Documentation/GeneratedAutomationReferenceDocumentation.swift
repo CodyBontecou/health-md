@@ -1033,21 +1033,17 @@ enum GeneratedAutomationReferenceDocumentation {
                 dateRangeStart: dayStart,
                 dateRangeEnd: dayEnd,
                 selection: CanonicalHealthDataSelection(
-                    metricIDs: ["sleep_total", "steps"],
-                    sourceIDs: ["apple_health"],
-                    detailLevel: .summary,
-                    objectPaths: ["/workouts"],
-                    fieldPointers: ["/activity/steps"]
+                    metricIDs: ["steps"], sourceIDs: ["apple_health"], detailLevel: .summary
                 ),
                 profileID: secondJobID,
-                profileName: "Synthetic Context Profile"
+                profileName: "Synthetic context profile"
             )),
             .iphoneContextRefreshStatus(IPhoneContextRefreshStatus(
                 jobID: jobID,
                 state: .failed,
                 updatedAt: createdAt,
-                message: "Synthetic context refresh failed.",
-                failureReason: "synthetic_fixture_failure"
+                message: "Synthetic encrypted-context selection was rejected.",
+                failureReason: "invalid_context_selection"
             )),
             .iphoneExportRequest(strictRawRequest),
             .iphoneExportAccepted(IPhoneExportAcknowledgement(
