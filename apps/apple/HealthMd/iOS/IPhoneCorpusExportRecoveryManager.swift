@@ -46,6 +46,14 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     private var activeTask: Task<ConnectedCorpusDurableSender.Result, Error>?
     private var activeJobID: UUID?
     private var explicitlyCancelledJobIDs: Set<UUID> = []
+    /// Discard revokes immediately; only this accepted terminal checkpoint may
+    /// clean its spool once the active sender has finished unwinding.
+    private final class ScheduledDiscard {
+        var receipt: ConnectedCorpusOperationReceipt
+        init(_ receipt: ConnectedCorpusOperationReceipt) { self.receipt = receipt }
+        nonisolated deinit {}
+    }
+    private var discardedSenderCleanup: [UUID: ScheduledDiscard] = [:]
     /// Retained across disconnect/pause/resume attempts so unresolved physical
     /// HealthKit workers and their open circuits stay bounded for the full job.
     private var queryExecutionControllers: [UUID: HealthKitQueryExecutionController] = [:]
@@ -301,25 +309,32 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         _ = resumeEligibleJob()
     }
 
-    /// Synchronous local revocation precedes any peer RPC. Preserve the journal and
-    /// spool here: a sender can still be unwinding, and committed Mac files are untouched.
+    /// Revoke before peer RPC; preserve spool bytes until the active sender unwinds.
     func discardScheduledRecovery(jobID: UUID) throws {
         guard let journal = try store.load(jobID: jobID, allowExpired: true),
               journal.origin == .scheduledIPhone, !journal.state.isTerminal else { return }
-        explicitlyCancelledJobIDs.insert(jobID)
-        if activeJobID == jobID {
-            resumeWhenActiveTaskFinishes = false
-            activeTask?.cancel()
-        }
+        let receipt = try store.operationReceipt(for: journal)
         let message = "Scheduled recovery was discarded."
-        _ = try store.updateState(jobID: jobID, state: .cancelled, message: message)
+        let cancellation = try receipt.withOwnership(allowExpired: true) {
+            explicitlyCancelledJobIDs.insert(jobID)
+            let cancelled = try store.updateState(jobID: jobID, state: .cancelled, message: message)
+            let accepted = ScheduledDiscard(try store.operationReceipt(for: cancelled))
+            if activeJobID == jobID, activeTask != nil {
+                discardedSenderCleanup[jobID] = accepted
+                resumeWhenActiveTaskFinishes = false
+                activeTask?.cancel()
+            }
+            return accepted
+        }
         refreshPublishedSnapshot()
         if let syncService {
             Task { [weak syncService] in
-                _ = await syncService?.sendConnectedCorpusCancelAndWait(ConnectedCorpusTransferCancel(
-                    sessionID: journal.sessionID, jobID: jobID, reason: .userRequested,
-                    message: message, requestedAt: Date()
-                ))
+                _ = try? await cancellation.receipt.continueWhileOwned {
+                    await syncService?.sendConnectedCorpusCancelAndWait(ConnectedCorpusTransferCancel(
+                        sessionID: journal.sessionID, jobID: jobID, reason: .userRequested,
+                        message: message, requestedAt: Date()
+                    ))
+                }
             }
         }
     }
@@ -578,6 +593,14 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             ?? HealthKitQueryExecutionController()
         queryExecutionControllers[jobID] = queryController
         defer {
+            if let discarded = discardedSenderCleanup.removeValue(forKey: jobID) {
+                try? discarded.receipt.withOwnership(allowExpired: true) {
+                    try store.cancel(jobID: jobID)
+                    if let cleaned = try store.load(jobID: jobID, allowExpired: true) {
+                        discarded.receipt = try store.operationReceipt(for: cleaned)
+                    }
+                }
+            }
             if let journal = try? store.load(jobID: jobID, allowExpired: true),
                journal.state.isTerminal {
                 queryExecutionControllers.removeValue(forKey: jobID)

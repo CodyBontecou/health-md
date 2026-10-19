@@ -173,6 +173,7 @@ enum ConnectedCorpusOutboundStoreError: Error, Equatable {
     case corruptFile
     case invalidCommit
     case jobNotFound
+    case checkpointSuperseded
 }
 
 /// Routes each immutable operation to a fixed namespace store. Accepted bindings
@@ -304,8 +305,11 @@ final class ConnectedCorpusOutboundStore {
     func preparedPendingPartition(for journal: ConnectedCorpusOutboundJournal) throws -> ConnectedCorpusPreparedPartition? {
         try withStore(journal.jobID, expected: journal) { try $0.preparedPendingPartition(for: journal) }
     }
-    func commitPendingPartition(jobID: UUID) throws -> ConnectedCorpusOutboundJournal {
-        try withStore(jobID) { try $0.commitPendingPartition(jobID: jobID) }
+    func commitPendingPartition(jobID: UUID, expected: ConnectedCorpusOutboundJournal.PendingPartition) throws -> ConnectedCorpusOutboundJournal {
+        try withStore(jobID) { try $0.commitPendingPartition(jobID: jobID, expected: expected) }
+    }
+    func operationReceipt(for journal: ConnectedCorpusOutboundJournal) throws -> ConnectedCorpusOperationReceipt {
+        try withStore(journal.jobID, expected: journal) { try $0.operationReceipt(for: journal) }
     }
     func updateState(jobID: UUID, state: ConnectedCorpusOutboundState, message: String?, currentDate: Date? = nil) throws -> ConnectedCorpusOutboundJournal {
         try withStore(jobID) { try $0.updateState(jobID: jobID, state: state, message: message, currentDate: currentDate) }
@@ -724,11 +728,12 @@ private final class ConnectedCorpusOutboundNamespaceStore {
     /// Advances the digest and item frontier only after the receiver has
     /// durably accepted the pending partition. Journal replacement precedes
     /// removal of obsolete bytes, making every crash boundary replay-safe.
-    func commitPendingPartition(jobID: UUID) throws -> ConnectedCorpusOutboundJournal {
+    func commitPendingPartition(jobID: UUID, expected: ConnectedCorpusOutboundJournal.PendingPartition) throws -> ConnectedCorpusOutboundJournal {
         let transaction = try beginStoreTransaction()
         defer { transaction.close() }
 
         var journal = try requiredJournal(jobID: jobID)
+        guard journal.pendingPartition == expected else { throw ConnectedCorpusOutboundStoreError.checkpointSuperseded }
         guard let pending = journal.pendingPartition,
               pending.descriptor.index == journal.committedPartitionCount,
               pending.descriptor.previousSHA256 == journal.lastCommittedPartitionSHA256 else {
@@ -1071,6 +1076,17 @@ private final class ConnectedCorpusOutboundNamespaceStore {
         } catch let error as POSIXError where error.code == .EAGAIN || (freshAdmission && error.code == .EEXIST) {
             throw ConnectedCorpusOutboundStoreError.requestChanged
         }
+    }
+
+    func operationReceipt(for expected: ConnectedCorpusOutboundJournal) throws -> ConnectedCorpusOperationReceipt {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+        guard let current = try load(jobID: expected.jobID, allowExpired: true),
+              current == expected else {
+            throw ConnectedCorpusOutboundStoreError.checkpointSuperseded
+        }
+        return ConnectedCorpusOperationReceipt(checkpoint: try expectedCheckpoint(jobID: current.jobID),
+            journal: current, now: now)
     }
 
     private func expectedCheckpoint(jobID: UUID) throws -> AppleExportJournalCheckpoint {

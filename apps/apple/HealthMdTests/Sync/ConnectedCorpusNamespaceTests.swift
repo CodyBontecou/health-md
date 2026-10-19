@@ -156,7 +156,7 @@ final class ConnectedCorpusNamespaceTests: XCTestCase {
                     })
                 XCTFail("The suspended sender must reject a replacement")
             } catch {
-                XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .requestChanged)
+                XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .checkpointSuperseded)
             }
             XCTAssertEqual(transportCalls, 0)
             XCTAssertEqual(try Data(contentsOf: newDirectory.appendingPathComponent("journal.json")), try XCTUnwrap(winner))

@@ -120,6 +120,445 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertTrue(secondHarness.transfers.isEmpty)
     }
 
+    func testOlderAcknowledgementCannotCommitAnotherWritersPendingPartition() async throws {
+        let fixture = try makeFixture(dayCount: 2)
+        let first = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0,
+            jobID: fixture.session.jobID)
+        let firstPending = try preparePending(in: fixture.store, journal: first)
+        let other = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+        let harness = Harness()
+        harness.openResponse = { Self.disposition(for: $0, kind: .alreadyCommitted, next: $0.partition.index + 1) }
+        var advanced = false
+        var winner: Data?
+        var retained: [(URL, Data)] = []
+        var staleCheckpoints = 0
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        do {
+            _ = try await ConnectedCorpusDurableSender.send(
+                configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                store: fixture.store, transport: harness.transport(),
+                onCheckpoint: { _ in if advanced { staleCheckpoints += 1 } },
+                afterReceiverAcceptedPartition: {
+                    guard !advanced else { return }
+                    advanced = true
+                    _ = try other.commitPendingPartition(jobID: fixture.session.jobID,
+                        expected: XCTUnwrap(firstPending.pendingPartition))
+                    let second = try other.adoptItem(self.makeSmallItem(date: fixture.dates[1]), expectedIndex: 1,
+                        jobID: fixture.session.jobID)
+                    let pending = try self.preparePending(in: other, journal: second)
+                    XCTAssertEqual(pending.committedPartitionCount, 1)
+                    XCTAssertEqual(pending.pendingPartition?.descriptor.index, 1)
+                    winner = try Data(contentsOf: directory.appendingPathComponent("journal.json"))
+                    let paths = pending.items.map(\.relativePath) + [try XCTUnwrap(pending.pendingPartition).relativePath]
+                    retained = try paths.map { path in
+                        let url = directory.appendingPathComponent(path)
+                        return (url, try Data(contentsOf: url))
+                    }
+                }, produceItem: { _, _ in
+                    XCTFail("The older sender must not recapture another writer's day")
+                    throw TestError.unexpectedProduction
+                })
+            XCTFail("An old acknowledgement must not advance the new pending partition")
+        } catch {
+            XCTAssertTrue(advanced)
+            XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .checkpointSuperseded)
+        }
+        XCTAssertEqual(staleCheckpoints, 0)
+        XCTAssertEqual(harness.opens.count, 1)
+        XCTAssertTrue(harness.transfers.isEmpty)
+        XCTAssertTrue(harness.finalizations.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("journal.json")), try XCTUnwrap(winner))
+        for (url, bytes) in retained { XCTAssertEqual(try? Data(contentsOf: url), bytes) }
+        let current = try XCTUnwrap(other.load(jobID: fixture.session.jobID))
+        XCTAssertEqual(current.committedPartitionCount, 1)
+        XCTAssertEqual(current.pendingPartition?.descriptor.index, 1)
+        XCTAssertEqual(current.completedItemCount, 1)
+    }
+
+    func testNativeSyncServiceStopsAfterOpenStartOrChunkOwnershipChanges() async throws {
+        for stage in ["open", "start", "chunk"] {
+            let service = SyncService()
+            defer { clearTransportHooks(service) }
+            let peer = UUID()
+            service.remoteCapabilities = .current(installationID: peer)
+            let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID, destinationInstallationID: peer)
+            let saved = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0,
+                jobID: fixture.session.jobID)
+            _ = try preparePending(in: fixture.store, journal: saved)
+            let other = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+            let url = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased()).appendingPathComponent("journal.json")
+            var winner: Data?
+            var injected = false
+            var hookError: Error?
+            var enqueued: [String] = []
+            var opened = 0
+            var read = 0
+            var progress = 0
+            var ownedProgress = 0
+            let previousError = service.lastError
+            service.testConnectedTransferSourceOpen = { _ in opened += 1 }
+            service.testConnectedTransferSourceRead = { read += 1 }
+            let replace = {
+                do {
+                    _ = try other.updateState(jobID: fixture.session.jobID, state: .paused, message: "New checkpoint owns the operation")
+                    winner = try Data(contentsOf: url)
+                    injected = true
+                } catch { hookError = error }
+            }
+            service.testMessageSendObserver = { message in
+                if stage == "chunk", !injected, case .connectedTransferChunk = message { replace() }
+            }
+            service.testReliablePayloadEnqueue = { message, bytes in
+                XCTAssertFalse(bytes.isEmpty)
+                switch message {
+                case .connectedCorpusTransferOpen(let open):
+                    enqueued.append("open")
+                    if stage == "open" { replace() }
+                    _ = service.resolveConnectedCorpusDisposition(Self.disposition(for: open, kind: .accept, next: open.partition.index))
+                case .connectedTransferStart(let start):
+                    enqueued.append("start")
+                    if stage == "start" { replace() }
+                    _ = service.resolveConnectedTransferAck(.init(transferID: start.transferID, sequence: 0,
+                        accepted: true, sha256: start.sha256, message: nil))
+                case .connectedTransferChunk(let chunk):
+                    enqueued.append("chunk")
+                    _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                        accepted: true, sha256: chunk.sha256, message: nil))
+                default: enqueued.append("unexpected")
+                }
+                return true
+            }
+            service.testReliableBinaryEnqueue = { bytes in
+                enqueued.append("chunk")
+                do {
+                    let chunk = try ConnectedTransferBinaryFrame.decode(bytes).chunk
+                    _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                        accepted: true, sha256: chunk.sha256, message: nil))
+                } catch { hookError = error }
+                return true
+            }
+            do {
+                _ = try await ConnectedCorpusDurableSender.send(configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                    store: fixture.store, transport: .syncService(service),
+                    onValidatedPartitionProgress: { _, _, _ in
+                        if injected { progress += 1 } else { ownedProgress += 1 }
+                    },
+                    produceItem: { _, _ in throw TestError.unexpectedProduction })
+                XCTFail("Superseded native transport must stop")
+            } catch { XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .checkpointSuperseded, stage) }
+            XCTAssertNil(hookError)
+            XCTAssertTrue(injected, stage)
+            XCTAssertEqual(enqueued, stage == "open" ? ["open"] : ["open", "start"], stage)
+            XCTAssertEqual(opened, stage == "chunk" ? 1 : 0, stage)
+            XCTAssertEqual(read, stage == "chunk" ? 1 : 0, stage)
+            XCTAssertEqual(progress, 0, stage)
+            XCTAssertEqual(ownedProgress, stage == "chunk" ? 1 : 0, stage)
+            XCTAssertEqual(try Data(contentsOf: url), try XCTUnwrap(winner))
+            XCTAssertEqual(service.lastError, previousError)
+        }
+    }
+
+    func testNativeSyncServiceCompletesWhileCheckpointAndPeerRemainOwned() async throws {
+        let service = SyncService()
+        defer { clearTransportHooks(service) }
+        let peer = UUID()
+        service.remoteCapabilities = .current(installationID: peer)
+        let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID, destinationInstallationID: peer)
+        var chunks = 0
+        var hookError: Error?
+        service.testReliablePayloadEnqueue = { message, bytes in
+            XCTAssertFalse(bytes.isEmpty)
+            switch message {
+            case .connectedCorpusTransferOpen(let open):
+                _ = service.resolveConnectedCorpusDisposition(Self.disposition(for: open, kind: .accept, next: open.partition.index))
+            case .connectedTransferStart(let start):
+                _ = service.resolveConnectedTransferAck(.init(transferID: start.transferID, sequence: 0,
+                    accepted: true, sha256: start.sha256, message: nil))
+            case .connectedTransferChunk(let chunk):
+                chunks += 1
+                _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                    accepted: true, sha256: chunk.sha256, message: nil))
+            case .connectedTransferComplete(let complete):
+                _ = service.resolveConnectedTransferFinalAck(.init(transferID: complete.transferID,
+                    accepted: true, sha256: complete.sha256, message: nil))
+            case .connectedCorpusTransferFinalize(let request):
+                _ = service.resolveConnectedCorpusFinalAck(.init(sessionID: request.sessionID, jobID: request.jobID,
+                    accepted: true, requestFingerprint: request.requestFingerprint,
+                    finalPartitionSHA256: request.finalPartitionSHA256, successCount: 1, totalCount: 1))
+            default: XCTFail("Unexpected packet")
+            }
+            return true
+        }
+        service.testReliableBinaryEnqueue = { bytes in
+            do {
+                let chunk = try ConnectedTransferBinaryFrame.decode(bytes).chunk
+                chunks += 1
+                _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                    accepted: true, sha256: chunk.sha256, message: nil))
+            } catch { hookError = error }
+            return true
+        }
+        let result = try await ConnectedCorpusDurableSender.send(configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+            store: fixture.store, transport: .syncService(service),
+            produceItem: { _, date in try self.makeSmallItem(date: date) })
+        XCTAssertTrue(result.acknowledgement.accepted)
+        XCTAssertNil(hookError)
+        XCTAssertGreaterThan(chunks, 0)
+        XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID)?.state, .completed)
+    }
+
+    func testNativeEnqueueRejectsWrongPeerForeignTransferAndExpiredCheckpoint() async throws {
+        let service = SyncService()
+        defer { clearTransportHooks(service) }
+        let peer = UUID()
+        var clock = Date(timeIntervalSince1970: 1_800_000_000)
+        let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID,
+            destinationInstallationID: peer, now: { clock })
+        let spooled = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0,
+            jobID: fixture.session.jobID)
+        let saved = try preparePending(in: fixture.store, journal: spooled)
+        let partition = try XCTUnwrap(fixture.store.preparedPendingPartition(for: saved))
+        let receipt = try fixture.store.operationReceipt(for: saved)
+        let open = ConnectedCorpusTransferOpen(session: saved.session, partition: partition.descriptor, exportManifest: saved.exportManifest)
+        var queued = 0
+        var observed = 0
+        service.testReliablePayloadEnqueue = { _, _ in queued += 1; return true }
+        service.testMessageSendObserver = { _ in observed += 1 }
+        service.remoteCapabilities = .current(installationID: UUID())
+        let wrongPeer = try await receipt.continueWhileOwned { service.sendLargePayload(.connectedCorpusTransferOpen(open)) }
+        XCTAssertFalse(wrongPeer)
+        service.remoteCapabilities = .current(installationID: peer)
+        let foreign = try await receipt.continueWhileOwned {
+            service.sendLargePayload(.connectedTransferChunk(.init(transferID: UUID(), sequence: 1,
+                data: Data("synthetic".utf8), sha256: String(repeating: "0", count: 64))))
+        }
+        XCTAssertFalse(foreign)
+        XCTAssertEqual(queued, 0)
+        XCTAssertEqual(observed, 0)
+        service.testMessageSendObserver = { _ in
+            observed += 1
+            clock = clock.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval + 1)
+        }
+        do {
+            _ = try await receipt.continueWhileOwned { service.sendLargePayload(.connectedCorpusTransferOpen(open)) }
+            XCTFail("An enqueue cannot outlive its expiry")
+        } catch { XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .expired) }
+        XCTAssertEqual(observed, 1)
+        XCTAssertEqual(queued, 0)
+        XCTAssertEqual(try fixture.store.load(jobID: saved.jobID, allowExpired: true)?.pendingPartition, saved.pendingPartition)
+    }
+
+    func testRetiredReplyCancellationAndTimeoutCannotResolveReplacementSlot() async throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let spooled = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0,
+            jobID: fixture.session.jobID)
+        let saved = try preparePending(in: fixture.store, journal: spooled)
+        let partition = try XCTUnwrap(saved.pendingPartition)
+        let open = ConnectedCorpusTransferOpen(session: saved.session, partition: partition.descriptor, exportManifest: saved.exportManifest)
+        let service = SyncService()
+        defer { clearTransportHooks(service) }
+        var first: Task<ConnectedCorpusTransferDisposition?, Never>?
+        var enqueued = 0
+        service.testReliablePayloadEnqueue = { message, _ in
+            if case .connectedCorpusTransferOpen = message {
+                enqueued += 1
+                if enqueued == 2 { first?.cancel() }
+            }
+            return true
+        }
+        first = Task { await service.sendConnectedCorpusOpenAndWait(open, timeoutSeconds: 1, maximumAttempts: 1) }
+        await waitUntil { enqueued == 1 }
+        let second = Task { await service.sendConnectedCorpusOpenAndWait(open, timeoutSeconds: 1, maximumAttempts: 1) }
+        await waitUntil { enqueued == 2 }
+        for _ in 0..<8 { await Task.yield() }
+        let ack = Self.disposition(for: open, kind: .accept, next: open.partition.index)
+        XCTAssertTrue(service.resolveConnectedCorpusDisposition(ack), "Retired cancellation/timer must leave the new slot registered")
+        let secondResult = await second.value
+        let firstResult = await first?.value
+        XCTAssertEqual(secondResult, ack)
+        XCTAssertNil(firstResult)
+    }
+
+    func testFinalizationCannotCompleteOrPauseAnotherWritersCheckpoint() async throws {
+        for accepted in [true, false] {
+            let fixture = try makeFixture(dayCount: 1)
+            let other = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+            let url = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased()).appendingPathComponent("journal.json")
+            let harness = Harness()
+            var winner: Data?
+            var hookError: Error?
+            var stalePublications = 0
+            harness.finalizeResponse = { request in
+                do {
+                    _ = try other.updateState(jobID: request.jobID, state: .paused, message: "Replacement owns finalization")
+                    winner = try Data(contentsOf: url)
+                } catch { hookError = error }
+                guard accepted else { return nil }
+                return ConnectedCorpusTransferFinalAck(sessionID: request.sessionID, jobID: request.jobID,
+                    accepted: true, requestFingerprint: request.requestFingerprint,
+                    finalPartitionSHA256: request.finalPartitionSHA256, successCount: 1, totalCount: 1)
+            }
+            do {
+                _ = try await ConnectedCorpusDurableSender.send(configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                    store: fixture.store, transport: harness.transport(),
+                    onCheckpoint: { _ in if winner != nil { stalePublications += 1 } },
+                    produceItem: { _, date in try self.makeSmallItem(date: date) })
+                XCTFail("A retired finalizer cannot complete or pause a replacement")
+            } catch { XCTAssertEqual(error as? ConnectedCorpusOutboundStoreError, .checkpointSuperseded) }
+            XCTAssertNil(hookError)
+            XCTAssertEqual(harness.finalizations.count, 1)
+            XCTAssertEqual(stalePublications, 0)
+            XCTAssertEqual(try Data(contentsOf: url), try XCTUnwrap(winner))
+            let current = try XCTUnwrap(other.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(current.state, .paused)
+            XCTAssertNil(current.terminalAcknowledgement)
+        }
+    }
+
+    func testNativeTransferRejectsForeignSourceAndSourceSymlinkBeforeReading() async throws {
+        for substituteAtOpen in [false, true] {
+            let service = SyncService()
+            defer { clearTransportHooks(service) }
+            let peer = UUID()
+            service.remoteCapabilities = .current(installationID: peer)
+            let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID, destinationInstallationID: peer)
+            let item = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0, jobID: fixture.session.jobID)
+            let saved = try preparePending(in: fixture.store, journal: item)
+            let partition = try XCTUnwrap(fixture.store.preparedPendingPartition(for: saved))
+            let foreign = fixture.root.appendingPathComponent("foreign.bin")
+            let original = try Data(contentsOf: partition.file.url)
+            try original.write(to: foreign)
+            let manifest = ConnectedTransferManifest(kind: .connectedCorpusPartitionV1, jobID: saved.jobID,
+                payloadSchemaVersion: ConnectedCorpusPartitionFileManifest.currentVersion, corpusPartition: partition.descriptor)
+            let receipt = try fixture.store.operationReceipt(for: saved)
+            var starts = 0
+            var reads = 0
+            var chunks = 0
+            var hookError: Error?
+            service.testConnectedTransferSourceRead = { reads += 1 }
+            service.testConnectedTransferSourceOpen = { url in
+                guard substituteAtOpen else { return }
+                do {
+                    try FileManager.default.removeItem(at: url)
+                    try FileManager.default.createSymbolicLink(at: url, withDestinationURL: foreign)
+                } catch { hookError = error }
+            }
+            service.testReliablePayloadEnqueue = { message, _ in
+                if case .connectedTransferStart(let start) = message {
+                    starts += 1
+                    _ = service.resolveConnectedTransferAck(.init(transferID: start.transferID, sequence: 0,
+                        accepted: true, sha256: start.sha256, message: nil))
+                }
+                return true
+            }
+            service.testReliableBinaryEnqueue = { _ in chunks += 1; return true }
+            let file = substituteAtOpen ? partition.file : ConnectedTransferPreparedFile(url: foreign,
+                totalBytes: partition.file.totalBytes, sha256: partition.file.sha256)
+            let result = try await receipt.continueWhileOwned {
+                await service.sendConnectedTransfer(file, manifest: manifest, transferID: partition.transferID,
+                    protocolVersion: ConnectedTransferStart.corpusPartitionProtocolVersion,
+                    acknowledgementTimeout: 1, maximumAttempts: 1)
+            }
+            guard case .failure = result else { return XCTFail("A foreign source must not transfer") }
+            XCTAssertNil(hookError)
+            XCTAssertEqual(starts, substituteAtOpen ? 1 : 0)
+            XCTAssertEqual(reads, 0)
+            XCTAssertEqual(chunks, 0)
+            XCTAssertEqual(try Data(contentsOf: foreign), original)
+        }
+    }
+
+    func testNativePeerChangeAfterStartOrChunkPausesWithoutStaleProgress() async throws {
+        for stage in ["start", "chunk"] {
+            let service = SyncService()
+            defer { clearTransportHooks(service) }
+            let peer = UUID()
+            service.remoteCapabilities = .current(installationID: peer)
+            let fixture = try makeFixture(dayCount: 1, sourceInstallationID: service.installationID, destinationInstallationID: peer)
+            let item = try fixture.store.adoptItem(makeSmallItem(date: fixture.dates[0]), expectedIndex: 0, jobID: fixture.session.jobID)
+            _ = try preparePending(in: fixture.store, journal: item)
+            var opens = 0
+            var reads = 0
+            var changedPeer = false
+            var staleProgress = 0
+            var ownedProgress = 0
+            var hookError: Error?
+            service.testConnectedTransferSourceOpen = { _ in opens += 1 }
+            service.testConnectedTransferSourceRead = { reads += 1 }
+            let changePeer = {
+                changedPeer = true
+                service.remoteCapabilities = .current(installationID: UUID())
+            }
+            service.testReliablePayloadEnqueue = { message, _ in
+                switch message {
+                case .connectedCorpusTransferOpen(let open):
+                    _ = service.resolveConnectedCorpusDisposition(Self.disposition(for: open, kind: .accept, next: open.partition.index))
+                case .connectedTransferStart(let start):
+                    if stage == "start" { changePeer() }
+                    _ = service.resolveConnectedTransferAck(.init(transferID: start.transferID, sequence: 0,
+                        accepted: true, sha256: start.sha256, message: nil))
+                case .connectedTransferChunk(let chunk):
+                    changePeer()
+                    _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                        accepted: true, sha256: chunk.sha256, message: nil))
+                default: XCTFail("A replacement peer must receive no further control messages")
+                }
+                return true
+            }
+            service.testReliableBinaryEnqueue = { bytes in
+                do {
+                    let chunk = try ConnectedTransferBinaryFrame.decode(bytes).chunk
+                    changePeer()
+                    _ = service.resolveConnectedTransferAck(.init(transferID: chunk.transferID, sequence: chunk.sequence,
+                        accepted: true, sha256: chunk.sha256, message: nil))
+                } catch { hookError = error }
+                return true
+            }
+            do {
+                _ = try await ConnectedCorpusDurableSender.send(configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                    store: fixture.store, transport: .syncService(service),
+                    onValidatedPartitionProgress: { _, _, _ in
+                        if changedPeer { staleProgress += 1 } else { ownedProgress += 1 }
+                    }, produceItem: { _, _ in throw TestError.unexpectedProduction })
+                XCTFail("Peer replacement must pause the original operation")
+            } catch {
+                guard let senderError = error as? ConnectedCorpusDurableSender.DurableSenderError,
+                      case .paused = senderError else {
+                    return XCTFail("Expected resumable pause, got \(error)")
+                }
+            }
+            XCTAssertNil(hookError)
+            XCTAssertTrue(changedPeer)
+            XCTAssertEqual(opens, stage == "start" ? 0 : 1, stage)
+            XCTAssertEqual(reads, stage == "start" ? 0 : 1, stage)
+            XCTAssertEqual(staleProgress, 0, stage)
+            XCTAssertEqual(ownedProgress, stage == "start" ? 0 : 1, stage)
+            let current = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(current.state, .paused)
+            XCTAssertNotNil(current.pendingPartition)
+        }
+    }
+
+    private func clearTransportHooks(_ service: SyncService) {
+        service.testMessageSendObserver = nil
+        service.testReliablePayloadEnqueue = nil
+        service.testReliableBinaryEnqueue = nil
+        service.testConnectedTransferSourceOpen = nil
+        service.testConnectedTransferSourceRead = nil
+        service.cancelAllConnectedCorpusWaiters()
+        service.cancelAllConnectedTransferWaiters()
+    }
+
+    private func preparePending(in store: ConnectedCorpusOutboundStore,
+                                journal: ConnectedCorpusOutboundJournal) throws -> ConnectedCorpusOutboundJournal {
+        let partition = try ConnectedCorpusDurablePartitionBuilder.prepare(sessionID: journal.sessionID,
+            jobID: journal.jobID, targetBytes: journal.session.partitionTargetBytes,
+            partitionIndex: journal.committedPartitionCount,
+            previousPartitionSHA256: journal.lastCommittedPartitionSHA256,
+            sources: store.spoolItems(for: journal))
+        return try store.adoptPendingPartition(partition, jobID: journal.jobID)
+    }
+
     func testV1OutboundJournalMigratesWithoutChangingPinnedLegacySession() throws {
         let fixture = try makeFixture(dayCount: 1, protocolVersion: 2)
         let journalURL = fixture.root
@@ -731,6 +1170,50 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
 
         XCTAssertNil(manager.activeSnapshot)
         XCTAssertEqual(manager.resumableSnapshots.map(\.jobID), [fixture.session.jobID])
+    }
+
+    func testDiscardCleanupCannotDeleteACompetingCheckpointWhileSenderUnwinds() async throws {
+        let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone)
+        let harness = Harness()
+        let baseline = harness.transport()
+        var release: CheckedContinuation<Void, Never>?
+        defer { release?.resume() }
+        let transport = ConnectedCorpusSender.Transport(open: baseline.open,
+            sendPartition: { _, manifest, transferID, _ in
+                await withCheckedContinuation { release = $0 }
+                return .failure(.init(transferID: transferID, jobID: manifest.jobID,
+                    reason: .cancelled, message: "Controlled unwind"))
+            }, finalize: baseline.finalize, cancel: baseline.cancel)
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, transportProvider: { _ in transport })
+        Self.retainedRecoveryManagers.append(manager)
+        let negotiation = ConnectedCorpusDurableNegotiation(transfer: .init(protocolVersion: fixture.session.protocolVersion,
+            partitionTargetBytes: fixture.session.partitionTargetBytes), peerBinding: try XCTUnwrap(fixture.session.peerBinding))
+        let service = SyncService()
+        let task = Task { @MainActor in
+            try await manager.send(origin: .scheduledIPhone, jobID: fixture.session.jobID,
+                manifest: fixture.manifest, durableNegotiation: negotiation, syncService: service,
+                produceItem: { _, date in try self.makeSmallItem(date: date) })
+        }
+        await waitUntil { release != nil }
+        try manager.discardScheduledRecovery(jobID: fixture.session.jobID)
+        let discarded = try XCTUnwrap(manager.journal(jobID: fixture.session.jobID))
+        XCTAssertEqual(discarded.state, .cancelled)
+        XCTAssertNotNil(discarded.pendingPartition)
+        XCTAssertEqual(discarded.items.count, 1)
+        let other = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+        let winner = try other.updateState(jobID: fixture.session.jobID, state: .cancelled, message: "A different revocation owns cleanup")
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let journalURL = directory.appendingPathComponent("journal.json")
+        let metadata = try Data(contentsOf: journalURL)
+        let paths = winner.items.map(\.relativePath) + [try XCTUnwrap(winner.pendingPartition).relativePath]
+        let files = try paths.map { (directory.appendingPathComponent($0), try Data(contentsOf: directory.appendingPathComponent($0))) }
+        release?.resume()
+        release = nil
+        _ = try? await task.value
+        XCTAssertEqual(try Data(contentsOf: journalURL), metadata)
+        for (url, bytes) in files { XCTAssertEqual(try Data(contentsOf: url), bytes) }
+        XCTAssertEqual(try other.load(jobID: fixture.session.jobID)?.state, .cancelled)
+        XCTAssertFalse(manager.hasRunningExport)
     }
 
     func testDiscardScheduledCorpusRecoveryRetainsJournalAndDoesNotTouchInteractiveJobs() throws {
