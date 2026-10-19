@@ -906,6 +906,10 @@ class HostCoreDailyAggregatePlannerTest {
     @Test
     fun realPinnedWakeDateRouterDoesNotReadPolicyOrAmbientClockAndKeepsEmptySleepAuthority() = runTest {
         val service = HealthMdCoreService()
+        val capturedStoragePin = requireNotNull(ExportEnginePinCodec.decodeOrNull(
+            requireNotNull(javaClass.classLoader!!.getResource("direct/android-sleep-v6-storage-pin.json")).readText().trim(),
+        ))
+        assertThat(ExportEnginePinValidator().validate(capturedStoragePin, service).isCompatible).isTrue()
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
         val pin = ExportEnginePin.create(
             engine = ExportEngineMode.rust,

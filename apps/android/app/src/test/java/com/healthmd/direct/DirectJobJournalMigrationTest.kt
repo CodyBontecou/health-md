@@ -44,6 +44,17 @@ class DirectJobJournalMigrationTest {
     }
 
     @Test
+    fun missingInspectionDoesNotCreateJobStorageOrOwnership() = withStore { store, root ->
+        val directory = File(root, "direct-cli")
+        val before = directory.listFiles().orEmpty().map { it.name }.toSet()
+        assertThat(File(directory, "jobs").exists()).isFalse()
+        val jobId = UUID.randomUUID().toString()
+        assertThat(store.load(jobId, "synthetic-missing")).isNull()
+        assertThat(store.hasIncompletePreparation(jobId, "synthetic-missing")).isFalse()
+        assertThat(directory.listFiles().orEmpty().map { it.name }.toSet()).isEqualTo(before)
+    }
+
+    @Test
     fun v1WithoutVersionOrPinDecodesAsLegacy() {
         val current = DirectJobJournal(
             requestFingerprint = "request-fingerprint",

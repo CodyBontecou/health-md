@@ -1,17 +1,29 @@
 package com.healthmd.direct
 
 import com.healthmd.direct.protocol.PreparedTransfer
+import com.healthmd.direct.protocol.ArtifactKind
+import com.healthmd.direct.protocol.ArtifactSchema
+import com.healthmd.direct.protocol.ProductId
+import com.healthmd.direct.protocol.MINIMUM_PARTITION_BYTES
+import com.healthmd.direct.protocol.MAXIMUM_PARTITION_BYTES
+import com.healthmd.direct.protocol.MAXIMUM_CHUNK_BYTES
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import java.io.File
 import java.io.RandomAccessFile
 import java.time.Instant
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.FileVisitResult
+import java.nio.file.attribute.BasicFileAttributes
+import java.io.IOException
+import java.time.LocalDate
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -25,27 +37,14 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 
-@Singleton
-class DirectCliJobStore private constructor(
-    trustStore: DirectCliTrustStore,
+internal class DirectCliNamespaceJobStore(
+    internal val root: File,
+    internal val namespace: DirectJobNamespace,
     private val directorySync: (File) -> Boolean,
 ) {
-    @Inject
-    constructor(trustStore: DirectCliTrustStore) : this(trustStore, ::syncDirectoryOnAndroid)
-
-    internal constructor(
-        trustStore: DirectCliTrustStore,
-        @Suppress("UNUSED_PARAMETER") testOnly: Unit,
-        directorySync: (File) -> Boolean,
-    ) : this(trustStore, directorySync)
-
-    private val root = File(trustStore.rootDirectory(), "jobs").apply {
-        check(mkdirs() || isDirectory) { "Unable to create Direct CLI job storage." }
-    }
     private val json = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
 
     fun load(jobId: String, requestFingerprint: String): DirectJobJournal? = withStoreLock {
-        sweepExpired()
         val directory = jobDirectory(jobId)
         val file = File(directory, JOURNAL_NAME)
         if (!file.isFile) {
@@ -108,11 +107,10 @@ class DirectCliJobStore private constructor(
         atomicWrite(pending, pendingImage.toByteArray())
         val token = UUID.randomUUID().toString()
         atomicWrite(File(directory, OWNER_NAME), token.toByteArray(Charsets.US_ASCII))
-        DirectPreparationLease(jobId, token, pendingImage)
+        DirectPreparationLease(jobId, token, pendingImage, namespace)
     }
 
     fun hasIncompletePreparation(jobId: String, requestFingerprint: String): Boolean = withStoreLock {
-        sweepExpired()
         val pending = File(jobDirectory(jobId), PENDING_NAME)
         if (!pending.isFile) return@withStoreLock false
         val saved = runCatching { decodePendingJob(pending.readText()) }
@@ -137,6 +135,9 @@ class DirectCliJobStore private constructor(
 
     fun save(journal: DirectJobJournal): Unit = withStoreLock {
         require(UUID.fromString(journal.transfer.accepted.jobId).toString() == journal.transfer.accepted.jobId)
+        if (namespace == DirectJobNamespace.WAKE_DATE) {
+            validateSuccessorJournal(jobDirectory(journal.transfer.accepted.jobId), journal)
+        }
         val directory = jobDirectory(journal.transfer.accepted.jobId).apply {
             check(mkdirs() || isDirectory) { "Unable to create Direct CLI job directory." }
         }
@@ -194,7 +195,7 @@ class DirectCliJobStore private constructor(
         }
         // Re-establish durability even after a previous rename succeeded but its sync failed.
         syncAuthorityDirectories(directory)
-        DirectAcceptedLease(DirectPreparationLease(jobId, token), current)
+        DirectAcceptedLease(DirectPreparationLease(jobId, token, namespace = namespace), current)
     }
 
     fun validatePreparationLease(lease: DirectPreparationLease): Unit = withStoreLock {
@@ -282,6 +283,7 @@ class DirectCliJobStore private constructor(
     private fun requiredOwnedJournal(lease: DirectAcceptedLease): DirectJobJournal {
         validateAcceptedLease(lease)
         val journal = requireNotNull(loadUnvalidated(lease.owner.jobId))
+        if (namespace == DirectJobNamespace.WAKE_DATE) validateSuccessorJournal(jobDirectory(lease.owner.jobId), journal)
         check(sameAuthority(journal, lease.authority)) { "The accepted Direct CLI authority changed." }
         syncAuthorityDirectories(jobDirectory(lease.owner.jobId))
         return journal
@@ -295,26 +297,127 @@ class DirectCliJobStore private constructor(
     }
 
     fun purgeAll(): Unit = withStoreLock {
-        check(root.deleteRecursively()) { "Unable to purge Direct CLI job storage." }
+        check(deleteTreeWithoutFollowingLinks(root)) { "Unable to purge Direct CLI job storage." }
         check(root.mkdirs() || root.isDirectory) { "Unable to recreate the Direct CLI job store." }
         syncAuthorityDirectories(root)
     }
 
-    fun sweepExpired(now: Instant = Instant.now()): Unit = withStoreLock {
+    fun sweepExpired(now: Instant, protectedJobIds: Set<String>): Unit = withStoreLock {
+        if (!storageExists()) return@withStoreLock
+        check(root.isDirectory && !Files.isSymbolicLink(root.toPath())) { "Invalid Direct CLI storage root." }
+        // Retry an ambiguous post-removal sync even when no job remains to scan.
+        syncAuthorityDirectories(root)
         root.listFiles()?.filter(File::isDirectory)?.forEach { directory ->
-            val journal = runCatching {
-                json.decodeFromString<DirectJobJournal>(File(directory, JOURNAL_NAME).readText())
-            }.getOrNull()
-            val pending = runCatching {
-                decodePendingJob(File(directory, PENDING_NAME).readText())
-            }.getOrNull()
-            val expiresAt = journal?.expiresAt ?: pending?.expiresAt
-            val expired = expiresAt?.let { runCatching { !Instant.parse(it).isAfter(now) }.getOrNull() }
-            val corruptRetentionElapsed = expired == null &&
-                directory.lastModified() > 0L &&
-                directory.lastModified() <= now.minusSeconds(MAXIMUM_RETENTION_SECONDS).toEpochMilli()
-            if (expired == true || corruptRetentionElapsed) {
+            if (directory.name in protectedJobIds) return@forEach
+            // Unknown, misplaced, incomplete and duplicate authority is never age-deleted.
+            val expiresAt = runCatching {
+                validatePlacement(directory.name)
+                val journalFile = File(directory, JOURNAL_NAME)
+                if (journalFile.isFile) {
+                    val journal = json.decodeFromString<DirectJobJournal>(journalFile.readText())
+                    Instant.parse(journal.expiresAt)
+                } else {
+                    Instant.parse(decodePendingJob(File(directory, PENDING_NAME).readText()).expiresAt)
+                }
+            }.getOrNull() ?: return@forEach
+            if (!expiresAt.isAfter(now)) {
+                syncAuthorityDirectories(directory)
                 check(deleteOwnedDirectory(directory)) { "Unable to remove expired Direct CLI storage." }
+            }
+        }
+    }
+
+    internal fun <T> transaction(action: () -> T): T = withStoreLock(action)
+    internal fun contains(jobId: String): Boolean = Files.exists(jobDirectory(jobId).toPath(), LinkOption.NOFOLLOW_LINKS)
+    internal fun storageExists(): Boolean = Files.exists(root.toPath(), LinkOption.NOFOLLOW_LINKS)
+    internal fun jobIds(): List<String> = root.listFiles()?.filter { it.isDirectory }?.map { it.name }.orEmpty()
+
+    internal fun validatePlacement(jobId: String) {
+        val directory = jobDirectory(jobId)
+        check(directory.isDirectory && !Files.isSymbolicLink(directory.toPath()) &&
+            !Files.isSymbolicLink(root.toPath()) && directory.canonicalFile.parentFile == root.canonicalFile) {
+            "Invalid Direct CLI storage placement."
+        }
+        val journalFile = File(directory, JOURNAL_NAME)
+        val pendingFile = File(directory, PENDING_NAME)
+        val pin = if (journalFile.exists()) {
+            check(journalFile.isFile && !Files.isSymbolicLink(journalFile.toPath())) { "Invalid Direct CLI journal storage." }
+            val journal = runCatching { json.decodeFromString<DirectJobJournal>(journalFile.readText()) }
+                .getOrElse { throw IllegalStateException("The durable Direct CLI journal is corrupt.", it) }
+            check(journal.transfer.accepted.jobId == jobId) { "The Direct CLI journal identity changed." }
+            if (namespace == DirectJobNamespace.WAKE_DATE) {
+                check(journal.version == DirectJobJournal.CURRENT_VERSION && !pendingFile.exists()) {
+                    "The successor Direct CLI journal is incomplete."
+                }
+                validateSuccessorJournal(directory, journal)
+            }
+            journal.enginePin
+        } else {
+            check(pendingFile.isFile && !Files.isSymbolicLink(pendingFile.toPath())) { "The Direct CLI preparation is incomplete." }
+            val pending = runCatching { decodePendingJob(pendingFile.readText()) }
+                .getOrElse { throw IllegalStateException("The Direct CLI preparation is corrupt.", it) }
+            if (namespace == DirectJobNamespace.WAKE_DATE) {
+                check(pending.version == DirectJobJournal.CURRENT_VERSION) { "The successor Direct CLI preparation version changed." }
+            }
+            pending.enginePin
+        }
+        check(DirectJobNamespace.forPin(pin) == namespace) { "The Direct CLI journal is in the wrong namespace." }
+        if (namespace == DirectJobNamespace.WAKE_DATE) {
+            val owner = File(directory, OWNER_NAME)
+            check(owner.isFile && !Files.isSymbolicLink(owner.toPath()) && owner.length() == 36L &&
+                runCatching { UUID.fromString(owner.readText()).toString() == owner.readText() }.getOrDefault(false)) {
+                "The successor Direct CLI ownership is unavailable."
+            }
+        }
+    }
+
+    private fun validateSuccessorJournal(directory: File, journal: DirectJobJournal) {
+        val transfer = journal.transfer
+        val accepted = transfer.accepted
+        val session = transfer.session
+        check(accepted.productId == ProductId.GENERATED_FILES_V1 &&
+            accepted.jobId == directory.name && session.jobId == accepted.jobId &&
+            accepted.requestFingerprint == journal.requestFingerprint && session.requestFingerprint == journal.requestFingerprint &&
+            accepted.peerBinding == session.peerBinding && UUID.fromString(session.sessionId).toString() == session.sessionId &&
+            UUID.fromString(accepted.peerBinding.sourceInstallationId).toString() == accepted.peerBinding.sourceInstallationId &&
+            UUID.fromString(accepted.peerBinding.destinationInstallationId).toString() == accepted.peerBinding.destinationInstallationId &&
+            LocalDate.parse(accepted.resolvedRange.startDate) <= LocalDate.parse(accepted.resolvedRange.endDate) &&
+            Instant.parse(accepted.acceptedAt) <= Instant.parse(journal.expiresAt) &&
+            Instant.parse(session.createdAt) <= Instant.parse(journal.expiresAt) &&
+            session.partitionTargetBytes in MINIMUM_PARTITION_BYTES..MAXIMUM_PARTITION_BYTES &&
+            transfer.manifests.isNotEmpty() &&
+            transfer.manifests.map { it.artifactId }.toSet().size == transfer.manifests.size &&
+            transfer.manifests.map { it.artifactId }.toSet() == transfer.artifactPaths.keys &&
+            transfer.manifests.all { it.jobId == accepted.jobId && it.artifactId.isNotBlank() &&
+                it.kind == ArtifactKind.GENERATED_FILE && it.schema == ArtifactSchema("healthmd.generated-files", 1) &&
+                it.byteCount >= 0 && it.sha256.matches(SHA256_PATTERN) &&
+                !it.relativePath.isNullOrBlank() && it.writeMode != null } &&
+            transfer.partitions.all { it.artifactId in transfer.artifactPaths &&
+                UUID.fromString(it.transferId).toString() == it.transferId &&
+                it.byteCount in 1..session.partitionTargetBytes && it.artifactOffset >= 0 &&
+                it.chunkCount == (it.byteCount + MAXIMUM_CHUNK_BYTES - 1) / MAXIMUM_CHUNK_BYTES &&
+                it.sha256.matches(SHA256_PATTERN) } &&
+            transfer.partitions.map { it.index } == transfer.partitions.indices.map(Int::toLong) &&
+            transfer.partitions.firstOrNull()?.previousSha256 == null &&
+            transfer.partitions.zipWithNext().all { (left, right) -> right.previousSha256 == left.sha256 }) {
+            "The successor Direct CLI transfer authority is incomplete."
+        }
+        transfer.artifactPaths.forEach { (id, path) ->
+            val file = File(path)
+            val manifest = transfer.manifests.single { it.artifactId == id }
+            var offset = 0L
+            transfer.partitions.filter { it.artifactId == id }.forEach { partition ->
+                check(partition.artifactOffset == offset && partition.byteCount <= manifest.byteCount - offset) {
+                    "The successor Direct CLI partition coverage is incomplete."
+                }
+                offset += partition.byteCount
+            }
+            check(offset == manifest.byteCount) { "The successor Direct CLI artifact coverage is incomplete." }
+            check(file.isFile && file.length() == manifest.byteCount &&
+                generateSequence(file) { it.parentFile }.takeWhile { it != directory }
+                    .none { Files.isSymbolicLink(it.toPath()) } &&
+                file.canonicalFile.toPath().startsWith(directory.canonicalFile.toPath())) {
+                "The successor Direct CLI artifact is unavailable."
             }
         }
     }
@@ -421,10 +524,27 @@ class DirectCliJobStore private constructor(
     }
 
     private fun deleteOwnedDirectory(directory: File): Boolean {
-        if (directory.exists() && !directory.deleteRecursively()) return false
+        if (!deleteTreeWithoutFollowingLinks(directory)) return false
         syncAuthorityDirectories(root)
         return true
     }
+
+    private fun deleteTreeWithoutFollowingLinks(directory: File): Boolean = try {
+        if (Files.exists(directory.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+            Files.walkFileTree(directory.toPath(), object : SimpleFileVisitor<Path>() {
+                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    Files.delete(file)
+                    return FileVisitResult.CONTINUE
+                }
+                override fun postVisitDirectory(dir: Path, error: IOException?): FileVisitResult {
+                    if (error != null) throw error
+                    Files.delete(dir)
+                    return FileVisitResult.CONTINUE
+                }
+            })
+        }
+        true
+    } catch (_: IOException) { false }
 
     private fun atomicWrite(file: File, bytes: ByteArray) {
         val directory = requireNotNull(file.parentFile)
@@ -443,7 +563,7 @@ class DirectCliJobStore private constructor(
     }
 
     companion object {
-        private fun syncDirectoryOnAndroid(directory: File): Boolean = try {
+        internal fun syncDirectoryOnAndroid(directory: File): Boolean = try {
             val descriptor = android.system.Os.open(directory.absolutePath, android.system.OsConstants.O_RDONLY, 0)
             try {
                 android.system.Os.fsync(descriptor)
@@ -455,12 +575,12 @@ class DirectCliJobStore private constructor(
             false
         }
 
+        private val SHA256_PATTERN = Regex("[0-9a-f]{64}")
         private val transactionLock = ReentrantLock()
         private val activeLockPaths = ThreadLocal.withInitial { mutableSetOf<String>() }
         private const val JOURNAL_NAME = "job.json"
         private const val PENDING_NAME = "pending.json"
         private const val OWNER_NAME = "preparation-owner"
-        private const val MAXIMUM_RETENTION_SECONDS = 7L * 24L * 60L * 60L
     }
 
     private data class PendingJob(
@@ -486,6 +606,7 @@ class DirectPreparationLease internal constructor(
     internal val jobId: String,
     internal val token: String,
     internal val pendingImage: String? = null,
+    internal val namespace: DirectJobNamespace = DirectJobNamespace.HISTORICAL,
 )
 
 /** An accepted operation's live ownership and frozen authority, never serialized on the wire. */
