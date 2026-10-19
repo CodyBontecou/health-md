@@ -601,40 +601,72 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             startDate: XCTUnwrap(formatter.date(from: "2026-10-31T04:00:00Z")),
             endDate: XCTUnwrap(formatter.date(from: "2026-11-03T05:00:00Z")),
             calendarTimeZoneIdentifier: zone.identifier)
-        let snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
-            selectionIDs: ["sleep_total", "sleep_core"], rangeSummary: true)
-        let resolution = try await AppleLooseDailyExportPlanner().planRange(healthData: [populated, empty],
-            dailyOutputOwnerDates: ["2026-11-01"], requestedRange: requested,
-            settingsSnapshot: snapshot, surface: .localVaultRangeWithoutSideEffects,
-            operationIdentity: AppleExportOperationIdentity(requestID: "sleep-range-request", sessionID: "sleep-range-session",
-                capturedAt: try XCTUnwrap(formatter.date(from: "2026-11-04T12:00:00Z")),
-                calendarTimeZoneIdentifier: zone.identifier))
-        guard case .planned(let operation) = resolution else { return XCTFail("The successor range must not fall back to a historical writer") }
-        let summaries = operation.artifacts.filter { $0.kind == .rollup }
-        XCTAssertEqual(summaries.count, 4)
-        for planned in summaries {
-            let bytes = planned.artifact.inlineData
-            let text = String(decoding: bytes, as: UTF8.self)
-            XCTAssertTrue(text.contains("morning_ends"))
-            XCTAssertTrue(text.contains("apple-v11"))
-            if planned.format == .json {
-                let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
-                XCTAssertEqual(root["schema_version"] as? Int, 11)
-                XCTAssertEqual(root["source_schema_version"] as? Int, 11)
-                XCTAssertEqual(root["rollup_rules_version"] as? Int, 11)
-                XCTAssertEqual(root["period_id"] as? String, "2026-10-31_to_2026-11-03")
-                XCTAssertEqual(root["days_expected"] as? Int, 4)
-                XCTAssertEqual(root["days_counted"] as? Int, 2)
-                XCTAssertEqual(root["source_dates"] as? [String], ["2026-11-01", "2026-11-02"])
-                XCTAssertEqual(root["coverage_percent"] as? Double, 50)
+        var baselineSummaryBytes: [ExportFormat: Data] = [:]
+        for summaryOnly in [false, true] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                selectionIDs: ["sleep_total", "sleep_core"], rangeSummary: true)
+            snapshot.summaryOnlyExport = summaryOnly
+            let resolution = try await AppleLooseDailyExportPlanner().planRange(healthData: [populated, empty],
+                dailyOutputOwnerDates: ["2026-11-01"], requestedRange: requested,
+                settingsSnapshot: snapshot, surface: .localVaultRangeWithoutSideEffects,
+                operationIdentity: AppleExportOperationIdentity(requestID: "sleep-range-request", sessionID: "sleep-range-session",
+                    capturedAt: try XCTUnwrap(formatter.date(from: "2026-11-04T12:00:00Z")),
+                    calendarTimeZoneIdentifier: zone.identifier))
+            guard case .planned(let operation) = resolution else { return XCTFail("The successor range must not fall back to a historical writer") }
+            let summaries = operation.artifacts.filter { $0.kind == .rollup }
+            XCTAssertEqual(summaries.count, 4)
+            XCTAssertEqual(operation.artifacts.count, summaryOnly ? 4 : 8)
+            if summaryOnly {
+                XCTAssertTrue(operation.artifacts.allSatisfy { $0.kind == .rollup })
             }
-            if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_RANGE_FIXTURE_DIR"], !directory.isEmpty {
-                let output = URL(fileURLWithPath: directory).appendingPathComponent("native-apple-v11")
-                    .appendingPathComponent(planned.artifact.relativePath)
-                try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try bytes.write(to: output)
+            for planned in summaries {
+                let bytes = planned.artifact.inlineData
+                if summaryOnly {
+                    XCTAssertEqual(bytes, baselineSummaryBytes[planned.format], "Summary-only must preserve exact range bytes")
+                } else {
+                    baselineSummaryBytes[planned.format] = bytes
+                }
+                let text = String(decoding: bytes, as: UTF8.self)
+                XCTAssertTrue(text.contains("morning_ends"))
+                XCTAssertTrue(text.contains("apple-v11"))
+                if planned.format == .json {
+                    let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+                    XCTAssertEqual(root["schema_version"] as? Int, 11)
+                    XCTAssertEqual(root["source_schema_version"] as? Int, 11)
+                    XCTAssertEqual(root["rollup_rules_version"] as? Int, 11)
+                    XCTAssertEqual(root["period_id"] as? String, "2026-10-31_to_2026-11-03")
+                    XCTAssertEqual(root["days_expected"] as? Int, 4)
+                    XCTAssertEqual(root["days_counted"] as? Int, 2)
+                    XCTAssertEqual(root["source_dates"] as? [String], ["2026-11-01", "2026-11-02"])
+                    XCTAssertEqual(root["coverage_percent"] as? Double, 50)
+                }
+                if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_RANGE_FIXTURE_DIR"], !directory.isEmpty {
+                    let output = URL(fileURLWithPath: directory).appendingPathComponent("native-apple-v11")
+                        .appendingPathComponent(planned.artifact.relativePath)
+                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try bytes.write(to: output)
+                }
             }
         }
+    }
+
+    func testDormantSummaryOnlyPreferenceKeepsDailyOutputWhenRangeSummaryIsDisabled() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 123))
+        var snapshot = try acceptedSnapshot(context: context, formats: [.json], selectionIDs: ["steps"])
+        snapshot.summaryOnlyExport = true
+        let result = try await AppleLooseDailyExportPlanner().planRange(healthData: [day],
+            settingsSnapshot: snapshot, surface: .localVaultRangeWithoutSideEffects)
+        guard case .planned(let operation) = result else { return XCTFail("A dormant summary-only preference must retain daily output") }
+        XCTAssertEqual(operation.artifacts.count, 1)
+        XCTAssertEqual(operation.artifacts.first?.kind, .daily)
+        let bytes = try XCTUnwrap(operation.artifacts.first).artifact.inlineData
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        XCTAssertEqual(root["schema_version"] as? Int, 11)
+        XCTAssertEqual((root["activity"] as? [String: Any])?["steps"] as? Int, 123)
     }
 
     private func acceptedSnapshot(

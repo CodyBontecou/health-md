@@ -308,7 +308,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
 
     func planRange(
         healthData records: [HealthData],
-        dailyOutputOwnerDates: Set<String>,
+        dailyOutputOwnerDates requestedDailyOutputOwnerDates: Set<String>,
         requestedRange suppliedRequestedRange: HealthRollupRangeRequest? = nil,
         settingsSnapshot: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface,
@@ -339,6 +339,10 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
             )
         }
+        // Summary-only changes output selection, never the captured corpus or
+        // immutable requested bounds used to calculate the range summary.
+        let dailyOutputOwnerDates: Set<String> = settingsSnapshot.summaryOnlyExport
+            && settingsSnapshot.generateRangeSummary ? [] : requestedDailyOutputOwnerDates
         let requestedRange: HealthRollupRangeRequest?
         if settingsSnapshot.generateRangeSummary {
             requestedRange = try suppliedRequestedRange ?? HealthRollupRangeRequest(
@@ -350,7 +354,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         }
         guard Set(ownerDates).count == ownerDates.count,
               (!dailyOutputOwnerDates.isEmpty || requestedRange != nil),
-              dailyOutputOwnerDates.isSubset(of: Set(ownerDates)),
+              requestedDailyOutputOwnerDates.isSubset(of: Set(ownerDates)),
               requestedRange?.calendarTimeZoneIdentifier == nil
                 || requestedRange?.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
@@ -714,7 +718,6 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
     ) -> Bool {
         (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .preview)
             && !settings.exportFormats.isEmpty && settings.exportFormats.isSubset(of: Set(ExportFormat.allCases))
-            && !settings.summaryOnlyExport
             && records.allSatisfy { $0.workouts.isEmpty && $0.providers?.isEmpty != false }
     }
 
