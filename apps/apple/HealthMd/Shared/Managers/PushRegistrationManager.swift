@@ -214,7 +214,9 @@ final class PushRegistrationManager: @unchecked Sendable {
             hour: schedule.preferredHour,
             minute: schedule.preferredMinute,
             weekday: schedule.frequency == .weekly ? schedule.weekday : nil,
-            todayRefreshEnabled: schedule.todayRefreshEnabled,
+            // The deployed push contract remains hour-only. Keep its completed-day nudge,
+            // but do not advertise a rounded three-hour refresh for minute schedules.
+            todayRefreshEnabled: schedule.todayRefreshEnabled && schedule.todayRefreshMinutes >= 180,
             todayRefreshIntervalHours: ExportSchedule.clampedTodayRefreshIntervalHours(schedule.todayRefreshIntervalHours)
         )
         let body = Payload(userId: userId, timezone: timezone, schedule: inner)

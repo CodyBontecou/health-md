@@ -44,7 +44,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
 
         XCTAssertEqual(
             inventory.capabilities.first { $0.id == "account.myself_lifetime_claim" }?.classification,
-            "planned"
+            "shared"
         )
 
         for capability in inventory.capabilities {
@@ -89,6 +89,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
     }
 
     private static let sharedCapabilities: Set<String> = [
+        "account.myself_lifetime_claim",
         "export.daily-files",
         "export.sleep-summary",
         "export.activity-basics",
@@ -120,7 +121,6 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "automation.api-recovery-authority",
         "direct.cli_agent_push_wake",
         "export.range-summary",
-        "account.myself_lifetime_claim",
         "support.local-reporting-fallback",
     ]
 

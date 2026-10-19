@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 WORKFLOWS = sorted((ROOT / ".github/workflows").glob("android-*.yml"))
+NATIVE_CACHE = ROOT / ".github/actions/android-native-cache/action.yml"
 USES = re.compile(r"^\s*(?:-\s*)?uses:\s*([^\s#]+)", re.MULTILINE)
 PINNED = re.compile(r"^[^./][^@]*@[0-9a-f]{40}$")
 
@@ -14,7 +15,7 @@ PINNED = re.compile(r"^[^./][^@]*@[0-9a-f]{40}$")
 class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
     def test_every_external_action_in_release_and_provenance_path_is_commit_pinned(self) -> None:
         failures: list[str] = []
-        for workflow in WORKFLOWS:
+        for workflow in [*WORKFLOWS, NATIVE_CACHE]:
             for reference in USES.findall(workflow.read_text()):
                 if reference.startswith("./"):
                     continue
@@ -151,7 +152,7 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         setting = "settings put secure show_ime_with_hard_keyboard 1"
         readiness = "settings get secure default_input_method"
         enabled = "shell ime list -s"
-        instrumentation = ":app:connectedFdroidDebugAndroidTest"
+        instrumentation = "./scripts/run-ci-instrumentation.sh"
         for requirement in (setting, readiness, enabled, instrumentation):
             self.assertIn(requirement, workflow)
         self.assertLess(workflow.index(setting), workflow.index(instrumentation))
