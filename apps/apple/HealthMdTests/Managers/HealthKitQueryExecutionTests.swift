@@ -112,29 +112,38 @@ nonisolated final class HealthKitQueryExecutionTests: XCTestCase {
         )
         let physicalCompletions = LockedCounter()
         let physicalQuery = ControlledQuery()
+        let callerReturned = expectation(description: "Logical timeout returns while the physical query is held")
         let startedAt = ContinuousClock.now
 
-        do {
-            _ = try await HealthKitQueryExecutionController.withController(controller) {
-                try await executeHealthKitQuery(
-                    operation: "testTimeout",
-                    typeIdentifier: "test.type"
-                ) {
-                    let result = await physicalQuery.value()
-                    physicalCompletions.increment()
-                    return result
+        let caller = Task {
+            do {
+                _ = try await HealthKitQueryExecutionController.withController(controller) {
+                    try await executeHealthKitQuery(
+                        operation: "testTimeout",
+                        typeIdentifier: "test.type"
+                    ) {
+                        let result = await physicalQuery.value()
+                        physicalCompletions.increment()
+                        return result
+                    }
                 }
+                XCTFail("Expected timeout")
+            } catch {
+                let nsError = error as NSError
+                XCTAssertEqual(nsError.domain, HealthKitQueryExecutionError.domain)
+                XCTAssertEqual(nsError.code, HealthKitQueryExecutionError.Code.timedOut.rawValue)
             }
-            XCTFail("Expected timeout")
-        } catch {
-            let nsError = error as NSError
-            XCTAssertEqual(nsError.domain, HealthKitQueryExecutionError.domain)
-            XCTAssertEqual(nsError.code, HealthKitQueryExecutionError.Code.timedOut.rawValue)
+            callerReturned.fulfill()
         }
 
+        // Bound an accidental caller/worker join so failure still reaches cleanup.
+        // The latency assertion retains its original, separate 300 ms budget.
+        await fulfillment(of: [callerReturned], timeout: 2)
         XCTAssertLessThan(milliseconds(from: startedAt), 300)
+        XCTAssertEqual(physicalCompletions.value, 0)
         XCTAssertEqual(controller.snapshot().unresolvedQueries, 1)
         physicalQuery.complete()
+        await caller.value
         let physicalWorkerReleased = await waitUntil {
             physicalCompletions.value == 1 && controller.snapshot().unresolvedQueries == 0
         }
