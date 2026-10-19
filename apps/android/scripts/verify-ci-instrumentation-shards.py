@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-SHARD_COUNT = 4
+SHARD_COUNT = 6
 
 
 def report_kind(path: Path) -> str:

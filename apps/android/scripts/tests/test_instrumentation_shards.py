@@ -16,7 +16,7 @@ class ShardReportTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
-        for index in range(4):
+        for index in range(6):
             for kind in ('play',) + (('core', 'direct_e2e') if index == 0 else ()):
                 self.report(index, kind)
 
@@ -40,8 +40,8 @@ class ShardReportTests(unittest.TestCase):
     def test_full_distinct_union_and_skips_are_retained(self):
         self.report(2, 'play', skipped=True)
         result = shards.verify(self.root, '12', '1')
-        self.assertEqual((6, 5, 1), (result['tests'], result['passed'], result['skipped']))
-        self.assertEqual({0, 1, 2, 3}, {x['shard'] for x in result['cases']})
+        self.assertEqual((8, 7, 1), (result['tests'], result['passed'], result['skipped']))
+        self.assertEqual({0, 1, 2, 3, 4, 5}, {x['shard'] for x in result['cases']})
 
     def test_missing_artifact_report_or_required_group_fails(self):
         for kind in ('play', 'core', 'direct_e2e'):
@@ -55,6 +55,18 @@ class ShardReportTests(unittest.TestCase):
         (self.root / 'android-instrumentation-12-1-shard-3').rename(self.root / 'wrong-attempt')
         with self.assertRaisesRegex(ValueError, 'artifact set mismatch'):
             shards.verify(self.root, '12', '1')
+
+    def test_each_of_the_six_worker_artifacts_is_required(self):
+        for index in range(6):
+            with self.subTest(shard=index):
+                folder = self.root / f'android-instrumentation-12-1-shard-{index}'
+                hidden = self.root.parent / (self.root.name + '-held')
+                folder.rename(hidden)
+                try:
+                    with self.assertRaisesRegex(ValueError, 'artifact set mismatch'):
+                        shards.verify(self.root, '12', '1')
+                finally:
+                    hidden.rename(folder)
 
     def test_duplicate_case_across_shards_fails(self):
         self.report(3, 'play', name='test0')
@@ -80,13 +92,22 @@ class ShardReportTests(unittest.TestCase):
             shards.verify(self.root, '12', '1')
 
 class ShardWorkflowTests(unittest.TestCase):
-    def test_all_four_workers_and_stable_release_gate_remain_mandatory(self):
+    def test_all_six_workers_and_stable_release_gate_remain_mandatory(self):
         workflow = (SCRIPT.parents[3] / '.github/workflows/android-ci.yml').read_text()
         workers = workflow.split('\n  instrumentation-shards:\n', 1)[1].split('\n  instrumentation:\n', 1)[0]
         aggregate = workflow.split('\n  instrumentation:\n', 1)[1].split('\n  fdroid:\n', 1)[0]
         self.assertIn('fail-fast: false', workers)
-        self.assertIn('shard: [0, 1, 2, 3]', workers)
-        self.assertIn("HEALTHMD_ANDROID_SHARD_COUNT: '4'", workers)
+        self.assertEqual(2, workers.count('./scripts/run-ci-gradle.sh --no-daemon --max-workers=2'))
+        self.assertNotIn('./gradlew --no-daemon', workers)
+        for selector in (':healthmd-core:prepareRustDebug', ':app:assemblePlayDebug',
+                         ':app:assemblePlayDebugAndroidTest', ':healthmd-core:assembleDebugAndroidTest',
+                         ':app:assemblePlayE2e', ':app:assemblePlayE2eAndroidTest'):
+            self.assertIn(selector, workers)
+        self.assertIn('timeout 90 ./scripts/prepare-ci-emulator.sh', workers)
+        self.assertIn('./scripts/run-ci-instrumentation.sh', workers)
+        self.assertIn('./scripts/run-direct-cli-ui-e2e.sh', workers)
+        self.assertIn('shard: [0, 1, 2, 3, 4, 5]', workers)
+        self.assertIn("HEALTHMD_ANDROID_SHARD_COUNT: '6'", workers)
         self.assertIn('HEALTHMD_ANDROID_SHARD_INDEX: ${{ matrix.shard }}', workers)
         self.assertIn('if [ "${{ matrix.shard }}" = 0 ]; then', workers)
         self.assertIn('HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX: ${{ needs.changes.outputs.accessibility_matrix }}', workers)

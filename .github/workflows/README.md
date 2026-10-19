@@ -90,9 +90,12 @@ or changing results run every active job. Selected jobs must succeed; a skipped
 job is accepted only when its selection output explicitly says `false`. The policy
 job's listing validator discovers every `scripts/tests/test_*.py`.
 
-Phone instrumentation retains four hosted shards. Shard zero also runs the core
+Phone instrumentation uses six hosted shards with the same complete Play test inventory. Shard zero also runs the core
 suite and direct E2E; every shard runs the native-input readiness check using Play.
 The stable instrumentation gate validates the combined Play/core/E2E XML inventory.
+APK preparation reuses compilation outputs through the existing safe Gradle wrapper;
+requested Test tasks still execute freshly. Six workers trade more runner minutes
+for shorter device-test execution; hosted cache and queue evidence determine actual savings.
 Local runs remain unsharded unless shard index/count are explicitly supplied.
 
 Instrumentation runs every core and Play test method with the full ten-display

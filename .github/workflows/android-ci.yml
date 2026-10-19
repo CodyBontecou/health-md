@@ -268,7 +268,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5]
     needs: changes
     if: ${{ needs.changes.outputs.instrumentation == 'true' }}
     runs-on: ubuntu-24.04
@@ -318,8 +318,9 @@ jobs:
       - name: Prepare instrumentation APKs before the emulator boots
         # Avoid running Kotlin compilation alongside the emulator's first boot.
         # In-process compilation leaves no Kotlin daemon holding memory afterward.
+        # Reuse compilation outputs; the shared init script forces any Test tasks fresh.
         run: |
-          ./gradlew --no-daemon --max-workers=2 \
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 \
             -Pkotlin.compiler.execution.strategy=in-process \
             :healthmd-core:prepareRustDebug \
             :app:assemblePlayDebug :app:assemblePlayDebugAndroidTest --stacktrace
@@ -327,7 +328,7 @@ jobs:
       - name: Prepare core and direct E2E artifacts on shard zero before boot
         if: ${{ matrix.shard == 0 }}
         run: |
-          ./gradlew --no-daemon --max-workers=2 \
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 \
             -Pkotlin.compiler.execution.strategy=in-process \
             -PhealthmdInstrumentedTestBuildType=e2e \
             :healthmd-core:assembleDebugAndroidTest \
@@ -341,7 +342,7 @@ jobs:
       - name: Run core and Play instrumentation
         env:
           HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX: ${{ needs.changes.outputs.accessibility_matrix }}
-          HEALTHMD_ANDROID_SHARD_COUNT: '4'
+          HEALTHMD_ANDROID_SHARD_COUNT: '6'
           HEALTHMD_ANDROID_SHARD_INDEX: ${{ matrix.shard }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
