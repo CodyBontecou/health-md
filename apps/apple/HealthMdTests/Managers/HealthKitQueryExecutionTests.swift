@@ -2,7 +2,10 @@
 import XCTest
 @testable import HealthMd
 
-final class HealthKitQueryExecutionTests: XCTestCase {
+// These tests measure the query executor, not UI/main-actor scheduling latency.
+// iOS tests default to MainActor; run async cases on the concurrent executor so
+// a busy hosted app cannot postpone the observation after a deadline fires.
+nonisolated final class HealthKitQueryExecutionTests: XCTestCase {
     nonisolated private final class LockedCounter: @unchecked Sendable {
         private let lock = NSLock()
         private var storage = 0
@@ -102,6 +105,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         return condition()
     }
 
+    @concurrent
     func testCallerReturnsByDeadlineWhenWorkerIgnoresCancellationAndCompletesLater() async {
         let controller = HealthKitQueryExecutionController(
             configuration: configuration(deadlineMilliseconds: 25)
@@ -137,6 +141,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         XCTAssertTrue(physicalWorkerReleased)
     }
 
+    @concurrent
     func testLateCompletionDoesNotResumeCallerTwice() async {
         let controller = HealthKitQueryExecutionController(
             configuration: configuration(deadlineMilliseconds: 20)
@@ -171,6 +176,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         XCTAssertEqual(controller.snapshot().unresolvedQueries, 0)
     }
 
+    @concurrent
     func testBlockedDiagnosticsDoNotDelayDeadlineOrReleasePhysicalOwnership() async {
         for blockedOutcome in ["start", "slow", "timeout"] {
             let observed = LockedCounter()
@@ -209,6 +215,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         }
     }
 
+    @concurrent
     func testBlockedCompletionDiagnosticDoesNotDelaySuccessfulCaller() async throws {
         let observed = LockedCounter()
         let controller = HealthKitQueryExecutionController(
@@ -232,6 +239,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         XCTAssertTrue(emitted)
     }
 
+    @concurrent
     func testSameOperationAndTypeCircuitFailsFastWithoutInvokingAgain() async {
         let controller = HealthKitQueryExecutionController(
             configuration: configuration(deadlineMilliseconds: 20)
@@ -278,6 +286,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         XCTAssertEqual(invocations.value, 1)
     }
 
+    @concurrent
     func testTimedOutQueryDoesNotBlockDifferentHealthyQueryWithinBudget() async throws {
         let controller = HealthKitQueryExecutionController(
             configuration: configuration(
@@ -315,6 +324,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         XCTAssertEqual(controller.snapshot().unresolvedQueries, 1)
     }
 
+    @concurrent
     func testCancellationReturnsWithoutAwaitingPhysicalCompletion() async {
         let controller = HealthKitQueryExecutionController(
             configuration: configuration(deadlineMilliseconds: 500)
@@ -359,6 +369,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         XCTAssertTrue(physicalWorkerReleased)
     }
 
+    @concurrent
     func testStableNSErrorDomainAndCodesIncludingBudgetFailure() async {
         XCTAssertEqual(
             HealthKitQueryExecutionError.domain,
