@@ -657,7 +657,7 @@ final class IPhoneDirectFileExportProducer {
                 failure: outcome.failure
             )
             let relativePath = String(format: "captured-%08d.citem", index)
-            let url = try jobDirectory(journal.request.jobID).appendingPathComponent(relativePath)
+            let url = try jobDirectory(for: journal).appendingPathComponent(relativePath)
             let encodedPayload = try measureDirectFileSynchronousPhase("spool-encode") {
                 try ConnectedCorpusApplicationItemCodec.encode(
                     payload,
@@ -748,7 +748,7 @@ final class IPhoneDirectFileExportProducer {
 
         for index in journal.capturedDays.indices where !journal.capturedDays[index].historyFactsRecorded {
             let day = journal.capturedDays[index]
-            let url = try jobDirectory(journal.request.jobID).appendingPathComponent(day.relativePath)
+            let url = try jobDirectory(for: journal).appendingPathComponent(day.relativePath)
             let payload = try decoder.decode(
                 ConnectedCorpusHealthDayPayload.self,
                 from: Data(contentsOf: url)
@@ -794,7 +794,7 @@ final class IPhoneDirectFileExportProducer {
         channel: IPhoneDirectExportConnection
     ) async throws -> IPhoneDirectFileJournal {
         var journal = supplied
-        let staging = try stagingDirectory(journal.request.jobID)
+        let staging = try stagingDirectory(for: journal)
         if fileManager.fileExists(atPath: staging.path) { try fileManager.removeItem(at: staging) }
         try fileManager.createDirectory(
             at: staging,
@@ -842,7 +842,7 @@ final class IPhoneDirectFileExportProducer {
             archiveDates: journal.originalRequestedDates
         )
         let payloadURLs = try journal.capturedDays.map {
-            try jobDirectory(journal.request.jobID).appendingPathComponent($0.relativePath)
+            try jobDirectory(for: journal).appendingPathComponent($0.relativePath)
         }
         // Capture journals already persist the count of exportable provider records. Use that
         // lightweight fact for operation-wide authority instead of decoding every potentially
@@ -1016,7 +1016,7 @@ final class IPhoneDirectFileExportProducer {
                 startDate: immutableRangeStart,
                 endDate: immutableRangeEnd,
                 healthSubfolder: journal.healthSubfolder,
-                archiveWorkDirectoryURL: try jobDirectory(journal.request.jobID)
+                archiveWorkDirectoryURL: try jobDirectory(for: journal)
                     .appendingPathComponent("archive-work", isDirectory: true),
                 unavailableRollupDates: unavailable,
                 writeDataDictionary: !wroteDictionary,
@@ -1118,7 +1118,7 @@ final class IPhoneDirectFileExportProducer {
     private func buildPartitions(_ journal: IPhoneDirectFileJournal) throws -> [DirectTransferPartition] {
         var partitions: [DirectTransferPartition] = []
         var previous: String?
-        let staging = try stagingDirectory(journal.request.jobID)
+        let staging = try stagingDirectory(for: journal)
         for file in journal.generatedFiles {
             let url = try generatedFileURL(relativePath: file.relativePath, under: staging)
             var offset: Int64 = 0
@@ -1239,7 +1239,7 @@ final class IPhoneDirectFileExportProducer {
             throw IPhoneDirectFileProducerError.invalidSpool
         }
         try checkCancellation(journal)
-        let staging = try stagingDirectory(journal.request.jobID)
+        let staging = try stagingDirectory(for: journal)
         let url = try generatedFileURL(relativePath: file.relativePath, under: staging)
         let handle = try FileHandle(forReadingFrom: url)
         _ = Darwin.fcntl(handle.fileDescriptor, F_NOCACHE, 1)
@@ -1655,33 +1655,18 @@ final class IPhoneDirectFileExportProducer {
         }
     }
 
-    private func jobDirectory(_ jobID: UUID, createIfMissing: Bool = true) throws -> URL {
-        let applicationSupport = try fileManager.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: createIfMissing
-        )
-        let directory = applicationSupport
-            .appendingPathComponent("Health.md", isDirectory: true)
-            .appendingPathComponent("DirectCLIOutbound", isDirectory: true)
-            .appendingPathComponent("v1", isDirectory: true)
-            .appendingPathComponent(jobID.uuidString.lowercased(), isDirectory: true)
-            .appendingPathComponent("files", isDirectory: true)
-        guard createIfMissing else { return directory }
-        try fileManager.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true,
-            attributes: [
-                .posixPermissions: 0o700,
-                .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication
-            ]
-        )
-        return directory
+    private func jobStorage(createSupport: Bool = false) throws -> AppleDirectJobStorage {
+        AppleDirectJobStorage(support: try fileManager.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: createSupport), fileManager: fileManager)
     }
 
-    private func stagingDirectory(_ jobID: UUID) throws -> URL {
-        try jobDirectory(jobID).appendingPathComponent("generated", isDirectory: true)
+    private func jobDirectory(for journal: IPhoneDirectFileJournal) throws -> URL {
+        try jobStorage().boundDirectory(jobID: journal.request.jobID, kind: .files,
+            snapshot: journal.settingsSnapshot, checkpoint: journal.checkpoint).1
+    }
+
+    private func stagingDirectory(for journal: IPhoneDirectFileJournal) throws -> URL {
+        try jobDirectory(for: journal).appendingPathComponent("generated", isDirectory: true)
     }
 
     private func saveJournal(_ journal: inout IPhoneDirectFileJournal, freshAdmission: Bool = false) throws {
@@ -1689,15 +1674,19 @@ final class IPhoneDirectFileExportProducer {
         encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let destination = try jobDirectory(journal.request.jobID).appendingPathComponent("journal.json")
-        let support = try fileManager.url(for: .applicationSupportDirectory,
-            in: .userDomainMask, appropriateFor: nil, create: true)
+        let storage = try jobStorage(createSupport: freshAdmission)
         let data = try encoder.encode(journal)
         do {
-            try journal.checkpoint.publish(data, to: destination,
-                freshAdmission: freshAdmission,
-                lockURL: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"),
-                durabilityRoot: support, fileManager: fileManager,
+            _ = try storage.namespace(for: journal.settingsSnapshot)
+            let admission = freshAdmission ? try storage.beginAdmission() : nil
+            defer { admission?.close() }
+            let location = freshAdmission
+                ? try storage.prepareDirectory(jobID: journal.request.jobID, kind: .files, snapshot: journal.settingsSnapshot)
+                : try storage.boundDirectory(jobID: journal.request.jobID, kind: .files,
+                    snapshot: journal.settingsSnapshot, checkpoint: journal.checkpoint)
+            try journal.checkpoint.publish(data, to: location.1.appendingPathComponent("journal.json"),
+                freshAdmission: freshAdmission, lockURL: storage.lock(location.0),
+                durabilityRoot: storage.support, fileManager: fileManager,
                 attributes: [.posixPermissions: 0o600,
                     .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
         } catch let error as POSIXError where error.code == .EAGAIN || (freshAdmission && error.code == .EEXIST) {
@@ -1706,19 +1695,18 @@ final class IPhoneDirectFileExportProducer {
     }
 
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal? {
-        let directory = try jobDirectory(jobID, createIfMissing: false)
-        guard try AppleExportJournalRecovery.hasExistingJobDirectory(at: directory, fileManager: fileManager) else { return nil }
-        let support = try fileManager.url(for: .applicationSupportDirectory,
-            in: .userDomainMask, appropriateFor: nil, create: false)
+        let storage = try jobStorage()
+        guard let (namespace, directory) = try storage.existingDirectory(jobID: jobID, kind: .files) else { return nil }
         let saved: (journal: IPhoneDirectFileJournal, checkpoint: AppleExportJournalCheckpoint)? =
             try AppleExportJournalRecovery.loadOwned(
                 at: directory.appendingPathComponent("journal.json"),
-                lockURL: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"),
-                durabilityRoot: support, fileManager: fileManager,
+                lockURL: storage.lock(namespace), durabilityRoot: storage.support, fileManager: fileManager,
                 attributes: [.posixPermissions: 0o600,
                     .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
                 legacyCompletionIdentity: { $0.request.jobID },
-                isSupported: { journal in journal.request.jobID == jobID && IPhoneDirectFileJournal.isSupportedVersion(journal.version) })
+                isSupported: { journal in journal.request.jobID == jobID && IPhoneDirectFileJournal.isSupportedVersion(journal.version)
+                    && (try? storage.namespace(for: journal.settingsSnapshot)) == namespace
+                    && (namespace != .wakeDate || journal.appleExportEnginePin == journal.settingsSnapshot.appleExportEnginePin) })
         guard var saved else { return nil }
         saved.journal.checkpoint = saved.checkpoint
         return saved.journal
