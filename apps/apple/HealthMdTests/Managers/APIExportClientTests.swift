@@ -601,7 +601,7 @@ private final class InjectedSessionAuthenticationDelegate: NSObject, URLSessionT
     }
 }
 
-private final class AuthenticationChallengeURLProtocol: URLProtocol, URLAuthenticationChallengeSender, @unchecked Sendable {
+private final class AuthenticationChallengeURLProtocol: URLProtocol {
     override class func canInit(with request: URLRequest) -> Bool { true }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -620,12 +620,25 @@ private final class AuthenticationChallengeURLProtocol: URLProtocol, URLAuthenti
             previousFailureCount: 0,
             failureResponse: nil,
             error: nil,
-            sender: self
+            sender: AuthenticationChallengeSender(protocolInstance: self)
         )
         client?.urlProtocol(self, didReceive: challenge)
     }
 
     override func stopLoading() {}
+
+}
+
+// URLAuthenticationChallengeSender requires Sendable, while URLProtocol's
+// conformance is unavailable on iOS. Keep the challenge callback in a separate
+// NSObject adapter and serialize access to the retained protocol context.
+private final class AuthenticationChallengeSender: NSObject, URLAuthenticationChallengeSender, @unchecked Sendable {
+    private let protocolInstance: URLProtocol
+    private let lock = NSRecursiveLock()
+
+    init(protocolInstance: URLProtocol) {
+        self.protocolInstance = protocolInstance
+    }
 
     func use(_ credential: URLCredential, for challenge: URLAuthenticationChallenge) {
         finishLoading()
@@ -636,7 +649,9 @@ private final class AuthenticationChallengeURLProtocol: URLProtocol, URLAuthenti
     }
 
     func cancel(_ challenge: URLAuthenticationChallenge) {
-        client?.urlProtocol(self, didFailWithError: URLError(.userAuthenticationRequired))
+        lock.withLock {
+            protocolInstance.client?.urlProtocol(protocolInstance, didFailWithError: URLError(.userAuthenticationRequired))
+        }
     }
 
     func performDefaultHandling(for challenge: URLAuthenticationChallenge) {
@@ -648,13 +663,15 @@ private final class AuthenticationChallengeURLProtocol: URLProtocol, URLAuthenti
     }
 
     private func finishLoading() {
+        lock.lock()
+        defer { lock.unlock() }
         let response = HTTPURLResponse(
-            url: request.url!,
+            url: protocolInstance.request.url!,
             statusCode: 202,
             httpVersion: "HTTP/1.1",
             headerFields: nil
         )!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocolDidFinishLoading(self)
+        protocolInstance.client?.urlProtocol(protocolInstance, didReceive: response, cacheStoragePolicy: .notAllowed)
+        protocolInstance.client?.urlProtocolDidFinishLoading(protocolInstance)
     }
 }
