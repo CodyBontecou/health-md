@@ -1,5 +1,6 @@
 package com.healthmd.presentation
 
+import com.healthmd.BuildConfig
 import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
@@ -35,12 +36,15 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_START_ROUTE = "com.healthmd.START_ROUTE"
         const val EXTRA_PROMPT_SCHEDULED_RECOVERY = "com.healthmd.PROMPT_SCHEDULED_RECOVERY"
+        private const val STATE_HANDLED_MYSELF_CLAIM = "myselfClaim.handledIntent"
         private const val STATE_HANDLED_EXTERNAL_INTENT = "sharedSetup.handledExternalIntent"
         private const val STATE_SHARED_SETUP_PROCESS_ID = "sharedSetup.processInstanceID"
         private const val STATE_EXTERNAL_DOCUMENT_BYTES = "sharedSetup.externalDocumentBytes"
         private const val STATE_EXTERNAL_IMPORT_FINISHED = "sharedSetup.externalImportFinished"
     }
 
+    private var handledMyselfClaimIntent = false
+    private var myselfClaimRequestId by mutableStateOf(0L)
     private var startRoute by mutableStateOf<String?>(null)
     private var scheduledRecoveryPromptRequestId by mutableStateOf(0L)
     private var handledExternalIntent = false
@@ -68,6 +72,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handledMyselfClaimIntent = savedInstanceState?.getBoolean(STATE_HANDLED_MYSELF_CLAIM) == true
         val alreadyHandledExternalIntent =
             savedInstanceState?.getBoolean(STATE_HANDLED_EXTERNAL_INTENT) == true
         val restoredExternalBytes = savedInstanceState?.getByteArray(STATE_EXTERNAL_DOCUMENT_BYTES)
@@ -106,6 +111,7 @@ class MainActivity : ComponentActivity() {
                     settingsRepository = settingsRepository,
                     sharedSetupCoordinator = sharedSetupCoordinator,
                     initialRoute = startRoute,
+                    myselfClaimRequestId = myselfClaimRequestId,
                     scheduledRecoveryPromptRequestId = scheduledRecoveryPromptRequestId,
                 )
             }
@@ -113,6 +119,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(STATE_HANDLED_MYSELF_CLAIM, handledMyselfClaimIntent)
         outState.putBoolean(STATE_HANDLED_EXTERNAL_INTENT, handledExternalIntent)
         if (handledExternalIntent) {
             outState.putString(STATE_SHARED_SETUP_PROCESS_ID, sharedSetupCoordinator.processInstanceID)
@@ -154,10 +161,22 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handledMyselfClaimIntent = false
         handleLaunchIntent(intent, acceptExternalDocument = true)
     }
 
     private fun handleLaunchIntent(intent: Intent?, acceptExternalDocument: Boolean) {
+        // Claim links must never enter Shared Setup's document importer. Reject noncanonical
+        // variants here as well; presenting a disclosure never authorizes a proof upload.
+        if (intent?.data?.scheme == "healthmd") {
+            if (!handledMyselfClaimIntent && com.healthmd.myselfclaim.MyselfClaimLinks.accepts(
+                    intent.action, intent.dataString, BuildConfig.DISTRIBUTION_CHANNEL == "play",
+                )) {
+                handledMyselfClaimIntent = true
+                myselfClaimRequestId++
+            }
+            return
+        }
         if (acceptExternalDocument) {
             SharedSetupIntentExtractor.uri(intent)?.let { uri ->
                 // Record ownership synchronously. The singleton coordinator keeps provider IO alive

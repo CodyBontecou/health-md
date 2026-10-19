@@ -494,6 +494,8 @@
     <string name="schedule_through_today_summary">প্রতিটি রান পূর্ববর্তী সম্পূর্ণ দিনগুলোর সাথে আজকের আংশিক ফাইলও এক্সপোর্ট করে, তাই দিনের বেলায় চালালে গতকাল রাতের ঘুমও অন্তর্ভুক্ত হয়। সারাদিন উভয় ফাইল হালনাগাদ রাখতে ঘণ্টায় ঘণ্টায় ফ্রিকোয়েন্সির সাথে ব্যবহার করুন। একই দিনের সদৃশ কনটেন্ট এড়াতে ওভাররাইট বা আপডেট রাইট মোড ব্যবহার করুন।</string>
     <string name="profile_schedule_today_refresh">আজকের এক্সপোর্ট রিফ্রেশ করুন</string>
     <string name="profile_schedule_refresh_interval">রিফ্রেশ ব্যবধান</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d মিনিট</string>
+    <string name="profile_schedule_refresh_summary_minutes">আজ প্রতি %1$d মিনিটয় রিফ্রেশ করে</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d ঘণ্টা</string>
     <string name="profile_schedule_refresh_summary">আজ প্রতি %1$d ঘণ্টায় রিফ্রেশ করে</string>
     <string name="profile_schedule_discard_recovery">মুলতুবি পুনরুদ্ধার বাতিল করুন</string>
@@ -1380,4 +1382,18 @@
     <string name="fdroid_onboarding_access_body">অফিসিয়াল F-Droid বিল্ডে সব লোকাল এক্সপোর্ট ও অটোমেশন সুবিধা বিনামূল্যে অন্তর্ভুক্ত।</string>
     <string name="fdroid_onboarding_no_purchase">কেনা, পুনরুদ্ধার, মূল্য বা Play অ্যাকাউন্টের প্রয়োজন নেই।</string>
     <string name="fdroid_onboarding_no_play_services">নির্ধারিত এক্সপোর্ট Google Play Billing ছাড়াই কাজ করে।</string>
+
+    <string name="myself_claim_entry">myself.md অ্যাক্সেস দাবি করুন</string>
+    <string name="myself_claim_entry_subtitle">Google Play-এর আগের আজীবন কেনাকাটা যাচাই করুন।</string>
+    <string name="myself_claim_title">myself.md অ্যাক্সেস</string>
+    <string name="myself_claim_intro">আপনার Health.md-এর আজীবন কেনাকাটায় myself.md-এর বিনামূল্যে আজীবন অ্যাক্সেস রয়েছে।</string>
+    <string name="myself_claim_disclosure">চালিয়ে গেলে আমরা Google Play-এর কেনাকাটার প্রমাণ পড়ে যোগ্যতা যাচাইয়ের জন্য myself.md-এ পাঠাব। স্বাস্থ্য ও অবস্থানের ডেটা আপনার ডিভাইসেই থাকবে।</string>
+    <string name="myself_claim_account">তারপর সাইন ইন করে অ্যাক্সেস পাওয়ার myself.md অ্যাকাউন্ট বেছে নিন। প্রতিটি মূল কেনাকাটা শুধু একটি অ্যাকাউন্টের সঙ্গে যুক্ত হতে পারে। শুধু বিনামূল্যের বা পুরোনো হিসেবে বহাল Android অ্যাক্সেস যোগ্য নয়।</string>
+    <string name="myself_claim_verify">কেনাকাটা যাচাই করে এগিয়ে যান</string>
+    <string name="myself_claim_verifying">কেনাকাটা যাচাই হচ্ছে…</string>
+    <string name="myself_claim_awaiting_user">ব্রাউজারে সাইন ইন করে প্রাপকের অ্যাকাউন্ট নিশ্চিত করুন। তারপর myself.md-এ একই অ্যাকাউন্ট ব্যবহার করুন। নিশ্চিত করার আগে অ্যাক্সেস দেওয়া হবে না।</string>
+    <string name="myself_claim_no_purchase">Health.md-এর সম্পূর্ণ আজীবন কেনাকাটা পাওয়া যায়নি। যে Google Play অ্যাকাউন্ট দিয়ে কিনেছেন সেটি ব্যবহার করে আবার চেষ্টা করুন। অপেক্ষমাণ কেনাকাটা যোগ্য নয়।</string>
+    <string name="myself_claim_store_unavailable">Google Play কেনাকাটা আনতে পারেনি। সংযোগ ও Google Play অ্যাকাউন্ট পরীক্ষা করে আবার চেষ্টা করুন।</string>
+    <string name="myself_claim_verification_failed">কেনাকাটা যাচাই করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন। সমস্যা থাকলে সহায়তায় যোগাযোগ করুন; কোনো অ্যাক্সেস দেওয়া হয়নি।</string>
+    <string name="myself_claim_browser_unavailable">ব্রাউজার খোলা যায়নি। একটি ব্রাউজার চালু করে কেনাকাটা আবার যাচাই করুন।</string>
 </resources>

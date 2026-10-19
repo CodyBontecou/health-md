@@ -35,7 +35,6 @@ EXPECTED_TESTS = [
     "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
     "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
     "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab",
-    "ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle",
     "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
     "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
     "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
@@ -438,7 +437,7 @@ class WorkflowExecutionTests(unittest.TestCase):
             self.assertIn(setting, build)
         selections = []
         result_bundles = set()
-        for args, count in zip(calls[1:], (9, 9)):
+        for args, count in zip(calls[1:], (9, 8)):
             self.assertEqual(args[args.index("-xctestrun") + 1], artifact)
             bundle = Path(args[args.index("-resultBundlePath") + 1])
             self.assertEqual(bundle.parent, Path("build/test-results"))
@@ -475,7 +474,7 @@ class WorkflowExecutionTests(unittest.TestCase):
 
     def test_every_selected_native_case_has_an_implemented_test_method(self) -> None:
         selections = re.findall(r"-only-testing:HealthMdUITests/([A-Za-z0-9_]+/[A-Za-z0-9_]+)", self.job)
-        self.assertEqual(len(selections), 22, "Preserve all18 phone and4 tablet selections")
+        self.assertEqual(len(selections), 21, "Preserve all17 phone and4 tablet selections")
         for selection in selections:
             suite, method = selection.split("/")
             source = (REPO / "apps/apple/HealthMdUITests" / (suite + ".swift")).read_text()

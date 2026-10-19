@@ -35,6 +35,7 @@ struct ContentView: View {
     @State private var showPostOnboardingPaywall = false
     @AppStorage("pricing.paywall.postOnboarding.shown.v1") private var hasSeenPostOnboardingPaywall = false
     @State private var isExporting = false
+    @State private var isTestExportWaitingForCompletion = false
     @State private var isRequestingHealthAuthorization = false
     @State private var isAssessingHistory = false
     @State private var executionHistoryAssessment: HealthHistoryAssessment?
@@ -290,17 +291,25 @@ struct ContentView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if isExporting {
-                ManualExportActivityBanner(
-                    target: exportTargetSelection,
-                    progress: exportProgress,
-                    message: exportStatusMessage,
-                    onCancel: cancelExport
-                )
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.s2)
-                .padding(.bottom, Spacing.s1)
-                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            VStack(spacing: 0) {
+                if TestMode.isUITesting && isTestExportWaitingForCompletion {
+                    Button("Finish simulated export") {
+                        isTestExportWaitingForCompletion = false
+                    }
+                    .accessibilityIdentifier("uitest.export.finishBatch")
+                }
+                if isExporting {
+                    ManualExportActivityBanner(
+                        target: exportTargetSelection,
+                        progress: exportProgress,
+                        message: exportStatusMessage,
+                        onCancel: cancelExport
+                    )
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, Spacing.s2)
+                    .padding(.bottom, Spacing.s1)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
             }
         }
         .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
@@ -2556,6 +2565,7 @@ struct ContentView: View {
         exportTask = Task {
             defer {
                 isExporting = false
+                isTestExportWaitingForCompletion = false
                 exportProgress = 0.0
                 exportTask = nil
             }
@@ -2577,7 +2587,16 @@ struct ContentView: View {
                 }
                 exportStatusMessage = "Exporting 2026-03-29... (2/2)"
                 exportProgress = 0.5
-                try? await Task.sleep(for: .seconds(3))
+                // Let the UI test inspect the intermediate state for as long as
+                // it needs. A wall-clock delay races XCTest accessibility queries.
+                isTestExportWaitingForCompletion = true
+                while isTestExportWaitingForCompletion {
+                    do {
+                        try await Task.sleep(for: .milliseconds(100))
+                    } catch {
+                        return
+                    }
+                }
             }
 
             switch result {

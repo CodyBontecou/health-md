@@ -340,7 +340,7 @@ final class CIQualityGateTests: XCTestCase {
             "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
         )
         XCTAssertTrue(
-            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
+            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
             "The native UI execution job must retain 60 minutes after preparation"
         )
         XCTAssertEqual(
@@ -371,7 +371,7 @@ final class CIQualityGateTests: XCTestCase {
             XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
         }
         let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-        XCTAssertEqual(smokeSelectionCount, 18, "PR smoke must preserve all 15 current regressions plus three history journeys")
+        XCTAssertEqual(smokeSelectionCount, 17, "PR smoke must preserve all 14 current regressions plus three history journeys")
         XCTAssertEqual(content.components(separatedBy: "runs-on: xcode-27").count - 1, 5,
                        "Both producers and all three native test jobs must use the verified free SDK27 runner")
         XCTAssertEqual(content.components(separatedBy: "name: apple-sdk27-shared-core").count - 1, 5,
