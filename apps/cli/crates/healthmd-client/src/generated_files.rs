@@ -258,7 +258,14 @@ mod tests {
         let GeneratedFileRequest::Android(wire, path) = android.request else {
             panic!("wrong adapter")
         };
-        assert_eq!(path, std::fs::canonicalize(&root).unwrap());
+        // The admitted policy path has a portable Windows representation; std
+        // canonicalization may instead add a verbatim namespace prefix.
+        let expected_destination = GeneratedDestination::open(&root).unwrap();
+        assert_eq!(path.as_path(), expected_destination.root());
+        assert_eq!(
+            std::fs::canonicalize(&path).unwrap(),
+            std::fs::canonicalize(&root).unwrap()
+        );
         assert_eq!(wire.source_installation_id, source_id);
         assert!(matches!(
             wire.product,
