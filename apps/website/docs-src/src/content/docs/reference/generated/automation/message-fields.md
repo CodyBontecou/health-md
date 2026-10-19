@@ -7,7 +7,7 @@ editUrl: false
 This inventory is generated from production API/control serialization and every current `SyncMessage` Codable case. Paths ending in `[]` describe array elements.
 
 - Generated JSON artifacts inventoried: 30
-- Sync messages inventoried: 38
+- Sync messages inventoried: 40
 
 ## SyncMessage wire inventory
 
@@ -338,6 +338,42 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsSplitExportDetailPolicy` | boolean |
 | `$.hello._0.supportsStrictRawStreaming` | boolean |
 | `$.hello._0.supportsSummaryOnlyExports` | boolean |
+
+### `iphoneContextRefreshRequest`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.iphoneContextRefreshRequest` | object |
+| `$.iphoneContextRefreshRequest._0` | object |
+| `$.iphoneContextRefreshRequest._0.createdAt` | integer |
+| `$.iphoneContextRefreshRequest._0.dateRangeEnd` | integer |
+| `$.iphoneContextRefreshRequest._0.dateRangeStart` | integer |
+| `$.iphoneContextRefreshRequest._0.dateSelection` | string |
+| `$.iphoneContextRefreshRequest._0.jobID` | string |
+| `$.iphoneContextRefreshRequest._0.profileID` | string |
+| `$.iphoneContextRefreshRequest._0.profileName` | string |
+| `$.iphoneContextRefreshRequest._0.selection` | object |
+| `$.iphoneContextRefreshRequest._0.selection.detail_level` | string |
+| `$.iphoneContextRefreshRequest._0.selection.field_pointers` | array |
+| `$.iphoneContextRefreshRequest._0.selection.metric_ids` | array |
+| `$.iphoneContextRefreshRequest._0.selection.metric_ids[]` | string |
+| `$.iphoneContextRefreshRequest._0.selection.object_paths` | array |
+| `$.iphoneContextRefreshRequest._0.selection.source_ids` | array |
+| `$.iphoneContextRefreshRequest._0.selection.source_ids[]` | string |
+
+### `iphoneContextRefreshStatus`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.iphoneContextRefreshStatus` | object |
+| `$.iphoneContextRefreshStatus._0` | object |
+| `$.iphoneContextRefreshStatus._0.failureReason` | string |
+| `$.iphoneContextRefreshStatus._0.jobID` | string |
+| `$.iphoneContextRefreshStatus._0.message` | string |
+| `$.iphoneContextRefreshStatus._0.state` | string |
+| `$.iphoneContextRefreshStatus._0.updatedAt` | integer |
 
 ### `iphoneExportAccepted`
 
