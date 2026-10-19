@@ -729,6 +729,49 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         )
     }
 
+    func testLegacyFormatsSurviveBootstrapAndReload() throws {
+        let settings = makeSettings()
+        settings.exportFormats = [.markdown, .obsidianBases]
+        let coordinator = makeCoordinator(settings: settings)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let reloaded = ExportProfileStore(userDefaults: defaults)
+        XCTAssertEqual(reloaded.profile(id: activeID)?.settings.exportFormats, [.markdown, .obsidianBases])
+        XCTAssertEqual(settings.exportFormats, [.markdown, .obsidianBases])
+    }
+
+    func testFormatEditsStillPersistAfterExplicitFlush() async throws {
+        let settings = makeSettings()
+        settings.exportFormats = [.markdown, .obsidianBases]
+        let coordinator = makeCoordinator(settings: settings)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        coordinator.flushEdits()
+
+        settings.exportFormats = [.markdown, .json]
+        try await Task.sleep(for: .seconds(1.2))
+
+        let reloaded = ExportProfileStore(userDefaults: defaults)
+        XCTAssertEqual(settings.exportFormats, [.markdown, .json])
+        XCTAssertEqual(reloaded.profile(id: activeID)?.settings.exportFormats, [.markdown, .json],
+                       "The scheduled profile must not retain Bases and omit JSON after the visible selection changes")
+    }
+
+    func testSecondDebouncedFormatEditPersistsWithoutProfileSwitch() async throws {
+        let settings = makeSettings()
+        settings.exportFormats = [.markdown]
+        let coordinator = makeCoordinator(settings: settings)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+
+        settings.exportFormats = [.markdown, .obsidianBases]
+        try await Task.sleep(for: .seconds(1.2))
+        XCTAssertEqual(ExportProfileStore(userDefaults: defaults).profile(id: activeID)?.settings.exportFormats,
+                       [.markdown, .obsidianBases])
+
+        settings.exportFormats = [.markdown, .json]
+        try await Task.sleep(for: .seconds(1.2))
+        XCTAssertEqual(ExportProfileStore(userDefaults: defaults).profile(id: activeID)?.settings.exportFormats,
+                       [.markdown, .json], "More than one edit batch must be observed during the same activation")
+    }
+
     // MARK: - Creation form
 
     func testCreateProfileUsesChosenNameTargetAndFolderBinding() throws {

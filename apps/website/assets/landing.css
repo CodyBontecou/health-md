@@ -2953,6 +2953,188 @@ html:lang(zh-Hans) .hero-intro p {
   .agent-evidence-card { padding: 22px 19px; }
 }
 
+.testimonials {
+  padding: 110px clamp(24px, 6vw, 96px);
+  border-top: 1px solid #e9e8eb;
+  background: var(--paper);
+}
+
+.testimonials-inner {
+  max-width: 1200px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.testimonials-heading {
+  max-width: 620px;
+  margin: 0 auto 44px;
+}
+
+.testimonials-eyebrow {
+  margin-bottom: 16px;
+  display: inline-block;
+  padding: 9px 16px;
+  border-radius: 100px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.testimonials-heading h2 {
+  margin-bottom: 18px;
+  font-size: clamp(36px, 4.5vw, 60px);
+  font-weight: 550;
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+}
+
+.testimonials-heading > p:last-child {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.testimonials-wall {
+  display: grid;
+  gap: 16px;
+  text-align: left;
+}
+
+.testimonials-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.testimonials-wall.is-animated {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+}
+
+.is-animated .testimonials-track {
+  display: flex;
+  width: max-content;
+  animation: testimonial-scroll 55s linear infinite;
+  animation-play-state: paused;
+}
+
+.is-animated.is-in-view .testimonials-track { animation-play-state: running; }
+.is-animated .testimonials-row-reverse .testimonials-track { animation-direction: reverse; }
+.is-animated .testimonials-group {
+  display: flex;
+  flex-shrink: 0;
+  padding-right: 16px;
+}
+
+.is-animated .testimonial-card { width: clamp(290px, 28vw, 360px); }
+.testimonials-wall.is-paused .testimonials-track,
+.testimonials-wall:hover .testimonials-track,
+.testimonials:focus-within .testimonials-track { animation-play-state: paused; }
+
+@keyframes testimonial-scroll {
+  to { transform: translateX(-50%); }
+}
+
+.testimonial-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 285px;
+  padding: 26px;
+  border: 1px solid #efeff0;
+  border-radius: 12px;
+  background: #f1f2f3;
+  overflow-wrap: anywhere;
+}
+
+.testimonial-card::before {
+  content: "“";
+  height: 36px;
+  color: #7240e8;
+  font-family: Georgia, serif;
+  font-size: 56px;
+  line-height: 1;
+}
+
+.testimonial-rating {
+  order: 1;
+  margin-top: 12px;
+  color: #7240e8;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.testimonial-card blockquote {
+  margin-bottom: 32px;
+  font-size: 17px;
+  line-height: 1.5;
+  letter-spacing: -0.025em;
+}
+
+.testimonial-card figcaption {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.testimonial-author {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.testimonial-source,
+.testimonials-note {
+  color: #626269;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.testimonials-note { margin-top: 28px; }
+
+.testimonials-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--ink);
+  font-size: 14px;
+  text-underline-offset: 4px;
+}
+
+.testimonials-pause {
+  margin-top: 24px;
+  padding: 10px 18px;
+  border: 1px solid #d5d3da;
+  border-radius: 100px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.testimonials-pause:hover { background: #eeedf1; }
+.testimonials-pause:focus-visible,
+.testimonials-link:focus-visible {
+  outline: 2px solid #7240e8;
+  outline-offset: 5px;
+  border-radius: 2px;
+}
+
+@media (max-width: 800px) {
+  .testimonials { padding-block: 72px; }
+  .testimonials-group { grid-template-columns: 1fr; }
+  .testimonials-heading { margin-bottom: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .testimonials-wall.is-animated { overflow: visible; mask-image: none; }
+  .is-animated .testimonials-track { display: block; width: auto; animation: none; }
+  .is-animated .testimonials-group { display: grid; padding-right: 0; }
+  .is-animated .testimonial-card { width: auto; }
+  .testimonials-group[aria-hidden="true"],
+  .testimonials-pause { display: none; }
+}
+
 .download-cta {
   position: relative;
   min-height: 680px;
