@@ -2,10 +2,16 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
+mode=paired
+case "${1:-}" in
+  "") [[ $# == 0 ]] || exit 1 ;;
+  --phone-only) [[ $# == 1 ]] || exit 1; mode=phone ;;
+  *) echo 'Usage: test_verify_google_play_generated_apk_evidence.sh [--phone-only]' >&2; exit 1 ;;
+esac
 verifier=./scripts/verify-google-play-generated-apk-evidence.sh
 phone_source=app/build/outputs/apk/play/debug/app-play-debug.apk
 wear_source=wear/build/outputs/apk/debug/wear-debug.apk
-[[ -f "$phone_source" && -f "$wear_source" ]] || {
+[[ -f "$phone_source" && ( "$mode" == phone || -f "$wear_source" ) ]] || {
   echo 'Build :app:assemblePlayDebug :wear:assembleDebug before this test' >&2; exit 1;
 }
 build_tools=${ANDROID_HOME:-$HOME/Library/Android/sdk}/build-tools/35.0.0
@@ -14,7 +20,9 @@ aapt=${AAPT:-$build_tools/aapt}
 [[ -x "$apksigner" && -x "$aapt" ]] || {
   echo 'Android build-tools 35.0.0 apksigner/aapt are required' >&2; exit 1;
 }
-signer=$("$apksigner" verify --print-certs "$wear_source" \
+signer_source=$wear_source
+[[ "$mode" != phone ]] || signer_source=$phone_source
+signer=$("$apksigner" verify --print-certs "$signer_source" \
   | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1 | tr '[:upper:]' '[:lower:]')
 [[ "$signer" =~ ^[0-9a-f]{64}$ ]] || exit 1
 
@@ -37,12 +45,17 @@ apk_identity() {
 # independently supplied EXPECTED_* release identity and never derives trust
 # from the retained receipt or APK.
 read -r phone_code phone_version_name < <(apk_identity phone "$phone_source")
-read -r wear_code wear_version_name < <(apk_identity wear "$wear_source")
 # shellcheck source=../android-release-scope.sh
 source scripts/android-release-scope.sh
 wear_mode=$(android_release_wear_mode release-scope.json "$phone_version_name" "$phone_code") || {
   echo 'Release scope is invalid or differs from the built phone APK' >&2; exit 1;
 }
+if [[ "$mode" == phone ]]; then
+  (( phone_code < 1000000 )) || { echo 'Phone APK versionCode is outside its reserved range' >&2; exit 1; }
+  echo 'Phone APK signature and release-scope identity verified; paired receipt checks require a Wear build'
+  exit 0
+fi
+read -r wear_code wear_version_name < <(apk_identity wear "$wear_source")
 [[ "$wear_mode" == deferred || "$phone_version_name" == "$wear_version_name" ]] || {
   echo 'Active paired phone and Wear APK version names differ' >&2; exit 1;
 }

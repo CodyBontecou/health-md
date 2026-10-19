@@ -145,6 +145,40 @@ class GeneratedApkReceiptTest(unittest.TestCase):
         path.write_bytes(path.read_bytes() + b"tamper")
         self.assert_rejected("checksum coverage or content mismatch")
 
+    def test_phone_only_ci_validates_phone_without_a_wear_build(self) -> None:
+        android = self.root / "repo/apps/android"
+        scripts = android / "scripts"
+        (scripts / "tests").mkdir(parents=True)
+        shutil.copyfile(ANDROID / "scripts/android-release-scope.sh", scripts / "android-release-scope.sh")
+        harness = scripts / "tests/test_verify_google_play_generated_apk_evidence.sh"
+        shutil.copyfile(ANDROID / "scripts/tests" / harness.name, harness)
+        phone = android / "app/build/outputs/apk/play/debug/app-play-debug.apk"
+        phone.parent.mkdir(parents=True)
+        original = json.loads((self.evidence / "phone-generated.apk").read_text())
+        phone.write_text(json.dumps(original))
+        scope = json.loads((ANDROID / "release-scope.json").read_text())
+        scope["releaseVersionName"] = "2.3.4"
+        scope["googlePlay"]["phone"]["versionCode"] = 55
+        (android / "release-scope.json").write_text(json.dumps(scope))
+
+        def run(*args):
+            return subprocess.run(["bash", str(harness), *args], env=self.env,
+                                  text=True, capture_output=True)
+
+        result = run("--phone-only")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Phone APK signature and release-scope identity verified", result.stdout)
+        self.assertNotEqual(run().returncode, 0, "Default paired mode must still require Wear")
+        self.assertNotEqual(run("--unknown").returncode, 0)
+        for field, value in (("package", "other.package"), ("code", 56),
+                             ("code", 1000055), ("version", "2.3.5"), ("signer", "invalid")):
+            with self.subTest(field=field, value=value):
+                phone.write_text(json.dumps(original | {field: value}))
+                self.assertNotEqual(run("--phone-only").returncode, 0)
+        phone.write_text(json.dumps(original))
+        (self.tools / "apksigner").write_text("#!/usr/bin/env python3\nimport sys\nsys.exit(1)\n")
+        self.assertNotEqual(run("--phone-only").returncode, 0, "Invalid signatures must fail")
+
     def test_deferred_real_apk_ci_harness_requires_mixed_pair_rejection(self) -> None:
         # Synthetic APK inspectors exercise the CI harness while leaving the production verifier's
         # single paired version expectation unchanged. They cannot produce Play release evidence.
