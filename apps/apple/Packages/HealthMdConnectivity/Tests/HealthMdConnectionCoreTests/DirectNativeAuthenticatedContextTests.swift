@@ -148,7 +148,7 @@ final class DirectNativeAuthenticatedContextTests: XCTestCase {
 // SYNTHETIC HANDSHAKE HELPERS
 // External in-process packet and legacy storage boundaries only. Actual client verification,
 // Curve25519/HMAC/AEAD and existing writer operations execute; no fake proof/capsule is supplied.
-nonisolated final class NativeSessionHandshakeFixture: @unchecked Sendable {
+final class NativeSessionHandshakeFixture: @unchecked Sendable {
     let source = UUID(uuidString: "00000000-0000-4000-8000-000000000001")!
     let host = UUID(uuidString: "00000000-0000-4000-8000-000000000002")!
     let secret = Data(repeating: 0x39, count: 32)
@@ -167,7 +167,7 @@ nonisolated final class NativeSessionHandshakeFixture: @unchecked Sendable {
     }
 }
 
-nonisolated final class NativeSessionMemoryTrust: ManualIPTrustStoring, @unchecked Sendable {
+final class NativeSessionMemoryTrust: ManualIPTrustStoring, @unchecked Sendable {
     private let lock = NSLock()
     private var state: ManualIPTrustState
     private var count = 0
@@ -177,7 +177,7 @@ nonisolated final class NativeSessionMemoryTrust: ManualIPTrustStoring, @uncheck
     func saveState(_ value: ManualIPTrustState) throws { lock.withLock { state = value; count += 1 } }
 }
 
-nonisolated final class NativeSessionPacketPeer: DirectPacketTransport, @unchecked Sendable {
+final class NativeSessionPacketPeer: DirectPacketTransport, @unchecked Sendable {
     enum Fault: Sendable { case none, proof, identity, credential, invalidCredentialSize, malformedEncrypted, closed, saveCancellation }
     private let lock = NSLock()
     private let source: UUID
