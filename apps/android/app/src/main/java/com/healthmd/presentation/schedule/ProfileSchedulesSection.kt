@@ -44,6 +44,7 @@ fun ProfileSchedulesSection(
         onToggle = viewModel::setEnabled,
         onOpenEditor = viewModel::openEditor,
         onDeleteProfile = viewModel::deleteProfile,
+        onDiscardRecovery = viewModel::discardPendingRecovery,
         onAddProfile = viewModel::addProfileFromCurrentSettings,
         onSaveEntry = viewModel::saveEntry,
         modifier = modifier,
@@ -57,12 +58,14 @@ internal fun ProfileSchedulesContent(
     onToggle: (String, Boolean) -> Unit,
     onOpenEditor: (String?) -> Unit,
     onDeleteProfile: (String) -> Unit,
+    onDiscardRecovery: (String) -> Unit,
     onAddProfile: () -> Unit,
     onSaveEntry: (ScheduledProfileEntry) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val protection = LocalConfigurationProtection.current
     var pendingDeleteProfile by remember { mutableStateOf<ProfileScheduleRow?>(null) }
+    var pendingDiscardProfile by remember { mutableStateOf<ProfileScheduleRow?>(null) }
 
     ConfigurationProtectedRegion(modifier = modifier.fillMaxWidth()) {
         Card(
@@ -83,8 +86,16 @@ internal fun ProfileSchedulesContent(
                         onToggle = { enabled -> onToggle(row.profile.id, enabled) },
                         onOpenEditor = { onOpenEditor(row.profile.id) },
                         onDelete = { pendingDeleteProfile = row },
+                        onDiscardRecovery = { pendingDiscardProfile = row },
+                        discardEnabled = uiState.discardingRecoveryProfileId == null,
                     )
                     HorizontalDivider(color = AppColors.borderDefault)
+                }
+                if (uiState.recoveryDiscardFailed) {
+                    Text(
+                        stringResource(R.string.profile_schedule_discard_recovery_failed),
+                        style = MaterialTheme.typography.bodySmall, color = AppColors.error,
+                    )
                 }
                 if (uiState.rows.isEmpty()) {
                     Text(
@@ -126,6 +137,20 @@ internal fun ProfileSchedulesContent(
             },
         )
     }
+    pendingDiscardProfile?.let { row ->
+        ProfileScheduleDiscardRecoveryDialog(
+            profileName = row.profile.name,
+            onDismiss = { pendingDiscardProfile = null },
+            onDiscard = {
+                if (protection.enabled) {
+                    protection.onBlockedChange()
+                } else {
+                    onDiscardRecovery(row.profile.id)
+                }
+                pendingDiscardProfile = null
+            },
+        )
+    }
     uiState.editingProfileId?.let { profileId ->
         val row = uiState.rows.firstOrNull { it.profile.id == profileId } ?: return
         ProfileCadenceEditorDialog(
@@ -142,6 +167,17 @@ internal fun ProfileSchedulesContent(
             },
             onDismiss = { onOpenEditor(null) },
         )
+    }
+}
+
+/** Keep legacy hour summaries while representing the two new minute choices exactly. */
+@Composable
+internal fun todayRefreshSummary(entry: ScheduledProfileEntry?): String {
+    val minutes = entry?.todayRefreshMinutes ?: 180
+    return if (minutes < 180) {
+        stringResource(R.string.profile_schedule_refresh_summary_minutes, minutes)
+    } else {
+        stringResource(R.string.profile_schedule_refresh_summary, minutes / 60)
     }
 }
 

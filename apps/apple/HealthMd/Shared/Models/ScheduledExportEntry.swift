@@ -39,11 +39,24 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
     var lookbackDays: Int
     var todayRefreshEnabled: Bool
     var todayRefreshIntervalHours: Int
+    var todayRefreshIntervalMinutes: Int?
+    var todayRefreshMinutes: Int {
+        get { todayRefreshIntervalMinutes ?? todayRefreshIntervalHours * 60 }
+        set {
+            let minutes = ExportSchedule.todayRefreshMinuteOptions.contains(newValue) ? newValue : 180
+            todayRefreshIntervalMinutes = minutes < 180 ? minutes : nil
+            if minutes >= 180 { todayRefreshIntervalHours = minutes / 60 }
+        }
+    }
 
     /// Logical occurrence of the most recent successful completed-day run.
     var lastExportDate: Date?
     /// Scheduled fire date of the most recent successful Today Refresh.
     var lastTodayRefreshDate: Date?
+    /// Durable fence for explicitly abandoned recovery; never owned by editor drafts.
+    var recoveryGeneration: Int = 0
+    /// Suppresses the abandoned occurrence without pretending it succeeded.
+    var recoveryDiscardedAt: Date?
 
     init(
         id: UUID = UUID(),
@@ -59,6 +72,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         lookbackDays: Int? = nil,
         todayRefreshEnabled: Bool = false,
         todayRefreshIntervalHours: Int = ExportSchedule.defaultTodayRefreshIntervalHours,
+        todayRefreshIntervalMinutes: Int? = nil,
         lastExportDate: Date? = nil,
         lastTodayRefreshDate: Date? = nil,
         enabledAt: Date? = nil
@@ -85,8 +99,89 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         self.todayRefreshIntervalHours = ExportSchedule.clampedTodayRefreshIntervalHours(
             todayRefreshIntervalHours
         )
+        self.todayRefreshIntervalMinutes = todayRefreshIntervalMinutes
         self.lastExportDate = lastExportDate
         self.lastTodayRefreshDate = lastTodayRefreshDate
+    }
+
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case profileID
+        case isEnabled
+        case enabledAt
+        case frequency
+        case customInterval
+        case customUnit
+        case customAnchorDate
+        case preferredHour
+        case preferredMinute
+        case weekday
+        case lookbackDays
+        case todayRefreshIntervalHours
+        case lastExportDate
+        case lastTodayRefreshDate
+        case recoveryGeneration
+        case recoveryDiscardedAt
+        case todayRefreshEnabled
+        case todayRefreshIntervalMinutes
+        case todayRefreshRequestedV2
+        case todayRefreshPersistenceVersion
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(profileID, forKey: .profileID)
+        try c.encode(isEnabled, forKey: .isEnabled)
+        try c.encode(enabledAt, forKey: .enabledAt)
+        try c.encode(frequency, forKey: .frequency)
+        try c.encode(customInterval, forKey: .customInterval)
+        try c.encode(customUnit, forKey: .customUnit)
+        try c.encode(customAnchorDate, forKey: .customAnchorDate)
+        try c.encode(preferredHour, forKey: .preferredHour)
+        try c.encode(preferredMinute, forKey: .preferredMinute)
+        try c.encode(weekday, forKey: .weekday)
+        try c.encode(lookbackDays, forKey: .lookbackDays)
+        try c.encode(todayRefreshIntervalHours, forKey: .todayRefreshIntervalHours)
+        try c.encode(lastExportDate, forKey: .lastExportDate)
+        try c.encode(lastTodayRefreshDate, forKey: .lastTodayRefreshDate)
+        try c.encode(recoveryGeneration, forKey: .recoveryGeneration)
+        try c.encode(recoveryDiscardedAt, forKey: .recoveryDiscardedAt)
+        try c.encode(2, forKey: .todayRefreshPersistenceVersion)
+        try c.encode(todayRefreshIntervalMinutes == nil ? todayRefreshEnabled : false, forKey: .todayRefreshEnabled)
+        try c.encode(todayRefreshIntervalMinutes, forKey: .todayRefreshIntervalMinutes)
+        try c.encode(todayRefreshIntervalMinutes.map { _ in todayRefreshEnabled }, forKey: .todayRefreshRequestedV2)
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        profileID = try c.decode(UUID.self, forKey: .profileID)
+        isEnabled = try c.decode(Bool.self, forKey: .isEnabled)
+        enabledAt = try c.decodeIfPresent(Date.self, forKey: .enabledAt)
+        frequency = try c.decode(ScheduleFrequency.self, forKey: .frequency)
+        customInterval = try c.decode(Int.self, forKey: .customInterval)
+        customUnit = try c.decode(ScheduleIntervalUnit.self, forKey: .customUnit)
+        customAnchorDate = try c.decode(Date.self, forKey: .customAnchorDate)
+        preferredHour = try c.decode(Int.self, forKey: .preferredHour)
+        preferredMinute = try c.decode(Int.self, forKey: .preferredMinute)
+        weekday = try c.decode(Int.self, forKey: .weekday)
+        lookbackDays = try c.decode(Int.self, forKey: .lookbackDays)
+        todayRefreshEnabled = try c.decode(Bool.self, forKey: .todayRefreshEnabled)
+        todayRefreshIntervalHours = try c.decode(Int.self, forKey: .todayRefreshIntervalHours)
+        todayRefreshIntervalMinutes = try c.decodeIfPresent(Int.self, forKey: .todayRefreshIntervalMinutes)
+        if let minutes = todayRefreshIntervalMinutes {
+            guard [30, 60].contains(minutes) else {
+                throw DecodingError.dataCorruptedError(forKey: .todayRefreshIntervalMinutes, in: c, debugDescription: "Unsupported Today Refresh minute interval")
+            }
+            todayRefreshEnabled = try c.decodeIfPresent(Int.self, forKey: .todayRefreshPersistenceVersion) == 2
+                && (c.decodeIfPresent(Bool.self, forKey: .todayRefreshRequestedV2) ?? false)
+        }
+        lastExportDate = try c.decodeIfPresent(Date.self, forKey: .lastExportDate)
+        lastTodayRefreshDate = try c.decodeIfPresent(Date.self, forKey: .lastTodayRefreshDate)
+        recoveryGeneration = try c.decodeIfPresent(Int.self, forKey: .recoveryGeneration) ?? 0
+        recoveryDiscardedAt = try c.decodeIfPresent(Date.self, forKey: .recoveryDiscardedAt)
     }
 
     /// Projects this entry onto the legacy schedule shape so every shipped
@@ -106,9 +201,10 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
             lookbackDays: lookbackDays,
             todayRefreshEnabled: todayRefreshEnabled,
             todayRefreshIntervalHours: todayRefreshIntervalHours,
+            todayRefreshIntervalMinutes: todayRefreshIntervalMinutes,
             lastExportDate: lastExportDate,
             lastTodayRefreshDate: lastTodayRefreshDate,
-            enabledAt: enabledAt
+            enabledAt: recoveryDiscardedAt.map { max(enabledAt ?? $0, $0) } ?? enabledAt
         )
     }
 }
@@ -168,8 +264,16 @@ final class ScheduledExportEntryStore: ObservableObject {
 
     private static func decodeStoredEntries(from userDefaults: UserDefaults) -> [ScheduledExportEntry] {
         guard let data = userDefaults.data(forKey: storageKey),
-              let decoded = try? JSONDecoder().decode([ScheduledExportEntry].self, from: data) else {
+              var decoded = try? JSONDecoder().decode([ScheduledExportEntry].self, from: data) else {
             return []
+        }
+        let archived = userDefaults.dictionary(forKey: "scheduledExportEntries.minuteIntent.v2") ?? [:]
+        if let objects = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            for index in decoded.indices where objects[index]["todayRefreshPersistenceVersion"] == nil && !decoded[index].todayRefreshEnabled {
+                if let minutes = archived[decoded[index].profileID.uuidString] as? Int, [30, 60].contains(minutes) {
+                    decoded[index].todayRefreshIntervalMinutes = minutes
+                }
+            }
         }
         return decoded
     }
@@ -207,8 +311,19 @@ final class ScheduledExportEntryStore: ObservableObject {
     /// store is full and the entry's profile is not already present.
     @discardableResult
     func upsert(_ entry: ScheduledExportEntry) -> Bool {
+        reloadFromDefaults()
         if let index = entries.firstIndex(where: { $0.profileID == entry.profileID }) {
-            entries[index] = entry
+            let stored = entries[index]
+            let startsEnabledPeriod = !stored.isEnabled && entry.isEnabled
+            guard !startsEnabledPeriod || stored.recoveryGeneration < Int.max else { return false }
+            var merged = entry
+            merged.lastExportDate = stored.lastExportDate
+            merged.lastTodayRefreshDate = stored.lastTodayRefreshDate
+            merged.recoveryGeneration = stored.recoveryGeneration + (startsEnabledPeriod ? 1 : 0)
+            merged.recoveryDiscardedAt = stored.recoveryDiscardedAt
+            merged.enabledAt = stored.isEnabled == entry.isEnabled
+                ? stored.enabledAt : (entry.isEnabled ? now() : nil)
+            entries[index] = merged
             persist()
             return true
         }
@@ -222,15 +337,28 @@ final class ScheduledExportEntryStore: ObservableObject {
     /// and upserts. Returns false when no entry exists for the profile.
     @discardableResult
     func update(profileID: UUID, _ change: (inout ScheduledExportEntry) -> Void) -> Bool {
-        guard var entry = entry(profileID: profileID) else { return false }
-        change(&entry)
-        return upsert(entry)
+        reloadFromDefaults()
+        guard let index = entries.firstIndex(where: { $0.profileID == profileID }) else { return false }
+        let current = entries[index]
+        var changed = current
+        change(&changed)
+        if changed.isEnabled != current.isEnabled {
+            if changed.isEnabled {
+                guard current.recoveryGeneration < Int.max else { return false }
+                changed.recoveryGeneration = current.recoveryGeneration + 1
+            }
+            changed.enabledAt = changed.isEnabled ? now() : nil
+        }
+        entries[index] = changed
+        persist()
+        return true
     }
 
     /// Removes the entry bound to a profile. Deleting a profile must delete
     /// its entry; the store never orphans entries.
     @discardableResult
     func delete(profileID: UUID) -> Bool {
+        reloadFromDefaults()
         guard let index = entries.firstIndex(where: { $0.profileID == profileID }) else {
             return false
         }
@@ -245,15 +373,33 @@ final class ScheduledExportEntryStore: ObservableObject {
     func recordSuccess(
         profileID: UUID,
         kind: ScheduledExportKind,
-        occurrenceDate: Date
+        occurrenceDate: Date,
+        expectedRecoveryGeneration: Int? = nil
     ) -> Bool {
-        update(profileID: profileID) { entry in
+        if let expectedRecoveryGeneration,
+           entry(profileID: profileID)?.recoveryGeneration != expectedRecoveryGeneration {
+            return false
+        }
+        return update(profileID: profileID) { entry in
             switch kind {
             case .completedDay:
                 entry.lastExportDate = max(entry.lastExportDate ?? occurrenceDate, occurrenceDate)
             case .todayRefresh:
                 entry.lastTodayRefreshDate = max(entry.lastTodayRefreshDate ?? occurrenceDate, occurrenceDate)
             }
+        }
+    }
+
+    /// Invalidate first: cancellation cannot await all export callbacks. Keep both success
+    /// frontiers and schedule configuration, and wait for the next ordinary occurrence.
+    @discardableResult
+    func discardPendingRecovery(profileID: UUID) -> Bool {
+        guard let current = entry(profileID: profileID), current.recoveryGeneration < Int.max else {
+            return false
+        }
+        return update(profileID: profileID) {
+            $0.recoveryGeneration += 1
+            $0.recoveryDiscardedAt = now()
         }
     }
 
@@ -268,6 +414,7 @@ final class ScheduledExportEntryStore: ObservableObject {
         legacy: ExportSchedule,
         defaultProfileID: UUID
     ) -> Bool {
+        reloadFromDefaults()
         guard entries.isEmpty, legacy.isEnabled else { return false }
 
         let entry = ScheduledExportEntry(
@@ -283,6 +430,7 @@ final class ScheduledExportEntryStore: ObservableObject {
             lookbackDays: legacy.lookbackDays,
             todayRefreshEnabled: legacy.todayRefreshEnabled,
             todayRefreshIntervalHours: legacy.todayRefreshIntervalHours,
+            todayRefreshIntervalMinutes: legacy.todayRefreshIntervalMinutes,
             lastExportDate: legacy.lastExportDate,
             lastTodayRefreshDate: legacy.lastTodayRefreshDate,
             enabledAt: legacy.enabledAt
@@ -308,6 +456,8 @@ final class ScheduledExportEntryStore: ObservableObject {
         let profileID: UUID
         let kind: ScheduledExportKind
         let fireDate: Date
+        let recoveryGeneration: Int
+        let enabledAt: Date?
         /// Data days to export for a completed-day occurrence. Always empty
         /// for Today Refresh, which re-exports only the current day.
         let exportDates: [Date]
@@ -352,6 +502,8 @@ final class ScheduledExportEntryStore: ObservableObject {
                         profileID: entry.profileID,
                         kind: occurrence.kind,
                         fireDate: occurrence.fireDate,
+                        recoveryGeneration: entry.recoveryGeneration,
+                        enabledAt: entry.enabledAt,
                         exportDates: exportDates
                     )
                 }
@@ -363,6 +515,10 @@ final class ScheduledExportEntryStore: ObservableObject {
 
     private func persist() {
         if let encoded = try? JSONEncoder().encode(entries) {
+            let minuteIntent = Dictionary(uniqueKeysWithValues: entries.compactMap { entry in
+                entry.todayRefreshIntervalMinutes.map { (entry.profileID.uuidString, $0) }
+            })
+            userDefaults.set(minuteIntent, forKey: "scheduledExportEntries.minuteIntent.v2")
             userDefaults.set(encoded, forKey: Self.storageKey)
         }
     }
