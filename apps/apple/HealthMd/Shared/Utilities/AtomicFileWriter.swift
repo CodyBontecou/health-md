@@ -110,7 +110,7 @@ nonisolated enum AtomicFileWriter {
     }
 
     private static let publicationMutex = NSRecursiveLock()
-    private static let publicationPathsKey = "Health.md.AtomicFileWriter.publication-paths"
+    private static let publicationInodesKey = "Health.md.AtomicFileWriter.publication-inodes"
 
     nonisolated final class PublicationLease {
         private var release: (() -> Void)?
@@ -128,14 +128,6 @@ nonisolated enum AtomicFileWriter {
         guard url.isFileURL else { throw POSIXError(.EINVAL) }
         publicationMutex.lock()
         let thread = Thread.current
-        let path = url.standardizedFileURL.resolvingSymlinksInPath().path
-        let owned = thread.threadDictionary[publicationPathsKey] as? Set<String> ?? []
-        if owned.contains(path) {
-            return PublicationLease {
-                precondition(Thread.current == thread, "Publication transaction changed threads.")
-                publicationMutex.unlock()
-            }
-        }
         var descriptor: Int32 = -1
         do {
             descriptor = url.withUnsafeFileSystemRepresentation { path -> Int32 in
@@ -143,15 +135,29 @@ nonisolated enum AtomicFileWriter {
                 return open(path, O_RDWR | O_CREAT | O_CLOEXEC, 0o600)
             }
             guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            // Resolve identity after opening: a missing lock's path can resolve
+            // differently after creation, and hard links have different paths.
+            var information = stat()
+            guard fstat(descriptor, &information) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            let identity = "\(information.st_dev):\(information.st_ino)"
+            let owned = thread.threadDictionary[publicationInodesKey] as? Set<String> ?? []
+            if owned.contains(identity) {
+                _ = close(descriptor)
+                descriptor = -1
+                return PublicationLease {
+                    precondition(Thread.current == thread, "Publication transaction changed threads.")
+                    publicationMutex.unlock()
+                }
+            }
             guard flock(descriptor, LOCK_EX) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
-            thread.threadDictionary[publicationPathsKey] = owned.union([path])
+            thread.threadDictionary[publicationInodesKey] = owned.union([identity])
             let heldDescriptor = descriptor
             return PublicationLease {
                 precondition(Thread.current == thread, "Publication transaction changed threads.")
-                var paths = thread.threadDictionary[publicationPathsKey] as? Set<String> ?? []
-                paths.remove(path)
-                if paths.isEmpty { thread.threadDictionary.removeObject(forKey: publicationPathsKey) }
-                else { thread.threadDictionary[publicationPathsKey] = paths }
+                var inodes = thread.threadDictionary[publicationInodesKey] as? Set<String> ?? []
+                inodes.remove(identity)
+                if inodes.isEmpty { thread.threadDictionary.removeObject(forKey: publicationInodesKey) }
+                else { thread.threadDictionary[publicationInodesKey] = inodes }
                 _ = flock(heldDescriptor, LOCK_UN)
                 _ = close(heldDescriptor)
                 publicationMutex.unlock()

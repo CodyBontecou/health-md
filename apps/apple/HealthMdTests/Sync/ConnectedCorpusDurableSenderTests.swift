@@ -748,7 +748,8 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         }
     }
 
-    func testScheduledCorpusRecoveryChecksCurrentScheduleAuthorityBeforeOpeningTransport() throws {
+    // Provide a Swift task context for isolated deinit on older iOS runtimes (swiftlang/swift#85663).
+    func testScheduledCorpusRecoveryChecksCurrentScheduleAuthorityBeforeOpeningTransport() async throws {
         let sync = SyncService()
         let remoteID = UUID()
         let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone,
@@ -1305,8 +1306,10 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         destinationInstallationID: UUID? = nil,
         now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_800_000_000) }
     ) throws -> Fixture {
-        let root = FileManager.default.temporaryDirectory
+        let candidate = FileManager.default.temporaryDirectory
             .appendingPathComponent("durable-sender-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: candidate, withIntermediateDirectories: true)
+        let root = candidate.standardizedFileURL.resolvingSymlinksInPath()
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
         let suite = "ConnectedCorpusDurableSenderTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!

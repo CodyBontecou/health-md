@@ -1121,8 +1121,9 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     }
 
     private func withDirectJournalDirectory(_ body: (URL) throws -> Void) throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let candidate = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: candidate, withIntermediateDirectories: true)
+        let directory = candidate.standardizedFileURL.resolvingSymlinksInPath()
         defer { try? FileManager.default.removeItem(at: directory) }
         try body(directory)
     }
