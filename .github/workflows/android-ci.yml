@@ -242,9 +242,10 @@ jobs:
       - name: Run Android lint
         run: ./scripts/run-ci-gradle.sh :app:lintPlayDebug --stacktrace
 
-      - name: Assemble Play debug app and bundle
+      - name: Assemble Play debug app and validate phone APK policy
         run: |
           ./scripts/run-ci-gradle.sh :app:assemblePlayDebug :app:bundlePlayDebug --stacktrace
+          bash scripts/tests/test_verify_google_play_generated_apk_evidence.sh --phone-only
 
       - name: Retain JVM test results, task profiles, and runner diagnostics
         if: ${{ always() }}
