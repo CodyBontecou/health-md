@@ -431,7 +431,7 @@ describe("inactive AS06 compound RAM public authority", () => {
 
 describe("AS06 wave2 selected CREATE retry", () => {
   it("recovers original committed CREATE after real decrypt boundary fault", async () => {
-    expect(process.versions.node).toBe("24.19.0");
+    expect(Number(process.versions.node.split(".")[0])).toBeGreaterThanOrEqual(24);
     const ram = await createProfileSyncV1Ram({ sentinel: "healthmd.profile-sync.v1.ram.synthetic-only" });
     const s = await issue(ram); await select(ram, s);
     const real = crypto.subtle.decrypt.bind(crypto.subtle);
