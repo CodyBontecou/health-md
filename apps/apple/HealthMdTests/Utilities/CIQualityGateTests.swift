@@ -221,8 +221,7 @@ final class CIQualityGateTests: XCTestCase {
              "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
              "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
              "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab"],
-            ["ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle",
-             "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
+            ["ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
              "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
              "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
              "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
@@ -242,11 +241,12 @@ final class CIQualityGateTests: XCTestCase {
         let tablet = try ownedPlan(content, marker: "IPAD_PLAN")
         guard let phonePipelines = phone["pipelines"] as? [[String: Any]], phonePipelines.count == 2,
               let tabletPipelines = tablet["pipelines"] as? [[String: Any]], tabletPipelines.count == 1,
-              content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60")
+              content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60")
         else { throw OwnedPlanError.invalid }
-        guard content.contains("prepare-ui-artifacts:\n    name: Prepare qualified UI products once\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 20"),
+        guard content.contains("prepare-ui-artifacts:\n    name: Prepare qualified UI products once\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 20"),
               content.contains("PREPARE_UI_RESULT: ${{ needs.prepare-ui-artifacts.result }}"),
-              content.contains("test \"$PREPARE_UI_RESULT\" = success"),
+              content.contains("require_job \"$IOS_UI_SELECTED\" \"$PREPARE_UI_RESULT\" \"UI artifact preparation\""),
+              content.contains("true:success|false:skipped|false:success) ;;"),
               content.contains("--sha256 '${{ needs.prepare-ui-artifacts.outputs.sha256 }}'"),
               content.contains("--source-sha \"$(git rev-parse HEAD)\"")
         else { throw OwnedPlanError.invalid }
@@ -277,7 +277,7 @@ final class CIQualityGateTests: XCTestCase {
 
     func testWorkflow_ownedUIActualJSONRejectsMutatedCommandsSelectorsFlagsAndBudgets() throws {
         let content = try String(contentsOfFile: appleCIWorkflowPath, encoding: .utf8)
-        XCTAssertEqual(try validatedOwnedUICommands(content).map { $0.filter { $0.hasPrefix("-only-testing:") }.count }, [9, 9, 4])
+        XCTAssertEqual(try validatedOwnedUICommands(content).map { $0.filter { $0.hasPrefix("-only-testing:") }.count }, [9, 8, 4])
         for marker in ["PHONE_PLAN", "IPAD_PLAN"] {
             let actual = try ownedPlan(content, marker: marker)
             let pipelines = try XCTUnwrap(actual["pipelines"] as? [[String: Any]])
@@ -303,7 +303,7 @@ final class CIQualityGateTests: XCTestCase {
                 let secondID = try XCTUnwrap(second.firstIndex(where: { $0.hasPrefix("-only-testing:") }))
                 let saved = first[firstID]; first[firstID] = second[secondID]; second[secondID] = saved
                 relocated[0]["command"] = first; relocated[1]["command"] = second
-                mutants.append(relocated) // Same19/counts, WRONG invocation attribution.
+                mutants.append(relocated) // Same selectors and counts, wrong invocation attribution.
             }
             for mutatedCommand in commandMutants {
                 var mutated = pipelines; mutated[0]["command"] = mutatedCommand; mutants.append(mutated)
@@ -323,7 +323,9 @@ final class CIQualityGateTests: XCTestCase {
                                 ("timeout-minutes: 20", "timeout-minutes: 21"),
                                 ("needs: [changes, prepare-shared-core, prepare-ui-artifacts]", "needs: [changes, prepare-shared-core]"),
                                 ("needs.prepare-ui-artifacts.result", "needs.changes.result"),
-                                ("test \"$PREPARE_UI_RESULT\" = success", "echo unchecked-preparation"),
+                                ("require_job \"$IOS_UI_SELECTED\" \"$PREPARE_UI_RESULT\" \"UI artifact preparation\"", "echo unchecked-preparation"),
+                                ("needs.changes.outputs.ios_ui", "needs.changes.outputs.run"),
+                                ("true:success|false:skipped|false:success) ;;", "true:success|true:skipped|false:skipped|false:success) ;;"),
                                 ("needs.prepare-ui-artifacts.outputs.sha256", "needs.changes.outputs.sha256"),
                                 ("--source-sha \"$(git rev-parse HEAD)\"", "--source-sha unchecked"),
                                 ("- name: Run UI smoke tests (iOS)", "- name: Run UI smoke tests (iOS)\n        continue-on-error: true")] {
