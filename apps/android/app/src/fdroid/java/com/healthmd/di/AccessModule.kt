@@ -1,5 +1,8 @@
 package com.healthmd.di
 
+import com.healthmd.myselfclaim.MyselfClaimPurchaseSource
+import com.healthmd.myselfclaim.MyselfClaimException
+import com.healthmd.myselfclaim.MyselfClaimFailure
 import com.healthmd.data.access.FdroidAccessRepository
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.PurchaseRepository
@@ -15,6 +18,10 @@ object AccessModule {
     @Provides
     @Singleton
     fun provideFdroidAccessRepository(): FdroidAccessRepository = FdroidAccessRepository()
+
+    @Provides
+    fun provideMyselfClaimPurchaseSource(): MyselfClaimPurchaseSource =
+        MyselfClaimPurchaseSource { throw MyselfClaimException(MyselfClaimFailure.NO_PURCHASE) }
 
     @Provides
     fun provideEntitlementRepository(repository: FdroidAccessRepository): EntitlementRepository =

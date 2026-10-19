@@ -323,6 +323,9 @@ jobs:
       - name: Validate macOS localizations
         run: make check-macos-localizations
 
+      - name: Test reference documentation runner policy
+        run: python3 -m unittest discover -s scripts/tests -p 'test_reference_docs_runner.py'
+
       - name: Run macOS unit tests with coverage
         timeout-minutes: 45
         run: |
@@ -469,7 +472,6 @@ jobs:
             -xctestrun '${{ steps.ui_artifacts.outputs.xctestrun }}' \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -resultBundlePath build/test-results/HealthMd-UI-Profiles-iPhone.xcresult \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard \

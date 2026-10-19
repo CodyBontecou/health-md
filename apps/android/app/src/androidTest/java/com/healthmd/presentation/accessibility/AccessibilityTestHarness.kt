@@ -62,7 +62,10 @@ fun accessibilityDisplays(): List<Array<AccessibilityDisplayCase>> = accessibili
  * No device-wide font/display/locale settings, app storage, or permissions are changed.
  * Native popup/dialog windows are separate owners: check their own bounds and density explicitly.
  */
-abstract class AccessibilityTestHarness(protected val display: AccessibilityDisplayCase) {
+abstract class AccessibilityTestHarness(
+    protected val display: AccessibilityDisplayCase,
+    private val wakeWithUiAutomation: Boolean = true,
+) {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
@@ -70,7 +73,9 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
 
     @Before
     fun keepTestActivityAwake() {
-        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wakeUp()
+        // Activity.setTurnScreenOn below can wake app-only fixtures without claiming the
+        // exclusive UiAutomation connection already owned by a device-control bridge.
+        if (wakeWithUiAutomation) UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wakeUp()
         withNativeInputDiagnostics("Native test activity could not prepare for input") {
             compose.runOnUiThread {
                 val activity = compose.activity

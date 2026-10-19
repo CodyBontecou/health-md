@@ -2,7 +2,13 @@
 
 Refs https://github.com/CodyBontecou/health-md-visualizations/issues/9
 
-## Disposition
+## Implementation follow-up (2026-10-18)
+
+The follow-up implementation adds native 30/60-minute choices to both platforms with local persistence v2, explicit older-reader disable behavior, retained disabled minute preferences, and a fail-closed Shared Setup v2 writer boundary. Civil slots shift gaps forward preserving minutes and choose only the first fold occurrence. The findings below describe the pre-implementation baseline and remain historical; new minute/downgrade/DST/sharing tests supersede their missing-feature assertions.
+
+The originating issue remains **open** pending complete hosted UI, cross-platform qualification, and refreshed-day consumer verification. Local deterministic tests establish scheduling/persistence semantics, not physical background delivery or Obsidian refresh timing.
+
+## Original disposition
 
 **Investigation / partial draft, not an implementation or availability claim.**
 At source base `b8fd904f4d299f5af4a22111d2fdccf829705ea7`, today's partial file can be refreshed every 3, 6, or 12 hours after the preferred time. The requested **30-minute and hourly** choices are not available on Apple or Android profile schedules. This work adds executable characterization/compatibility tests and an implementation checklist; it changes no production behavior, user data, schema, capability availability, plugin installation, or cache.

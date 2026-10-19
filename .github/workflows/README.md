@@ -54,6 +54,22 @@ accepts a skipped job only when its selection output explicitly says `false`;
 selected jobs must succeed. The policy job's listing validator discovers every
 `scripts/tests/test_*.py`, including routing and gate regressions.
 
+Phone instrumentation runs in four AndroidJUnitRunner shards on independent
+hosted emulators. Each shard runs its assigned Play and F-Droid cases; shard zero
+also runs the complete core suite and direct CLI E2E. The native input readiness
+check runs unsharded before each worker's suites. Local invocations remain complete
+and unsharded unless both `HEALTHMD_ANDROID_SHARD_INDEX` and
+`HEALTHMD_ANDROID_SHARD_COUNT` are explicitly supplied.
+
+The stable `Emulator instrumentation and direct E2E` job requires all four workers
+to succeed and validates their combined XML inventory. Missing artifacts, empty
+reports, duplicate cases, test failures, or missing flavor/core/E2E groups fail the
+gate. The existing `android-instrumentation-<run>-<attempt>` artifact contains each
+worker's reports in a separate directory and a combined `case-inventory.json`;
+matching XML filenames are never flattened or overwritten. Release qualification
+continues to require the stable job, and full qualification still selects both
+complete display matrices.
+
 Ordinary PR instrumentation runs all test methods on both Play and F-Droid. Play
 uses the complete ten-display accessibility matrix. F-Droid uses a baseline English
 light display and a constrained large-font Arabic RTL dark display, avoiding 304
