@@ -176,9 +176,11 @@ pub(crate) async fn publish<F: std::future::Future<Output = Result<(), ClientErr
         } else {
             dir.rename(&temporary, dir, name).map_err(unavailable)?;
         }
-        dir.try_clone()
+        // Linux capability directory handles may use O_PATH, which fsync rejects.
+        // Reopen this same directory relative to its retained handle with read access;
+        // synchronizing it remains mandatory after publishing either directory entry.
+        dir.open(".")
             .map_err(unavailable)?
-            .into_std_file()
             .sync_all()
             .map_err(unavailable)
     }
@@ -187,4 +189,33 @@ pub(crate) async fn publish<F: std::future::Future<Output = Result<(), ClientErr
         let _ = dir.remove_file(&temporary);
     }
     result
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt as _;
+
+    #[tokio::test]
+    async fn private_publication_syncs_created_and_replaced_directory_entries() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = std::fs::canonicalize(temporary.path()).unwrap();
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let (dir, _) = inspect_root(&root).unwrap();
+        private_directory(&dir).unwrap();
+        publish(&dir, "issuer.json", b"first", true, || async { Ok(()) })
+            .await
+            .unwrap();
+        assert_eq!(read_private(&dir, "issuer.json", 32).unwrap(), b"first");
+        publish(&dir, "issuer.json", b"replacement", false, || async {
+            Ok(())
+        })
+        .await
+        .unwrap();
+        assert_eq!(
+            read_private(&dir, "issuer.json", 32).unwrap(),
+            b"replacement"
+        );
+        assert_eq!(std::fs::read_dir(&root).unwrap().count(), 1);
+    }
 }
