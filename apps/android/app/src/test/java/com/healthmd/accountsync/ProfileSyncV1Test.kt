@@ -121,6 +121,14 @@ object ProfileSyncV1FixtureConformance {
     }
 }
 class ProfileSyncV1Test {
+    @Test fun sharedFixturesAndSourceScenariosUseProductionRegistry() {
+        val root = generateSequence(File(".").absoluteFile) { it.parentFile }
+            .first { File(it, "packages/contracts/profile-sync/v1/fixtures").isDirectory }
+        // Exercise the generated Kotlin binding and the exact-source host Rust
+        // registry in addition to the independently pinned fixture registry below.
+        ProfileSyncV1FixtureConformance.run(root, ProfileSyncV1())
+    }
+
     @Test fun sharedFixturesAndSourceScenarios() {
         val root = generateSequence(File(".").absoluteFile) { it.parentFile }
             .first { File(it, "packages/contracts/profile-sync/v1/fixtures").isDirectory }
