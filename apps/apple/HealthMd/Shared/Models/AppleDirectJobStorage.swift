@@ -95,6 +95,70 @@ struct AppleDirectJobStorage {
         return (selected, directory)
     }
 
+    /// Only complete, unambiguous successor jobs can expire. Unknown bytes are retained.
+    func cleanupExpiredWakeDateJobs(
+        now: Date, lifetime: TimeInterval,
+        directorySync: (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory,
+        validatedCreationDate: (URL, UUID, AppleDirectJobKind) throws -> Date
+    ) throws -> [UUID] {
+        let directory = root(.wakeDate)
+        guard now.timeIntervalSince1970.isFinite, lifetime.isFinite, lifetime >= 0,
+              support.isFileURL,
+              directory.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+                .starts(with: support.standardizedFileURL.resolvingSymlinksInPath().pathComponents) else {
+            throw POSIXError(.EINVAL)
+        }
+        guard try AppleExportJournalRecovery.hasExistingJobDirectory(at: directory, fileManager: fileManager) else { return [] }
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: lock(.wakeDate))
+        defer { transaction.close() }
+        // Retry any ambiguous preceding removal before examining another job.
+        try AtomicFileWriter.synchronizeDirectories(from: directory,
+            durability: .required(upTo: support), directorySync: directorySync)
+        let entries = try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]).sorted { $0.lastPathComponent < $1.lastPathComponent }
+        var removed: [UUID] = []
+        for entry in entries {
+            guard let id = UUID(uuidString: entry.lastPathComponent),
+                  id.uuidString.lowercased() == entry.lastPathComponent else { continue }
+            do {
+                guard try existingNamespace(jobID: id) == .wakeDate else { continue }
+                let contents = try fileManager.contentsOfDirectory(atPath: entry.path)
+                var candidates: [(AppleDirectJobKind, URL)] = []
+                if contents.contains("journal.json") {
+                    candidates.append((.raw, entry.appendingPathComponent("journal.json")))
+                } else if contents != ["files"] {
+                    // A raw spool/sidecar without its journal is incomplete work.
+                    continue
+                }
+                if contents.contains("files") {
+                    let files = job(id, namespace: .wakeDate, kind: .files)
+                    guard try AppleExportJournalRecovery.hasExistingJobDirectory(at: files, fileManager: fileManager) else { continue }
+                    candidates.append((.files, files.appendingPathComponent("journal.json")))
+                }
+                guard !candidates.isEmpty else { continue }
+                var allExpired = true
+                for (kind, journal) in candidates {
+                    guard try fileManager.attributesOfItem(atPath: journal.path)[.type] as? FileAttributeType == .typeRegular else {
+                        throw AppleExportJournalRecovery.RecoveryError.unreadableJournal
+                    }
+                    try AppleExportJournalRecovery.validateExistingOwnership(at: journal, fileManager: fileManager)
+                    let createdAt = try validatedCreationDate(journal, id, kind)
+                    guard createdAt.timeIntervalSince1970.isFinite else { throw POSIXError(.EINVAL) }
+                    if createdAt.addingTimeInterval(lifetime) > now { allExpired = false }
+                }
+                guard allExpired else { continue }
+            } catch {
+                // No migration, timestamp fallback or deletion for unknown authority.
+                continue
+            }
+            try fileManager.removeItem(at: entry)
+            try AtomicFileWriter.synchronizeDirectories(from: directory,
+                durability: .required(upTo: support), directorySync: directorySync)
+            removed.append(id)
+        }
+        return removed
+    }
+
     private func createProtectedDirectory(_ directory: URL) throws {
         var attributes: [FileAttributeKey: Any] = [.posixPermissions: 0o700]
         #if os(iOS)

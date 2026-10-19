@@ -487,6 +487,13 @@ enum AppleExportJournalRecovery {
         }
     }
 
+    /// Expiry may inspect a committed owner without migrating an incomplete journal.
+    /// The caller holds the matching namespace publication transaction.
+    static func validateExistingOwnership(at journalURL: URL, fileManager: FileManager = .default) throws {
+        guard let ownership = try AppleExportJournalCheckpoint.readOwnership(for: journalURL, fileManager: fileManager),
+              ownership.completionIdentity != nil else { throw RecoveryError.unreadableJournal }
+    }
+
     /// Bind decoded bytes and auxiliary ownership while holding one publication transaction.
     /// Legacy journals receive a sidecar without rewriting their JSON.
     static func loadOwned<Journal: Decodable>(

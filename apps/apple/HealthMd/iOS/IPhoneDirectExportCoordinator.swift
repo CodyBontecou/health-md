@@ -1542,13 +1542,61 @@ final class IPhoneDirectExportCoordinator {
 
     func cleanupExpiredJobs(now: Date = Date()) {
         guard let storage = try? jobStorage() else { return }
-        // Successor expiry requires its independently validated journal authority.
-        // Until that path is qualified, historical cleanup never scans its sibling.
+        _ = try? storage.cleanupExpiredWakeDateJobs(now: now, lifetime: HealthMdDirectProtocol.jobLifetime) { url, id, kind in
+            try self.validatedSuccessorExpiryCreationDate(at: url, jobID: id, kind: kind, storage: storage)
+        }
         let root = storage.root(.historical)
         guard (try? AppleExportJournalRecovery.hasExistingJobDirectory(at: root, fileManager: fileManager)) == true else { return }
         _ = try? AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
             lockURL: storage.lock(.historical), durabilityRoot: storage.support,
             now: now, lifetime: HealthMdDirectProtocol.jobLifetime, fileManager: fileManager)
+    }
+
+    private func validatedSuccessorExpiryCreationDate(
+        at url: URL, jobID: UUID, kind: AppleDirectJobKind, storage: AppleDirectJobStorage
+    ) throws -> Date {
+        let request: DirectExportRequest
+        let accepted: DirectExportAccepted
+        let session: DirectTransferSession
+        let snapshot: ExportSettingsSnapshot
+        let protocolPin: AppleDirectProtocolPin?
+        switch kind {
+        case .raw:
+            guard let journal: IPhoneDirectExportJournal = try AppleExportJournalRecovery.load(at: url,
+                fileManager: fileManager, isSupported: { $0.version == IPhoneDirectExportJournal.currentVersion }) else {
+                throw AppleExportJournalRecovery.RecoveryError.unreadableJournal
+            }
+            request = journal.request
+            accepted = journal.accepted
+            session = journal.session
+            snapshot = journal.settingsSnapshot
+            protocolPin = journal.appleDirectProtocolPin
+        case .files:
+            guard let journal: IPhoneDirectFileJournal = try AppleExportJournalRecovery.load(at: url,
+                fileManager: fileManager, isSupported: { $0.version == IPhoneDirectFileJournal.currentVersion }),
+                  journal.appleExportEnginePin == journal.settingsSnapshot.appleExportEnginePin,
+                  journal.originalCalendarTimeZoneIdentifier == journal.settingsSnapshot.calendarTimeZoneIdentifier else {
+                throw AppleExportJournalRecovery.RecoveryError.unreadableJournal
+            }
+            request = journal.request
+            accepted = journal.accepted
+            session = journal.session
+            snapshot = journal.settingsSnapshot
+            protocolPin = journal.appleDirectProtocolPin
+        }
+        guard request.jobID == jobID, accepted.jobID == jobID, session.jobID == jobID,
+              request.protocolVersion == HealthMdDirectProtocol.currentVersion,
+              session.protocolVersion == 1,
+              accepted.peerBinding == session.peerBinding,
+              session.requestFingerprint == (try DirectRequestFingerprint.make(for: request)),
+              try storage.namespace(for: snapshot) == .wakeDate,
+              TimeZone(identifier: accepted.sourceTimeZoneIdentifier)?.identifier
+                == (try snapshot.validatedSleepCaptureContext()).calendarTimeZoneIdentifier else {
+            throw AppleExportJournalRecovery.RecoveryError.unreadableJournal
+        }
+        let authority = AppleDirectProtocolAuthority.shared.makeSessionAuthority()
+        try authority.beginOperation(pin: protocolPin)
+        return request.createdAt
     }
 
     private func jobStorage(createSupport: Bool = false) throws -> AppleDirectJobStorage {

@@ -87,6 +87,89 @@ final class AppleDirectJobStorageTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
     }
 
+    func testMixedRawAndFileJobsExpireOnlyAfterEveryJournalIsValidatedAndExpired() async throws {
+        let storage = try fixture()
+        let wake = try await snapshot(.morningEnds)
+        let id = UUID()
+        let admission = try storage.beginAdmission()
+        var checkpoints: [AppleExportJournalCheckpoint] = []
+        for kind in [AppleDirectJobKind.raw, .files] {
+            let directory = try storage.prepareDirectory(jobID: id, kind: kind, snapshot: wake).1
+            var checkpoint = AppleExportJournalCheckpoint()
+            try checkpoint.publish(Data("synthetic mixed job".utf8), to: directory.appendingPathComponent("journal.json"),
+                freshAdmission: true, lockURL: storage.lock(.wakeDate), durabilityRoot: storage.support)
+            checkpoints.append(checkpoint)
+        }
+        admission.close()
+        var examined: [AppleDirectJobKind] = []
+        let kept = try storage.cleanupExpiredWakeDateJobs(now: Date(timeIntervalSince1970: 200), lifetime: 100,
+            validatedCreationDate: { _, candidateID, kind in
+                XCTAssertEqual(candidateID, id)
+                examined.append(kind)
+                return Date(timeIntervalSince1970: kind == .files ? 200 : 0)
+            })
+        XCTAssertTrue(kept.isEmpty)
+        XCTAssertEqual(examined, [.raw, .files])
+        for checkpoint in checkpoints { try checkpoint.validateGeneration() }
+        let rejected = try storage.cleanupExpiredWakeDateJobs(now: Date(timeIntervalSince1970: 200), lifetime: 100,
+            validatedCreationDate: { _, _, kind in
+                if kind == .files { throw POSIXError(.EAGAIN) }
+                return Date(timeIntervalSince1970: 0)
+            })
+        XCTAssertTrue(rejected.isEmpty)
+        for checkpoint in checkpoints { try checkpoint.validateGeneration() }
+        let removed = try storage.cleanupExpiredWakeDateJobs(now: Date(timeIntervalSince1970: 200), lifetime: 100,
+            validatedCreationDate: { _, _, _ in Date(timeIntervalSince1970: 0) })
+        XCTAssertEqual(removed, [id])
+        for checkpoint in checkpoints { XCTAssertThrowsError(try checkpoint.validateGeneration()) }
+    }
+
+    func testExpiryRequiresDirectoryDurabilityBeforeValidationAndAfterRemoval() async throws {
+        let storage = try fixture()
+        let wake = try await snapshot(.morningEnds)
+        let id = UUID()
+        let admission = try storage.beginAdmission()
+        let directory = try storage.prepareDirectory(jobID: id, kind: .raw, snapshot: wake).1
+        var checkpoint = AppleExportJournalCheckpoint()
+        try checkpoint.publish(Data("synthetic owned expiry".utf8), to: directory.appendingPathComponent("journal.json"),
+            freshAdmission: true, lockURL: storage.lock(.wakeDate), durabilityRoot: storage.support)
+        admission.close()
+        var validated = 0
+        XCTAssertThrowsError(try storage.cleanupExpiredWakeDateJobs(now: Date(timeIntervalSince1970: 200), lifetime: 100,
+            directorySync: { _ in throw POSIXError(.EIO) }, validatedCreationDate: { _, _, _ in
+                validated += 1
+                return Date(timeIntervalSince1970: 0)
+            }))
+        XCTAssertEqual(validated, 0)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: directory.path))
+        var rootSyncs = 0
+        XCTAssertThrowsError(try storage.cleanupExpiredWakeDateJobs(now: Date(timeIntervalSince1970: 200), lifetime: 100,
+            directorySync: { url in
+                if url == storage.root(.wakeDate) {
+                    rootSyncs += 1
+                    if rootSyncs == 2 { throw POSIXError(.EIO) }
+                }
+                try AtomicFileWriter.synchronizeDirectory(url)
+            }, validatedCreationDate: { _, _, _ in
+                validated += 1
+                return Date(timeIntervalSince1970: 0)
+            }))
+        XCTAssertEqual(validated, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        var retryRootSyncs = 0
+        let removed = try storage.cleanupExpiredWakeDateJobs(now: Date(timeIntervalSince1970: 200), lifetime: 100,
+            directorySync: { url in
+                if url == storage.root(.wakeDate) { retryRootSyncs += 1 }
+                try AtomicFileWriter.synchronizeDirectory(url)
+            }, validatedCreationDate: { _, _, _ in
+                XCTFail("An ambiguous removal must not be recreated for validation")
+                return Date(timeIntervalSince1970: 0)
+            })
+        XCTAssertTrue(removed.isEmpty)
+        XCTAssertEqual(retryRootSyncs, 1)
+        XCTAssertThrowsError(try checkpoint.validateGeneration())
+    }
+
     #if os(iOS)
     func testActualRawAndFileCancellationFindSuccessorWithoutCreatingHistoricalStorage() async throws {
         for files in [false, true] {
@@ -157,6 +240,115 @@ final class AppleDirectJobStorageTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path), ["journal.json"])
     }
 
+    func testActualExpiryRemovesOnlyCompleteExpiredSuccessorJobs() async throws {
+        for files in [false, true] {
+            let storage = try fixture()
+            let id = UUID()
+            let bytes = try await cancellationJournal(jobID: id, files: files)
+            let directory = storage.job(id, namespace: .wakeDate, kind: files ? .files : .raw)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            var checkpoint = AppleExportJournalCheckpoint()
+            try checkpoint.publish(bytes, to: directory.appendingPathComponent("journal.json"), freshAdmission: true,
+                lockURL: storage.lock(.wakeDate), durabilityRoot: storage.support)
+            let manager = NamespaceSupportFileManager(support: storage.support)
+            let producer = IPhoneDirectFileExportProducer(fileManager: manager)
+            let coordinator = IPhoneDirectExportCoordinator(fileManager: manager, fileProducer: producer)
+            coordinator.cleanupExpiredJobs(now: Date(timeIntervalSince1970: 1_800_000_000 + HealthMdDirectProtocol.jobLifetime + 1))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: storage.job(id, namespace: .wakeDate, kind: .raw).path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: storage.root(.historical).path))
+            XCTAssertThrowsError(try checkpoint.validateGeneration())
+        }
+    }
+
+    func testActualSuccessorExpiryRetainsUnknownIncompleteAndAmbiguousJobs() async throws {
+        for files in [false, true] {
+            for invalid in ["missing-owner", "bad-owner", "version", "identity", "clock", "capture", "renderer", "protocol", "fingerprint", "transfer", "missing-journal", "corrupt", "symlink", "duplicate", "unexpired"] {
+                let storage = try fixture()
+                let id = UUID()
+                let encoded = try await cancellationJournal(jobID: id, files: files)
+                var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+                if invalid == "version" { object["version"] = 999 }
+                if invalid == "identity" {
+                    var accepted = try XCTUnwrap(object["accepted"] as? [String: Any])
+                    accepted["jobID"] = UUID().uuidString
+                    object["accepted"] = accepted
+                }
+                if invalid == "clock" {
+                    var accepted = try XCTUnwrap(object["accepted"] as? [String: Any])
+                    accepted["sourceTimeZoneIdentifier"] = "America/Los_Angeles"
+                    object["accepted"] = accepted
+                }
+                if invalid == "capture" {
+                    var snapshot = try XCTUnwrap(object["settingsSnapshot"] as? [String: Any])
+                    snapshot["sleepCaptureContext"] = nil
+                    object["settingsSnapshot"] = snapshot
+                }
+                if invalid == "renderer" {
+                    var snapshot = try XCTUnwrap(object["settingsSnapshot"] as? [String: Any])
+                    var pin = try XCTUnwrap(snapshot["appleExportEnginePin"] as? [String: Any])
+                    pin[AppleExportEnginePin.CodingKeys.registrySHA256.rawValue] = String(repeating: "0", count: 64)
+                    snapshot["appleExportEnginePin"] = pin
+                    object["settingsSnapshot"] = snapshot
+                }
+                if invalid == "protocol" {
+                    let base = try IPhoneDirectFileJournalTests.makeJournal(jobID: id)
+                    var pin = try XCTUnwrap(JSONSerialization.jsonObject(with:
+                        JSONEncoder().encode(try XCTUnwrap(base.appleDirectProtocolPin))) as? [String: Any])
+                    pin["coreAPIVersion"] = 999
+                    object["appleDirectProtocolPin"] = pin
+                }
+                if invalid == "fingerprint" || invalid == "transfer" {
+                    var session = try XCTUnwrap(object["session"] as? [String: Any])
+                    if invalid == "transfer" { session["protocolVersion"] = 999 }
+                    else {
+                        var fingerprint = try XCTUnwrap(session["requestFingerprint"] as? [String: Any])
+                        fingerprint["sha256"] = String(repeating: "0", count: 64)
+                        session["requestFingerprint"] = fingerprint
+                    }
+                    object["session"] = session
+                }
+                let bytes = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+                let directory = storage.job(id, namespace: .wakeDate, kind: files ? .files : .raw)
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                let url = directory.appendingPathComponent("journal.json")
+                var checkpoint = AppleExportJournalCheckpoint()
+                try checkpoint.publish(bytes, to: url, freshAdmission: true,
+                    lockURL: storage.lock(.wakeDate), durabilityRoot: storage.support)
+                let marker = directory.appendingPathComponent(".journal-generation")
+                if invalid == "missing-owner" { try FileManager.default.removeItem(at: marker) }
+                if invalid == "bad-owner" { try Data("unknown marker".utf8).write(to: marker) }
+                if invalid == "missing-journal" { try FileManager.default.removeItem(at: url) }
+                if invalid == "corrupt" { try Data("{".utf8).write(to: url) }
+                if invalid == "symlink" {
+                    let target = storage.support.appendingPathComponent("retained.json")
+                    try bytes.write(to: target)
+                    try FileManager.default.removeItem(at: url)
+                    try FileManager.default.createSymbolicLink(at: url, withDestinationURL: target)
+                }
+                if invalid == "duplicate" {
+                    let duplicate = storage.job(id, namespace: .historical, kind: .raw)
+                    try FileManager.default.createDirectory(at: duplicate, withIntermediateDirectories: true)
+                    // A current timestamp keeps historical cleanup from removing this separate job.
+                    try Data("{\"request\":{\"createdAt\":\"2099-01-01T00:00:00Z\"}}".utf8)
+                        .write(to: duplicate.appendingPathComponent("journal.json"))
+                }
+                let before = try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted()
+                let markerBytes = try? Data(contentsOf: marker)
+                let journalBytes = try? Data(contentsOf: url)
+                let journalType = try? FileManager.default.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType
+                let manager = NamespaceSupportFileManager(support: storage.support)
+                let coordinator = IPhoneDirectExportCoordinator(fileManager: manager,
+                    fileProducer: IPhoneDirectFileExportProducer(fileManager: manager))
+                let now = Date(timeIntervalSince1970: 1_800_000_000 + (invalid == "unexpired" ? 0 : HealthMdDirectProtocol.jobLifetime + 1))
+                coordinator.cleanupExpiredJobs(now: now)
+                XCTAssertEqual(try? Data(contentsOf: url), journalBytes, invalid)
+                XCTAssertEqual(try? FileManager.default.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType, journalType, invalid)
+                XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted(), before, invalid)
+                XCTAssertEqual(try? Data(contentsOf: marker), markerBytes, invalid)
+            }
+        }
+    }
+
     private func cancellationJournal(jobID: UUID, files: Bool) async throws -> Data {
         let model = try IPhoneDirectFileJournalTests.makeJournal(jobID: jobID)
         let wake = try await snapshot(.morningEnds)
@@ -168,6 +360,10 @@ final class AppleDirectJobStorageTests: XCTestCase {
         object["appleExportEnginePin"] = try JSONSerialization.jsonObject(with: encoder.encode(try XCTUnwrap(wake.appleExportEnginePin)))
         object["appleDirectProtocolPin"] = nil
         object["state"] = "paused"
+        var accepted = try XCTUnwrap(object["accepted"] as? [String: Any])
+        accepted["sourceTimeZoneIdentifier"] = try XCTUnwrap(wake.sleepCaptureContext).calendarTimeZoneIdentifier
+        object["accepted"] = accepted
+        object["originalCalendarTimeZoneIdentifier"] = try XCTUnwrap(wake.sleepCaptureContext).calendarTimeZoneIdentifier
         if !files {
             let keys: Set<String> = ["settingsSnapshot", "accepted", "updatedAt", "state", "partitions",
                 "committedPartitionCount", "committedBytes", "completionRecorded", "request", "session"]
