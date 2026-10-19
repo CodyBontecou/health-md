@@ -727,6 +727,8 @@ struct ExportProfileDetailView: View {
 
                     Button {
                         UIPasteboard.general.string = profile.id.uuidString
+                        // Keep the completion state readable for the lifetime of this detail,
+                        // including accessibility clients that observe after tap synchronization.
                         idCopied = true
                     } label: {
                         Label(

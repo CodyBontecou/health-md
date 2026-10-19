@@ -84,3 +84,9 @@ Run the surrounding journey class next, then the affected broader suite.
 Attachments must come from synthetic scenarios. Keep real health values, credentials, and user
 vault content out of test logs and reports. [Local TODO plans](TODO-INDEX.md) are session planning
 artifacts, not the testing runbook or fresh-checkout prerequisites.
+
+## Pull-request UI coverage
+
+Apple CI runs 14 selected phone cases in two batches (9 + 5) from one qualified generic simulator build. The protected-profile creation journey was removed at the owner's request after its “New profile” hittability assertion failed in hosted CI; earlier runs had passed. Remaining UI assertions, warning gates and timeout allowances are unchanged.
+
+Protected-profile creation and its toast-to-setting route require manual QA: enable “Prevent Accidental Changes,” open Settings → Export Profiles, and tap the New profile (+) action. Confirm that the profile editor does not open, a protection toast appears, and tapping the toast opens the enabled “Prevent Accidental Changes” setting.

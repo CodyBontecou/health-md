@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Prévia · MCP direto portátil</strong>
-<p>A topologia separada <code>healthmd mcp serve</code> para macOS, Linux e Windows é publicada como a prévia não qualificada de 19 ferramentas <code>0.1.0-alpha.7</code>. Sua entrada sem nuvem <code>serve-read-only</code> disponibiliza apenas as 13 ferramentas de prontidão e consulta após o emparelhamento local. Instale no macOS ou Linux com <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>A topologia separada <code>healthmd mcp serve</code> para macOS, Linux e Windows é publicada como a prévia não qualificada de 19 ferramentas <code>0.1.0-alpha.6</code> (alpha.7 continua como rascunho não publicado, sem arquivos). Sua entrada sem nuvem <code>serve-read-only</code> disponibiliza apenas as 13 ferramentas de prontidão e consulta após o emparelhamento local. Instale no macOS ou Linux com <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Requisitos da versão integrada ao Mac
@@ -116,7 +116,7 @@ Se o host não for compatível com MCP Apps, as ferramentas continuarão funcion
 
 ## Ferramentas disponíveis
 
-O servidor integrado para Mac oferece 21 ferramentas fixas: 13 de prontidão/consulta, quatro de arquivos gerados e quatro de atualização do contexto criptografado. A prévia portátil publicada `0.1.0-alpha.7` tem 19 ferramentas. O código de desenvolvimento atual tem 21 após adicionar corpus completo e leitura limitada de artefato; não presuma essas duas ferramentas antes de uma versão posterior.
+O servidor integrado para Mac oferece 21 ferramentas fixas: 13 de prontidão/consulta, quatro de arquivos gerados e quatro de atualização do contexto criptografado. A prévia portátil publicada `0.1.0-alpha.6` tem 19 ferramentas. O código de desenvolvimento atual tem 21 após adicionar corpus completo e leitura limitada de artefato; não presuma essas duas ferramentas antes de uma versão posterior.
 
 ### Prontidão e descoberta
 
