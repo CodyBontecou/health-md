@@ -398,6 +398,150 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
     #endif
 
+    func testNativeCatalogWorkerPublishesOffMainAndPreservesUnchangedGeneration() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()
+        try lifecycle.observe(facts)
+        let store = rig.store
+        let first = try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: rig.peer,
+            existingDirectory: rig.directory, loadStore: { _ in
+                XCTAssertFalse(Thread.isMainThread)
+                return store
+            })
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        let next = try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: rig.peer,
+            existingDirectory: rig.directory, loadStore: { _ in store })
+        XCTAssertEqual(next, first)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+    }
+
+    func testNativeCatalogWorkerRechecksOwnerAtPreparedAndPostFsyncBoundaries() async throws {
+        for afterSync in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }
+            let lifecycle = AgentBridgeNativeCatalogLifecycle()
+            try lifecycle.observe(nativeState())
+            let session = rig.session, store = rig.store
+            if afterSync { rig.publication.onPublished = { _ in session.revoke() } }
+            else { rig.publication.onPrepared = { _ in session.revoke() } }
+            do {
+                _ = try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: rig.peer,
+                    existingDirectory: rig.directory, loadStore: { _ in store })
+                XCTFail("Revoked native owner must suppress publication return")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+            XCTAssertThrowsError(try lifecycle.currentFacts()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            rig.publication.onPrepared = nil; rig.publication.onPublished = nil
+            XCTAssertEqual(try rig.store.snapshot().nativeCatalog != nil, afterSync)
+        }
+    }
+
+    func testNativeCatalogWorkerCancellationDuringKeyReadCannotReopenPublishedCache() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()
+        try lifecycle.observe(facts)
+        try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        let entered = DispatchSemaphore(value: 0), release = DispatchSemaphore(value: 0)
+        rig.keys.onNextLoad { entered.signal(); release.wait() }
+        let store = rig.store, peer = rig.peer, directory = rig.directory
+        let task = Task { try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: peer,
+            existingDirectory: directory, loadStore: { _ in store }) }
+        let reached = await Task.detached { entered.wait(timeout: .now() + 5) == .success }.value
+        guard reached else { release.signal(); task.cancel(); _ = try? await task.value; return XCTFail("Worker never reached key boundary") }
+        task.cancel()
+        release.signal()
+        do { _ = try await task.value; XCTFail("Canceled worker returned publication") }
+        catch { XCTAssertTrue(error is CancellationError) }
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertThrowsError(try lifecycle.currentFacts()) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+    }
+
+    func testNativeCatalogWorkerCancellationDuringFinalTrustCheckRejectsReturn() async throws {
+        let checkCount = try await nativePublisherCheckCount()
+
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        try lifecycle.observe(nativeState())
+        let cancel = PublicationTaskCancellation(), store = rig.store
+        let finalCheck = rig.session.checks + checkCount
+        rig.session.observeChecks { if $0 == finalCheck { cancel.request() } }
+        let peer = rig.peer, directory = rig.directory
+        let task = Task { try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: peer,
+            existingDirectory: directory, loadStore: { _ in store }) }
+        cancel.install(task)
+        do { _ = try await task.value; XCTFail("Cancellation during final trust check returned success") }
+        catch { XCTAssertTrue(error is CancellationError) }
+        XCTAssertTrue(cancel.requested)
+        XCTAssertThrowsError(try lifecycle.currentFacts()) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+    }
+
+    private func nativePublisherCheckCount() async throws -> Int {
+        // Fresh stores follow the same transaction, so identify the final callback without encoding
+        // the implementation's signing/fsync check count in a regression.
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        try lifecycle.observe(nativeState())
+        let before = rig.session.checks, store = rig.store
+        _ = try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: rig.peer,
+            existingDirectory: rig.directory, loadStore: { _ in store })
+        let count = rig.session.checks - before
+        XCTAssertGreaterThan(count, 0)
+        return count
+    }
+
+    func testNativeCatalogMetadataChangeDuringFinalTrustCheckRejectsReturn() async throws {
+        let checkCount = try await nativePublisherCheckCount()
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        try lifecycle.observe(nativeState())
+        let finalCheck = rig.session.checks + checkCount, store = rig.store
+        rig.session.observeChecks { if $0 == finalCheck { try? lifecycle.observeNativeChange() } }
+        do {
+            _ = try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: rig.peer,
+                existingDirectory: rig.directory, loadStore: { _ in store })
+            XCTFail("Metadata changed during final trust check but stale publication was returned")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+        XCTAssertThrowsError(try lifecycle.currentFacts())
+    }
+
+    func testNativeCatalogAlreadyCancelledWorkerDoesNotLoadPrivateStore() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        try lifecycle.observe(nativeState())
+        let store = rig.store, keys = rig.keys, peer = rig.peer, directory = rig.directory
+        let before = keys.loads
+        let task = Task {
+            try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: peer,
+                existingDirectory: directory, loadStore: { _ in
+                    _ = try keys.loadExistingExportAuthorityKey()
+                    return store
+                })
+        }
+        task.cancel() // This actor has not yielded, so the async entry sees cancellation first.
+        do { _ = try await task.value; XCTFail("Already canceled native task returned publication") }
+        catch { XCTAssertTrue(error is CancellationError) }
+        XCTAssertEqual(keys.loads, before)
+    }
+
+    func testNativeCatalogWorkerDoesNotCreateMissingPrivateStore() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        try lifecycle.observe(nativeState())
+        let missing = rig.parent.appendingPathComponent("missing-native-authority")
+        do {
+            _ = try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: rig.peer, existingDirectory: missing)
+            XCTFail("Missing authority must not bootstrap")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: missing.path))
+        XCTAssertThrowsError(try lifecycle.currentFacts())
+    }
+
     func testNativeCatalogResamplesAtStagedAndPostFsyncPublicationBoundaries() throws {
         for afterSync in [false, true] {
             let rig = try Rig(); defer { rig.cleanup() }
@@ -1464,6 +1608,17 @@ private let outputPointers = [
     "/individual_entries/category_folders", "/individual_entries/enabled", "/individual_entries/filename_template", "/individual_entries/folder_template", "/individual_entries/metric_ids", "/output_profile", "/packaging/type", "/presentation/display_units", "/presentation/frontmatter/custom_fields", "/presentation/frontmatter/enabled_field_ids", "/presentation/frontmatter/include_capture_diagnostics", "/presentation/frontmatter/include_units", "/presentation/group_by_category", "/presentation/include_metadata", "/presentation/locale", "/presentation/machine_units", "/presentation/markdown/custom_template", "/presentation/markdown/placeholder_ids", "/presentation/markdown/style", "/subfolder", "/write_mode"
 ]
 private let capturePointers = ["/capture_scope/compatibility_detail", "/capture_scope/native_archive/type", "/capture_scope/selection/all_metrics", "/capture_scope/selection/category_ids", "/capture_scope/selection/metric_ids", "/capture_scope/selection/provider_ids", "/capture_scope/selection/source_ids"]
+
+nonisolated private final class PublicationTaskCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var task: Task<AgentBridgeNativeCatalogPublication, Error>?
+    private var didRequest = false
+    var requested: Bool { lock.withLock { didRequest } }
+    func install(_ value: Task<AgentBridgeNativeCatalogPublication, Error>) {
+        lock.withLock { task = value; if didRequest { value.cancel() } }
+    }
+    func request() { lock.withLock { didRequest = true; task?.cancel() } }
+}
 
 nonisolated private final class RevocableNativeSession: AgentBridgeExportNativeSessionChecking, @unchecked Sendable {
     private let lock = NSLock()
