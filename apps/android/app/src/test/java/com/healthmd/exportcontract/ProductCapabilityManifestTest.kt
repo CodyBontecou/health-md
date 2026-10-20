@@ -57,6 +57,7 @@ class ProductCapabilityManifestTest {
             "planned",
             pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
+
         val claimCapability = capabilities.single {
             it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
         }
@@ -189,6 +190,7 @@ class ProductCapabilityManifestTest {
             "export.whoop-physiological-cycle-steps",
             "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",
+            "support.local-reporting-fallback",
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities +

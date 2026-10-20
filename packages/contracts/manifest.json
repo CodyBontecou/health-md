@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "7ea65d87c69ea49977b56e17caf9fa907b226dceee7dcecc04b52920e003624d",
+      "sha256": "039af2f2619918b7d236a5454702d772fa48398d6a800f91988225559e424ff7",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -28,7 +28,7 @@
       "id": "healthmd.capability_index",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/capability-index-v1.json",
-      "sha256": "0a5e48ed9083c7b28dd369410ee98ffe150693f9f5e4da67b1235f4b1eef27a6",
+      "sha256": "84c9111a78c94847c18f4c613f282c2a086888d276c1505d02c723611bc7ca41",
       "implementations": [
         "packages/healthmd-core-rust/scripts/import-native-registry.py",
         "packages/contracts/validate.py"

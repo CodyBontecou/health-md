@@ -29,6 +29,7 @@
       "account.myself_lifetime_claim"
     ],
     "apple": [
+      "support.local-reporting-fallback",
       "export.daily-files",
       "export.range-summary",
       "export.sleep-summary",
@@ -63,6 +64,7 @@
     ]
   },
   "known_capability_ids": [
+    "support.local-reporting-fallback",
     "export.daily-files",
     "cloud.opt-in-export-receiver",
     "cloud.read-only-mcp",
@@ -121,5 +123,5 @@
   "schema": "healthmd.capability_index",
   "schema_version": 1,
   "source_inventory_path": "packages/contracts/product-capabilities.json",
-  "source_inventory_sha256": "7ea65d87c69ea49977b56e17caf9fa907b226dceee7dcecc04b52920e003624d"
+  "source_inventory_sha256": "039af2f2619918b7d236a5454702d772fa48398d6a800f91988225559e424ff7"
 }
