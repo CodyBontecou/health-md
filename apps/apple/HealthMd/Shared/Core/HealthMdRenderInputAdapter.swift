@@ -525,9 +525,12 @@ enum HealthMdRenderInputAdapter {
         clock.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         for sample in samples {
             guard owner != nil, let id = sample["id"] as? String, UUID(uuidString: id) != nil,
-                  let timestamp = sample["timestamp"] as? String, timestamp.hasSuffix("Z"),
-                  let end = sample["endDate"] as? String, end.hasSuffix("Z"),
-                  let startDate = clock.date(from: timestamp), let endDate = clock.date(from: end), endDate >= startDate,
+                  let timestamp = sample["timestamp"] as? String, timestamp.count == 30, timestamp.hasSuffix("Z"),
+                  let end = sample["endDate"] as? String, end.count == 30, end.hasSuffix("Z"),
+                  clock.date(from: timestamp) != nil, clock.date(from: end) != nil,
+                  // Native successor UTC clocks have fixed nine-digit fractions. Compare those
+                  // exact bytes; ISO8601DateFormatter loses submillisecond ordering precision.
+                  end >= timestamp,
                   let valence = sample["valence"] as? NSNumber, valence.doubleValue.isFinite,
                   (-1...1).contains(valence.doubleValue),
                   let kind = sample["kind"] as? String, ["Momentary Emotion", "Daily Mood", "Unknown"].contains(kind)
@@ -541,7 +544,7 @@ enum HealthMdRenderInputAdapter {
                 .replacingOccurrences(of: ">", with: "\\u003e").replacingOccurrences(of: "&", with: "\\u0026")
             lines.append("| \(cell) |")
         }
-        return ["output_keys": samples.isEmpty ? [] : [try unwrapWorkoutOwner(owner)], "csv_rows": rows,
+        return ["output_keys": samples.isEmpty ? [] : [try requireNativeDetailOwner(owner)], "csv_rows": rows,
             "markdown_blocks": samples.isEmpty ? [] : [["heading": "State of Mind Details", "lines": lines, "ordinal": 0]],
             "bases_frontmatter_blocks": yaml.isEmpty ? [] : [["key": "native_mindfulness_details", "lines": yaml, "ordinal": 0]]]
     }
@@ -598,12 +601,12 @@ enum HealthMdRenderInputAdapter {
             // Escaping a pipe as a JSON escape keeps the Markdown table and decoded source object intact.
             lines.append("| \(encoded.replacingOccurrences(of: "|", with: "\\u007c")) |")
         }
-        return ["output_keys": workouts.isEmpty ? [] : [try unwrapWorkoutOwner(owner)], "csv_rows": rows,
+        return ["output_keys": workouts.isEmpty ? [] : [try requireNativeDetailOwner(owner)], "csv_rows": rows,
             "markdown_blocks": workouts.isEmpty ? [] : [["heading": "Workout Details", "lines": lines, "ordinal": 0]],
             "bases_frontmatter_blocks": yaml.isEmpty ? [] : [["key": "native_workout_details", "lines": yaml, "ordinal": 0]]]
     }
 
-    private static func unwrapWorkoutOwner(_ value: String?) throws -> String {
+    private static func requireNativeDetailOwner(_ value: String?) throws -> String {
         guard let value else { throw AdapterError.invalidPresentation }
         return value
     }

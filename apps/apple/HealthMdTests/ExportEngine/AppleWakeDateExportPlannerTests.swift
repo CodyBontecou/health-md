@@ -62,7 +62,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
 
     func testUnselectedOrInvalidStateOfMindRecordsNeverEnterSuccessorArtifacts() async throws {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
-        let instant = ExportFixtures.referenceDate
+        let instant = ExportFixtures.referenceDate.addingTimeInterval(0.1255)
         var day = HealthData(date: instant, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
             activity: ActivityData(steps: 1), mindfulness: MindfulnessData(stateOfMind: [
                 StateOfMindEntry(timestamp: instant, kind: .dailyMood, valence: 0.5,
@@ -76,7 +76,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
         snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["state_of_mind_entries"])
         snapshot.detailPolicy = .detailedTimeSeries
-        for (end, valence) in [(instant.addingTimeInterval(-1), 0.5), (instant, 1.25)] {
+        for (end, valence) in [(instant.addingTimeInterval(-1), 0.5), (instant.addingTimeInterval(-0.0001), 0.5), (instant, 1.25)] {
             day.mindfulness.stateOfMind = [StateOfMindEntry(timestamp: instant, endDate: end,
                 kind: .dailyMood, valence: valence, labels: [], associations: [])]
             do {
