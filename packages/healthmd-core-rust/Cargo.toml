@@ -56,3 +56,7 @@ all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
 module_name_repetitions = "allow"
 must_use_candidate = "allow"
+
+# Temporary source-pinned UniFFI tooling repair; see vendor/askama_derive/HEALTHMD-PATCH.md.
+[patch.crates-io]
+askama_derive = { path = "vendor/askama_derive" }

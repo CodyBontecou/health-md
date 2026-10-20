@@ -1,0 +1,65 @@
+{
+  "crate": "askama_derive",
+  "version": "0.16.0",
+  "registry": "https://crates.io/crates/askama_derive/0.16.0",
+  "archiveSha256": "e1c7065972a130eafa84215f21352ae15b4a7393da48c1f5e103904490736738",
+  "upstreamVcs": {
+    "git": {
+      "sha1": "229e8bbd1682a51b073e4eceed2186511c4d670a"
+    },
+    "path_in_vcs": "askama_derive"
+  },
+  "excludedPackagedFiles": [
+    ".cargo-checksum.json",
+    ".cargo-ok",
+    ".cargo_vcs_info.json",
+    "Cargo.lock"
+  ],
+  "upstreamFilesSha256": {
+    "_typos.toml": "3c73a10e0f3a854d78b80e5a38bde1f052b80640ed2f47cc8d2a353d268165c2",
+    "Cargo.toml": "02a3d97fe897370922b983cdbb68a490f8574f01f948354758fe363c97dafb7a",
+    "LICENSE-APACHE": "87cb0d734c723c083e51c825930ff42bce28596b52dee15567f6b28f19c195e3",
+    "deny.toml": "b7637b42164b1bbba883c422187292cf08ad624691145b5124eaf10edf38c164",
+    "tomlfmt.toml": "a33c21547346656aead5f46f2f07e1965f4cf0c6f2a16deb8ec06019619267aa",
+    "README.md": "d14d50477d6ebf3a404203e2afcbe130f980b3c777e5c5d607e1a061ae3cdac7",
+    "clippy.toml": "d11998a49687dcc509cdd3c37063f74dc29d006ac05adc0b1e9a20d0a2f4904b",
+    "empty_test_config.toml": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".rustfmt.toml": "a3754a3582a6ab4247c2ace9f9686f8757f94691b01e86f340234c4c18073a1b",
+    "Cargo.toml.orig": "56dd3537ddd1ea2fdb6aa841cc278316c3c6d79b125432cead2787d0e2718789",
+    "LICENSE-MIT": "df20e0180764bf5bd76f74d47bc9e8c0069a666401629c390003a1d5eba99c92",
+    "benches/complex-expression.rs": "57b54eb53aad4d1cf2ed4bf11f2ad5aaad12ab582545308e0a3cdff950187770",
+    "benches/derive-template.rs": "6c3c312bad0fbb5ec5fa8f46535ae4c73bb4fcbe559ab050382a72cb690402fe",
+    "templates/b.html": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730",
+    "templates/include2.html": "cd319fee61d9d0e8a00a40d55e91c338fd9e156e69773f03ba5c31db02892eb2",
+    "templates/include3.html": "1121cfccd5913f0a63fec40a6ffd44ea64f9dc135c66634ba001d10bcf4302a2",
+    "templates/include1.html": "5a4304e5548d5cf618779383dcc27eba93d826feff1c41a348101c734c034ea2",
+    "templates/a.html": "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c",
+    "templates/sub/b.html": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730",
+    "templates/sub/c.html": "bf07a7fbb825fc0aae7bf4a1177b2b31fcf8a3feeaf7092761e18c859ee52a9c",
+    "templates/sub/sub1/d.html": "86b0c5a1e2b73b08fd54c727f4458649ed9fe3ad1b6e8ac9460c070113509a1e",
+    "src/spans.rs": "fa5fe2e62b061134ea261e151dd672281007a1ca45dbca04a68581d903f3a569",
+    "src/ascii_str.rs": "272ed728e3e024cefbf16b9a004ad806781cff95f613d34c35a4e8479224d16f",
+    "src/html.rs": "91ee580663d8ad08460373d9e5c8ed196ab0ce61eb113dc8d43ad19ca6671422",
+    "src/config.rs": "2e2afc5f4b3fcc6795a8514d33514e8d32575af2e273d45c46262cb55c4997d5",
+    "src/lib.rs": "a56a7829804ab90f08bc16fb1dd956ae9f43d69712466fd7aad41a195634137e",
+    "src/filter_fn.rs": "de93d0af92713c6851eddafd9a1d58b5c570eebd3b4f08c4f64f779aeb455564",
+    "src/tests.rs": "5c00bb481fd48e50a8209c66b0a40bbafbdf7b2f31f65b586edb259d21542b08",
+    "src/heritage.rs": "8fceaff570b1f9d4572c06ff860684ba5ce30c062b0cabff5034f8d659960c89",
+    "src/input.rs": "40126658a90b4041946f2caecb293797f7743c1148d481111859dfa1e3559b56",
+    "src/integration.rs": "e53715e2ebce35103eb68b341e1f7471a88366168229ea2ec72ec4a0822323ce",
+    "src/generator.rs": "2813180f836edfe2230d164f0dd848244e76a9f887a46a488490467abe6c41a5",
+    "src/spans/rustc_literal_escaper.rs": "bfc9025ab9ae61820f34ee0e595e1a46744fce436e417a3260386cd5292dd913",
+    "src/generator/expr.rs": "189400d3bd12a9156fcd5fa052e29bd4619ae5beb9153b0f1c92164eb41d2ca9",
+    "src/generator/node.rs": "7e3b0abb3a5c3cd1d0421409c5ba64ef1f0f482a04e81a1c2bd23f059b6d83fe",
+    "src/generator/filter.rs": "d958e621560fc395323e7a97f0eaf36352d07be3fbcb06fc604bc89f996a288e",
+    "src/generator/helpers/macro_invocation.rs": "df47707cab5edab7d6aa1320c4f0ec9420ccf848c02eb0f846fcb27c7e761d2d",
+    "src/generator/helpers/paths.rs": "ce3ae51cf9797a5893d66b0b24a4a53d640a94d515f0567956907b8cd4078b5f",
+    "src/generator/helpers/mod.rs": "b4de6e933964f65b3cbfdef2468ed2635df210301282c66cc95f4077ccd9b160"
+  },
+  "modifiedFiles": [
+    "Cargo.toml",
+    "src/config.rs"
+  ],
+  "reason": "Replace the unmaintained basic-toml configuration parser with maintained toml; RUSTSEC-2026-0374.",
+  "removalCondition": "A released compatible Askama/UniFFI dependency no longer resolves basic-toml and exact Swift/Kotlin binding generation remains identical."
+}
