@@ -301,6 +301,40 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
     else record.exactStartTime.nano++;
     assert.equal(api.parseHealthDay(changed), null, variant.name);
   }
+  const completeSleepRoot = path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/native-sleep-complete");
+  const completeSleepVariants = (await readdir(completeSleepRoot, { withFileTypes: true }))
+    .filter(item => item.isDirectory());
+  assert.equal(completeSleepVariants.length, 6);
+  for (const variant of completeSleepVariants) {
+    const apple = variant.name.startsWith("apple");
+    const folder = path.join(completeSleepRoot, variant.name, apple ? "Health" : "health");
+    const source = JSON.parse(await readFile(path.join(folder, "2026-11-01.json"), "utf8"));
+    const day = api.parseHealthDay(source);
+    assert.ok(day, variant.name);
+    for (const field of ["sleepStages", "sleepSessions"]) {
+      if (!source.sleep[field]) continue;
+      assert.deepEqual(JSON.parse(JSON.stringify(day.sleep[field])), source.sleep[field], variant.name);
+    }
+    const markdown = await readFile(path.join(folder, "2026-11-01.md"), "utf8");
+    const tables = marked.lexer(markdown).filter(token => token.type === "table");
+    for (const [field, columns] of [["sleepStages", 4], ["sleepSessions", 3]]) {
+      if (!source.sleep[field]?.length) continue;
+      const table = tables.find(token => token.header.length === columns
+        && token.header.at(-1)?.text === "Native Record (JSON)");
+      assert.ok(table, `${variant.name}/${field}`);
+      const records = table.rows.map(row => {
+        const tokens = row.at(-1).tokens;
+        assert.equal(tokens.length, 1);
+        assert.equal(tokens[0].type, "codespan");
+        return JSON.parse(tokens[0].text);
+      });
+      assert.deepEqual(records, source.sleep[field], `${variant.name}/${field}`);
+    }
+    const foreign = structuredClone(source);
+    foreign.sleep.sleepStages[0].stage = apple ? "light" : "core";
+    assert.equal(api.parseHealthDay(foreign), null, variant.name);
+  }
   const parentInput = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
     "tests/fixtures/sleep-native-parents/2026-11-01.json"), "utf8");
   const parentDay = api.parseHealthDay(parentInput);
