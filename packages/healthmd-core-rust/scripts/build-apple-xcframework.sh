@@ -73,6 +73,9 @@ if [ "$source_revision" != development ] && [ -n "$(git -C "$repo_root" status -
 fi
 export HEALTHMD_CORE_SOURCE_REVISION="$source_revision"
 
+# Rust 1.88 strips host proc-macros by default in release builds. Its Mach-O
+# strip pass can misalign LINKEDIT, which macOS27 dyld rejects (rust-lang/rust#157750).
+# Override only build dependencies: shipped target optimization/stripping stays unchanged.
 build_target() {
     target=$1
     platform=$2
@@ -91,6 +94,7 @@ build_target() {
                     --manifest-path "$workspace_root/Cargo.toml" \
                     --locked \
                     --release \
+                    --config 'profile.release.build-override.strip="none"' \
                     --package healthmd-core-uniffi \
                     --target "$target"
             ;;
@@ -107,6 +111,7 @@ build_target() {
                     --manifest-path "$workspace_root/Cargo.toml" \
                     --locked \
                     --release \
+                    --config 'profile.release.build-override.strip="none"' \
                     --package healthmd-core-uniffi \
                     --target "$target"
             ;;
