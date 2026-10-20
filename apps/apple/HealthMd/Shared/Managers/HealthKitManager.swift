@@ -81,6 +81,10 @@ nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
     }
 }
 
+extension Notification.Name {
+    nonisolated static let healthMdNativeHealthAuthorizationDidChange = Notification.Name("HealthMd.nativeHealthAuthorizationDidChange")
+}
+
 @MainActor
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
@@ -103,6 +107,7 @@ final class HealthKitManager: ObservableObject {
     private let healthStore: HKHealthStore
     private let logger = Logger(subsystem: "com.healthexporter", category: "HealthKitManager")
     private let userDefaults: UserDefaults
+    private let nativePlanningNotifications: NotificationCenter
     private let healthAuthorizationRequestedKey = "healthKit.authorizationRequested"
     private let authorizationStateMigrationKey = "healthKit.authorizationStateMigrationCompleted"
     private let legacyOnboardingCompletedKey = "hasCompletedOnboarding"
@@ -112,10 +117,12 @@ final class HealthKitManager: ObservableObject {
     /// Active observer queries for background delivery
     private(set) var observerQueries: [HKObserverQuery] = []
 
-    init(store: HealthStoreProviding = SystemHealthStoreAdapter(), userDefaults: UserDefaults = .standard) {
+    init(store: HealthStoreProviding = SystemHealthStoreAdapter(), userDefaults: UserDefaults = .standard,
+         nativePlanningNotifications: NotificationCenter = .default) {
         self.store = store
         self.healthStore = HKHealthStore()
         self.userDefaults = userDefaults
+        self.nativePlanningNotifications = nativePlanningNotifications
         let medicationRequested = userDefaults.bool(forKey: medicationAuthorizationRequestedKey)
         self.isMedicationAuthorizationRequested = medicationRequested
         self.medicationAuthorizationStatus = medicationRequested ? "Medication access selected" : "Not requested"
@@ -129,7 +136,13 @@ final class HealthKitManager: ObservableObject {
     /// Callback triggered when background delivery receives new data
     var onBackgroundDelivery: (() -> Void)?
 
-    @Published var isAuthorized = false
+    @Published var isAuthorized = false {
+        didSet {
+            if isAuthorized != oldValue {
+                nativePlanningNotifications.post(name: .healthMdNativeHealthAuthorizationDidChange, object: self)
+            }
+        }
+    }
     @Published var authorizationStatus: String = "Not Connected"
     @Published private(set) var isMedicationAuthorizationRequested: Bool
     @Published private(set) var medicationAuthorizationStatus: String
@@ -557,7 +570,13 @@ final class HealthKitManager: ObservableObject {
     private func markAuthorizationRequested() {
         userDefaults.set(true, forKey: healthAuthorizationRequestedKey)
         userDefaults.set(true, forKey: authorizationStateMigrationKey)
+        let previouslyAuthorized = isAuthorized
         isAuthorized = true
+        // A repeated completed native flow may change read choices without changing this Boolean.
+        // This is flow evidence only; HealthKit does not disclose per-type read grants.
+        if previouslyAuthorized {
+            nativePlanningNotifications.post(name: .healthMdNativeHealthAuthorizationDidChange, object: self)
+        }
         authorizationStatus = "Connected"
     }
 

@@ -33,6 +33,7 @@ class DirectCliForegroundService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var operation: Job? = null
+    private var nativeActivityEvents: AgentBridgeNativeCatalogActivityEvents? = null
     private var nativeCatalogBroadcasts: AgentBridgeNativeCatalogBroadcasts? = null
     private var nativeEligibilityObservation: AutoCloseable? = null
     private var nativeProtectionObservation: AutoCloseable? = null
@@ -56,6 +57,7 @@ class DirectCliForegroundService : Service() {
         // Real SDK notifications latch before worker sampling/publication. First-unlock is not
         // ordinary screen lock; existing native serving/permission fences remain authoritative.
         nativeCatalogBroadcasts = AgentBridgeNativeCatalogBroadcasts(this, coordinator::agentBridgeNativeMetadataChanged)
+        nativeActivityEvents = AgentBridgeNativeCatalogActivityEvents(application, coordinator::agentBridgeNativeMetadataChanged)
         scope.launch {
             coordinator.state.collectLatest(::updateNotification)
         }
@@ -137,6 +139,8 @@ class DirectCliForegroundService : Service() {
     }
 
     private fun closeNativeEligibilityObservation() {
+        nativeActivityEvents?.close()
+        nativeActivityEvents = null
         nativeProtectionObservation?.close()
         nativeProtectionObservation = null
         nativeEligibilityObservation?.close()

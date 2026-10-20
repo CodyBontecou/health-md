@@ -5,6 +5,7 @@ import HealthMdConnectionCore
 import HealthMdCoreRust
 import XCTest
 #if canImport(HealthMd)
+import HealthKit
 @testable import HealthMd
 #else
 @testable import AgentBridgeRequestSettingsHarness
@@ -396,6 +397,49 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
         }
     }
+    #endif
+
+    #if canImport(HealthMd)
+    func testHealthKitFlowEventsInvalidateSameFactsAndTeardownExactNativeObserver() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let center = NotificationCenter(), healthStore = FakeHealthStore()
+        healthStore.authRequestStatus = .unnecessary
+        let manager = HealthKitManager(store: healthStore, userDefaults: rig.reader.defaults,
+                                       nativePlanningNotifications: center)
+        manager.isAuthorized = true
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()
+        let relay = AgentBridgeNativeCatalogEventRelay()
+        relay.replace(with: lifecycle)
+        var notifications: AgentBridgeNativeCatalogNotifications? = .init(center: center,
+            names: [.healthMdNativeHealthAuthorizationDidChange], relay: relay)
+        try lifecycle.observe(facts)
+        let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        manager.isAuthorized = true // Identical cache assignment is not a completed native flow.
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        _ = try await manager.requestAuthorization()
+        XCTAssertThrowsError(try lifecycle.currentPublication())
+        let second = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        XCTAssertEqual(second.revision, first.revision + 1)
+        _ = try await manager.requestAuthorization() // Repeated flow still invalidates equal metadata.
+        XCTAssertThrowsError(try lifecycle.currentFacts())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        manager.isAuthorized = false; manager.isAuthorized = true
+        XCTAssertThrowsError(try lifecycle.currentFacts())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        withExtendedLifetime(notifications) { }
+        notifications = nil
+        manager.isAuthorized = false
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        relay.replace(with: nil)
+        manager.isAuthorized = true
+        XCTAssertThrowsError(try lifecycle.currentFacts())
+        XCTAssertFalse(healthStore.authRequested)
+        XCTAssertTrue(healthStore.quantitySampleQueries.isEmpty)
+        XCTAssertTrue(healthStore.completedCanonicalQueryIdentifiers.isEmpty)
+        XCTAssertTrue(healthStore.workoutRecordQueries.isEmpty)
+        XCTAssertTrue(healthStore.medicationRecordQueries.isEmpty)
+    }
+
     #endif
 
     func testNativeRefreshControllerSerializesAndCoalescesEventsAcrossActualPublication() async throws {

@@ -407,6 +407,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         agentBridgeCatalogEvents = catalogEvents
         agentBridgeCatalogNotifications = AgentBridgeNativeCatalogNotifications(
             names: [.healthMdNativeExportEligibilityDidChange, .healthMdConfigurationProtectionDidChange,
+                    .healthMdNativeHealthAuthorizationDidChange,
                     .NSSystemTimeZoneDidChange,
                     UIApplication.protectedDataWillBecomeUnavailableNotification,
                     UIApplication.protectedDataDidBecomeAvailableNotification], relay: catalogEvents)
