@@ -353,6 +353,8 @@ jobs:
           profile: pixel_7
           disable-animations: true
           script: |
+            adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+            adb -s emulator-5554 shell wm dismiss-keyguard
             # The short-window editor matrix exercises the real software keyboard. Hosted
             # API 35 headless AVDs can leave that IME suppressed, so make the software-IME
             # contract explicit and prove a default method is ready before instrumentation.
@@ -416,6 +418,19 @@ jobs:
           path: shard-reports/
           retention-days: 7
           if-no-files-found: error
+
+      - name: Retain synthetic instrumentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-instrumentation-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/android/healthmd-core/build/reports/androidTests/
+            apps/android/healthmd-core/build/outputs/androidTest-results/
+            apps/android/app/build/reports/androidTests/
+            apps/android/app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 7
 
   fdroid-build:
     name: F-Droid clean build (${{ matrix.variant }})
