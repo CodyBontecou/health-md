@@ -145,3 +145,64 @@ it("serves authenticated, scoped, read-only Streamable HTTP MCP and revokes imme
     expect((await request(tool(29, "health_list_exports"), issuedFull.token)).status).toBe(401);
   } finally { await service.close(); db.close(); }
 }, 30_000);
+
+
+it("releases MCP capacity after disconnected tool calls finish", async () => {
+  const root = mkdtempSync(join(tmpdir(), "healthmd-mcp-disconnect-synthetic-"));
+  folders.push(root);
+  const db = new VmDatabase(root, resolve(import.meta.dirname, "../migrations"));
+  const userId = randomUUID();
+  db.connection.prepare(`INSERT INTO users (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+    VALUES (?, ?, 'synthetic', 'synthetic', 'active', ?)`)
+    .run(userId, randomUUID(), new Date().toISOString());
+  const issued = createReadToken(db.connection, userId, "Synthetic disconnect test");
+  const pending: Array<() => void> = [];
+  const unexpected = async (): Promise<never> => { throw new Error("Unexpected synthetic tool"); };
+  const reader: HealthDataReader = {
+    listMetrics: async () => [],
+    getLatest: async () => new Promise((done) => pending.push(() => done({
+      metric: "steps", date: "2026-03-15", timestamp: null, calendarTimezone: "UTC",
+      value: 123, unit: "steps", kind: "daily_aggregate",
+    }))),
+    getRange: unexpected, getDailySummary: unexpected, getWeeklySummary: unexpected,
+    search: unexpected, listExports: unexpected, findExportForDate: unexpected,
+    readExportNode: unexpected, readExportBytes: unexpected,
+  };
+  const service = await startMcpServer({ dataDirectory: root, reader,
+    publicOrigin: "https://mcp.example.test",
+    exportKeysJson: JSON.stringify({ v1: randomBytes(32).toString("base64") }), port: 0 });
+  function request(id: number, name: string) {
+    const req = httpRequest({ host: "127.0.0.1", port: service.port, path: "/mcp", method: "POST", headers: {
+      Host: "mcp.example.test", "X-Forwarded-Proto": "https", "X-Forwarded-Host": "mcp.example.test",
+      "Content-Type": "application/json", Accept: "application/json, text/event-stream",
+      "MCP-Protocol-Version": "2025-11-25", Authorization: `Bearer ${issued.token}`,
+    } });
+    req.on("error", () => { /* Expected for deliberately disconnected clients. */ });
+    req.end(JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call",
+      params: { name, arguments: name === "health_get_latest" ? { metric: "steps" } : {} } }));
+    return req;
+  }
+  const status = (id: number): Promise<number> => new Promise((done) => {
+    request(id, "health_list_metrics").on("response", (response) => {
+      response.resume();
+      response.on("end", () => done(response.statusCode ?? 0));
+    });
+  });
+  const clients = [request(1, "health_get_latest"), request(2, "health_get_latest")];
+  try {
+    await expect.poll(() => pending.length).toBe(2);
+    expect(await status(3)).toBe(429);
+    await Promise.all(clients.map((client) => new Promise<void>((done) => {
+      client.once("close", done);
+      client.destroy();
+    })));
+    expect(await status(4)).toBe(429);
+    for (const finish of pending) finish();
+    await expect.poll(() => status(4), { timeout: 1_000 }).toBe(200);
+  } finally {
+    for (const client of clients) client.destroy();
+    for (const finish of pending) finish();
+    await service.close();
+    db.close();
+  }
+}, 10_000);

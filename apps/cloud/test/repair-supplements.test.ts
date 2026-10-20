@@ -416,3 +416,31 @@ it("keeps read authority owner-scoped and rejects supplement requests on the wri
     expect(await hit(account.port, "/api/v1/exports", "POST")).toBe(404);
   } finally { await account.close(); await ingest.close(); db.close(); }
 }, 30_000);
+
+
+it("retains the newest submillisecond export regardless of upload order or UTC offset", async () => {
+  const test = setup();
+  try {
+    const { bearer, userId } = await owner(test);
+    let latestId: string | undefined;
+    let steps = 500;
+    for (const [timestamp, replaces] of [
+      ["2026-04-03T12:00:00.123Z", true],
+      ["2026-04-03T12:00:00.123900000Z", true],
+      ["2026-04-03T12:00:00.123400000Z", false],
+      ["2026-04-03T12:00:00.123Z", false],
+      ["2026-04-03T14:00:00.123900001+02:00", true],
+      ["2026-04-03T12:00:00.123900000999Z", false],
+      ["2026-04-03T12:00:00.124Z", true],
+      ["2026-04-03T12:00:00.123999999999Z", false],
+    ] as const) {
+      const response = await test.request("/api/v1/exports", "POST",
+        { ...envelope(date, steps++), exported_at: timestamp }, undefined, bearer);
+      expect(response.status).toBe(201);
+      const id = (await response.json() as { id: string }).id;
+      if (replaces) latestId = id;
+      expect(test.db.connection.prepare(`SELECT export_id AS id FROM daily_records
+        WHERE user_id = ? AND owner_date = ?`).get(userId, date)).toMatchObject({ id: latestId });
+    }
+  } finally { test.db.close(); }
+});
