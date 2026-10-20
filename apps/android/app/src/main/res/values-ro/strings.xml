@@ -1470,4 +1470,13 @@
     <string name="myself_claim_store_unavailable">Google Play nu a putut prelua achiziția. Verifică conexiunea și contul Google Play, apoi reîncearcă.</string>
     <string name="myself_claim_verification_failed">Achiziția nu a putut fi verificată. Verifică conexiunea și reîncearcă. Dacă problema persistă, contactează asistența; nu s-a acordat acces.</string>
     <string name="myself_claim_browser_unavailable">Browserul nu a putut fi deschis. Activează un browser și verifică din nou achiziția.</string>
+    <string name="agent_export_permissions_title">Permisiuni de export pentru agenți</string>
+    <string name="agent_export_permissions_checking">Se verifică permisiunile de export pentru agenți…</string>
+    <string name="agent_export_permissions_intro">Păstrează permisiunile de export pentru agenți pe acest dispozitiv. Fiecare agent are nevoie de aprobarea ta separată înainte de a putea exporta date de sănătate.</string>
+    <string name="agent_export_permissions_ready">Permisiunile de export pentru agenți sunt configurate pe acest dispozitiv. Configurarea în sine nu oferă acces niciunui agent.</string>
+    <string name="agent_export_permissions_unavailable">Permisiunile de export pentru agenți nu sunt disponibile. Nu s-a acordat niciun acces nou la export.</string>
+    <string name="agent_export_permissions_setup">Configurează permisiunile de export pentru agenți</string>
+    <string name="agent_export_permissions_confirmation">Configurezi permisiunile de export pentru agenți pe acest dispozitiv?</string>
+    <string name="agent_export_permissions_confirmation_body">Fiecare agent va avea nevoie de o permisiune de export separată. Această configurare nu aprobă niciun export și nu oferă acces niciunui agent.</string>
+    <string name="agent_export_permissions_confirm">Configurează permisiunile</string>
 </resources>

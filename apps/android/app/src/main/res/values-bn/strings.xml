@@ -1396,4 +1396,13 @@
     <string name="myself_claim_store_unavailable">Google Play কেনাকাটা আনতে পারেনি। সংযোগ ও Google Play অ্যাকাউন্ট পরীক্ষা করে আবার চেষ্টা করুন।</string>
     <string name="myself_claim_verification_failed">কেনাকাটা যাচাই করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন। সমস্যা থাকলে সহায়তায় যোগাযোগ করুন; কোনো অ্যাক্সেস দেওয়া হয়নি।</string>
     <string name="myself_claim_browser_unavailable">ব্রাউজার খোলা যায়নি। একটি ব্রাউজার চালু করে কেনাকাটা আবার যাচাই করুন।</string>
+    <string name="agent_export_permissions_title">এজেন্টের রপ্তানি অনুমতি</string>
+    <string name="agent_export_permissions_checking">এজেন্টের রপ্তানি অনুমতি যাচাই করা হচ্ছে…</string>
+    <string name="agent_export_permissions_intro">এজেন্টের রপ্তানি অনুমতি এই ডিভাইসে রাখুন। স্বাস্থ্য তথ্য রপ্তানির আগে প্রতিটি এজেন্টের জন্য আপনার আলাদা অনুমোদন প্রয়োজন।</string>
+    <string name="agent_export_permissions_ready">এই ডিভাইসে এজেন্টের রপ্তানি অনুমতি সেট আপ করা হয়েছে। শুধু সেটআপ করলে কোনো এজেন্ট প্রবেশাধিকার পায় না।</string>
+    <string name="agent_export_permissions_unavailable">এজেন্টের রপ্তানি অনুমতি উপলব্ধ নয়। রপ্তানির নতুন কোনো প্রবেশাধিকার দেওয়া হয়নি।</string>
+    <string name="agent_export_permissions_setup">এজেন্টের রপ্তানি অনুমতি সেট আপ করুন</string>
+    <string name="agent_export_permissions_confirmation">এই ডিভাইসে এজেন্টের রপ্তানি অনুমতি সেট আপ করবেন?</string>
+    <string name="agent_export_permissions_confirmation_body">প্রতিটি এজেন্টের আলাদা রপ্তানি অনুমতি লাগবে। এই সেটআপ কোনো রপ্তানি অনুমোদন করে না বা কোনো এজেন্টকে প্রবেশাধিকার দেয় না।</string>
+    <string name="agent_export_permissions_confirm">অনুমতি সেট আপ করুন</string>
 </resources>

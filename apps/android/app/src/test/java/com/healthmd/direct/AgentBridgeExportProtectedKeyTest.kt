@@ -517,6 +517,114 @@ class AgentBridgeExportProtectedKeyTest {
         }
     }
 
+    @Test
+    fun nativeSetupConsentIsScopedAndCannotAuthorizeOtherActions() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            var escaped: AgentBridgeExportNativeAuthorization? = null
+            AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy = {}, clockNanos = { 0L }) { consent ->
+                escaped = consent
+                consent.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+            }
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { requireNotNull(escaped).requireDecision(AgentBridgeExportNativeDecision.InitializeStore) }
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) {
+                AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy = {}, clockNanos = { 0L }) { consent ->
+                    f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { consent.requireDecision(AgentBridgeExportNativeDecision.Delegation("a".repeat(64), 0)) }
+                    f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { consent.requireDecision(AgentBridgeExportNativeDecision.InitializeStore) }
+                }
+            }
+            f.expect(AgentBridgeErrorCode.INVALID_REQUEST) {
+                AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy = {}, clockNanos = { 0L }) { consent ->
+                    escaped = consent
+                    throw com.healthmd.direct.protocol.AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+                }
+            }
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { requireNotNull(escaped).requireDecision(AgentBridgeExportNativeDecision.InitializeStore) }
+        }
+    }
+
+    @Test
+    fun nativeSetupConsentObservedPolicyLossAndExpiryNeverRenew() {
+        for (expiry in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            var allowed = true
+            var now = 0L
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) {
+                AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy = {
+                    if (!allowed) throw com.healthmd.direct.protocol.AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+                }, clockNanos = { now }) { consent ->
+                    consent.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                    if (expiry) now = 31_000_000_000 else allowed = false
+                    f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { consent.requireDecision(AgentBridgeExportNativeDecision.InitializeStore) }
+                    now = 0L
+                    allowed = true
+                    f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { consent.requireDecision(AgentBridgeExportNativeDecision.InitializeStore) }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun nativeSetupConfirmationCreatesOnlyEmptyLedgerAndRejectsLatePolicyLoss() {
+        for (losePolicy in listOf(false, true)) withNativeKey { os ->
+            AgentBridgeExportPlanningFixture().use { f -> withNativeData(os, f.parent) {
+                os.selected = null
+                var allowed = true
+                if (losePolicy) os.afterGeneration = { allowed = false }
+                val root = f.parent.resolve("no_backup").resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+                val operation = {
+                    AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy = {
+                        if (!allowed) throw com.healthmd.direct.protocol.AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+                    }, clockNanos = { 0L }) { consent -> AgentBridgeExportAuthorityStore.initializeNative(os.context, consent) }
+                }
+                if (losePolicy) {
+                    f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { operation() }
+                    assertThat(Files.exists(root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isFalse()
+                } else operation().access { tx ->
+                    assertThat(requireNotNull(tx).state.grants).isEmpty()
+                    assertThat(tx.state.plans).isEmpty()
+                    assertThat(tx.state.decisions).isEmpty()
+                }
+            } }
+        }
+    }
+
+    @Test
+    fun nativeSetupCreatesMissingNoBackupOnlyAfterConsentAndNeverRepairsExistingPaths() {
+        for (mode in listOf("missing", "denied", "loose", "file", "symlink")) withNativeKey { os ->
+            AgentBridgeExportPlanningFixture().use { f -> withNativeData(os, f.parent) {
+                os.selected = null
+                val parent = f.parent.resolve("no_backup")
+                when (mode) {
+                    "missing", "denied" -> Files.delete(parent)
+                    "loose" -> Files.setPosixFilePermissions(parent, PosixFilePermissions.fromString("rwxrwxrwx"))
+                    "file" -> { Files.delete(parent); Files.write(parent, byteArrayOf(7)) }
+                    "symlink" -> {
+                        Files.delete(parent)
+                        val outside = Files.createDirectory(f.parent.resolve("other"))
+                        Files.createSymbolicLink(parent, outside)
+                    }
+                }
+                if (mode == "denied") f.native.allowed = false
+                if (mode == "missing") {
+                    AgentBridgeExportAuthorityStore.initializeNative(os.context, f.native).access { tx ->
+                        assertThat(requireNotNull(tx).state.grants).isEmpty()
+                    }
+                    assertThat(Files.getPosixFilePermissions(parent)).isEqualTo(PosixFilePermissions.fromString("rwx------"))
+                    verify(exactly = 1) { os.generator.generateKey() }
+                } else {
+                    f.expect(if (mode == "denied") AgentBridgeErrorCode.APPROVAL_REQUIRED else AgentBridgeErrorCode.BINDING_CHANGED) {
+                        AgentBridgeExportAuthorityStore.initializeNative(os.context, f.native)
+                    }
+                    if (mode == "denied") assertThat(Files.exists(parent, java.nio.file.LinkOption.NOFOLLOW_LINKS)).isFalse()
+                    if (mode == "loose") assertThat(Files.getPosixFilePermissions(parent)).isEqualTo(PosixFilePermissions.fromString("rwxrwxrwx"))
+                    if (mode == "file") assertThat(Files.readAllBytes(parent)).isEqualTo(byteArrayOf(7))
+                    if (mode == "symlink") assertThat(Files.isSymbolicLink(parent)).isTrue()
+                    verify(exactly = 0) { os.generator.generateKey() }
+                }
+                verify(exactly = 0) { os.context.noBackupFilesDir }
+            } }
+        }
+    }
+
     private fun withNativeData(os: NativeKeyBoundary, data: Path, block: () -> Unit) {
         Files.createDirectory(data.resolve("no_backup"),
             PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))

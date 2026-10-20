@@ -99,7 +99,7 @@ final class AgentBridgeExportProtectedKeyTests: XCTestCase {
             if stage == "sdk" { sdk.beforeAdd = { consent.revoked = true } }
             if stage == "publication" {
                 consent.beforeCheck = { count in
-                    if count == 3 {
+                    if count == 4 {
                         consent.sawStagedFile = (try FileManager.default.contentsOfDirectory(atPath: directory.path))
                             .contains(where: { $0.hasPrefix("transaction-") })
                         consent.revoked = true
@@ -122,7 +122,7 @@ final class AgentBridgeExportProtectedKeyTests: XCTestCase {
     }
 
     func testNativeBootstrapConsentCallbackCannotPublishIntoRelocatedOrReplacementIssuer() throws {
-        for checkpoint in [2, 3] {
+        for checkpoint in [3, 4] {
             let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
             let directory = parent.appendingPathComponent("issuer"), retained = parent.appendingPathComponent("retained")
             let sdk = NativeBootstrapKeyBoundary(), consent = NativeBootstrapConsentBoundary()
@@ -131,7 +131,7 @@ final class AgentBridgeExportProtectedKeyTests: XCTestCase {
             var replacementFile: URL?
             consent.beforeCheck = { count in
                 if count == checkpoint {
-                    let temporary = checkpoint == 3
+                    let temporary = checkpoint == 4
                         ? try XCTUnwrap(FileManager.default.contentsOfDirectory(atPath: directory.path)
                             .first(where: { $0.hasPrefix("transaction-") }))
                         : "transaction-foreign"
@@ -141,7 +141,7 @@ final class AgentBridgeExportProtectedKeyTests: XCTestCase {
                     let foreign = directory.appendingPathComponent(temporary)
                     try marker.write(to: foreign)
                     replacementFile = foreign
-                    if checkpoint == 2 {
+                    if checkpoint == 3 {
                         try FileManager.default.setAttributes([.modificationDate: untouchedDate], ofItemAtPath: directory.path)
                         try FileManager.default.setAttributes([.modificationDate: untouchedDate], ofItemAtPath: retained.path)
                     }
@@ -154,10 +154,70 @@ final class AgentBridgeExportProtectedKeyTests: XCTestCase {
             XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path))
             XCTAssertFalse(FileManager.default.fileExists(atPath: retained.appendingPathComponent("state.json").path))
             XCTAssertEqual(try Data(contentsOf: XCTUnwrap(replacementFile)), marker)
-            if checkpoint == 2 {
+            if checkpoint == 3 {
                 // A temporary creation+deletion changes directory mtime even with no retained file.
                 XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: directory.path)[.modificationDate] as? Date, untouchedDate)
                 XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: retained.path)[.modificationDate] as? Date, untouchedDate)
+            }
+            XCTAssertNil(sdk.callbackError)
+        }
+    }
+
+    func testNativeSetupConsentIsScopedAndCannotAuthorizeOtherNativeActions() throws {
+        let policy = SetupConsentPolicyBoundary()
+        var escaped: (any AgentBridgeExportNativeAuthorizing)?
+        try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+            escaped = consent
+            try consent.requireNativeAuthorization(for: .createPrivateStore)
+        }
+        XCTAssertThrowsError(try XCTUnwrap(escaped).requireNativeAuthorization(for: .createPrivateStore))
+        let other = try AgentBridgeAuthorityReference(authorityId: AgentBridgeUUID("00000000-0000-4000-8000-000000000001"),
+            grantRevision: 1, grantSha256: AgentBridgeDigest(String(repeating: "a", count: 64)), issuer: .nativeSource)
+        XCTAssertThrowsError(try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+            XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .revokeDelegation(other)))
+            XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .createPrivateStore))
+        })
+        XCTAssertThrowsError(try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+            escaped = consent
+            throw AgentBridgeValidationError.invalidRequest
+        }) { XCTAssertEqual($0 as? AgentBridgeValidationError, .invalidRequest) }
+        XCTAssertThrowsError(try XCTUnwrap(escaped).requireNativeAuthorization(for: .createPrivateStore))
+    }
+
+    func testNativeSetupConsentObservedPolicyLossAndExpiryNeverRenew() throws {
+        for expiry in [false, true] {
+            let policy = SetupConsentPolicyBoundary()
+            XCTAssertThrowsError(try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(
+                requireCurrentNativePolicy: { try policy.requireCurrent() }, now: { policy.now }) { consent in
+                try consent.requireNativeAuthorization(for: .createPrivateStore)
+                if expiry { policy.advance() } else { policy.allowed = false }
+                XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .createPrivateStore))
+                policy.restore()
+                XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .createPrivateStore))
+            }) { XCTAssertEqual($0 as? AgentBridgeValidationError, .approvalRequired) }
+        }
+    }
+
+    func testNativeSetupConfirmationCreatesOnlyLocalEmptyLedgerAndRejectsLatePolicyLoss() throws {
+        for losePolicy in [false, true] {
+            let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let root = parent.appendingPathComponent("issuer")
+            let sdk = NativeBootstrapKeyBoundary(), policy = SetupConsentPolicyBoundary()
+            sdk.beforeAdd = {
+                XCTAssertEqual(try root.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup, true)
+                if losePolicy { policy.allowed = false }
+            }
+            if losePolicy {
+                XCTAssertThrowsError(try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+                    try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: root, authorization: consent, provisioner: sdk.provisioner)
+                }) { XCTAssertEqual($0 as? AgentBridgeValidationError, .approvalRequired) }
+                XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("state.json").path))
+            } else {
+                let store = try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+                    try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: root, authorization: consent, provisioner: sdk.provisioner)
+                }
+                let state = try store.snapshot()
+                XCTAssertTrue(state.delegations.isEmpty && state.plans.isEmpty && state.decisions.isEmpty)
             }
             XCTAssertNil(sdk.callbackError)
         }
@@ -521,5 +581,22 @@ nonisolated private final class NativeBootstrapConsentBoundary: AgentBridgeExpor
         checks += 1
         try beforeCheck?(checks)
         guard !revoked else { throw AgentBridgeValidationError.permissionRequired }
+    }
+}
+
+nonisolated private final class SetupConsentPolicyBoundary: @unchecked Sendable {
+    private let lock = NSLock()
+    private let origin = ContinuousClock.now
+    private var offset = Duration.zero
+    private var available = true
+    var allowed: Bool {
+        get { lock.withLock { available } }
+        set { lock.withLock { available = newValue } }
+    }
+    var now: ContinuousClock.Instant { lock.withLock { origin.advanced(by: offset) } }
+    func advance() { lock.withLock { offset = .seconds(31) } }
+    func restore() { lock.withLock { available = true; offset = .zero } }
+    func requireCurrent() throws {
+        guard allowed else { throw AgentBridgeValidationError.permissionRequired }
     }
 }

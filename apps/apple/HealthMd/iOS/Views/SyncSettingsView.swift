@@ -60,6 +60,9 @@ struct SyncSettingsView: View {
                     errorSection
                 case .cli:
                     directCLISection
+                    SyncCard(title: "Agent export permissions", subtitle: "Manage permission for agent exports separately from pairing.") {
+                        AgentExportPermissionsSetupControls()
+                    }
                 }
             }
             .padding(.horizontal, Spacing.s4)

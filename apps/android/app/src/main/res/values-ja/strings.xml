@@ -1247,4 +1247,13 @@
     <string name="myself_claim_store_unavailable">Google Play から購入を取得できませんでした。接続と Google Play アカウントを確認して再試行してください。</string>
     <string name="myself_claim_verification_failed">購入を確認できませんでした。接続を確認して再試行してください。解決しない場合はサポートに連絡してください。アクセスは付与されていません。</string>
     <string name="myself_claim_browser_unavailable">ブラウザを開けませんでした。ブラウザを有効にして購入を再確認してください。</string>
+    <string name="agent_export_permissions_title">エージェントのエクスポート権限</string>
+    <string name="agent_export_permissions_checking">エージェントのエクスポート権限を確認中…</string>
+    <string name="agent_export_permissions_intro">エージェントのエクスポート権限をこのデバイスに保存します。各エージェントが健康データをエクスポートするには、個別の承認が必要です。</string>
+    <string name="agent_export_permissions_ready">このデバイスでエージェントのエクスポート権限が設定されています。設定だけでは、エージェントにアクセスは許可されません。</string>
+    <string name="agent_export_permissions_unavailable">エージェントのエクスポート権限を利用できません。新たなエクスポートアクセスは許可されていません。</string>
+    <string name="agent_export_permissions_setup">エージェントのエクスポート権限を設定</string>
+    <string name="agent_export_permissions_confirmation">このデバイスでエージェントのエクスポート権限を設定しますか？</string>
+    <string name="agent_export_permissions_confirmation_body">各エージェントには個別のエクスポート権限が必要です。この設定では、エクスポートの承認やエージェントへのアクセス許可は行われません。</string>
+    <string name="agent_export_permissions_confirm">権限を設定</string>
 </resources>

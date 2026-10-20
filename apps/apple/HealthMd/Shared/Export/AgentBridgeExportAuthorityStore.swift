@@ -151,6 +151,21 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         try authorization.requireNativeAuthorization(for: .createPrivateStore)
         let store = try reservePrivateDirectory(at: directory, protectedKeys: provisioner.reader,
                                                publication: AgentBridgeExportUnobservedPublication())
+        // Permission records remain local to this installation, like their nonmigrating key.
+        // Do this only after explicit native approval/reservation, never from a load-only reader.
+        var localDirectory = directory
+        var protection = URLResourceValues()
+        protection.isExcludedFromBackup = true
+        try localDirectory.setResourceValues(protection)
+        guard try localDirectory.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true else {
+            throw AgentBridgeValidationError.permissionRequired
+        }
+        #if os(iOS)
+        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: directory.path)
+        #endif
+        try store.requireCurrentRoot()
+        try authorization.requireNativeAuthorization(for: .createPrivateStore)
+        try store.requireCurrentRoot()
         let key = try provisioner.loadOrCreateForNewPrivateStore()
         // Revalidate the pinned private directory after potentially delaying SDK work,
         // again after staging/fsync, and before exposing the initialized store.
@@ -461,4 +476,50 @@ nonisolated private enum AgentBridgeExportPrivateFiles {
         guard renameat(root, temporary, root, name) == 0, fsync(root) == 0 else { throw AgentBridgeValidationError.bindingChanged }
         try afterSync()
     }
+}
+
+/// Transient proof of ONE native setup confirmation, not a grant or a serializable capability.
+/// Only the native confirmation handler enters this scope. The proof cannot escape the operation,
+/// authorize another action, survive observed policy loss, or renew itself when policy recovers.
+nonisolated final class AgentBridgeExportNativeSetupConsent: AgentBridgeExportNativeAuthorizing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var active = true
+    private let requireCurrentNativePolicy: @Sendable () throws -> Void
+    private let now: @Sendable () -> ContinuousClock.Instant
+    private let deadline: ContinuousClock.Instant
+
+    private init(policy: @escaping @Sendable () throws -> Void,
+                 now: @escaping @Sendable () -> ContinuousClock.Instant) {
+        requireCurrentNativePolicy = policy
+        self.now = now
+        deadline = now().advanced(by: .seconds(30))
+    }
+
+    static func withNativeConfirmation<T>(
+        requireCurrentNativePolicy: @escaping @Sendable () throws -> Void,
+        now: @escaping @Sendable () -> ContinuousClock.Instant = { ContinuousClock.now },
+        _ operation: (any AgentBridgeExportNativeAuthorizing) throws -> T
+    ) throws -> T {
+        let consent = Self(policy: requireCurrentNativePolicy, now: now)
+        defer { consent.invalidate() }
+        try consent.requireNativeAuthorization(for: .createPrivateStore)
+        let result = try operation(consent)
+        try consent.requireNativeAuthorization(for: .createPrivateStore)
+        return result
+    }
+
+    func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws {
+        do {
+            guard case .createPrivateStore = action, lock.withLock({ active }), now() < deadline else {
+                throw AgentBridgeValidationError.approvalRequired
+            }
+            try requireCurrentNativePolicy()
+            guard lock.withLock({ active }), now() < deadline else { throw AgentBridgeValidationError.approvalRequired }
+        } catch {
+            invalidate()
+            throw AgentBridgeValidationError.approvalRequired
+        }
+    }
+
+    private func invalidate() { lock.withLock { active = false } }
 }

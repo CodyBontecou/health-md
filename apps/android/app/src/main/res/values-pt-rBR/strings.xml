@@ -1470,4 +1470,13 @@
     <string name="myself_claim_store_unavailable">O Google Play não conseguiu obter sua compra. Verifique a conexão e a conta do Google Play e tente novamente.</string>
     <string name="myself_claim_verification_failed">Não foi possível verificar sua compra. Confira a conexão e tente novamente. Se continuar, contate o suporte; nenhum acesso foi resgatado.</string>
     <string name="myself_claim_browser_unavailable">Não foi possível abrir o navegador. Ative um navegador e verifique a compra novamente.</string>
+    <string name="agent_export_permissions_title">Permissões de exportação dos agentes</string>
+    <string name="agent_export_permissions_checking">Verificando permissões de exportação dos agentes…</string>
+    <string name="agent_export_permissions_intro">Mantenha as permissões de exportação dos agentes neste dispositivo. Cada agente precisa da sua aprovação separada antes de exportar dados de saúde.</string>
+    <string name="agent_export_permissions_ready">As permissões de exportação dos agentes estão configuradas neste dispositivo. A configuração por si só não dá acesso a nenhum agente.</string>
+    <string name="agent_export_permissions_unavailable">As permissões de exportação dos agentes estão indisponíveis. Nenhum novo acesso de exportação foi concedido.</string>
+    <string name="agent_export_permissions_setup">Configurar permissões de exportação dos agentes</string>
+    <string name="agent_export_permissions_confirmation">Configurar as permissões de exportação dos agentes neste dispositivo?</string>
+    <string name="agent_export_permissions_confirmation_body">Cada agente precisará de uma permissão de exportação separada. Esta configuração não aprova nenhuma exportação nem dá acesso a qualquer agente.</string>
+    <string name="agent_export_permissions_confirm">Configurar permissões</string>
 </resources>

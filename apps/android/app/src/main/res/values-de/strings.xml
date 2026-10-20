@@ -1422,4 +1422,13 @@
     <string name="myself_claim_store_unavailable">Google Play konnte deinen Kauf nicht abrufen. Prüfe Verbindung und Google Play-Konto und versuche es erneut.</string>
     <string name="myself_claim_verification_failed">Dein Kauf konnte nicht geprüft werden. Prüfe die Verbindung und versuche es erneut. Falls das Problem bleibt, kontaktiere den Support. Es wurde kein Zugang beansprucht.</string>
     <string name="myself_claim_browser_unavailable">Der Browser konnte nicht geöffnet werden. Aktiviere einen Browser und prüfe den Kauf erneut.</string>
+    <string name="agent_export_permissions_title">Exportberechtigungen für Agenten</string>
+    <string name="agent_export_permissions_checking">Exportberechtigungen für Agenten werden geprüft…</string>
+    <string name="agent_export_permissions_intro">Speichere Exportberechtigungen für Agenten auf diesem Gerät. Jeder Agent benötigt deine gesonderte Zustimmung, bevor er Gesundheitsdaten exportieren kann.</string>
+    <string name="agent_export_permissions_ready">Exportberechtigungen für Agenten sind auf diesem Gerät eingerichtet. Die Einrichtung allein gewährt keinem Agenten Zugriff.</string>
+    <string name="agent_export_permissions_unavailable">Exportberechtigungen für Agenten sind nicht verfügbar. Es wurde kein neuer Exportzugriff gewährt.</string>
+    <string name="agent_export_permissions_setup">Exportberechtigungen für Agenten einrichten</string>
+    <string name="agent_export_permissions_confirmation">Exportberechtigungen für Agenten auf diesem Gerät einrichten?</string>
+    <string name="agent_export_permissions_confirmation_body">Jeder Agent benötigt eine gesonderte Exportberechtigung. Diese Einrichtung genehmigt keinen Export und gewährt keinem Agenten Zugriff.</string>
+    <string name="agent_export_permissions_confirm">Berechtigungen einrichten</string>
 </resources>

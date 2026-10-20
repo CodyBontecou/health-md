@@ -411,6 +411,23 @@ internal class AgentBridgeExportAuthorityStore private constructor(
          * A lost/invalid key with an existing issuer directory rejects without credential writes. */
         fun initializeNative(context: Context, native: AgentBridgeExportNativeAuthorization): AgentBridgeExportAuthorityStore {
             val provisioner = AgentBridgeExportProtectedKeyProvisioner(context)
+            // Explicit setup may create the FIXED missing SDK parent, never chmod/repair an
+            // existing path through Context's creating getter. Load-only factories stay unchanged.
+            demand(!context.isDeviceProtectedStorage)
+            val data = context.dataDir.toPath().toAbsolutePath().normalize()
+            val uid = Process.myUid()
+            val gid = Os.getgid()
+            val dataIdentity = nativeDirectory(data, uid, gid).fileKey()
+            val parent = data.resolve("no_backup")
+            if (!Files.exists(parent, NOFOLLOW_LINKS)) {
+                native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                provisioner.requireAvailable()
+                demand(nativeDirectory(data, uid, gid).fileKey() == dataIdentity)
+                // Exclusive creation rejects races instead of adopting or repairing another path.
+                Files.createDirectory(parent, PosixFilePermissions.asFileAttribute(directoryPermissions))
+                FileChannel.open(data, READ, NOFOLLOW_LINKS).use { it.force(true) }
+                demand(nativeDirectory(data, uid, gid).fileKey() == dataIdentity)
+            }
             val store = forNoBackup(context, provisioner.reader)
             store.initializeNew(native, false, provisioner::requireAvailable) { provisioner.loadOrCreateForNewPrivateStore() }
             return store
@@ -517,5 +534,52 @@ internal class AgentBridgeExportAuthorityTransaction(internal var state: AgentBr
     fun decide(planId: String, approval: AgentBridgeApproval) {
         if (state.decisions.size >= AgentBridgeExportAuthorityStore.MAX_DECISIONS) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
         state = state.copy(decisions = state.decisions + AgentBridgeExportDecisionRecord(planId, AgentBridgeCodec.encode(approval).decodeToString()))
+    }
+}
+
+/** One native setup confirmation scoped to its synchronous operation. Not a serializable grant,
+ * export/configuration authority, renewable policy Boolean, or remote permission endpoint. */
+internal class AgentBridgeExportNativeSetupConsent private constructor(
+    private val requireCurrentNativePolicy: () -> Unit,
+    private val clockNanos: () -> Long,
+) : AgentBridgeExportNativeAuthorization() {
+    private val lock = Any()
+    private var active = true
+    private val startedAt = clockNanos()
+
+    override fun requireDecision(decision: AgentBridgeExportNativeDecision) {
+        try {
+            demand(decision == AgentBridgeExportNativeDecision.InitializeStore)
+            demand(synchronized(lock) { active })
+            demand((clockNanos() - startedAt) in 0L until TIMEOUT_NANOS)
+            requireCurrentNativePolicy()
+            demand(synchronized(lock) { active })
+            demand((clockNanos() - startedAt) in 0L until TIMEOUT_NANOS)
+        } catch (_: Exception) {
+            invalidate()
+            throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+        }
+    }
+
+    private fun invalidate() { synchronized(lock) { active = false } }
+    private fun demand(value: Boolean) {
+        if (!value) throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+    }
+
+    companion object {
+        private const val TIMEOUT_NANOS = 30_000_000_000L
+        fun <T> withNativeConfirmation(
+            requireCurrentNativePolicy: () -> Unit,
+            clockNanos: () -> Long = { android.os.SystemClock.elapsedRealtimeNanos() },
+            operation: (AgentBridgeExportNativeAuthorization) -> T,
+        ): T {
+            val consent = AgentBridgeExportNativeSetupConsent(requireCurrentNativePolicy, clockNanos)
+            return try {
+                consent.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                val result = operation(consent)
+                consent.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                result
+            } finally { consent.invalidate() }
+        }
     }
 }

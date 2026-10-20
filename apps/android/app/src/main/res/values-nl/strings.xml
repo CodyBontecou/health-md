@@ -1422,4 +1422,13 @@
     <string name="myself_claim_store_unavailable">Google Play kon je aankoop niet ophalen. Controleer je verbinding en Google Play-account en probeer opnieuw.</string>
     <string name="myself_claim_verification_failed">Je aankoop kon niet worden gecontroleerd. Controleer je verbinding en probeer opnieuw. Neem bij aanhoudende problemen contact op met ondersteuning; er is geen toegang geclaimd.</string>
     <string name="myself_claim_browser_unavailable">De browser kon niet worden geopend. Schakel een browser in en controleer de aankoop opnieuw.</string>
+    <string name="agent_export_permissions_title">Exportrechten voor agents</string>
+    <string name="agent_export_permissions_checking">Exportrechten voor agents controleren…</string>
+    <string name="agent_export_permissions_intro">Bewaar exportrechten voor agents op dit apparaat. Elke agent heeft je afzonderlijke goedkeuring nodig voordat deze gezondheidsgegevens kan exporteren.</string>
+    <string name="agent_export_permissions_ready">Exportrechten voor agents zijn ingesteld op dit apparaat. Alleen instellen geeft geen enkele agent toegang.</string>
+    <string name="agent_export_permissions_unavailable">Exportrechten voor agents zijn niet beschikbaar. Er is geen nieuwe exporttoegang verleend.</string>
+    <string name="agent_export_permissions_setup">Exportrechten voor agents instellen</string>
+    <string name="agent_export_permissions_confirmation">Exportrechten voor agents op dit apparaat instellen?</string>
+    <string name="agent_export_permissions_confirmation_body">Elke agent heeft afzonderlijke exportrechten nodig. Deze instelling keurt geen export goed en geeft geen enkele agent toegang.</string>
+    <string name="agent_export_permissions_confirm">Rechten instellen</string>
 </resources>

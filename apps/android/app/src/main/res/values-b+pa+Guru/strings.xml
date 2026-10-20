@@ -1396,4 +1396,13 @@
     <string name="myself_claim_store_unavailable">Google Play ਖਰੀਦ ਪ੍ਰਾਪਤ ਨਹੀਂ ਕਰ ਸਕਿਆ। ਕਨੈਕਸ਼ਨ ਅਤੇ Google Play ਖਾਤਾ ਜਾਂਚ ਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="myself_claim_verification_failed">ਖਰੀਦ ਦੀ ਪੁਸ਼ਟੀ ਨਹੀਂ ਹੋ ਸਕੀ। ਕਨੈਕਸ਼ਨ ਜਾਂਚ ਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ। ਸਮੱਸਿਆ ਜਾਰੀ ਰਹੇ ਤਾਂ ਸਹਾਇਤਾ ਨਾਲ ਸੰਪਰਕ ਕਰੋ; ਪਹੁੰਚ ਨਹੀਂ ਦਿੱਤੀ ਗਈ।</string>
     <string name="myself_claim_browser_unavailable">ਬ੍ਰਾਊਜ਼ਰ ਨਹੀਂ ਖੁੱਲ੍ਹ ਸਕਿਆ। ਬ੍ਰਾਊਜ਼ਰ ਚਾਲੂ ਕਰਕੇ ਖਰੀਦ ਦੀ ਮੁੜ ਪੁਸ਼ਟੀ ਕਰੋ।</string>
+    <string name="agent_export_permissions_title">ਏਜੰਟ ਦੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ</string>
+    <string name="agent_export_permissions_checking">ਏਜੰਟ ਦੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ ਦੀ ਜਾਂਚ ਹੋ ਰਹੀ ਹੈ…</string>
+    <string name="agent_export_permissions_intro">ਏਜੰਟ ਦੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਰੱਖੋ। ਸਿਹਤ ਡਾਟਾ ਨਿਰਯਾਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਹਰ ਏਜੰਟ ਨੂੰ ਤੁਹਾਡੀ ਵੱਖਰੀ ਮਨਜ਼ੂਰੀ ਚਾਹੀਦੀ ਹੈ।</string>
+    <string name="agent_export_permissions_ready">ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਏਜੰਟ ਦੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ ਸੈੱਟ ਅੱਪ ਹਨ। ਸਿਰਫ਼ ਸੈੱਟਅੱਪ ਕਰਨ ਨਾਲ ਕਿਸੇ ਏਜੰਟ ਨੂੰ ਪਹੁੰਚ ਨਹੀਂ ਮਿਲਦੀ।</string>
+    <string name="agent_export_permissions_unavailable">ਏਜੰਟ ਦੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ ਉਪਲਬਧ ਨਹੀਂ ਹਨ। ਨਿਰਯਾਤ ਲਈ ਕੋਈ ਨਵੀਂ ਪਹੁੰਚ ਨਹੀਂ ਦਿੱਤੀ ਗਈ।</string>
+    <string name="agent_export_permissions_setup">ਏਜੰਟ ਦੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ ਸੈੱਟ ਅੱਪ ਕਰੋ</string>
+    <string name="agent_export_permissions_confirmation">ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਏਜੰਟ ਦੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ ਸੈੱਟ ਅੱਪ ਕਰਨੀਆਂ ਹਨ?</string>
+    <string name="agent_export_permissions_confirmation_body">ਹਰ ਏਜੰਟ ਨੂੰ ਵੱਖਰੀ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤ ਚਾਹੀਦੀ ਹੋਵੇਗੀ। ਇਹ ਸੈੱਟਅੱਪ ਕਿਸੇ ਨਿਰਯਾਤ ਨੂੰ ਮਨਜ਼ੂਰੀ ਨਹੀਂ ਦਿੰਦਾ ਅਤੇ ਨਾ ਹੀ ਕਿਸੇ ਏਜੰਟ ਨੂੰ ਪਹੁੰਚ ਦਿੰਦਾ ਹੈ।</string>
+    <string name="agent_export_permissions_confirm">ਇਜਾਜ਼ਤਾਂ ਸੈੱਟ ਅੱਪ ਕਰੋ</string>
 </resources>

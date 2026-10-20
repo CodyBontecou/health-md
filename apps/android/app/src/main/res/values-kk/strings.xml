@@ -1363,4 +1363,13 @@
     <string name="myself_claim_store_unavailable">Google Play сатып алуды ала алмады. Байланыс пен Google Play жазбасын тексеріп, қайталап көріңіз.</string>
     <string name="myself_claim_verification_failed">Сатып алу тексерілмеді. Байланысты тексеріп, қайталап көріңіз. Мәселе шешілмесе, қолдау қызметіне хабарласыңыз. Қолжетімділік берілмеді.</string>
     <string name="myself_claim_browser_unavailable">Браузер ашылмады. Браузерді қосып, сатып алуды қайта тексеріңіз.</string>
+    <string name="agent_export_permissions_title">Агенттердің экспорт рұқсаттары</string>
+    <string name="agent_export_permissions_checking">Агенттердің экспорт рұқсаттары тексерілуде…</string>
+    <string name="agent_export_permissions_intro">Агенттердің экспорт рұқсаттарын осы құрылғыда сақтаңыз. Денсаулық деректерін экспорттау үшін әр агентке сіздің бөлек мақұлдауыңыз қажет.</string>
+    <string name="agent_export_permissions_ready">Агенттердің экспорт рұқсаттары осы құрылғыда бапталған. Баптаудың өзі ешбір агентке қолжетімділік бермейді.</string>
+    <string name="agent_export_permissions_unavailable">Агенттердің экспорт рұқсаттары қолжетімсіз. Экспортқа жаңа қолжетімділік берілген жоқ.</string>
+    <string name="agent_export_permissions_setup">Агенттердің экспорт рұқсаттарын баптау</string>
+    <string name="agent_export_permissions_confirmation">Осы құрылғыда агенттердің экспорт рұқсаттарын баптау керек пе?</string>
+    <string name="agent_export_permissions_confirmation_body">Әр агентке бөлек экспорт рұқсаты қажет болады. Бұл баптау ешбір экспортты мақұлдамайды және ешбір агентке қолжетімділік бермейді.</string>
+    <string name="agent_export_permissions_confirm">Рұқсаттарды баптау</string>
 </resources>

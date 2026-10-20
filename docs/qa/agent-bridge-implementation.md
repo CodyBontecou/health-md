@@ -57,6 +57,32 @@ after publication suppresses return without rolling back the committed empty led
 permission is created by this setup. Installed consent/configuration UI, native routes and full
 feature/physical acceptance remain incomplete; the PR remains draft.
 
+## Native settings setup increment (2026-10-20)
+
+The iOS Direct CLI settings and Android Direct CLI screen now contain an explicit local setup
+confirmation. Opening either screen only inspects existing storage. Confirmation checks the current
+foreground/unlocked lifecycle and configuration protection, then uses a synchronous, nonescaping
+30-second native setup proof. Policy loss, expiry, an unrelated action or scope exit invalidates the
+proof permanently. The proof authorizes only empty-store initialization, never an agent grant.
+Duplicate confirmations are ignored after the setup state changes. Confirmation closes on background.
+
+Apple excludes the reserved issuer directory from backup and applies complete iOS file protection
+before credential work. Android can exclusively create a missing fixed credential-protected
+`no_backup` parent after native approval and first-unlock checks; it never calls a creating Context
+getter or repairs an existing loose/file/symlink parent. Existing load-only providers stay load-only.
+Nine Android setup strings are translated in all 15 supported locales. The UI uses existing native
+components and configuration-protection gates; it does not alter API preferences or start a service.
+
+The actual unsigned generic iOS app build passes, including the new SwiftUI view. The affected
+macOS app execution passes 101 XCTest methods (97 bridge methods and four configuration-protection
+methods). Contract validation and all 32 bridge contract tests pass. SDK credential/policy boundaries
+remain intercepted in tests; actual filesystem and MAC operations execute. Play passes 149 selected
+JVM methods: 133 bridge methods plus 16 localization/configuration-protection methods. F-Droid
+passes all 133 bridge JVM methods, with zero failures/errors/skips. Counts overlap prior suites. No installed UI, accessibility, actual OS credential or
+physical-device result is claimed. Native grant editing/revocation, bound approval, route dispatch,
+capture/execution, receipts, recipes and full CLI/MCP × Apple/Android acceptance remain incomplete.
+B19/B20 stay separately approval-blocked, extension4 stays unadvertised, and this PR remains draft.
+
 ## Current consolidated native-session increment (2026-10-06)
 
 After the user cleared the fleet goal and authorized consolidation, all23 bridge branch heads were

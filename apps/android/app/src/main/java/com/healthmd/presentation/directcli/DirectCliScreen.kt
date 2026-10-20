@@ -93,6 +93,7 @@ fun DirectCliScreen(
         onConnect = viewModel::connect,
         onDisconnect = viewModel::disconnect,
         onForget = { configurationChange(viewModel::forget) },
+        agentPermissionsSetup = { AgentExportPermissionsSetupCard() },
     )
     if (showPairingScanner) {
         DirectCliPairingScanner(
@@ -120,6 +121,7 @@ fun DirectCliContent(
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onForget: () -> Unit,
+    agentPermissionsSetup: @Composable () -> Unit = {},
 ) {
     Scaffold(
         modifier = Modifier.testTag(DirectCliTestTags.SCREEN),
@@ -159,6 +161,8 @@ fun DirectCliContent(
                     )
                 }
             }
+
+            agentPermissionsSetup()
 
             if (!ui.hasTrust) {
                 Text(

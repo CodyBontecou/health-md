@@ -1615,4 +1615,13 @@
     <string name="myself_claim_store_unavailable">تعذّر على Google Play جلب عملية الشراء. تحقق من الاتصال وحساب Google Play وحاول مجدداً.</string>
     <string name="myself_claim_verification_failed">تعذّر التحقق من الشراء. تحقق من الاتصال وحاول مجدداً. إذا استمرت المشكلة، تواصل مع الدعم؛ لم يُمنح أي وصول.</string>
     <string name="myself_claim_browser_unavailable">تعذّر فتح المتصفح. فعّل متصفحاً وأعد التحقق من الشراء للمتابعة.</string>
+    <string name="agent_export_permissions_title">أذونات تصدير الوكلاء</string>
+    <string name="agent_export_permissions_checking">جارٍ التحقق من أذونات تصدير الوكلاء…</string>
+    <string name="agent_export_permissions_intro">احتفظ بأذونات تصدير الوكلاء على هذا الجهاز. يحتاج كل وكيل إلى موافقتك المنفصلة قبل تصدير البيانات الصحية.</string>
+    <string name="agent_export_permissions_ready">تم إعداد أذونات تصدير الوكلاء على هذا الجهاز. الإعداد وحده لا يمنح أي وكيل حق الوصول.</string>
+    <string name="agent_export_permissions_unavailable">أذونات تصدير الوكلاء غير متاحة. لم يُمنح أي وصول جديد للتصدير.</string>
+    <string name="agent_export_permissions_setup">إعداد أذونات تصدير الوكلاء</string>
+    <string name="agent_export_permissions_confirmation">هل تريد إعداد أذونات تصدير الوكلاء على هذا الجهاز؟</string>
+    <string name="agent_export_permissions_confirmation_body">سيحتاج كل وكيل إلى إذن تصدير منفصل. لا يوافق هذا الإعداد على أي تصدير ولا يمنح أي وكيل حق الوصول.</string>
+    <string name="agent_export_permissions_confirm">إعداد الأذونات</string>
 </resources>

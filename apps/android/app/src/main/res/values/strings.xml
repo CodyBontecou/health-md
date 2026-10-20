@@ -1470,4 +1470,13 @@
     <string name="myself_claim_store_unavailable">Google Play could not retrieve your purchase. Check your connection and Google Play account, then try again.</string>
     <string name="myself_claim_verification_failed">Your purchase could not be verified. Check your connection and try again. If it continues, contact support; no access has been claimed.</string>
     <string name="myself_claim_browser_unavailable">The claim browser could not open. Enable a browser, then verify your purchase again to continue.</string>
+    <string name="agent_export_permissions_title">Agent export permissions</string>
+    <string name="agent_export_permissions_checking">Checking agent export permissions…</string>
+    <string name="agent_export_permissions_intro">Keep agent export permissions on this device. Each agent needs your separate approval before it can export health data.</string>
+    <string name="agent_export_permissions_ready">Agent export permissions are set up on this device. Setup alone does not give an agent access.</string>
+    <string name="agent_export_permissions_unavailable">Agent export permissions are unavailable. No new export access was granted.</string>
+    <string name="agent_export_permissions_setup">Set up agent export permissions</string>
+    <string name="agent_export_permissions_confirmation">Set up agent export permissions on this device?</string>
+    <string name="agent_export_permissions_confirmation_body">Each agent will need separate export permission. Setting this up does not approve an export or give any agent access.</string>
+    <string name="agent_export_permissions_confirm">Set up permissions</string>
 </resources>

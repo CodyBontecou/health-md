@@ -1470,4 +1470,13 @@
     <string name="myself_claim_store_unavailable">Google Play n’a pas pu récupérer votre achat. Vérifiez votre connexion et votre compte Google Play, puis réessayez.</string>
     <string name="myself_claim_verification_failed">Votre achat n’a pas pu être vérifié. Vérifiez votre connexion et réessayez. Si le problème persiste, contactez l’assistance. Aucun accès n’a été accordé.</string>
     <string name="myself_claim_browser_unavailable">Le navigateur n’a pas pu s’ouvrir. Activez un navigateur, puis vérifiez à nouveau votre achat.</string>
+    <string name="agent_export_permissions_title">Autorisations d’exportation des agents</string>
+    <string name="agent_export_permissions_checking">Vérification des autorisations d’exportation des agents…</string>
+    <string name="agent_export_permissions_intro">Conservez les autorisations d’exportation des agents sur cet appareil. Chaque agent nécessite votre accord distinct avant de pouvoir exporter des données de santé.</string>
+    <string name="agent_export_permissions_ready">Les autorisations d’exportation des agents sont configurées sur cet appareil. La configuration seule ne donne accès à aucun agent.</string>
+    <string name="agent_export_permissions_unavailable">Les autorisations d’exportation des agents sont indisponibles. Aucun nouvel accès à l’exportation n’a été accordé.</string>
+    <string name="agent_export_permissions_setup">Configurer les autorisations d’exportation des agents</string>
+    <string name="agent_export_permissions_confirmation">Configurer les autorisations d’exportation des agents sur cet appareil ?</string>
+    <string name="agent_export_permissions_confirmation_body">Chaque agent aura besoin d’une autorisation d’exportation distincte. Cette configuration n’approuve aucune exportation et ne donne accès à aucun agent.</string>
+    <string name="agent_export_permissions_confirm">Configurer les autorisations</string>
 </resources>

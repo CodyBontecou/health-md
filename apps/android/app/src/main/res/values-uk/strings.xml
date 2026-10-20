@@ -1524,4 +1524,13 @@
     <string name="myself_claim_store_unavailable">Google Play не вдалося отримати покупку. Перевірте підключення й обліковий запис Google Play та повторіть спробу.</string>
     <string name="myself_claim_verification_failed">Не вдалося перевірити покупку. Перевірте підключення й повторіть спробу. Якщо помилка залишається, зверніться до підтримки. Доступ не надано.</string>
     <string name="myself_claim_browser_unavailable">Не вдалося відкрити браузер. Увімкніть браузер і знову перевірте покупку.</string>
+    <string name="agent_export_permissions_title">Дозволи на експорт для агентів</string>
+    <string name="agent_export_permissions_checking">Перевірка дозволів на експорт для агентів…</string>
+    <string name="agent_export_permissions_intro">Зберігайте дозволи на експорт для агентів на цьому пристрої. Перед експортом даних про здоров’я кожному агенту потрібне ваше окреме схвалення.</string>
+    <string name="agent_export_permissions_ready">Дозволи на експорт для агентів налаштовано на цьому пристрої. Саме налаштування не надає доступу жодному агенту.</string>
+    <string name="agent_export_permissions_unavailable">Дозволи на експорт для агентів недоступні. Новий доступ до експорту не надано.</string>
+    <string name="agent_export_permissions_setup">Налаштувати дозволи на експорт для агентів</string>
+    <string name="agent_export_permissions_confirmation">Налаштувати дозволи на експорт для агентів на цьому пристрої?</string>
+    <string name="agent_export_permissions_confirmation_body">Кожному агенту потрібен окремий дозвіл на експорт. Це налаштування не схвалює експорт і не надає доступу жодному агенту.</string>
+    <string name="agent_export_permissions_confirm">Налаштувати дозволи</string>
 </resources>
