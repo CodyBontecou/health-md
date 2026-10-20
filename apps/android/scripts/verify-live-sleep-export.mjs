@@ -24,12 +24,15 @@ try {
     'export {parseCSV} from "./src/parsers/csv-parser.ts";',
     'export {parseMarkdown} from "./src/parsers/markdown-parser.ts";',
     'export {canonicalSourceInstant} from "./src/native-source-clock.ts";',
+    'export {nativeSourceRecordsAgree} from "./src/native-detail-markdown.ts";',
   ].join('\n'), resolveDir: plugin, loader: 'ts'}, bundle: true, platform: 'node', format: 'esm', outfile: bundle});
   const reader = await import(pathToFileURL(bundle));
   const baseline = JSON.parse(await readFile(path.join(capture, 'sdk-baseline.json'), 'utf8'));
   assert.ok(Array.isArray(baseline) && baseline.length > 0);
   assert.ok(baseline.every(source => typeof source.nativeId === 'string' && source.nativeId.trim()
-    && typeof source.ownerDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(source.ownerDate)), 'Invalid SDK baseline');
+    && typeof source.ownerDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(source.ownerDate)
+    && ['startOffset', 'endOffset', 'title', 'notes'].every(key => source[key] === null || typeof source[key] === 'string')
+    && typeof source.source === 'string'), 'Invalid SDK baseline');
   assert.equal(new Set(baseline.map(source => source.nativeId)).size, baseline.length, 'Duplicate SDK source identity');
   const byDay = Map.groupBy(baseline, source => source.ownerDate);
   const clock = value => {
@@ -38,6 +41,14 @@ try {
     return instant.toString();
   };
   const intervals = rows => rows.map(row => `${clock(row.startTimeISO)}/${clock(row.endTimeISO)}`).sort();
+  const totalSeconds = rows => {
+    const nanos = rows.reduce((sum, row) => {
+      const duration = BigInt(clock(row.endTimeISO)) - BigInt(clock(row.startTimeISO));
+      assert.ok(duration > 0n, 'Invalid SDK source interval');
+      return sum + duration;
+    }, 0n);
+    return Number(nanos / 1_000_000_000n) + Number(nanos % 1_000_000_000n) / 1e9;
+  };
   const files = [];
   async function visit(folder) {
     for (const item of await readdir(folder, {withFileTypes: true})) {
@@ -47,6 +58,14 @@ try {
     }
   }
   await visit(capture);
+  const sourceDays = new Map();
+  for (const file of files.filter(file => file.endsWith('.json'))) {
+    const day = reader.parseJSON(await readFile(file, 'utf8'));
+    assert.ok(day, 'Invalid native JSON companion');
+    const key = `${path.relative(capture, file).split(path.sep)[0]}/${day.date}`;
+    assert.ok(!sourceDays.has(key), 'Duplicate JSON owner');
+    sourceDays.set(key, day);
+  }
   const seen = new Set(), evidence = [];
   for (const file of files) {
     const relative = path.relative(capture, file);
@@ -70,20 +89,42 @@ try {
     const sessions = day.sleep?.sleepSessions ?? [];
     assert.deepEqual(intervals(sessions), intervals(expected), `${relative}: complete source intervals and multiplicity`);
     const ids = sessions.map(source => source.identity?.nativeId);
-    // The existing Markdown clock table does not carry source identity metadata.
-    // Its limitation remains explicit; do not invent IDs from the JSON companion.
-    const identityVerified = format !== 'markdown' || ids.every(Boolean);
-    if (identityVerified) assert.deepEqual(ids.sort(), expected.map(source => source.nativeId).sort(), relative);
+    assert.deepEqual([...ids].sort(), expected.map(source => source.nativeId).sort(), `${relative}: source IDs`);
+    const native = sourceDays.get(`${metadata}/${day.date}`);
+    assert.ok(native, 'Missing JSON owner');
+    assert.ok(reader.nativeSourceRecordsAgree(sessions, native.sleep?.sleepSessions ?? []), `${relative}: full parent source facts`);
+    assert.ok(reader.nativeSourceRecordsAgree(day.sleep?.sleepStages ?? [], native.sleep?.sleepStages ?? []), `${relative}: full stage source facts`);
+    for (const session of sessions) {
+      const source = expected.find(row => row.nativeId === session.identity?.nativeId);
+      assert.ok(source);
+      assert.equal(session.exactStartTime?.offset, source.startOffset, `${relative}: source start offset`);
+      assert.equal(session.exactEndTime?.offset, source.endOffset, `${relative}: source end offset`);
+      assert.equal(session.title ?? null, source.title, `${relative}: source title`);
+      assert.equal(session.notes ?? null, source.notes, `${relative}: source notes`);
+      assert.equal(session.source, source.source, `${relative}: source origin`);
+    }
+    // Metadata-off Markdown intentionally rounds its visible summary. Its complete
+    // native records above remain exact; machine summaries and metadata stay precise.
+    if (format !== 'markdown' || metadata === 'true') {
+      const expectedSeconds = totalSeconds(expected);
+      const value = day.sleep?.totalDuration;
+      assert.equal(typeof value, 'number', `${relative}: missing totalDuration`);
+      assert.ok(Math.abs(value - expectedSeconds) <= Math.max(1e-9, expectedSeconds * Number.EPSILON * 4),
+        `${relative}: truncated additive totalDuration`);
+      if (format === 'json') assert.equal(JSON.parse(text).sleep.inBedTime, value, `${relative}: native in-bed duration`);
+    }
     const key = `${metadata}/${day.date}/${format}`;
     assert.ok(!seen.has(key), 'Duplicate format/owner'); seen.add(key);
-    evidence.push({path: relative, owner: day.date, format, metadata: metadata === 'true', exactIntervals: true, sourceIdentityVerified: identityVerified});
+    evidence.push({path: relative, owner: day.date, format, metadata: metadata === 'true', exactIntervals: true,
+      sourceIdentityVerified: true, sourceFieldsVerified: true,
+      preciseTotalVerified: format !== 'markdown' || metadata === 'true'});
   }
   assert.equal(seen.size, byDay.size * 8);
   for (const day of byDay.keys()) for (const metadata of ['true', 'false']) for (const format of ['json', 'csv', 'markdown', 'bases']) {
     assert.ok(seen.has(`${metadata}/${day}/${format}`), 'Missing owner/metadata/format');
   }
   await writeFile(path.join(capture, '..', 'consumer-verification.json'), JSON.stringify({reader: revision, artifacts: evidence,
-    fullFeatureAcceptance: false, limitation: 'Markdown retains exact source intervals but not source identity metadata; broader production/recovery/device/accessibility acceptance remains required.'}, null, 2)+'\n');
+    fullFeatureAcceptance: false, limitation: 'Synthetic controls and a provider probe do not qualify broader production/recovery/device/accessibility acceptance.'}, null, 2)+'\n');
 } finally {
   await rm(bundle, {force: true});
 }

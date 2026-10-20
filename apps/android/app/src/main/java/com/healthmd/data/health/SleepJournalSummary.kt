@@ -11,6 +11,8 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Pure compatibility projection for Health Connect sleep sessions.
@@ -102,8 +104,13 @@ internal object SleepJournalSummary {
             return SleepData(stages = rawStages, sessions = detailedSessions)
         }
 
-        val totalMilliseconds = slices.sumOf { slice ->
-            Duration.between(slice.start, slice.end).toMillis()
+        val totalDuration = when (attribution) {
+            SleepDayAttribution.NIGHT_BEGINS -> slices.sumOf { slice ->
+                Duration.between(slice.start, slice.end).toMillis()
+            }.milliseconds
+            SleepDayAttribution.MORNING_ENDS -> slices.fold(Duration.ZERO) { total, slice ->
+                total.plus(Duration.between(slice.start, slice.end))
+            }.toExactSleepDuration()
         }
         // Night-begins keeps clipping stages to the journal window. Wake-up-date
         // mode clips only to the owned sessions' own span, which is a no-op guard
@@ -118,12 +125,12 @@ internal object SleepJournalSummary {
         val stageDurations = additiveStageDurations(slices, stageClipWindow, attribution)
 
         return SleepData(
-            totalDuration = totalMilliseconds.milliseconds,
-            deepSleep = stageDurations[StageBucket.DEEP].orZero().milliseconds,
-            remSleep = stageDurations[StageBucket.REM].orZero().milliseconds,
-            lightSleep = stageDurations[StageBucket.LIGHT].orZero().milliseconds,
-            awakeTime = stageDurations[StageBucket.AWAKE].orZero().milliseconds,
-            inBedTime = totalMilliseconds.milliseconds,
+            totalDuration = totalDuration,
+            deepSleep = stageDurations[StageBucket.DEEP] ?: kotlin.time.Duration.ZERO,
+            remSleep = stageDurations[StageBucket.REM] ?: kotlin.time.Duration.ZERO,
+            lightSleep = stageDurations[StageBucket.LIGHT] ?: kotlin.time.Duration.ZERO,
+            awakeTime = stageDurations[StageBucket.AWAKE] ?: kotlin.time.Duration.ZERO,
+            inBedTime = totalDuration,
             stages = rawStages,
             sessions = detailedSessions,
             sessionStart = LocalDateTime.ofInstant(slices.minOf { it.start }, zone),
@@ -136,8 +143,9 @@ internal object SleepJournalSummary {
         slices: List<SessionSlice>,
         window: InstantInterval,
         attribution: SleepDayAttribution,
-    ): Map<StageBucket, Long> {
-        val totals = mutableMapOf<StageBucket, Long>()
+    ): Map<StageBucket, kotlin.time.Duration> {
+        val legacyMilliseconds = mutableMapOf<StageBucket, Long>()
+        val exactDurations = mutableMapOf<StageBucket, Duration>()
         for (slice in slices) {
             for (stage in slice.source.stages) {
                 if (!stage.start.isBefore(stage.end)) continue
@@ -145,11 +153,19 @@ internal object SleepJournalSummary {
                 val end = minOf(stage.end, slice.end, window.end)
                 if (!start.isBefore(end)) continue
                 val bucket = stageBucket(stage.entry.stage, attribution) ?: continue
-                totals[bucket] = totals.getOrDefault(bucket, 0L) +
-                    Duration.between(start, end).toMillis()
+                val duration = Duration.between(start, end)
+                when (attribution) {
+                    SleepDayAttribution.NIGHT_BEGINS -> legacyMilliseconds[bucket] =
+                        legacyMilliseconds.getOrDefault(bucket, 0L) + duration.toMillis()
+                    SleepDayAttribution.MORNING_ENDS -> exactDurations[bucket] =
+                        exactDurations.getOrDefault(bucket, Duration.ZERO).plus(duration)
+                }
             }
         }
-        return totals
+        return when (attribution) {
+            SleepDayAttribution.NIGHT_BEGINS -> legacyMilliseconds.mapValues { it.value.milliseconds }
+            SleepDayAttribution.MORNING_ENDS -> exactDurations.mapValues { it.value.toExactSleepDuration() }
+        }
     }
 
     private fun journalWindow(date: LocalDate, zone: ZoneId): InstantInterval = InstantInterval(
@@ -211,7 +227,13 @@ internal object SleepJournalSummary {
         else -> null
     }
 
-    private fun Long?.orZero(): Long = this ?: 0L
+    private fun Duration.toExactSleepDuration(): kotlin.time.Duration {
+        val value = seconds.seconds + nano.nanoseconds
+        require(value.isFinite() && value.toComponents { seconds, nanoseconds ->
+            seconds == this.seconds && nanoseconds == nano
+        }) { "wake-date sleep duration precision is unavailable" }
+        return value
+    }
 
     private val JOURNAL_BOUNDARY: LocalTime = LocalTime.NOON
 

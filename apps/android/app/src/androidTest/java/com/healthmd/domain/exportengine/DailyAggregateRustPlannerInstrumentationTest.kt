@@ -26,6 +26,49 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class DailyAggregateRustPlannerInstrumentationTest {
     @Test
+    fun packagedCaptureReducerRetainsFractionalSleepQuantities() = runBlocking {
+        val zone = ZoneId.of("America/New_York")
+        val date = LocalDate.of(2026, 11, 1)
+        val context = com.healthmd.domain.model.AndroidCaptureContext(zone, com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val start = java.time.Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = java.time.Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val from = start.atZone(zone).toLocalDateTime()
+        val to = end.atZone(zone).toLocalDateTime()
+        val exactStart = com.healthmd.domain.model.ExactSourceTimestamp.from(start, java.time.ZoneOffset.of("-04:00"))
+        val exactEnd = com.healthmd.domain.model.ExactSourceTimestamp.from(end, java.time.ZoneOffset.of("-05:00"))
+        val sources = listOf("light", "deep").map { stage ->
+            val id = "synthetic-device-precision-$stage"
+            com.healthmd.data.health.SourceSession(start, end,
+                com.healthmd.domain.model.SleepSessionEntry(from, to, exactStartTime = exactStart, exactEndTime = exactEnd,
+                    identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = id)),
+                listOf(com.healthmd.data.health.SourceStage(start, end,
+                    com.healthmd.domain.model.SleepStageEntry(from, to, stage, exactStartTime = exactStart, exactEndTime = exactEnd,
+                        identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "$id-stage")))))
+        }
+        for (granular in listOf(false, true)) {
+            val sleep = com.healthmd.data.health.SleepJournalSummary.summarize(sources, listOf(date), zone, granular,
+                com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS).getValue(date)
+            assertEquals(kotlin.time.Duration.parse("7201.728395064s"), sleep.totalDuration)
+            assertEquals(kotlin.time.Duration.parse("3600.864197532s"), sleep.lightSleep)
+            val request = FrozenDailyAggregateExportRequest.capture(HealthData(date, sleep = sleep), ExportSettings(
+                exportFormats = ExportFormat.entries.toSet(), includeGranularData = granular,
+                metricSelection = com.healthmd.domain.model.MetricSelectionState(enabledMetrics = setOf(
+                    "sleep_total", "sleep_light", "sleep_deep", "sleep_in_bed", "sleep_bedtime", "sleep_wake")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("device-sleep-precision-$granular", "device-sleep-precision-session-$granular"))
+            val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+            assertEquals(4, plan.items.size)
+            val native = org.json.JSONObject(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString())
+                .getJSONObject("sleep")
+            assertEquals(7201.728395064, native.getDouble("totalDuration"), 0.0)
+            assertEquals(7201.728395064, native.getDouble("inBedTime"), 0.0)
+            assertEquals(3600.864197532, native.getDouble("deepSleep"), 0.0)
+            assertEquals(3600.864197532, native.getDouble("lightSleep"), 0.0)
+        }
+    }
+
+    @Test
     fun packagedCoreKeepsCompleteSleepStageAndParentRecordsInMarkdown() = runBlocking {
         val zone = ZoneId.of("America/New_York")
         val capture = com.healthmd.domain.model.AndroidCaptureContext(zone, com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)

@@ -12,11 +12,59 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.nanoseconds
 import org.junit.Test
 
 class SleepJournalSummaryTest {
     private val utc = ZoneId.of("UTC")
     private val journalDay = LocalDate.of(2026, 1, 10)
+
+    @Test
+    fun `morning ends preserves fractional additive session and stage durations without changing night begins`() {
+        val start = local(journalDay, 22, 0).withNano(100)
+        val end = local(journalDay.plusDays(1), 5, 0).withNano(900)
+        val sources = listOf("first", "overlapping").map { id -> session(id, start, end,
+            listOf("deep", "rem", "light", "awake", "sleeping").map { stage(start, end, it) }) }
+        val expected = 14.hours + 1600.nanoseconds
+        for (granular in listOf(false, true)) {
+            val sleep = SleepJournalSummary.summarize(sources, listOf(journalDay.plusDays(1)), utc,
+                granular, SleepDayAttribution.MORNING_ENDS).getValue(journalDay.plusDays(1))
+            assertThat(listOf(sleep.totalDuration, sleep.inBedTime, sleep.deepSleep, sleep.remSleep,
+                sleep.lightSleep, sleep.awakeTime)).containsExactlyElementsIn(List(6) { expected })
+            assertThat(sleep.sessions).hasSize(2)
+            assertThat(sleep.stages).hasSize(if (granular) 10 else 0)
+        }
+        val historical = summarize(journalDay, sources)
+        assertThat(historical.totalDuration).isEqualTo(14.hours)
+        assertThat(historical.deepSleep).isEqualTo(14.hours)
+        assertThat(historical.lightSleep).isEqualTo(28.hours)
+    }
+
+    @Test
+    fun `morning ends keeps positive submillisecond sources that historical summaries truncate`() {
+        val start = local(journalDay, 14, 0).withNano(100)
+        val end = start.withNano(900)
+        val sources = listOf("first", "second").map { session(it, start, end, listOf(stage(start, end, "light"))) }
+        val morning = summarize(journalDay, sources, attribution = SleepDayAttribution.MORNING_ENDS)
+        assertThat(morning.totalDuration).isEqualTo(1600.nanoseconds)
+        assertThat(morning.lightSleep).isEqualTo(1600.nanoseconds)
+        assertThat(summarize(journalDay, sources).totalDuration).isEqualTo(kotlin.time.Duration.ZERO)
+    }
+
+    @Test
+    fun `morning ends rejects duration precision the native model cannot represent`() {
+        val source = session("oversized-fraction", local(journalDay.minusYears(200), 6, 0),
+            local(journalDay, 6, 0).withNano(1))
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            summarize(journalDay, listOf(source), attribution = SleepDayAttribution.MORNING_ENDS)
+        }
+        val representable = session("large-representable", local(journalDay.minusDays(200), 6, 0),
+            local(journalDay, 6, 0).withNano(1))
+        val duration = summarize(journalDay, listOf(representable), attribution = SleepDayAttribution.MORNING_ENDS).totalDuration
+        assertThat(duration.toComponents { seconds, nanos -> java.time.Duration.ofSeconds(seconds, nanos.toLong()) })
+            .isEqualTo(java.time.Duration.between(representable.start, representable.end))
+    }
 
     @Test
     fun `issue 96 full overnight boundaries survive a nested fragment`() {

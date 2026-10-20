@@ -91,14 +91,24 @@ class LiveSleepCaptureAcceptanceTest {
                 owned.keys, observed.map { it.identity?.nativeId }.toSet())
             // Preceding notes are negative ownership controls, not extra export scope.
             if (owned.isEmpty()) continue
-            assertEquals(owned.values.sumOf { java.time.Duration.between(it.startTime, it.endTime).toMillis() },
-                day.sleep.totalDuration.inWholeMilliseconds)
+            val expectedDuration = owned.values.fold(java.time.Duration.ZERO) { total, record ->
+                total.plus(java.time.Duration.between(record.startTime, record.endTime))
+            }
+            val capturedDuration = day.sleep.totalDuration.toComponents { seconds, nanos ->
+                java.time.Duration.ofSeconds(seconds, nanos.toLong())
+            }
+            assertEquals("Complete additive session duration must not be truncated", expectedDuration, capturedDuration)
             for (entry in day.sleep.sessions) {
                 val original = owned.getValue(requireNotNull(entry.identity?.nativeId))
                 assertEquals(original.startTime.epochSecond, entry.exactStartTime?.epochSecond)
                 assertEquals(original.startTime.nano, entry.exactStartTime?.nano)
                 assertEquals(original.endTime.epochSecond, entry.exactEndTime?.epochSecond)
                 assertEquals(original.endTime.nano, entry.exactEndTime?.nano)
+                assertEquals(original.startZoneOffset?.id, entry.exactStartTime?.offset)
+                assertEquals(original.endZoneOffset?.id, entry.exactEndTime?.offset)
+                assertEquals(original.title?.takeIf(String::isNotBlank), entry.title)
+                assertEquals(original.notes?.takeIf(String::isNotBlank), entry.notes)
+                assertEquals(original.metadata.dataOrigin.packageName, entry.source)
             }
             for (metadata in listOf(false, true)) {
                 val settings = ExportSettings(dataTypes = selection, exportFormats = ExportFormat.entries.toSet(),
@@ -135,7 +145,12 @@ class LiveSleepCaptureAcceptanceTest {
         }
         val baseline = JSONArray(expected.map { record -> JSONObject()
             .put("nativeId", record.metadata.id).put("startTimeISO", record.startTime.toString())
-            .put("endTimeISO", record.endTime.toString()).put("ownerDate", record.endTime.atZone(zone).toLocalDate().toString()) })
+            .put("endTimeISO", record.endTime.toString()).put("ownerDate", record.endTime.atZone(zone).toLocalDate().toString())
+            .put("startOffset", record.startZoneOffset?.id ?: JSONObject.NULL)
+            .put("endOffset", record.endZoneOffset?.id ?: JSONObject.NULL)
+            .put("title", record.title?.takeIf(String::isNotBlank) ?: JSONObject.NULL)
+            .put("notes", record.notes?.takeIf(String::isNotBlank) ?: JSONObject.NULL)
+            .put("source", record.metadata.dataOrigin.packageName) })
         File(output, "sdk-baseline.json").writeText(baseline.toString())
         File(output, "receipt.json").writeText(JSONObject().put("provider", "Health Connect")
             .put("sourceRecords", expected.size).put("artifacts", artifacts).put("metadataVariants", 2)

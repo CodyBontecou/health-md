@@ -34,6 +34,8 @@ The owner is the calendar date of the source session's end instant in the captur
 
 Owned valid sessions retain their complete source start and end, including sessions beginning before the requested date or spanning noon. Summary duration uses elapsed instants, not subtraction of wall clocks. Stages retain the existing platform interpretation and are clipped only to their parent session, never to a noon or midnight summary window. Malformed/zero-length sessions do not create fabricated summary duration; existing detailed-source fidelity remains independent.
 
+Android-v6 preparation sums exact elapsed session/stage intervals before converting the total to its native duration model. Positive submillisecond intervals remain positive; overlap stays additive and unclassified Sleeping does not become Light. A total the native model cannot represent exactly rejects with a bounded error rather than silently truncating it. Historical Night begins retains its existing per-interval millisecond quantization and stage aliases. This corrects successor capture precision without changing public profile/schema, registry or wire identities. The shared historical duration serializer remains millisecond-based; lossless successor durable capture/replay still requires independent qualification before production admission.
+
 Afternoon naps belong to their end date. Source offsets, nanoseconds, identities and canonical raw-record ownership remain unchanged. Apple Core and Android Light do not become equivalent through this feature; readers must retain the native identities.
 
 ## Exported authority

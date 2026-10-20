@@ -43,9 +43,9 @@ echo "Building isolated read-only provider acceptance artifacts."
 APP_APK="$ANDROID_ROOT/app/build/outputs/apk/play/e2e/app-play-e2e.apk"
 TEST_APK="$ANDROID_ROOT/app/build/outputs/apk/androidTest/play/e2e/app-play-e2e-androidTest.apk"
 ACCEPTANCE_SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
-python3 - "$REPO_ROOT" "$APP_APK" "$TEST_APK" "$OUTPUT" "$ACCEPTANCE_SDK_ROOT" <<'PY'
+python3 - "$REPO_ROOT" "$APP_APK" "$TEST_APK" "$OUTPUT" "$ACCEPTANCE_SDK_ROOT" "$DATES" "$ZONE" <<'PY'
 import hashlib, json, pathlib, re, subprocess, sys
-root, app, test, output, sdk = map(pathlib.Path, sys.argv[1:])
+root, app, test, output, sdk = map(pathlib.Path, sys.argv[1:6])
 aapt = sorted((sdk/'build-tools').glob('*/aapt'))[-1]
 packages = {}
 for apk, expected in [(app,'com.healthmd.android.e2e'), (test,'com.healthmd.android.e2e.test')]:
@@ -58,6 +58,7 @@ paths = [app, test, root/'apps/android/app/src/androidTest/java/com/healthmd/dat
          root/'apps/android/app/src/main/java/com/healthmd/data/health/SleepJournalSummary.kt']
 source = {'commit': subprocess.check_output(['git','rev-parse','HEAD'], cwd=root, text=True).strip(),
           'dirty': bool(subprocess.check_output(['git','status','--porcelain'], cwd=root, text=True).strip()),
+          'scope': {'wakeDates': sorted(set(sys.argv[6].split(','))), 'calendarTimeZone': sys.argv[7], 'readOnly': True},
           'apkPackages': packages,
           'sha256': {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}}
 (output/'source.json').write_text(json.dumps(source, indent=2)+'\n')

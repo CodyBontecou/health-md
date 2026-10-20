@@ -1170,8 +1170,7 @@ class HostCoreDailyAggregatePlannerTest {
                 val sleep = root.getValue("sleep").jsonObject
                 assertThat(sleep.getValue("bedtimeISO").jsonPrimitive.content).isEqualTo("2026-11-01T02:00:00.123456789Z")
                 assertThat(sleep.getValue("wakeTimeISO").jsonPrimitive.content).isEqualTo("2026-11-01T12:00:00.987654321Z")
-                // Captured summary quantities keep milliseconds; source instants keep nanoseconds.
-                assertThat(sleep.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(36000.864)
+                assertThat(sleep.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(36000.864197532)
             }
         }
         val settings = ExportSettings(
