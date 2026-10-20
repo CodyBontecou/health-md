@@ -33,6 +33,8 @@ class RoutingTests(unittest.TestCase):
         selected = set(jobs)
         if selected & {"ios", "ios_ui", "macos"}:
             selected.add("prepare")
+        if selected:
+            selected.add("policy")
         self.assertEqual(selected, {job for job in ci.JOBS if result[job]})
         self.assertEqual(bool(selected), result["run"])
 
@@ -214,7 +216,7 @@ class QualificationAndCliTests(unittest.TestCase):
                 self.assertEqual(ci.full_plan(), result)
 
     def test_cli_writes_every_boolean_output_and_can_never_reduce_push(self):
-        for event_name, selected in (("pull_request", {"prepare", "macos"}), ("push", set(ci.ALL))):
+        for event_name, selected in (("pull_request", {"prepare", "macos", "policy"}), ("push", set(ci.ALL))):
             with self.subTest(event=event_name), tempfile.TemporaryDirectory() as directory:
                 source, output = Path(directory) / "files.json", Path(directory) / "output"
                 source.write_text(json.dumps(["apps/apple/docs/guide.md"]))

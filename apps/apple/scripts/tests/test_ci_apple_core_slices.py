@@ -62,6 +62,44 @@ class SliceReceiptTests(unittest.TestCase):
         with self.assertRaises(ValueError): slices.verify(self.root, SHA, DIGEST, TOOLCHAIN)
 
 
+class SourceDigestTests(unittest.TestCase):
+    def test_vendor_only_changes_invalidate_native_source_digest(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "packages/healthmd-core-rust"
+            scripts = workspace / "scripts"
+            scripts.mkdir(parents=True)
+            digest_script = scripts / "apple-source-digest.sh"
+            digest_script.write_bytes((SCRIPT.parent / "apple-source-digest.sh").read_bytes())
+            files = ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
+                     "crates/healthmd-core/lib.rs", "crates/healthmd-core-uniffi/lib.rs",
+                     "crates/healthmd-protocol/lib.rs", "scripts/build-apple-xcframework.sh",
+                     "scripts/normalize-apple-xcframework.py", "scripts/validate-apple-xcframework.sh",
+                     "vendor/askama_derive/src/config.rs"]
+            for name in files:
+                path = workspace / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("original source")
+            bindings = root / "apps/apple/Packages/HealthMdCoreRust/Bindings"
+            bindings.mkdir(parents=True)
+            (bindings / "core.swift").write_text("bindings")
+            def digest():
+                return subprocess.check_output(["sh", str(digest_script)], text=True).strip()
+            before = digest()
+            (workspace / "vendor/askama_derive/src/config.rs").write_text("updated parser source")
+            self.assertNotEqual(before, digest())
+
+    def test_every_new_native_cache_hashes_vendored_build_sources(self):
+        for name in ("apple-ci.yml", "apple-nightly.yml"):
+            workflow = (slices.REPO / ".github/workflows" / name).read_text()
+            keys = [line for line in workflow.splitlines()
+                    if "hashFiles(" in line and "apple-" in line]
+            self.assertTrue(keys, name)
+            for key in keys:
+                with self.subTest(workflow=name, key=key):
+                    self.assertIn("'packages/healthmd-core-rust/vendor/**'", key)
+
+
 class NativeBuildEntrypointTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
