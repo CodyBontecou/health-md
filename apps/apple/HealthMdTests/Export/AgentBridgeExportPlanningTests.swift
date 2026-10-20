@@ -12,6 +12,106 @@ import XCTest
 
 @MainActor
 final class AgentBridgeExportPlanningTests: XCTestCase {
+    func testNativePlanReviewUsesStoredPlanWithoutIssuingConsentOrChangingPreferences() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan(), path = rig.directory.appendingPathComponent("state.json")
+        let before = try Data(contentsOf: path), generation = try rig.store.snapshot().generation
+        let reads = rig.reader.defaults.reads, writes = rig.reader.defaults.writes
+        let reviewed = try rig.service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer)
+        XCTAssertEqual(reviewed, plan)
+        XCTAssertEqual(try AgentBridgeSemantics.binding(reviewed), try AgentBridgeSemantics.binding(plan))
+        XCTAssertEqual(try rig.restartedService().reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer), plan)
+        XCTAssertEqual(try Data(contentsOf: path), before)
+        XCTAssertEqual(try rig.store.snapshot().generation, generation)
+        XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+        XCTAssertEqual(rig.reader.defaults.reads, reads); XCTAssertEqual(rig.reader.defaults.writes, writes)
+        try rig.expectError(.approvalRequired, request: .approvalRequest(.init(
+            binding: AgentBridgeSemantics.binding(reviewed), planId: plan.planId, requestId: id(104))))
+    }
+
+    func testNativePlanReviewRequiresExecutionDelegationAndNativeReadiness() throws {
+        for mode in ["plan_only", "permission", "entitlement"] {
+            let rig = try Rig(); defer { rig.cleanup() }
+            if mode == "permission" { rig.reader.grants = .required }
+            if mode == "entitlement" { rig.reader.entitlement = .required }
+            let grant = try rig.grant()
+            let eligible = try AgentBridgeExportDelegation(authorityID: grant.authorityID, issuer: grant.issuer,
+                grantRevision: grant.grantRevision, peer: grant.peer,
+                rights: mode == "plan_only" ? [.discover, .plan] : grant.rights,
+                expiresAt: grant.expiresAt, bounds: grant.bounds)
+            try rig.store.storeNativeDelegation(eligible, expectedGeneration: 0, authorization: FakeNativeAuthorization())
+            let plan = try rig.makePlan(), path = rig.directory.appendingPathComponent("state.json")
+            let before = try Data(contentsOf: path)
+            XCTAssertThrowsError(try rig.service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer)) {
+                let expected: AgentBridgeValidationError = mode == "plan_only" ? .approvalRequired :
+                    (mode == "entitlement" ? .entitlementRequired : .permissionRequired)
+                XCTAssertEqual($0 as? AgentBridgeValidationError, expected)
+            }
+            XCTAssertEqual(try Data(contentsOf: path), before)
+        }
+    }
+
+    func testNativePlanReviewRechecksLiveTrustConfigurationAndExpiryBeforeReturn() throws {
+        for mode in ["permission", "configuration", "expiry"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let plan = try rig.makePlan(), path = rig.directory.appendingPathComponent("state.json")
+            let before = try Data(contentsOf: path)
+            var reads = 0
+            rig.reader.beforeReturn = {
+                reads += 1
+                guard reads == 2 else { return }
+                switch mode {
+                case "permission": rig.session.revoke()
+                case "configuration": rig.reader.available.remove("steps")
+                default: rig.clock.advance(seconds: 600)
+                }
+            }
+            XCTAssertThrowsError(try rig.service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer)) {
+                let expected: AgentBridgeValidationError = mode == "permission" ? .permissionRequired :
+                    (mode == "configuration" ? .unsupportedMetric : .planExpired)
+                XCTAssertEqual($0 as? AgentBridgeValidationError, expected)
+            }
+            XCTAssertEqual(reads, 2)
+            XCTAssertEqual(try Data(contentsOf: path), before)
+            rig.reader.beforeReturn = nil
+        }
+    }
+
+    func testNativePlanReviewRejectsForeignPeerAndUnknownPlanWithoutWrites() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan(), path = rig.directory.appendingPathComponent("state.json")
+        let before = try Data(contentsOf: path)
+        let source = try XCTUnwrap(UUID(uuidString: id(1).rawValue)), host = try XCTUnwrap(UUID(uuidString: id(99).rawValue))
+        let session = try RevocableNativeSession(source: source, host: host)
+        let foreign = try AgentBridgeExportAuthenticatedPeer(nativeSourceInstallationID: source,
+            authenticatedHostInstallationID: host, currentNativeSession: session)
+        XCTAssertThrowsError(try rig.service.reviewNativePlan(planID: plan.planId, authenticatedPeer: foreign)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        XCTAssertThrowsError(try rig.service.reviewNativePlan(planID: id(99), authenticatedPeer: rig.peer))
+        XCTAssertEqual(try Data(contentsOf: path), before)
+    }
+
+    func testNativePlanReviewDoesNotRetainAuthorityAfterRevocationOrClockAdvance() throws {
+        for revoke in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let plan = try rig.makePlan()
+            let reviewed = try rig.service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer)
+            if revoke {
+                try rig.store.revokeNativeDelegation(rig.grant().reference(), expectedGeneration: rig.store.snapshot().generation,
+                    authorization: FakeNativeAuthorization())
+            } else { rig.clock.advanceAfterNextSample(seconds: 600) }
+            let path = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: path)
+            XCTAssertThrowsError(try rig.service.reviewNativePlan(planID: reviewed.planId, authenticatedPeer: rig.peer)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, revoke ? .approvalRequired : .planExpired)
+            }
+            XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: reviewed.planId, binding: AgentBridgeSemantics.binding(reviewed),
+                approvalID: id(8), authenticatedPeer: rig.peer,
+                authorization: LiveExactApprovalAuthorization(planID: reviewed.planId, binding: AgentBridgeSemantics.binding(reviewed))))
+            XCTAssertEqual(try Data(contentsOf: path), before)
+        }
+    }
+
     func testExactNativeApprovalRejectsConsentLostDuringKeyAndConfigurationReads() throws {
         for duringKey in [false, true] {
             let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()

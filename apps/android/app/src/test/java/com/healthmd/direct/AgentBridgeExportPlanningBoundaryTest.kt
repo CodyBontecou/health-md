@@ -11,6 +11,112 @@ import org.junit.Test
 /** Actual production service/store/resolver boundaries; no native Context, key or health reads. */
 class AgentBridgeExportPlanningBoundaryTest {
     @Test
+    fun nativePlanReviewUsesStoredPlanWithoutCreatingConsentOrChangingPreferences() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))
+            val before = ledgerBytes(f)
+            val decisions = f.native.decisions.size
+            val reviewed = f.service.reviewNativePlan(f.peerContext, plan.planId)
+            assertThat(reviewed).isEqualTo(plan)
+            assertThat(AgentBridgeValidation.bindingFor(reviewed)).isEqualTo(AgentBridgeValidation.bindingFor(plan))
+            assertThat(f.restart().reviewNativePlan(f.peerContext, plan.planId)).isEqualTo(plan)
+            assertThat(ledgerBytes(f)).isEqualTo(before)
+            assertThat(f.native.decisions.size).isEqualTo(decisions)
+            assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
+            assertThat(ledgerState(f).getValue("decisions").jsonArray).isEmpty()
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.approval(f.peerContext, f.approvalRequest(reviewed)) }
+        }
+    }
+
+    @Test
+    fun nativePlanReviewRequiresExecutionDelegationAndNativeReadiness() {
+        for (mode in listOf("plan_only", "permission", "entitlement")) AgentBridgeExportPlanningFixture().use { f ->
+            if (mode == "permission") f.configuration.grants = AgentBridgeDiscoveryNativeGrants.REQUIRED
+            if (mode == "entitlement") f.configuration.entitlement = AgentBridgeDiscoveryEntitlement.REQUIRED
+            f.store.initialize(f.native)
+            val grant = f.delegation()
+            f.store.putDelegation(f.native, if (mode == "plan_only") grant.copy(
+                rights = grant.rights.filter { it != AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE }) else grant, 0)
+            val plan = f.service.plan(f.peerContext, f.request(f.service.discover(f.peerContext, f.discoveryRequest())))
+            val before = ledgerBytes(f)
+            val expected = when (mode) {
+                "plan_only" -> AgentBridgeErrorCode.APPROVAL_REQUIRED
+                "entitlement" -> AgentBridgeErrorCode.ENTITLEMENT_REQUIRED
+                else -> AgentBridgeErrorCode.PERMISSION_REQUIRED
+            }
+            f.expect(expected) { f.service.reviewNativePlan(f.peerContext, plan.planId) }
+            assertThat(ledgerBytes(f)).isEqualTo(before)
+        }
+    }
+
+    @Test
+    fun nativePlanReviewRechecksTrustConfigurationAndExpiryAtPublicationAndReturn() {
+        for (stage in listOf(2, 3)) for (mode in listOf("permission", "configuration", "expiry"))
+            AgentBridgeExportPlanningFixture().use { f ->
+                val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))
+                val before = ledgerBytes(f)
+                var reads = 0
+                f.configuration.onRead = {
+                    reads++
+                    if (reads == stage && mode != "configuration") {
+                        if (mode == "permission") f.peerContext.trusted = false
+                        else f.clock.now = Instant.parse(plan.expiresAt)
+                    }
+                }
+                var changed = false
+                f.peerContext.onCheck = {
+                    if (mode == "configuration" && !changed && reads == stage - 1) {
+                        changed = true
+                        f.configuration.catalog = AgentBridgeRequestSettingsCatalog(AgentBridgeExportTestRegistry.load(),
+                            setOf("avg_hr", "min_hr", "max_hr", "resting_hr", "hrv"), 4)
+                    }
+                }
+                // Change configuration before the publication/return read; the next boundary
+                // must inspect current inputs rather than reuse the earlier copied snapshot.
+                val expected = when (mode) {
+                    "permission" -> AgentBridgeErrorCode.PERMISSION_REQUIRED
+                    "configuration" -> AgentBridgeErrorCode.BINDING_CHANGED
+                    else -> AgentBridgeErrorCode.PLAN_EXPIRED
+                }
+                f.expect(expected) { f.service.reviewNativePlan(f.peerContext, plan.planId) }
+                assertThat(reads).isAtLeast(stage)
+                assertThat(ledgerBytes(f)).isEqualTo(before)
+                f.configuration.onRead = null
+            }
+    }
+
+    @Test
+    fun nativePlanReviewRejectsForeignPeerAndUnknownPlanWithoutWrites() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))
+            val before = ledgerBytes(f)
+            val foreign = AgentBridgeExportTestPeer(f.peer.copy(hostInstallationId = AgentBridgeExportPlanningFixture.id(99)))
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.reviewNativePlan(foreign, plan.planId) }
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.reviewNativePlan(f.peerContext, AgentBridgeExportPlanningFixture.id(99)) }
+            assertThat(ledgerBytes(f)).isEqualTo(before)
+        }
+    }
+
+    @Test
+    fun nativePlanReviewDoesNotRetainAuthorityAfterRevocationOrExpiry() {
+        for (revoke in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            val discovery = f.enrolled()
+            val plan = f.service.plan(f.peerContext, f.request(discovery))
+            val reviewed = f.service.reviewNativePlan(f.peerContext, plan.planId)
+            if (revoke) f.store.revoke(f.native, f.peer, discovery.authorityReferences.single().authorityId, 1)
+            else f.clock.now = Instant.parse(plan.expiresAt)
+            val before = ledgerBytes(f)
+            f.expect(if (revoke) AgentBridgeErrorCode.APPROVAL_REQUIRED else AgentBridgeErrorCode.PLAN_EXPIRED) {
+                f.service.reviewNativePlan(f.peerContext, reviewed.planId)
+            }
+            f.expect(if (revoke) AgentBridgeErrorCode.APPROVAL_REQUIRED else AgentBridgeErrorCode.PLAN_EXPIRED) {
+                f.service.authorizeExactApproval(f.peerContext, f.native, reviewed.planId, AgentBridgeValidation.bindingFor(reviewed))
+            }
+            assertThat(ledgerBytes(f)).isEqualTo(before)
+        }
+    }
+
+    @Test
     fun discoveryCoversEveryEffectivePresetLeafIncludingFixedDisabledOutputs() {
         AgentBridgeExportPlanningFixture().use { f ->
             val discovery = f.enrolled()

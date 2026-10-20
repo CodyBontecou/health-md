@@ -181,6 +181,26 @@ final class AgentBridgeExportPlanningService {
         }
     }
 
+    /// Native presentation read only. The plan comes from this issuer's stored record, never
+    /// host-provided review text. Eligibility is rechecked after key/trust/configuration reads;
+    /// returning the plan neither approves it nor supplies a proof to storeNativeDecision.
+    func reviewNativePlan(planID: AgentBridgeUUID, authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgePlan {
+        try authenticatedPeer.requireCurrent()
+        let candidate = try store.inspectCurrent { state in
+            try self.currentPlan(in: state, planID: planID, peer: authenticatedPeer,
+                                 right: .exportExecute, requireReadiness: true).plan
+        }
+        // Trust can change after the first inspection releases its lock. Reload issuer-owned
+        // state after that callback instead of treating the copied plan as current authority.
+        try authenticatedPeer.requireCurrent()
+        return try store.inspectCurrent { state in
+            let checked = try self.currentPlan(in: state, planID: planID, peer: authenticatedPeer,
+                                              right: .exportExecute, requireReadiness: true)
+            guard checked.plan == candidate else { throw AgentBridgeValidationError.bindingChanged }
+            return checked.plan
+        }
+    }
+
     /// Source-derived sanitized scope for a later adapter. The HOST must independently derive and
     /// verify its own authority/root; neither its wire reference nor this value establishes host rights.
     func nativeScopedAuthority(planID: AgentBridgeUUID, authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeAuthority {
