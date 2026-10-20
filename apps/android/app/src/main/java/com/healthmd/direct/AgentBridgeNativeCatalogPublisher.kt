@@ -10,6 +10,29 @@ import kotlinx.coroutines.withContext
 /** Native controller worker only. The factory opens existing storage; no health/metadata sampling,
  * key/store/grant creation, wire route or detached/unowned coroutine is introduced here. */
 internal object AgentBridgeNativeCatalogPublisher {
+    /** Native-only refresh; a failed/suspended sampler never reopens older cached readiness. */
+    suspend fun refresh(lifecycle: AgentBridgeNativeCatalogLifecycle, peer: AgentBridgeExportAuthenticatedPeer,
+        sample: suspend () -> AgentBridgeNativePlanningFacts,
+        loadStore: () -> AgentBridgeExportAuthorityStore): AgentBridgeNativeCatalogPublication {
+        val caller = currentCoroutineContext()
+        caller.ensureActive()
+        val started = lifecycle.beginSample()
+        try {
+            val original = peer.requireCurrent()
+            caller.ensureActive()
+            val facts = sample()
+            caller.ensureActive()
+            if (peer.requireCurrent() != original) fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            caller.ensureActive()
+            val accepted = lifecycle.observe(facts, started)
+            return publish(lifecycle, peer, accepted, loadStore)
+        } catch (failure: Exception) {
+            runCatching { lifecycle.observeNativeChange() }
+            caller.ensureActive()
+            throw failure
+        }
+    }
+
     suspend fun publish(lifecycle: AgentBridgeNativeCatalogLifecycle, peer: AgentBridgeExportAuthenticatedPeer,
         sample: AgentBridgeNativeCatalogLifecycle.Sample? = null, loadStore: () -> AgentBridgeExportAuthorityStore): AgentBridgeNativeCatalogPublication {
         val caller = currentCoroutineContext()

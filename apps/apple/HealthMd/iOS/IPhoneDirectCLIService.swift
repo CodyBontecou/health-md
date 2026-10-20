@@ -495,14 +495,10 @@ final class IPhoneDirectCLIService: ObservableObject {
     func publishAgentBridgeNativeCatalog(sample: () async throws -> AgentBridgeNativePlanningFacts) async throws -> AgentBridgeNativeCatalogPublication {
         try Task.checkCancellation()
         let original = try agentBridgeNativePlanningOwner()
-        let started = try original.lifecycle.beginSample()
         do {
-            let facts = try await sample()
-            try Task.checkCancellation()
-            let accepted = try original.lifecycle.observe(facts, sampledDuring: started)
             let directory = try AgentExportPermissionsStorage.directory(createParent: false)
-            let publication = try await AgentBridgeNativeCatalogPublisher.publish(
-                lifecycle: original.lifecycle, peer: original.peer, existingDirectory: directory, sample: accepted)
+            let publication = try await AgentBridgeNativeCatalogPublisher.refresh(
+                lifecycle: original.lifecycle, peer: original.peer, existingDirectory: directory, sample: sample)
             try Task.checkCancellation()
             let current = try agentBridgeNativePlanningOwner()
             guard current.lifecycle === original.lifecycle, current.peer.peer == original.peer.peer else {
@@ -516,6 +512,21 @@ final class IPhoneDirectCLIService: ObservableObject {
         } catch {
             try? original.lifecycle.observeNativeChange()
             throw error
+        }
+    }
+
+    /// Explicit native controller entry point. Existing managers supply cached readiness; this
+    /// never refreshes billing/quota, queries health samples, requests authorization or creates keys.
+    func refreshAgentBridgeNativeCatalog(health: HealthKitManager, purchases: PurchaseManager,
+                                        configurationProtection: ConfigurationProtectionManager) async throws -> AgentBridgeNativeCatalogPublication {
+        try await publishAgentBridgeNativeCatalog {
+            let application = UIApplication.shared
+            return health.nativePlanningMetadata().planningFacts(
+                sourceCalendarTimezone: try AgentBridgeZone(TimeZone.current.identifier),
+                configurationProtection: configurationProtection.isEnabled ? .locked : .unlockedNative,
+                entitlement: purchases.nativePlanningCanExport ? .satisfied : .required,
+                foregroundAvailable: self.appIsActive && application.applicationState == .active,
+                protectedDataAvailable: application.isProtectedDataAvailable)
         }
     }
 

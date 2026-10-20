@@ -398,6 +398,73 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
     #endif
 
+    func testNativeRefreshComposesMetadataAndPreservesUnchangedPublication() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), store = rig.store
+        let metadata = HealthKitNativePlanningMetadata(providerAvailable: true,
+            availableNativeMetricIDs: ["steps"], authorizationFlowSatisfied: true)
+        let facts = metadata.planningFacts(sourceCalendarTimezone: try AgentBridgeZone("UTC"),
+            configurationProtection: .locked, entitlement: .required,
+            foregroundAvailable: true, protectedDataAvailable: true)
+        let first = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: lifecycle, peer: rig.peer,
+            existingDirectory: rig.directory, sample: { await Task.yield(); return facts }, loadStore: { _ in store })
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        let next = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: lifecycle, peer: rig.peer,
+            existingDirectory: rig.directory, sample: { facts }, loadStore: { _ in store })
+        XCTAssertEqual(first, next)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+    }
+
+    func testNativeRefreshFailedStaleOrRevokedSamplerCannotOpenIssuerOrReuseCache() async throws {
+        for outcome in ["failed", "event", "revoked"] {
+            let rig = try Rig(); defer { rig.cleanup() }
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState(), store = rig.store
+            try lifecycle.observe(facts)
+            try lifecycle.publish(to: store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            do {
+                _ = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: lifecycle, peer: rig.peer,
+                    existingDirectory: rig.directory, sample: {
+                        await Task.yield()
+                        if outcome == "failed" { throw AgentBridgeValidationError.busy }
+                        if outcome == "event" { try lifecycle.observeNativeChange() }
+                        if outcome == "revoked" { rig.session.revoke() }
+                        return facts
+                    }, loadStore: { _ in XCTFail("Rejected sampler opened issuer storage"); return store })
+                XCTFail("Rejected sampler returned a publication")
+            } catch {
+                XCTAssertEqual(error as? AgentBridgeValidationError,
+                    outcome == "failed" ? .busy : outcome == "event" ? .bindingChanged : .permissionRequired)
+            }
+            XCTAssertThrowsError(try lifecycle.currentPublication())
+            XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        }
+    }
+
+    func testNativeRefreshCancellationRejectsBeforeStoreAndBeforePreCancelledSampler() async throws {
+        for duringSample in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState(), store = rig.store
+            try lifecycle.observe(facts)
+            try lifecycle.publish(to: store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let peer = rig.peer, directory = rig.directory
+            let task = Task {
+                if !duringSample { withUnsafeCurrentTask { $0?.cancel() } }
+                return try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: lifecycle, peer: peer,
+                    existingDirectory: directory, sample: {
+                        XCTAssertTrue(duringSample)
+                        withUnsafeCurrentTask { $0?.cancel() }
+                        return facts
+                    }, loadStore: { _ in XCTFail("Canceled refresh opened issuer storage"); return store })
+            }
+            do { _ = try await task.value; XCTFail("Canceled refresh returned success") }
+            catch { XCTAssertTrue(error is CancellationError) }
+            if duringSample { XCTAssertThrowsError(try lifecycle.currentPublication()) }
+            else { XCTAssertEqual(try lifecycle.currentFacts(), facts) } // No work was started.
+        }
+    }
+
     func testNativeCatalogSampleRejectsEventsAcrossSuspensionAndWorkerAdmission() async throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()

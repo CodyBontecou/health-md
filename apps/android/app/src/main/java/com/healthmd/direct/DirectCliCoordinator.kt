@@ -314,12 +314,8 @@ class DirectCliCoordinator @Inject constructor(
         val original = agentBridgeNativePlanningOwner(context)
         val originalPeer = original.first.requireCurrent()
         caller.ensureActive()
-        val started = original.second.beginSample()
         try {
-            val facts = sample()
-            caller.ensureActive()
-            val accepted = original.second.observe(facts, started)
-            val publication = AgentBridgeNativeCatalogPublisher.publish(original.second, original.first, accepted) {
+            val publication = AgentBridgeNativeCatalogPublisher.refresh(original.second, original.first, sample) {
                 AgentBridgeExportAuthorityStore.forNoBackup(context)
             }
             caller.ensureActive()
@@ -335,6 +331,27 @@ class DirectCliCoordinator @Inject constructor(
             runCatching { original.second.observeNativeChange() }
             caller.ensureActive()
             throw failure
+        }
+    }
+
+    /** Explicit native controller only: actual SDK metadata plus service-owned memory caches.
+     * No health records, saved output configuration, quota/billing refresh, grant or creating getter. */
+    internal suspend fun refreshAgentBridgeNativeCatalog(context: android.content.Context,
+        healthConnect: com.healthmd.data.health.HealthConnectManager): AgentBridgeNativeCatalogPublication {
+        return publishAgentBridgeNativeCatalog(context) {
+            val original = agentBridgeNativePlanningOwner(context).first.requireCurrent()
+            val protection = agentBridgeNativeConfigurationProtected()
+                ?: throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.BINDING_CHANGED)
+            val metadata = healthConnect.nativePlanningMetadata()
+            currentCoroutineContext().ensureActive()
+            metadata.planningFacts(original.sourceInstallationId, ZoneId.systemDefault().id,
+                if (protection) com.healthmd.direct.protocol.AgentBridgeDiscoveryConfigurationProtection.LOCKED
+                else com.healthmd.direct.protocol.AgentBridgeDiscoveryConfigurationProtection.UNLOCKED_NATIVE,
+                if (agentBridgeNativeCanExport()) com.healthmd.direct.protocol.AgentBridgeDiscoveryEntitlement.SATISFIED
+                else com.healthmd.direct.protocol.AgentBridgeDiscoveryEntitlement.REQUIRED,
+                userStartedServiceActive = true, firstUnlockComplete = true)
+            // True availability follows the pinned native session's foreground/first-unlock checks
+            // before and after this sampler; it cannot be supplied by a request or restart a service.
         }
     }
 

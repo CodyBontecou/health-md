@@ -4,6 +4,32 @@ import HealthMdConnectionCore
 /// Native controller worker boundary. Opens only an existing private store and propagates parent
 /// cancellation to the actual worker. No wire route, key/grant creation, metadata or health sampling.
 nonisolated enum AgentBridgeNativeCatalogPublisher {
+    /// Native refresh transaction: the sampler runs under the original observation ticket. Its
+    /// failure or cancellation cannot leave an older published readiness cache available.
+    static func refresh(lifecycle: AgentBridgeNativeCatalogLifecycle, peer: AgentBridgeExportAuthenticatedPeer,
+                        existingDirectory: URL,
+                        sample: () async throws -> AgentBridgeNativePlanningFacts,
+                        loadStore: @escaping @Sendable (URL) throws -> AgentBridgeExportAuthorityStore = {
+                            try AgentBridgeExportAuthorityStore(existingDirectory: $0)
+                        }) async throws -> AgentBridgeNativeCatalogPublication {
+        try Task.checkCancellation()
+        let started = try lifecycle.beginSample()
+        do {
+            try peer.requireCurrent()
+            try Task.checkCancellation()
+            let facts = try await sample()
+            try Task.checkCancellation()
+            try peer.requireCurrent()
+            try Task.checkCancellation()
+            let accepted = try lifecycle.observe(facts, sampledDuring: started)
+            return try await publish(lifecycle: lifecycle, peer: peer, existingDirectory: existingDirectory,
+                                     sample: accepted, loadStore: loadStore)
+        } catch {
+            try? lifecycle.observeNativeChange()
+            throw error
+        }
+    }
+
     static func publish(lifecycle: AgentBridgeNativeCatalogLifecycle, peer: AgentBridgeExportAuthenticatedPeer,
                         existingDirectory: URL, sample: AgentBridgeNativeCatalogLifecycle.Sample? = nil,
                         loadStore: @escaping @Sendable (URL) throws -> AgentBridgeExportAuthorityStore = {

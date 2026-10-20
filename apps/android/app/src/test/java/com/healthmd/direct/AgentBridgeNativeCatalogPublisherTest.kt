@@ -36,6 +36,75 @@ class AgentBridgeNativeCatalogPublisherTest {
         peer.checks.get()
     }
 
+    @Test fun refreshComposesNativeMetadataAndPreservesUnchangedPublication() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = AgentBridgeNativeCatalogLifecycle()
+            val peer = WorkerPeer(f.peer)
+            val metadata = com.healthmd.data.health.HealthConnectNativePlanningMetadata(true, setOf("steps"), true, "a".repeat(64), emptySet())
+            val facts = metadata.planningFacts(f.peer.sourceInstallationId, "UTC",
+                AgentBridgeDiscoveryConfigurationProtection.LOCKED, AgentBridgeDiscoveryEntitlement.REQUIRED, true, true)
+            val first = AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, { yield(); facts }) { f.store }
+            assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+            val file = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val before = Files.readAllBytes(file)
+            val next = AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, { facts }) { f.store }
+            assertThat(next).isEqualTo(first)
+            assertThat(Files.readAllBytes(file)).isEqualTo(before)
+        }
+    }
+
+    @Test fun failedStaleOrRevokedSamplerCannotOpenIssuerOrReuseCache() = runBlocking {
+        for (outcome in listOf("failed", "event", "revoked")) AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f)
+            val peer = WorkerPeer(f.peer)
+            AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+            val facts = lifecycle.currentFacts()
+            val file = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val before = Files.readAllBytes(file)
+            val code = when(outcome) { "failed" -> AgentBridgeErrorCode.BUSY; "event" -> AgentBridgeErrorCode.BINDING_CHANGED; else -> AgentBridgeErrorCode.PERMISSION_REQUIRED }
+            expect(code) {
+                AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, {
+                    yield()
+                    when(outcome) {
+                        "failed" -> throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
+                        "event" -> lifecycle.observeNativeChange()
+                        "revoked" -> peer.allowed.set(false)
+                    }
+                    facts
+                }) { throw AssertionError("Rejected sampler opened issuer storage") }
+            }
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentPublication() }
+            assertThat(Files.readAllBytes(file)).isEqualTo(before)
+        }
+    }
+
+    @Test fun refreshCancellationRejectsBeforeStoreAndBeforePreCancelledSampler() = runBlocking {
+        for (duringSample in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f)
+            val peer = WorkerPeer(f.peer)
+            AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+            val facts = lifecycle.currentFacts()
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            try {
+                val task = scope.async {
+                    if (!duringSample) currentCoroutineContext().job.cancel()
+                    AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, {
+                        assertThat(duringSample).isTrue()
+                        currentCoroutineContext().job.cancel()
+                        facts
+                    }) { throw AssertionError("Canceled refresh opened issuer storage") }
+                }
+                try { task.await(); throw AssertionError("Canceled refresh returned success") }
+                catch (_: CancellationException) { }
+                if (duringSample) f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentPublication() }
+                else assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+            } finally { scope.cancel() }
+        }
+    }
+
     @Test fun sampleRejectsEventsAcrossSuspensionAndWorkerAdmission() = runBlocking {
         AgentBridgeExportPlanningFixture().use { f ->
             f.store.initialize(f.native)
