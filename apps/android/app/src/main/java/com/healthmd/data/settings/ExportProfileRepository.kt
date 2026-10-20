@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.APIExportEndpoint
@@ -22,7 +23,18 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
 import timber.log.Timber
+
+/** Non-secret frozen output configuration; contains no active-profile or destination authority. */
+internal data class ExportProfileConfigurationSnapshot(
+    val revision: Int,
+    val settings: AndroidExportSettingsSnapshot,
+    val executionBlocked: Boolean,
+)
 
 /**
  * DataStore-backed repository for export profiles (Android phase 6 parity).
@@ -67,6 +79,22 @@ class ExportProfileRepository @Inject constructor(
 
     suspend fun profileByName(name: String): ExportProfile? =
         ExportProfileRules.byName(getProfiles(), name)
+
+    /** One committed DataStore image supplies the exact row, revision and rebind state. No default,
+     * active-profile lookup, migration, preference edit, endpoint or credential read is performed. */
+    internal suspend fun readConfigurationProfile(id: String, expectedRevision: Int): ExportProfileConfigurationSnapshot? {
+        if (expectedRevision < 1) return null
+        val prefs = dataStore.data.first()
+        val profile = decodeProfiles(prefs[Keys.PROFILES])?.singleOrNull { it.id == id }
+            ?.takeIf { it.configurationRevision == expectedRevision } ?: return null
+        val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson) ?: return null
+        val blocked = try {
+            prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+        } catch (_: ClassCastException) {
+            return null // Malformed gate storage never grants execution.
+        }
+        return ExportProfileConfigurationSnapshot(expectedRevision, snapshot, id in blocked)
+    }
 
     /** Central non-secret execution gate for imported profiles awaiting local rebinding. */
     suspend fun sharedSetupV2ExecutionAccess(id: String): SharedSetupV2ProfileExecutionAccess =
@@ -567,7 +595,19 @@ class ExportProfileRepository @Inject constructor(
 
     private fun decodeProfiles(raw: String?): List<ExportProfile>? {
         if (raw.isNullOrBlank()) return emptyList()
-        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrElse { error ->
+        return runCatching {
+            val rows = json.parseToJsonElement(raw)
+            require(rows is JsonArray)
+            for (row in rows) {
+                require(row is JsonObject)
+                if ("configurationRevision" in row) {
+                    val revision = row["configurationRevision"] as? JsonPrimitive
+                    // Kotlin's integer serializer accepts quoted numbers; native revision pins do not.
+                    require(revision != null && !revision.isString && revision.intOrNull != null)
+                }
+            }
+            json.decodeFromJsonElement(listSerializer, rows)
+        }.getOrElse { error ->
             Timber.e(error, "Export profiles failed to decode; blocking profile writes")
             null
         }

@@ -7,6 +7,11 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.ExportSettings
+import com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence
+import java.time.ZoneId
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
 import io.mockk.mockk
@@ -17,6 +22,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -59,6 +65,88 @@ class ExportProfileRepositoryTest {
     @After
     fun tearDown() {
         dataStoreScope.cancel()
+    }
+
+    private fun configurationSnapshot(filename: String): String = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+        AndroidExportSettingsSnapshot.capture(ExportSettings(filenameFormat = filename), null, ZoneId.of("UTC")),
+    )
+
+    @Test
+    fun `configuration read obtains row and gate from one committed image without writing`() = runTest {
+        val profile = repository.add("Selected", configurationSnapshot("selected-{date}"), ExportTarget.DEVICE_FOLDER)
+        val key = SharedSetupV2ProfilePersistence.blockedProfileIdsKey
+        dataStore.edit { it[key] = setOf(profile.id) }
+        var reads = 0
+        var writes = 0
+        val observingStore = object : DataStore<Preferences> {
+            override val data = dataStore.data.map { reads++; it }
+            override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                writes++
+                return dataStore.updateData(transform)
+            }
+        }
+        val reader = ExportProfileRepository(observingStore, mockk<Context>(relaxed = true))
+        assertThat(reader.readConfigurationProfile(profile.id, 1)?.executionBlocked).isTrue()
+        assertThat(reads).isEqualTo(1)
+        assertThat(writes).isEqualTo(0)
+        dataStore.edit { it[stringPreferencesKey(key.name)] = "malformed" }
+        val before = dataStore.data.first().asMap()
+        assertThat(reader.readConfigurationProfile(profile.id, 1)).isNull()
+        assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+    }
+
+    @Test
+    fun `configuration read uses exact persisted row without active or cached fallback`() = runTest {
+        val original = configurationSnapshot("selected-{date}")
+        val selected = repository.add("Selected", original, ExportTarget.DEVICE_FOLDER)
+        val other = repository.add("Active", configurationSnapshot("other-{date}"), ExportTarget.DEVICE_FOLDER)
+        assertThat(repository.activate(other.id)).isTrue()
+        val before = dataStore.data.first().asMap()
+        val read = requireNotNull(repository.readConfigurationProfile(selected.id, 1))
+        assertThat(read.settings.filenameFormat).isEqualTo("selected-{date}")
+        assertThat(read.revision).isEqualTo(1)
+        assertThat(read.executionBlocked).isFalse()
+        assertThat(repository.readConfigurationProfile("missing", 1)).isNull()
+        assertThat(repository.readConfigurationProfile(selected.id, 0)).isNull()
+        assertThat(repository.readConfigurationProfile(selected.id, 2)).isNull()
+        assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+        assertThat(repository.updateProfile(selected.id, settingsSnapshotJson = configurationSnapshot("changed-{date}"))).isTrue()
+        assertThat(repository.updateProfile(selected.id, settingsSnapshotJson = original)).isTrue()
+        assertThat(repository.readConfigurationProfile(selected.id, 1)).isNull()
+        assertThat(repository.readConfigurationProfile(selected.id, 3)?.settings?.filenameFormat).isEqualTo("selected-{date}")
+    }
+
+    @Test
+    fun `configuration read rejects malformed duplicate or missing rows without repair`() = runTest {
+        val profile = repository.add("Selected", configurationSnapshot("selected-{date}"), ExportTarget.DEVICE_FOLDER)
+        val rows = Json.parseToJsonElement(requireNotNull(dataStore.data.first()[PROFILES_KEY])).jsonArray
+        val duplicate = JsonArray(listOf(rows[0], rows[0])).toString()
+        val malformed = JsonArray(listOf(JsonObject(rows[0].jsonObject + ("configurationRevision" to JsonPrimitive("1"))))).toString()
+        for (raw in listOf(duplicate, malformed, "invalid")) {
+            dataStore.edit { it[PROFILES_KEY] = raw }
+            assertThat(repository.readConfigurationProfile(profile.id, 1)).isNull()
+            if (raw != duplicate) {
+                assertThat(repository.updateProfile(profile.id, settingsSnapshotJson = configurationSnapshot("replacement-{date}"))).isFalse()
+            }
+            assertThat(dataStore.data.first()[PROFILES_KEY]).isEqualTo(raw)
+        }
+        dataStore.edit { it.remove(PROFILES_KEY) }
+        assertThat(repository.readConfigurationProfile(profile.id, 1)).isNull()
+        assertThat(dataStore.data.first()[PROFILES_KEY]).isNull()
+    }
+
+    @Test
+    fun `configuration read observes rebind state in same datastore image and rejects corrupt output`() = runTest {
+        val profile = repository.add("Selected", configurationSnapshot("selected-{date}"), ExportTarget.DEVICE_FOLDER)
+        val key = SharedSetupV2ProfilePersistence.blockedProfileIdsKey
+        dataStore.edit { it[key] = setOf(profile.id) }
+        val before = dataStore.data.first().asMap()
+        assertThat(repository.readConfigurationProfile(profile.id, 1)?.executionBlocked).isTrue()
+        assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+        dataStore.edit { it.remove(key) }
+        assertThat(repository.readConfigurationProfile(profile.id, 1)?.executionBlocked).isFalse()
+        assertThat(repository.updateProfile(profile.id, settingsSnapshotJson = "invalid")).isTrue()
+        assertThat(repository.readConfigurationProfile(profile.id, 2)).isNull()
     }
 
     private suspend fun seededProfile(

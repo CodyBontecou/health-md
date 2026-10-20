@@ -84,6 +84,13 @@ struct ExportProfile: Codable, Identifiable, Equatable {
     }
 }
 
+/// Current non-secret output configuration, independent of the active profile and destinations.
+struct ExportProfileConfigurationSnapshot {
+    let revision: Int64
+    let settings: ExportSettingsSnapshot
+    let executionBlocked: Bool
+}
+
 /// Observable, UserDefaults-backed store for the ordered export profile list.
 ///
 /// Persistence follows the `ExportSchedule` pattern: the whole list is stored
@@ -187,6 +194,22 @@ final class ExportProfileStore: ObservableObject {
         return profiles.first {
             $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized
         }
+    }
+
+    /// Reads the exact persisted row without updating caches, migrating, or consulting live settings.
+    /// Missing, duplicate, malformed or changed revision pins have no fallback configuration.
+    func readConfigurationProfile(id: UUID, expectedRevision: Int64) -> ExportProfileConfigurationSnapshot? {
+        guard (1...Int64(Int32.max)).contains(expectedRevision),
+              let data = userDefaults.data(forKey: Key.list),
+              let decoded = try? JSONDecoder().decode([ExportProfile].self, from: data) else { return nil }
+        let matches = decoded.filter { $0.id == id }
+        guard matches.count == 1, let profile = matches.first,
+              Int64(profile.configurationRevision) == expectedRevision else { return nil }
+        return .init(
+            revision: expectedRevision,
+            settings: profile.settings,
+            executionBlocked: SharedSetupV2ExecutionGate(userDefaults: userDefaults).isExecutionBlocked(profileID: id)
+        )
     }
 
     // MARK: - Migration

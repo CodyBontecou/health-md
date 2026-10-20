@@ -52,6 +52,60 @@ final class ExportProfileStoreTests: XCTestCase {
         return ExportSettingsSnapshot.from(settings)
     }
 
+    func testConfigurationReadUsesExactPersistedProfileWithoutActiveOrCachedFallback() throws {
+        let store = makeStore(), original = makeSnapshot(filenameFormat: "selected-{date}")
+        let selected = try XCTUnwrap(store.add(name: "Selected", settings: original, target: .localIPhoneFolder))
+        let other = try XCTUnwrap(store.add(name: "Active", settings: makeSnapshot(filenameFormat: "other-{date}"), target: .connectedMac))
+        XCTAssertTrue(store.activate(id: other.id))
+        let before = try XCTUnwrap(defaults.data(forKey: "exportProfiles.list"))
+        let read = try XCTUnwrap(store.readConfigurationProfile(id: selected.id, expectedRevision: 1))
+        XCTAssertEqual(read.settings, original)
+        XCTAssertEqual(read.revision, 1)
+        XCTAssertFalse(read.executionBlocked)
+        XCTAssertNil(store.readConfigurationProfile(id: UUID(), expectedRevision: 1))
+        XCTAssertNil(store.readConfigurationProfile(id: selected.id, expectedRevision: 0))
+        XCTAssertNil(store.readConfigurationProfile(id: selected.id, expectedRevision: 2))
+        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+        XCTAssertEqual(store.activeProfileID, other.id)
+
+        let editor = makeStore()
+        XCTAssertTrue(editor.updateSettings(id: selected.id, settings: makeSnapshot(filenameFormat: "changed-{date}")))
+        XCTAssertTrue(editor.updateSettings(id: selected.id, settings: original))
+        XCTAssertNil(store.readConfigurationProfile(id: selected.id, expectedRevision: 1))
+        XCTAssertEqual(store.readConfigurationProfile(id: selected.id, expectedRevision: 3)?.settings, original)
+    }
+
+    func testConfigurationReadRejectsMalformedOrDuplicatePersistedRowsWithoutRepairingThem() throws {
+        let store = makeStore()
+        let profile = try XCTUnwrap(store.add(name: "Selected", settings: makeSnapshot(), target: .localIPhoneFolder))
+        let rows = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: "exportProfiles.list"))) as? [[String: Any]])
+        let duplicate = try JSONSerialization.data(withJSONObject: [rows[0], rows[0]])
+        var malformed = rows[0]; malformed["configurationRevision"] = "1"
+        let invalid = try JSONSerialization.data(withJSONObject: [malformed])
+        for raw in [duplicate, invalid, Data("invalid".utf8)] {
+            defaults.set(raw, forKey: "exportProfiles.list")
+            XCTAssertNil(store.readConfigurationProfile(id: profile.id, expectedRevision: 1))
+            XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), raw)
+        }
+        defaults.removeObject(forKey: "exportProfiles.list")
+        XCTAssertNil(store.readConfigurationProfile(id: profile.id, expectedRevision: 1))
+        XCTAssertNil(defaults.object(forKey: "exportProfiles.list"))
+    }
+
+    func testConfigurationReadReflectsCurrentNativeRebindGateWithoutChangingProfileRevision() throws {
+        let store = makeStore()
+        let profile = try XCTUnwrap(store.add(name: "Selected", settings: makeSnapshot(), target: .localIPhoneFolder))
+        let key = SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        defaults.set(try SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs([profile.id]), forKey: key)
+        let before = defaults.data(forKey: "exportProfiles.list")
+        XCTAssertTrue(try XCTUnwrap(store.readConfigurationProfile(id: profile.id, expectedRevision: 1)).executionBlocked)
+        defaults.set(Data("invalid".utf8), forKey: key)
+        XCTAssertTrue(try XCTUnwrap(store.readConfigurationProfile(id: profile.id, expectedRevision: 1)).executionBlocked)
+        defaults.removeObject(forKey: key)
+        XCTAssertFalse(try XCTUnwrap(store.readConfigurationProfile(id: profile.id, expectedRevision: 1)).executionBlocked)
+        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+    }
+
     func testConfigurationRevisionSurvivesReloadAndDoesNotReusePinsWhenSettingsReturn() throws {
         let store = makeStore(), original = makeSnapshot(filenameFormat: "first-{date}")
         let profile = try XCTUnwrap(store.add(name: "Daily", settings: original, target: .localIPhoneFolder))
