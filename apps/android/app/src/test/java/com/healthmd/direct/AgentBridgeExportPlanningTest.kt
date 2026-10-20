@@ -12,6 +12,102 @@ import org.junit.Test
 
 class AgentBridgeExportPlanningTest {
     @Test
+    fun exactNativeApprovalRejectsConsentLostDuringConfigurationAndSigning() {
+        for (duringSigning in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))
+            val binding = AgentBridgeValidation.bindingFor(plan)
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val before = Files.readAllBytes(path)
+            var reviewed = false
+            var observed = false
+            var encoded = 0
+            f.native.afterDecision = {
+                assertThat(it).isEqualTo(AgentBridgeExportNativeDecision.ExactApproval(plan.planId, binding))
+                reviewed = true
+            }
+            if (duringSigning) {
+                f.keys.onEncode = { encoded++; if (encoded == 2) { observed = true; f.native.allowed = false } }
+            } else {
+                f.configuration.onRead = { if (reviewed) { observed = true; f.native.allowed = false } }
+            }
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.authorizeExactApproval(f.peerContext, f.native, plan.planId, binding) }
+            f.keys.onEncode = null; f.configuration.onRead = null
+            assertThat(observed).isTrue()
+            assertThat(Files.readAllBytes(path)).isEqualTo(before)
+            f.store.access { assertThat(requireNotNull(it).state.decisions).isEmpty() }
+            assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
+        }
+    }
+
+    @Test
+    fun exactNativeApprovalRechecksConsentAtStagingPublicationAndFinalKeyRead() {
+        for (phase in listOf("staging", "publication", "return_key")) AgentBridgeExportPlanningFixture().use { f ->
+            val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))
+            val binding = AgentBridgeValidation.bindingFor(plan)
+            val root = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+            val path = root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val before = Files.readAllBytes(path)
+            var checks = 0
+            var observed = false
+            var reviewed = false
+            f.native.afterDecision = {
+                assertThat(it).isEqualTo(AgentBridgeExportNativeDecision.ExactApproval(plan.planId, binding))
+                reviewed = true; checks++
+                if (phase == "staging" && checks == 4) {
+                    Files.newDirectoryStream(root).use { paths -> assertThat(paths.any { it.fileName.toString().startsWith("pending-") }).isTrue() }
+                    observed = true
+                    throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                }
+                if (phase == "publication" && checks == 5) {
+                    assertThat(Files.readAllBytes(path)).isNotEqualTo(before)
+                    observed = true
+                    throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                }
+            }
+            if (phase == "return_key") f.keys.onLoad = {
+                if (reviewed && !Files.readAllBytes(path).contentEquals(before)) { observed = true; f.native.allowed = false }
+            }
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.authorizeExactApproval(f.peerContext, f.native, plan.planId, binding) }
+            f.keys.onLoad = null; f.native.afterDecision = null
+            assertThat(observed).isTrue()
+            if (phase == "staging") {
+                assertThat(Files.readAllBytes(path)).isEqualTo(before)
+                f.store.access { assertThat(requireNotNull(it).state.decisions).isEmpty() }
+            } else {
+                assertThat(Files.readAllBytes(path)).isNotEqualTo(before)
+                f.store.access { tx ->
+                    val approval = requireNotNull(tx).state.decisions.single().approval()
+                    assertThat(approval.binding).isEqualTo(binding)
+                    assertThat(approval.approvedAt).isEqualTo("2026-05-29T00:00:00Z")
+                }
+            }
+            Files.newDirectoryStream(root).use { paths -> assertThat(paths.map { it.fileName.toString() }).containsExactly(AgentBridgeExportAuthorityStore.LEDGER_NAME, "issuer.lock") }
+        }
+    }
+
+    @Test
+    fun exactNativeApprovalSamplesLiveExpiryAfterRepeatedNativeCheck() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))
+            val binding = AgentBridgeValidation.bindingFor(plan)
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val before = Files.readAllBytes(path)
+            var checks = 0
+            var delayed = false
+            f.native.afterDecision = {
+                assertThat(it).isEqualTo(AgentBridgeExportNativeDecision.ExactApproval(plan.planId, binding))
+                checks++
+                if (checks == 2) { delayed = true; f.clock.now = f.clock.now.plusSeconds(600) }
+            }
+            f.expect(AgentBridgeErrorCode.PLAN_EXPIRED) { f.service.authorizeExactApproval(f.peerContext, f.native, plan.planId, binding) }
+            f.native.afterDecision = null
+            assertThat(delayed).isTrue()
+            assertThat(Files.readAllBytes(path)).isEqualTo(before)
+            f.store.access { assertThat(requireNotNull(it).state.decisions).isEmpty() }
+        }
+    }
+
+    @Test
     fun nativeStoredConsentIsRequiredBeforeActualResolverCanIssueYearJsonPlan() {
         AgentBridgeExportPlanningFixture().use { f ->
             val empty = f.service.discover(f.peerContext, f.discoveryRequest())

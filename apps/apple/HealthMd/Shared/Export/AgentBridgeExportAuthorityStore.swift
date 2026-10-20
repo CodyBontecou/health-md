@@ -270,8 +270,12 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                                requireCurrentAuthority: (AgentBridgeExportAuthoritySnapshot) throws -> Void) throws {
         // Native consent may delay or revoke authority. It runs outside the private lock, then the
         // builder/validator receive the freshly loaded CAS state after protected-key lookup.
-        try authorization.requireNativeAuthorization(for: .decideExport(planID: planID, binding: binding))
-        try transaction(beforeCommit: requireCurrentAuthority) { state in
+        let action = AgentBridgeExportNativeAction.decideExport(planID: planID, binding: binding)
+        try authorization.requireNativeAuthorization(for: action)
+        try transaction(beforeCommit: { current in
+            try authorization.requireNativeAuthorization(for: action)
+            try requireCurrentAuthority(current) // Sample live authority/time AFTER the native callback.
+        }) { state in
             guard state.generation == expectedGeneration else { throw AgentBridgeValidationError.revisionConflict }
             let decision = try makeDecision(state), approval = try decision.approval()
             let plan = try state.issued(id: planID, peer: binding.peer).plan()

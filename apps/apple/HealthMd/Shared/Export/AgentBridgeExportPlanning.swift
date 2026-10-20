@@ -152,8 +152,10 @@ final class AgentBridgeExportPlanningService {
         let state = try store.snapshot()
         let current = try currentPlan(in: state, planID: planID, peer: authenticatedPeer, right: .exportExecute, requireReadiness: true)
         guard binding == AgentBridgeSemantics.binding(current.plan) else { throw AgentBridgeValidationError.bindingChanged }
+        let native = AgentBridgeExportSessionBoundAuthorization(peer: authenticatedPeer, native: authorization)
+        let action = AgentBridgeExportNativeAction.decideExport(planID: planID, binding: binding)
         try store.persistNativeDecision(planID: planID, binding: binding, expectedGeneration: state.generation,
-            authorization: AgentBridgeExportSessionBoundAuthorization(peer: authenticatedPeer, native: authorization),
+            authorization: native,
             makeDecision: { currentState in
                 // Consent AND protected-key lookup have completed. Use the locked transaction's
                 // real state, refreshed configuration and live time, not pre-consent captured records.
@@ -168,12 +170,14 @@ final class AgentBridgeExportPlanningService {
                     authorityId: checked.plan.authorityReferences.native.authorityId, binding: binding, rights: [.exportExecute])
                 return try .init(planID: planID, approvalBytes: AgentBridgeV4Codec.encode(approval))
             }, requireCurrentAuthority: { currentState in
-                _ = try self.currentDecision(in: currentState, planID: planID, peer: authenticatedPeer)
+                _ = try self.currentDecision(in: currentState, planID: planID, peer: authenticatedPeer,
+                    requireNativeDecision: { try native.requireNativeAuthorization(for: action) })
             })
         // A post-publication delay can suppress return but cannot roll back committed private
         // metadata. Every later relay/scope/retry independently rejects expired/revoked records.
         try store.inspectCurrent { currentState in
-            _ = try self.currentDecision(in: currentState, planID: planID, peer: authenticatedPeer)
+            _ = try self.currentDecision(in: currentState, planID: planID, peer: authenticatedPeer,
+                requireNativeDecision: { try native.requireNativeAuthorization(for: action) })
         }
     }
 
@@ -283,13 +287,17 @@ final class AgentBridgeExportPlanningService {
         }
     }
 
-    private func currentDecision(in state: AgentBridgeExportAuthoritySnapshot, planID: AgentBridgeUUID, peer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeApproval {
+    private func currentDecision(in state: AgentBridgeExportAuthoritySnapshot, planID: AgentBridgeUUID, peer: AgentBridgeExportAuthenticatedPeer,
+                                 requireNativeDecision: (() throws -> Void)? = nil) throws -> AgentBridgeApproval {
         let checked = try currentPlan(in: state, planID: planID, peer: peer, right: .exportExecute, requireReadiness: true)
         guard let decision = state.decisions.first(where: { $0.planID == planID }) else { throw AgentBridgeValidationError.approvalRequired }
         let approval = try decision.approval()
         guard approval.binding == AgentBridgeSemantics.binding(checked.plan), approval.authorityId == checked.plan.authorityReferences.native.authorityId,
               approval.approvedAt.rawValue >= checked.plan.issuedAt.rawValue, approval.approvedAt.rawValue < checked.plan.expiresAt.rawValue,
               approval.approvedAt.rawValue <= (try utc(checked.now)).rawValue else { throw AgentBridgeValidationError.approvalRequired }
+        // Native mutation callers retain the exact reviewed decision across the final key/config
+        // reads too. Relay-only requests do not issue or renew native consent.
+        try requireNativeDecision?()
         try requireLifetime(checked.plan, state: state, peer: peer, now: clock.now())
         return approval
     }

@@ -12,6 +12,86 @@ import XCTest
 
 @MainActor
 final class AgentBridgeExportPlanningTests: XCTestCase {
+    func testExactNativeApprovalRejectsConsentLostDuringKeyAndConfigurationReads() throws {
+        for duringKey in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+            let path = rig.directory.appendingPathComponent("state.json")
+            let before = try Data(contentsOf: path)
+            let native = LiveExactApprovalAuthorization(planID: plan.planId, binding: binding)
+            var observed = false
+            native.onCheck = { count in
+                if count == 1 {
+                    let loseConsent = { observed = true; native.allowed = false }
+                    if duringKey { rig.keys.onNextLoad(loseConsent) }
+                    else { rig.reader.beforeReturn = loseConsent }
+                }
+            }
+            XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer, authorization: native)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .approvalRequired)
+            }
+            rig.reader.beforeReturn = nil
+            XCTAssertTrue(observed)
+            XCTAssertEqual(try Data(contentsOf: path), before)
+            XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+            XCTAssertEqual(rig.reader.defaults.writes, 0)
+        }
+    }
+
+    func testExactNativeApprovalRechecksConsentAtStagingPublicationAndFinalKeyRead() throws {
+        for phase in ["staging", "publication", "return_key"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+            let path = rig.directory.appendingPathComponent("state.json")
+            let before = try Data(contentsOf: path)
+            let native = LiveExactApprovalAuthorization(planID: plan.planId, binding: binding)
+            var observed = false
+            if phase == "staging" {
+                rig.publication.onPrepared = { candidate in
+                    XCTAssertEqual(candidate.decisions.count, 1)
+                    XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path).contains { $0.hasPrefix("transaction-") })
+                    observed = true; native.allowed = false
+                }
+            } else {
+                rig.publication.onPublished = { candidate in
+                    XCTAssertEqual(candidate.decisions.count, 1)
+                    if phase == "return_key" { rig.keys.onNextLoad { observed = true; native.allowed = false } }
+                    else { observed = true; native.allowed = false }
+                }
+            }
+            XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer, authorization: native)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .approvalRequired)
+            }
+            XCTAssertTrue(observed)
+            if phase == "staging" {
+                XCTAssertEqual(try Data(contentsOf: path), before)
+                XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+            } else {
+                XCTAssertNotEqual(try Data(contentsOf: path), before)
+                let approval = try XCTUnwrap(rig.store.snapshot().decisions.first).approval()
+                XCTAssertEqual(approval.binding, binding) // Retain the already committed exact decision; never roll back.
+                XCTAssertEqual(approval.approvedAt.rawValue, "2026-03-09T00:00:00Z")
+            }
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path).sorted(), ["lock", "state.json"])
+        }
+    }
+
+    func testExactNativeApprovalSamplesLiveExpiryAfterRepeatedNativeCheck() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+        let path = rig.directory.appendingPathComponent("state.json")
+        let before = try Data(contentsOf: path)
+        let native = LiveExactApprovalAuthorization(planID: plan.planId, binding: binding)
+        var delayed = false
+        native.onCheck = { count in if count == 2 { delayed = true; rig.clock.advance(seconds: 600) } }
+        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer, authorization: native)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired)
+        }
+        XCTAssertTrue(delayed)
+        XCTAssertEqual(try Data(contentsOf: path), before)
+        XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+    }
+
     func testMissingAuthorityNeverCreatesStoreGrantKeyOrDecision() throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let missing = rig.parent.appendingPathComponent("missing")
@@ -803,6 +883,21 @@ nonisolated private final class FakeProtectedKeys: AgentBridgeExportProtectedKey
         lock.lock(); count += 1; let callback = nextLoad; nextLoad = nil; lock.unlock()
         callback?()
         return key
+    }
+}
+nonisolated private final class LiveExactApprovalAuthorization: AgentBridgeExportNativeAuthorizing {
+    private let planID: AgentBridgeUUID
+    private let binding: AgentBridgeBinding
+    var allowed = true
+    var checks = 0
+    var onCheck: ((Int) -> Void)?
+    init(planID: AgentBridgeUUID, binding: AgentBridgeBinding) { self.planID = planID; self.binding = binding }
+    func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws {
+        guard allowed, case .decideExport(let id, let candidate) = action, id == planID, candidate == binding else {
+            throw AgentBridgeValidationError.approvalRequired
+        }
+        checks += 1
+        onCheck?(checks)
     }
 }
 nonisolated private struct FakeNativeAuthorization: AgentBridgeExportNativeAuthorizing {

@@ -65,7 +65,7 @@ internal class AgentBridgeExportPlanningService(
             is AgentBridgeApproval -> payload.binding.peer
             else -> null // Fixed rejection conveys no private authority/configuration.
         }
-        if (responsePeer != null) recheckReturn(authenticated, responsePeer, response.payload)
+        if (responsePeer != null) recheckReturn(authenticated, responsePeer, response.payload, nativeDecision = null)
         return encoded
     }
 
@@ -157,7 +157,8 @@ internal class AgentBridgeExportPlanningService(
         val frozenBinding = (AgentBridgeCodec.decode(AgentBridgeCodec.encode(AgentBridgeApprovalRequest(binding, planId,
             UUID.randomUUID().toString(), "healthmd.agent_approval_request", 1))) as AgentBridgeApprovalRequest).binding
         val peer = peer(authenticated, frozenBinding.peer)
-        return access(authenticated, peer) { transaction ->
+        val nativeDecision = NativeDecisionFence(native, AgentBridgeExportNativeDecision.ExactApproval(planId, frozenBinding))
+        return access(authenticated, peer, nativeDecision) { transaction ->
             val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
             val record = tx.plan(peer, planId)
             require(frozenBinding == AgentBridgeValidation.bindingFor(record.plan()), AgentBridgeErrorCode.BINDING_CHANGED)
@@ -169,7 +170,7 @@ internal class AgentBridgeExportPlanningService(
             require(AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE in parent.rights, AgentBridgeErrorCode.APPROVAL_REQUIRED)
             tx.decision(planId)?.let { return@access it }
             peer(authenticated, peer) // A native session can revoke/change live trust during a decision.
-            native.requireDecision(AgentBridgeExportNativeDecision.ExactApproval(planId, frozenBinding))
+            nativeDecision.requireCurrent()
             val current = configuration.readConfiguration()
             peer(authenticated, peer) // This callback can delay: sample time only AFTER current trust.
             val decided = now()
@@ -219,29 +220,39 @@ internal class AgentBridgeExportPlanningService(
         val response = draft.copy(capabilitySha256 = AgentBridgeValidation.capabilityDigest(draft))
         return AgentBridgeCodec.decode(AgentBridgeCodec.encode(response)) as AgentBridgeDiscovery
     }
+    /** Only native mutation callers supply this exact, non-wire review. No new prompt is performed. */
+    private class NativeDecisionFence(private val native: AgentBridgeExportNativeAuthorization,
+        private val decision: AgentBridgeExportNativeDecision.ExactApproval) {
+        fun requireCurrent() = native.requireDecision(decision)
+    }
+
     private fun <T : AgentBridgeDocument> access(authenticated: AgentBridgeExportAuthenticatedPeer, expected: AgentBridgePeer,
-        block: (AgentBridgeExportAuthorityTransaction?) -> T): T {
+        nativeDecision: NativeDecisionFence? = null, block: (AgentBridgeExportAuthorityTransaction?) -> T): T {
         var candidate: T? = null
         val result = store.access(fence = { tx ->
-            candidate?.let { validateBoundary(authenticated, expected, tx, it) } ?: peer(authenticated, expected)
+            candidate?.let { validateBoundary(authenticated, expected, tx, it, nativeDecision) } ?: peer(authenticated, expected)
         }) { tx -> block(tx).also { candidate = it } }
-        return recheckReturn(authenticated, expected, result)
+        return recheckReturn(authenticated, expected, result, nativeDecision)
     }
 
     private fun <T : AgentBridgeDocument> recheckReturn(authenticated: AgentBridgeExportAuthenticatedPeer,
-        expected: AgentBridgePeer, value: T): T {
+        expected: AgentBridgePeer, value: T, nativeDecision: NativeDecisionFence?): T {
         // Trust may delay or revoke a parent AFTER the previous transaction released its lock.
         // Reload issuer-owned state after that callback; cached transaction data is not permission.
         peer(authenticated, expected)
-        return store.access(fence = { tx -> validateBoundary(authenticated, expected, tx, value) }) { value }
+        return store.access(fence = { tx -> validateBoundary(authenticated, expected, tx, value, nativeDecision) }) { value }
     }
 
     private fun validateBoundary(authenticated: AgentBridgeExportAuthenticatedPeer, expected: AgentBridgePeer,
-        tx: AgentBridgeExportAuthorityTransaction?, value: AgentBridgeDocument) {
+        tx: AgentBridgeExportAuthorityTransaction?, value: AgentBridgeDocument, nativeDecision: NativeDecisionFence?) {
         peer(authenticated, expected)
         val snapshot = configuration.readConfiguration() // Fresh configuration AFTER the publication/return trust callback.
-        peer(authenticated, expected) // Sample live expiry AFTER configuration and current-trust callbacks.
-        val instant = now()
+        peer(authenticated, expected)
+        if (nativeDecision != null) {
+            nativeDecision.requireCurrent() // Same review after key/config reads and at publication/return.
+            peer(authenticated, expected)
+        }
+        val instant = now() // Sample live expiry AFTER all native and current-trust callbacks.
         when (value) {
             is AgentBridgeDiscovery -> {
                 require(instant >= Instant.parse(value.issuedAt) && instant < Instant.parse(value.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)

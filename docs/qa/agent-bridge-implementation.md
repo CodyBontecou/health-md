@@ -110,6 +110,31 @@ grant management, exact approval UI, bound capture/execution/routes, receipts/re
 feature acceptance remain incomplete. The PR stays draft; B19/B20 gates and planned capabilities
 are unchanged.
 
+## Exact native approval consent fences (2026-10-20)
+
+The local exact-export approval APIs now retain the original reviewed plan/binding decision through
+persistence and final return validation. Swift repeats the native check at each private commit fence
+and after the final key/configuration reads, before the final pure lifetime check. Kotlin carries an
+immutable, private native-decision fence through its transaction and fresh return-state read; it
+samples current trust and live expiry after the native callback. Read-only envelope/approval relay
+paths receive no native mutation fence and do not issue or renew consent.
+
+Three new regression methods per platform fail against the preceding production source. They cover
+consent lost during key/configuration or signing work, actual staging/publication/return boundaries,
+and expiry occurring during an added native callback. Before publication, rejected operations leave
+ledger bytes and decision count unchanged. After publication, rejection suppresses return while
+retaining the committed binding, identity and original approval timestamp. No rollback or consent
+renewal is inferred. Tests assert the exact plan/binding presented to native authorization.
+
+The owning planning suites pass 37 Apple and 22 Play JVM methods. The final affected macOS run passes
+108 XCTest methods; contract validation and all 32 bridge contract tests pass. Play passes 143 selected JVM methods (140 bridge and three configuration-protection methods);
+F-Droid passes all 140 bridge JVM methods. The unsigned generic iOS build, targeted warning and diff
+checks pass. Counts overlap prior suites. Native policy
+and credential SDK boundaries remain intercepted; there is no installed consent, OS credential,
+physical phone or complete CLI/MCP journey qualification. Native grant/approval UI, adapters/routes,
+bound execution, receipts/recipes/resume and full feature acceptance remain incomplete. Draft status,
+planned capabilities, public contracts and B19/B20 gates are unchanged.
+
 ## Current consolidated native-session increment (2026-10-06)
 
 After the user cleared the fleet goal and authorized consolidation, all23 bridge branch heads were
