@@ -13,6 +13,7 @@ internal class AgentBridgeNativeCatalogLifecycle {
     private var facts: AgentBridgeNativePlanningFacts? = null
     private var generation = 0L
     private var publishedGeneration: Long? = null
+    private var publication: AgentBridgeNativeCatalogPublication? = null
     // A new native owner cannot prove the old owner published its final observation. Advance
     // once rather than accepting an old unexecuted plan. Durable job resume has a separate journal.
     private var observedChange = true
@@ -41,25 +42,37 @@ internal class AgentBridgeNativeCatalogLifecycle {
         value.copy(availableNativeMetricIds = value.availableNativeMetricIds.toSet())
     }
 
+    /** Exact return-side revision fence across worker suspension, including equal-facts ABA. */
+    fun currentPublication(): AgentBridgeNativeCatalogPublication = synchronized(lock) {
+        requireAvailable()
+        if (publishedGeneration != generation) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        publication ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
+    }
+
     /** The native owner calls on a worker; the real store enforces the main-looper rejection. */
-    fun publish(store: AgentBridgeExportAuthorityStore, sourceInstallationId: String): AgentBridgeNativeCatalogPublication {
+    fun publish(store: AgentBridgeExportAuthorityStore, sourceInstallationId: String,
+        requireOwner: () -> Unit = {}): AgentBridgeNativeCatalogPublication {
         // ReentrantLock.tryLock alone admits same-thread recursion; reject that explicitly too.
         if (publisher.isHeldByCurrentThread || !publisher.tryLock()) fail(AgentBridgeErrorCode.BUSY)
         try {
+            requireOwner()
             val captured = synchronized(lock) {
                 requireAvailable()
                 Triple(generation, observedChange, facts ?: fail(AgentBridgeErrorCode.BINDING_CHANGED))
             }
             val publication = store.publishNativeCatalog(sourceInstallationId, captured.second) {
+                requireOwner()
                 synchronized(lock) {
                     requireAvailable()
                     if (generation != captured.first || facts != captured.third) fail(AgentBridgeErrorCode.BINDING_CHANGED)
                     captured.third
                 }
             }
+            requireOwner()
             synchronized(lock) {
                 requireAvailable()
                 if (generation != captured.first || facts != captured.third) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+                this.publication = publication
                 publishedGeneration = captured.first
                 observedChange = false
             }

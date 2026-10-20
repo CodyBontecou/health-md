@@ -306,6 +306,35 @@ class DirectCliCoordinator @Inject constructor(
         return peer to owner.catalogLifecycle
     }
 
+    /** Native controller only. Facts are sampled outside requests; no creating SDK store getter. */
+    internal suspend fun publishAgentBridgeNativeCatalog(context: android.content.Context,
+        facts: AgentBridgeNativePlanningFacts): AgentBridgeNativeCatalogPublication {
+        val caller = currentCoroutineContext()
+        caller.ensureActive()
+        val original = agentBridgeNativePlanningOwner(context)
+        val originalPeer = original.first.requireCurrent()
+        caller.ensureActive()
+        original.second.observe(facts)
+        try {
+            val publication = AgentBridgeNativeCatalogPublisher.publish(original.second, original.first) {
+                AgentBridgeExportAuthorityStore.forNoBackup(context)
+            }
+            caller.ensureActive()
+            val current = agentBridgeNativePlanningOwner(context)
+            if (current.second !== original.second || current.first.requireCurrent() != originalPeer)
+                throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            caller.ensureActive()
+            if (original.second.currentPublication() != publication)
+                throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.BINDING_CHANGED)
+            caller.ensureActive()
+            return publication
+        } catch (failure: Exception) {
+            runCatching { original.second.observeNativeChange() }
+            caller.ensureActive()
+            throw failure
+        }
+    }
+
     private fun replaceNativeOwner(owner: NativeSessionOwner?) = synchronized(nativeOwnerLock) {
         if (acceptedNativeOwner !== owner) {
             acceptedNativeOwner?.revoke()
