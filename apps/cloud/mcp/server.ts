@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
@@ -199,11 +200,9 @@ export function startMcpServer(config: {
           "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
         result.headers.forEach((value, key) => { outputHeaders[key] = value; });
         response.writeHead(result.status, outputHeaders);
-        if (result.body) await new Promise<void>((done, fail) => {
-          const output = Readable.fromWeb(result.body as never);
-          output.on("error", fail); response.on("error", fail); response.on("finish", done);
-          output.pipe(response);
-        });
+        // pipeline also settles on a premature client/proxy close, including
+        // one that happened while the tool was still producing its result.
+        if (result.body) await pipeline(Readable.fromWeb(result.body as never), response);
         else response.end();
       } finally { running -= 1; }
     } catch {

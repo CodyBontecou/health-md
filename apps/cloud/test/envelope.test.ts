@@ -54,6 +54,17 @@ describe("API Endpoint compatibility boundary", () => {
     expect(payload.records[0]!.providers.whoop.cycles[0]!.step_count).toBe(0);
   });
 
+  it.each([
+    ["2026-08-01T12:00:00.123900000Z", "2026-08-01T12:00:00.1239Z"],
+    ["2026-08-01T14:00:00.123400001+02:00", "2026-08-01T12:00:00.123400001Z"],
+    ["2026-08-01T12:00:00.123000Z", "2026-08-01T12:00:00.123Z"],
+    ["2026-08-01T12:00:00Z", "2026-08-01T12:00:00.000Z"],
+    ["2026-08-01T12:00:00.000000000001Z", "2026-08-01T12:00:00.000000000001Z"],
+  ])("preserves exact export timestamp precision for %s", (exportedAt, expected) => {
+    expect(parseAndValidateEnvelope(encode({ ...envelope(), exported_at: exportedAt })).exportedAt)
+      .toBe(expected);
+  });
+
   it("rejects reserved unified daily v9 and does not call Android v10 equivalent", () => {
     for (const [source, version] of [["ios", 9], ["android", 10]] as const) {
       const base = envelope();
