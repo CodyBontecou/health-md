@@ -37,6 +37,26 @@ nonisolated final class WorkoutTableToggleLocalizationTests: XCTestCase {
         }
     }
 
+    @MainActor func testWorkoutPresentationParityRecordIsExplicitlyStagedWithoutChangingMetricCapabilities() throws {
+        let rootURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let url = rootURL.appendingPathComponent("apps/apple/docs/features/workout-presentation-parity-v1.json")
+        let record = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        XCTAssertEqual(record["schema_version"] as? Int, 1)
+        XCTAssertEqual(record["classification"] as? String, "planned")
+        XCTAssertEqual(record["parent_capability_id"] as? String, "export.completed-workouts")
+        XCTAssertEqual(record["setting"] as? String, "markdownTemplate.includeWorkoutDetailsAndMetadata")
+        XCTAssertEqual(record["default"] as? Bool, MarkdownTemplateConfig().includeWorkoutDetailsAndMetadata)
+        let platforms = try XCTUnwrap(record["platforms"] as? [String: [String: Any]])
+        XCTAssertEqual(platforms["apple"]?["state"] as? String, "available")
+        XCTAssertEqual(platforms["android"]?["state"] as? String, "planned")
+        XCTAssertTrue((platforms["android"]?["target"] as? String)?.contains("unified-v9") == true)
+        let inventory = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: rootURL.appendingPathComponent("packages/contracts/product-capabilities.json"))) as? [String: Any])
+        let capabilities = try XCTUnwrap(inventory["capabilities"] as? [[String: Any]])
+        XCTAssertEqual(capabilities.first { $0["id"] as? String == "export.completed-workouts" }?["classification"] as? String, "shared")
+    }
+
     #if os(iOS)
     @MainActor
     func testActualWorkoutControlUsesLocalizedPresentationAndKeepsItsBinding() throws {

@@ -268,7 +268,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5]
     needs: changes
     if: ${{ needs.changes.outputs.instrumentation == 'true' }}
     runs-on: ubuntu-24.04
@@ -318,8 +318,9 @@ jobs:
       - name: Prepare instrumentation APKs before the emulator boots
         # Avoid running Kotlin compilation alongside the emulator's first boot.
         # In-process compilation leaves no Kotlin daemon holding memory afterward.
+        # Reuse compilation outputs; the shared init script forces any Test tasks fresh.
         run: |
-          ./gradlew --no-daemon --max-workers=2 \
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 \
             -Pkotlin.compiler.execution.strategy=in-process \
             :healthmd-core:prepareRustDebug \
             :app:assemblePlayDebug :app:assemblePlayDebugAndroidTest --stacktrace
@@ -327,7 +328,7 @@ jobs:
       - name: Prepare core and direct E2E artifacts on shard zero before boot
         if: ${{ matrix.shard == 0 }}
         run: |
-          ./gradlew --no-daemon --max-workers=2 \
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 \
             -Pkotlin.compiler.execution.strategy=in-process \
             -PhealthmdInstrumentedTestBuildType=e2e \
             :healthmd-core:assembleDebugAndroidTest \
@@ -341,7 +342,7 @@ jobs:
       - name: Run core and Play instrumentation
         env:
           HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX: ${{ needs.changes.outputs.accessibility_matrix }}
-          HEALTHMD_ANDROID_SHARD_COUNT: '4'
+          HEALTHMD_ANDROID_SHARD_COUNT: '6'
           HEALTHMD_ANDROID_SHARD_INDEX: ${{ matrix.shard }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
@@ -351,6 +352,8 @@ jobs:
           profile: pixel_7
           disable-animations: true
           script: |
+            adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+            adb -s emulator-5554 shell wm dismiss-keyguard
             # The short-window editor matrix exercises the real software keyboard. Hosted
             # API 35 headless AVDs can leave that IME suppressed, so make the software-IME
             # contract explicit and prove a default method is ready before instrumentation.
@@ -367,6 +370,14 @@ jobs:
             cd apps/android && ./scripts/run-ci-instrumentation.sh
             if [ "${{ matrix.shard }}" = 0 ]; then cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh; fi
 
+      - name: Record the exact source and attempt for this shard
+        if: ${{ always() }}
+        run: |
+          python3 scripts/verify-ci-instrumentation-shards.py \
+            --write-receipt build/logs/instrumentation-source.json \
+            --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}' \
+            --shard '${{ matrix.shard }}' --source-sha "$(git rev-parse HEAD)"
+
       - name: Retain instrumentation reports and per-test results
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -376,6 +387,7 @@ jobs:
           if-no-files-found: warn
           path: |
             apps/android/build/logs/emulator-readiness.log
+            apps/android/build/logs/instrumentation-source.json
             apps/android/app/build/reports/androidTests/connected/**
             apps/android/app/build/outputs/androidTest-results/connected/**
             apps/android/healthmd-core/build/reports/androidTests/connected/**
@@ -405,7 +417,8 @@ jobs:
           set -euo pipefail
           test "$SHARDS_RESULT" = success
           python3 apps/android/scripts/verify-ci-instrumentation-shards.py \
-            --reports shard-reports --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}'
+            --reports shard-reports --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}' \
+            --source-sha "$(git rev-parse HEAD)"
       - name: Retain complete instrumentation evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -414,6 +427,19 @@ jobs:
           path: shard-reports/
           retention-days: 7
           if-no-files-found: error
+
+      - name: Retain synthetic instrumentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-instrumentation-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/android/healthmd-core/build/reports/androidTests/
+            apps/android/healthmd-core/build/outputs/androidTest-results/
+            apps/android/app/build/reports/androidTests/
+            apps/android/app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 7
 
   fdroid-build:
     name: F-Droid clean build (${{ matrix.variant }})
