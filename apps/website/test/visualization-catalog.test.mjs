@@ -273,6 +273,25 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
       assert.equal(api.parseHealthDay(imprecise), null, variant.name);
     }
   }
+  const mindfulnessRoot = path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO, "tests/fixtures/native-mindfulness");
+  const mindfulnessVariants = (await readdir(mindfulnessRoot, { withFileTypes: true })).filter(item => item.isDirectory());
+  assert.equal(mindfulnessVariants.length, 4);
+  for (const variant of mindfulnessVariants) {
+    const apple = variant.name.startsWith("apple");
+    const folder = path.join(mindfulnessRoot, variant.name, apple ? "Health" : "health");
+    const name = (await readdir(folder)).find(file => file.endsWith(".json"));
+    const source = JSON.parse(await readFile(path.join(folder, name), "utf8"));
+    const day = api.parseHealthDay(source);
+    assert.ok(day, variant.name);
+    const samples = source.mindfulness[apple ? "stateOfMindEntries" : "sessions"];
+    assert.deepEqual(JSON.parse(JSON.stringify(day.nativeMindfulnessDetails.map(record => record.sample))), samples);
+    assert.equal(day.nativeMindfulnessDetails[0].metric, apple ? "state_of_mind" : "mindfulness_session");
+    const changed = structuredClone(source);
+    const record = changed.mindfulness[apple ? "stateOfMindEntries" : "sessions"][0];
+    if (apple) record.valence = 2;
+    else record.exactStartTime.nano++;
+    assert.equal(api.parseHealthDay(changed), null, variant.name);
+  }
   const parentInput = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
     "tests/fixtures/sleep-native-parents/2026-11-01.json"), "utf8");
   const parentDay = api.parseHealthDay(parentInput);
