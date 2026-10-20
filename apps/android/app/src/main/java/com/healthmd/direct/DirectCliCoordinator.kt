@@ -172,6 +172,8 @@ class DirectCliCoordinator @Inject constructor(
     @Volatile private var activeServingScope: ServingScope? = null
     @Volatile private var acceptedNativeOwner: NativeSessionOwner? = null
     private val nativeOwnerLock = Any()
+    private val nativeProtectionLock = Any()
+    private var nativeProtection: AgentBridgeNativeConfigurationProtection? = null
     private val nativeEligibilityLock = Any()
     private var nativeEligibility: AgentBridgeNativeExportEligibility? = null
 
@@ -216,6 +218,39 @@ class DirectCliCoordinator @Inject constructor(
             com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
         owner.requireCurrent()
         return owner.peer(context)
+    }
+
+    /** Native foreground owner only; neither registration nor current() reads settings on a wire path. */
+    internal fun observeAgentBridgeNativeConfigurationProtection(scope: CoroutineScope): AutoCloseable {
+        lateinit var observer: AgentBridgeNativeConfigurationProtection
+        observer = AgentBridgeNativeConfigurationProtection(settingsRepository.nativeConfigurationProtection) {
+            synchronized(nativeProtectionLock) {
+                if (nativeProtection === observer) agentBridgeNativeMetadataChanged()
+            }
+        }
+        val previous = synchronized(nativeProtectionLock) {
+            val previous = nativeProtection
+            nativeProtection = observer
+            agentBridgeNativeMetadataChanged()
+            previous
+        }
+        previous?.close() // Do not nest coordinator and producer locks.
+        observer.start(scope)
+        return AutoCloseable {
+            synchronized(nativeProtectionLock) {
+                if (nativeProtection === observer) {
+                    nativeProtection = null
+                    agentBridgeNativeMetadataChanged()
+                }
+            }
+            observer.close()
+        }
+    }
+
+    internal fun agentBridgeNativeConfigurationProtected(): Boolean? {
+        val observer = synchronized(nativeProtectionLock) { nativeProtection } ?: return null
+        val protected = observer.current()
+        return synchronized(nativeProtectionLock) { if (nativeProtection === observer) protected else null }
     }
 
     /** Called only after native foreground admission, never by a wire plan/discovery request. */

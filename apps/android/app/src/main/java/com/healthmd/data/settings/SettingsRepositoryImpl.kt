@@ -16,6 +16,8 @@ import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FormatCustomization
+import com.healthmd.domain.repository.NativeConfigurationProtectionObservation
+import com.healthmd.domain.repository.NativeConfigurationProtectionSource
 import com.healthmd.domain.repository.NativeExportEligibilitySettings
 import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +30,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.time.LocalDate
+import java.util.UUID
 
 internal data class SavedDeviceExportConfigurationSnapshot(val revision: Int, val settings: ExportSettings)
 
@@ -43,6 +46,7 @@ class SettingsRepositoryImpl(
         val NATIVE_CONFIGURATION_REVISION = intPreferencesKey("native_export_settings_revision_v1")
 
         val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
+        val NATIVE_PROTECTION_REVISION = stringPreferencesKey("native_configuration_protection_revision_v1")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
         val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
@@ -119,8 +123,24 @@ class SettingsRepositoryImpl(
         prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false
     }
 
+    override val nativeConfigurationProtection = NativeConfigurationProtectionSource(dataStore.data.map { prefs ->
+        try {
+            val revision = prefs[Keys.NATIVE_PROTECTION_REVISION]
+            if (revision != null && UUID.fromString(revision).toString() != revision) null
+            else NativeConfigurationProtectionObservation(prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false, revision ?: "initial")
+        } catch (_: IllegalArgumentException) { null }
+        catch (_: ClassCastException) { null }
+    })
+
     override suspend fun setPreventAccidentalChanges(enabled: Boolean) {
         dataStore.edit { prefs ->
+            if ((prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false) != enabled) {
+                val revision = UUID.randomUUID().toString()
+                // Synchronous native invalidation precedes commit. Only the matching committed
+                // image may reopen the service cache, including conflated lock/unlock round trips.
+                nativeConfigurationProtection.invalidate(revision)
+                prefs[Keys.NATIVE_PROTECTION_REVISION] = revision
+            }
             prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] = enabled
         }
     }

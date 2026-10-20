@@ -9,6 +9,10 @@ import java.time.LocalDate
 data class NativeExportEligibilitySettings(val purchased: Boolean, val freeExportsUsed: Int)
 
 interface SettingsRepository {
+    /** Unsupported repositories remain unknown; no UI-default fallback for native plans. */
+    val nativeConfigurationProtection: NativeConfigurationProtectionSource?
+        get() = null
+
     /** Native observer only. Unsupported repositories provide unknown, never fresh free quota. */
     val nativeExportEligibility: Flow<NativeExportEligibilitySettings?>
         get() = flowOf(null)
