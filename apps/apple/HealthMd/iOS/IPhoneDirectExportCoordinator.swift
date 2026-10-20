@@ -1543,7 +1543,8 @@ final class IPhoneDirectExportCoordinator {
     func cleanupExpiredJobs(now: Date = Date()) {
         guard let storage = try? jobStorage() else { return }
         _ = try? storage.cleanupExpiredWakeDateJobs(now: now, lifetime: HealthMdDirectProtocol.jobLifetime) { url, id, kind in
-            try self.validatedSuccessorExpiryCreationDate(at: url, jobID: id, kind: kind, storage: storage)
+            try self.validatedSuccessorExpiryCreationDate(at: url, jobID: id, kind: kind, storage: storage,
+                expiryCutoff: now.addingTimeInterval(-HealthMdDirectProtocol.jobLifetime))
         }
         let root = storage.root(.historical)
         guard (try? AppleExportJournalRecovery.hasExistingJobDirectory(at: root, fileManager: fileManager)) == true else { return }
@@ -1553,7 +1554,7 @@ final class IPhoneDirectExportCoordinator {
     }
 
     private func validatedSuccessorExpiryCreationDate(
-        at url: URL, jobID: UUID, kind: AppleDirectJobKind, storage: AppleDirectJobStorage
+        at url: URL, jobID: UUID, kind: AppleDirectJobKind, storage: AppleDirectJobStorage, expiryCutoff: Date
     ) throws -> Date {
         let request: DirectExportRequest
         let accepted: DirectExportAccepted
@@ -1577,6 +1578,9 @@ final class IPhoneDirectExportCoordinator {
                   journal.appleExportEnginePin == journal.settingsSnapshot.appleExportEnginePin,
                   journal.originalCalendarTimeZoneIdentifier == journal.settingsSnapshot.calendarTimeZoneIdentifier else {
                 throw AppleExportJournalRecovery.RecoveryError.unreadableJournal
+            }
+            if journal.request.createdAt <= expiryCutoff {
+                try storage.validateGeneratedArtifacts(journal, in: url.deletingLastPathComponent())
             }
             request = journal.request
             accepted = journal.accepted

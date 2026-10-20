@@ -216,6 +216,7 @@ final class IPhoneDirectFileExportProducer {
                 current.updatedAt = Date()
                 try saveJournal(&current)
             }
+            try validateRetainedArtifacts(current)
             current.state = "transferring"
             current.updatedAt = Date()
             try saveJournal(&current)
@@ -270,6 +271,7 @@ final class IPhoneDirectFileExportProducer {
             }
             do {
                 try completionOwnership.withCheckpointOwnership {
+                    try validateRetainedArtifacts(current)
                     current.state = "completed"
                     current.updatedAt = Date()
                     let shouldRecordCompletion = !current.completionRecorded
@@ -1695,21 +1697,15 @@ final class IPhoneDirectFileExportProducer {
     }
 
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal? {
+        try jobStorage().loadGeneratedJournal(jobID: jobID)
+    }
+
+    private func validateRetainedArtifacts(_ journal: IPhoneDirectFileJournal) throws {
         let storage = try jobStorage()
-        guard let (namespace, directory) = try storage.existingDirectory(jobID: jobID, kind: .files) else { return nil }
-        let saved: (journal: IPhoneDirectFileJournal, checkpoint: AppleExportJournalCheckpoint)? =
-            try AppleExportJournalRecovery.loadOwned(
-                at: directory.appendingPathComponent("journal.json"),
-                lockURL: storage.lock(namespace), durabilityRoot: storage.support, fileManager: fileManager,
-                attributes: [.posixPermissions: 0o600,
-                    .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
-                legacyCompletionIdentity: { $0.request.jobID },
-                isSupported: { journal in journal.request.jobID == jobID && IPhoneDirectFileJournal.isSupportedVersion(journal.version)
-                    && (try? storage.namespace(for: journal.settingsSnapshot)) == namespace
-                    && (namespace != .wakeDate || journal.appleExportEnginePin == journal.settingsSnapshot.appleExportEnginePin) })
-        guard var saved else { return nil }
-        saved.journal.checkpoint = saved.checkpoint
-        return saved.journal
+        guard try storage.namespace(for: journal.settingsSnapshot) == .wakeDate else { return }
+        let directory = try storage.boundDirectory(jobID: journal.request.jobID, kind: .files,
+            snapshot: journal.settingsSnapshot, checkpoint: journal.checkpoint).1
+        try storage.validateGeneratedArtifacts(journal, in: directory)
     }
 
     private func decodeCapturedPayload(
