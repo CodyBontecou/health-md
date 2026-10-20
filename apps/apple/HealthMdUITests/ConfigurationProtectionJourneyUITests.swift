@@ -275,10 +275,10 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         // With the migrated single Default profile, Delete is additionally
         // disabled by the last-profile guard, so tapping it must present
         // neither the confirmation dialog nor mutate anything.
-        let delete = app.buttons["Delete Profile…"]
-        XCTAssertTrue(scrollUntilVisible(delete, in: app), "The disabled Delete action should be visible")
-        XCTAssertFalse(delete.isEnabled, "The last remaining profile must not be deletable")
-        delete.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let disabledDelete = app.buttons["Delete Profile…"]
+        XCTAssertTrue(scrollUntilVisible(disabledDelete, in: app), "The disabled Delete action should be visible")
+        XCTAssertFalse(disabledDelete.isEnabled, "The last remaining profile must not be deletable")
+        disabledDelete.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertFalse(app.staticTexts["Delete this profile?"].waitForExistence(timeout: 1))
     }
 
