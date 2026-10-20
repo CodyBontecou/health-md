@@ -542,7 +542,8 @@ enum HealthMdRenderInputAdapter {
             let cell = encoded.replacingOccurrences(of: "|", with: "\\u007c")
                 .replacingOccurrences(of: "`", with: "\\u0060").replacingOccurrences(of: "<", with: "\\u003c")
                 .replacingOccurrences(of: ">", with: "\\u003e").replacingOccurrences(of: "&", with: "\\u0026")
-            lines.append("| \(cell) |")
+            // A literal code span keeps JSON escapes intact in rendered/copyable Markdown.
+            lines.append("| `\(cell)` |")
         }
         return ["output_keys": samples.isEmpty ? [] : [try requireNativeDetailOwner(owner)], "csv_rows": rows,
             "markdown_blocks": samples.isEmpty ? [] : [["heading": "State of Mind Details", "lines": lines, "ordinal": 0]],

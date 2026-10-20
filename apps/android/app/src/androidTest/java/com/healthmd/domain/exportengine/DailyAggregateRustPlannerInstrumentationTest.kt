@@ -58,7 +58,14 @@ class DailyAggregateRustPlannerInstrumentationTest {
                 assertTrue(!text.contains("mutated-source"))
                 if (item.relativePath.endsWith(".csv")) assertTrue(text.contains(",Native Detail,Mindfulness Record,"))
                 if (item.relativePath.endsWith("-bases.md")) assertTrue(text.contains("native_mindfulness_details:"))
-                else if (item.relativePath.endsWith(".md")) assertTrue(text.contains("Mindfulness Session Details"))
+                else if (item.relativePath.endsWith(".md")) {
+                    assertTrue(text.contains("Mindfulness Session Details"))
+                    val row = text.lineSequence().single { it.startsWith("| `{") }
+                    assertTrue(row.endsWith("}` |"))
+                    val sample = org.json.JSONObject(row.removePrefix("| `").removeSuffix("` |")).getJSONObject("sample")
+                    assertEquals(session.notes, sample.getString("notes"))
+                    assertEquals(session.title, sample.getString("title"))
+                }
             }
         }
     }

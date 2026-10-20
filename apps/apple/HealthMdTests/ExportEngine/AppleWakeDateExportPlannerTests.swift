@@ -39,7 +39,16 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
                 XCTAssertTrue(text.contains("622C563B-D30C-4C45-A02B-20E45894377A"))
                 XCTAssertTrue(text.contains("mind, source"))
                 if artifact.format == .csv { XCTAssertTrue(text.contains(",Native Detail,Mindfulness Record,")) }
-                if artifact.format == .markdown { XCTAssertTrue(text.contains("State of Mind Details")) }
+                if artifact.format == .markdown {
+                    XCTAssertTrue(text.contains("State of Mind Details"))
+                    let row = try XCTUnwrap(text.components(separatedBy: "\n").first { $0.hasPrefix("| `{") })
+                    XCTAssertTrue(row.hasSuffix("}` |"))
+                    let json = String(row.dropFirst(3).dropLast(3))
+                    let record = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+                    let sample = try XCTUnwrap(record["sample"] as? [String: Any])
+                    XCTAssertEqual(sample["labels"] as? [String], entry.labels)
+                    XCTAssertEqual(sample["metadata"] as? [String: String], entry.metadata)
+                }
                 if artifact.format == .obsidianBases { XCTAssertTrue(text.contains("native_mindfulness_details:")) }
                 if artifact.format == .json {
                     let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: artifact.artifact.inlineData) as? [String: Any])

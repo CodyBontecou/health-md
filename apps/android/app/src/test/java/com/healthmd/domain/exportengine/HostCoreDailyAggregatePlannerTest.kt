@@ -83,7 +83,14 @@ class HostCoreDailyAggregatePlannerTest {
                 assertThat(text).doesNotContain("mutated")
                 if (item.relativePath.endsWith(".csv")) assertThat(text).contains(",Native Detail,Mindfulness Record,")
                 if (item.relativePath.endsWith("-bases.md")) assertThat(text).contains("native_mindfulness_details:")
-                else if (item.relativePath.endsWith(".md")) assertThat(text).contains("Mindfulness Session Details")
+                else if (item.relativePath.endsWith(".md")) {
+                    assertThat(text).contains("Mindfulness Session Details")
+                    val row = text.lineSequence().single { it.startsWith("| `{") }
+                    assertThat(row).endsWith("}` |")
+                    val record = kotlinx.serialization.json.Json.parseToJsonElement(row.removePrefix("| `").removeSuffix("` |")).jsonObject
+                    val sample = record.getValue("sample").jsonObject
+                    assertThat(sample.getValue("notes").jsonPrimitive.content).isEqualTo(request.data.mindfulness.sessions.single().notes)
+                }
                 System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { directory ->
                     val output = File(directory, "android-v6-mindfulness-$includeMetadata/${item.relativePath}")
                     val parent = checkNotNull(output.parentFile)

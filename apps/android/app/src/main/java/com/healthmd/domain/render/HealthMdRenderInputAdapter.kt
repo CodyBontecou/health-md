@@ -527,8 +527,8 @@ object HealthMdRenderInputAdapter {
                 if (records.isNotEmpty()) add(buildJsonObject {
                     put("heading", "Mindfulness Session Details")
                     val lines = listOf("| Native Record (JSON) |", "|---|") + records.map { record ->
-                        "| " + record.replace("|", "\\u007c").replace("`", "\\u0060")
-                            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + " |"
+                        "| `" + record.replace("|", "\\u007c").replace("`", "\\u0060")
+                            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + "` |"
                     }
                     put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
                 })
