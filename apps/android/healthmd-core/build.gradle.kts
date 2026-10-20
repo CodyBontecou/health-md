@@ -48,6 +48,7 @@ val rustSourceInputs = fileTree(rustWorkspace) {
     include("crates/**/*.json")
     include("xtask/**/*.rs")
     include("xtask/**/*.toml")
+    include("vendor/**")
     exclude("target/**")
 }
 
