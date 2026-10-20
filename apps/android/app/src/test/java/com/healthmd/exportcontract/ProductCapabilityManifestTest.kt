@@ -46,6 +46,7 @@ class ProductCapabilityManifestTest {
                 "export.range-summary",
                 "setup.share-portable-configuration",
                 "settings.sleep-attribution",
+                "support.local-reporting-fallback",
             ),
             idsWithState(states, "planned"),
         )
@@ -161,6 +162,7 @@ class ProductCapabilityManifestTest {
             "account.myself_lifetime_claim",
             "core.shared-rust-profile-engine",
             "settings.sleep-attribution",
+            "support.local-reporting-fallback",
         )
     }
 }
