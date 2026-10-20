@@ -398,6 +398,55 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
     #endif
 
+    func testNativeCatalogSampleRejectsEventsAcrossSuspensionAndWorkerAdmission() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()
+        let initial = try lifecycle.observe(facts, sampledDuring: lifecycle.beginSample())
+        let store = rig.store
+        let first = try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: rig.peer,
+            existingDirectory: rig.directory, sample: initial, loadStore: { _ in store })
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        let sampling = try lifecycle.beginSample()
+        await Task.yield() // A native event may arrive while SDK metadata is suspended.
+        try lifecycle.observeNativeChange()
+        XCTAssertThrowsError(try lifecycle.observe(facts, sampledDuring: sampling)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        let accepted = try lifecycle.observe(facts, sampledDuring: lifecycle.beginSample())
+        try lifecycle.observeNativeChange() // Event after sample acceptance, before worker admission.
+        do {
+            _ = try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: rig.peer,
+                existingDirectory: rig.directory, sample: accepted, loadStore: { _ in store })
+            XCTFail("Stale sampled generation returned a publication")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertThrowsError(try lifecycle.currentPublication())
+        let fresh = try lifecycle.observe(facts, sampledDuring: lifecycle.beginSample())
+        let next = try await AgentBridgeNativeCatalogPublisher.publish(lifecycle: lifecycle, peer: rig.peer,
+            existingDirectory: rig.directory, sample: fresh, loadStore: { _ in store })
+        XCTAssertGreaterThan(next.revision, first.revision)
+    }
+
+    func testNativeCatalogSampleBindsExactOwnerAndChangedFactsGeneration() throws {
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), other = AgentBridgeNativeCatalogLifecycle()
+        let ticket = try lifecycle.beginSample(), facts = try nativeState()
+        XCTAssertThrowsError(try other.observe(facts, sampledDuring: ticket)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        _ = try lifecycle.observe(facts, sampledDuring: ticket)
+        let preceding = try lifecycle.beginSample()
+        _ = try lifecycle.observe(nativeState(zone: "UTC"), sampledDuring: preceding)
+        XCTAssertThrowsError(try lifecycle.observe(facts, sampledDuring: preceding)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        let stopped = try lifecycle.beginSample()
+        lifecycle.stop()
+        XCTAssertThrowsError(try lifecycle.observe(facts, sampledDuring: stopped)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        XCTAssertThrowsError(try lifecycle.beginSample())
+    }
+
     func testNativeCatalogWorkerPublishesOffMainAndPreservesUnchangedGeneration() async throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()

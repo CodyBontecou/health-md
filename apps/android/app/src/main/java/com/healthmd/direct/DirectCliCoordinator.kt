@@ -308,15 +308,18 @@ class DirectCliCoordinator @Inject constructor(
 
     /** Native controller only. Facts are sampled outside requests; no creating SDK store getter. */
     internal suspend fun publishAgentBridgeNativeCatalog(context: android.content.Context,
-        facts: AgentBridgeNativePlanningFacts): AgentBridgeNativeCatalogPublication {
+        sample: suspend () -> AgentBridgeNativePlanningFacts): AgentBridgeNativeCatalogPublication {
         val caller = currentCoroutineContext()
         caller.ensureActive()
         val original = agentBridgeNativePlanningOwner(context)
         val originalPeer = original.first.requireCurrent()
         caller.ensureActive()
-        original.second.observe(facts)
+        val started = original.second.beginSample()
         try {
-            val publication = AgentBridgeNativeCatalogPublisher.publish(original.second, original.first) {
+            val facts = sample()
+            caller.ensureActive()
+            val accepted = original.second.observe(facts, started)
+            val publication = AgentBridgeNativeCatalogPublisher.publish(original.second, original.first, accepted) {
                 AgentBridgeExportAuthorityStore.forNoBackup(context)
             }
             caller.ensureActive()

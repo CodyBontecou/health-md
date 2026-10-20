@@ -5,6 +5,12 @@ import HealthMdConnectionCore
 /// The native owner records metadata before scheduling publication; readers reject until that exact
 /// observation has committed. SDK event registration and owner cancellation remain separate work.
 nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
+    /// Native-only ticket: binds a suspended metadata sample to this exact owner/generation.
+    struct Sample: Sendable {
+        fileprivate let owner: UUID
+        fileprivate let generation: UInt64
+    }
+    private let identity = UUID()
     private let lock = NSLock()
     private let publisher = NSLock()
     private var facts: AgentBridgeNativePlanningFacts?
@@ -16,6 +22,29 @@ nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
     private var observedChange = true
     private var stopped = false
     private var exhausted = false
+
+    func beginSample() throws -> Sample {
+        try lock.withLock { try requireAvailable(); return Sample(owner: identity, generation: generation) }
+    }
+
+    /// A notification during SDK suspension rejects even when sampled facts return to A.
+    func observe(_ value: AgentBridgeNativePlanningFacts, sampledDuring sample: Sample) throws -> Sample {
+        try lock.withLock {
+            try requireSample(sample)
+            if facts != value {
+                if facts != nil { try advance() }
+                facts = value
+            }
+            return Sample(owner: identity, generation: generation)
+        }
+    }
+
+    private func requireSample(_ sample: Sample) throws {
+        try requireAvailable()
+        guard sample.owner == identity, sample.generation == generation else {
+            throw AgentBridgeValidationError.bindingChanged
+        }
+    }
 
     /// Initial metadata is not an observed transition. Subsequent unequal samples invalidate reads
     /// immediately, even before a worker starts the filesystem transaction.
@@ -60,12 +89,13 @@ nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
     /// and no native consent is implied. Concurrent publishers reject instead of queueing stale work.
     @discardableResult
     func publish(to store: AgentBridgeExportAuthorityStore, sourceInstallationID: AgentBridgeUUID,
-                 requireOwner: () throws -> Void = {}) throws -> AgentBridgeNativeCatalogPublication {
+                 sample: Sample? = nil, requireOwner: () throws -> Void = {}) throws -> AgentBridgeNativeCatalogPublication {
         guard publisher.try() else { throw AgentBridgeValidationError.busy }
         defer { publisher.unlock() }
         try requireOwner()
         let captured = try lock.withLock { () throws -> (UInt64, Bool, AgentBridgeNativePlanningFacts) in
             try requireAvailable()
+            if let sample { try requireSample(sample) }
             guard let facts else { throw AgentBridgeValidationError.bindingChanged }
             return (generation, observedChange, facts)
         }

@@ -492,14 +492,17 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     /// Native controller only: caller supplies freshly sampled non-wire facts. Publication runs on
     /// a cancellable worker and never bootstraps missing private storage or native export authority.
-    func publishAgentBridgeNativeCatalog(_ facts: AgentBridgeNativePlanningFacts) async throws -> AgentBridgeNativeCatalogPublication {
+    func publishAgentBridgeNativeCatalog(sample: () async throws -> AgentBridgeNativePlanningFacts) async throws -> AgentBridgeNativeCatalogPublication {
         try Task.checkCancellation()
         let original = try agentBridgeNativePlanningOwner()
-        try original.lifecycle.observe(facts)
+        let started = try original.lifecycle.beginSample()
         do {
+            let facts = try await sample()
+            try Task.checkCancellation()
+            let accepted = try original.lifecycle.observe(facts, sampledDuring: started)
             let directory = try AgentExportPermissionsStorage.directory(createParent: false)
             let publication = try await AgentBridgeNativeCatalogPublisher.publish(
-                lifecycle: original.lifecycle, peer: original.peer, existingDirectory: directory)
+                lifecycle: original.lifecycle, peer: original.peer, existingDirectory: directory, sample: accepted)
             try Task.checkCancellation()
             let current = try agentBridgeNativePlanningOwner()
             guard current.lifecycle === original.lifecycle, current.peer.peer == original.peer.peer else {

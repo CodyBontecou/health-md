@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
  * key/store/grant creation, wire route or detached/unowned coroutine is introduced here. */
 internal object AgentBridgeNativeCatalogPublisher {
     suspend fun publish(lifecycle: AgentBridgeNativeCatalogLifecycle, peer: AgentBridgeExportAuthenticatedPeer,
-        loadStore: () -> AgentBridgeExportAuthorityStore): AgentBridgeNativeCatalogPublication {
+        sample: AgentBridgeNativeCatalogLifecycle.Sample? = null, loadStore: () -> AgentBridgeExportAuthorityStore): AgentBridgeNativeCatalogPublication {
         val caller = currentCoroutineContext()
         caller.ensureActive()
         try {
@@ -28,7 +28,7 @@ internal object AgentBridgeNativeCatalogPublisher {
                     caller.ensureActive()
                 }
                 val store = loadStore()
-                lifecycle.publish(store, original.sourceInstallationId, ::requireOwner) to original
+                lifecycle.publish(store, original.sourceInstallationId, ::requireOwner, sample) to original
             }
             caller.ensureActive()
             if (peer.requireCurrent() != original) fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)

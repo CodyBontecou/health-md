@@ -8,6 +8,8 @@ import java.util.concurrent.locks.ReentrantLock
  * reject until that exact observation commits. Does not register SDK events, spawn unowned tasks,
  * initialize stores/keys, or grant consent. Fresh SDK sampling remains the native owner's duty. */
 internal class AgentBridgeNativeCatalogLifecycle {
+    /** Native-only ticket, retaining exact owner identity across suspended SDK sampling. */
+    class Sample internal constructor(internal val owner: AgentBridgeNativeCatalogLifecycle, internal val generation: Long)
     private val lock = Any()
     private val publisher = ReentrantLock()
     private var facts: AgentBridgeNativePlanningFacts? = null
@@ -19,6 +21,18 @@ internal class AgentBridgeNativeCatalogLifecycle {
     private var observedChange = true
     private var stopped = false
     private var exhausted = false
+
+    fun beginSample(): Sample = synchronized(lock) {
+        requireAvailable()
+        Sample(this, generation)
+    }
+
+    fun observe(value: AgentBridgeNativePlanningFacts, sampledDuring: Sample): Sample = synchronized(lock) {
+        requireAvailable()
+        if (sampledDuring.owner !== this || sampledDuring.generation != generation) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        observe(value)
+        Sample(this, generation)
+    }
 
     fun observe(value: AgentBridgeNativePlanningFacts) = synchronized(lock) {
         requireAvailable()
@@ -51,13 +65,14 @@ internal class AgentBridgeNativeCatalogLifecycle {
 
     /** The native owner calls on a worker; the real store enforces the main-looper rejection. */
     fun publish(store: AgentBridgeExportAuthorityStore, sourceInstallationId: String,
-        requireOwner: () -> Unit = {}): AgentBridgeNativeCatalogPublication {
+        requireOwner: () -> Unit = {}, sample: Sample? = null): AgentBridgeNativeCatalogPublication {
         // ReentrantLock.tryLock alone admits same-thread recursion; reject that explicitly too.
         if (publisher.isHeldByCurrentThread || !publisher.tryLock()) fail(AgentBridgeErrorCode.BUSY)
         try {
             requireOwner()
             val captured = synchronized(lock) {
                 requireAvailable()
+                if (sample != null && (sample.owner !== this || sample.generation != generation)) fail(AgentBridgeErrorCode.BINDING_CHANGED)
                 Triple(generation, observedChange, facts ?: fail(AgentBridgeErrorCode.BINDING_CHANGED))
             }
             val publication = store.publishNativeCatalog(sourceInstallationId, captured.second) {

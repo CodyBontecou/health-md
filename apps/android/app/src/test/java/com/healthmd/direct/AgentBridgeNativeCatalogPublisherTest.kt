@@ -36,6 +36,49 @@ class AgentBridgeNativeCatalogPublisherTest {
         peer.checks.get()
     }
 
+    @Test fun sampleRejectsEventsAcrossSuspensionAndWorkerAdmission() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f)
+            val peer = WorkerPeer(f.peer)
+            val first = AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+            val facts = lifecycle.currentFacts()
+            val file = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val before = Files.readAllBytes(file)
+            val sampling = lifecycle.beginSample()
+            yield()
+            lifecycle.observeNativeChange()
+            expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.observe(facts, sampling) }
+            val accepted = lifecycle.observe(facts, lifecycle.beginSample())
+            lifecycle.observeNativeChange()
+            expect(AgentBridgeErrorCode.BINDING_CHANGED) {
+                AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer, accepted) { f.store }
+            }
+            assertThat(Files.readAllBytes(file)).isEqualTo(before)
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentPublication() }
+            val fresh = lifecycle.observe(facts, lifecycle.beginSample())
+            val next = AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer, fresh) { f.store }
+            assertThat(next.revision).isGreaterThan(first.revision)
+        }
+    }
+
+    @Test fun sampleBindsExactOwnerAndChangedFactsGeneration() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f)
+            AgentBridgeNativeCatalogPublisher.publish(lifecycle, WorkerPeer(f.peer)) { f.store }
+            val facts = lifecycle.currentFacts()
+            val ticket = lifecycle.beginSample()
+            expect(AgentBridgeErrorCode.BINDING_CHANGED) { AgentBridgeNativeCatalogLifecycle().observe(facts, ticket) }
+            lifecycle.observe(facts.copy(sourceCalendarTimezone = "Europe/London"), ticket)
+            expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.observe(facts, ticket) }
+            val stopped = lifecycle.beginSample()
+            lifecycle.stop()
+            expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.observe(facts, stopped) }
+            expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.beginSample() }
+        }
+    }
+
     @Test fun workerUsesExistingStoreOffMainAndPreservesUnchangedPublication() = runBlocking {
         AgentBridgeExportPlanningFixture().use { f ->
             f.store.initialize(f.native)

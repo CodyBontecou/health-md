@@ -5,7 +5,7 @@ import HealthMdConnectionCore
 /// cancellation to the actual worker. No wire route, key/grant creation, metadata or health sampling.
 nonisolated enum AgentBridgeNativeCatalogPublisher {
     static func publish(lifecycle: AgentBridgeNativeCatalogLifecycle, peer: AgentBridgeExportAuthenticatedPeer,
-                        existingDirectory: URL,
+                        existingDirectory: URL, sample: AgentBridgeNativeCatalogLifecycle.Sample? = nil,
                         loadStore: @escaping @Sendable (URL) throws -> AgentBridgeExportAuthorityStore = {
                             try AgentBridgeExportAuthorityStore(existingDirectory: $0)
                         }) async throws -> AgentBridgeNativeCatalogPublication {
@@ -14,7 +14,7 @@ nonisolated enum AgentBridgeNativeCatalogPublisher {
             try Task.checkCancellation()
             try peer.requireCurrent()
             let store = try loadStore(existingDirectory)
-            return try lifecycle.publish(to: store, sourceInstallationID: peer.peer.sourceInstallationID) {
+            return try lifecycle.publish(to: store, sourceInstallationID: peer.peer.sourceInstallationID, sample: sample) {
                 try Task.checkCancellation()
                 try peer.requireCurrent()
                 try Task.checkCancellation()
