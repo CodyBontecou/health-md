@@ -24,6 +24,7 @@ PROJECT_PATH = APPLE_ROOT / "HealthMd.xcodeproj/project.pbxproj"
 MAC_ROOT = APPLE_ROOT / "HealthMd/macOS"
 SHARED_MAC_DISPLAY = (
     APPLE_ROOT / "HealthMd/Shared/Theme/DesignSystem.swift",
+    APPLE_ROOT / "HealthMd/Shared/Utilities/FeedbackReporter.swift",
     APPLE_ROOT / "HealthMd/Shared/Views/ExportPreviewView.swift",
     APPLE_ROOT / "HealthMd/Shared/Views/ExportFormatHelpSheet.swift",
     APPLE_ROOT / "HealthMd/Shared/Export/ExportRolloutCopy.swift",
