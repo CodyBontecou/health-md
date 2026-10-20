@@ -36,6 +36,38 @@ jobs to pass and rejects missing selection outputs or selected skips. The Rust
 artifact preparation job runs whenever an Xcode test job needs it. Main/testing
 pushes, manual runs, and reusable/exact-SHA qualification retain every job.
 
+### Apple critical-path execution
+
+All five Rust targets (iOS device, both iOS Simulator architectures, and both
+macOS architectures) compile in parallel with the unchanged pinned release
+profile. Each archive is paired with a source digest, commit, toolchain and byte
+hash receipt. The preparation job requires the complete five-slice inventory,
+checks generated bindings, assembles the same three-platform XCFramework and
+runs the existing architecture/symbol validator. Exact-source archive and
+XCFramework caches include the active Xcode/SDK fingerprint; nightly uses the
+same complete-artifact key and still validates source/bindings on cache hits.
+
+iOS unit and UI jobs begin booting the selected compatible simulator before
+compilation. They compile only the architecture on which tests actually execute
+and disable the unused compiler index store. The native XCFramework still
+contains all five previously qualified target architectures. Test results are
+never restored from a cache.
+
+The existing fourteen main/PR UI selectors run across three independent hosted
+lanes. Entire XCTest classes remain together to preserve shared fixture state.
+Each lane builds and qualifies fresh app/runner/test products, executes one
+`test-without-building` invocation, and checks both the authoritative xcresult
+case tree and summary against its exact selection. Missing, duplicate, failed,
+skipped or unexpected cases fail qualification. The stable `iOS UI regressions`
+aggregate requires all three current-run/source receipts, preserving both that
+job name and the final `Apple CI` context. Compile/runtime warning gates, raw
+logs and xcresults remain mandatory. Fail-fast is disabled.
+
+These changes trade additional simultaneous runners for a shorter critical
+path; they do not remove test coverage or claim a fixed hosted-runner speedup.
+Compare cold/warm execution separately from dependency wait, queue time and
+summed runner work. F-Droid and Android Wear remain paused as described below.
+
 ## Android CI selection and accessibility coverage
 
 On pull requests, `apps/android/scripts/android-ci-plan.py` selects the active Android
@@ -58,9 +90,12 @@ or changing results run every active job. Selected jobs must succeed; a skipped
 job is accepted only when its selection output explicitly says `false`. The policy
 job's listing validator discovers every `scripts/tests/test_*.py`.
 
-Phone instrumentation retains four hosted shards. Shard zero also runs the core
+Phone instrumentation uses six hosted shards with the same complete Play test inventory. Shard zero also runs the core
 suite and direct E2E; every shard runs the native-input readiness check using Play.
 The stable instrumentation gate validates the combined Play/core/E2E XML inventory.
+APK preparation reuses compilation outputs through the existing safe Gradle wrapper;
+requested Test tasks still execute freshly. Six workers trade more runner minutes
+for shorter device-test execution; hosted cache and queue evidence determine actual savings.
 Local runs remain unsharded unless shard index/count are explicitly supplied.
 
 Instrumentation runs every core and Play test method with the full ten-display
