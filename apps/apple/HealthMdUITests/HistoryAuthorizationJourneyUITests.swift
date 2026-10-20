@@ -184,7 +184,22 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
             if safelyVisible && element.isHittable { return }
             guard visible.height > 44 else { break }
             let above = exists && center.y < visible.minY
-            let pickers = scroll.datePickers.allElementsBoundByIndex.map(\.frame)
+            // Both native roots expose the selected preset as an AX trait. A
+            // non-custom preset has no date pickers; enumerating its virtual
+            // DatePicker descendants stalled the actual large-text iPad query.
+            let custom = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
+            let pickers: [CGRect]
+            // A virtualized preset may be absent from AX. In that case retain
+            // the two exact picker checks; skip them only for known non-Custom.
+            if !custom.exists || custom.isSelected {
+                pickers = [UITestLaunchHelper.Export.customStartDatePicker,
+                           UITestLaunchHelper.Export.customEndDatePicker].compactMap { identifier in
+                    let picker = app.datePickers[identifier]
+                    return picker.exists ? picker.frame : nil
+                }
+            } else {
+                pickers = []
+            }
             let preferredY = visible.minY + visible.height * (above ? 0.25 : 0.75)
             // Querying every virtual StaticText costs one remote AX snapshot
             // per node. This consumed the pending phone fixture's lifetime and
