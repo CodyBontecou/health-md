@@ -131,9 +131,11 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             // they omit this new fixture. The default remains unknown, never full.
             let fixture = ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] ?? "unknown"
             if fixture == "pending" {
-                // Synthetic latency path only. Production cancellation is not
-                // assumed to bound HealthKit's metadata operation.
-                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                // Keep this explicit pending fixture pending beyond the UI lane's
+                // 300-second maximum test allowance. A 30-second completion raced
+                // native scrolling and removed Continue before the test could tap it.
+                // Production cancellation is not assumed to bound HealthKit work.
+                try? await Task.sleep(nanoseconds: 600_000_000_000)
                 return .boundaries([:])
             }
             switch fixture {
