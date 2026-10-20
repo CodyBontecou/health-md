@@ -15,6 +15,9 @@ import com.healthmd.domain.model.WriteMode
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,6 +25,48 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class DailyAggregateRustPlannerInstrumentationTest {
+    @Test
+    fun packagedCoreKeepsCompleteSleepStageAndParentRecordsInMarkdown() = runBlocking {
+        val zone = ZoneId.of("America/New_York")
+        val capture = com.healthmd.domain.model.AndroidCaptureContext(zone, com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val start = java.time.Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = java.time.Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val from = start.atZone(zone).toLocalDateTime()
+        val to = end.atZone(zone).toLocalDateTime()
+        val duration = kotlin.time.Duration.parse("3600.864197532s")
+        val exactStart = com.healthmd.domain.model.ExactSourceTimestamp.from(start, java.time.ZoneOffset.of("-04:00"))
+        val exactEnd = com.healthmd.domain.model.ExactSourceTimestamp.from(end, java.time.ZoneOffset.of("-05:00"))
+        val stage = com.healthmd.domain.model.SleepStageEntry(from, to, "light", exactStartTime = exactStart,
+            exactEndTime = exactEnd, identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-device-stage"))
+        val parent = com.healthmd.domain.model.SleepSessionEntry(from, to, title = "Synthetic | ` <session> &",
+            notes = "quoted \"note\"", metadata = mapOf("synthetic" to "native source"),
+            exactStartTime = exactStart, exactEndTime = exactEnd,
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-device-parent"))
+        val day = HealthData(LocalDate.of(2026, 11, 1), sleep = com.healthmd.domain.model.SleepData(
+            totalDuration = duration, lightSleep = duration, inBedTime = duration,
+            sessionStart = from, sessionEnd = to, stages = listOf(stage), sessions = listOf(parent)))
+        for (metadata in listOf(false, true)) {
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+                includeMetadata = metadata,
+                metricSelection = com.healthmd.domain.model.MetricSelectionState(enabledMetrics = setOf("sleep_total", "sleep_light", "sleep_in_bed")),
+                executionSleepCaptureContext = capture, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(day, settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("sleep-records-$metadata", "sleep-records-session-$metadata"))
+            val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+            assertEquals(4, plan.items.size)
+            val source = Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString())
+                .jsonObject.getValue("sleep").jsonObject
+            val markdown = plan.items.single { it.relativePath.endsWith(".md") && !it.relativePath.endsWith("-bases.md") }.content.decodeToString()
+            val records = markdown.lineSequence().filter { it.contains("| `{") }.map { row ->
+                val cell = row.split('|').dropLast(1).last().trim()
+                check(cell.startsWith("`{") && cell.endsWith("}`"))
+                Json.parseToJsonElement(cell.removeSurrounding("`")).jsonObject
+            }.toList()
+            assertEquals(source.getValue("sleepStages").jsonArray.toList(), records.filter { "stage" in it })
+            assertEquals(source.getValue("sleepSessions").jsonArray.toList(), records.filter { "startTimeISO" in it })
+        }
+    }
+
     @Test
     fun packagedCoreKeepsFrozenMindfulnessSessionsAcrossEveryFormat() = runBlocking {
         val zone = ZoneId.of("America/New_York")

@@ -498,6 +498,10 @@ object HealthMdRenderInputAdapter {
         listOf("vitals", "bloodOxygenSamples"), listOf("vitals", "bloodGlucoseSamples"), listOf("vitals", "respiratoryRateSamples"), listOf("vitals", "bloodPressureSamples"),
         listOf("activity", "stepSamples"), listOf("activity", "activityIntensity"), listOf("mindfulness", "sessions"))
 
+    private fun nativeJsonCodeCell(encoded: String): String = "`" +
+        encoded.replace("|", "\\u007c").replace("`", "\\u0060")
+            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + "`"
+
     private fun mindfulnessDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
         val samples = root["mindfulness"]?.jsonObject?.get("sessions")?.jsonArray ?: JsonArray(emptyList())
         val owner = listOf("mindful_minutes", "mindful_sessions").firstOrNull(selected::contains)
@@ -527,8 +531,7 @@ object HealthMdRenderInputAdapter {
                 if (records.isNotEmpty()) add(buildJsonObject {
                     put("heading", "Mindfulness Session Details")
                     val lines = listOf("| Native Record (JSON) |", "|---|") + records.map { record ->
-                        "| `" + record.replace("|", "\\u007c").replace("`", "\\u0060")
-                            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + "` |"
+                        "| ${nativeJsonCodeCell(record)} |"
                     }
                     put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
                 })
@@ -571,7 +574,7 @@ object HealthMdRenderInputAdapter {
                 put("value", encoded); put("unit", "json"); put("timestamp", start); put("ordinal", rows.size)
             }
             yaml += "  - $encoded"
-            lines += "| ${encoded.replace("|", "\\u007c")} |"
+            lines += "| ${nativeJsonCodeCell(encoded)} |"
         }
         return buildJsonObject {
             put("output_keys", JsonArray(if (workouts.isEmpty()) emptyList() else listOf(JsonPrimitive(owner))))
@@ -693,8 +696,7 @@ object HealthMdRenderInputAdapter {
                     put("heading", "Activity Record Details")
                     // Keep source JSON readable and reversible inside a Markdown cell.
                     val lines = listOf("| Native Record (JSON) |", "|---|") + records.map { record ->
-                        "| " + record.replace("|", "\\u007c").replace("`", "\\u0060")
-                            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + " |"
+                        "| ${nativeJsonCodeCell(record)} |"
                     }
                     put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
                 })
@@ -750,7 +752,7 @@ object HealthMdRenderInputAdapter {
             "unknown" to "sleep_total_hours")
         val keys = mutableSetOf<String>()
         val rows = mutableListOf<JsonObject>()
-        val lines = mutableListOf("| Start (UTC) | End (UTC) | Stage |", "|---|---|---|")
+        val lines = mutableListOf("| Start (UTC) | End (UTC) | Stage | Native Record (JSON) |", "|---|---|---|---|")
         val yaml = mutableListOf<String>()
         stages.forEachIndexed { ordinal, element ->
             val stage = element.jsonObject
@@ -766,7 +768,7 @@ object HealthMdRenderInputAdapter {
                 put("date", ownerDate); put("category", "Sleep Detail"); put("metric", "Sleep Stage")
                 put("value", value); put("unit", "seconds"); put("timestamp", start); put("ordinal", ordinal)
             }
-            lines += "| $start | $end | $name |"
+            lines += "| $start | $end | $name | ${nativeJsonCodeCell(value)} |"
             yaml += "  - $value"
         }
         val markdownBlocks = mutableListOf<JsonObject>()
@@ -788,7 +790,7 @@ object HealthMdRenderInputAdapter {
             val key = listOf("sleep_total_hours", "sleep_in_bed_hours").firstOrNull { it in selectedOutputKeys }
                 ?: throw AdapterException("wake-date native session selection is incompatible")
             keys += key
-            val sessionLines = mutableListOf("| Start (UTC) | End (UTC) |", "|---|---|")
+            val sessionLines = mutableListOf("| Start (UTC) | End (UTC) | Native Record (JSON) |", "|---|---|---|")
             val sessionYaml = mutableListOf<String>()
             for (element in sessions) {
                 val session = element.jsonObject
@@ -807,7 +809,7 @@ object HealthMdRenderInputAdapter {
                     put("timestamp", start)
                     put("ordinal", ordinal)
                 }
-                sessionLines += "| $start | $end |"
+                sessionLines += "| $start | $end | ${nativeJsonCodeCell(value)} |"
                 sessionYaml += "  - $value"
             }
             addBlocks("Sleep Session Details", "sleep_session_details", sessionLines, sessionYaml, 1)

@@ -742,7 +742,7 @@ class HostCoreDailyAggregatePlannerTest {
         coEvery { client.readRecords(any<ReadRecordsRequest<SleepSessionRecord>>()) } returns ReadRecordsResponse(listOf(
             SleepSessionRecord(startTime = start, startZoneOffset = ZoneOffset.of("-04:00"),
                 endTime = end, endZoneOffset = ZoneOffset.of("-05:00"),
-                title = "Synthetic overnight, \"quoted\"", notes = "first line\nsecond line",
+                title = "Synthetic overnight, \"quoted\" | ` <source> &", notes = "first line\nsecond line",
                 metadata = Metadata.manualEntry(clientRecordId = "synthetic-parent-overnight"),
                 stages = listOf(SleepSessionRecord.Stage(start, end, SleepSessionRecord.STAGE_TYPE_LIGHT))),
             SleepSessionRecord(startTime = Instant.parse("2026-11-01T20:00:00.333333333Z"), startZoneOffset = null,
@@ -763,9 +763,9 @@ class HostCoreDailyAggregatePlannerTest {
             com.healthmd.domain.model.UnitConverter(UnitPreference.METRIC), context.zoneId.id, captureContext = context)
         val semantic = core.createSemanticSession(config).use { it.processBatch(batch.bytes) }
         val customization = FormatCustomization()
-        fun encode(candidate: HealthData) = com.healthmd.domain.render.HealthMdRenderInputAdapter.encode(semantic,
+        fun encode(candidate: HealthData, includeMetadata: Boolean = true) = com.healthmd.domain.render.HealthMdRenderInputAdapter.encode(semantic,
             registry, context.zoneId.id, com.healthmd.domain.render.HealthMdRenderInputAdapter.Options(
-                "android-parent-detail", listOf("json", "csv", "markdown", "obsidian_bases"), includeGranularData = true),
+                "android-parent-detail", listOf("json", "csv", "markdown", "obsidian_bases"), includeGranularData = true, includeMetadata = includeMetadata),
             presentationByOwnerDate = mapOf(date.toString() to candidate), presentationCustomization = customization,
             captureContext = context)
         val encoded = encode(data)
@@ -795,6 +795,29 @@ class HostCoreDailyAggregatePlannerTest {
         val native = com.healthmd.data.export.JsonExporter().export(data, customization, true, captureContext = context)
         assertThat(Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()))
             .isEqualTo(Json.parseToJsonElement(native))
+        for (includeMetadata in listOf(false, true)) {
+            val input = encode(data, includeMetadata)
+            val emitted = core.createRenderSession(input.configuration, semantic).use { session ->
+                input.batches.forEach { session.processBatch(it) }; session.finish()
+            }
+            val json = Json.parseToJsonElement(emitted.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).jsonObject
+            val source = json.getValue("sleep").jsonObject
+            val md = emitted.items.single { it.relativePath.endsWith(".md") && !it.relativePath.endsWith("-bases.md") }.content.decodeToString()
+            val records = md.lineSequence().filter { it.contains("| `{") }.map { row ->
+                val cell = row.split('|').dropLast(1).last().trim()
+                check(cell.startsWith("`{") && cell.endsWith("}`"))
+                Json.parseToJsonElement(cell.removeSurrounding("`")).jsonObject
+            }.toList()
+            assertThat(records.filter { "stage" in it }).containsExactlyElementsIn(source.getValue("sleepStages").jsonArray)
+            assertThat(records.filter { "startTimeISO" in it }).containsExactlyElementsIn(source.getValue("sleepSessions").jsonArray)
+            System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf { it.isNotBlank() }?.let { directory ->
+                for (item in emitted.items) {
+                    val output = File(directory, "android-v6-sleep-source-$includeMetadata/${item.relativePath}")
+                    check(output.parentFile!!.mkdirs() || output.parentFile!!.isDirectory)
+                    output.writeBytes(item.content)
+                }
+            }
+        }
         val parentOnly = data.copy(sleep = data.sleep.copy(stages = emptyList()))
         val parentEncoded = encode(parentOnly)
         val parentPlan = core.createRenderSession(parentEncoded.configuration, semantic).use { session ->

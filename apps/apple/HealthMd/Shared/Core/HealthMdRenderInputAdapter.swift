@@ -514,6 +514,13 @@ enum HealthMdRenderInputAdapter {
         ["mindfulness", "stateOfMindEntries"], ["mindfulness", "emotionLabels"], ["mindfulness", "associations"],
     ]
 
+    private static func nativeJSONCodeCell(_ encoded: String) -> String {
+        let escaped = encoded.replacingOccurrences(of: "|", with: "\\u007c")
+            .replacingOccurrences(of: "`", with: "\\u0060").replacingOccurrences(of: "<", with: "\\u003c")
+            .replacingOccurrences(of: ">", with: "\\u003e").replacingOccurrences(of: "&", with: "\\u0026")
+        return "`\(escaped)`"
+    }
+
     private static func mindfulnessDetails(_ root: [String: Any], ownerDate: String,
                                            selectedOutputKeys: [String]) throws -> [String: Any] {
         let samples = (root["mindfulness"] as? [String: Any])?["stateOfMindEntries"] as? [[String: Any]] ?? []
@@ -539,11 +546,7 @@ enum HealthMdRenderInputAdapter {
             rows.append(["date": ownerDate, "category": "Native Detail", "metric": "Mindfulness Record",
                 "value": encoded, "unit": "json", "timestamp": timestamp, "ordinal": rows.count])
             yaml.append("  - \(encoded)")
-            let cell = encoded.replacingOccurrences(of: "|", with: "\\u007c")
-                .replacingOccurrences(of: "`", with: "\\u0060").replacingOccurrences(of: "<", with: "\\u003c")
-                .replacingOccurrences(of: ">", with: "\\u003e").replacingOccurrences(of: "&", with: "\\u0026")
-            // A literal code span keeps JSON escapes intact in rendered/copyable Markdown.
-            lines.append("| `\(cell)` |")
+            lines.append("| \(nativeJSONCodeCell(encoded)) |")
         }
         return ["output_keys": samples.isEmpty ? [] : [try requireNativeDetailOwner(owner)], "csv_rows": rows,
             "markdown_blocks": samples.isEmpty ? [] : [["heading": "State of Mind Details", "lines": lines, "ordinal": 0]],
@@ -599,8 +602,7 @@ enum HealthMdRenderInputAdapter {
             rows.append(["date": ownerDate, "category": "Native Detail", "metric": "Workout",
                 "value": encoded, "unit": "json", "timestamp": start, "ordinal": rows.count])
             yaml.append("  - \(encoded)")
-            // Escaping a pipe as a JSON escape keeps the Markdown table and decoded source object intact.
-            lines.append("| \(encoded.replacingOccurrences(of: "|", with: "\\u007c")) |")
+            lines.append("| \(nativeJSONCodeCell(encoded)) |")
         }
         return ["output_keys": workouts.isEmpty ? [] : [try requireNativeDetailOwner(owner)], "csv_rows": rows,
             "markdown_blocks": workouts.isEmpty ? [] : [["heading": "Workout Details", "lines": lines, "ordinal": 0]],
@@ -690,7 +692,7 @@ enum HealthMdRenderInputAdapter {
                            "inBed": "sleep_in_bed_hours", "unspecified": "sleep_total_hours"]
         var keys = Set<String>()
         var rows: [[String: Any]] = []
-        var lines = ["| Start (UTC) | End (UTC) | Stage |", "|---|---|---|"]
+        var lines = ["| Start (UTC) | End (UTC) | Stage | Native Record (JSON) |", "|---|---|---|---|"]
         var yaml: [String] = []
         for (ordinal, stage) in stages.enumerated() {
             guard let name = stage["stage"] as? String, let key = keysByStage[name],
@@ -701,9 +703,7 @@ enum HealthMdRenderInputAdapter {
             keys.insert(key)
             rows.append(["date": ownerDate, "category": "Sleep Detail", "metric": "Sleep Stage",
                          "value": value, "unit": "seconds", "timestamp": start, "ordinal": ordinal])
-            // Names are the closed native stage identities above; all other source
-            // facts stay in the exact JSON object used by CSV and YAML flow maps.
-            lines.append("| \(start) | \(end) | \(name) |")
+            lines.append("| \(start) | \(end) | \(name) | \(nativeJSONCodeCell(value)) |")
             yaml.append("  - \(value)")
         }
         return ["output_keys": keys.sorted(), "csv_rows": rows,

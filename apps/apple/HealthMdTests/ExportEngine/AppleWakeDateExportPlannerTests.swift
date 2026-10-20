@@ -109,7 +109,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
             CategorySampleValue(value: HKCategoryValueSleepAnalysis.inBed.rawValue, startDate: start, endDate: end),
             CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue,
-                startDate: coreStart, endDate: coreEnd, metadata: ["synthetic": "core, \"quoted\""]),
+                startDate: coreStart, endDate: coreEnd, metadata: ["synthetic": "core, \"quoted\" | ` <source> &"]),
             CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
                 startDate: coreEnd, endDate: end, metadata: ["synthetic": "unspecified-source"]),
         ]
@@ -121,39 +121,51 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             timeZone: zone, includeDetailedTimeSeries: true)
         let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds), sleep: sleep)
         XCTAssertEqual(day.sleep.stages.count, 3)
-        for selection: Set<String> in [["sleep_total", "sleep_core", "sleep_in_bed", "sleep_bedtime", "sleep_wake"], ["sleep_total"]] {
-            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: selection)
-            snapshot.detailPolicy = .detailedTimeSeries
-            let planner = AppleLooseDailyExportPlanner()
-            let resolution = try await planner.plan(healthData: day, settingsSnapshot: snapshot,
-                surface: .localVaultWithoutSideEffects)
-            guard case .planned(let operation) = resolution else { return XCTFail("Captured sleep details must reach the concrete successor planner") }
-            XCTAssertEqual(operation.artifacts.count, 4)
-            let csv = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .csv }).artifact.inlineData, as: UTF8.self)
-            XCTAssertTrue(csv.contains("2026-11-01,Sleep Detail,Sleep Stage,"))
-            XCTAssertTrue(csv.contains("unspecified-source"))
-            XCTAssertTrue(csv.contains("2026-11-01T17:30:00.750000000Z"))
-            let markdown = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .markdown }).artifact.inlineData, as: UTF8.self)
-            XCTAssertTrue(markdown.contains("Sleep Stage Details"))
-            XCTAssertTrue(markdown.contains("| unspecified |"))
-            let bases = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .obsidianBases }).artifact.inlineData, as: UTF8.self)
-            XCTAssertTrue(bases.contains("sleep_stage_details:"))
-            XCTAssertEqual(csv.contains("core,"), selection.contains("sleep_core"))
-            XCTAssertFalse(bases.contains("sleep_session_details:"))
-            let settings = snapshot.makeAdvancedExportSettings(userDefaults: defaults)
-            Self.retainedSettings.append(settings)
-            let prepared = day.preparedExport(settings: settings)
-            XCTAssertEqual(prepared.filteredData.sleep.stages.count, selection.contains("sleep_core") ? 3 : 1)
-            let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
-            let expected = try prepared.filteredData.toJSONDataThrowing(customization: settings.formatCustomization, captureContext: context)
-            XCTAssertEqual(try JSONSerialization.jsonObject(with: json) as? NSDictionary,
-                try JSONSerialization.jsonObject(with: expected) as? NSDictionary)
-            if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
-                for artifact in operation.artifacts {
-                    let output = URL(fileURLWithPath: directory).appendingPathComponent(selection.contains("sleep_core") ? "apple-v11-concrete-stages" : "apple-v11-concrete-total")
-                        .appendingPathComponent(artifact.artifact.relativePath)
-                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
-                    try artifact.artifact.inlineData.write(to: output)
+        for includeMetadata in [false, true] {
+            for selection: Set<String> in [["sleep_total", "sleep_core", "sleep_in_bed", "sleep_bedtime", "sleep_wake"], ["sleep_total"]] {
+                var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: selection)
+                snapshot.detailPolicy = .detailedTimeSeries
+                snapshot.includeMetadata = includeMetadata
+                let planner = AppleLooseDailyExportPlanner()
+                let resolution = try await planner.plan(healthData: day, settingsSnapshot: snapshot,
+                    surface: .localVaultWithoutSideEffects)
+                guard case .planned(let operation) = resolution else { return XCTFail("Captured sleep details must reach the concrete successor planner") }
+                XCTAssertEqual(operation.artifacts.count, 4)
+                let csv = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .csv }).artifact.inlineData, as: UTF8.self)
+                XCTAssertTrue(csv.contains("2026-11-01,Sleep Detail,Sleep Stage,"))
+                XCTAssertTrue(csv.contains("unspecified-source"))
+                XCTAssertTrue(csv.contains("2026-11-01T17:30:00.750000000Z"))
+                let markdown = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .markdown }).artifact.inlineData, as: UTF8.self)
+                XCTAssertTrue(markdown.contains("Sleep Stage Details"))
+                XCTAssertTrue(markdown.contains("| unspecified |"))
+                let bases = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .obsidianBases }).artifact.inlineData, as: UTF8.self)
+                XCTAssertTrue(bases.contains("sleep_stage_details:"))
+                XCTAssertEqual(csv.contains("core,"), selection.contains("sleep_core"))
+                XCTAssertFalse(bases.contains("sleep_session_details:"))
+                let settings = snapshot.makeAdvancedExportSettings(userDefaults: defaults)
+                Self.retainedSettings.append(settings)
+                let prepared = day.preparedExport(settings: settings)
+                XCTAssertEqual(prepared.filteredData.sleep.stages.count, selection.contains("sleep_core") ? 3 : 1)
+                let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
+                let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: json) as? [String: Any])
+                let sleep = try XCTUnwrap(root["sleep"] as? [String: Any])
+                let expectedRecords = try XCTUnwrap(sleep["sleepStages"] as? [[String: Any]])
+                let records = try markdown.components(separatedBy: "\n").filter { $0.contains("| `{") }.map { row in
+                    let cell = try XCTUnwrap(row.components(separatedBy: "|").dropLast().last).trimmingCharacters(in: .whitespaces)
+                    XCTAssertTrue(cell.hasPrefix("`{") && cell.hasSuffix("}`"))
+                    return try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(cell.dropFirst().dropLast().utf8)) as? [String: Any])
+                }
+                XCTAssertEqual(records as NSArray, expectedRecords as NSArray)
+                let expected = try prepared.filteredData.toJSONDataThrowing(customization: settings.formatCustomization, captureContext: context)
+                XCTAssertEqual(try JSONSerialization.jsonObject(with: json) as? NSDictionary,
+                    try JSONSerialization.jsonObject(with: expected) as? NSDictionary)
+                if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                    for artifact in operation.artifacts {
+                        let output = URL(fileURLWithPath: directory).appendingPathComponent(selection.contains("sleep_core") ? "apple-v11-sleep-source-selected-\(includeMetadata)" : "apple-v11-sleep-source-total-\(includeMetadata)")
+                            .appendingPathComponent(artifact.artifact.relativePath)
+                        try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                        try artifact.artifact.inlineData.write(to: output)
+                    }
                 }
             }
         }
