@@ -62,7 +62,11 @@ function canonicalTimestamp(value: unknown, field: string): string {
   if (!TIMESTAMP_PATTERN.test(candidate) || !Number.isFinite(milliseconds)) {
     throw new EnvelopeValidationError(`${field} must be an ISO timestamp`);
   }
-  return new Date(milliseconds).toISOString();
+  // Date supplies UTC/calendar normalization only; its millisecond precision
+  // must not decide ordering for Android Instant (or other ISO) fractions.
+  const fraction = /\.(\d+)/u.exec(candidate)?.[1] ?? "";
+  const canonicalFraction = fraction.replace(/0+$/u, "").padEnd(3, "0");
+  return `${new Date(milliseconds).toISOString().slice(0, -5)}.${canonicalFraction}Z`;
 }
 
 export function parseAndValidateEnvelope(bytes: Uint8Array): EnvelopeInfo {
