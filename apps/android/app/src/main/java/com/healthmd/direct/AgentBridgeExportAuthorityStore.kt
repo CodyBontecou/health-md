@@ -125,8 +125,9 @@ internal class AgentBridgeExportAuthorityStore private constructor(
         val frozen = AgentBridgeCodec.decode(bytes) as AgentBridgeExportDelegation
         demand(frozen.issuer == AgentBridgeIssuer.NATIVE_SOURCE && frozen.peer.platform == AgentBridgePlatform.ANDROID,
             AgentBridgeErrorCode.APPROVAL_REQUIRED)
-        native.requireDecision(AgentBridgeExportNativeDecision.Delegation(AgentBridgeCodec.sha256(bytes), expectedGrantRevision))
-        access { transaction ->
+        val decision = AgentBridgeExportNativeDecision.Delegation(AgentBridgeCodec.sha256(bytes), expectedGrantRevision)
+        native.requireDecision(decision)
+        access(fence = { native.requireDecision(decision) }) { transaction ->
             val tx = transaction ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
             val old = tx.state.grants.singleOrNull { it.delegation().authorityId == frozen.authorityId }
             if (old == null) {
@@ -144,8 +145,9 @@ internal class AgentBridgeExportAuthorityStore private constructor(
     }
 
     fun revoke(native: AgentBridgeExportNativeAuthorization, peer: AgentBridgePeer, authorityId: String, expectedGrantRevision: Int) = safe {
-        native.requireDecision(AgentBridgeExportNativeDecision.Revoke(peer, authorityId, expectedGrantRevision))
-        access { transaction ->
+        val decision = AgentBridgeExportNativeDecision.Revoke(peer, authorityId, expectedGrantRevision)
+        native.requireDecision(decision)
+        access(fence = { native.requireDecision(decision) }) { transaction ->
             val tx = transaction ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
             val old = tx.state.grants.singleOrNull { it.delegation().authorityId == authorityId } ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
             val grant = old.delegation()
@@ -184,6 +186,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
                     val tx = AgentBridgeExportAuthorityTransaction(before)
                     val result = block(tx)
                     fence(tx)
+                    checkIdentity(rootIdentity, lockIdentity)
                     if (tx.state != before) {
                         demand(before.revision < Long.MAX_VALUE, AgentBridgeErrorCode.BUSY)
                         val after = tx.state.copy(revision = before.revision + 1)
@@ -192,13 +195,16 @@ internal class AgentBridgeExportAuthorityStore private constructor(
                         demand(bytes.size <= MAX_BYTES, AgentBridgeErrorCode.BUSY)
                         checkIdentity(rootIdentity, lockIdentity)
                         fence(tx) // Current trust/authority/time after bounded validation and MAC signing.
+                        checkIdentity(rootIdentity, lockIdentity)
                         replace(bytes) {
                             checkIdentity(rootIdentity, lockIdentity)
                             fence(tx) // Actual publication, AFTER pending-file write/fsync and native callbacks.
+                            checkIdentity(rootIdentity, lockIdentity)
                         }
                     }
                     checkIdentity(rootIdentity, lockIdentity)
                     fence(tx) // Late expiry/revocation suppresses return, NOT a postpublication rollback.
+                    checkIdentity(rootIdentity, lockIdentity)
                     result
                 }
             }

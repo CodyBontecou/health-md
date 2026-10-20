@@ -15,6 +15,133 @@ import org.junit.Test
 
 class AgentBridgeExportAuthorityStoreTest {
     @Test
+    fun nativeGrantAndRevocationRejectConsentLostDuringProtectedKeyLoad() {
+        for (revoke in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            if (revoke) f.enrolled() else f.store.initialize(f.native)
+            val before = bytes(f)
+            var loaded = false
+            f.keys.onLoad = { loaded = true; f.native.allowed = false }
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { change(f, revoke) }
+            f.keys.onLoad = null
+            assertThat(loaded).isTrue()
+            assertThat(bytes(f)).isEqualTo(before)
+            assertInventory(f)
+        }
+    }
+
+    @Test
+    fun nativeGrantAndRevocationRecheckConsentAfterSigningStagingAndPublication() {
+        for (revoke in listOf(false, true)) for (boundary in listOf("signing", "staging", "return")) {
+            AgentBridgeExportPlanningFixture().use { f ->
+                if (revoke) f.enrolled() else f.store.initialize(f.native)
+                val before = bytes(f)
+                var encoded = 0
+                var checks = 0
+                var observed = false
+                f.keys.onEncode = {
+                    encoded++
+                    if (boundary == "signing" && encoded == 2) { observed = true; f.native.allowed = false }
+                }
+                f.native.afterDecision = {
+                    checks++
+                    if (boundary == "staging" && checks == 4) {
+                        Files.newDirectoryStream(ledger(f).parent).use { paths ->
+                            assertThat(paths.any { it.fileName.toString().startsWith("pending-") }).isTrue()
+                        }
+                        observed = true
+                        throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                    }
+                    if (boundary == "return" && checks == 5) {
+                        assertThat(bytes(f)).isNotEqualTo(before)
+                        observed = true
+                        throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                    }
+                }
+                f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { change(f, revoke) }
+                f.keys.onEncode = null
+                f.native.afterDecision = null
+                assertThat(observed).isTrue()
+                if (boundary == "return") {
+                    assertThat(bytes(f)).isNotEqualTo(before) // Postpublication denial does not undo durable state.
+                    f.store.access { tx ->
+                        assertThat(requireNotNull(tx).state.grants).hasSize(1)
+                        assertThat(tx.state.grants.single().revoked).isEqualTo(revoke)
+                    }
+                } else { assertThat(bytes(f)).isEqualTo(before) }
+                assertInventory(f)
+            }
+        }
+    }
+
+    @Test
+    fun nativeGrantAndRevocationRejectRootReplacementDuringRevalidation() {
+        for (revoke in listOf(false, true)) for (checkpoint in listOf(2, 3)) AgentBridgeExportPlanningFixture().use { f ->
+            if (revoke) f.enrolled() else f.store.initialize(f.native)
+            val before = bytes(f)
+            val root = ledger(f).parent
+            val moved = f.parent.resolve("moved-authority")
+            var checks = 0
+            var replacementModified: java.nio.file.attribute.FileTime? = null
+            f.native.afterDecision = {
+                checks++
+                if (checks == checkpoint) {
+                    Files.move(root, moved)
+                    Files.createDirectory(root, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))
+                    Files.write(root.resolve("foreign"), "replacement".toByteArray())
+                    replacementModified = Files.getLastModifiedTime(root)
+                }
+            }
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { change(f, revoke) }
+            assertThat(checks).isEqualTo(checkpoint)
+            assertThat(replacementModified).isNotNull()
+            assertThat(Files.getLastModifiedTime(root)).isEqualTo(replacementModified)
+            assertThat(Files.readAllBytes(moved.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(before)
+            Files.newDirectoryStream(moved).use { paths -> assertThat(paths.map { it.fileName.toString() }).containsExactly(AgentBridgeExportAuthorityStore.LEDGER_NAME, "issuer.lock") }
+            Files.newDirectoryStream(root).use { paths -> assertThat(paths.map { it.fileName.toString() }).containsExactly("foreign") }
+            assertThat(Files.readAllBytes(root.resolve("foreign"))).isEqualTo("replacement".toByteArray())
+        }
+    }
+
+    @Test
+    fun nativeGrantAndRevocationRejectLockReplacementAfterNativeCallbacks() {
+        for (revoke in listOf(false, true)) for (checkpoint in 2..5) AgentBridgeExportPlanningFixture().use { f ->
+            if (revoke) f.enrolled() else f.store.initialize(f.native)
+            val before = bytes(f)
+            val path = ledger(f).parent.resolve("issuer.lock")
+            val moved = f.parent.resolve("original-lock")
+            var checks = 0
+            var replaced = false
+            f.native.afterDecision = {
+                checks++
+                if (checks == checkpoint) {
+                    Files.move(path, moved)
+                    Files.createFile(path, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))
+                    replaced = true
+                }
+            }
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { change(f, revoke) }
+            f.native.afterDecision = null
+            assertThat(replaced).isTrue()
+            assertThat(checks).isEqualTo(checkpoint)
+            if (checkpoint == 5) { assertThat(bytes(f)).isNotEqualTo(before) }
+            else { assertThat(bytes(f)).isEqualTo(before) }
+            assertThat(Files.size(path)).isEqualTo(0)
+            assertThat(Files.size(moved)).isEqualTo(0)
+            assertInventory(f)
+        }
+    }
+
+    private fun change(f: AgentBridgeExportPlanningFixture, revoke: Boolean) {
+        if (revoke) f.store.revoke(f.native, f.peer, f.delegation().authorityId, 1)
+        else f.store.putDelegation(f.native, f.delegation(), 0)
+    }
+    private fun assertInventory(f: AgentBridgeExportPlanningFixture) {
+        Files.newDirectoryStream(ledger(f).parent).use { paths ->
+            assertThat(paths.map { it.fileName.toString() }).containsExactly(AgentBridgeExportAuthorityStore.LEDGER_NAME, "issuer.lock")
+        }
+    }
+
+    @Test
     fun initializedEmptyLedgerStaysEmptyAfterRemoteRequestsWithoutNativeEnrollment() {
         AgentBridgeExportPlanningFixture().use { f ->
             f.store.initialize(f.native)
@@ -74,7 +201,7 @@ class AgentBridgeExportAuthorityStoreTest {
             f.keys.key = SecretKeySpec(ByteArray(32) { 0x55 }, "HmacSHA256")
             f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { f.restart().discover(f.peerContext, f.discoveryRequest()) }
             assertThat(bytes(f)).isEqualTo(before)
-            assertThat(f.native.decisions).hasSize(2)
+            assertThat(f.native.decisions).hasSize(6)
         }
     }
 
@@ -133,7 +260,7 @@ class AgentBridgeExportAuthorityStoreTest {
             f.enrolled()
             mutate(f)
             f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { f.restart().discover(f.peerContext, f.discoveryRequest()) }
-            assertThat(f.native.decisions).hasSize(2)
+            assertThat(f.native.decisions).hasSize(6)
         }
     }
 

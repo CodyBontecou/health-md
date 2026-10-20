@@ -215,8 +215,11 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         guard value.issuer == .nativeSource, value.peer.platform == .apple else { throw AgentBridgeValidationError.approvalRequired }
         let bytes = try AgentBridgeV4Codec.encode(value)
         guard bytes.count <= Self.recordLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
-        try authorization.requireNativeAuthorization(for: .storeDelegation(value))
-        try transaction { state in
+        let action = AgentBridgeExportNativeAction.storeDelegation(value)
+        try authorization.requireNativeAuthorization(for: action)
+        try transaction(beforeCommit: { _ in
+            try authorization.requireNativeAuthorization(for: action)
+        }) { state in
             guard state.generation == expectedGeneration else { throw AgentBridgeValidationError.revisionConflict }
             if let index = try state.delegations.firstIndex(where: { try $0.description().authorityID == value.authorityID }) {
                 let old = try state.delegations[index].description()
@@ -233,8 +236,11 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
 
     func revokeNativeDelegation(_ reference: AgentBridgeAuthorityReference, expectedGeneration: Int64,
                                 authorization: any AgentBridgeExportNativeAuthorizing) throws {
-        try authorization.requireNativeAuthorization(for: .revokeDelegation(reference))
-        try transaction { state in
+        let action = AgentBridgeExportNativeAction.revokeDelegation(reference)
+        try authorization.requireNativeAuthorization(for: action)
+        try transaction(beforeCommit: { _ in
+            try authorization.requireNativeAuthorization(for: action)
+        }) { state in
             guard state.generation == expectedGeneration else { throw AgentBridgeValidationError.revisionConflict }
             guard let index = try state.delegations.firstIndex(where: { try $0.description().reference() == reference }) else { throw AgentBridgeValidationError.approvalRequired }
             let changed = !state.delegations[index].revoked
@@ -308,19 +314,30 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         }
         guard acquired else { throw AgentBridgeValidationError.busy }
         defer { _ = flock(lock, LOCK_UN) }
-        try AgentBridgeExportPrivateFiles.checkPath(rootFD, "lock", fd: lock)
+        func requireLockedIdentity() throws {
+            try requireCurrentRoot()
+            try AgentBridgeExportPrivateFiles.checkPath(rootFD, "lock", fd: lock)
+        }
+        func revalidate(_ candidate: AgentBridgeExportAuthoritySnapshot) throws {
+            try beforeCommit(candidate)
+            // A native callback can replace either name. Holding the old lock descriptor alone
+            // cannot serialize against another handle that opened the replacement lock inode.
+            try requireLockedIdentity()
+        }
+        try requireLockedIdentity()
         let key = try Self.existingKey(keys)
+        try requireLockedIdentity() // Keychain lookup can delay or invoke native callbacks too.
         var state = try read(key: key)
         let (result, changed) = try body(&state)
-        try beforeCommit(state)
+        try revalidate(state)
         if changed {
             guard state.generation < Int64.max else { throw AgentBridgeValidationError.busy }
             state.generation += 1
             try validate(state)
-            try write(state, key: key, beforePublish: beforeCommit)
+            try write(state, key: key, beforePublish: revalidate)
             // Post-rename/root-fsync expiry or revocation suppresses return. Publication cannot be
             // undone here: stale private metadata remains retained and every consumer revalidates it.
-            try beforeCommit(state)
+            try revalidate(state)
         }
         return result
     }

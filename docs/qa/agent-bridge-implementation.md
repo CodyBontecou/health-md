@@ -83,6 +83,33 @@ physical-device result is claimed. Native grant editing/revocation, bound approv
 capture/execution, receipts, recipes and full CLI/MCP × Apple/Android acceptance remain incomplete.
 B19/B20 stay separately approval-blocked, extension4 stays unadvertised, and this PR remains draft.
 
+## Native grant/revocation publication fences (2026-10-20)
+
+Before adding native grant-management controls, the existing local grant and revocation operations
+now retain and revalidate the same reviewed native decision after key lookup, after staged
+serialization/fsync immediately before publication, and before return. These are noninteractive
+checks, not additional approval prompts. A rejected check before publication leaves the original
+ledger unchanged. A rejection after publication suppresses return without restoring old authority
+or undoing a committed revocation. No native grant editor or new wire endpoint is added here.
+
+Both platform regressions fail against the preceding production source. Apple additionally
+reproduces a lock-substitution defect discovered during Standards review: holding the original lock
+FD was insufficient when a callback replaced its path. The private transaction now revalidates the
+root and held lock inode after key lookup and every commit/publication callback. Kotlin likewise
+checks root and lock identity after callbacks; tests exercise both operations, signing/staging/return,
+root replacement without temporary create/delete in the replacement directory, and lock replacement.
+The Apple lock regression fails eight assertions before repair across its four scenarios.
+
+Final affected macOS app execution passes 105 XCTest methods, including 12 authority-store methods.
+Play passes 140 selected JVM methods (137 bridge plus three configuration-protection methods);
+F-Droid passes all 137 bridge JVM methods. The unsigned generic iOS build and targeted Swift-warning
+gate pass. Counts overlap earlier suites. Contract validation and
+32 bridge contract tests pass. Native consent and credential SDK boundaries remain synthetic; these
+results do not qualify installed consent, Keychain/Keystore protection or a physical phone. Native
+grant management, exact approval UI, bound capture/execution/routes, receipts/recipes/resume and full
+feature acceptance remain incomplete. The PR stays draft; B19/B20 gates and planned capabilities
+are unchanged.
+
 ## Current consolidated native-session increment (2026-10-06)
 
 After the user cleared the fleet goal and authorized consolidation, all23 bridge branch heads were

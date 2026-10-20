@@ -10,6 +10,126 @@ import XCTest
 #endif
 
 final class AgentBridgeExportAuthorityStoreTests: XCTestCase {
+    func testNativeGrantAndRevocationRejectConsentLostDuringProtectedKeyLoad() throws {
+        for revoke in [false, true] {
+            let rig = try StoreRig(); defer { rig.cleanup() }
+            let grant = try rig.grant(7)
+            if revoke { try rig.store.storeNativeDelegation(grant, expectedGeneration: 0, authorization: IsolatedNativeAuthorization()) }
+            let before = try rig.bytes()
+            let native = RevocableGrantAuthorization()
+            var loaded = false
+            rig.keys.onLoad = { loaded = true; native.allowed = false }
+            XCTAssertThrowsError(try rig.change(grant, revoke: revoke, native: native)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+            }
+            rig.keys.onLoad = nil
+            XCTAssertTrue(loaded)
+            XCTAssertEqual(try rig.bytes(), before)
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path).sorted(), ["lock", "state.json"])
+        }
+    }
+
+    func testNativeGrantAndRevocationRecheckConsentAtPublicationAndReturn() throws {
+        for revoke in [false, true] {
+            for afterPublication in [false, true] {
+                let rig = try StoreRig(); defer { rig.cleanup() }
+                let grant = try rig.grant(7)
+                if revoke { try rig.store.storeNativeDelegation(grant, expectedGeneration: 0, authorization: IsolatedNativeAuthorization()) }
+                let before = try rig.bytes()
+                let native = RevocableGrantAuthorization()
+                var observed = false
+                let loseConsent: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { candidate in
+                    observed = true
+                    XCTAssertEqual(candidate.generation, revoke ? 2 : 1)
+                    XCTAssertEqual(candidate.delegations.count, 1)
+                    XCTAssertEqual(candidate.delegations[0].revoked, revoke)
+                    if !afterPublication {
+                        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path).contains { $0.hasPrefix("transaction-") })
+                    }
+                    native.allowed = false
+                }
+                if afterPublication { rig.publication.afterRename = loseConsent }
+                else { rig.publication.beforeRename = loseConsent }
+                XCTAssertThrowsError(try rig.change(grant, revoke: revoke, native: native)) {
+                    XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+                }
+                XCTAssertTrue(observed)
+                let snapshot = try rig.store.snapshot()
+                if afterPublication {
+                    XCTAssertNotEqual(try rig.bytes(), before) // No unsafe rollback after a committed rename.
+                    XCTAssertEqual(snapshot.generation, revoke ? 2 : 1)
+                    XCTAssertEqual(snapshot.delegations.count, 1)
+                    XCTAssertEqual(snapshot.delegations[0].revoked, revoke)
+                } else {
+                    XCTAssertEqual(try rig.bytes(), before)
+                    XCTAssertEqual(snapshot.generation, revoke ? 1 : 0)
+                }
+                XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path).sorted(), ["lock", "state.json"])
+            }
+        }
+    }
+
+    func testNativeGrantAndRevocationRejectRootReplacementDuringRevalidation() throws {
+        for revoke in [false, true] {
+            let rig = try StoreRig(); defer { rig.cleanup() }
+            let grant = try rig.grant(7)
+            if revoke { try rig.store.storeNativeDelegation(grant, expectedGeneration: 0, authorization: IsolatedNativeAuthorization()) }
+            let before = try rig.bytes()
+            let moved = rig.parent.appendingPathComponent("moved-authority")
+            let native = RevocableGrantAuthorization()
+            var movedDuringKeyLoad = false
+            rig.keys.onLoad = {
+                rig.keys.onLoad = nil
+                do {
+                    try FileManager.default.moveItem(at: rig.directory, to: moved)
+                    try FileManager.default.createDirectory(at: rig.directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+                    try Data("replacement".utf8).write(to: rig.directory.appendingPathComponent("foreign"))
+                    movedDuringKeyLoad = true
+                } catch { XCTFail("Synthetic directory substitution failed") }
+            }
+            XCTAssertThrowsError(try rig.change(grant, revoke: revoke, native: native)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            XCTAssertTrue(movedDuringKeyLoad)
+            XCTAssertEqual(native.checks, 1) // The changed path rejects immediately after key lookup.
+            XCTAssertEqual(try Data(contentsOf: moved.appendingPathComponent("state.json")), before)
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: moved.path).sorted(), ["lock", "state.json"])
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path), ["foreign"])
+            XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("foreign")), Data("replacement".utf8))
+        }
+    }
+
+    func testNativeGrantAndRevocationRejectLockReplacementBeforePublication() throws {
+        for revoke in [false, true] {
+            for duringPublication in [false, true] {
+                let rig = try StoreRig(); defer { rig.cleanup() }
+                let grant = try rig.grant(7)
+                if revoke { try rig.store.storeNativeDelegation(grant, expectedGeneration: 0, authorization: IsolatedNativeAuthorization()) }
+                let before = try rig.bytes()
+                let native = RevocableGrantAuthorization()
+                let lock = rig.directory.appendingPathComponent("lock")
+                let moved = rig.parent.appendingPathComponent("original-lock")
+                var replaced = false
+                let replaceLock = {
+                    try FileManager.default.moveItem(at: lock, to: moved)
+                    try Data().write(to: lock)
+                    try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: lock.path)
+                    replaced = true
+                }
+                if duringPublication { rig.publication.beforeRename = { _ in try replaceLock() } }
+                else { native.onCheck = { count in if count == 2 { try replaceLock() } } }
+                XCTAssertThrowsError(try rig.change(grant, revoke: revoke, native: native)) {
+                    XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+                }
+                XCTAssertTrue(replaced)
+                XCTAssertEqual(try rig.bytes(), before)
+                XCTAssertEqual(try Data(contentsOf: lock), Data())
+                XCTAssertEqual(try Data(contentsOf: moved), Data())
+                XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path).sorted(), ["lock", "state.json"])
+            }
+        }
+    }
+
     func testPrivateCASHasOneWinnerAcrossIndependentStoreHandles() throws {
         let rig = try StoreRig(); defer { rig.cleanup() }
         let second = try AgentBridgeExportAuthorityStore(existingDirectory: rig.directory, protectedKeys: rig.keys)
@@ -195,16 +315,28 @@ nonisolated private final class CASResult: @unchecked Sendable {
 nonisolated private final class IsolatedKeys: AgentBridgeExportProtectedKeyReading, @unchecked Sendable {
     let key: SymmetricKey?
     init(key: SymmetricKey? = SymmetricKey(data: Data(repeating: 7, count: 32))) { self.key = key }
-    func loadExistingExportAuthorityKey() throws -> SymmetricKey? { key }
+    var onLoad: (() -> Void)?
+    func loadExistingExportAuthorityKey() throws -> SymmetricKey? { onLoad?(); return key }
 }
 nonisolated private struct IsolatedNativeAuthorization: AgentBridgeExportNativeAuthorizing {
     var allowed = true
     func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws { guard allowed else { throw AgentBridgeValidationError.permissionRequired } }
 }
+nonisolated private final class RevocableGrantAuthorization: AgentBridgeExportNativeAuthorizing {
+    var allowed = true
+    var checks = 0
+    var onCheck: ((Int) throws -> Void)?
+    func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws {
+        checks += 1
+        guard allowed else { throw AgentBridgeValidationError.permissionRequired }
+        try onCheck?(checks)
+    }
+}
 nonisolated private final class StorePublicationProbe: AgentBridgeExportPublicationObserving {
     var beforeRename: ((AgentBridgeExportAuthoritySnapshot) throws -> Void)?
     func prepared(_ state: AgentBridgeExportAuthoritySnapshot) throws { try beforeRename?(state) }
-    func published(_ state: AgentBridgeExportAuthoritySnapshot) throws {}
+    var afterRename: ((AgentBridgeExportAuthoritySnapshot) throws -> Void)?
+    func published(_ state: AgentBridgeExportAuthoritySnapshot) throws { try afterRename?(state) }
 }
 nonisolated private func storeID(_ n: Int) throws -> AgentBridgeUUID { try AgentBridgeUUID(String(format: "00000000-0000-4000-8000-%012x", n)) }
 nonisolated private final class StoreRig: @unchecked Sendable {
@@ -225,6 +357,10 @@ nonisolated private final class StoreRig: @unchecked Sendable {
                   peer: .init(sourceInstallationID: storeID(1), hostInstallationID: storeID(2), platform: .apple), rights: [.discover, .exportExecute, .plan], expiresAt: AgentBridgeUTC("2026-03-09T01:00:00Z"),
                   bounds: .init(products: [.generatedFiles], projectionDetails: [], projectionObjectIDs: [], projectionFieldIDs: [], metricIDs: [AgentBridgeID("steps")], calendarTimezones: [AgentBridgeZone("UTC")],
                                 datePolicy: .authorizedHistory(maxDays: 366, allowAllAvailable: true), formats: [.json], outputProfiles: [.appleV8], writeModes: [.overwrite], compatibilityDetail: [.summary], nativeArchiveProducts: [.none], destinationPolicy: .authenticatedHostBindings))
+    }
+    func change(_ grant: AgentBridgeExportDelegation, revoke: Bool, native: any AgentBridgeExportNativeAuthorizing) throws {
+        if revoke { try store.revokeNativeDelegation(grant.reference(), expectedGeneration: 1, authorization: native) }
+        else { try store.storeNativeDelegation(grant, expectedGeneration: 0, authorization: native) }
     }
     func bytes() throws -> Data { try Data(contentsOf: stateFile) }
     func cleanup() { try? FileManager.default.removeItem(at: parent) }

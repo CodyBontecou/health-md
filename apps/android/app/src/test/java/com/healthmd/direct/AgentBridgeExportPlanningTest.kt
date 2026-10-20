@@ -67,7 +67,7 @@ class AgentBridgeExportPlanningTest {
             assertThat(inactive.requiredActions).containsExactly(AgentBridgeDiscoveryRequiredActionsItem.OPEN_MOBILE_APP, AgentBridgeDiscoveryRequiredActionsItem.UNLOCK_MOBILE)
             assertThat(f.configuration.active).isFalse()
             assertThat(f.configuration.unlocked).isFalse()
-            assertThat(f.native.decisions).hasSize(2)
+            assertThat(f.native.decisions).hasSize(6)
         }
     }
 
@@ -85,7 +85,7 @@ class AgentBridgeExportPlanningTest {
             f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.plan(f.peerContext, request.copy(authorityId = AgentBridgeExportPlanningFixture.id(42))) }
             f.expect(AgentBridgeErrorCode.REVISION_CONFLICT) { f.service.plan(f.peerContext, request.copy(authorityRevision = 2)) }
             f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.plan(f.peerContext, request.copy(hostAuthorityReference = f.hostReference.copy(issuer = AgentBridgeIssuer.NATIVE_SOURCE))) }
-            assertThat(f.native.decisions).hasSize(2)
+            assertThat(f.native.decisions).hasSize(6)
         }
     }
 
@@ -201,7 +201,7 @@ class AgentBridgeExportPlanningTest {
             f.peerContext.trusted = true // Explicit fake native trust restoration, NOT a remote operation.
             val stored = f.restart().plan(f.peerContext, request)
             f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.approval(f.peerContext, f.approvalRequest(stored)) }
-            assertThat(f.native.decisions).hasSize(2)
+            assertThat(f.native.decisions).hasSize(6)
         }
     }
 
@@ -317,7 +317,7 @@ class AgentBridgeExportPlanningTest {
             val plan = f.service.plan(f.peerContext, f.request(f.service.discover(f.peerContext, f.discoveryRequest())))
             assertThat(plan.requiredActions).containsExactly("grant_health_access")
             f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { f.service.authorizeExactApproval(f.peerContext, f.native, plan.planId, AgentBridgeValidation.bindingFor(plan)) }
-            assertThat(f.native.decisions).hasSize(2)
+            assertThat(f.native.decisions).hasSize(6)
             assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
         }
     }
@@ -427,7 +427,7 @@ class AgentBridgeExportPlanningTest {
             val corrupt = Files.readAllBytes(path)
             f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { f.restart().discover(f.peerContext, f.discoveryRequest()) }
             assertThat(Files.readAllBytes(path)).isEqualTo(corrupt)
-            assertThat(f.native.decisions).hasSize(2)
+            assertThat(f.native.decisions).hasSize(6)
             f.expect(AgentBridgeErrorCode.REVISION_CONFLICT) { f.store.initialize(f.native) }
         }
     }

@@ -417,7 +417,7 @@ class AgentBridgeExportProtectedKeyTest {
                 f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) {
                     service.authorizeExactApproval(f.peerContext, f.native, plan.planId, AgentBridgeValidation.bindingFor(plan))
                 }
-                assertThat(f.native.decisions).hasSize(2) // Separate initialize + delegation, no exact decision.
+                assertThat(f.native.decisions).hasSize(6) // One initialize + five same-delegation checks; no exact decision.
                 assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
             }
         }
