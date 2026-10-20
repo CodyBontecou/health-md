@@ -247,6 +247,32 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
       assert.equal(day.activity.activityIntensity, undefined);
     }
   }
+  const workoutRoot = path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/native-workouts");
+  const workoutVariants = (await readdir(workoutRoot, { withFileTypes: true }))
+    .filter(entry => entry.isDirectory());
+  assert.equal(workoutVariants.length, 11);
+  for (const variant of workoutVariants) {
+    const folder = path.join(workoutRoot, variant.name,
+      variant.name.startsWith("apple") ? "Health" : "health");
+    const filename = (await readdir(folder)).find(name => name.endsWith(".json"));
+    const source = JSON.parse(await readFile(path.join(folder, filename), "utf8"));
+    const day = api.parseHealthDay(source);
+    assert.ok(day, variant.name);
+    assert.deepEqual(JSON.parse(JSON.stringify(day.nativeWorkoutDetails.map(record => record.sample))),
+      source.workouts, variant.name);
+    assert.deepEqual(JSON.parse(JSON.stringify(day.workouts)), source.workouts.map(sample => ({
+      ...sample, ...(typeof sample.distance === "number" ? { distanceMeters: sample.distance } : {}),
+    })), variant.name);
+    const inconsistent = structuredClone(source);
+    inconsistent.workouts[0].elapsedDuration += 1;
+    assert.equal(api.parseHealthDay(inconsistent), null, variant.name);
+    if (source.schema_profile === "android-sleep-v6") {
+      const imprecise = structuredClone(source);
+      imprecise.workouts[0].exactStartTime.nano += 1;
+      assert.equal(api.parseHealthDay(imprecise), null, variant.name);
+    }
+  }
   const parentInput = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
     "tests/fixtures/sleep-native-parents/2026-11-01.json"), "utf8");
   const parentDay = api.parseHealthDay(parentInput);
