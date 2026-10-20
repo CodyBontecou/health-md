@@ -24,3 +24,12 @@ Render validation rejects unknown/duplicate selected outputs, a selection narrow
 ## Current qualification limits
 
 Daily successor semantics and metadata are exercised by the real core session/render interfaces in `crates/healthmd-core/tests/sleep_rendering.rs`. Calendar/range reductions for successor profiles remain unsupported until the independent Apple roll-up v11 implementation is verified. Native adapters, capture/output fixtures, durable resume, real consumers and physical-device checks are still required by the [feature qualification contract](../../sleep-attribution/v1/contract.md). Enum or helper acceptance is not production enablement.
+
+
+## Explicit workout range authority
+
+Registry v3 is an opt-in successor inventory alongside immutable v2. Its exact hash is `0136dc5096e7cfc7030ec92286f1bbe9422e8b0bbbc0fa16924d45fe9124d337`; version/hash pairs are indivisible. V1 profiles cannot request v3. Default build information and successor callers that request v2 retain their historical authority and bytes. No saved job may be silently repinned.
+
+V3 changes workout maximum heart rate and maximum power to maximum, and minimum heart rate to minimum, in both profile and metric output inventories. Other selection IDs, classifications and native units are unchanged. Each v3 `workout_*` fact whose range rule is weighted average requires a positive exact-number `weight`: the active seconds of workouts that actually contribute that quantity. Heart rate, power, running cadence/stride/contact/oscillation and cycling cadence carry independent denominators, including native workout-type filtering. Missing measurements do not contribute zero, and the overall workout duration output is not a denominator. The core derives range weights from accepted source record IDs; disabling count/duration/type-list presentation does not change the measured result or expose those summaries. Missing, zero, negative and nonfinite required weights reject transactionally. V2 keeps its previous denominator and extrema behavior for explicit replay.
+
+Apple requested ranges use the existing explicit range revision 2 and v3 registry. Android range planning remains planned under Issue #104: its direct semantic range request is still unsupported; registry v3 does not imply Android range admission. This is separate from native provider, bounded streaming, production routing and physical acceptance.

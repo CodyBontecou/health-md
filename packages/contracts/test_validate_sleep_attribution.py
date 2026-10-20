@@ -30,6 +30,24 @@ class SleepAttributionValidationTests(unittest.TestCase):
     def test_native_handoff_and_core_plan(self):
         self.check()
 
+    def test_explicit_registry_three_tuple_and_mixed_versions(self):
+        import hashlib
+        new_hash = hashlib.sha256((ROOT / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v3.json").read_bytes()).hexdigest()
+        original = copy.deepcopy(self.handoff)
+        for section in ('semantic_configuration', 'render_configuration'):
+            self.handoff[section]['registry_version'] = 3
+            self.handoff[section]['registry_sha256'] = new_hash
+        self.handoff['expected_semantic_result']['registry_sha256'] = new_hash
+        self.check()
+        accepted = copy.deepcopy(self.handoff)
+        for section in ('semantic_configuration', 'render_configuration'):
+            for key, value in [('registry_version', 2), ('registry_sha256', original[section]['registry_sha256'])]:
+                with self.subTest(section=section, key=key):
+                    self.handoff = copy.deepcopy(accepted)
+                    self.handoff[section][key] = value
+                    with self.assertRaises(validate.ContractValidationError):
+                        self.check()
+
     def test_mixed_authority_is_rejected(self):
         mutations = [
             ('render_configuration', 'calendar_time_zone', 'UTC'),

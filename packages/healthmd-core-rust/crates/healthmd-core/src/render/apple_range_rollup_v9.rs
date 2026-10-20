@@ -138,7 +138,8 @@ fn render(
                     other => other,
                 };
                 if let Some(statistic) = value.statistics.get(semantic_name) {
-                    let mut display = display_value(statistic)?;
+                    let mut display =
+                        display_value_for_registry(statistic, config.registry_version)?;
                     if name == "value_counts" {
                         display = normalize_value_counts(&display);
                     }
@@ -148,7 +149,7 @@ fn render(
             Ok(Metric {
                 presentation,
                 rule: &value.rule,
-                primary: display_value(&value.primary_value)?,
+                primary: display_value_for_registry(&value.primary_value, config.registry_version)?,
                 days_counted: value.days_counted,
                 statistics,
             })
@@ -167,6 +168,7 @@ fn render(
     });
     let context = Context {
         wake_date: config.profile.is_wake_date(),
+        rules_version: rules_version(config),
         rollup,
         period_id,
         days_expected,
@@ -183,8 +185,19 @@ fn render(
     }
 }
 
+fn rules_version(config: &RenderSessionConfig) -> u32 {
+    if config.registry_version == crate::WORKOUT_RANGE_REGISTRY_VERSION {
+        12
+    } else if config.profile.is_wake_date() {
+        11
+    } else {
+        8
+    }
+}
+
 struct Context<'a> {
     wake_date: bool,
+    rules_version: u32,
     rollup: &'a SemanticRollupResult,
     period_id: String,
     days_expected: u32,
@@ -263,7 +276,7 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
         ),
         (
             "rollup_rules_version".to_owned(),
-            Value::from(if context.wake_date { 11 } else { 8 }),
+            Value::from(context.rules_version),
         ),
         (
             "generated_at".to_owned(),
@@ -377,7 +390,7 @@ fn render_csv(context: &Context<'_>) -> Vec<u8> {
             if context.wake_date { "11" } else { "9" }.to_owned(),
             "healthmd.health_data".to_owned(),
             if context.wake_date { "11" } else { "8" }.to_owned(),
-            if context.wake_date { "11" } else { "8" }.to_owned(),
+            context.rules_version.to_string(),
             context.rollup.calendar_time_zone.clone(),
             period_id(context.rollup.period).to_owned(),
             context.period_id.clone(),
@@ -447,10 +460,7 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
             "source_schema_version: {}",
             if context.wake_date { 11 } else { 8 }
         ),
-        format!(
-            "rollup_rules_version: {}",
-            if context.wake_date { 11 } else { 8 }
-        ),
+        format!("rollup_rules_version: {}", context.rules_version),
         format!("generated_at: {}", context.generated_at),
     ];
     if context.wake_date {
@@ -611,10 +621,7 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
             "source_schema_version: {}",
             if context.wake_date { 11 } else { 8 }
         ),
-        format!(
-            "rollup_rules_version: {}",
-            if context.wake_date { 11 } else { 8 }
-        ),
+        format!("rollup_rules_version: {}", context.rules_version),
         format!("generated_at: {}", context.generated_at),
     ];
     if context.wake_date {
@@ -726,6 +733,30 @@ fn period_display(period: RollupPeriod) -> &'static str {
 
 fn period_folder(period: RollupPeriod) -> &'static str {
     period_display(period)
+}
+
+fn display_value_for_registry(
+    value: &SemanticValue,
+    registry_version: u32,
+) -> Result<String, RenderError> {
+    if registry_version == crate::WORKOUT_RANGE_REGISTRY_VERSION {
+        if let SemanticValue::Number { number, .. } = value {
+            return match number {
+                ExactNumber::Binary64 { bits } => {
+                    let bits = u64::from_str_radix(bits, 16)
+                        .map_err(|_| RenderError::InvalidSemanticResult)?;
+                    let number = f64::from_bits(bits);
+                    if !number.is_finite() {
+                        return Err(RenderError::InvalidSemanticResult);
+                    }
+                    Ok(number.to_string())
+                }
+                ExactNumber::SignedInteger { decimal }
+                | ExactNumber::UnsignedInteger { decimal } => Ok(decimal.clone()),
+            };
+        }
+    }
+    display_value(value)
 }
 
 fn display_value(value: &SemanticValue) -> Result<String, RenderError> {

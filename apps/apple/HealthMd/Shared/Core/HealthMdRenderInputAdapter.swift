@@ -121,8 +121,8 @@ enum HealthMdRenderInputAdapter {
         let wakeDate = registry.profileId == AppleExportEnginePin.wakeDateProfileID
         if wakeDate {
             guard registry.publicProfileId == "apple-v11", registry.publicSchemaVersion == 11,
-                  registry.registryVersion == HealthMdSleepProfileContract.registryVersion,
-                  registry.registrySha256 == HealthMdSleepProfileContract.registrySHA256,
+                  AppleExportEnginePin.isSupportedWakeDateRegistry(
+                    version: registry.registryVersion, sha256: registry.registrySha256),
                   (semanticProfileRevision == 1 && semanticRollups.isEmpty)
                     || (semanticProfileRevision == 2 && semanticRollups.allSatisfy { $0["period"] as? String == "range" }),
                   root["semantic_input_version"] as? Int == 2,
@@ -263,13 +263,17 @@ enum HealthMdRenderInputAdapter {
                 guard let entry = entriesByCanonicalKey[outputKey] else {
                     throw AdapterError.invalidRegistry
                 }
+                let correctedWorkout = registry.registryVersion == HealthMdWorkoutRangeRegistryContract.registryVersion
+                    && (outputKey == "workouts" || outputKey.hasPrefix("workout_"))
+                let rule = registry.outputs.first { $0.key == outputKey }?.rollup
+                let rangeNotes: Any = correctedWorkout ? workoutRangeNotes(rule: rule) : (entry.rollup.notes as Any?) ?? NSNull()
                 metrics[outputKey] = [
                     "key": entry.key,
                     "canonical_key": entry.canonicalKey,
-                    "display_name": entry.displayName,
+                    "display_name": correctedWorkout ? workoutLabel(outputKey) : entry.displayName,
                     "category": entry.category,
                     "unit": entry.unit,
-                    "notes": (entry.rollup.notes as Any?) ?? NSNull(),
+                    "notes": rangeNotes,
                     "statistic_order": entry.rollup.statistics,
                 ]
             }
@@ -387,7 +391,7 @@ enum HealthMdRenderInputAdapter {
             } else if captureContext?.sleepDayAttribution == .morningEnds, outputKey == "sleep_wake" {
                 label = "Wake Time"
             } else if captureContext?.sleepDayAttribution == .morningEnds, outputKey.hasPrefix("workout_") {
-                label = outputKey.split(separator: "_").map { $0.capitalized }.joined(separator: " ")
+                label = workoutLabel(outputKey)
             } else {
                 label = metric.referenceName
             }
@@ -522,6 +526,21 @@ enum HealthMdRenderInputAdapter {
         return result
     }
 
+    private static func workoutLabel(_ key: String) -> String {
+        key.split(separator: "_").map { $0.capitalized }.joined(separator: " ")
+    }
+
+    private static func workoutRangeNotes(rule: String?) -> String {
+        switch rule {
+        case "weighted_average": "Weighted by active seconds of workouts with this measurement; missing measurements do not contribute."
+        case "maximum": "Maximum available workout measurement in the requested range."
+        case "minimum": "Minimum available workout measurement in the requested range."
+        case "sum": "Sum of available daily workout values in the requested range."
+        case "union": "Distinct recorded workout types in the requested range."
+        default: "Available recorded workout values in the requested range."
+        }
+    }
+
     private static func workoutDetails(_ root: [String: Any], ownerDate: String,
                                        selectedOutputKeys: [String]) throws -> [String: Any] {
         let workouts = root["workouts"] as? [[String: Any]] ?? []
@@ -530,6 +549,7 @@ enum HealthMdRenderInputAdapter {
         var lines = ["| Native Record (JSON) |", "|---|"]
         let owners = ["workout_count", "workouts", "workout_minutes"]
         let owner = owners.first(where: selectedOutputKeys.contains)
+            ?? selectedOutputKeys.sorted().first(where: { $0.hasPrefix("workout_") })
         for workout in workouts {
             guard owner != nil, let start = workout["startTimeISO"] as? String,
                   let end = workout["endTimeISO"] as? String,

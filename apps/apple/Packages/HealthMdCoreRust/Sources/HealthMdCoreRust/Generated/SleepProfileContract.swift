@@ -4,3 +4,7 @@ public enum HealthMdSleepProfileContract {
     public static let registryVersion: UInt32 = 2
     public static let registrySHA256 = "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78"
 }
+public enum HealthMdWorkoutRangeRegistryContract {
+    public static let registryVersion: UInt32 = 3
+    public static let registrySHA256 = "0136dc5096e7cfc7030ec92286f1bbe9422e8b0bbbc0fa16924d45fe9124d337"
+}

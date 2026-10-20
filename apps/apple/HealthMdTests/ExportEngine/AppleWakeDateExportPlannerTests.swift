@@ -846,6 +846,108 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    func testExplicitWorkoutRangeAuthorityUsesMeasuredDurationsAndTrueExtremaAcrossAllFormats() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let firstDate = ExportFixtures.referenceDate
+        let secondDate = firstDate.addingTimeInterval(86400)
+        let days = [
+            HealthData(date: firstDate, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds), workouts: [
+                WorkoutData(workoutType: .running, startTime: firstDate, duration: 600, calories: nil, distance: nil,
+                    avgHeartRate: 100, maxHeartRate: 260, minHeartRate: 50,
+                    avgRunningCadence: 180, avgStrideLength: 1, avgGroundContactTime: 200,
+                    avgVerticalOscillation: 6, avgPower: 100, maxPower: 400),
+                WorkoutData(workoutType: .cycling, startTime: firstDate.addingTimeInterval(1200), duration: 1200, calories: nil, distance: nil, avgCyclingCadence: 80, avgPower: 100),
+                WorkoutData(workoutType: .running, startTime: firstDate.addingTimeInterval(3600), duration: 1800, calories: nil, distance: nil),
+            ]),
+            HealthData(date: secondDate, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds), workouts: [
+                WorkoutData(workoutType: .running, startTime: secondDate, duration: 1800, calories: nil, distance: nil,
+                    avgHeartRate: 200, maxHeartRate: 250, minHeartRate: 55,
+                    avgRunningCadence: 200, avgStrideLength: 2, avgGroundContactTime: 300,
+                    avgVerticalOscillation: 10, maxPower: 900),
+                WorkoutData(workoutType: .cycling, startTime: secondDate.addingTimeInterval(3600), duration: 600, calories: nil, distance: nil, avgCyclingCadence: 100, avgPower: 300),
+                WorkoutData(workoutType: .running, startTime: secondDate.addingTimeInterval(7200), duration: 4800, calories: nil, distance: nil),
+            ]),
+        ]
+        for preference in [UnitPreference.metric, .imperial] {
+            for visibleDuration in [false, true] {
+                for summaryOnly in [false, true] {
+                    var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                        selectionIDs: ["workouts"], rangeSummary: true, unitPreference: preference, registryVersion: 3)
+                    snapshot.summaryOnlyExport = summaryOnly
+                    if !visibleDuration {
+                        for index in snapshot.formatCustomization.frontmatterConfig.fields.indices {
+                            if ["workout_count", "workout_minutes", "workouts"].contains(snapshot.formatCustomization.frontmatterConfig.fields[index].originalKey) {
+                                snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+                            }
+                        }
+                    }
+                    let resolution = try await AppleLooseDailyExportPlanner().planRange(healthData: days,
+                        settingsSnapshot: snapshot, surface: .localVaultRangeWithoutSideEffects)
+                    guard case .planned(let operation) = resolution else { return XCTFail("Registry 3 must qualify workout ranges") }
+                    XCTAssertEqual(operation.pin.registryVersion, 3)
+                    XCTAssertEqual(operation.pin, snapshot.appleExportEnginePin)
+                    let ranges = operation.artifacts.filter { $0.kind == .rollup }
+                    XCTAssertEqual(ranges.count, 4)
+                    XCTAssertEqual(operation.artifacts.filter { $0.kind == .daily }.count, summaryOnly ? 0 : 8)
+                    let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: XCTUnwrap(ranges.first { $0.format == .json }).artifact.inlineData) as? [String: Any])
+                    XCTAssertEqual(root["schema_version"] as? Int, 11)
+                    XCTAssertEqual(root["rollup_rules_version"] as? Int, 12)
+                    let metrics = try XCTUnwrap(root["metrics"] as? [[String: Any]])
+                    for (key, expected, rule) in [("workout_avg_heart_rate", 175.0, "weighted_average"), ("workout_avg_power", 150.0, "weighted_average"),
+                                                  ("workout_max_heart_rate", 260.0, "maximum"), ("workout_min_heart_rate", 50.0, "minimum"), ("workout_max_power", 900.0, "maximum"), ("workout_running_cadence", 195.0, "weighted_average"),
+                                                  ("workout_running_stride_length", 1.75, "weighted_average"), ("workout_running_ground_contact", 275.0, "weighted_average"),
+                                                  ("workout_running_vertical_oscillation", 9.0, "weighted_average"), ("workout_cycling_cadence", 260.0 / 3.0, "weighted_average")] {
+                        let metric = try XCTUnwrap(metrics.first { $0["key"] as? String == key })
+                        let value = try XCTUnwrap(metric["primary_value"] as? String)
+                        XCTAssertEqual(try XCTUnwrap(Double(value)), expected, accuracy: 1e-9, key)
+                        XCTAssertEqual(metric["rule"] as? String, rule)
+                        XCTAssertNotEqual(metric["display_name"] as? String, "Workouts")
+                        if rule == "weighted_average" {
+                            XCTAssertTrue((metric["notes"] as? String)?.contains("workouts with this measurement") == true)
+                        }
+                    }
+                    XCTAssertEqual(metrics.contains { $0["key"] as? String == "workout_minutes" }, visibleDuration)
+                    for item in ranges where item.format != .json {
+                        let text = String(decoding: item.artifact.inlineData, as: UTF8.self)
+                        XCTAssertTrue(text.contains(item.format == .csv ? "healthmd.rollup_summary,11,healthmd.health_data,11,12," : "rollup_rules_version: 12"))
+                    }
+                    if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_WORKOUT_RANGE_FIXTURE_DIR"], !directory.isEmpty {
+                        let variant = "apple-v11-workout-range-\(preference.rawValue)-\(visibleDuration)-\(summaryOnly)"
+                        for item in operation.artifacts {
+                            let output = URL(fileURLWithPath: directory).appendingPathComponent(variant).appendingPathComponent(item.artifact.relativePath)
+                            try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                            try item.artifact.inlineData.write(to: output)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func testWorkoutRangePinsResumeOnlyUnderTheirExactRegistryAndKeepVersionTwoAvailable() async throws {
+        let executor = SystemAppleLooseDailyCoreExecutor()
+        let oldContext = try await executor.loadContext(profile: .appleHealthDataV11)
+        let newContext = try await executor.loadContext(profile: .appleHealthDataV11, expectedRegistryVersion: 3)
+        XCTAssertEqual(oldContext.registry.registryVersion, 2)
+        XCTAssertEqual(newContext.registry.registryVersion, 3)
+        let oldPin = try AppleExportEnginePin(engine: .rust, calendarTimeZoneIdentifier: "UTC",
+            buildInfo: oldContext.buildInfo, registrySnapshot: oldContext.registry)
+        let newPin = try AppleExportEnginePin(engine: .rust, calendarTimeZoneIdentifier: "UTC",
+            buildInfo: newContext.buildInfo, registrySnapshot: newContext.registry)
+        XCTAssertTrue(oldPin.hasExplicitWakeDateContracts)
+        XCTAssertTrue(newPin.hasExplicitWakeDateContracts)
+        XCTAssertNoThrow(try oldPin.validateCompatibility(buildInfo: oldContext.buildInfo, registrySnapshot: oldContext.registry))
+        XCTAssertNoThrow(try newPin.validateCompatibility(buildInfo: newContext.buildInfo, registrySnapshot: newContext.registry))
+        XCTAssertThrowsError(try oldPin.validateCompatibility(buildInfo: newContext.buildInfo, registrySnapshot: newContext.registry))
+        XCTAssertThrowsError(try newPin.validateCompatibility(buildInfo: oldContext.buildInfo, registrySnapshot: oldContext.registry))
+        let recovered = try JSONDecoder().decode(AppleExportEnginePin.self, from: JSONEncoder().encode(newPin))
+        XCTAssertEqual(recovered, newPin)
+        XCTAssertTrue(recovered.hasExplicitWakeDateContracts)
+        XCTAssertFalse(AppleExportEnginePin.isSupportedWakeDateRegistry(version: 3, sha256: oldPin.registrySHA256))
+        XCTAssertFalse(AppleExportEnginePin.isSupportedWakeDateRegistry(version: 2, sha256: newPin.registrySHA256))
+    }
+
     func testRegistryTwoWorkoutRangeDoesNotPublishUnqualifiedExtremaRules() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
@@ -866,7 +968,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
 
     private func acceptedSnapshot(
         context: AppleSleepCaptureContext, formats: Set<ExportFormat>, selectionIDs: Set<String>? = nil,
-        rangeSummary: Bool = false, unitPreference: UnitPreference = .metric
+        rangeSummary: Bool = false, unitPreference: UnitPreference = .metric, registryVersion: UInt32 = 2
     ) throws -> ExportSettingsSnapshot {
         let suite = "AppleWakeDatePlannerFixture.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -892,7 +994,8 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             "engine": "rust", "profile": "apple_health_data_v11", "public_schema": "healthmd.health_data",
             "public_schema_version": 11, "core_api_version": 4, "semantic_input_version": 2,
             "canonical_model_version": 2, "render_input_version": 2, "artifact_plan_version": 2,
-            "registry_version": 2, "registry_sha256": "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78",
+            "registry_version": registryVersion, "registry_sha256": registryVersion == 3
+                ? HealthMdWorkoutRangeRegistryContract.registrySHA256 : HealthMdSleepProfileContract.registrySHA256,
             "semantic_profile_revision": 1, "render_profile_revision": 2,
             "core_source_revision": "synthetic-planner-contract", "calendar_time_zone": context.calendarTimeZoneIdentifier,
         ]

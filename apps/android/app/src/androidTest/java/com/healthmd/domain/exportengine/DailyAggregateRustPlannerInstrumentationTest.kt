@@ -38,26 +38,51 @@ class DailyAggregateRustPlannerInstrumentationTest {
             identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-device-workout"))
         val data = HealthData(date = LocalDate.of(2026, 11, 1), workouts = listOf(workout))
         for (preference in listOf(com.healthmd.domain.model.UnitPreference.METRIC, com.healthmd.domain.model.UnitPreference.IMPERIAL)) {
-            val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
-                exportFormats = ExportFormat.entries.toSet(), includeGranularData = true, includeMetadata = false,
-                formatCustomization = FormatCustomization(unitPreference = preference),
-                metricSelection = com.healthmd.domain.model.MetricSelectionState(enabledMetrics = setOf("workouts")),
-                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
-                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
-                DailyAggregateExportIds("device-workout-${preference.name}", "device-workout-session-${preference.name}"))
-            val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("cannot borrow an ambient clock") }).plan(request)
-            assertEquals(AndroidExportProfile.android_sleep_v6, result.pin.profile)
-            assertEquals(4, result.plan.items.size)
-            for (item in result.plan.items) {
-                val text = item.content.decodeToString()
-                assertTrue(text.contains("android-sleep-v6"))
-                assertTrue(text.contains("synthetic-device-workout"))
-                assertTrue(text.contains("160.125"))
-                assertTrue(text.contains("178.625"))
-                assertTrue(text.contains("240.125"))
-                assertTrue(text.contains(start.toString()))
-                assertTrue(text.contains(end.toString()))
+            for (visibleOwners in listOf(true, false)) {
+                val fields = com.healthmd.domain.model.FrontmatterConfiguration.defaultFields.map { field ->
+                    field.copy(isEnabled = visibleOwners || field.originalKey !in setOf("workout_count", "workouts", "workout_minutes"))
+                }
+                val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
+                    exportFormats = ExportFormat.entries.toSet(), includeGranularData = true, includeMetadata = false,
+                    formatCustomization = FormatCustomization(unitPreference = preference,
+                        frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(fields = fields)),
+                    metricSelection = com.healthmd.domain.model.MetricSelectionState(enabledMetrics = setOf("workouts")),
+                    executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
+                    AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                    DailyAggregateExportIds("device-workout-${preference.name}-$visibleOwners", "device-workout-session-${preference.name}-$visibleOwners"))
+                val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("cannot borrow an ambient clock") }).plan(request)
+                assertEquals(AndroidExportProfile.android_sleep_v6, result.pin.profile)
+                assertEquals(4, result.plan.items.size)
+                for (item in result.plan.items) {
+                    val text = item.content.decodeToString()
+                    assertTrue(text.contains("android-sleep-v6"))
+                    assertTrue(text.contains("synthetic-device-workout"))
+                    assertTrue(text.contains("160.125"))
+                    assertTrue(text.contains("178.625"))
+                    assertTrue(text.contains("240.125"))
+                    assertTrue(text.contains(start.toString()))
+                    assertTrue(text.contains(end.toString()))
+                }
             }
+        }
+    }
+
+    @Test
+    fun packagedRegistryThreeKeepsVersionTwoExactAndCorrectsWorkoutExtrema() {
+        val service = com.healthmd.core.HealthMdCoreService()
+        for (profile in listOf(com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6,
+            com.healthmd.core.CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V11)) {
+            val original = service.getMetricRegistry(profile, 2u)
+            val corrected = service.getMetricRegistry(profile, 3u)
+            assertEquals(com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256, original.registrySha256)
+            assertEquals(com.healthmd.core.HEALTHMD_WORKOUT_RANGE_REGISTRY_SHA256, corrected.registrySha256)
+            for ((key, rule) in listOf("workout_max_heart_rate" to "maximum", "workout_min_heart_rate" to "minimum", "workout_max_power" to "maximum")) {
+                // Android v2 has no range reducer; Apple's old v2 explicitly declares sum.
+                val oldRule = if (profile == com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6) "" else "sum"
+                assertEquals(oldRule, original.outputs.single { it.key == key }.rollup)
+                assertEquals(rule, corrected.outputs.single { it.key == key }.rollup)
+            }
+            assertEquals(original.outputs.map { it.key }, corrected.outputs.map { it.key })
         }
     }
 

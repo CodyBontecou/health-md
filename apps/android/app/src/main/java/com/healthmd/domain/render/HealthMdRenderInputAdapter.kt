@@ -510,6 +510,7 @@ object HealthMdRenderInputAdapter {
     private fun workoutDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
         val workouts = root["workouts"]?.jsonArray ?: JsonArray(emptyList())
         val owner = listOf("workout_count", "workouts", "workout_minutes").firstOrNull(selected::contains)
+            ?: selected.sorted().firstOrNull { it.startsWith("workout_") }
         if (workouts.isNotEmpty() && owner == null) throw AdapterException("wake-date native workout selection is incompatible")
         val rows = mutableListOf<JsonObject>()
         val lines = mutableListOf("| Native Record (JSON) |", "|---|")

@@ -223,7 +223,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
                         calendarTimeZone: calendarTimeZone
                     ) : wakeDateValue(raw, outputKey: output.key, unit: output.unit,
                         day: day, mindfulness: snapshot.mindfulness, calendarTimeZone: calendarTimeZone),
-                    "weight": NSNull(),
+                    "weight": try registry.registryVersion == HealthMdWorkoutRangeRegistryContract.registryVersion
+                        ? workoutRangeWeight(outputKey: output.key, day: day) : NSNull(),
                     "attributes": [:],
                     "extensions": [],
                 ])
@@ -528,8 +529,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
             guard registry.publicProfileId == "apple-v11",
                   registry.publicSchema == HealthMdExportSchema.identifier,
                   registry.publicSchemaVersion == 11, registry.profileRevision == 1,
-                  registry.registryVersion == HealthMdSleepProfileContract.registryVersion,
-                  registry.registrySha256 == HealthMdSleepProfileContract.registrySHA256 else {
+                  AppleExportEnginePin.isSupportedWakeDateRegistry(
+                    version: registry.registryVersion, sha256: registry.registrySha256) else {
                 throw AdapterError.invalidRegistry
             }
             guard let captureContext, captureContext.sleepDayAttribution == .morningEnds,
@@ -773,6 +774,25 @@ nonisolated enum HealthMdSemanticInputAdapter {
         }
         guard let quantity else { throw AdapterError.unavailableWakeDateQuantity }
         return try binary64(quantity, unitID: internalUnitID(unit))
+    }
+
+    /// The denominator belongs to each measured workout quantity, independently of visible duration.
+    private static func workoutRangeWeight(outputKey: String, day: HealthData) throws -> Any {
+        let workouts: [WorkoutData]
+        let value: KeyPath<WorkoutData, Double?>
+        switch outputKey {
+        case "workout_avg_heart_rate": workouts = day.workouts; value = \.avgHeartRate
+        case "workout_avg_power": workouts = day.workouts; value = \.avgPower
+        case "workout_running_cadence": workouts = day.workouts.filter { $0.workoutType == .running }; value = \.avgRunningCadence
+        case "workout_running_stride_length": workouts = day.workouts.filter { $0.workoutType == .running }; value = \.avgStrideLength
+        case "workout_running_ground_contact": workouts = day.workouts.filter { $0.workoutType == .running }; value = \.avgGroundContactTime
+        case "workout_running_vertical_oscillation": workouts = day.workouts.filter { $0.workoutType == .running }; value = \.avgVerticalOscillation
+        case "workout_cycling_cadence": workouts = day.workouts.filter { $0.workoutType == .cycling }; value = \.avgCyclingCadence
+        default: return NSNull()
+        }
+        let duration = workouts.filter { $0[keyPath: value] != nil }.reduce(0) { $0 + $1.duration }
+        guard duration.isFinite, duration > 0 else { throw AdapterError.unavailableWakeDateQuantity }
+        return try binary64(duration, unitID: "second")["number"] ?? NSNull()
     }
 
     /// Retains the native duration-weighted reducer without historical display rounding.

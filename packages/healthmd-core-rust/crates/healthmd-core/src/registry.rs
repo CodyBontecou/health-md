@@ -8,10 +8,13 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     CoreError, REGISTRY_SHA256, REGISTRY_VERSION, SLEEP_REGISTRY_SHA256, SLEEP_REGISTRY_VERSION,
+    WORKOUT_RANGE_REGISTRY_SHA256, WORKOUT_RANGE_REGISTRY_VERSION,
 };
 
 const REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.json");
 const SLEEP_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v2.json");
+
+const WORKOUT_RANGE_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v3.json");
 
 /// Closed set of shipped output profiles represented by registry metadata.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -327,6 +330,7 @@ struct UnavailableRow {
 
 static REGISTRY: OnceLock<Result<RegistryDocument, CoreError>> = OnceLock::new();
 static SLEEP_REGISTRY: OnceLock<Result<RegistryDocument, CoreError>> = OnceLock::new();
+static WORKOUT_RANGE_REGISTRY: OnceLock<Result<RegistryDocument, CoreError>> = OnceLock::new();
 
 /// Load, validate, and project one complete registry profile.
 ///
@@ -338,7 +342,13 @@ pub fn metric_registry_snapshot(
     profile: MetricRegistryProfile,
     expected_registry_version: u32,
 ) -> Result<MetricRegistrySnapshot, CoreError> {
-    if expected_registry_version != profile.registry_version() {
+    if expected_registry_version != profile.registry_version()
+        && !(expected_registry_version == WORKOUT_RANGE_REGISTRY_VERSION
+            && matches!(
+                profile,
+                MetricRegistryProfile::AppleHealthDataV11 | MetricRegistryProfile::AndroidSleepV6
+            ))
+    {
         return Err(CoreError::UnsupportedRegistryVersion);
     }
     project_snapshot(registry_document(expected_registry_version)?, profile)
@@ -349,6 +359,13 @@ fn registry_document(version: u32) -> Result<&'static RegistryDocument, CoreErro
         REGISTRY_VERSION => REGISTRY.get_or_init(|| decode_and_validate(REGISTRY_BYTES, true)),
         SLEEP_REGISTRY_VERSION => SLEEP_REGISTRY.get_or_init(|| {
             decode_and_validate_version(SLEEP_REGISTRY_BYTES, true, SLEEP_REGISTRY_VERSION)
+        }),
+        WORKOUT_RANGE_REGISTRY_VERSION => WORKOUT_RANGE_REGISTRY.get_or_init(|| {
+            decode_and_validate_version(
+                WORKOUT_RANGE_REGISTRY_BYTES,
+                true,
+                WORKOUT_RANGE_REGISTRY_VERSION,
+            )
         }),
         _ => return Err(CoreError::UnsupportedRegistryVersion),
     };
@@ -394,18 +411,21 @@ fn decode_and_validate(bytes: &[u8], enforce_hash: bool) -> Result<RegistryDocum
     decode_and_validate_version(bytes, enforce_hash, REGISTRY_VERSION)
 }
 
+pub(crate) const fn registry_hash(version: u32) -> Result<&'static str, CoreError> {
+    match version {
+        REGISTRY_VERSION => Ok(REGISTRY_SHA256),
+        SLEEP_REGISTRY_VERSION => Ok(SLEEP_REGISTRY_SHA256),
+        WORKOUT_RANGE_REGISTRY_VERSION => Ok(WORKOUT_RANGE_REGISTRY_SHA256),
+        _ => Err(CoreError::UnsupportedRegistryVersion),
+    }
+}
+
 fn decode_and_validate_version(
     bytes: &[u8],
     enforce_hash: bool,
     expected_version: u32,
 ) -> Result<RegistryDocument, CoreError> {
-    let expected_hash = if expected_version == REGISTRY_VERSION {
-        REGISTRY_SHA256
-    } else if expected_version == SLEEP_REGISTRY_VERSION {
-        SLEEP_REGISTRY_SHA256
-    } else {
-        return Err(CoreError::UnsupportedRegistryVersion);
-    };
+    let expected_hash = registry_hash(expected_version)?;
     if enforce_hash && format!("{:x}", Sha256::digest(bytes)) != expected_hash {
         return Err(CoreError::InvalidRegistry);
     }
@@ -431,7 +451,7 @@ fn validate_document(document: &RegistryDocument) -> Result<(), CoreError> {
         || document.schema_version != 1
         || !matches!(
             document.registry_version,
-            REGISTRY_VERSION | SLEEP_REGISTRY_VERSION
+            REGISTRY_VERSION | SLEEP_REGISTRY_VERSION | WORKOUT_RANGE_REGISTRY_VERSION
         )
         || document.profiles.len() != expected_profile_ids(document.registry_version).len()
         || document.known_capability_ids.is_empty()
@@ -530,7 +550,9 @@ fn expected_profile_ids(version: u32) -> HashSet<&'static str> {
             "android_frozen_v4",
             "android_analytical_v5",
         ]),
-        SLEEP_REGISTRY_VERSION => HashSet::from(["apple_health_data_v11", "android_sleep_v6"]),
+        SLEEP_REGISTRY_VERSION | WORKOUT_RANGE_REGISTRY_VERSION => {
+            HashSet::from(["apple_health_data_v11", "android_sleep_v6"])
+        }
         _ => HashSet::new(),
     }
 }
@@ -852,11 +874,7 @@ fn project_snapshot(
 
     Ok(MetricRegistrySnapshot {
         registry_version: document.registry_version,
-        registry_sha256: if document.registry_version == REGISTRY_VERSION {
-            REGISTRY_SHA256.to_owned()
-        } else {
-            SLEEP_REGISTRY_SHA256.to_owned()
-        },
+        registry_sha256: registry_hash(document.registry_version)?.to_owned(),
         profile_id: profile.id.clone(),
         public_profile_id: profile.public_profile_id.clone(),
         public_schema: profile.public_schema.clone(),

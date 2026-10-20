@@ -121,6 +121,47 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
+    fun anySelectedWorkoutOutputOwnsDetailsWithoutRequiringVisibleCountOrDuration() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 11, 1)
+        val start = Instant.parse("2026-11-01T01:30:00Z")
+        val end = start.plusSeconds(1800)
+        val workout = com.healthmd.domain.model.WorkoutData(
+            workoutType = com.healthmd.domain.model.WorkoutType.RUNNING,
+            startTime = start.atZone(context.zoneId).toLocalDateTime(),
+            endTime = end.atZone(context.zoneId).toLocalDateTime(), duration = 30.minutes,
+            averageHeartRate = 160.125, heartRateMax = 179.875, heartRateMin = 91.125,
+            exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.UTC),
+            exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.UTC),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-selected-workout"))
+        val data = HealthData(date = date, workouts = listOf(workout))
+        val registry = HealthMdCoreService().getMetricRegistry(com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6, 2u)
+        val keys = registry.outputs.filter { it.key == "workouts" || it.key.startsWith("workout_") }.map { it.key }
+        // Android has twelve native outputs; Apple-only gait metrics and its mile alias stay absent.
+        assertThat(keys).hasSize(12)
+        for (key in keys) {
+            val fields = keys.map { com.healthmd.domain.model.CustomFrontmatterField(it, isEnabled = it == key) }
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+                formatCustomization = FormatCustomization(frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(fields = fields)),
+                metricSelection = MetricSelectionState(enabledMetrics = setOf("workouts")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings,
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("selected-$key", "selected-session-$key"))
+            val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("no ambient clock") }).plan(request).plan
+            assertThat(plan.items).hasSize(4)
+            val csv = plan.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString()
+            assertThat(csv).contains(",Native Detail,Workout,")
+            assertThat(csv).contains("synthetic-selected-workout")
+            val document = Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).jsonObject
+            assertThat(document.getValue("workouts").jsonArray.single().jsonObject.getValue("identity").jsonObject.getValue("nativeId").jsonPrimitive.content)
+                .isEqualTo("synthetic-selected-workout")
+            assertThat(plan.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString()).contains("native_workout_details:")
+            assertThat(plan.items.single { it.relativePath.endsWith(".md") && !it.relativePath.endsWith("-bases.md") }.content.decodeToString()).contains("Workout Details")
+        }
+    }
+
+    @Test
     fun capturedWorkoutIntervalsAndNestedSourcesKeepExactDstElapsedTime() = runTest {
         val zone = ZoneId.of("America/New_York")
         val date = LocalDate.of(2026, 11, 1)

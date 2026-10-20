@@ -735,7 +735,8 @@ impl RenderSession {
                 )
             })
             .collect();
-        let presentation_categories = profile_presentation_categories(config.profile)?;
+        let presentation_categories =
+            profile_presentation_categories(config.profile, config.registry_version)?;
         if let Some(keys) = &semantic.selected_output_keys {
             let selected = keys.iter().collect::<HashSet<_>>();
             if !config.profile.is_wake_date()
@@ -907,6 +908,7 @@ impl RenderSession {
 
 fn profile_presentation_categories(
     profile: SemanticProfile,
+    registry_version: u32,
 ) -> Result<HashMap<String, BTreeSet<String>>, RenderError> {
     let registry_profile = match profile {
         SemanticProfile::AppleHealthDataV8 => {
@@ -921,9 +923,8 @@ fn profile_presentation_categories(
         }
         SemanticProfile::AndroidSleepV6 => crate::registry::MetricRegistryProfile::AndroidSleepV6,
     };
-    let snapshot =
-        crate::registry::metric_registry_snapshot(registry_profile, profile.registry_version())
-            .map_err(|_| RenderError::InvalidConfig)?;
+    let snapshot = crate::registry::metric_registry_snapshot(registry_profile, registry_version)
+        .map_err(|_| RenderError::InvalidConfig)?;
     let categories_by_selection = snapshot
         .metrics
         .into_iter()
@@ -1003,8 +1004,12 @@ fn validate_config(
     }
     if config.schema != "healthmd.render_session_config"
         || config.canonical_model_version != config.profile.canonical_model_version()
-        || config.registry_version != config.profile.registry_version()
-        || config.registry_sha256 != config.profile.registry_sha256()
+        || !config
+            .profile
+            .supports_registry_version(config.registry_version)
+        || config.registry_sha256
+            != crate::registry::registry_hash(config.registry_version)
+                .map_err(|_| RenderError::InvalidConfig)?
         || semantic.schema != "healthmd.semantic_result"
         || semantic.canonical_model_version != config.canonical_model_version
         || semantic.semantic_input_version != config.profile.semantic_input_version()

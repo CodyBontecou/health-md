@@ -439,10 +439,16 @@
           "const": 2
         },
         "registry_version": {
-          "const": 2
+          "enum": [
+            2,
+            3
+          ]
         },
         "registry_sha256": {
-          "const": "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78"
+          "enum": [
+            "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78",
+            "0136dc5096e7cfc7030ec92286f1bbe9422e8b0bbbc0fa16924d45fe9124d337"
+          ]
         },
         "profile_revision": {
           "enum": [
@@ -580,6 +586,30 @@
               }
             }
           }
+        },
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "registry_version": {
+                  "const": 2
+                },
+                "registry_sha256": {
+                  "const": "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78"
+                }
+              }
+            },
+            {
+              "properties": {
+                "registry_version": {
+                  "const": 3
+                },
+                "registry_sha256": {
+                  "const": "0136dc5096e7cfc7030ec92286f1bbe9422e8b0bbbc0fa16924d45fe9124d337"
+                }
+              }
+            }
+          ]
         }
       ]
     },

@@ -680,7 +680,8 @@
         "packages/contracts/render-input/v2/render-input.schema.json",
         "packages/contracts/render-input/v2/artifact-plan.schema.json",
         "packages/contracts/render-input/v2/stream-artifact-plan-item.schema.json",
-        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v2.json"
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v2.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v3.json"
       ],
       "implementations": [
         "packages/contracts/validate.py",
@@ -689,7 +690,8 @@
       ],
       "consumers": [
         "packages/contracts/test_validate_sleep_attribution.py",
-        "packages/healthmd-core-rust/crates/healthmd-core/tests/sleep_rendering.rs"
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/sleep_rendering.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/workout_range_authority.rs"
       ],
       "documentation": [
         "packages/contracts/render-input/v2/contract.md",

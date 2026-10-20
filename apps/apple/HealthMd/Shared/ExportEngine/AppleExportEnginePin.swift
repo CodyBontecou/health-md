@@ -169,10 +169,16 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
             && canonicalModelVersion == Self.wakeDateHandoffVersion
             && renderInputVersion == Self.wakeDateHandoffVersion
             && artifactPlanVersion == Self.wakeDateHandoffVersion
-            && registryVersion == HealthMdSleepProfileContract.registryVersion
-            && registrySHA256 == HealthMdSleepProfileContract.registrySHA256
+            && Self.isSupportedWakeDateRegistry(version: registryVersion, sha256: registrySHA256)
             && semanticProfileRevision == Self.supportedSemanticProfileRevision
             && renderProfileRevision == Self.supportedRenderProfileRevision
+    }
+
+    static func isSupportedWakeDateRegistry(version: UInt32, sha256: String) -> Bool {
+        (version == HealthMdSleepProfileContract.registryVersion
+            && sha256 == HealthMdSleepProfileContract.registrySHA256)
+        || (version == HealthMdWorkoutRangeRegistryContract.registryVersion
+            && sha256 == HealthMdWorkoutRangeRegistryContract.registrySHA256)
     }
 
     private func validateWakeDateCompatibility(

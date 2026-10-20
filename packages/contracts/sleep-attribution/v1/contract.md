@@ -72,7 +72,7 @@ For Apple successor compatibility timestamps, split Foundation's reference-date 
 
 Each CSV `Native Detail` / `Workout` row carries a JSON `{metric: "workout", sample: ...}` object and its recorded UTC start. Markdown's `Workout Details` table carries the same object; JSON escaping of table separators preserves the object. Bases uses `native_workout_details`. Native facts are bound to selected workout outputs under the existing bounded render-input-v2 grammar. Readers keep complete source facts when formats are combined and reject conflicting identities, quantities or metadata. Display-only distance strings cannot replace canonical native meters.
 
-Workout requested-range aggregation still requires separately versioned, qualified rules: the immutable registry-v2 snapshot declares sums for workout heart-rate extrema and maximum power. New Apple workout range plans under that authority remain unavailable; daily preparation does not approve those folds or complete the full feature acceptance.
+Workout requested-range plans under immutable registry v2 remain unavailable: that snapshot declares sums for workout heart-rate extrema and maximum power. Explicit registry v3 independently defines corrected range preparation below; it does not repin v2 or complete full feature acceptance.
 
 ## API, direct and connected consumers
 
@@ -107,3 +107,8 @@ The accepted test seams are the existing production exporters/artifact planners,
 Qualification requires independently expected synthetic overnight, noon-spanning, midnight-boundary, DST, nap and invalid-session cases; all supported formats and metadata settings; empty sleep; mixed historical/successor reads; both preference-mutation directions; concurrency; partial recovery/downgrade; configuration protection; phone/tablet accessibility metadata and spoken VoiceOver evidence. Run affected Apple, Android, core, contracts, CLI, website/API and pinned external Obsidian checks, and keep health-data QA artifacts private and ignored. Update capability/registry projections through their canonical owner/generator only after implementation evidence supports the classification.
 
 No successor writer is qualified until the completion audit maps every obligation above to inspected artifacts and real verification results. No product release or health-data upload is implied by owner authorization of the implementation.
+
+
+## Opt-in workout range preparation
+
+Registry v3 independently versions corrected workout extrema and quantity-specific duration weights. The previous v2 inventory, old hashes, saved job identities and v2 range preflight remain immutable. New explicit Apple v3 pins may prepare requested ranges under range revision 2 and public rollup rules version 12. Daily profile IDs/schema versions remain Apple v11 and Android v6; no shipped schema/signature, direct protocol or historical fixture is repinned. Android requested-range export remains planned under Issue #104 and still rejects unsupported range requests. Full native provider/streaming/archive, production route/durable recovery, reader/vault/device/user-flow and spoken-accessibility qualification remains required before either production gate opens.

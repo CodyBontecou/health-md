@@ -58,6 +58,7 @@ nonisolated struct AppleLooseDailyCoreContext: Sendable {
 nonisolated protocol AppleLooseDailyCoreExecuting: Sendable {
     func loadContext() async throws -> AppleLooseDailyCoreContext
     func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext
+    func loadContext(profile: CoreMetricRegistryProfile, expectedRegistryVersion: UInt32) async throws -> AppleLooseDailyCoreContext
     func processSemantic(configuration: Data, batches: [Data]) async throws -> Data
     func render(
         configuration: Data,
@@ -67,6 +68,14 @@ nonisolated protocol AppleLooseDailyCoreExecuting: Sendable {
 }
 
 extension AppleLooseDailyCoreExecuting {
+    nonisolated func loadContext(profile: CoreMetricRegistryProfile, expectedRegistryVersion: UInt32) async throws -> AppleLooseDailyCoreContext {
+        let context = try await loadContext(profile: profile)
+        guard context.registry.registryVersion == expectedRegistryVersion else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        return context
+    }
+
     nonisolated func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext {
         guard profile == .appleHealthDataV8 else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
@@ -81,6 +90,11 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
     }
 
     func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext {
+        try await loadContext(profile: profile, expectedRegistryVersion: profile == .appleHealthDataV11
+            ? HealthMdSleepProfileContract.registryVersion : 1)
+    }
+
+    func loadContext(profile: CoreMetricRegistryProfile, expectedRegistryVersion: UInt32) async throws -> AppleLooseDailyCoreContext {
         guard profile == .appleHealthDataV8 || profile == .appleHealthDataV11 else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
@@ -88,9 +102,7 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
             let service = HealthMdCoreService()
             return AppleLooseDailyCoreContext(
                 buildInfo: try service.buildInfo(),
-                registry: try service.metricRegistry(profile: profile,
-                    expectedRegistryVersion: profile == .appleHealthDataV11
-                        ? HealthMdSleepProfileContract.registryVersion : 1)
+                registry: try service.metricRegistry(profile: profile, expectedRegistryVersion: expectedRegistryVersion)
             )
         }
     }
@@ -409,7 +421,9 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         let context: AppleLooseDailyCoreContext
         do {
             context = try await coreExecutor.loadContext(profile: wakeDateContext == nil
-                ? .appleHealthDataV8 : .appleHealthDataV11)
+                ? .appleHealthDataV8 : .appleHealthDataV11,
+                expectedRegistryVersion: suppliedPin?.registryVersion
+                    ?? (wakeDateContext == nil ? 1 : HealthMdSleepProfileContract.registryVersion))
         } catch is CancellationError {
             throw CancellationError()
         } catch {

@@ -3759,8 +3759,11 @@ def validate_sleep_successor_pair(root: Path, handoff: Any, plan: Any) -> None:
     schema_check(result, "semantic-input/v2/semantic-result.schema.json", "semantic result")
     schema_check(render, "render-input/v2/render-input.schema.json", "render configuration")
     schema_check(plan, "render-input/v2/artifact-plan.schema.json", "artifact plan")
+    registry_version = semantic["registry_version"]
+    if registry_version not in (2, 3) or render["registry_version"] != registry_version:
+        fail(f"{context}: successor registry version mismatch")
     registry_hash = hashlib.sha256(
-        (root / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v2.json").read_bytes()
+        (root / f"packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v{registry_version}.json").read_bytes()
     ).hexdigest()
     for value in (semantic, result, render):
         if value["registry_sha256"] != registry_hash:
