@@ -109,19 +109,19 @@ printf '%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" > "$TEST_ROOT/expected"
 cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
 unset MOCK_PLAY_EXIT
 
-for shard in 0 1 2 3; do
-    export HEALTHMD_ANDROID_SHARD_INDEX="$shard" HEALTHMD_ANDROID_SHARD_COUNT=4
+for shard in 0 1 2 3 4 5; do
+    export HEALTHMD_ANDROID_SHARD_INDEX="$shard" HEALTHMD_ANDROID_SHARD_COUNT=6
     run_case full 0
     printf '%s\n' "$FOCUS_COMMAND" > "$TEST_ROOT/expected"
     if [[ "$shard" == 0 ]]; then
         printf '%s\n' "$DIAGNOSTICS :healthmd-core:connectedDebugAndroidTest --stacktrace" >> "$TEST_ROOT/expected"
     fi
-    FLAGS="-Pandroid.testInstrumentationRunnerArguments.numShards=4 -Pandroid.testInstrumentationRunnerArguments.shardIndex=$shard"
+    FLAGS="-Pandroid.testInstrumentationRunnerArguments.numShards=6 -Pandroid.testInstrumentationRunnerArguments.shardIndex=$shard"
     printf '%s\n' "$DIAGNOSTICS $FLAGS :app:connectedPlayDebugAndroidTest --stacktrace" >> "$TEST_ROOT/expected"
     cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
 done
 run_case standard 0
-grep -q "numShards=4.*shardIndex=3.*connectedPlayDebugAndroidTest" "$MOCK_CALLS"
+grep -q "numShards=6.*shardIndex=5.*connectedPlayDebugAndroidTest" "$MOCK_CALLS"
 export MOCK_PLAY_EXIT=23
 run_case full 23
 [[ $(wc -l < "$MOCK_CALLS") -eq 2 ]]
@@ -136,7 +136,7 @@ unset HEALTHMD_ANDROID_SHARD_COUNT
 run_case full 2
 [[ ! -s "$MOCK_CALLS" ]]
 unset HEALTHMD_ANDROID_SHARD_INDEX
-export HEALTHMD_ANDROID_SHARD_COUNT=4
+export HEALTHMD_ANDROID_SHARD_COUNT=6
 run_case full 2
 [[ ! -s "$MOCK_CALLS" ]]
 unset HEALTHMD_ANDROID_SHARD_COUNT
