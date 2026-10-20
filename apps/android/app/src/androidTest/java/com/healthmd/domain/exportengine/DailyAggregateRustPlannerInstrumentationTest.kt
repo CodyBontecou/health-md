@@ -129,9 +129,29 @@ class DailyAggregateRustPlannerInstrumentationTest {
             exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, java.time.ZoneOffset.of("-04:00")),
             exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, java.time.ZoneOffset.of("-05:00")),
             identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-device-workout"))
-        val data = HealthData(date = LocalDate.of(2026, 11, 1), workouts = listOf(workout))
         for (preference in listOf(com.healthmd.domain.model.UnitPreference.METRIC, com.healthmd.domain.model.UnitPreference.IMPERIAL)) {
             for (visibleOwners in listOf(true, false)) {
+                val facts = mutableMapOf("synthetic" to "accepted-workout-source")
+                val sampleFacts = mutableMapOf("synthetic" to "accepted-series-source")
+                val sampleContext = mutableMapOf("measurement" to "accepted-context")
+                val samples = mutableListOf(com.healthmd.domain.model.TimestampedSample(workout.startTime, 160.125,
+                    metadata = sampleFacts, context = sampleContext, exactTime = workout.exactStartTime))
+                val sourceIds = mutableListOf("accepted-correlated-source")
+                val correlations = mutableMapOf<String, List<String>>("heart_rate" to sourceIds)
+                val laps = mutableListOf(com.healthmd.domain.model.WorkoutLapData(workout.startTime, checkNotNull(workout.endTime),
+                    exactStartTime = workout.exactStartTime, exactEndTime = workout.exactEndTime))
+                val segments = mutableListOf(com.healthmd.domain.model.WorkoutSegmentData(workout.startTime, checkNotNull(workout.endTime),
+                    "running", exactStartTime = workout.exactStartTime, exactEndTime = workout.exactEndTime))
+                val splits = mutableListOf(com.healthmd.domain.model.WorkoutSplitData(1, workout.startTime, checkNotNull(workout.endTime),
+                    workout.duration, exactStartTime = workout.exactStartTime, exactEndTime = workout.exactEndTime))
+                val route = mutableListOf(com.healthmd.domain.model.WorkoutRoutePointData(workout.startTime, 0.0, 0.0,
+                    exactTime = workout.exactStartTime))
+                val workouts = mutableListOf(workout.copy(metadata = facts, laps = laps, segments = segments,
+                    splits = splits, route = route, routeAccess = com.healthmd.domain.model.WorkoutRouteAccess.DATA,
+                    correlatedSourceIds = correlations, heartRateSamples = samples, speedSamples = samples,
+                    cyclingCadenceSamples = samples, stepsCadenceSamples = samples, powerSamples = samples,
+                    elevationSamples = samples))
+                val data = HealthData(date = LocalDate.of(2026, 11, 1), workouts = workouts)
                 val fields = com.healthmd.domain.model.FrontmatterConfiguration.defaultFields.map { field ->
                     field.copy(isEnabled = visibleOwners || field.originalKey !in setOf("workout_count", "workouts", "workout_minutes"))
                 }
@@ -143,7 +163,12 @@ class DailyAggregateRustPlannerInstrumentationTest {
                     executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
                     AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
                     DailyAggregateExportIds("device-workout-${preference.name}-$visibleOwners", "device-workout-session-${preference.name}-$visibleOwners"))
-                val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("cannot borrow an ambient clock") }).plan(request)
+                val planner = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("cannot borrow an ambient clock") })
+                val accepted = planner.plan(request).plan.items.associate { it.relativePath to it.content.decodeToString() }
+                workouts.clear(); facts.clear(); sampleFacts.clear(); sampleContext.clear(); samples.clear()
+                sourceIds.clear(); correlations.clear(); laps.clear(); segments.clear(); splits.clear(); route.clear()
+                val result = planner.plan(request)
+                assertEquals(accepted, result.plan.items.associate { it.relativePath to it.content.decodeToString() })
                 assertEquals(AndroidExportProfile.android_sleep_v6, result.pin.profile)
                 assertEquals(4, result.plan.items.size)
                 for (item in result.plan.items) {

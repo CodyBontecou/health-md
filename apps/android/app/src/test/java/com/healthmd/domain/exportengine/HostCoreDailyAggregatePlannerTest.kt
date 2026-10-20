@@ -111,6 +111,77 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
+    fun acceptedWorkoutSourcesRemainFixedWhenCallerCollectionsChange() = runTest {
+        val zone = ZoneId.of("America/New_York")
+        val context = AndroidCaptureContext(zone, SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val localStart = start.atZone(zone).toLocalDateTime()
+        val localEnd = end.atZone(zone).toLocalDateTime()
+        val exactStart = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.of("-04:00"))
+        val exactEnd = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.of("-05:00"))
+        val mutations = listOf("control", "workouts", "metadata", "laps", "segments", "splits", "route",
+            "series", "sample-metadata", "sample-context", "correlation-map", "correlation-ids")
+        val changed = mutableListOf<String>()
+        for (granular in listOf(false, true)) for (mutation in mutations) {
+            val metadata = mutableMapOf("synthetic" to "accepted workout")
+            val sampleMetadata = mutableMapOf("synthetic" to "accepted sample")
+            val sampleContext = mutableMapOf("measurement" to "accepted context")
+            val series = mutableListOf(com.healthmd.domain.model.TimestampedSample(localStart, 160.125,
+                metadata = sampleMetadata, context = sampleContext, exactTime = exactStart))
+            val laps = mutableListOf(com.healthmd.domain.model.WorkoutLapData(localStart, localEnd,
+                length = 1000.125, exactStartTime = exactStart, exactEndTime = exactEnd))
+            val segments = mutableListOf(com.healthmd.domain.model.WorkoutSegmentData(localStart, localEnd,
+                type = "running", exactStartTime = exactStart, exactEndTime = exactEnd))
+            val splits = mutableListOf(com.healthmd.domain.model.WorkoutSplitData(1, localStart, localEnd,
+                duration = kotlin.time.Duration.parse("3600.864197532s"), distance = 1000.125,
+                exactStartTime = exactStart, exactEndTime = exactEnd))
+            val route = mutableListOf(com.healthmd.domain.model.WorkoutRoutePointData(localStart, 0.0, 0.0,
+                exactTime = exactStart))
+            val correlatedIds = mutableListOf("accepted-correlated-source")
+            val correlations = mutableMapOf<String, List<String>>("heart_rate" to correlatedIds)
+            val workouts = mutableListOf(com.healthmd.domain.model.WorkoutData(
+                workoutType = com.healthmd.domain.model.WorkoutType.RUNNING, startTime = localStart, endTime = localEnd,
+                duration = kotlin.time.Duration.parse("1800.5s"), averageHeartRate = 160.125,
+                metadata = metadata, laps = laps, segments = segments, splits = splits, route = route,
+                routeAccess = com.healthmd.domain.model.WorkoutRouteAccess.DATA,
+                heartRateSamples = series, speedSamples = series, cyclingCadenceSamples = series,
+                stepsCadenceSamples = series, powerSamples = series, elevationSamples = series,
+                exactStartTime = exactStart, exactEndTime = exactEnd, correlatedSourceIds = correlations))
+            val data = HealthData(LocalDate.of(2026, 11, 1), workouts = workouts, heart = HeartData(samples = series))
+            val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
+                exportFormats = ExportFormat.entries.toSet(), includeGranularData = granular,
+                metricSelection = MetricSelectionState(enabledMetrics = setOf("workouts", "avg_hr")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("accepted-workout-$granular-$mutation", "accepted-workout-session-$granular-$mutation"))
+            val planner = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("no ambient clock") })
+            val expectedData = Json.encodeToJsonElement(HealthData.serializer(), request.data)
+            val expected = planner.plan(request).plan.items.associate { it.relativePath to it.content.decodeToString() }
+            when (mutation) {
+                "workouts" -> workouts.clear()
+                "metadata" -> metadata["synthetic"] = "changed after acceptance"
+                "laps" -> laps.clear()
+                "segments" -> segments.clear()
+                "splits" -> splits.clear()
+                "route" -> route.clear()
+                "series" -> series.clear()
+                "sample-metadata" -> sampleMetadata.clear()
+                "sample-context" -> sampleContext.clear()
+                "correlation-map" -> correlations.clear()
+                "correlation-ids" -> correlatedIds.clear()
+            }
+            if (Json.encodeToJsonElement(HealthData.serializer(), request.data) != expectedData) {
+                changed += "$granular/$mutation: accepted source changed"
+            }
+            val actual = planner.plan(request).plan.items.associate { it.relativePath to it.content.decodeToString() }
+            if (actual != expected) changed += "$granular/$mutation: exported bytes changed"
+        }
+        assertWithMessage("An accepted operation must retain its source facts and all four artifact bytes")
+            .that(changed).isEmpty()
+    }
+
+    @Test
     fun nativeWorkoutsReachEverySuccessorFormatWithExactQuantitiesAndClocks() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
         val start = Instant.parse("2026-11-01T05:30:00.123456789Z")

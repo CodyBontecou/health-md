@@ -131,6 +131,9 @@ class FrozenDailyAggregateExportRequest private constructor(
                         bloodOxygenSamples = freezeQuantitySamples(data.vitals.bloodOxygenSamples),
                         bloodGlucoseSamples = freezeQuantitySamples(data.vitals.bloodGlucoseSamples),
                         respiratoryRateSamples = freezeQuantitySamples(data.vitals.respiratoryRateSamples),
+                        bodyTemperatureSamples = freezeQuantitySamples(data.vitals.bodyTemperatureSamples),
+                        basalBodyTemperatureSamples = freezeQuantitySamples(data.vitals.basalBodyTemperatureSamples),
+                        skinTemperatureDeltas = freezeQuantitySamples(data.vitals.skinTemperatureDeltas),
                         bloodPressureSamples = Collections.unmodifiableList(data.vitals.bloodPressureSamples.map { sample ->
                             sample.copy(metadata = Collections.unmodifiableMap(sample.metadata.toMap()))
                         }),
@@ -145,6 +148,24 @@ class FrozenDailyAggregateExportRequest private constructor(
                         sessions = Collections.unmodifiableList(data.mindfulness.sessions.map { session ->
                             session.copy(metadata = Collections.unmodifiableMap(session.metadata.toMap()))
                         }),
+                    ),
+                    nutrition = data.nutrition.copy(
+                        meals = Collections.unmodifiableList(data.nutrition.meals.map { meal ->
+                            meal.copy(metadata = Collections.unmodifiableMap(meal.metadata.toMap()))
+                        }),
+                    ),
+                    reproductiveHealth = data.reproductiveHealth.copy(
+                        menstruationPeriods = Collections.unmodifiableList(data.reproductiveHealth.menstruationPeriods.map { period ->
+                            period.copy(metadata = Collections.unmodifiableMap(period.metadata.toMap()))
+                        }),
+                    ),
+                    workouts = freezeWorkouts(data.workouts),
+                    // These sources are rejected when populated at acceptance. Freeze the empty
+                    // collections too, so later caller mutation cannot change that decision.
+                    plannedWorkouts = Collections.unmodifiableList(data.plannedWorkouts.toList()),
+                    medicalResources = data.medicalResources.copy(
+                        resources = Collections.unmodifiableList(data.medicalResources.resources.toList()),
+                        countsByType = Collections.unmodifiableMap(data.medicalResources.countsByType.toMap()),
                     ),
                 ) else data,
                 profile = profile,
@@ -656,5 +677,26 @@ private fun rethrowCancellationOrFatal(error: Throwable) {
 
 private fun freezeQuantitySamples(samples: List<com.healthmd.domain.model.TimestampedSample>) =
     Collections.unmodifiableList(samples.map { sample ->
-        sample.copy(metadata = Collections.unmodifiableMap(sample.metadata.toMap()))
+        sample.copy(metadata = Collections.unmodifiableMap(sample.metadata.toMap()),
+            context = Collections.unmodifiableMap(sample.context.toMap()))
+    })
+
+private fun freezeWorkouts(workouts: List<com.healthmd.domain.model.WorkoutData>) =
+    Collections.unmodifiableList(workouts.map { workout ->
+        workout.copy(
+            metadata = Collections.unmodifiableMap(workout.metadata.toMap()),
+            laps = Collections.unmodifiableList(workout.laps.toList()),
+            segments = Collections.unmodifiableList(workout.segments.toList()),
+            splits = Collections.unmodifiableList(workout.splits.toList()),
+            route = Collections.unmodifiableList(workout.route.toList()),
+            heartRateSamples = freezeQuantitySamples(workout.heartRateSamples),
+            speedSamples = freezeQuantitySamples(workout.speedSamples),
+            cyclingCadenceSamples = freezeQuantitySamples(workout.cyclingCadenceSamples),
+            stepsCadenceSamples = freezeQuantitySamples(workout.stepsCadenceSamples),
+            powerSamples = freezeQuantitySamples(workout.powerSamples),
+            elevationSamples = freezeQuantitySamples(workout.elevationSamples),
+            correlatedSourceIds = Collections.unmodifiableMap(workout.correlatedSourceIds.mapValues { (_, ids) ->
+                Collections.unmodifiableList(ids.toList())
+            }),
+        )
     })

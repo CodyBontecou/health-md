@@ -24,6 +24,53 @@ import org.junit.Test
 
 class DailyAggregateExportPlannerTest {
     @Test
+    fun acceptedEmptySourceCollectionsCannotChangeLaterAdmission() {
+        val samples = mutableListOf<com.healthmd.domain.model.TimestampedSample>()
+        val meals = mutableListOf<com.healthmd.domain.model.NutritionMealEntry>()
+        val periods = mutableListOf<com.healthmd.domain.model.MenstruationPeriodEntry>()
+        val plans = mutableListOf<com.healthmd.domain.model.PlannedExerciseData>()
+        val resources = mutableListOf<com.healthmd.domain.model.MedicalResourceData>()
+        val counts = mutableMapOf<String, Int>()
+        val data = day.copy(vitals = day.vitals.copy(bodyTemperatureSamples = samples,
+            basalBodyTemperatureSamples = samples, skinTemperatureDeltas = samples),
+            nutrition = day.nutrition.copy(meals = meals),
+            reproductiveHealth = day.reproductiveHealth.copy(menstruationPeriods = periods),
+            plannedWorkouts = plans,
+            medicalResources = com.healthmd.domain.model.MedicalResourcesData(resources, counts))
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val settings = simpleSettings().copy(executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true)
+        val ids = DailyAggregateExportIds(TEST_REQUEST_ID, TEST_SESSION_ID)
+        val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+            ExportEngineMode.rust, ids)
+        val expected = kotlinx.serialization.json.Json.encodeToJsonElement(
+            com.healthmd.domain.model.HealthData.serializer(), request.data)
+        val time = java.time.LocalDateTime.of(2026, 3, 15, 1, 0)
+        samples.add(com.healthmd.domain.model.TimestampedSample(time, 36.5))
+        meals.add(com.healthmd.domain.model.NutritionMealEntry(time, time.plusHours(1), name = "synthetic meal"))
+        periods.add(com.healthmd.domain.model.MenstruationPeriodEntry(time, time.plusHours(1),
+            kotlin.time.Duration.parse("1h")))
+        plans.add(com.healthmd.domain.model.PlannedExerciseData(com.healthmd.domain.model.WorkoutType.RUNNING,
+            time, time.plusHours(1), kotlin.time.Duration.parse("1h"), true, 1))
+        resources.add(com.healthmd.domain.model.MedicalResourceData("synthetic", 1, "synthetic-source", "synthetic-id",
+            "4.0.1", "Observation", 1, "synthetic-fhir-id", "{}"))
+        counts["synthetic"] = 1
+        assertThat(kotlinx.serialization.json.Json.encodeToJsonElement(
+            com.healthmd.domain.model.HealthData.serializer(), request.data)).isEqualTo(expected)
+        // A distinct new request sees the added, still-unqualified records. The accepted one does not.
+        assertThrows(IllegalArgumentException::class.java) {
+            FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, ids)
+        }
+        assertThrows(UnsupportedOperationException::class.java) {
+            (request.data.vitals.bodyTemperatureSamples as MutableList).add(samples.single())
+        }
+        assertThrows(UnsupportedOperationException::class.java) {
+            (request.data.medicalResources.countsByType as MutableMap)["synthetic"] = 1
+        }
+    }
+
+    @Test
     fun explicitlyPinnedWakeDateRoutesOnlyToRustWithItsCapturedProfileAndClock() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
         val pin = ExportEnginePin.create(
