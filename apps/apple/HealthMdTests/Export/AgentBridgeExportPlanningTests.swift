@@ -398,6 +398,88 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
     #endif
 
+    func testNativeRefreshControllerSerializesAndCoalescesEventsAcrossActualPublication() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState(), store = rig.store
+        let entered = expectation(description: "initial native sample suspended")
+        let published = expectation(description: "fresh follow-up published")
+        let extra = expectation(description: "no duplicate follow-up"); extra.isInverted = true
+        let gate = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        var calls = 0
+        let controller = try AgentBridgeNativeCatalogRefresh(lifecycle: lifecycle) {
+            _ = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: lifecycle, peer: rig.peer,
+                existingDirectory: rig.directory, sample: {
+                    calls += 1
+                    if calls == 1 { entered.fulfill(); for await _ in gate.stream { break } }
+                    if calls > 2 { extra.fulfill() }
+                    return facts
+                }, loadStore: { _ in store })
+            published.fulfill()
+        }
+        defer { gate.continuation.finish(); controller.stop() }
+        await fulfillment(of: [entered], timeout: 3)
+        XCTAssertEqual(calls, 1)
+        try lifecycle.recordNativeEvent(); try lifecycle.recordNativeEvent()
+        XCTAssertThrowsError(try lifecycle.currentPublication())
+        XCTAssertThrowsError(try lifecycle.claimRefreshEvents()) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .busy)
+        }
+        gate.continuation.yield(())
+        await fulfillment(of: [published], timeout: 3)
+        await fulfillment(of: [extra], timeout: 0.15)
+        XCTAssertEqual(calls, 2)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        XCTAssertNotNil(try rig.store.snapshot().nativeCatalog)
+    }
+
+    func testNativeRefreshControllerFailureWaitsForNativeEventWithoutSelfRetry() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState(), store = rig.store
+        try lifecycle.observe(facts)
+        try lifecycle.publish(to: store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let failed = expectation(description: "native refresh failed")
+        let retried = expectation(description: "external event schedules refresh")
+        let early = expectation(description: "no autonomous retry"); early.isInverted = true
+        var calls = 0, allowRetry = false
+        let controller = try AgentBridgeNativeCatalogRefresh(lifecycle: lifecycle) {
+            calls += 1
+            if calls == 1 { failed.fulfill(); throw AgentBridgeValidationError.busy }
+            if !allowRetry { early.fulfill() }
+            _ = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: lifecycle, peer: rig.peer,
+                existingDirectory: rig.directory, sample: { facts }, loadStore: { _ in store })
+            retried.fulfill()
+        }
+        defer { controller.stop() }
+        await fulfillment(of: [failed], timeout: 3)
+        await fulfillment(of: [early], timeout: 0.15)
+        XCTAssertEqual(calls, 1)
+        XCTAssertThrowsError(try lifecycle.currentPublication())
+        allowRetry = true
+        try lifecycle.recordNativeEvent()
+        await fulfillment(of: [retried], timeout: 3)
+        XCTAssertEqual(calls, 2)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+    }
+
+    func testNativeRefreshControllerStopCancelsSamplerAndPermanentlyClosesOwner() async throws {
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        let entered = expectation(description: "native sampler entered")
+        let ended = expectation(description: "native sampler canceled")
+        let controller = try AgentBridgeNativeCatalogRefresh(lifecycle: lifecycle) {
+            defer { ended.fulfill() }
+            entered.fulfill()
+            try await Task.sleep(for: .seconds(30))
+        }
+        await fulfillment(of: [entered], timeout: 3)
+        controller.stop()
+        await fulfillment(of: [ended], timeout: 3)
+        XCTAssertThrowsError(try lifecycle.beginSample()) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        XCTAssertThrowsError(try lifecycle.recordNativeEvent())
+        XCTAssertThrowsError(try AgentBridgeNativeCatalogRefresh(lifecycle: lifecycle) { XCTFail("Closed owner restarted") })
+    }
+
     func testNativeRefreshComposesMetadataAndPreservesUnchangedPublication() async throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let lifecycle = AgentBridgeNativeCatalogLifecycle(), store = rig.store

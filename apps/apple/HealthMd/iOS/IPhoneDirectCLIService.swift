@@ -370,6 +370,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var agentBridgeSession: IPhoneDirectCLIAuthenticatedSession?
     private var agentBridgePeer: AgentBridgeExportAuthenticatedPeer?
     private var agentBridgeCatalogLifecycle: AgentBridgeNativeCatalogLifecycle?
+    private var agentBridgeCatalogRefresh: AgentBridgeNativeCatalogRefresh?
     private let agentBridgeCatalogEvents: AgentBridgeNativeCatalogEventRelay
     private let agentBridgeCatalogNotifications: AgentBridgeNativeCatalogNotifications
     private var exportTask: Task<Void, Never>?
@@ -530,6 +531,23 @@ final class IPhoneDirectCLIService: ObservableObject {
         }
     }
 
+    /// Explicit native controller admission; never invoked by hello/requests. Repeated starts do
+    /// not replace the pinned sampler/managers or renew an existing owner.
+    func startAgentBridgeNativeCatalogRefresh(health: HealthKitManager, purchases: PurchaseManager,
+                                             configurationProtection: ConfigurationProtectionManager) throws {
+        try Task.checkCancellation()
+        let original = try agentBridgeNativePlanningOwner()
+        _ = try original.lifecycle.beginSample() // A terminal controller cannot be renewed.
+        guard agentBridgeCatalogRefresh == nil else { return }
+        agentBridgeCatalogRefresh = try AgentBridgeNativeCatalogRefresh(lifecycle: original.lifecycle) { [weak self] in
+            guard let self, self.agentBridgeCatalogLifecycle === original.lifecycle else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
+            _ = try await self.refreshAgentBridgeNativeCatalog(health: health, purchases: purchases,
+                                                              configurationProtection: configurationProtection)
+        }
+    }
+
     private func recordAgentBridgeBaseHello(
         _ capabilities: DirectPeerCapabilities, on channel: DirectSecureChannel, sessionID: UUID
     ) {
@@ -557,6 +575,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func invalidateAgentBridgeSession() {
+        agentBridgeCatalogRefresh?.stop()
+        agentBridgeCatalogRefresh = nil
         agentBridgeCatalogEvents.replace(with: nil)
         agentBridgeCatalogLifecycle = nil
         agentBridgeSession?.revoke()

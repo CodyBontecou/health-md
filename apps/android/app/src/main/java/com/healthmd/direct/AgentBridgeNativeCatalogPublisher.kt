@@ -3,6 +3,11 @@ package com.healthmd.direct
 import com.healthmd.direct.protocol.AgentBridgeErrorCode
 import com.healthmd.direct.protocol.AgentBridgeException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -69,4 +74,29 @@ internal object AgentBridgeNativeCatalogPublisher {
     }
 
     private fun fail(code: AgentBridgeErrorCode): Nothing = throw AgentBridgeException(code)
+}
+
+
+/** Serial child of the native service scope. Native events coalesce behind in-flight SDK/store
+ * work; failures wait for another event, and scope cancellation permanently closes this owner. */
+internal class AgentBridgeNativeCatalogRefresh(
+    scope: CoroutineScope,
+    private val lifecycle: AgentBridgeNativeCatalogLifecycle,
+    refresh: suspend () -> Unit,
+) : AutoCloseable {
+    private val events = lifecycle.claimRefreshEvents()
+    private val job = scope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
+        try {
+            events.takeWhile { it != null }.collect {
+                currentCoroutineContext().ensureActive()
+                try { refresh() }
+                catch (failure: CancellationException) { throw failure }
+                catch (_: Exception) { runCatching { lifecycle.observeNativeChange() } }
+            }
+        } finally { lifecycle.stop() }
+    }
+    // A canceled parent can prevent the body from starting, so finally alone is insufficient.
+    init { job.invokeOnCompletion { lifecycle.stop() } }
+    fun start() { job.start() }
+    override fun close() { job.cancel(); lifecycle.stop() }
 }

@@ -10,6 +10,9 @@ nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
         fileprivate let owner: UUID
         fileprivate let generation: UInt64
     }
+    private let refreshEvents: AsyncStream<Void>
+    private let refreshContinuation: AsyncStream<Void>.Continuation
+    private var refreshClaimed = false
     private let identity = UUID()
     private let lock = NSLock()
     private let publisher = NSLock()
@@ -22,6 +25,34 @@ nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
     private var observedChange = true
     private var stopped = false
     private var exhausted = false
+
+    init() {
+        let events = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        refreshEvents = events.stream
+        refreshContinuation = events.continuation
+    }
+
+    /// Exactly one native controller per accepted owner. Initial refresh catches events that
+    /// preceded registration; later events coalesce only after synchronous invalidation.
+    func claimRefreshEvents() throws -> AsyncStream<Void> {
+        try lock.withLock {
+            try requireAvailable()
+            guard !refreshClaimed else { throw AgentBridgeValidationError.busy }
+            refreshClaimed = true
+            refreshContinuation.yield(())
+            return refreshEvents
+        }
+    }
+
+    /// Actual native events wake the controller; publication failures only invalidate and must
+    /// not self-schedule an unbounded retry loop against a missing store or unavailable SDK.
+    func recordNativeEvent() throws {
+        try lock.withLock {
+            try requireAvailable()
+            try advance()
+            refreshContinuation.yield(())
+        }
+    }
 
     func beginSample() throws -> Sample {
         try lock.withLock { try requireAvailable(); return Sample(owner: identity, generation: generation) }
@@ -62,7 +93,7 @@ nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
         try lock.withLock { try requireAvailable(); try advance() }
     }
 
-    func stop() { lock.withLock { stopped = true } }
+    func stop() { lock.withLock { stopped = true; refreshContinuation.finish() } }
 
     func currentFacts() throws -> AgentBridgeNativePlanningFacts {
         try lock.withLock {
@@ -153,7 +184,7 @@ nonisolated final class AgentBridgeNativeCatalogEventRelay: @unchecked Sendable 
 
     func observeNativeChange() {
         lock.withLock {
-            do { try current?.observeNativeChange() }
+            do { try current?.recordNativeEvent() }
             catch { current?.stop() } // Overflow/stopped observation cannot silently reopen reads.
         }
     }

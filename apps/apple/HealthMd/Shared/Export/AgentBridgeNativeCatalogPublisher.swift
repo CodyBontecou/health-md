@@ -65,3 +65,32 @@ nonisolated enum AgentBridgeNativeCatalogPublisher {
         }
     }
 }
+
+
+/// One serial native refresh loop per accepted owner. A pending notification retains one follow-up
+/// sample while work is suspended. Failures wait for another native event; no polling or retry timer.
+@MainActor
+final class AgentBridgeNativeCatalogRefresh {
+    private let lifecycle: AgentBridgeNativeCatalogLifecycle
+    private let task: Task<Void, Never>
+
+    init(lifecycle: AgentBridgeNativeCatalogLifecycle, refresh: @escaping @MainActor () async throws -> Void) throws {
+        try Task.checkCancellation()
+        let events = try lifecycle.claimRefreshEvents()
+        self.lifecycle = lifecycle
+        task = Task {
+            defer { lifecycle.stop() }
+            for await _ in events {
+                if Task.isCancelled { return }
+                do { try await refresh() }
+                catch {
+                    try? lifecycle.observeNativeChange()
+                    if error is CancellationError || Task.isCancelled { return }
+                }
+            }
+        }
+    }
+
+    func stop() { task.cancel(); lifecycle.stop() }
+    deinit { task.cancel(); lifecycle.stop() }
+}

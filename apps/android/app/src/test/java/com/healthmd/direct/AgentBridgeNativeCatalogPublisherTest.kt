@@ -36,6 +36,94 @@ class AgentBridgeNativeCatalogPublisherTest {
         peer.checks.get()
     }
 
+    @Test fun controllerSerializesAndCoalescesEventsAcrossActualPublication() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f)
+            val peer = WorkerPeer(f.peer)
+            AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+            val facts = lifecycle.currentFacts()
+            val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+            val published = CompletableDeferred<Unit>()
+            val calls = AtomicInteger()
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val controller = AgentBridgeNativeCatalogRefresh(scope, lifecycle) {
+                AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, {
+                    if (calls.incrementAndGet() == 1) { entered.complete(Unit); release.await() }
+                    facts
+                }) { f.store }
+                published.complete(Unit)
+            }
+            try {
+                controller.start()
+                withTimeout(3000) { entered.await() }
+                lifecycle.recordNativeEvent(); lifecycle.recordNativeEvent()
+                expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentPublication() }
+                expect(AgentBridgeErrorCode.BUSY) { lifecycle.claimRefreshEvents() }
+                assertThat(calls.get()).isEqualTo(1)
+                release.complete(Unit)
+                withTimeout(3000) { published.await() }
+                delay(150) // A duplicate queued event would create an unwanted third SDK sample.
+                assertThat(calls.get()).isEqualTo(2)
+                assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+            } finally { controller.close(); scope.cancel() }
+        }
+    }
+
+    @Test fun controllerFailureWaitsForNativeEventWithoutSelfRetry() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f); val peer = WorkerPeer(f.peer)
+            AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+            val facts = lifecycle.currentFacts()
+            val failed = CompletableDeferred<Unit>(); val published = CompletableDeferred<Unit>()
+            val calls = AtomicInteger()
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val controller = AgentBridgeNativeCatalogRefresh(scope, lifecycle) {
+                if (calls.incrementAndGet() == 1) { failed.complete(Unit); throw AgentBridgeException(AgentBridgeErrorCode.BUSY) }
+                AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, { facts }) { f.store }
+                published.complete(Unit)
+            }
+            try {
+                controller.start()
+                withTimeout(3000) { failed.await() }
+                delay(150)
+                assertThat(calls.get()).isEqualTo(1)
+                expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentPublication() }
+                lifecycle.recordNativeEvent()
+                withTimeout(3000) { published.await() }
+                assertThat(calls.get()).isEqualTo(2)
+                assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+            } finally { controller.close(); scope.cancel() }
+        }
+    }
+
+    @Test fun controllerScopeCancellationAndClosePermanentlyStopNativeOwner() = runBlocking {
+        for (cancelScope in listOf(false, true)) {
+            val lifecycle = AgentBridgeNativeCatalogLifecycle()
+            val entered = CompletableDeferred<Unit>(); val ended = CompletableDeferred<Unit>()
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val controller = AgentBridgeNativeCatalogRefresh(scope, lifecycle) {
+                try { entered.complete(Unit); awaitCancellation() }
+                finally { ended.complete(Unit) }
+            }
+            try {
+                controller.start()
+                withTimeout(3000) { entered.await() }
+                if (cancelScope) scope.coroutineContext.job.cancelAndJoin() else controller.close()
+                withTimeout(3000) { ended.await() }
+                expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.beginSample() }
+                expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.recordNativeEvent() }
+                controller.start() // Job.start never renews a canceled child.
+            } finally { controller.close(); scope.cancel() }
+        }
+        val closed = AgentBridgeNativeCatalogLifecycle()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default).also { it.cancel() }
+        val controller = AgentBridgeNativeCatalogRefresh(scope, closed) { throw AssertionError("Canceled scope sampled SDK") }
+        controller.start()
+        expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { closed.beginSample() }
+    }
+
     @Test fun refreshComposesNativeMetadataAndPreservesUnchangedPublication() = runBlocking {
         AgentBridgeExportPlanningFixture().use { f ->
             f.store.initialize(f.native)

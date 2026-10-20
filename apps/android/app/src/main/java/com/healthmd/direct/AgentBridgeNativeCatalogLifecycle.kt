@@ -3,6 +3,7 @@ package com.healthmd.direct
 import com.healthmd.direct.protocol.AgentBridgeErrorCode
 import com.healthmd.direct.protocol.AgentBridgeException
 import java.util.concurrent.locks.ReentrantLock
+import kotlinx.coroutines.flow.asStateFlow
 
 /** Native observer state only. The owner records metadata before scheduling publication; readers
  * reject until that exact observation commits. Does not register SDK events, spawn unowned tasks,
@@ -10,6 +11,8 @@ import java.util.concurrent.locks.ReentrantLock
 internal class AgentBridgeNativeCatalogLifecycle {
     /** Native-only ticket, retaining exact owner identity across suspended SDK sampling. */
     class Sample internal constructor(internal val owner: AgentBridgeNativeCatalogLifecycle, internal val generation: Long)
+    private val refreshEvents = kotlinx.coroutines.flow.MutableStateFlow<Long?>(0L)
+    private var refreshClaimed = false
     private val lock = Any()
     private val publisher = ReentrantLock()
     private var facts: AgentBridgeNativePlanningFacts? = null
@@ -21,6 +24,22 @@ internal class AgentBridgeNativeCatalogLifecycle {
     private var observedChange = true
     private var stopped = false
     private var exhausted = false
+
+    /** One collector per accepted owner; initial state catches events preceding registration. */
+    fun claimRefreshEvents(): kotlinx.coroutines.flow.StateFlow<Long?> = synchronized(lock) {
+        requireAvailable()
+        if (refreshClaimed) fail(AgentBridgeErrorCode.BUSY)
+        refreshClaimed = true
+        refreshEvents.asStateFlow()
+    }
+
+    /** Native events wake deferred refresh only after latching the pending generation. Failures
+     * use observeNativeChange instead, avoiding self-scheduled retries against unavailable storage. */
+    fun recordNativeEvent() = synchronized(lock) {
+        requireAvailable()
+        advance()
+        refreshEvents.value = generation
+    }
 
     fun beginSample(): Sample = synchronized(lock) {
         requireAvailable()
@@ -47,7 +66,7 @@ internal class AgentBridgeNativeCatalogLifecycle {
     /** Actual native notification, including A→B→A coalesced before deferred SDK sampling. */
     fun observeNativeChange() = synchronized(lock) { requireAvailable(); advance() }
 
-    fun stop() = synchronized(lock) { stopped = true }
+    fun stop() = synchronized(lock) { stopped = true; refreshEvents.value = null }
 
     fun currentFacts(): AgentBridgeNativePlanningFacts = synchronized(lock) {
         requireAvailable()

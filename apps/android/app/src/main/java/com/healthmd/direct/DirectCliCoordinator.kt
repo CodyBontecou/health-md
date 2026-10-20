@@ -185,7 +185,27 @@ class DirectCliCoordinator @Inject constructor(
         private val serving: ServingScope) : AgentBridgeExportNativeSessionOwner {
         @Volatile private var revoked = false
         val catalogLifecycle = AgentBridgeNativeCatalogLifecycle()
-        fun revoke() { revoked = true; catalogLifecycle.stop() }
+        private val catalogRefreshLock = Any()
+        private var catalogRefresh: AgentBridgeNativeCatalogRefresh? = null
+        fun revoke() {
+            revoked = true
+            val previous = synchronized(catalogRefreshLock) { catalogRefresh.also { catalogRefresh = null } }
+            previous?.close()
+            catalogLifecycle.stop()
+        }
+        fun startCatalogRefresh(scope: CoroutineScope, context: android.content.Context,
+            healthConnect: com.healthmd.data.health.HealthConnectManager) {
+            val controller = synchronized(catalogRefreshLock) {
+                requireCurrent()
+                catalogLifecycle.beginSample() // Terminal scheduler cancellation cannot be renewed.
+                if (catalogRefresh != null) return
+                AgentBridgeNativeCatalogRefresh(scope, catalogLifecycle) {
+                    requireCurrent()
+                    refreshAgentBridgeNativeCatalog(context, healthConnect)
+                }.also { catalogRefresh = it }
+            }
+            controller.start() // No SDK/store work while holding coordinator/owner subscription locks.
+        }
         private var nativePeer: AgentBridgeExportNativeSession? = null
         private var nativeContext: android.content.Context? = null
         @Synchronized fun peer(context: android.content.Context): AgentBridgeExportNativeSession {
@@ -291,7 +311,7 @@ class DirectCliCoordinator @Inject constructor(
     /** Native event only: immediate cache invalidation, no SDK/settings/issuer/key access. */
     internal fun agentBridgeNativeMetadataChanged() {
         val owner = acceptedNativeOwner ?: return
-        try { owner.catalogLifecycle.observeNativeChange() }
+        try { owner.catalogLifecycle.recordNativeEvent() }
         catch (_: Exception) { owner.revoke() }
     }
 
@@ -353,6 +373,14 @@ class DirectCliCoordinator @Inject constructor(
             // True availability follows the pinned native session's foreground/first-unlock checks
             // before and after this sampler; it cannot be supplied by a request or restart a service.
         }
+    }
+
+    /** Explicit native controller admission; never called by ordinary hello or wire requests. */
+    internal fun startAgentBridgeNativeCatalogRefresh(scope: CoroutineScope, context: android.content.Context,
+        healthConnect: com.healthmd.data.health.HealthConnectManager) {
+        val owner = acceptedNativeOwner ?: throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        owner.startCatalogRefresh(scope, context, healthConnect)
     }
 
     private fun replaceNativeOwner(owner: NativeSessionOwner?) = synchronized(nativeOwnerLock) {
