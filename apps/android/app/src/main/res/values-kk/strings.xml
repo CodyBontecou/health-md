@@ -1372,4 +1372,27 @@
     <string name="agent_export_permissions_confirmation">Осы құрылғыда агенттердің экспорт рұқсаттарын баптау керек пе?</string>
     <string name="agent_export_permissions_confirmation_body">Әр агентке бөлек экспорт рұқсаты қажет болады. Бұл баптау ешбір экспортты мақұлдамайды және ешбір агентке қолжетімділік бермейді.</string>
     <string name="agent_export_permissions_confirm">Рұқсаттарды баптау</string>
+    <string name="agent_export_grant_add">Экспорт рұқсатын қосу</string>
+    <string name="agent_export_grant_revoke">Рұқсатты қайтарып алу</string>
+    <string name="agent_export_grant_refresh">Рұқсаттарды жаңарту</string>
+    <string name="agent_export_grant_pair_required">Экспорт рұқсатын қоспас бұрын компьютерді жұптастырыңыз.</string>
+    <string name="agent_export_grant_unverified">Рұқсат күйін тексеру мүмкін болмады. Қайта әрекеттенбес бұрын осы экранды қайта ашыңыз.</string>
+    <string name="agent_export_grant_revoke_title">Осы экспорт рұқсатын қайтарып алу керек пе?</string>
+    <string name="agent_export_grant_allow_title">Осы экспорт рұқсатын беру керек пе?</string>
+    <string name="agent_export_grant_allow">Рұқсат беру</string>
+    <string name="agent_export_grant_review">Рұқсатты қарап шығу</string>
+    <string name="agent_export_grant_metrics">Көрсеткіштер</string>
+    <string name="agent_export_grant_scope">Экспорт ауқымы</string>
+    <string name="agent_export_grant_computer">Компьютер</string>
+    <string name="agent_export_grant_start">Басталу күні</string>
+    <string name="agent_export_grant_end">Аяқталу күні</string>
+    <string name="agent_export_grant_timezone">Уақыт белдеуі</string>
+    <string name="agent_export_grant_expiry">Рұқсаттың аяқталу уақыты</string>
+    <string name="agent_export_grant_format">Пішім</string>
+    <string name="agent_export_grant_warning">Осы ауқымда жоспарлауға және бөлек мақұлданған экспорттарға рұқсат беру. Файлдар осы компьютерде мақұлданған орындардағы бар файлдарды алмастыруы мүмкін.</string>
+    <string name="agent_export_grant_invalid">Кемінде бір көрсеткішті, жарамды күн аралығын және болашақ аяқталу уақытын таңдаңыз.</string>
+    <string name="agent_export_grant_hour">Бір сағат</string>
+    <string name="agent_export_grant_day">Бір күн</string>
+    <string name="agent_export_grant_week">Бір апта</string>
+    <string name="agent_export_grant_day_limit">Күндер шегі</string>
 </resources>

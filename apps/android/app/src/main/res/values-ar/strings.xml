@@ -1624,4 +1624,27 @@
     <string name="agent_export_permissions_confirmation">هل تريد إعداد أذونات تصدير الوكلاء على هذا الجهاز؟</string>
     <string name="agent_export_permissions_confirmation_body">سيحتاج كل وكيل إلى إذن تصدير منفصل. لا يوافق هذا الإعداد على أي تصدير ولا يمنح أي وكيل حق الوصول.</string>
     <string name="agent_export_permissions_confirm">إعداد الأذونات</string>
+    <string name="agent_export_grant_add">إضافة إذن تصدير</string>
+    <string name="agent_export_grant_revoke">إلغاء الإذن</string>
+    <string name="agent_export_grant_refresh">تحديث الأذونات</string>
+    <string name="agent_export_grant_pair_required">أقرن جهاز كمبيوتر قبل إضافة إذن تصدير.</string>
+    <string name="agent_export_grant_unverified">تعذر التحقق من حالة الإذن. أعد فتح هذه الشاشة قبل المحاولة مجددًا.</string>
+    <string name="agent_export_grant_revoke_title">هل تريد إلغاء إذن التصدير هذا؟</string>
+    <string name="agent_export_grant_allow_title">هل تريد منح إذن التصدير هذا؟</string>
+    <string name="agent_export_grant_allow">منح الإذن</string>
+    <string name="agent_export_grant_review">مراجعة الإذن</string>
+    <string name="agent_export_grant_metrics">المقاييس</string>
+    <string name="agent_export_grant_scope">نطاق التصدير</string>
+    <string name="agent_export_grant_computer">الكمبيوتر</string>
+    <string name="agent_export_grant_start">تاريخ البدء</string>
+    <string name="agent_export_grant_end">تاريخ الانتهاء</string>
+    <string name="agent_export_grant_timezone">المنطقة الزمنية</string>
+    <string name="agent_export_grant_expiry">انتهاء صلاحية الإذن</string>
+    <string name="agent_export_grant_format">التنسيق</string>
+    <string name="agent_export_grant_warning">السماح بالتخطيط وعمليات التصدير المعتمدة بشكل منفصل ضمن هذا النطاق. قد تحل الملفات محل ملفات موجودة في مواقع معتمدة على هذا الكمبيوتر.</string>
+    <string name="agent_export_grant_invalid">اختر مقياسًا واحدًا على الأقل ونطاق تواريخ صالحًا ووقت انتهاء صلاحية في المستقبل.</string>
+    <string name="agent_export_grant_hour">ساعة واحدة</string>
+    <string name="agent_export_grant_day">يوم واحد</string>
+    <string name="agent_export_grant_week">أسبوع واحد</string>
+    <string name="agent_export_grant_day_limit">الحد الأقصى للأيام</string>
 </resources>

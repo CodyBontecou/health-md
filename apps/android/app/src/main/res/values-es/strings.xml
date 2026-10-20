@@ -1479,4 +1479,27 @@
     <string name="agent_export_permissions_confirmation">¿Configurar los permisos de exportación de agentes en este dispositivo?</string>
     <string name="agent_export_permissions_confirmation_body">Cada agente necesitará un permiso de exportación por separado. Esta configuración no aprueba ninguna exportación ni da acceso a ningún agente.</string>
     <string name="agent_export_permissions_confirm">Configurar permisos</string>
+    <string name="agent_export_grant_add">Añadir permiso de exportación</string>
+    <string name="agent_export_grant_revoke">Revocar permiso</string>
+    <string name="agent_export_grant_refresh">Actualizar permisos</string>
+    <string name="agent_export_grant_pair_required">Vincula un ordenador antes de añadir un permiso de exportación.</string>
+    <string name="agent_export_grant_unverified">No se pudo verificar el estado del permiso. Vuelve a abrir esta pantalla antes de intentarlo de nuevo.</string>
+    <string name="agent_export_grant_revoke_title">¿Revocar este permiso de exportación?</string>
+    <string name="agent_export_grant_allow_title">¿Permitir este permiso de exportación?</string>
+    <string name="agent_export_grant_allow">Permitir acceso</string>
+    <string name="agent_export_grant_review">Revisar permiso</string>
+    <string name="agent_export_grant_metrics">Métricas</string>
+    <string name="agent_export_grant_scope">Alcance de exportación</string>
+    <string name="agent_export_grant_computer">Ordenador</string>
+    <string name="agent_export_grant_start">Fecha de inicio</string>
+    <string name="agent_export_grant_end">Fecha de fin</string>
+    <string name="agent_export_grant_timezone">Zona horaria</string>
+    <string name="agent_export_grant_expiry">El permiso caduca</string>
+    <string name="agent_export_grant_format">Formato</string>
+    <string name="agent_export_grant_warning">Permitir la planificación y las exportaciones aprobadas por separado dentro de este alcance. Los archivos pueden reemplazar archivos existentes en ubicaciones aprobadas en este ordenador.</string>
+    <string name="agent_export_grant_invalid">Elige al menos una métrica, un intervalo de fechas válido y una caducidad futura.</string>
+    <string name="agent_export_grant_hour">Una hora</string>
+    <string name="agent_export_grant_day">Un día</string>
+    <string name="agent_export_grant_week">Una semana</string>
+    <string name="agent_export_grant_day_limit">Límite de días</string>
 </resources>

@@ -20,7 +20,7 @@ nonisolated private struct AgentBridgeExportUnobservedPublication: AgentBridgeEx
 }
 
 /// These non-Codable actions are presented by a trusted native UI/policy adapter, never wire JSON.
-nonisolated enum AgentBridgeExportNativeAction {
+nonisolated enum AgentBridgeExportNativeAction: Equatable, Sendable {
     case createPrivateStore
     case storeDelegation(AgentBridgeExportDelegation)
     case revokeDelegation(AgentBridgeAuthorityReference)
@@ -499,39 +499,42 @@ nonisolated private enum AgentBridgeExportPrivateFiles {
     }
 }
 
-/// Transient proof of ONE native setup confirmation, not a grant or a serializable capability.
+/// Transient proof of ONE exact native confirmation, not a grant or serializable capability.
 /// Only the native confirmation handler enters this scope. The proof cannot escape the operation,
 /// authorize another action, survive observed policy loss, or renew itself when policy recovers.
-nonisolated final class AgentBridgeExportNativeSetupConsent: AgentBridgeExportNativeAuthorizing, @unchecked Sendable {
+nonisolated final class AgentBridgeExportNativeConsent: AgentBridgeExportNativeAuthorizing, @unchecked Sendable {
+    private let expectedAction: AgentBridgeExportNativeAction
     private let lock = NSLock()
     private var active = true
     private let requireCurrentNativePolicy: @Sendable () throws -> Void
     private let now: @Sendable () -> ContinuousClock.Instant
     private let deadline: ContinuousClock.Instant
 
-    private init(policy: @escaping @Sendable () throws -> Void,
+    private init(action: AgentBridgeExportNativeAction, policy: @escaping @Sendable () throws -> Void,
                  now: @escaping @Sendable () -> ContinuousClock.Instant) {
+        expectedAction = action
         requireCurrentNativePolicy = policy
         self.now = now
         deadline = now().advanced(by: .seconds(30))
     }
 
     static func withNativeConfirmation<T>(
+        for action: AgentBridgeExportNativeAction,
         requireCurrentNativePolicy: @escaping @Sendable () throws -> Void,
         now: @escaping @Sendable () -> ContinuousClock.Instant = { ContinuousClock.now },
         _ operation: (any AgentBridgeExportNativeAuthorizing) throws -> T
     ) throws -> T {
-        let consent = Self(policy: requireCurrentNativePolicy, now: now)
+        let consent = Self(action: action, policy: requireCurrentNativePolicy, now: now)
         defer { consent.invalidate() }
-        try consent.requireNativeAuthorization(for: .createPrivateStore)
+        try consent.requireNativeAuthorization(for: action)
         let result = try operation(consent)
-        try consent.requireNativeAuthorization(for: .createPrivateStore)
+        try consent.requireNativeAuthorization(for: action)
         return result
     }
 
     func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws {
         do {
-            guard case .createPrivateStore = action, lock.withLock({ active }), now() < deadline else {
+            guard action == expectedAction, lock.withLock({ active }), now() < deadline else {
                 throw AgentBridgeValidationError.approvalRequired
             }
             try requireCurrentNativePolicy()
@@ -543,4 +546,16 @@ nonisolated final class AgentBridgeExportNativeSetupConsent: AgentBridgeExportNa
     }
 
     private func invalidate() { lock.withLock { active = false } }
+}
+
+/// Setup has a deliberately narrower entry point; it can never authorize grant or approval actions.
+nonisolated enum AgentBridgeExportNativeSetupConsent {
+    static func withNativeConfirmation<T>(
+        requireCurrentNativePolicy: @escaping @Sendable () throws -> Void,
+        now: @escaping @Sendable () -> ContinuousClock.Instant = { ContinuousClock.now },
+        _ operation: (any AgentBridgeExportNativeAuthorizing) throws -> T
+    ) throws -> T {
+        try AgentBridgeExportNativeConsent.withNativeConfirmation(for: .createPrivateStore,
+            requireCurrentNativePolicy: requireCurrentNativePolicy, now: now, operation)
+    }
 }

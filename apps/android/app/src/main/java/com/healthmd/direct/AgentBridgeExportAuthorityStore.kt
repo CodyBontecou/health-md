@@ -543,9 +543,10 @@ internal class AgentBridgeExportAuthorityTransaction(internal var state: AgentBr
     }
 }
 
-/** One native setup confirmation scoped to its synchronous operation. Not a serializable grant,
+/** One exact native confirmation scoped to its synchronous operation. Not a serializable grant,
  * export/configuration authority, renewable policy Boolean, or remote permission endpoint. */
-internal class AgentBridgeExportNativeSetupConsent private constructor(
+internal class AgentBridgeExportNativeConsent private constructor(
+    private val expectedDecision: String,
     private val requireCurrentNativePolicy: () -> Unit,
     private val clockNanos: () -> Long,
 ) : AgentBridgeExportNativeAuthorization() {
@@ -555,10 +556,11 @@ internal class AgentBridgeExportNativeSetupConsent private constructor(
 
     override fun requireDecision(decision: AgentBridgeExportNativeDecision) {
         try {
-            demand(decision == AgentBridgeExportNativeDecision.InitializeStore)
+            demand(token(decision) == expectedDecision)
             demand(synchronized(lock) { active })
             demand((clockNanos() - startedAt) in 0L until TIMEOUT_NANOS)
             requireCurrentNativePolicy()
+            demand(token(decision) == expectedDecision)
             demand(synchronized(lock) { active })
             demand((clockNanos() - startedAt) in 0L until TIMEOUT_NANOS)
         } catch (_: Exception) {
@@ -573,19 +575,38 @@ internal class AgentBridgeExportNativeSetupConsent private constructor(
     }
 
     companion object {
+        // Scalars are immutable; hash a canonical exact approval to freeze any caller-owned lists.
+        private fun token(value: AgentBridgeExportNativeDecision): String = when (value) {
+            AgentBridgeExportNativeDecision.InitializeStore -> "setup"
+            is AgentBridgeExportNativeDecision.Delegation -> "grant:${value.canonicalSha256}:${value.expectedGrantRevision}"
+            is AgentBridgeExportNativeDecision.Revoke -> "revoke:${value.peer.platform}:${value.peer.sourceInstallationId}:${value.peer.hostInstallationId}:${value.authorityId}:${value.expectedGrantRevision}"
+            is AgentBridgeExportNativeDecision.ExactApproval -> "approval:" + AgentBridgeCodec.sha256(AgentBridgeCodec.encode(
+                AgentBridgeApprovalRequest(value.binding, value.planId, value.planId, "healthmd.agent_approval_request", 1)))
+        }
         private const val TIMEOUT_NANOS = 30_000_000_000L
         fun <T> withNativeConfirmation(
+            decision: AgentBridgeExportNativeDecision,
             requireCurrentNativePolicy: () -> Unit,
             clockNanos: () -> Long = { android.os.SystemClock.elapsedRealtimeNanos() },
             operation: (AgentBridgeExportNativeAuthorization) -> T,
         ): T {
-            val consent = AgentBridgeExportNativeSetupConsent(requireCurrentNativePolicy, clockNanos)
+            val consent = AgentBridgeExportNativeConsent(token(decision), requireCurrentNativePolicy, clockNanos)
             return try {
-                consent.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                consent.requireDecision(decision)
                 val result = operation(consent)
-                consent.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                consent.requireDecision(decision)
                 result
             } finally { consent.invalidate() }
         }
     }
+}
+
+/** Setup-only entry point retained for callers; it cannot create a grant/approval proof. */
+internal object AgentBridgeExportNativeSetupConsent {
+    fun <T> withNativeConfirmation(
+        requireCurrentNativePolicy: () -> Unit,
+        clockNanos: () -> Long = { android.os.SystemClock.elapsedRealtimeNanos() },
+        operation: (AgentBridgeExportNativeAuthorization) -> T,
+    ): T = AgentBridgeExportNativeConsent.withNativeConfirmation(
+        AgentBridgeExportNativeDecision.InitializeStore, requireCurrentNativePolicy, clockNanos, operation)
 }

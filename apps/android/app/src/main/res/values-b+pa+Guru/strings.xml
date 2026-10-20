@@ -1405,4 +1405,27 @@
     <string name="agent_export_permissions_confirmation">ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਏਜੰਟ ਦੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ ਸੈੱਟ ਅੱਪ ਕਰਨੀਆਂ ਹਨ?</string>
     <string name="agent_export_permissions_confirmation_body">ਹਰ ਏਜੰਟ ਨੂੰ ਵੱਖਰੀ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤ ਚਾਹੀਦੀ ਹੋਵੇਗੀ। ਇਹ ਸੈੱਟਅੱਪ ਕਿਸੇ ਨਿਰਯਾਤ ਨੂੰ ਮਨਜ਼ੂਰੀ ਨਹੀਂ ਦਿੰਦਾ ਅਤੇ ਨਾ ਹੀ ਕਿਸੇ ਏਜੰਟ ਨੂੰ ਪਹੁੰਚ ਦਿੰਦਾ ਹੈ।</string>
     <string name="agent_export_permissions_confirm">ਇਜਾਜ਼ਤਾਂ ਸੈੱਟ ਅੱਪ ਕਰੋ</string>
+    <string name="agent_export_grant_add">ਨਿਰਯਾਤ ਦੀ ਇਜਾਜ਼ਤ ਜੋੜੋ</string>
+    <string name="agent_export_grant_revoke">ਇਜਾਜ਼ਤ ਵਾਪਸ ਲਓ</string>
+    <string name="agent_export_grant_refresh">ਇਜਾਜ਼ਤਾਂ ਰਿਫ੍ਰੈਸ਼ ਕਰੋ</string>
+    <string name="agent_export_grant_pair_required">ਨਿਰਯਾਤ ਦੀ ਇਜਾਜ਼ਤ ਜੋੜਨ ਤੋਂ ਪਹਿਲਾਂ ਕੰਪਿਊਟਰ ਪੇਅਰ ਕਰੋ।</string>
+    <string name="agent_export_grant_unverified">ਇਜਾਜ਼ਤ ਦੀ ਸਥਿਤੀ ਦੀ ਪੁਸ਼ਟੀ ਨਹੀਂ ਹੋ ਸਕੀ। ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਇਹ ਸਕ੍ਰੀਨ ਮੁੜ ਖੋਲ੍ਹੋ।</string>
+    <string name="agent_export_grant_revoke_title">ਨਿਰਯਾਤ ਦੀ ਇਹ ਇਜਾਜ਼ਤ ਵਾਪਸ ਲੈਣੀ ਹੈ?</string>
+    <string name="agent_export_grant_allow_title">ਨਿਰਯਾਤ ਦੀ ਇਹ ਇਜਾਜ਼ਤ ਦੇਣੀ ਹੈ?</string>
+    <string name="agent_export_grant_allow">ਇਜਾਜ਼ਤ ਦਿਓ</string>
+    <string name="agent_export_grant_review">ਇਜਾਜ਼ਤ ਦੀ ਸਮੀਖਿਆ ਕਰੋ</string>
+    <string name="agent_export_grant_metrics">ਮਾਪ</string>
+    <string name="agent_export_grant_scope">ਨਿਰਯਾਤ ਦਾ ਦਾਇਰਾ</string>
+    <string name="agent_export_grant_computer">ਕੰਪਿਊਟਰ</string>
+    <string name="agent_export_grant_start">ਸ਼ੁਰੂਆਤੀ ਮਿਤੀ</string>
+    <string name="agent_export_grant_end">ਅੰਤਿਮ ਮਿਤੀ</string>
+    <string name="agent_export_grant_timezone">ਸਮਾਂ ਖੇਤਰ</string>
+    <string name="agent_export_grant_expiry">ਇਜਾਜ਼ਤ ਦੀ ਮਿਆਦ ਮੁੱਕਣ ਦਾ ਸਮਾਂ</string>
+    <string name="agent_export_grant_format">ਫਾਰਮੈਟ</string>
+    <string name="agent_export_grant_warning">ਇਸ ਦਾਇਰੇ ਵਿੱਚ ਯੋਜਨਾ ਬਣਾਉਣ ਅਤੇ ਵੱਖਰੇ ਤੌਰ ’ਤੇ ਮਨਜ਼ੂਰ ਕੀਤੇ ਨਿਰਯਾਤ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ। ਫ਼ਾਈਲਾਂ ਇਸ ਕੰਪਿਊਟਰ ਉੱਤੇ ਮਨਜ਼ੂਰ ਟਿਕਾਣਿਆਂ ਵਿੱਚ ਮੌਜੂਦ ਫ਼ਾਈਲਾਂ ਨੂੰ ਬਦਲ ਸਕਦੀਆਂ ਹਨ।</string>
+    <string name="agent_export_grant_invalid">ਘੱਟੋ-ਘੱਟ ਇੱਕ ਮਾਪ, ਇੱਕ ਵੈਧ ਮਿਤੀ ਸੀਮਾ ਅਤੇ ਭਵਿੱਖ ਦਾ ਮਿਆਦ ਮੁੱਕਣ ਦਾ ਸਮਾਂ ਚੁਣੋ।</string>
+    <string name="agent_export_grant_hour">ਇੱਕ ਘੰਟਾ</string>
+    <string name="agent_export_grant_day">ਇੱਕ ਦਿਨ</string>
+    <string name="agent_export_grant_week">ਇੱਕ ਹਫ਼ਤਾ</string>
+    <string name="agent_export_grant_day_limit">ਦਿਨਾਂ ਦੀ ਸੀਮਾ</string>
 </resources>

@@ -1533,4 +1533,27 @@
     <string name="agent_export_permissions_confirmation">Налаштувати дозволи на експорт для агентів на цьому пристрої?</string>
     <string name="agent_export_permissions_confirmation_body">Кожному агенту потрібен окремий дозвіл на експорт. Це налаштування не схвалює експорт і не надає доступу жодному агенту.</string>
     <string name="agent_export_permissions_confirm">Налаштувати дозволи</string>
+    <string name="agent_export_grant_add">Додати дозвіл на експорт</string>
+    <string name="agent_export_grant_revoke">Відкликати дозвіл</string>
+    <string name="agent_export_grant_refresh">Оновити дозволи</string>
+    <string name="agent_export_grant_pair_required">Перш ніж додати дозвіл на експорт, створіть пару з комп’ютером.</string>
+    <string name="agent_export_grant_unverified">Не вдалося перевірити стан дозволу. Відкрийте цей екран знову, перш ніж повторити спробу.</string>
+    <string name="agent_export_grant_revoke_title">Відкликати цей дозвіл на експорт?</string>
+    <string name="agent_export_grant_allow_title">Надати цей дозвіл на експорт?</string>
+    <string name="agent_export_grant_allow">Надати дозвіл</string>
+    <string name="agent_export_grant_review">Перевірити дозвіл</string>
+    <string name="agent_export_grant_metrics">Показники</string>
+    <string name="agent_export_grant_scope">Обсяг експорту</string>
+    <string name="agent_export_grant_computer">Комп’ютер</string>
+    <string name="agent_export_grant_start">Дата початку</string>
+    <string name="agent_export_grant_end">Дата завершення</string>
+    <string name="agent_export_grant_timezone">Часовий пояс</string>
+    <string name="agent_export_grant_expiry">Термін дії дозволу</string>
+    <string name="agent_export_grant_format">Формат</string>
+    <string name="agent_export_grant_warning">Дозволити планування та окремо схвалені експорти в цих межах. Файли можуть замінювати наявні файли в розташуваннях, схвалених на цьому комп’ютері.</string>
+    <string name="agent_export_grant_invalid">Виберіть принаймні один показник, допустимий діапазон дат і час завершення в майбутньому.</string>
+    <string name="agent_export_grant_hour">Одна година</string>
+    <string name="agent_export_grant_day">Один день</string>
+    <string name="agent_export_grant_week">Один тиждень</string>
+    <string name="agent_export_grant_day_limit">Обмеження днів</string>
 </resources>

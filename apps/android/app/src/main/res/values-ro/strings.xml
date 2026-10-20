@@ -1479,4 +1479,27 @@
     <string name="agent_export_permissions_confirmation">Configurezi permisiunile de export pentru agenți pe acest dispozitiv?</string>
     <string name="agent_export_permissions_confirmation_body">Fiecare agent va avea nevoie de o permisiune de export separată. Această configurare nu aprobă niciun export și nu oferă acces niciunui agent.</string>
     <string name="agent_export_permissions_confirm">Configurează permisiunile</string>
+    <string name="agent_export_grant_add">Adaugă permisiune de export</string>
+    <string name="agent_export_grant_revoke">Revocă permisiunea</string>
+    <string name="agent_export_grant_refresh">Actualizează permisiunile</string>
+    <string name="agent_export_grant_pair_required">Asociază un computer înainte de a adăuga o permisiune de export.</string>
+    <string name="agent_export_grant_unverified">Starea permisiunii nu a putut fi verificată. Redeschide acest ecran înainte de a încerca din nou.</string>
+    <string name="agent_export_grant_revoke_title">Revoci această permisiune de export?</string>
+    <string name="agent_export_grant_allow_title">Acorzi această permisiune de export?</string>
+    <string name="agent_export_grant_allow">Acordă permisiunea</string>
+    <string name="agent_export_grant_review">Verifică permisiunea</string>
+    <string name="agent_export_grant_metrics">Indicatori</string>
+    <string name="agent_export_grant_scope">Domeniul exportului</string>
+    <string name="agent_export_grant_computer">Computer</string>
+    <string name="agent_export_grant_start">Data de început</string>
+    <string name="agent_export_grant_end">Data de sfârșit</string>
+    <string name="agent_export_grant_timezone">Fus orar</string>
+    <string name="agent_export_grant_expiry">Permisiunea expiră</string>
+    <string name="agent_export_grant_format">Format</string>
+    <string name="agent_export_grant_warning">Permite planificarea și exporturile aprobate separat în acest domeniu. Fișierele pot înlocui fișiere existente în locații aprobate pe acest computer.</string>
+    <string name="agent_export_grant_invalid">Alege cel puțin un indicator, un interval valid de date și o expirare viitoare.</string>
+    <string name="agent_export_grant_hour">O oră</string>
+    <string name="agent_export_grant_day">O zi</string>
+    <string name="agent_export_grant_week">O săptămână</string>
+    <string name="agent_export_grant_day_limit">Limită de zile</string>
 </resources>

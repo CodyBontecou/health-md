@@ -1254,4 +1254,27 @@
     <string name="agent_export_permissions_confirmation">在此设备上设置代理导出权限？</string>
     <string name="agent_export_permissions_confirmation_body">每个代理都需要单独的导出权限。此设置不会批准任何导出，也不会授予任何代理访问权限。</string>
     <string name="agent_export_permissions_confirm">设置权限</string>
+    <string name="agent_export_grant_add">添加导出权限</string>
+    <string name="agent_export_grant_revoke">撤销权限</string>
+    <string name="agent_export_grant_refresh">刷新权限</string>
+    <string name="agent_export_grant_pair_required">添加导出权限前，请先配对电脑。</string>
+    <string name="agent_export_grant_unverified">无法验证权限状态。请重新打开此页面后再试。</string>
+    <string name="agent_export_grant_revoke_title">撤销此导出权限？</string>
+    <string name="agent_export_grant_allow_title">授予此导出权限？</string>
+    <string name="agent_export_grant_allow">授予权限</string>
+    <string name="agent_export_grant_review">审查权限</string>
+    <string name="agent_export_grant_metrics">指标</string>
+    <string name="agent_export_grant_scope">导出范围</string>
+    <string name="agent_export_grant_computer">电脑</string>
+    <string name="agent_export_grant_start">开始日期</string>
+    <string name="agent_export_grant_end">结束日期</string>
+    <string name="agent_export_grant_timezone">时区</string>
+    <string name="agent_export_grant_expiry">权限到期时间</string>
+    <string name="agent_export_grant_format">格式</string>
+    <string name="agent_export_grant_warning">允许在此范围内进行规划和单独批准的导出。文件可能会替换此电脑上已批准位置中的现有文件。</string>
+    <string name="agent_export_grant_invalid">请选择至少一项指标、有效的日期范围和未来的到期时间。</string>
+    <string name="agent_export_grant_hour">一小时</string>
+    <string name="agent_export_grant_day">一天</string>
+    <string name="agent_export_grant_week">一周</string>
+    <string name="agent_export_grant_day_limit">天数上限</string>
 </resources>

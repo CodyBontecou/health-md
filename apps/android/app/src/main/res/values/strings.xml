@@ -1479,4 +1479,27 @@
     <string name="agent_export_permissions_confirmation">Set up agent export permissions on this device?</string>
     <string name="agent_export_permissions_confirmation_body">Each agent will need separate export permission. Setting this up does not approve an export or give any agent access.</string>
     <string name="agent_export_permissions_confirm">Set up permissions</string>
+    <string name="agent_export_grant_add">Add export permission</string>
+    <string name="agent_export_grant_revoke">Revoke permission</string>
+    <string name="agent_export_grant_refresh">Refresh permissions</string>
+    <string name="agent_export_grant_pair_required">Pair a computer before adding export permission.</string>
+    <string name="agent_export_grant_unverified">Permission status could not be verified. Reopen this screen before trying again.</string>
+    <string name="agent_export_grant_revoke_title">Revoke this export permission?</string>
+    <string name="agent_export_grant_allow_title">Allow this export permission?</string>
+    <string name="agent_export_grant_allow">Allow permission</string>
+    <string name="agent_export_grant_review">Review permission</string>
+    <string name="agent_export_grant_metrics">Metrics</string>
+    <string name="agent_export_grant_scope">Export scope</string>
+    <string name="agent_export_grant_computer">Computer</string>
+    <string name="agent_export_grant_start">Start date</string>
+    <string name="agent_export_grant_end">End date</string>
+    <string name="agent_export_grant_timezone">Time zone</string>
+    <string name="agent_export_grant_expiry">Permission expires</string>
+    <string name="agent_export_grant_format">Format</string>
+    <string name="agent_export_grant_warning">Allow planning and separately approved exports within this scope. Files may replace existing files at locations approved on this computer.</string>
+    <string name="agent_export_grant_invalid">Choose at least one metric, a valid date range, and a future expiry.</string>
+    <string name="agent_export_grant_hour">One hour</string>
+    <string name="agent_export_grant_day">One day</string>
+    <string name="agent_export_grant_week">One week</string>
+    <string name="agent_export_grant_day_limit">Day limit</string>
 </resources>

@@ -15,6 +15,67 @@ import org.junit.Test
 
 class AgentBridgeExportAuthorityStoreTest {
     @Test
+    fun nativeGrantDraftKeepsExactReviewedBoundsAndPlatformMeaning() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val value = AgentBridgeExportNativeGrantDraft.make(f.peer, setOf("steps", "android.hrv_rmssd"),
+                java.time.LocalDate.parse("2026-03-07"), java.time.LocalDate.parse("2026-03-09"),
+                "America/Los_Angeles", f.clock.now.plusSeconds(3600), f.clock.now)
+            assertThat(value.peer).isEqualTo(f.peer)
+            assertThat(value.bounds.metricIds).containsExactly("android.hrv_rmssd", "steps").inOrder()
+            assertThat(value.bounds.formats).containsExactly(AgentBridgeFormat.JSON)
+            assertThat(value.bounds.outputProfiles).containsExactly(AgentBridgeOutputProfile.ANDROID_FROZEN_V4)
+            assertThat(value.bounds.nativeArchiveProducts).containsExactly(AgentBridgeOutputSupportNativeArchiveProductsItem.NONE)
+            val dates = value.bounds.datePolicy as AgentBridgeExportDelegationBoundsDatePolicyBoundedExact
+            assertThat(dates.maxDays).isEqualTo(3) // Inclusive endpoints across DST.
+            assertThat(dates.range).isEqualTo(AgentBridgeRange("2026-03-09", "2026-03-07"))
+            assertThat(AgentBridgeCodec.decode(AgentBridgeCodec.encode(value))).isEqualTo(value)
+        }
+    }
+
+    @Test
+    fun nativeGrantDraftRejectsInvalidScopeAndExpiryLostByCanonicalization() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val now = f.clock.now.plusNanos(250_000_000)
+            val first = java.time.LocalDate.parse("2026-03-07")
+            val last = java.time.LocalDate.parse("2026-03-09")
+            for (metrics in listOf(emptySet(), setOf("hrv"), setOf("steps", "unknown"))) {
+                f.expect(AgentBridgeErrorCode.INVALID_REQUEST) { AgentBridgeExportNativeGrantDraft.make(f.peer, metrics, first, last, "UTC", now.plusSeconds(3600), now) }
+            }
+            for (expiry in listOf(now, now.minusSeconds(1), now.plusNanos(500_000_000))) {
+                f.expect(AgentBridgeErrorCode.INVALID_REQUEST) { AgentBridgeExportNativeGrantDraft.make(f.peer, setOf("steps"), first, last, "UTC", expiry, now) }
+            }
+            f.expect(AgentBridgeErrorCode.INVALID_REQUEST) { AgentBridgeExportNativeGrantDraft.make(f.peer, setOf("steps"), last, first, "UTC", now.plusSeconds(3600), now) }
+        }
+    }
+
+    @Test
+    fun exactNativeGrantConsentWritesAndRevokesWithoutEscapingOrRetargeting() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val grant = f.delegation()
+            val decision = AgentBridgeExportNativeDecision.Delegation(AgentBridgeCodec.fingerprint(grant), 0)
+            var escaped: AgentBridgeExportNativeAuthorization? = null
+            AgentBridgeExportNativeConsent.withNativeConfirmation(decision, {}, { 0L }) { consent ->
+                escaped = consent
+                f.store.putDelegation(consent, grant, 0)
+            }
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { requireNotNull(escaped).requireDecision(decision) }
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) {
+                AgentBridgeExportNativeConsent.withNativeConfirmation(decision, {}, { 0L }) { consent ->
+                    val changed = f.delegation("2026-05-29T02:00:00Z")
+                    f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { consent.requireDecision(AgentBridgeExportNativeDecision.Delegation(AgentBridgeCodec.fingerprint(changed), 0)) }
+                    f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { consent.requireDecision(decision) }
+                }
+            }
+            val revoke = AgentBridgeExportNativeDecision.Revoke(grant.peer, grant.authorityId, grant.grantRevision)
+            AgentBridgeExportNativeConsent.withNativeConfirmation(revoke, {}, { 0L }) { consent ->
+                f.store.revoke(consent, grant.peer, grant.authorityId, grant.grantRevision)
+            }
+            f.store.access { tx -> assertThat(requireNotNull(tx).state.grants.single().revoked).isTrue() }
+        }
+    }
+
+    @Test
     fun nativeGrantAndRevocationRejectConsentLostDuringProtectedKeyLoad() {
         for (revoke in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
             if (revoke) f.enrolled() else f.store.initialize(f.native)

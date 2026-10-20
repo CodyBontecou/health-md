@@ -1479,4 +1479,27 @@
     <string name="agent_export_permissions_confirmation">Configurer les autorisations d’exportation des agents sur cet appareil ?</string>
     <string name="agent_export_permissions_confirmation_body">Chaque agent aura besoin d’une autorisation d’exportation distincte. Cette configuration n’approuve aucune exportation et ne donne accès à aucun agent.</string>
     <string name="agent_export_permissions_confirm">Configurer les autorisations</string>
+    <string name="agent_export_grant_add">Ajouter une autorisation d’exportation</string>
+    <string name="agent_export_grant_revoke">Révoquer l’autorisation</string>
+    <string name="agent_export_grant_refresh">Actualiser les autorisations</string>
+    <string name="agent_export_grant_pair_required">Associez un ordinateur avant d’ajouter une autorisation d’exportation.</string>
+    <string name="agent_export_grant_unverified">L’état de l’autorisation n’a pas pu être vérifié. Rouvrez cet écran avant de réessayer.</string>
+    <string name="agent_export_grant_revoke_title">Révoquer cette autorisation d’exportation ?</string>
+    <string name="agent_export_grant_allow_title">Accorder cette autorisation d’exportation ?</string>
+    <string name="agent_export_grant_allow">Accorder l’autorisation</string>
+    <string name="agent_export_grant_review">Vérifier l’autorisation</string>
+    <string name="agent_export_grant_metrics">Mesures</string>
+    <string name="agent_export_grant_scope">Périmètre d’exportation</string>
+    <string name="agent_export_grant_computer">Ordinateur</string>
+    <string name="agent_export_grant_start">Date de début</string>
+    <string name="agent_export_grant_end">Date de fin</string>
+    <string name="agent_export_grant_timezone">Fuseau horaire</string>
+    <string name="agent_export_grant_expiry">Expiration de l’autorisation</string>
+    <string name="agent_export_grant_format">Format</string>
+    <string name="agent_export_grant_warning">Autoriser la planification et les exportations approuvées séparément dans ce périmètre. Les fichiers peuvent remplacer des fichiers existants aux emplacements approuvés sur cet ordinateur.</string>
+    <string name="agent_export_grant_invalid">Choisissez au moins une mesure, une période valide et une expiration future.</string>
+    <string name="agent_export_grant_hour">Une heure</string>
+    <string name="agent_export_grant_day">Un jour</string>
+    <string name="agent_export_grant_week">Une semaine</string>
+    <string name="agent_export_grant_day_limit">Limite de jours</string>
 </resources>

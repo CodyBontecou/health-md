@@ -1405,4 +1405,27 @@
     <string name="agent_export_permissions_confirmation">এই ডিভাইসে এজেন্টের রপ্তানি অনুমতি সেট আপ করবেন?</string>
     <string name="agent_export_permissions_confirmation_body">প্রতিটি এজেন্টের আলাদা রপ্তানি অনুমতি লাগবে। এই সেটআপ কোনো রপ্তানি অনুমোদন করে না বা কোনো এজেন্টকে প্রবেশাধিকার দেয় না।</string>
     <string name="agent_export_permissions_confirm">অনুমতি সেট আপ করুন</string>
+    <string name="agent_export_grant_add">রপ্তানির অনুমতি যোগ করুন</string>
+    <string name="agent_export_grant_revoke">অনুমতি প্রত্যাহার করুন</string>
+    <string name="agent_export_grant_refresh">অনুমতি রিফ্রেশ করুন</string>
+    <string name="agent_export_grant_pair_required">রপ্তানির অনুমতি যোগ করার আগে একটি কম্পিউটার পেয়ার করুন।</string>
+    <string name="agent_export_grant_unverified">অনুমতির অবস্থা যাচাই করা যায়নি। আবার চেষ্টা করার আগে এই স্ক্রিনটি পুনরায় খুলুন।</string>
+    <string name="agent_export_grant_revoke_title">রপ্তানির এই অনুমতি প্রত্যাহার করবেন?</string>
+    <string name="agent_export_grant_allow_title">রপ্তানির এই অনুমতি দেবেন?</string>
+    <string name="agent_export_grant_allow">অনুমতি দিন</string>
+    <string name="agent_export_grant_review">অনুমতি পর্যালোচনা করুন</string>
+    <string name="agent_export_grant_metrics">পরিমাপ</string>
+    <string name="agent_export_grant_scope">রপ্তানির পরিসর</string>
+    <string name="agent_export_grant_computer">কম্পিউটার</string>
+    <string name="agent_export_grant_start">শুরুর তারিখ</string>
+    <string name="agent_export_grant_end">শেষের তারিখ</string>
+    <string name="agent_export_grant_timezone">সময় অঞ্চল</string>
+    <string name="agent_export_grant_expiry">অনুমতির মেয়াদ শেষ হবে</string>
+    <string name="agent_export_grant_format">ফরম্যাট</string>
+    <string name="agent_export_grant_warning">এই পরিসরের মধ্যে পরিকল্পনা এবং আলাদাভাবে অনুমোদিত রপ্তানির অনুমতি দিন। এই কম্পিউটারে অনুমোদিত অবস্থানে থাকা বিদ্যমান ফাইল প্রতিস্থাপিত হতে পারে।</string>
+    <string name="agent_export_grant_invalid">অন্তত একটি পরিমাপ, একটি বৈধ তারিখের পরিসর এবং ভবিষ্যতের মেয়াদ শেষ হওয়ার সময় বেছে নিন।</string>
+    <string name="agent_export_grant_hour">এক ঘণ্টা</string>
+    <string name="agent_export_grant_day">এক দিন</string>
+    <string name="agent_export_grant_week">এক সপ্তাহ</string>
+    <string name="agent_export_grant_day_limit">দিনের সীমা</string>
 </resources>

@@ -86,6 +86,7 @@ internal fun AgentExportPermissionsSetupCard() {
                 color = AppColors.textMuted,
                 modifier = Modifier.testTag("agent_export_permissions_status"),
             )
+            if (status == AgentPermissionSetupStatus.READY) { AgentExportPermissionsManagementControls() }
             if (status == AgentPermissionSetupStatus.NOT_SET_UP) {
                 Button(onClick = {
                     if (protection.enabled) protection.onBlockedChange() else confirming = true

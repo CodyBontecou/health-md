@@ -4,7 +4,7 @@ import HealthMdConnectionCore
 import SwiftUI
 import UIKit
 
-/// Local native setup only. No wire request, grant editor or export route invokes this view.
+/// Local native setup and grant controls. No wire request or export route invokes this view.
 struct AgentExportPermissionsSetupControls: View {
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.scenePhase) private var scenePhase
@@ -20,6 +20,7 @@ struct AgentExportPermissionsSetupControls: View {
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("agentExportPermissions.status")
+            if status == .ready { AgentExportPermissionsManagementControls() }
             if status == .notSetUp {
                 Button("Set up agent export permissions") {
                     configurationProtection.performConfigurationChange { confirming = true }
@@ -53,23 +54,9 @@ struct AgentExportPermissionsSetupControls: View {
         }
     }
 
-    private func directory(createParent: Bool) throws -> URL {
-        let parent: URL
-        if createParent {
-            parent = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
-                                                appropriateFor: nil, create: true).resolvingSymlinksInPath()
-        } else {
-            guard let existingLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-                throw AgentBridgeValidationError.permissionRequired
-            }
-            parent = existingLocation.resolvingSymlinksInPath()
-        }
-        return parent.appendingPathComponent("agent-bridge-export-authority-v1", isDirectory: true)
-    }
-
     private func refresh() {
         do {
-            let root = try directory(createParent: false)
+            let root = try AgentExportPermissionsStorage.directory(createParent: false)
             var attributes = stat()
             if lstat(root.path, &attributes) != 0 {
                 status = errno == ENOENT ? .notSetUp : .unavailable
@@ -93,7 +80,7 @@ struct AgentExportPermissionsSetupControls: View {
                               !protection.isEnabled else { throw AgentBridgeValidationError.approvalRequired }
                     }
                 }) { consent in
-                    let root = try directory(createParent: true)
+                    let root = try AgentExportPermissionsStorage.directory(createParent: true)
                     let store = try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: root, authorization: consent)
                     _ = try store.snapshot()
                 }
@@ -101,5 +88,21 @@ struct AgentExportPermissionsSetupControls: View {
             } catch { status = .unavailable }
         }
     }
+}
+enum AgentExportPermissionsStorage {
+    static func directory(createParent: Bool) throws -> URL {
+        let parent: URL
+        if createParent {
+            parent = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
+                                                appropriateFor: nil, create: true).resolvingSymlinksInPath()
+        } else {
+            guard let existingLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
+            parent = existingLocation.resolvingSymlinksInPath()
+        }
+        return parent.appendingPathComponent("agent-bridge-export-authority-v1", isDirectory: true)
+    }
+
 }
 #endif

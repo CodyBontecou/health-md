@@ -1431,4 +1431,27 @@
     <string name="agent_export_permissions_confirmation">Exportberechtigungen für Agenten auf diesem Gerät einrichten?</string>
     <string name="agent_export_permissions_confirmation_body">Jeder Agent benötigt eine gesonderte Exportberechtigung. Diese Einrichtung genehmigt keinen Export und gewährt keinem Agenten Zugriff.</string>
     <string name="agent_export_permissions_confirm">Berechtigungen einrichten</string>
+    <string name="agent_export_grant_add">Exportberechtigung hinzufügen</string>
+    <string name="agent_export_grant_revoke">Berechtigung widerrufen</string>
+    <string name="agent_export_grant_refresh">Berechtigungen aktualisieren</string>
+    <string name="agent_export_grant_pair_required">Kopple einen Computer, bevor du eine Exportberechtigung hinzufügst.</string>
+    <string name="agent_export_grant_unverified">Der Berechtigungsstatus konnte nicht überprüft werden. Öffne diesen Bildschirm erneut, bevor du es noch einmal versuchst.</string>
+    <string name="agent_export_grant_revoke_title">Diese Exportberechtigung widerrufen?</string>
+    <string name="agent_export_grant_allow_title">Diese Exportberechtigung erlauben?</string>
+    <string name="agent_export_grant_allow">Berechtigung erlauben</string>
+    <string name="agent_export_grant_review">Berechtigung prüfen</string>
+    <string name="agent_export_grant_metrics">Messwerte</string>
+    <string name="agent_export_grant_scope">Exportumfang</string>
+    <string name="agent_export_grant_computer">Computer</string>
+    <string name="agent_export_grant_start">Startdatum</string>
+    <string name="agent_export_grant_end">Enddatum</string>
+    <string name="agent_export_grant_timezone">Zeitzone</string>
+    <string name="agent_export_grant_expiry">Berechtigung läuft ab</string>
+    <string name="agent_export_grant_format">Format</string>
+    <string name="agent_export_grant_warning">Planung und separat genehmigte Exporte innerhalb dieses Umfangs erlauben. Dateien können vorhandene Dateien an Speicherorten ersetzen, die auf diesem Computer genehmigt wurden.</string>
+    <string name="agent_export_grant_invalid">Wähle mindestens einen Messwert, einen gültigen Datumsbereich und ein zukünftiges Ablaufdatum.</string>
+    <string name="agent_export_grant_hour">Eine Stunde</string>
+    <string name="agent_export_grant_day">Ein Tag</string>
+    <string name="agent_export_grant_week">Eine Woche</string>
+    <string name="agent_export_grant_day_limit">Tageslimit</string>
 </resources>

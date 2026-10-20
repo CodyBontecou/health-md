@@ -1256,4 +1256,27 @@
     <string name="agent_export_permissions_confirmation">このデバイスでエージェントのエクスポート権限を設定しますか？</string>
     <string name="agent_export_permissions_confirmation_body">各エージェントには個別のエクスポート権限が必要です。この設定では、エクスポートの承認やエージェントへのアクセス許可は行われません。</string>
     <string name="agent_export_permissions_confirm">権限を設定</string>
+    <string name="agent_export_grant_add">エクスポート権限を追加</string>
+    <string name="agent_export_grant_revoke">権限を取り消す</string>
+    <string name="agent_export_grant_refresh">権限を更新</string>
+    <string name="agent_export_grant_pair_required">エクスポート権限を追加する前に、コンピュータをペアリングしてください。</string>
+    <string name="agent_export_grant_unverified">権限の状態を確認できませんでした。この画面を開き直してから、もう一度お試しください。</string>
+    <string name="agent_export_grant_revoke_title">このエクスポート権限を取り消しますか？</string>
+    <string name="agent_export_grant_allow_title">このエクスポート権限を許可しますか？</string>
+    <string name="agent_export_grant_allow">権限を許可</string>
+    <string name="agent_export_grant_review">権限を確認</string>
+    <string name="agent_export_grant_metrics">指標</string>
+    <string name="agent_export_grant_scope">エクスポートの範囲</string>
+    <string name="agent_export_grant_computer">コンピュータ</string>
+    <string name="agent_export_grant_start">開始日</string>
+    <string name="agent_export_grant_end">終了日</string>
+    <string name="agent_export_grant_timezone">タイムゾーン</string>
+    <string name="agent_export_grant_expiry">権限の有効期限</string>
+    <string name="agent_export_grant_format">形式</string>
+    <string name="agent_export_grant_warning">この範囲内での計画と、個別に承認されたエクスポートを許可します。このコンピュータで承認された場所にある既存のファイルが置き換えられる場合があります。</string>
+    <string name="agent_export_grant_invalid">少なくとも1つの指標、有効な日付範囲、将来の有効期限を選択してください。</string>
+    <string name="agent_export_grant_hour">1時間</string>
+    <string name="agent_export_grant_day">1日</string>
+    <string name="agent_export_grant_week">1週間</string>
+    <string name="agent_export_grant_day_limit">日数の上限</string>
 </resources>

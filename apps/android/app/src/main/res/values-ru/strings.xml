@@ -1533,4 +1533,27 @@
     <string name="agent_export_permissions_confirmation">Настроить разрешения на экспорт для агентов на этом устройстве?</string>
     <string name="agent_export_permissions_confirmation_body">Каждому агенту потребуется отдельное разрешение на экспорт. Эта настройка не одобряет экспорт и не предоставляет доступ ни одному агенту.</string>
     <string name="agent_export_permissions_confirm">Настроить разрешения</string>
+    <string name="agent_export_grant_add">Добавить разрешение на экспорт</string>
+    <string name="agent_export_grant_revoke">Отозвать разрешение</string>
+    <string name="agent_export_grant_refresh">Обновить разрешения</string>
+    <string name="agent_export_grant_pair_required">Прежде чем добавить разрешение на экспорт, выполните сопряжение с компьютером.</string>
+    <string name="agent_export_grant_unverified">Не удалось проверить состояние разрешения. Откройте этот экран заново, прежде чем повторить попытку.</string>
+    <string name="agent_export_grant_revoke_title">Отозвать это разрешение на экспорт?</string>
+    <string name="agent_export_grant_allow_title">Выдать это разрешение на экспорт?</string>
+    <string name="agent_export_grant_allow">Выдать разрешение</string>
+    <string name="agent_export_grant_review">Проверить разрешение</string>
+    <string name="agent_export_grant_metrics">Показатели</string>
+    <string name="agent_export_grant_scope">Область экспорта</string>
+    <string name="agent_export_grant_computer">Компьютер</string>
+    <string name="agent_export_grant_start">Дата начала</string>
+    <string name="agent_export_grant_end">Дата окончания</string>
+    <string name="agent_export_grant_timezone">Часовой пояс</string>
+    <string name="agent_export_grant_expiry">Срок действия разрешения</string>
+    <string name="agent_export_grant_format">Формат</string>
+    <string name="agent_export_grant_warning">Разрешить планирование и отдельно одобренный экспорт в этих пределах. Файлы могут заменить существующие файлы в расположениях, одобренных на этом компьютере.</string>
+    <string name="agent_export_grant_invalid">Выберите хотя бы один показатель, допустимый диапазон дат и время окончания в будущем.</string>
+    <string name="agent_export_grant_hour">Один час</string>
+    <string name="agent_export_grant_day">Один день</string>
+    <string name="agent_export_grant_week">Одна неделя</string>
+    <string name="agent_export_grant_day_limit">Ограничение дней</string>
 </resources>

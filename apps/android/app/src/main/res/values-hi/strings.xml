@@ -1405,4 +1405,27 @@
     <string name="agent_export_permissions_confirmation">इस डिवाइस पर एजेंट की निर्यात अनुमतियाँ सेट अप करें?</string>
     <string name="agent_export_permissions_confirmation_body">हर एजेंट को अलग निर्यात अनुमति चाहिए होगी। यह सेटअप किसी निर्यात को स्वीकृति नहीं देता और न ही किसी एजेंट को पहुँच देता है।</string>
     <string name="agent_export_permissions_confirm">अनुमतियाँ सेट अप करें</string>
+    <string name="agent_export_grant_add">निर्यात की अनुमति जोड़ें</string>
+    <string name="agent_export_grant_revoke">अनुमति रद्द करें</string>
+    <string name="agent_export_grant_refresh">अनुमतियाँ रीफ़्रेश करें</string>
+    <string name="agent_export_grant_pair_required">निर्यात की अनुमति जोड़ने से पहले कंप्यूटर पेयर करें।</string>
+    <string name="agent_export_grant_unverified">अनुमति की स्थिति सत्यापित नहीं की जा सकी। दोबारा प्रयास करने से पहले यह स्क्रीन फिर से खोलें।</string>
+    <string name="agent_export_grant_revoke_title">निर्यात की यह अनुमति रद्द करें?</string>
+    <string name="agent_export_grant_allow_title">निर्यात की यह अनुमति दें?</string>
+    <string name="agent_export_grant_allow">अनुमति दें</string>
+    <string name="agent_export_grant_review">अनुमति की समीक्षा करें</string>
+    <string name="agent_export_grant_metrics">मेट्रिक्स</string>
+    <string name="agent_export_grant_scope">निर्यात का दायरा</string>
+    <string name="agent_export_grant_computer">कंप्यूटर</string>
+    <string name="agent_export_grant_start">आरंभ तिथि</string>
+    <string name="agent_export_grant_end">समाप्ति तिथि</string>
+    <string name="agent_export_grant_timezone">समय क्षेत्र</string>
+    <string name="agent_export_grant_expiry">अनुमति की समाप्ति</string>
+    <string name="agent_export_grant_format">प्रारूप</string>
+    <string name="agent_export_grant_warning">इस दायरे में योजना बनाने और अलग से स्वीकृत निर्यात की अनुमति दें। फ़ाइलें इस कंप्यूटर पर स्वीकृत स्थानों की मौजूदा फ़ाइलों को बदल सकती हैं।</string>
+    <string name="agent_export_grant_invalid">कम से कम एक मेट्रिक, एक मान्य तिथि सीमा और भविष्य का समाप्ति समय चुनें।</string>
+    <string name="agent_export_grant_hour">एक घंटा</string>
+    <string name="agent_export_grant_day">एक दिन</string>
+    <string name="agent_export_grant_week">एक सप्ताह</string>
+    <string name="agent_export_grant_day_limit">दिनों की सीमा</string>
 </resources>

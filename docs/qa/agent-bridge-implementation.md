@@ -135,6 +135,47 @@ physical phone or complete CLI/MCP journey qualification. Native grant/approval 
 bound execution, receipts/recipes/resume and full feature acceptance remain incomplete. Draft status,
 planned capabilities, public contracts and B19/B20 gates are unchanged.
 
+## Native permission management increment (2026-10-20)
+
+The iOS and Android Direct CLI settings now include source-integrated controls to list existing
+nonrevoked permissions, review and create a bounded permission for the original paired computer,
+and revoke a stored permission after pairing has been forgotten. Opening or refreshing the controls
+is load-only. Creation pins the original native identity, pairing record, credential and endpoint;
+confirmation revalidates those observations and the captured ledger generation without renewing
+review. Revocation binds the stored authority/revision and does not require a current pairing.
+Duplicate confirmations are consumed before persistence, and backgrounding closes pending review.
+
+The editor begins with no metrics selected. Its current planner-supported scope is six summary
+metrics, exact inclusive dates, a captured time zone, a future expiry, JSON generated files and
+explicit overwrite at separately host-approved destinations. Apple SDNN (`hrv`) and Android RMSSD
+(`android.hrv_rmssd`) retain distinct identities and native output profiles. The editor does not offer
+all-history, archives, projection or unrestricted destinations. This limited catalog is an
+implementation increment, not a reduced definition of full feature acceptance. Both builders reject
+an expiry that becomes nonfuture when serialized to whole seconds.
+
+A transient native confirmation binds one exact action. Setup retains its narrower setup-only API.
+Grant and revocation proofs cannot escape their synchronous scope or authorize a changed action;
+observed denial or expiry invalidates them permanently. The existing late-publication/return fences
+remain active. Postpublication rejection reports an unverified state and requires reopening rather
+than retrying, rolling back a committed change or claiming no permission exists.
+
+Three new owning regression methods per platform exercise canonical scope/platform meaning,
+invalid scope/expiry, exact proof binding, escape/retargeting denial, real ledger persistence and
+revocation. Android adds 23 strings in every supported locale; Apple adds 30 setup/management entries
+with all ten catalog locales, preserving existing entries. Actual unsigned iOS compilation, Apple
+catalog validation, contract validation and all 32 bridge contract tests pass. The final affected
+macOS app run passes 111 XCTest methods. Play passes 159 selected JVM methods (143 bridge plus 16 localization/configuration-protection);
+F-Droid passes all 143 bridge JVM methods, with no failures/errors/skips. The targeted Swift-warning
+and diff gates pass. Counts overlap earlier focused/affected runs. Both read-only review axes report
+no actionable defect. Translation-resource checks do not establish rendered UI or human translation review.
+
+No installed UI, accessibility, OS credential protection or physical acceptance is claimed. Native
+exact-approval UI, configuration/session adapters, routes, bound capture/execution, journals,
+receipts/recipes/resume and full CLI/MCP × Apple/Android acceptance remain incomplete. Native
+policy/credential SDK boundaries in tests are synthetic. Extension4 remains unadvertised/unrouted;
+public contracts, phone API preferences, planned capability classifications and B19/B20 gates are
+unchanged. Full feature acceptance remains required; this PR stays draft.
+
 ## Current consolidated native-session increment (2026-10-06)
 
 After the user cleared the fleet goal and authorized consolidation, all23 bridge branch heads were

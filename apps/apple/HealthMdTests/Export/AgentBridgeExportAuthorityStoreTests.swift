@@ -10,6 +10,63 @@ import XCTest
 #endif
 
 final class AgentBridgeExportAuthorityStoreTests: XCTestCase {
+    func testNativeGrantDraftKeepsExactReviewedBoundsAndPlatformMeaning() throws {
+        let peer = AgentBridgePeer(sourceInstallationID: try storeID(1), hostInstallationID: try storeID(2), platform: .apple)
+        let now = Date(timeIntervalSince1970: 1_772_928_000)
+        let value = try AgentBridgeExportNativeGrantDraft.make(peer: peer, metrics: ["steps", "hrv"],
+            start: "2026-03-07", end: "2026-03-09", timezone: "America/Los_Angeles", expiresAt: now.addingTimeInterval(3600), now: now)
+        XCTAssertEqual(value.peer, peer)
+        let bytes = try AgentBridgeV4Codec.encode(value)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        let bounds = try XCTUnwrap(json["bounds"] as? [String: Any])
+        XCTAssertEqual(bounds["metric_ids"] as? [String], ["hrv", "steps"])
+        XCTAssertEqual(bounds["formats"] as? [String], ["json"])
+        XCTAssertEqual(bounds["output_profiles"] as? [String], ["apple-v8"])
+        XCTAssertEqual(bounds["native_archive_products"] as? [String], ["none"])
+        let dates = try XCTUnwrap(bounds["date_policy"] as? [String: Any])
+        XCTAssertEqual(dates["type"] as? String, "bounded_exact")
+        XCTAssertEqual(dates["max_days"] as? Int, 3) // Includes both endpoints across DST.
+        XCTAssertEqual(try AgentBridgeV4Codec.decode(AgentBridgeExportDelegation.self, from: bytes), value)
+    }
+
+    func testNativeGrantDraftRejectsInvalidScopeAndExpiryLostByCanonicalization() throws {
+        let peer = AgentBridgePeer(sourceInstallationID: try storeID(1), hostInstallationID: try storeID(2), platform: .apple)
+        let now = Date(timeIntervalSince1970: 1_772_928_000.25)
+        for metrics: Set<String> in [[], ["android.hrv_rmssd"], ["steps", "unknown"]] {
+            XCTAssertThrowsError(try AgentBridgeExportNativeGrantDraft.make(peer: peer, metrics: metrics,
+                start: "2026-03-07", end: "2026-03-09", timezone: "UTC", expiresAt: now.addingTimeInterval(3600), now: now))
+        }
+        for expiry in [now, now.addingTimeInterval(-1), now.addingTimeInterval(0.5)] {
+            XCTAssertThrowsError(try AgentBridgeExportNativeGrantDraft.make(peer: peer, metrics: ["steps"],
+                start: "2026-03-07", end: "2026-03-09", timezone: "UTC", expiresAt: expiry, now: now))
+        }
+        for dates in [("2026-03-09", "2026-03-07"), ("2026-02-30", "2026-03-07")] {
+            XCTAssertThrowsError(try AgentBridgeExportNativeGrantDraft.make(peer: peer, metrics: ["steps"],
+                start: dates.0, end: dates.1, timezone: "UTC", expiresAt: now.addingTimeInterval(3600), now: now))
+        }
+    }
+
+    func testExactNativeGrantConsentWritesAndRevokesWithoutEscapingOrRetargeting() throws {
+        let rig = try StoreRig(); defer { rig.cleanup() }
+        let grant = try rig.grant(7), other = try rig.grant(8)
+        var escaped: (any AgentBridgeExportNativeAuthorizing)?
+        try AgentBridgeExportNativeConsent.withNativeConfirmation(for: .storeDelegation(grant), requireCurrentNativePolicy: {}) { consent in
+            escaped = consent
+            try rig.store.storeNativeDelegation(grant, expectedGeneration: 0, authorization: consent)
+        }
+        XCTAssertThrowsError(try XCTUnwrap(escaped).requireNativeAuthorization(for: .storeDelegation(grant)))
+        XCTAssertEqual(try rig.store.snapshot().delegations.count, 1)
+        XCTAssertThrowsError(try AgentBridgeExportNativeConsent.withNativeConfirmation(for: .storeDelegation(grant), requireCurrentNativePolicy: {}) { consent in
+            XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .storeDelegation(other)))
+            XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .storeDelegation(grant)))
+        })
+        let reference = try grant.reference()
+        try AgentBridgeExportNativeConsent.withNativeConfirmation(for: .revokeDelegation(reference), requireCurrentNativePolicy: {}) { consent in
+            try rig.store.revokeNativeDelegation(reference, expectedGeneration: 1, authorization: consent)
+        }
+        XCTAssertTrue(try rig.store.snapshot().delegations[0].revoked)
+    }
+
     func testNativeGrantAndRevocationRejectConsentLostDuringProtectedKeyLoad() throws {
         for revoke in [false, true] {
             let rig = try StoreRig(); defer { rig.cleanup() }

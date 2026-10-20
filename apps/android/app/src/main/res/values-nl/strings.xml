@@ -1431,4 +1431,27 @@
     <string name="agent_export_permissions_confirmation">Exportrechten voor agents op dit apparaat instellen?</string>
     <string name="agent_export_permissions_confirmation_body">Elke agent heeft afzonderlijke exportrechten nodig. Deze instelling keurt geen export goed en geeft geen enkele agent toegang.</string>
     <string name="agent_export_permissions_confirm">Rechten instellen</string>
+    <string name="agent_export_grant_add">Exportmachtiging toevoegen</string>
+    <string name="agent_export_grant_revoke">Machtiging intrekken</string>
+    <string name="agent_export_grant_refresh">Machtigingen vernieuwen</string>
+    <string name="agent_export_grant_pair_required">Koppel een computer voordat je een exportmachtiging toevoegt.</string>
+    <string name="agent_export_grant_unverified">De machtigingsstatus kon niet worden gecontroleerd. Open dit scherm opnieuw voordat je het nogmaals probeert.</string>
+    <string name="agent_export_grant_revoke_title">Deze exportmachtiging intrekken?</string>
+    <string name="agent_export_grant_allow_title">Deze exportmachtiging toestaan?</string>
+    <string name="agent_export_grant_allow">Machtiging toestaan</string>
+    <string name="agent_export_grant_review">Machtiging controleren</string>
+    <string name="agent_export_grant_metrics">Meetwaarden</string>
+    <string name="agent_export_grant_scope">Exportbereik</string>
+    <string name="agent_export_grant_computer">Computer</string>
+    <string name="agent_export_grant_start">Begindatum</string>
+    <string name="agent_export_grant_end">Einddatum</string>
+    <string name="agent_export_grant_timezone">Tijdzone</string>
+    <string name="agent_export_grant_expiry">Machtiging verloopt</string>
+    <string name="agent_export_grant_format">Indeling</string>
+    <string name="agent_export_grant_warning">Sta planning en afzonderlijk goedgekeurde exports binnen dit bereik toe. Bestanden kunnen bestaande bestanden vervangen op locaties die op deze computer zijn goedgekeurd.</string>
+    <string name="agent_export_grant_invalid">Kies minstens één meetwaarde, een geldig datumbereik en een vervaldatum in de toekomst.</string>
+    <string name="agent_export_grant_hour">Eén uur</string>
+    <string name="agent_export_grant_day">Eén dag</string>
+    <string name="agent_export_grant_week">Eén week</string>
+    <string name="agent_export_grant_day_limit">Dagenlimiet</string>
 </resources>
