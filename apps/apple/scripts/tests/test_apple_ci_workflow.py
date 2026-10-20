@@ -12,7 +12,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[4]
 WORKFLOW = REPO / ".github/workflows/apple-ci.yml"
 JOBS = {"prepare": "prepare-shared-core", "ios": "test-ios", "ios_ui": "test-ios-ui",
-        "macos": "test-macos", "connectivity": "connectivity-package"}
+        "macos": "test-macos", "connectivity": "connectivity-package", "policy": "workflow-policy"}
 
 
 def jobs():
