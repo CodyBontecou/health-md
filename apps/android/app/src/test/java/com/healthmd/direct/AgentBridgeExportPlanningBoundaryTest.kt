@@ -11,6 +11,79 @@ import org.junit.Test
 /** Actual production service/store/resolver boundaries; no native Context, key or health reads. */
 class AgentBridgeExportPlanningBoundaryTest {
     @Test
+    fun configurationReaderCannotMutateTheIssuedExplicitIntentThroughListAliases() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = f.request(f.enrolled())
+            val before = AgentBridgeCodec.encode(request)
+            var mutated = false
+            f.configuration.onPolicyRead = { policy ->
+                if (policy is AgentBridgeSettingsPolicyExplicit) {
+                    (policy.settings.formats as MutableList).clear()
+                    mutated = true
+                }
+            }
+            val plan = f.service.plan(f.peerContext, request)
+            assertThat(mutated).isTrue()
+            assertThat(AgentBridgeCodec.encode(request)).isEqualTo(before)
+            assertThat(plan.intent).isEqualTo(request.intent)
+            assertThat(plan.effectiveSettings).isEqualTo(AgentBridgeExportPlanningFixture.output())
+            f.configuration.onPolicyRead = null
+            assertThat(f.service.reviewNativePlan(f.peerContext, plan.planId)).isEqualTo(plan)
+        }
+    }
+
+    @Test
+    fun discoveryConfigurationIsMetadataOnlyAndExplicitReadsExcludeSavedSources() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            assertThat(f.configuration.readPolicies).isNotEmpty()
+            assertThat(f.configuration.readPolicies.all { it == null }).isTrue()
+            val explicit = f.intent().settingsPolicy
+            val inputs = f.configuration.readConfiguration(explicit).settings
+            assertThat(inputs.savedDevice).isNull()
+            assertThat(inputs.profiles).isEmpty()
+            assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
+        }
+    }
+
+    @Test
+    fun everyPlanningReviewApprovalAndEnvelopeBoundaryUsesTheExactIssuedSettingsPolicy() {
+        for (kind in listOf("explicit", "saved", "profile")) AgentBridgeExportPlanningFixture().use { f ->
+            val native = AgentBridgeRequestSettingsResolver.resolve(f.intent(),
+                f.configuration.readConfiguration(f.intent().settingsPolicy).settings, f.clock).exporterSettings()
+            val profileId = AgentBridgeExportPlanningFixture.id(61)
+            f.configuration.saved = AgentBridgeRequestSettingsSnapshot(7, native)
+            f.configuration.profiles = listOf(
+                AgentBridgeRequestSettingsProfile(profileId, AgentBridgeRequestSettingsSnapshot(7, native), false),
+                AgentBridgeRequestSettingsProfile(AgentBridgeExportPlanningFixture.id(62), AgentBridgeRequestSettingsSnapshot(8, native), true))
+            val policy = when (kind) {
+                "saved" -> AgentBridgeSettingsPolicySavedDeviceSettings(7, "saved_device_settings")
+                "profile" -> AgentBridgeSettingsPolicyProfile(7, profileId, "profile")
+                else -> f.intent().settingsPolicy
+            }
+            val request = f.request(f.enrolled(), f.intent(policy = policy))
+            fun checkReads(operation: () -> Unit) {
+                f.configuration.readPolicies.clear()
+                operation()
+                assertThat(f.configuration.readPolicies.size).isAtLeast(3)
+                assertThat(f.configuration.readPolicies.all { it == policy }).isTrue()
+            }
+            lateinit var plan: AgentBridgeGeneratedPlan
+            checkReads { plan = f.service.plan(f.peerContext, request) }
+            checkReads { assertThat(f.service.plan(f.peerContext, request)).isEqualTo(plan) }
+            checkReads { assertThat(f.service.reviewNativePlan(f.peerContext, plan.planId)).isEqualTo(plan) }
+            checkReads { f.service.authorizeExactApproval(f.peerContext, f.native, plan.planId, AgentBridgeValidation.bindingFor(plan)) }
+            checkReads { f.service.approval(f.peerContext, f.approvalRequest(plan)) }
+            val negotiation = AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, listOf(2, 4), listOf(2, 4))
+            for (message in listOf(AgentBridgeMessage("plan_request", request),
+                AgentBridgeMessage("approval_request", f.approvalRequest(plan)))) {
+                checkReads { f.service.handleEnvelope(AgentBridgeCodec.encodeEnvelope(message, negotiation), f.peerContext, negotiation) }
+            }
+            assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
+        }
+    }
+
+    @Test
     fun nativePlanReviewUsesStoredPlanWithoutCreatingConsentOrChangingPreferences() {
         AgentBridgeExportPlanningFixture().use { f ->
             val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))

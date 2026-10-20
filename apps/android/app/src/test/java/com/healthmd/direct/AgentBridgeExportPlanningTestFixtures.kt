@@ -123,6 +123,7 @@ internal class AgentBridgeExportTestClock(var now: Instant) : Clock() {
 }
 internal class AgentBridgeExportTestConfiguration : AgentBridgeExportPlanningConfigurationReader {
     var calls = 0
+    val readPolicies = mutableListOf<AgentBridgeSettingsPolicy?>()
     private val json = Json { encodeDefaults = true }
     var saved: AgentBridgeRequestSettingsSnapshot? = null
     var profiles = emptyList<AgentBridgeRequestSettingsProfile>()
@@ -133,11 +134,16 @@ internal class AgentBridgeExportTestConfiguration : AgentBridgeExportPlanningCon
     var unlocked = true
     var sourceZone = "America/Los_Angeles"
     var onRead: (() -> Unit)? = null
+    var onPolicyRead: ((AgentBridgeSettingsPolicy?) -> Unit)? = null
     private val unrelatedPreferences = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://synthetic.invalid/never-contact", scheduleEnabled = true)
     fun preferenceBytes() = json.encodeToString(unrelatedPreferences)
-    override fun readConfiguration(): AgentBridgeExportPlanningConfiguration {
+    override fun readConfiguration(policy: AgentBridgeSettingsPolicy?): AgentBridgeExportPlanningConfiguration {
         calls++
-        val snapshot = AgentBridgeExportPlanningConfiguration(AgentBridgeRequestSettingsInputs(catalog, saved, profiles),
+        readPolicies += policy
+        onPolicyRead?.invoke(policy)
+        val snapshot = AgentBridgeExportPlanningConfiguration(AgentBridgeRequestSettingsInputs(catalog,
+            if (policy is AgentBridgeSettingsPolicySavedDeviceSettings) saved else null,
+            if (policy is AgentBridgeSettingsPolicyProfile) profiles.filter { it.profileId == policy.profileId } else emptyList()),
             AgentBridgeExportPlanningFixture.id(2), sourceZone, AgentBridgeDiscoveryConfigurationProtection.LOCKED,
             grants, entitlement, active, unlocked)
         onRead?.invoke()

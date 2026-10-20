@@ -14,7 +14,9 @@ import kotlinx.serialization.json.*
  * This service structurally has no capture, provider, quota, exporter writer, settings writer or wake
  * dependency. That is source-service qualification, NOT instrumentation of an installed TCP route. */
 internal fun interface AgentBridgeExportPlanningConfigurationReader {
-    fun readConfiguration(): AgentBridgeExportPlanningConfiguration
+    // Null is metadata-only discovery. Explicit requests must not load saved settings/profiles;
+    // saved/profile reads select only that exact policy. Later boundaries use issuer-owned plans.
+    fun readConfiguration(policy: AgentBridgeSettingsPolicy?): AgentBridgeExportPlanningConfiguration
 }
 internal data class AgentBridgeExportPlanningConfiguration(
     val settings: AgentBridgeRequestSettingsInputs,
@@ -72,7 +74,7 @@ internal class AgentBridgeExportPlanningService(
     fun discover(authenticated: AgentBridgeExportAuthenticatedPeer, value: AgentBridgeDiscoveryRequest): AgentBridgeDiscovery {
         val request = AgentBridgeCodec.decode(AgentBridgeCodec.encode(value)) as AgentBridgeDiscoveryRequest
         val peer = peer(authenticated, request.peer)
-        return access(authenticated, peer) { tx -> discovery(request.requestId, peer, configuration.readConfiguration(), tx, now()) }
+        return access(authenticated, peer) { tx -> discovery(request.requestId, peer, readConfiguration(null), tx, now()) }
     }
 
     fun plan(authenticated: AgentBridgeExportAuthenticatedPeer, value: AgentBridgePlanRequest): AgentBridgeGeneratedPlan {
@@ -86,11 +88,11 @@ internal class AgentBridgeExportPlanningService(
             val existing = tx.issuedFor(peer, request.requestId)
             if (existing != null) {
                 require(existing.requestCanonical == requestBytes.decodeToString(), AgentBridgeErrorCode.BINDING_CHANGED)
-                val snapshot = configuration.readConfiguration()
+                val snapshot = readConfiguration(existing.plan().intent.settingsPolicy)
                 validateCurrent(existing, tx, snapshot, peer, now())
                 return@access existing.plan() // Never slide expiry, replace settings or create a new plan on retry.
             }
-            val snapshot = configuration.readConfiguration()
+            val snapshot = readConfiguration(intent.settingsPolicy)
             requirePresence(snapshot)
             val issued = now()
             val capabilities = discovery(request.requestId, peer, snapshot, tx, issued)
@@ -142,7 +144,7 @@ internal class AgentBridgeExportPlanningService(
         return access(authenticated, expected, nativePlanReview = true) { transaction ->
             val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
             val record = tx.plan(expected, planId)
-            val snapshot = configuration.readConfiguration()
+            val snapshot = readConfiguration(record.plan().intent.settingsPolicy)
             peer(authenticated, expected)
             validateCurrent(record, tx, snapshot, expected, now(), AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE)
             val plan = record.plan()
@@ -158,7 +160,7 @@ internal class AgentBridgeExportPlanningService(
             val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
             val record = tx.plan(peer, request.planId)
             AgentBridgeValidation.validateApprovalBinding(request, record.plan())
-            val snapshot = configuration.readConfiguration()
+            val snapshot = readConfiguration(record.plan().intent.settingsPolicy)
             validateCurrent(record, tx, snapshot, peer, now(), AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE)
             requireReady(snapshot, record.plan())
             tx.decision(request.planId) ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
@@ -178,7 +180,7 @@ internal class AgentBridgeExportPlanningService(
             val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
             val record = tx.plan(peer, planId)
             require(frozenBinding == AgentBridgeValidation.bindingFor(record.plan()), AgentBridgeErrorCode.BINDING_CHANGED)
-            val snapshot = configuration.readConfiguration()
+            val snapshot = readConfiguration(record.plan().intent.settingsPolicy)
             val approved = now()
             validateCurrent(record, tx, snapshot, peer, approved, AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE)
             requireReady(snapshot, record.plan())
@@ -187,7 +189,7 @@ internal class AgentBridgeExportPlanningService(
             tx.decision(planId)?.let { return@access it }
             peer(authenticated, peer) // A native session can revoke/change live trust during a decision.
             nativeDecision.requireCurrent()
-            val current = configuration.readConfiguration()
+            val current = readConfiguration(record.plan().intent.settingsPolicy)
             peer(authenticated, peer) // This callback can delay: sample time only AFTER current trust.
             val decided = now()
             validateCurrent(record, tx, current, peer, decided, AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE)
@@ -262,7 +264,17 @@ internal class AgentBridgeExportPlanningService(
     private fun validateBoundary(authenticated: AgentBridgeExportAuthenticatedPeer, expected: AgentBridgePeer,
         tx: AgentBridgeExportAuthorityTransaction?, value: AgentBridgeDocument, nativeDecision: NativeDecisionFence?, nativePlanReview: Boolean = false) {
         peer(authenticated, expected)
-        val snapshot = configuration.readConfiguration() // Fresh configuration AFTER the publication/return trust callback.
+        // Derive the policy from the issuer's locked record, never host-provided review text or
+        // defaults. Approval responses carry a binding, not a settings policy.
+        val policy = when (value) {
+            is AgentBridgeDiscovery -> null
+            is AgentBridgeGeneratedPlan -> (tx ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED))
+                .plan(expected, value.planId).plan().intent.settingsPolicy
+            is AgentBridgeApproval -> (tx ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED))
+                .planForApproval(expected, value).plan().intent.settingsPolicy
+            else -> throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        }
+        val snapshot = readConfiguration(policy) // Fresh configuration AFTER the publication/return trust callback.
         peer(authenticated, expected)
         if (nativeDecision != null) {
             nativeDecision.requireCurrent() // Same review after key/config reads and at publication/return.
@@ -303,6 +315,16 @@ internal class AgentBridgeExportPlanningService(
             }
             else -> throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         }
+    }
+
+    private fun readConfiguration(policy: AgentBridgeSettingsPolicy?): AgentBridgeExportPlanningConfiguration {
+        // Kotlin wire models contain List values that may have mutable backing collections.
+        // A native reader receives its own decoded policy, never aliases of an in-flight intent.
+        val detached = policy?.let {
+            json.decodeFromJsonElement(AgentBridgeSettingsPolicySerializer,
+                json.encodeToJsonElement(AgentBridgeSettingsPolicySerializer, it))
+        }
+        return configuration.readConfiguration(detached)
     }
 
     private fun peer(authenticated: AgentBridgeExportAuthenticatedPeer, wire: AgentBridgePeer): AgentBridgePeer {

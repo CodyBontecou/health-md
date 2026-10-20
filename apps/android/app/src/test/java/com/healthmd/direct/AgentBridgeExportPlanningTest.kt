@@ -355,7 +355,7 @@ class AgentBridgeExportPlanningTest {
     @Test
     fun savedAndProfileOutputRevisionsArePinnedWithoutFallbackOrInheritedApiScheduleAuthority() {
         AgentBridgeExportPlanningFixture().use { f ->
-            val native = AgentBridgeRequestSettingsResolver.resolve(f.intent(), f.configuration.readConfiguration().settings, f.clock).exporterSettings()
+            val native = AgentBridgeRequestSettingsResolver.resolve(f.intent(), f.configuration.readConfiguration(f.intent().settingsPolicy).settings, f.clock).exporterSettings()
                 .copy(apiEndpointUrl = "https://synthetic.invalid/never-contact", scheduleEnabled = true)
             val profileId = AgentBridgeExportPlanningFixture.id(47)
             f.configuration.saved = AgentBridgeRequestSettingsSnapshot(7, native)
@@ -379,7 +379,7 @@ class AgentBridgeExportPlanningTest {
     @Test
     fun capabilityAndSameRevisionNativeSettingsMutationRejectStoredPlans() {
         AgentBridgeExportPlanningFixture().use { f ->
-            val native = AgentBridgeRequestSettingsResolver.resolve(f.intent(), f.configuration.readConfiguration().settings, f.clock).exporterSettings()
+            val native = AgentBridgeRequestSettingsResolver.resolve(f.intent(), f.configuration.readConfiguration(f.intent().settingsPolicy).settings, f.clock).exporterSettings()
             f.configuration.saved = AgentBridgeRequestSettingsSnapshot(7, native)
             val request = f.request(f.enrolled(), f.intent(policy = AgentBridgeSettingsPolicySavedDeviceSettings(7, "saved_device_settings")))
             val plan = f.service.plan(f.peerContext, request)
