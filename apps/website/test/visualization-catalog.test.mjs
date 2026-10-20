@@ -3,6 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import path from "node:path";
 import vm from "node:vm";
+import { marked } from "marked";
 
 const expectedV7Visualizations = [
   "metric-trend",
@@ -284,6 +285,14 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
     const day = api.parseHealthDay(source);
     assert.ok(day, variant.name);
     const samples = source.mindfulness[apple ? "stateOfMindEntries" : "sessions"];
+    const markdown = await readFile(path.join(folder, name.replace(/\.json$/, ".md")), "utf8");
+    const table = marked.lexer(markdown).find(token => token.type === "table"
+      && token.header[0]?.text === "Native Record (JSON)");
+    assert.ok(table, variant.name);
+    const cell = table.rows[0][0].tokens;
+    assert.equal(cell.length, 1, variant.name);
+    assert.equal(cell[0].type, "codespan", variant.name);
+    assert.deepEqual(JSON.parse(cell[0].text).sample, samples[0], variant.name);
     assert.deepEqual(JSON.parse(JSON.stringify(day.nativeMindfulnessDetails.map(record => record.sample))), samples);
     assert.equal(day.nativeMindfulnessDetails[0].metric, apple ? "state_of_mind" : "mindfulness_session");
     const changed = structuredClone(source);
