@@ -142,6 +142,14 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     }
 
     @Test
+    fun nativeConfigurationRevisionIsLocalOnlyAndHasNoPortableContractPath() {
+        val row = rows(ledgerObject()).single { it.sourceType == "ExportProfile" && it.serializedField == "configurationRevision" }
+        assertEquals(LOCAL_ONLY, row.disposition)
+        assertEquals(DESCRIPTOR, row.coverageKind)
+        assertNull(row.contractPath)
+    }
+
+    @Test
     fun prohibitedFieldsNeverReceiveAContractPath() {
         val prohibited = rows(ledgerObject()).filter { it.disposition == PROHIBITED }
         assertTrue("The audit must explicitly account for prohibited native state", prohibited.isNotEmpty())
@@ -207,7 +215,14 @@ class SharedSetupAndroidProfileFieldCoverageTest {
         val base = Json.parseToJsonElement(ledgerFile().readText()).jsonObject
         val supplement = Json.parseToJsonElement(ledgerFile(SUPPLEMENT_PATH).readText()).jsonObject
         val combined = combineCoverageFields(base.getValue("fields").jsonArray, supplement.getValue("fields").jsonArray)
-        return JsonObject(base + ("fields" to combined))
+        // Post-freeze native metadata is classified only in this current inventory, never in
+        // the immutable base or the separately audited recovery-only supplement.
+        val localAdditions = Json.parseToJsonElement("""[{
+            "source_type":"ExportProfile", "serialized_field":"configurationRevision",
+            "coverage_kind":"descriptor", "disposition":"local_only", "contract_path":null,
+            "evidence":"Native profile revision pins are device-local; Shared Setup creates fresh local identities and does not transfer configuration authority."
+        }]""").jsonArray
+        return JsonObject(base + ("fields" to combineCoverageFields(combined, localAdditions)))
     }
 
     private fun combineCoverageFields(base: JsonArray, supplement: JsonArray): JsonArray {

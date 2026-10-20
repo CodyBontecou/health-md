@@ -30,6 +30,9 @@ struct ExportProfile: Codable, Identifiable, Equatable {
     var apiEndpointID: UUID?
     var createdAt: Date
     var updatedAt: Date
+    /// Device-local configuration identity for exact revision pins; never portable authority.
+    /// Timestamps are presentation metadata and cannot substitute for this counter.
+    var configurationRevision: Int
     /// True only for the profile synthesized from legacy live settings during
     /// first-run migration. It marks the row users expect to keep editing as
     /// their "main" configuration and is not part of export output.
@@ -44,7 +47,8 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         apiEndpointID: UUID? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
-        isMigrationDefault: Bool = false
+        isMigrationDefault: Bool = false,
+        configurationRevision: Int = 1
     ) {
         self.id = id
         self.name = name
@@ -54,7 +58,29 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         self.apiEndpointID = apiEndpointID
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.configurationRevision = configurationRevision
         self.isMigrationDefault = isMigrationDefault
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, settings, target, folderVaultID, apiEndpointID, createdAt, updatedAt
+        case isMigrationDefault, configurationRevision
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        name = try values.decode(String.self, forKey: .name)
+        settings = try values.decode(ExportSettingsSnapshot.self, forKey: .settings)
+        target = try values.decode(ExportTargetSelection.self, forKey: .target)
+        folderVaultID = try values.decodeIfPresent(UUID.self, forKey: .folderVaultID)
+        apiEndpointID = try values.decodeIfPresent(UUID.self, forKey: .apiEndpointID)
+        createdAt = try values.decode(Date.self, forKey: .createdAt)
+        updatedAt = try values.decode(Date.self, forKey: .updatedAt)
+        isMigrationDefault = try values.decode(Bool.self, forKey: .isMigrationDefault)
+        // Missing only is a legacy native row. Null/malformed values are never a new revision.
+        configurationRevision = values.contains(.configurationRevision)
+            ? try values.decode(Int.self, forKey: .configurationRevision) : 1
     }
 }
 
@@ -115,10 +141,11 @@ final class ExportProfileStore: ObservableObject {
     /// Re-reads persisted state so instances owned by different subsystems
     /// (UI coordinator, SchedulingManager, CLI paths) observe each other's
     /// mutations. Safe on the main thread, matching every existing call site.
-    private func reloadFromDefaults() {
+    @discardableResult
+    private func reloadFromDefaults() -> Bool {
         guard let data = userDefaults.data(forKey: Key.list),
               let decoded = try? JSONDecoder().decode([ExportProfile].self, from: data) else {
-            return
+            return false
         }
         if decoded != profiles {
             profiles = decoded
@@ -129,6 +156,7 @@ final class ExportProfileStore: ObservableObject {
            id != activeProfileID {
             activeProfileID = id
         }
+        return true
     }
 
     // MARK: - Derived state
@@ -174,7 +202,7 @@ final class ExportProfileStore: ObservableObject {
         folderVaultID: UUID? = nil,
         apiEndpointID: UUID? = nil
     ) -> Bool {
-        guard profiles.isEmpty else { return false }
+        guard prepareForListMutation(allowAbsent: true), profiles.isEmpty else { return false }
 
         let profile = ExportProfile(
             name: uniquifiedName(Self.defaultProfileName),
@@ -201,7 +229,8 @@ final class ExportProfileStore: ObservableObject {
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
         apiEndpointID: UUID? = nil
-    ) -> ExportProfile {
+    ) -> ExportProfile? {
+        guard prepareForListMutation(allowAbsent: true) else { return nil }
         let profile = ExportProfile(
             name: uniquifiedName(name),
             settings: settings,
@@ -223,9 +252,11 @@ final class ExportProfileStore: ObservableObject {
     /// Returns false when the id is unknown.
     @discardableResult
     func updateSettings(id: UUID, settings: ExportSettingsSnapshot) -> Bool {
-        guard let index = profiles.firstIndex(where: { $0.id == id }) else { return false }
+        guard let edit = nextConfigurationRevision(for: id) else { return false }
+        let index = edit.index
         profiles[index].settings = settings
         profiles[index].updatedAt = now()
+        profiles[index].configurationRevision = edit.revision
         persist()
         return true
     }
@@ -234,10 +265,13 @@ final class ExportProfileStore: ObservableObject {
     /// Returns false when the profile id is unknown.
     @discardableResult
     func setFolderBinding(profileID: UUID, destinationID: UUID?) -> Bool {
-        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return false }
-        guard profiles[index].folderVaultID != destinationID else { return true }
+        guard reloadFromDefaults(), let current = profiles.first(where: { $0.id == profileID }) else { return false }
+        guard current.folderVaultID != destinationID else { return true }
+        guard let edit = nextConfigurationRevision(for: profileID) else { return false }
+        let index = edit.index
         profiles[index].folderVaultID = destinationID
         profiles[index].updatedAt = now()
+        profiles[index].configurationRevision = edit.revision
         persist()
         return true
     }
@@ -246,10 +280,13 @@ final class ExportProfileStore: ObservableObject {
     /// Returns false when the profile id is unknown.
     @discardableResult
     func setAPIEndpointBinding(profileID: UUID, endpointID: UUID?) -> Bool {
-        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return false }
-        guard profiles[index].apiEndpointID != endpointID else { return true }
+        guard reloadFromDefaults(), let current = profiles.first(where: { $0.id == profileID }) else { return false }
+        guard current.apiEndpointID != endpointID else { return true }
+        guard let edit = nextConfigurationRevision(for: profileID) else { return false }
+        let index = edit.index
         profiles[index].apiEndpointID = endpointID
         profiles[index].updatedAt = now()
+        profiles[index].configurationRevision = edit.revision
         persist()
         return true
     }
@@ -258,9 +295,11 @@ final class ExportProfileStore: ObservableObject {
     /// Returns false when the id is unknown.
     @discardableResult
     func updateTarget(id: UUID, target: ExportTargetSelection) -> Bool {
-        guard let index = profiles.firstIndex(where: { $0.id == id }) else { return false }
+        guard let edit = nextConfigurationRevision(for: id) else { return false }
+        let index = edit.index
         profiles[index].target = target
         profiles[index].updatedAt = now()
+        profiles[index].configurationRevision = edit.revision
         persist()
         return true
     }
@@ -270,7 +309,8 @@ final class ExportProfileStore: ObservableObject {
     /// unknown or the trimmed name is empty.
     @discardableResult
     func rename(id: UUID, to rawName: String) -> String? {
-        guard let index = profiles.firstIndex(where: { $0.id == id }) else { return nil }
+        guard let edit = nextConfigurationRevision(for: id) else { return nil }
+        let index = edit.index
         let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
@@ -278,6 +318,7 @@ final class ExportProfileStore: ObservableObject {
         let unique = Self.uniquified(trimmed, against: others.map(\.name))
         profiles[index].name = unique
         profiles[index].updatedAt = now()
+        profiles[index].configurationRevision = edit.revision
         persist()
         return unique
     }
@@ -305,7 +346,7 @@ final class ExportProfileStore: ObservableObject {
     /// profile was deleted; false for unknown ids or the final profile.
     @discardableResult
     func delete(id: UUID) -> Bool {
-        guard profiles.count > 1,
+        guard prepareForListMutation(), profiles.count > 1,
               let index = profiles.firstIndex(where: { $0.id == id }) else { return false }
         profiles.remove(at: index)
 
@@ -320,7 +361,7 @@ final class ExportProfileStore: ObservableObject {
     /// or while in legacy mode.
     @discardableResult
     func activate(id: UUID) -> Bool {
-        guard profiles.contains(where: { $0.id == id }) else { return false }
+        guard prepareForListMutation(), profiles.contains(where: { $0.id == id }) else { return false }
         activeProfileID = id
         persist()
         return true
@@ -348,9 +389,32 @@ final class ExportProfileStore: ObservableObject {
         return "\(base) \(counter)"
     }
 
+    /// A genuinely empty initial store is creatable; unreadable or externally removed state
+    /// is never replaced from cached rows. Rejection precedes observable state changes.
+    private func prepareForListMutation(allowAbsent: Bool = false) -> Bool {
+        if userDefaults.object(forKey: Key.list) == nil {
+            return allowAbsent && profiles.isEmpty
+        }
+        return reloadFromDefaults()
+    }
+
+    /// Invalid or exhausted counters fail before mutation, never wrap or reuse an old pin.
+    private func nextConfigurationRevision(for id: UUID) -> (index: Int, revision: Int)? {
+        guard reloadFromDefaults(),
+              let index = profiles.firstIndex(where: { $0.id == id }),
+              (1..<Int(Int32.max)).contains(profiles[index].configurationRevision) else { return nil }
+        return (index, profiles[index].configurationRevision + 1)
+    }
+
     // MARK: - Persistence
 
     private func persist() {
+        // A malformed existing row is not an empty store. Never replace it from a cached list,
+        // including through unrelated add/delete/activation paths that serialize the whole list.
+        if userDefaults.object(forKey: Key.list) != nil {
+            guard let data = userDefaults.data(forKey: Key.list),
+                  (try? JSONDecoder().decode([ExportProfile].self, from: data)) != nil else { return }
+        }
         if let encoded = try? JSONEncoder().encode(profiles) {
             userDefaults.set(encoded, forKey: Key.list)
         }

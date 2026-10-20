@@ -45,7 +45,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     func testUnnamedResolutionUsesActiveProfile() throws {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         store.add(name: "Daily", settings: makeSettings(filenameFormat: "d-{date}"), target: .localIPhoneFolder)
-        let weekly = store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint)
+        let weekly = try XCTUnwrap(store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint))
         store.activate(id: weekly.id)
 
         let resolution = ExportIntentRunner.resolveProfile(named: nil, profileStore: store)
@@ -60,7 +60,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
 
     func testNamedResolutionIsTrimmedAndCaseInsensitive() throws {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
-        let weekly = store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint)
+        let weekly = try XCTUnwrap(store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint))
 
         let resolution = ExportIntentRunner.resolveProfile(named: "  weekly sleep ", profileStore: store)
 
@@ -80,11 +80,11 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
 
     func testProfileRunUsesProfileSnapshotAndAdoptsDestinations() async throws {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
-        let profile = store.add(
+        let profile = try XCTUnwrap(store.add(
             name: "Sleep",
             settings: makeSettings(filenameFormat: "sleep-{date}"),
             target: .localIPhoneFolder
-        )
+        ))
 
         let recorder = ProfileRunRecorder()
         let outcome = await ExportIntentRunner.run(

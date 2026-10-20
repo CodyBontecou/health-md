@@ -528,16 +528,16 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         // entries, plus a scheduled entry for the profile being deleted.
         let seedingStore = ExportProfileStore(userDefaults: defaults)
         let snapshot = ExportSettingsSnapshot.from(makeSettings())
-        let folderProfile = seedingStore.add(
+        let folderProfile = try XCTUnwrap(seedingStore.add(
             name: "Imported Folder",
             settings: snapshot,
             target: .localIPhoneFolder
-        )
-        let apiProfile = seedingStore.add(
+        ))
+        let apiProfile = try XCTUnwrap(seedingStore.add(
             name: "Imported API",
             settings: snapshot,
             target: .apiEndpoint
-        )
+        ))
         let source = try importedSourceProfile()
         defaults.set(
             try JSONEncoder().encode(SharedSetupV2AppleProfileState(profiles: [
@@ -597,11 +597,11 @@ final class ExportProfileCoordinatorTests: XCTestCase {
 
         // Deleting a later native profile with no sidecar reference is a
         // clean compaction no-op: the keys stay untouched.
-        let native = coordinator.profileStore.add(
+        let native = try XCTUnwrap(coordinator.profileStore.add(
             name: "Native",
             settings: snapshot,
             target: .localIPhoneFolder
-        )
+        ))
         let sidecarBytes = defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey)
         let blockedBytes = defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey)
         XCTAssertTrue(coordinator.deleteProfile(id: native.id))
@@ -623,16 +623,16 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         // remaining profile keeps working exactly as before.
         let seedingStore = ExportProfileStore(userDefaults: defaults)
         let snapshot = ExportSettingsSnapshot.from(makeSettings())
-        let folderProfile = seedingStore.add(
+        let folderProfile = try XCTUnwrap(seedingStore.add(
             name: "Imported Folder",
             settings: snapshot,
             target: .localIPhoneFolder
-        )
-        let apiProfile = seedingStore.add(
+        ))
+        let apiProfile = try XCTUnwrap(seedingStore.add(
             name: "Imported API",
             settings: snapshot,
             target: .apiEndpoint
-        )
+        ))
         let source = try importedSourceProfile()
         let sidecarBytes = try JSONEncoder().encode(SharedSetupV2AppleProfileState(profiles: [
             .init(

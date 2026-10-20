@@ -453,13 +453,13 @@ final class ExportProfileCoordinator: ObservableObject {
         flushEdits()
         guard let source = profileStore.activeProfile,
               !isProfileExecutionBlocked(source.id) else { return nil }
-        let created = profileStore.add(
+        guard let created = profileStore.add(
             name: name,
             settings: newSettings ?? ExportSettingsSnapshot.from(settings),
             target: target,
             folderVaultID: folderVaultID,
             apiEndpointID: source.apiEndpointID
-        )
+        ) else { return nil }
         activate(profileID: created.id, adoptVault: folderVaultID != nil)
         return created
     }
@@ -522,13 +522,13 @@ final class ExportProfileCoordinator: ObservableObject {
     func addProfileDuplicatingActive() -> ExportProfile? {
         guard let source = profileStore.activeProfile,
               !isProfileExecutionBlocked(source.id) else { return nil }
-        let copy = profileStore.add(
+        guard let copy = profileStore.add(
             name: source.name,
             settings: ExportSettingsSnapshot.from(settings),
             target: source.target,
             folderVaultID: source.folderVaultID,
             apiEndpointID: source.apiEndpointID
-        )
+        ) else { return nil }
         activate(profileID: copy.id, adoptVault: false)
         return copy
     }

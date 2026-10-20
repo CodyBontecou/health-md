@@ -181,7 +181,9 @@ class ExportProfileRepository @Inject constructor(
             if (index >= 0) {
                 val concreteFolderUri = folderUri
                     ?.takeIf { it.isNotBlank() && it.startsWith("content://", ignoreCase = true) }
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     folderUri = folderUri?.takeIf { it.isNotBlank() },
                     folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
                     updatedAtEpochMillis = System.currentTimeMillis(),
@@ -221,7 +223,9 @@ class ExportProfileRepository @Inject constructor(
             val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     settingsSnapshotJson = settingsSnapshotJson ?: existing[index].settingsSnapshotJson,
                     target = target ?: existing[index].target,
                     apiEndpointUrl = apiEndpointUrl ?: existing[index].apiEndpointUrl,
@@ -259,7 +263,9 @@ class ExportProfileRepository @Inject constructor(
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     name = ExportProfileRules.uniquifyName(rawName, others),
                     settingsSnapshotJson = settingsSnapshotJson,
                     target = target,
@@ -297,7 +303,9 @@ class ExportProfileRepository @Inject constructor(
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
                 val unique = ExportProfileRules.uniquifyName(rawName, others)
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     name = unique,
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )
@@ -432,7 +440,9 @@ class ExportProfileRepository @Inject constructor(
             val encodedSnapshot = runCatching {
                 AndroidExportSettingsSnapshotCodec.encodeCanonical(reboundSnapshot)
             }.getOrNull() ?: return@edit
+            val revision = profile.nextConfigurationRevision() ?: return@edit
             val updated = profile.copy(
+                configurationRevision = revision,
                 apiEndpointUrl = endpoint,
                 settingsSnapshotJson = encodedSnapshot,
                 updatedAtEpochMillis = System.currentTimeMillis(),
