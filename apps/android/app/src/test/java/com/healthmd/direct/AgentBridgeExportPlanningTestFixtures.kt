@@ -137,7 +137,7 @@ internal class AgentBridgeExportTestConfiguration : AgentBridgeExportPlanningCon
     var onPolicyRead: ((AgentBridgeSettingsPolicy?) -> Unit)? = null
     private val unrelatedPreferences = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://synthetic.invalid/never-contact", scheduleEnabled = true)
     fun preferenceBytes() = json.encodeToString(unrelatedPreferences)
-    override fun readConfiguration(policy: AgentBridgeSettingsPolicy?): AgentBridgeExportPlanningConfiguration {
+    override fun readConfiguration(policy: AgentBridgeSettingsPolicy?, catalogPublication: AgentBridgeNativeCatalogPublication?): AgentBridgeExportPlanningConfiguration {
         calls++
         readPolicies += policy
         onPolicyRead?.invoke(policy)

@@ -16,11 +16,14 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     // MainActor objects through process teardown on older iOS runtimes; these use the same owners.
     private static var retainedNativeConfigurationObjects: [AnyObject] = []
 
-    private func nativeState(revision: Int64 = 3) throws -> AgentBridgeNativePlanningState {
-        try .init(catalogRevision: revision,
-                  availableNativeMetricIDs: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"],
-                  sourceCalendarTimezone: AgentBridgeZone("America/Los_Angeles"), configurationProtection: .locked,
-                  nativeGrants: .satisfied, entitlement: .satisfied, foregroundAvailable: true, protectedDataAvailable: true)
+    private func nativeState(
+        available: Set<String> = ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"],
+        zone: String = "America/Los_Angeles", protection: AgentBridgeDiscoveryConfigurationProtection = .locked,
+        grants: AgentBridgeDiscoveryNativeGrants = .satisfied, entitlement: AgentBridgeDiscoveryEntitlement = .satisfied,
+        foregroundAvailable: Bool = true, protectedDataAvailable: Bool = true
+    ) throws -> AgentBridgeNativePlanningFacts {
+        try .init(availableNativeMetricIDs: available, sourceCalendarTimezone: AgentBridgeZone(zone), configurationProtection: protection,
+                  nativeGrants: grants, entitlement: entitlement, foregroundAvailable: foregroundAvailable, protectedDataAvailable: protectedDataAvailable)
     }
 
     func testNativeConfigurationDiscoveryAndExplicitNeverReadPrivatePreferences() throws {
@@ -28,10 +31,11 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
         Self.retainedNativeConfigurationObjects.append(profiles)
         let state = try nativeState()
+        let publication = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { state }
         let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: { state })
         rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
         for policy in [nil, AgentBridgeSettingsPolicy.explicit(try output())] {
-            let configuration = try reader.readConfiguration(for: rig.peer, policy: policy)
+            let configuration = try reader.readConfiguration(for: rig.peer, policy: policy, catalogPublication: publication)
             XCTAssertNil(configuration.inputs.savedDevice)
             XCTAssertTrue(configuration.inputs.profiles.isEmpty)
         }
@@ -55,6 +59,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTAssertTrue(profiles.activate(id: other.id))
             let revision = try XCTUnwrap(AdvancedExportSettings.nativeConfigurationRevision(defaults: SystemUserDefaults(defaults: rig.reader.defaults)))
             let state = try nativeState()
+            _ = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { state }
             let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: { state })
             let service = AgentBridgeExportPlanningService(store: rig.store, configuration: reader, clock: rig.clock, newPlanID: { try id(6) })
             func send(_ document: AgentBridgeDocument) throws -> AgentBridgeDocument {
@@ -97,11 +102,13 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
             Self.retainedNativeConfigurationObjects.append(profiles)
             let profile = try XCTUnwrap(profiles.add(name: "Selected", settings: XCTUnwrap(rig.reader.saved), target: .localIPhoneFolder))
+            let initial = try nativeState()
+            let publication = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { initial }
             var reads = 0
             let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: {
                 reads += 1
                 if mode == "revoke", reads == 2 { rig.session.revoke() }
-                return try self.nativeState(revision: mode == "drift" && reads == 2 ? 4 : 3)
+                return try self.nativeState(foregroundAvailable: !(mode == "drift" && reads == 2))
             })
             let policy: AgentBridgeSettingsPolicy?
             switch mode {
@@ -110,10 +117,183 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             default: policy = nil
             }
             rig.reader.defaults.writes = 0
-            XCTAssertThrowsError(try reader.readConfiguration(for: rig.peer, policy: policy)) {
+            XCTAssertThrowsError(try reader.readConfiguration(for: rig.peer, policy: policy, catalogPublication: publication)) {
                 XCTAssertEqual($0 as? AgentBridgeValidationError, mode == "revoke" ? .permissionRequired : .bindingChanged)
             }
             XCTAssertEqual(rig.reader.defaults.writes, 0)
+        }
+    }
+
+    func testNativeCatalogPublicationPersistsIdempotentlyAndAdvancesAcrossReadinessABA() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let file = rig.directory.appendingPathComponent("state.json")
+        let legacyBytes = try Data(contentsOf: file), original = try rig.store.snapshot()
+        XCTAssertNil(original.nativeCatalog)
+        _ = try rig.store.snapshot()
+        XCTAssertEqual(try Data(contentsOf: file), legacyBytes) // Reading v1 never migrates or writes it.
+        let ready = try nativeState(), unavailable = try nativeState(foregroundAvailable: false)
+        let first = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { ready }
+        XCTAssertEqual(first.revision, 1)
+        let publishedBytes = try Data(contentsOf: file), generation = try rig.store.snapshot().generation
+        let restarted = try AgentBridgeExportAuthorityStore(existingDirectory: rig.directory, protectedKeys: rig.keys)
+        XCTAssertEqual(try restarted.snapshot().nativeCatalog, first)
+        XCTAssertEqual(try restarted.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { ready }, first)
+        XCTAssertEqual(try restarted.snapshot().generation, generation)
+        XCTAssertEqual(try Data(contentsOf: file), publishedBytes)
+        let second = try restarted.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { unavailable }
+        let third = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { ready }
+        XCTAssertEqual([second.revision, third.revision], [2, 3])
+        XCTAssertEqual(third.factsSHA256, first.factsSHA256)
+        let after = try rig.store.snapshot()
+        XCTAssertEqual(after.delegations.map(\.sanitizedBytes), original.delegations.map(\.sanitizedBytes))
+        XCTAssertEqual(after.delegations.map(\.revoked), original.delegations.map(\.revoked))
+        XCTAssertTrue(after.plans.isEmpty); XCTAssertTrue(after.decisions.isEmpty)
+        XCTAssertEqual((try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])?["version"] as? Int, 2)
+    }
+
+    func testNativeCatalogMissingOrChangedPublicationRejectsWithoutWireRepairAndInvalidatesOldPlansAfterABA() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
+        Self.retainedNativeConfigurationObjects.append(profiles)
+        var facts = try nativeState(), samples = 0
+        let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: { samples += 1; return facts })
+        let service = AgentBridgeExportPlanningService(store: rig.store, configuration: reader, clock: rig.clock, newPlanID: { try id(6) })
+        func send(_ document: AgentBridgeDocument) throws -> Data {
+            try service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: document)), authenticatedPeer: rig.peer)
+        }
+        let file = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: file)
+        XCTAssertEqual(try error(send(.discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer)))), .bindingChanged)
+        XCTAssertEqual(samples, 0); XCTAssertEqual(try Data(contentsOf: file), before)
+        _ = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        guard case .discovery(let discovery) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self,
+            from: send(.discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer)))).payload else { return XCTFail("Expected published discovery") }
+        guard case .plan(let plan) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self,
+            from: send(.planRequest(rig.request(discovery: discovery)))).payload else { return XCTFail("Expected published plan") }
+        let accepted = try Data(contentsOf: file)
+        facts = try nativeState(foregroundAvailable: false)
+        XCTAssertThrowsError(try service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        XCTAssertEqual(try Data(contentsOf: file), accepted) // No reader publication or repair.
+        _ = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        facts = try nativeState()
+        _ = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        XCTAssertThrowsError(try service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        XCTAssertEqual(try rig.store.snapshot().plans.count, 1) // No silent replan or new consent.
+        XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+    }
+
+    func testNativeCatalogResamplesAtStagedAndPostFsyncPublicationBoundaries() throws {
+        for afterSync in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }
+            var facts = try nativeState()
+            let unavailable = try nativeState(foregroundAvailable: false)
+            let file = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: file)
+            var observed = false
+            if afterSync { rig.publication.onPublished = { _ in observed = true; facts = unavailable } }
+            else { rig.publication.onPrepared = { _ in observed = true; facts = unavailable } }
+            XCTAssertThrowsError(try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            XCTAssertTrue(observed)
+            rig.publication.onPrepared = nil; rig.publication.onPublished = nil
+            if afterSync {
+                let retained = try XCTUnwrap(rig.store.snapshot().nativeCatalog)
+                XCTAssertNotEqual(retained.factsSHA256, try facts.fingerprint(sourceInstallationID: rig.peer.peer.sourceInstallationID))
+                let next = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+                XCTAssertEqual(next.revision, 2) // Postpublication failure never rolls a counter back.
+            } else { XCTAssertEqual(try Data(contentsOf: file), before) }
+        }
+    }
+
+    func testNativeCatalogDoesNotRepairMissingStateOrKeyAndRejectsSourceRebinding() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let facts = try nativeState(), file = rig.directory.appendingPathComponent("state.json")
+        let publication = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        let before = try Data(contentsOf: file)
+        XCTAssertThrowsError(try rig.store.publishNativeCatalog(sourceInstallationID: id(99)) { facts }) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        let locked = try AgentBridgeExportAuthorityStore(existingDirectory: rig.directory, protectedKeys: FakeProtectedKeys(key: nil))
+        var samples = 0
+        XCTAssertThrowsError(try locked.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { samples += 1; return facts }) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        XCTAssertEqual(samples, 0); XCTAssertEqual(try Data(contentsOf: file), before)
+        XCTAssertEqual(try rig.store.snapshot().nativeCatalog, publication)
+        try FileManager.default.removeItem(at: file)
+        XCTAssertThrowsError(try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { samples += 1; return facts })
+        XCTAssertEqual(samples, 0); XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+    }
+
+    func testExhaustedNativeCatalogAllowsExactRetryButCannotResetOrAdvance() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let facts = try nativeState()
+        let first = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        var fixture = try rig.store.snapshot()
+        fixture.nativeCatalog = .init(revision: Int64(Int32.max), sourceInstallationID: first.sourceInstallationID, factsSHA256: first.factsSHA256)
+        // Independent signed boundary fixture, using the synthetic protected key and production
+        // private payload grammar. No production mutation/reset or test-only writer API is added.
+        let payload = try AgentBridgeV4Codec.canonicalize(JSONEncoder().encode(fixture))
+        let mac = Data(HMAC<SHA256>.authenticationCode(for: Data("HealthMd.AgentBridge.NativeExportAuthorityStore.v1\0".utf8) + payload,
+            using: try XCTUnwrap(rig.keys.key)))
+        let signed: [String: Any] = ["version": 2, "state": try JSONSerialization.jsonObject(with: payload), "mac": mac.base64EncodedString()]
+        let file = rig.directory.appendingPathComponent("state.json")
+        let before = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: signed))
+        try before.write(to: file)
+        XCTAssertEqual(try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }.revision, Int64(Int32.max))
+        let changed = try nativeState(foregroundAvailable: false)
+        XCTAssertThrowsError(try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { changed }) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .busy)
+        }
+        XCTAssertEqual(try Data(contentsOf: file), before)
+    }
+
+    func testEveryAdvertisedNativeFactChangeAdvancesItsPublicationIdentity() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let base = try nativeState()
+        let first = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { base }
+        let alternatives = try [nativeState(available: ["steps"]), nativeState(zone: "UTC"), nativeState(protection: .unlockedNative),
+            nativeState(grants: .required), nativeState(grants: .unverified), nativeState(entitlement: .required),
+            nativeState(foregroundAvailable: false), nativeState(protectedDataAvailable: false)]
+        var revision: Int64 = 1
+        for changed in alternatives {
+            let next = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { changed }
+            revision += 1
+            XCTAssertEqual(next.revision, revision)
+            XCTAssertNotEqual(next.factsSHA256, first.factsSHA256)
+            let restored = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { base }
+            revision += 1
+            XCTAssertEqual(restored.revision, revision)
+            XCTAssertEqual(restored.factsSHA256, first.factsSHA256)
+        }
+        XCTAssertTrue(try rig.store.snapshot().delegations.isEmpty)
+        XCTAssertTrue(try rig.store.snapshot().plans.isEmpty)
+        XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+    }
+
+    func testPrivateCatalogVersionRequiresExactlyItsPublicationShape() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let facts = try nativeState()
+        _ = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        let state = try rig.store.snapshot(), file = rig.directory.appendingPathComponent("state.json")
+        for dropCatalog in [false, true] {
+            var fixture = state
+            if dropCatalog { fixture.nativeCatalog = nil }
+            let payload = try AgentBridgeV4Codec.canonicalize(JSONEncoder().encode(fixture))
+            let mac = Data(HMAC<SHA256>.authenticationCode(for: Data("HealthMd.AgentBridge.NativeExportAuthorityStore.v1\0".utf8) + payload,
+                using: try XCTUnwrap(rig.keys.key)))
+            let signed: [String: Any] = ["version": dropCatalog ? 2 : 1,
+                "state": try JSONSerialization.jsonObject(with: payload), "mac": mac.base64EncodedString()]
+            let bytes = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: signed))
+            try bytes.write(to: file)
+            var samples = 0
+            XCTAssertThrowsError(try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { samples += 1; return facts }) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            XCTAssertEqual(samples, 0); XCTAssertEqual(try Data(contentsOf: file), bytes)
         }
     }
 
@@ -1168,7 +1348,7 @@ private final class ConfigurationProbe: AgentBridgeExportPlanningConfigurationRe
                              savedDevice: snapshot, profiles: snapshot.map { [.init(profileID: try! id(50), snapshot: $0, executionBlocked: false)] } ?? [])
         }
     }
-    func readConfiguration(for peer: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?) throws -> AgentBridgeExportPlanningConfiguration {
+    func readConfiguration(for peer: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?, catalogPublication: AgentBridgeNativeCatalogPublication?) throws -> AgentBridgeExportPlanningConfiguration {
         let kind: String
         switch policy { case nil: kind = "discovery"; case .explicit: kind = "explicit"; case .savedDeviceSettings: kind = "saved"; case .profile: kind = "profile" }
         calls.append(kind)

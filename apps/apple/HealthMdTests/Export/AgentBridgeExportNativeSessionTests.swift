@@ -670,7 +670,7 @@ nonisolated private final class NativeSessionIntegritySDK: @unchecked Sendable {
 private final class NativeSessionPlanningConfiguration: AgentBridgeExportPlanningConfigurationReading {
     var beforeReturn: (() -> Void)?
     var reads = 0
-    func readConfiguration(for peer: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?) throws -> AgentBridgeExportPlanningConfiguration {
+    func readConfiguration(for peer: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?, catalogPublication: AgentBridgeNativeCatalogPublication?) throws -> AgentBridgeExportPlanningConfiguration {
         reads += 1; beforeReturn?()
         // Synthetic external native configuration input. Real resolver/registry/store/planner run.
         return try .init(inputs: .init(catalog: .init(registry: HealthMdCoreRegistryAdapter.appleSnapshot(), availableNativeMetricIDs: ["steps"], revision: 1), savedDevice: nil, profiles: []),

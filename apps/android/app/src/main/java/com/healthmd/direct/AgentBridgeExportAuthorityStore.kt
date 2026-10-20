@@ -1,6 +1,7 @@
 package com.healthmd.direct
 
 import android.content.Context
+import android.os.Looper
 import android.os.Process
 import android.system.Os
 import com.healthmd.direct.protocol.*
@@ -157,6 +158,31 @@ internal class AgentBridgeExportAuthorityStore private constructor(
         }
     }
 
+    /** Native lifecycle publication only. Reuses signed/fsynced issuer storage, never initializes
+     * state, keys, grants or consent. Sampling must not reenter this issuer store. */
+    fun publishNativeCatalog(sourceInstallationId: String, sample: () -> AgentBridgeNativePlanningFacts): AgentBridgeNativeCatalogPublication {
+        if (Looper.myLooper() == Looper.getMainLooper()) fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        var selected: AgentBridgeNativeCatalogPublication? = null
+        return access(fence = {
+            val current = selected ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
+            demand(current.factsSha256 == sample().fingerprint(sourceInstallationId))
+        }) { transaction ->
+            val tx = transaction ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val digest = sample().fingerprint(sourceInstallationId)
+            val current = tx.state.nativeCatalog
+            if (current != null) {
+                demand(current.sourceInstallationId == sourceInstallationId)
+                if (current.factsSha256 == digest) { selected = current; return@access current }
+                demand(current.revision < Int.MAX_VALUE, AgentBridgeErrorCode.BUSY)
+            }
+            val next = AgentBridgeNativeCatalogPublication((current?.revision ?: 0) + 1, sourceInstallationId, digest)
+            next.validate()
+            tx.state = tx.state.copy(version = 2, nativeCatalog = next)
+            selected = next
+            next
+        }
+    }
+
     /** Only the production service uses this transaction seam; remote dispatch has no issuer APIs. */
     internal fun <T> access(fence: (AgentBridgeExportAuthorityTransaction?) -> Unit = {}, block: (AgentBridgeExportAuthorityTransaction?) -> T): T = safe {
         serialized {
@@ -257,7 +283,8 @@ internal class AgentBridgeExportAuthorityStore private constructor(
         return file.state
     }
     private fun validate(state: AgentBridgeExportLedger) {
-        demand(state.version == 1 && state.revision >= 1)
+        demand(state.version == (if (state.nativeCatalog == null) 1 else 2) && state.revision >= 1)
+        state.nativeCatalog?.validate()
         demand(state.grants.size <= MAX_GRANTS && state.plans.size <= MAX_PLANS && state.decisions.size <= MAX_DECISIONS)
         val grants = state.grants.map { it.delegation() }
         demand(grants.map { it.authorityId }.distinct().size == grants.size)
@@ -473,9 +500,12 @@ private data class AgentBridgeExportNativeDirectoryAnchor(val path: Path, val id
 
 @Serializable
 internal data class AgentBridgeExportLedgerFile(val state: AgentBridgeExportLedger, val mac: String)
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable
 internal data class AgentBridgeExportLedger(val version: Int, val revision: Long, val grants: List<AgentBridgeExportGrantRecord>,
-    val plans: List<AgentBridgeExportIssuedPlanRecord>, val decisions: List<AgentBridgeExportDecisionRecord>)
+    val plans: List<AgentBridgeExportIssuedPlanRecord>, val decisions: List<AgentBridgeExportDecisionRecord>,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val nativeCatalog: AgentBridgeNativeCatalogPublication? = null)
 @Serializable
 internal data class AgentBridgeExportGrantRecord(val delegationCanonical: String, val revoked: Boolean) {
     fun delegation(): AgentBridgeExportDelegation {

@@ -70,6 +70,7 @@ nonisolated struct AgentBridgeExportAuthoritySnapshot: Codable {
     var delegations: [AgentBridgeExportStoredDelegation]
     var plans: [AgentBridgeExportIssuedPlan]
     var decisions: [AgentBridgeExportStoredDecision]
+    var nativeCatalog: AgentBridgeNativeCatalogPublication? = nil
 
     func references(peer: AgentBridgePeer, now: AgentBridgeUTC) throws -> [AgentBridgeAuthorityReference] {
         let active = try delegations.filter { !$0.revoked }.map { try $0.description() }
@@ -206,6 +207,31 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
 
     /// Load protected key and current private state under the same lock as CAS/publication. The
     /// validator receives THIS state, never an earlier captured snapshot presented as a refresh.
+    /// Native lifecycle publication only, never called by a wire reader. Uses the existing
+    /// signed/fsynced issuer transaction; does not initialize state, keys, grants or consent.
+    /// Sampling must not reenter this issuer store. Readers receive its locked publication value.
+    func publishNativeCatalog(sourceInstallationID: AgentBridgeUUID,
+                              sample: () throws -> AgentBridgeNativePlanningFacts) throws -> AgentBridgeNativeCatalogPublication {
+        var selected: AgentBridgeNativeCatalogPublication?
+        return try transaction(beforeCommit: { _ in
+            guard let selected, selected.factsSHA256 == (try sample().fingerprint(sourceInstallationID: sourceInstallationID)) else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+        }) { state in
+            let digest = try sample().fingerprint(sourceInstallationID: sourceInstallationID)
+            if let current = state.nativeCatalog {
+                guard current.sourceInstallationID == sourceInstallationID else { throw AgentBridgeValidationError.bindingChanged }
+                if current.factsSHA256 == digest { selected = current; return (current, false) }
+                guard current.revision < Int64(Int32.max) else { throw AgentBridgeValidationError.busy }
+            }
+            let next = AgentBridgeNativeCatalogPublication(revision: (state.nativeCatalog?.revision ?? 0) + 1,
+                sourceInstallationID: sourceInstallationID, factsSHA256: digest)
+            state.nativeCatalog = next
+            selected = next
+            return (next, true)
+        }
+    }
+
     func inspectCurrent<T>(_ inspect: (AgentBridgeExportAuthoritySnapshot) throws -> T) throws -> T {
         try transaction { state in (try inspect(state), false) }
     }
@@ -353,7 +379,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
             // Foundation decoding. Re-encoding rejects unknown/null/noncanonical private fields.
             let canonical = try AgentBridgeV4Codec.canonicalize(bytes)
             let signed = try JSONDecoder().decode(SignedState.self, from: canonical)
-            guard signed.version == 1, try canonicalPrivate(signed) == canonical,
+            guard signed.version == (signed.state.nativeCatalog == nil ? 1 : 2), try canonicalPrivate(signed) == canonical,
                   HMAC<SHA256>.isValidAuthenticationCode(signed.mac, authenticating: Self.domain + (try canonicalPrivate(signed.state)), using: key) else { throw AgentBridgeValidationError.bindingChanged }
             try validate(signed.state)
             return signed.state
@@ -363,6 +389,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
 
     private func validate(_ state: AgentBridgeExportAuthoritySnapshot) throws {
         guard state.generation >= 0, state.delegations.count <= 32, state.plans.count <= 32, state.decisions.count <= 32 else { throw AgentBridgeValidationError.bindingChanged }
+        try state.nativeCatalog?.validate()
         var grants = Set<AgentBridgeUUID>(), plans = Set<AgentBridgeUUID>(), requests = Set<String>(), decisions = Set<AgentBridgeUUID>()
         for record in state.delegations {
             guard record.sanitizedBytes.count <= Self.recordLimit, try grants.insert(record.description().authorityID).inserted else { throw AgentBridgeValidationError.bindingChanged }
@@ -400,7 +427,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                        beforePublish: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { _ in }) throws {
         let stateBytes = try canonicalPrivate(state)
         let mac = Data(HMAC<SHA256>.authenticationCode(for: Self.domain + stateBytes, using: key))
-        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: 1, state: state, mac: mac)),
+        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: state.nativeCatalog == nil ? 1 : 2, state: state, mac: mac)),
             beforeRename: {
                 try self.publication.prepared(state)
                 // Canonical serialization, HMAC, temp write and fsync have ALREADY completed. This

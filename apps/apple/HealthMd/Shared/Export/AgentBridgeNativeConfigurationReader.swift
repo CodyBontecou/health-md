@@ -1,11 +1,10 @@
 import Foundation
 import HealthMdConnectionCore
 
-/// A native lifecycle/controller owns these facts and durably advances catalogRevision when
-/// advertised capability/readiness changes. This value cannot be decoded from a wire request.
+/// A native lifecycle/controller samples these facts and publishes their revision in signed issuer
+/// storage when readiness/configuration changes. This value cannot be decoded from a wire request.
 /// HealthKit's satisfied flag is authorization-flow evidence, never proof of per-type read grants.
-struct AgentBridgeNativePlanningState: Equatable {
-    let catalogRevision: Int64
+nonisolated struct AgentBridgeNativePlanningFacts: Equatable {
     let availableNativeMetricIDs: Set<String>
     let sourceCalendarTimezone: AgentBridgeZone
     let configurationProtection: AgentBridgeDiscoveryConfigurationProtection
@@ -21,22 +20,28 @@ struct AgentBridgeNativePlanningState: Equatable {
 final class AgentBridgeNativeConfigurationReader: AgentBridgeExportPlanningConfigurationReading {
     private let defaults: UserDefaults
     private let profiles: ExportProfileStore
-    private let nativeState: () throws -> AgentBridgeNativePlanningState
+    private let nativeState: () throws -> AgentBridgeNativePlanningFacts
 
     init(defaults: UserDefaults, profiles: ExportProfileStore,
-         nativeState: @escaping () throws -> AgentBridgeNativePlanningState) {
+         nativeState: @escaping () throws -> AgentBridgeNativePlanningFacts) {
         self.defaults = defaults
         self.profiles = profiles
         self.nativeState = nativeState
     }
 
-    func readConfiguration(for peer: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?) throws -> AgentBridgeExportPlanningConfiguration {
+    func readConfiguration(for peer: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?,
+                           catalogPublication: AgentBridgeNativeCatalogPublication?) throws -> AgentBridgeExportPlanningConfiguration {
         try peer.requireCurrent()
+        guard let publication = catalogPublication else { throw AgentBridgeValidationError.bindingChanged }
+        try publication.validate()
         let state = try nativeState()
-        guard (1...Int64(Int32.max)).contains(state.catalogRevision) else { throw AgentBridgeValidationError.bindingChanged }
+        guard publication.sourceInstallationID == peer.peer.sourceInstallationID,
+              publication.factsSHA256 == (try state.fingerprint(sourceInstallationID: peer.peer.sourceInstallationID)) else {
+            throw AgentBridgeValidationError.bindingChanged
+        }
         let catalog = try AgentBridgeRequestSettingsCatalog(
             registry: HealthMdCoreRegistryAdapter.appleSnapshot(),
-            availableNativeMetricIDs: state.availableNativeMetricIDs, revision: state.catalogRevision)
+            availableNativeMetricIDs: state.availableNativeMetricIDs, revision: publication.revision)
         var saved: AgentBridgeRequestSettingsSnapshot?
         var selectedProfiles: [AgentBridgeRequestSettingsProfile] = []
         switch policy {

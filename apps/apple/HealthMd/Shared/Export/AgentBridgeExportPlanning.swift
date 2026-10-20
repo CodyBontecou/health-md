@@ -65,7 +65,14 @@ struct AgentBridgeExportPlanningConfiguration {
 /// output/quota, unlock, credential or wake dependency is accepted by this source service.
 @MainActor
 protocol AgentBridgeExportPlanningConfigurationReading {
-    func readConfiguration(for peer: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?) throws -> AgentBridgeExportPlanningConfiguration
+    func readConfiguration(for peer: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?,
+                           catalogPublication: AgentBridgeNativeCatalogPublication?) throws -> AgentBridgeExportPlanningConfiguration
+}
+
+extension AgentBridgeExportPlanningConfigurationReading {
+    func readConfiguration(for peer: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?) throws -> AgentBridgeExportPlanningConfiguration {
+        try readConfiguration(for: peer, policy: policy, catalogPublication: nil)
+    }
 }
 
 /// Production bounded source seam for a LATER IPhoneDirectCLIService adapter. Strict request bytes
@@ -104,7 +111,7 @@ final class AgentBridgeExportPlanningService {
             case .discoveryRequest(let request):
                 try requirePeer(request.peer, authenticatedPeer)
                 let state = try store.snapshot()
-                let config = try configuration.readConfiguration(for: authenticatedPeer, policy: nil)
+                let config = try readConfiguration(state: state, peer: authenticatedPeer, policy: nil)
                 try authenticatedPeer.requireCurrent()
                 let value = try discovery(requestID: requestID, peer: authenticatedPeer, config: config, state: state, now: clock.now())
                 response = .discovery(value)
@@ -214,13 +221,21 @@ final class AgentBridgeExportPlanningService {
         }
     }
 
+    private func readConfiguration(state: AgentBridgeExportAuthoritySnapshot, peer: AgentBridgeExportAuthenticatedPeer,
+                                   policy: AgentBridgeSettingsPolicy?) throws -> AgentBridgeExportPlanningConfiguration {
+        if let publication = state.nativeCatalog, publication.sourceInstallationID != peer.peer.sourceInstallationID {
+            throw AgentBridgeValidationError.bindingChanged
+        }
+        return try configuration.readConfiguration(for: peer, policy: policy, catalogPublication: state.nativeCatalog)
+    }
+
     private func plan(_ request: AgentBridgePlanRequest, exactRequestBytes: Data, peer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgePlan {
         let state = try store.snapshot()
         let existing = try state.plans.first { try $0.request().requestId == request.requestId && $0.request().intent.peer == peer.peer }
         if let existing, existing.requestBytes != exactRequestBytes { throw AgentBridgeValidationError.bindingChanged }
         let parent = try state.delegation(id: request.authorityId, revision: request.authorityRevision, peer: peer.peer, now: utc(clock.now()))
         guard request.hostAuthorityReference.issuer == .authorizedHost, request.hostAuthorityReference.authorityId != parent.authorityID else { throw AgentBridgeValidationError.approvalRequired }
-        let config = try configuration.readConfiguration(for: peer, policy: request.intent.settingsPolicy)
+        let config = try readConfiguration(state: state, peer: peer, policy: request.intent.settingsPolicy)
         try peer.requireCurrent()
         let now = clock.now()
         _ = try state.delegation(id: request.authorityId, revision: request.authorityRevision, peer: peer.peer, now: utc(now))
@@ -286,7 +301,7 @@ final class AgentBridgeExportPlanningService {
         try store.inspectCurrent { state in
             switch response {
             case .discovery(let value):
-                let config = try self.configuration.readConfiguration(for: peer, policy: nil)
+                let config = try self.readConfiguration(state: state, peer: peer, policy: nil)
                 try peer.requireCurrent()
                 let now = self.clock.now()
                 guard value.issuedAt.rawValue <= (try self.utc(now)).rawValue, value.expiresAt.rawValue > (try self.utc(now)).rawValue else { throw AgentBridgeValidationError.planExpired }
@@ -337,7 +352,7 @@ final class AgentBridgeExportPlanningService {
     private func currentPlan(in state: AgentBridgeExportAuthoritySnapshot, planID: AgentBridgeUUID, peer: AgentBridgeExportAuthenticatedPeer,
                              right: AgentBridgeDelegationRight, requireReadiness: Bool = false) throws -> (plan: AgentBridgePlan, config: AgentBridgeExportPlanningConfiguration, now: Date) {
         let record = try state.issued(id: planID, peer: peer.peer)
-        let config = try configuration.readConfiguration(for: peer, policy: record.request().intent.settingsPolicy)
+        let config = try readConfiguration(state: state, peer: peer, policy: record.request().intent.settingsPolicy)
         try peer.requireCurrent() // The LAST potentially delaying session callback precedes live time.
         let now = clock.now()
         let plan = try revalidate(record, state: state, config: config, peer: peer, now: now, right: right)

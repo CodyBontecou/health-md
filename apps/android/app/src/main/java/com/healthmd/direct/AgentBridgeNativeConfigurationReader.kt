@@ -21,10 +21,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
-/** Native lifecycle state, never a wire DTO or a permission issuer. Its publisher must durably
- * advance catalogRevision for advertised capability/readiness changes before offering v4. */
-internal data class AgentBridgeNativePlanningState(
-    val catalogRevision: Int,
+/** Native lifecycle state, never a wire DTO or a permission issuer. Its publisher records
+ * advertised capability/readiness changes in signed issuer storage before offering v4. */
+internal data class AgentBridgeNativePlanningFacts(
     val availableNativeMetricIds: Set<String>,
     val deviceSettingsObjectId: String,
     val sourceCalendarTimezone: String,
@@ -43,22 +42,24 @@ internal class AgentBridgeNativeConfigurationReader(
     private val dataStore: DataStore<Preferences>,
     private val settings: SettingsRepositoryImpl,
     private val profiles: ExportProfileRepository,
-    private val nativeState: () -> AgentBridgeNativePlanningState,
+    private val nativeState: () -> AgentBridgeNativePlanningFacts,
     private val registry: () -> CoreMetricRegistrySnapshot = {
         HealthMdCoreRegistryAdapter.snapshot(CoreMetricRegistryProfile.ANDROID_FROZEN_V4)
     },
 ) : AgentBridgeExportPlanningConfigurationReader {
-    override fun readConfiguration(policy: AgentBridgeSettingsPolicy?): AgentBridgeExportPlanningConfiguration {
+    override fun readConfiguration(policy: AgentBridgeSettingsPolicy?, catalogPublication: AgentBridgeNativeCatalogPublication?): AgentBridgeExportPlanningConfiguration {
         if (Looper.myLooper() == Looper.getMainLooper()) fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)
-        return try { readSelectedConfiguration(policy) }
+        val publication = catalogPublication ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        publication.validate()
+        return try { readSelectedConfiguration(policy, publication) }
         catch (_: AndroidExportSettingsSnapshotException) { fail(AgentBridgeErrorCode.BINDING_CHANGED) }
         catch (_: DateTimeException) { fail(AgentBridgeErrorCode.BINDING_CHANGED) }
     }
 
-    private fun readSelectedConfiguration(policy: AgentBridgeSettingsPolicy?): AgentBridgeExportPlanningConfiguration {
+    private fun readSelectedConfiguration(policy: AgentBridgeSettingsPolicy?, publication: AgentBridgeNativeCatalogPublication): AgentBridgeExportPlanningConfiguration {
         val state = detachedState()
-        if (state.catalogRevision < 1) fail(AgentBridgeErrorCode.BINDING_CHANGED)
-        val catalog = AgentBridgeRequestSettingsCatalog(registry(), state.availableNativeMetricIds, state.catalogRevision)
+        if (state.fingerprint(publication.sourceInstallationId) != publication.factsSha256) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        val catalog = AgentBridgeRequestSettingsCatalog(registry(), state.availableNativeMetricIds, publication.revision)
         var saved: AgentBridgeRequestSettingsSnapshot? = null
         var selectedProfiles: List<AgentBridgeRequestSettingsProfile> = emptyList()
         if (policy is AgentBridgeSettingsPolicySavedDeviceSettings || policy is AgentBridgeSettingsPolicyProfile) {
@@ -93,7 +94,7 @@ internal class AgentBridgeNativeConfigurationReader(
             state.nativeGrants, state.entitlement, state.userStartedServiceActive, state.firstUnlockComplete)
     }
 
-    private fun detachedState(): AgentBridgeNativePlanningState {
+    private fun detachedState(): AgentBridgeNativePlanningFacts {
         val value = nativeState()
         return value.copy(availableNativeMetricIds = Collections.unmodifiableSet(value.availableNativeMetricIds.toSortedSet()))
     }
