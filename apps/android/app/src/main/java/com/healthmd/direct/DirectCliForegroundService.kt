@@ -34,6 +34,7 @@ class DirectCliForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var operation: Job? = null
     private var nativeCatalogBroadcasts: AgentBridgeNativeCatalogBroadcasts? = null
+    private var nativeEligibilityObservation: AutoCloseable? = null
     @Volatile private var stopRequested = false
     private val servingLifecycle by lazy { AgentBridgeExportServingLifecycle(coordinator) }
 
@@ -49,6 +50,7 @@ class DirectCliForegroundService : Service() {
         )
         // Successful native foreground admission is a prerequisite, not an active Boolean.
         servingLifecycle.foregroundAdmitted()
+        nativeEligibilityObservation = coordinator.observeAgentBridgeNativeExportEligibility(scope)
         // Real SDK notifications latch before worker sampling/publication. First-unlock is not
         // ordinary screen lock; existing native serving/permission fences remain authoritative.
         nativeCatalogBroadcasts = AgentBridgeNativeCatalogBroadcasts(this, coordinator::agentBridgeNativeMetadataChanged)
@@ -59,6 +61,7 @@ class DirectCliForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            closeNativeEligibilityObservation()
             servingLifecycle.stopped()
             stopRequested = true
             coordinator.cancelActive()
@@ -70,6 +73,7 @@ class DirectCliForegroundService : Service() {
             return START_NOT_STICKY
         }
         if (intent?.action == ACTION_FORGET) {
+            closeNativeEligibilityObservation()
             servingLifecycle.stopped()
             stopRequested = true
             coordinator.cancelActive()
@@ -130,7 +134,13 @@ class DirectCliForegroundService : Service() {
         return START_NOT_STICKY
     }
 
+    private fun closeNativeEligibilityObservation() {
+        nativeEligibilityObservation?.close()
+        nativeEligibilityObservation = null
+    }
+
     override fun onDestroy() {
+        closeNativeEligibilityObservation()
         nativeCatalogBroadcasts?.close()
         nativeCatalogBroadcasts = null
         servingLifecycle.stopped()

@@ -172,6 +172,8 @@ class DirectCliCoordinator @Inject constructor(
     @Volatile private var activeServingScope: ServingScope? = null
     @Volatile private var acceptedNativeOwner: NativeSessionOwner? = null
     private val nativeOwnerLock = Any()
+    private val nativeEligibilityLock = Any()
+    private var nativeEligibility: AgentBridgeNativeExportEligibility? = null
 
     private class ServingScope(val epoch: AgentBridgeExportServingEpoch, val operation: kotlinx.coroutines.Job) {
         @Volatile var revoked = false
@@ -214,6 +216,41 @@ class DirectCliCoordinator @Inject constructor(
             com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
         owner.requireCurrent()
         return owner.peer(context)
+    }
+
+    /** Called only after native foreground admission, never by a wire plan/discovery request. */
+    internal fun observeAgentBridgeNativeExportEligibility(scope: CoroutineScope): AutoCloseable {
+        lateinit var observer: AgentBridgeNativeExportEligibility
+        observer = AgentBridgeNativeExportEligibility(settingsRepository.nativeExportEligibility,
+            entitlementRepository.isUnlocked, distributionPolicy.fullAccessIncluded) {
+            synchronized(nativeEligibilityLock) {
+                if (nativeEligibility === observer) agentBridgeNativeMetadataChanged()
+            }
+        }
+        val previous = synchronized(nativeEligibilityLock) {
+            val previous = nativeEligibility
+            nativeEligibility = observer
+            agentBridgeNativeMetadataChanged()
+            previous
+        }
+        // Do not nest coordinator and producer locks; publication calls back into the coordinator.
+        previous?.close()
+        observer.start(scope)
+        return AutoCloseable {
+            synchronized(nativeEligibilityLock) {
+                if (nativeEligibility === observer) {
+                    nativeEligibility = null
+                    agentBridgeNativeMetadataChanged()
+                }
+            }
+            observer.close()
+        }
+    }
+
+    internal fun agentBridgeNativeCanExport(): Boolean {
+        val observer = synchronized(nativeEligibilityLock) { nativeEligibility } ?: return false
+        val eligible = observer.current()
+        return synchronized(nativeEligibilityLock) { nativeEligibility === observer && eligible }
     }
 
     /** Native event only: immediate cache invalidation, no SDK/settings/issuer/key access. */

@@ -16,6 +16,7 @@ import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FormatCustomization
+import com.healthmd.domain.repository.NativeExportEligibilitySettings
 import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -135,6 +136,23 @@ class SettingsRepositoryImpl(
 
     override suspend fun getExportFolderUri(): String? =
         exportFolderUri.first()
+
+    override val nativeExportEligibility: Flow<NativeExportEligibilitySettings?> = dataStore.data.map { prefs ->
+        val purchased = prefs[Keys.IS_PURCHASED] ?: isLegacyInstall()
+        if (purchased) {
+            // Known full access does not depend on the free counter, as on Apple.
+            NativeExportEligibilitySettings(purchased = true, freeExportsUsed = 0)
+        } else {
+            val current = prefs[Keys.FREE_EXPORTS_USED]
+            val legacy = prefs[Keys.LEGACY_FREE_EXPORTS_REMAINING]
+            // Keep public getter sanitization separate from strict native readiness.
+            if ((current != null && current < 0) || (current == null && legacy != null && legacy !in 0..3)) {
+                null
+            } else {
+                NativeExportEligibilitySettings(purchased = false, freeExportsUsed = prefs.freeExportsUsedValue())
+            }
+        }
+    }
 
     override val freeExportsUsed: Flow<Int> = dataStore.data.map { prefs ->
         prefs.freeExportsUsedValue()
