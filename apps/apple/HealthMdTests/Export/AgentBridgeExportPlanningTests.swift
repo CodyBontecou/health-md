@@ -307,6 +307,57 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertThrowsError(try lifecycle.currentFacts()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
     }
 
+    #if canImport(HealthMd)
+    func testNativePurchaseQuotaTransitionsInvalidatePublishedCatalogBeforeReturning() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let center = NotificationCenter(), keychain = FakeKeychainStore()
+        let manager = PurchaseManager(keychain: keychain, defaults: FakeUserDefaults(), nativePlanningNotifications: center)
+        Self.retainedNativeConfigurationObjects.append(manager)
+        XCTAssertTrue(manager.nativePlanningCanExport)
+        let facts = try nativeState(), lifecycle = AgentBridgeNativeCatalogLifecycle()
+        try lifecycle.observe(facts)
+        let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let relay = AgentBridgeNativeCatalogEventRelay()
+        relay.replace(with: lifecycle)
+        var notifications: AgentBridgeNativeCatalogNotifications? = .init(
+            center: center, names: [.healthMdNativeExportEligibilityDidChange], relay: relay)
+        try withExtendedLifetime(notifications) {
+            manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+            XCTAssertFalse(manager.nativePlanningCanExport)
+            XCTAssertThrowsError(try lifecycle.currentFacts()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            manager.resetFreeExports()
+            XCTAssertTrue(manager.nativePlanningCanExport)
+            // Eligibility returned to its original value before any deferred sampler ran.
+            XCTAssertThrowsError(try lifecycle.currentFacts()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+        }
+        let next = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        XCTAssertEqual(next.revision, first.revision + 1)
+        XCTAssertEqual(next.factsSHA256, first.factsSHA256)
+        try withExtendedLifetime(notifications) {
+            // Native refresh briefly closes eligibility even if durable facts are unchanged.
+            manager.refreshNativePlanningExportEligibility()
+            XCTAssertTrue(manager.nativePlanningCanExport)
+            XCTAssertThrowsError(try lifecycle.currentFacts()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+        }
+        let refreshed = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        XCTAssertEqual(refreshed.revision, next.revision + 1)
+        notifications = nil
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts) // Observer teardown removed its exact token.
+        relay.replace(with: nil)
+        manager.resetFreeExports()
+        XCTAssertThrowsError(try lifecycle.currentFacts()) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+    }
+    #endif
+
     func testNativeCatalogResamplesAtStagedAndPostFsyncPublicationBoundaries() throws {
         for afterSync in [false, true] {
             let rig = try Rig(); defer { rig.cleanup() }

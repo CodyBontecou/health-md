@@ -405,7 +405,8 @@ final class IPhoneDirectCLIService: ObservableObject {
         let catalogEvents = AgentBridgeNativeCatalogEventRelay()
         agentBridgeCatalogEvents = catalogEvents
         agentBridgeCatalogNotifications = AgentBridgeNativeCatalogNotifications(
-            names: [.NSSystemTimeZoneDidChange, UIApplication.protectedDataWillBecomeUnavailableNotification,
+            names: [.healthMdNativeExportEligibilityDidChange, .NSSystemTimeZoneDidChange,
+                    UIApplication.protectedDataWillBecomeUnavailableNotification,
                     UIApplication.protectedDataDidBecomeAvailableNotification], relay: catalogEvents)
         self.defaults = defaults
         self.reconnectPolicy = reconnectPolicy

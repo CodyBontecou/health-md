@@ -1,5 +1,10 @@
-#if os(macOS) && !DEBUG
 import Foundation
+
+extension Notification.Name {
+    nonisolated static let healthMdNativeExportEligibilityDidChange = Notification.Name("HealthMd.nativeExportEligibilityDidChange")
+}
+
+#if os(macOS) && !DEBUG
 import Combine
 
 nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
@@ -68,7 +73,6 @@ final class PurchaseManager: ObservableObject {
 }
 
 #else
-import Foundation
 import Combine
 import StoreKit
 import Security
@@ -284,7 +288,14 @@ final class PurchaseManager: ObservableObject {
 
     /// Native observer cache only. Sampling this value never reads quota or Keychain. False also
     /// represents unknown/unreadable state; it is not an execution or durable-resume permission.
-    @Published private(set) var nativePlanningCanExport = false
+    @Published private(set) var nativePlanningCanExport = false {
+        didSet {
+            guard nativePlanningCanExport != oldValue else { return }
+            // Post after assignment and before native mutation returns. A deferred Combine observer
+            // can miss a false/true round trip while quota storage is refreshed.
+            nativePlanningNotifications.post(name: .healthMdNativeExportEligibilityDidChange, object: self)
+        }
+    }
 
     /// Only native startup/entitlement/quota owners call this, never a plan/discovery request.
     /// Keep the old export API behavior independent; cached readiness must not inherit its fallback.
@@ -310,6 +321,7 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Injected Dependencies
 
+    private let nativePlanningNotifications: NotificationCenter
     private let keychain: KeychainStoring
     private let defaults: UserDefaultsStoring
     private let analytics: PricingAnalyticsClient
@@ -319,6 +331,7 @@ final class PurchaseManager: ObservableObject {
     // MARK: - Init
 
     private init() {
+        self.nativePlanningNotifications = .default
         self.keychain = SystemKeychainStore()
         self.defaults = SystemUserDefaults()
         self.analytics = .shared
@@ -361,8 +374,10 @@ final class PurchaseManager: ObservableObject {
         keychain: KeychainStoring,
         defaults: UserDefaultsStoring,
         analytics: PricingAnalyticsClient = .shared,
+        nativePlanningNotifications: NotificationCenter = NotificationCenter(),
         productLoader: @MainActor @escaping ([String]) async throws -> [Product] = { _ in [] }
     ) {
+        self.nativePlanningNotifications = nativePlanningNotifications
         self.keychain = keychain
         self.defaults = defaults
         self.analytics = analytics
