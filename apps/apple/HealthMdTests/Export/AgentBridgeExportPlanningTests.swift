@@ -185,6 +185,46 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
     }
 
+    func testObservedNativeChangeInvalidatesIssuedPlanEvenWhenDeferredFactsReturnToOriginalValue() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
+        Self.retainedNativeConfigurationObjects.append(profiles)
+        let facts = try nativeState()
+        let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: { facts })
+        let service = AgentBridgeExportPlanningService(store: rig.store, configuration: reader, clock: rig.clock, newPlanID: { try id(6) })
+        let first = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        let discoveryBytes = try service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload:
+            .discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer)))), authenticatedPeer: rig.peer)
+        guard case .discovery(let discovery) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: discoveryBytes).payload else {
+            return XCTFail("Expected published discovery")
+        }
+        let planBytes = try service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload:
+            .planRequest(rig.request(discovery: discovery)))), authenticatedPeer: rig.peer)
+        guard case .plan(let plan) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: planBytes).payload else {
+            return XCTFail("Expected issued plan")
+        }
+        _ = try service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer)
+        let before = try rig.store.snapshot()
+        // An observed transition may coalesce before deferred SDK sampling. It must not
+        // become an unchanged-publication retry or silently renew this issued plan.
+        let changed = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID,
+            invalidatingObservedChange: true) { facts }
+        XCTAssertEqual(changed.factsSHA256, first.factsSHA256)
+        XCTAssertEqual(changed.revision, first.revision + 1)
+        let after = try rig.store.snapshot()
+        XCTAssertEqual(after.generation, before.generation + 1)
+        XCTAssertEqual(after.plans.count, 1)
+        XCTAssertEqual(after.delegations.map(\.sanitizedBytes), before.delegations.map(\.sanitizedBytes))
+        XCTAssertTrue(after.decisions.isEmpty)
+        XCTAssertThrowsError(try service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        let file = rig.directory.appendingPathComponent("state.json"), committed = try Data(contentsOf: file)
+        let restarted = try AgentBridgeExportAuthorityStore(existingDirectory: rig.directory, protectedKeys: rig.keys, publication: rig.publication)
+        XCTAssertEqual(try restarted.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }, changed)
+        XCTAssertEqual(try Data(contentsOf: file), committed)
+    }
+
     func testNativeCatalogResamplesAtStagedAndPostFsyncPublicationBoundaries() throws {
         for afterSync in [false, true] {
             let rig = try Rig(); defer { rig.cleanup() }
@@ -244,6 +284,11 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let before = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: signed))
         try before.write(to: file)
         XCTAssertEqual(try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }.revision, Int64(Int32.max))
+        XCTAssertThrowsError(try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID,
+            invalidatingObservedChange: true) { facts }) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .busy)
+        }
+        XCTAssertEqual(try Data(contentsOf: file), before)
         let changed = try nativeState(foregroundAvailable: false)
         XCTAssertThrowsError(try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { changed }) {
             XCTAssertEqual($0 as? AgentBridgeValidationError, .busy)

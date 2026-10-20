@@ -210,7 +210,9 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     /// Native lifecycle publication only, never called by a wire reader. Uses the existing
     /// signed/fsynced issuer transaction; does not initialize state, keys, grants or consent.
     /// Sampling must not reenter this issuer store. Readers receive its locked publication value.
-    func publishNativeCatalog(sourceInstallationID: AgentBridgeUUID,
+    /// A native observer can invalidate an observed transition that coalesced before sampling.
+    /// That publication advances the revision even for equal facts; ordinary retries leave it false.
+    func publishNativeCatalog(sourceInstallationID: AgentBridgeUUID, invalidatingObservedChange: Bool = false,
                               sample: () throws -> AgentBridgeNativePlanningFacts) throws -> AgentBridgeNativeCatalogPublication {
         var selected: AgentBridgeNativeCatalogPublication?
         return try transaction(beforeCommit: { _ in
@@ -221,7 +223,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
             let digest = try sample().fingerprint(sourceInstallationID: sourceInstallationID)
             if let current = state.nativeCatalog {
                 guard current.sourceInstallationID == sourceInstallationID else { throw AgentBridgeValidationError.bindingChanged }
-                if current.factsSHA256 == digest { selected = current; return (current, false) }
+                if current.factsSHA256 == digest && !invalidatingObservedChange { selected = current; return (current, false) }
                 guard current.revision < Int64(Int32.max) else { throw AgentBridgeValidationError.busy }
             }
             let next = AgentBridgeNativeCatalogPublication(revision: (state.nativeCatalog?.revision ?? 0) + 1,

@@ -159,8 +159,10 @@ internal class AgentBridgeExportAuthorityStore private constructor(
     }
 
     /** Native lifecycle publication only. Reuses signed/fsynced issuer storage, never initializes
-     * state, keys, grants or consent. Sampling must not reenter this issuer store. */
-    fun publishNativeCatalog(sourceInstallationId: String, sample: () -> AgentBridgeNativePlanningFacts): AgentBridgeNativeCatalogPublication {
+     * state, keys, grants or consent. Sampling must not reenter this issuer store.
+     * Native observers can invalidate a transition that coalesced before sampling; equal facts
+     * then advance the revision. Ordinary unchanged retries leave that flag false. */
+    fun publishNativeCatalog(sourceInstallationId: String, invalidatingObservedChange: Boolean = false, sample: () -> AgentBridgeNativePlanningFacts): AgentBridgeNativeCatalogPublication {
         if (Looper.myLooper() == Looper.getMainLooper()) fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)
         var selected: AgentBridgeNativeCatalogPublication? = null
         return access(fence = {
@@ -172,7 +174,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
             val current = tx.state.nativeCatalog
             if (current != null) {
                 demand(current.sourceInstallationId == sourceInstallationId)
-                if (current.factsSha256 == digest) { selected = current; return@access current }
+                if (current.factsSha256 == digest && !invalidatingObservedChange) { selected = current; return@access current }
                 demand(current.revision < Int.MAX_VALUE, AgentBridgeErrorCode.BUSY)
             }
             val next = AgentBridgeNativeCatalogPublication((current?.revision ?: 0) + 1, sourceInstallationId, digest)

@@ -230,6 +230,31 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    @Test fun `observed native change invalidates issued plan even when deferred facts return to original value`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val service = AgentBridgeExportPlanningService(f.store, reader(), f.clock)
+            val first = f.store.publishNativeCatalog(f.peer.sourceInstallationId) { state }
+            val discovery = service.discover(f.peerContext, f.discoveryRequest())
+            val plan = service.plan(f.peerContext, f.request(discovery))
+            service.reviewNativePlan(f.peerContext, plan.planId)
+            val before = f.store.access { requireNotNull(it).state }
+            val changed = f.store.publishNativeCatalog(f.peer.sourceInstallationId, invalidatingObservedChange = true) { state }
+            assertThat(changed.factsSha256).isEqualTo(first.factsSha256)
+            assertThat(changed.revision).isEqualTo(first.revision + 1)
+            val after = f.store.access { requireNotNull(it).state }
+            assertThat(after.revision).isEqualTo(before.revision + 1)
+            assertThat(after.plans).hasSize(1); assertThat(after.decisions).isEmpty()
+            assertThat(after.grants).isEqualTo(before.grants)
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { service.reviewNativePlan(f.peerContext, plan.planId) }
+            val file = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val committed = Files.readAllBytes(file)
+            val restarted = AgentBridgeExportAuthorityStore.inPrivateDirectory(f.parent, f.keys)
+            assertThat(restarted.publishNativeCatalog(f.peer.sourceInstallationId) { state }).isEqualTo(changed)
+            assertThat(Files.readAllBytes(file)).isEqualTo(committed)
+        }
+    }
+
     @Test fun `publisher never initializes missing state repairs keys or rebinds a source`() {
         AgentBridgeExportPlanningFixture().use { f ->
             var samples = 0
@@ -307,6 +332,10 @@ class AgentBridgeNativeConfigurationReaderTest {
             val file = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
             val before = Files.readAllBytes(file)
             assertThat(f.store.publishNativeCatalog(f.peer.sourceInstallationId) { state }.revision).isEqualTo(Int.MAX_VALUE)
+            f.expect(AgentBridgeErrorCode.BUSY) {
+                f.store.publishNativeCatalog(f.peer.sourceInstallationId, invalidatingObservedChange = true) { state }
+            }
+            assertThat(Files.readAllBytes(file)).isEqualTo(before)
             state = state.copy(userStartedServiceActive = false)
             f.expect(AgentBridgeErrorCode.BUSY) { f.store.publishNativeCatalog(f.peer.sourceInstallationId) { state } }
             assertThat(Files.readAllBytes(file)).isEqualTo(before)
