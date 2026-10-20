@@ -800,6 +800,7 @@ struct iPadExportView: View {
             .iPadContentColumn()
         }
         .scrollIndicators(.hidden)
+        .accessibilityIdentifier(AccessibilityID.Export.contentScroll)
         .iPadPageBackground()
         .navigationTitle("Export")
         .iPadHiddenSystemNavigationTitle()

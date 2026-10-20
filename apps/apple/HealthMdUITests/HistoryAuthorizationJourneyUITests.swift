@@ -142,16 +142,16 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     }
 
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
+        // The real export viewport has one stable owner on both native roots. A
+        // descendant-containing query can repeatedly snapshot transient SwiftUI
+        // children and timed out on the hosted iPad before any pan was attempted.
+        let owners = app.scrollViews.matching(identifier: UITestLaunchHelper.Export.contentScroll)
+        let scroll = owners.firstMatch
+        XCTAssertTrue(scroll.waitForExistence(timeout: 5), "Native export scroll owner must exist")
+        guard scroll.exists else { return }
+        XCTAssertEqual(owners.count, 1, "Exactly one native export viewport must own the identifier")
         for _ in 0..<12 {
             let exists = element.exists
-            // Follow the actual element's scrolling ancestor, not an app-wide
-            // swipe that can hit the tablet sidebar. If not yet exposed, use
-            // the largest public scrolling viewport, not a substituted control.
-            let ancestor = exists ? app.scrollViews.containing(.any, identifier: element.identifier).firstMatch : nil
-            let largest = app.scrollViews.allElementsBoundByIndex.max {
-                $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height
-            }
-            guard let scroll = ancestor?.exists == true ? ancestor : largest else { break }
             let viewport = scroll.frame.intersection(app.frame)
             let tabs = app.tabBars.firstMatch
             var bottom = tabs.exists ? min(viewport.maxY, tabs.frame.minY) : viewport.maxY
