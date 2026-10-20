@@ -28,6 +28,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.time.LocalDate
 
+internal data class SavedDeviceExportConfigurationSnapshot(val revision: Int, val settings: ExportSettings)
+
 class SettingsRepositoryImpl(
     private val dataStore: DataStore<Preferences>,
     private val context: Context,
@@ -37,6 +39,7 @@ class SettingsRepositoryImpl(
 
     private object Keys {
         val EXPORT_SETTINGS = stringPreferencesKey("export_settings")
+        val NATIVE_CONFIGURATION_REVISION = intPreferencesKey("native_export_settings_revision_v1")
 
         val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
@@ -66,6 +69,7 @@ class SettingsRepositoryImpl(
 
     override suspend fun updateExportSettings(settings: ExportSettings) {
         dataStore.edit { prefs ->
+            prefs[Keys.NATIVE_CONFIGURATION_REVISION] = nextNativeConfigurationRevision(prefs)
             prefs[Keys.EXPORT_SETTINGS] = json.encodeToString(ExportSettings.serializer(), settings.normalized())
         }
     }
@@ -79,10 +83,28 @@ class SettingsRepositoryImpl(
         var updated: ExportSettings? = null
         dataStore.edit { prefs ->
             val next = transform(storedExportSettings(prefs)).normalized()
+            prefs[Keys.NATIVE_CONFIGURATION_REVISION] = nextNativeConfigurationRevision(prefs)
             prefs[Keys.EXPORT_SETTINGS] = json.encodeToString(ExportSettings.serializer(), next)
             updated = next
         }
         return checkNotNull(updated) { "Export settings atomic update did not commit." }
+    }
+
+    /** Reads exact persisted settings and revision from one committed image, without Flow defaults. */
+    internal suspend fun readSavedExportConfiguration(expectedRevision: Int): SavedDeviceExportConfigurationSnapshot? {
+        if (expectedRevision < 1) return null
+        val prefs = dataStore.data.first()
+        val revision = try { prefs[Keys.NATIVE_CONFIGURATION_REVISION] ?: 1 } catch (_: ClassCastException) { return null }
+        if (revision != expectedRevision) return null
+        val raw = try { prefs[Keys.EXPORT_SETTINGS] } catch (_: ClassCastException) { return null }
+            ?: return null
+        val settings = try { decodePersistedExportSettings(raw) } catch (_: Exception) { return null }
+        return SavedDeviceExportConfigurationSnapshot(revision, settings)
+    }
+
+    private fun nextNativeConfigurationRevision(prefs: Preferences): Int {
+        val revision = try { prefs[Keys.NATIVE_CONFIGURATION_REVISION] ?: 1 } catch (_: ClassCastException) { return 0 }
+        return if (revision in 1 until Int.MAX_VALUE) revision + 1 else 0
     }
 
     private fun storedExportSettings(prefs: Preferences): ExportSettings =

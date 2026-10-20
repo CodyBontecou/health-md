@@ -1542,6 +1542,22 @@ final class VaultManagerTests: XCTestCase {
 
     // MARK: - Subfolder Setting
 
+    func testChangedSubfolderInvalidatesSavedConfigurationPinWithoutRenewingExactRetry() throws {
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+        let original = manager.healthSubfolder
+        let initial = try XCTUnwrap(AdvancedExportSettings.nativeConfigurationRevision(defaults: defaults))
+        manager.saveSubfolderSetting()
+        XCTAssertEqual(AdvancedExportSettings.nativeConfigurationRevision(defaults: defaults), initial)
+        manager.healthSubfolder = "Changed"
+        manager.saveSubfolderSetting()
+        XCTAssertEqual(AdvancedExportSettings.nativeConfigurationRevision(defaults: defaults), initial + 1)
+        manager.saveSubfolderSetting()
+        XCTAssertEqual(AdvancedExportSettings.nativeConfigurationRevision(defaults: defaults), initial + 1)
+        manager.healthSubfolder = original
+        manager.saveSubfolderSetting()
+        XCTAssertEqual(AdvancedExportSettings.nativeConfigurationRevision(defaults: defaults), initial + 2)
+    }
+
     func testSaveSubfolderSetting_persistsToDefaults() {
         let manager = makeManager()
         manager.healthSubfolder = "CustomHealth"

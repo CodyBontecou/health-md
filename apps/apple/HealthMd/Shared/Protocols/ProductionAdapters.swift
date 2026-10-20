@@ -164,6 +164,10 @@ nonisolated final class SystemUserDefaults: UserDefaultsStoring, @unchecked Send
         self.defaults = defaults
     }
 
+    func containsObject(forKey key: String) -> Bool {
+        defaults.object(forKey: key) != nil
+    }
+
     func string(forKey key: String) -> String? {
         defaults.string(forKey: key)
     }

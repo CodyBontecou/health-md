@@ -26,6 +26,7 @@ protocol KeychainStoring: Sendable {
 
 /// Abstracts UserDefaults access used by managers for settings persistence.
 nonisolated protocol UserDefaultsStoring: Sendable {
+    func containsObject(forKey key: String) -> Bool
     func string(forKey key: String) -> String?
     func bool(forKey key: String) -> Bool
     func integer(forKey key: String) -> Int

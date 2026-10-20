@@ -1923,7 +1923,22 @@ final class VaultManager: ObservableObject {
         }
     }
 
+    /// MainActor-confined read: no live migrations, subscription, vault construction or folder access.
+    static func readSavedExportConfiguration(defaults: UserDefaults, expectedRevision: Int64) -> SavedDeviceExportConfigurationSnapshot? {
+        let storage = SystemUserDefaults(defaults: defaults)
+        guard AdvancedExportSettings.nativeConfigurationRevision(defaults: storage) == expectedRevision else { return nil }
+        let settings = AdvancedExportSettings(userDefaults: defaults, persistChanges: false)
+        guard storage.containsObject(forKey: AdvancedExportSettings.nativeConfigurationRevisionKey)
+                || settings.hasPersistedOutputConfiguration() else { return nil }
+        let snapshot = ExportSettingsSnapshot.from(settings, healthSubfolder: savedHealthSubfolder(defaults: storage))
+        guard AdvancedExportSettings.nativeConfigurationRevision(defaults: storage) == expectedRevision else { return nil }
+        return .init(revision: expectedRevision, settings: snapshot)
+    }
+
     func saveSubfolderSetting() {
+        if healthSubfolder != Self.savedHealthSubfolder(defaults: defaults) {
+            AdvancedExportSettings.advanceNativeConfigurationRevision(defaults: defaults)
+        }
         defaults.set(healthSubfolder, forKey: Self.subfolderKey)
     }
 

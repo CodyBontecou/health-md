@@ -74,6 +74,10 @@ final class FakeUserDefaults: UserDefaultsStoring, @unchecked Sendable {
         set { lock.withLock { storedValues = newValue } }
     }
 
+    func containsObject(forKey key: String) -> Bool {
+        lock.withLock { storedValues[key] != nil }
+    }
+
     func string(forKey key: String) -> String? {
         lock.withLock { storedValues[key] as? String }
     }
