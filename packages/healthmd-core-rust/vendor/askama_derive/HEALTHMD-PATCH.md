@@ -1,25 +1,10 @@
-# Temporary Askama tooling parser patch
+# Askama build parser patch
 
-This is the published `askama_derive` 0.16.0 source, copied from its checksum-verified Cargo archive.
-The upstream source revision, original file hashes, omitted cache/lock metadata, and archive checksum
-are recorded in `HEALTHMD-PROVENANCE.json`. The upstream MIT/Apache licenses remain included.
-`Cargo.toml.orig` is retained unchanged as upstream provenance, not the active manifest.
+Upstream: askama_derive 0.16.0, https://crates.io/crates/askama_derive/0.16.0
+Published crate SHA-256: `e1c7065972a130eafa84215f21352ae15b4a7393da48c1f5e103904490736738`. Upstream license notices and sources are retained.
 
-UniFFI 0.32.0 enables Askama configuration parsing. The released compatible Askama versions still use
-`basic-toml`, which RustSec marks unmaintained under RUSTSEC-2026-0374. The root dependency policy
-continues to deny the advisory: no ignore, source allowance or runtime dependency is added.
+UniFFI 0.32.0 enables Askama's configuration parser. Published Askama 0.16.1 and UniFFI 0.32.2 still depend on archived basic-toml, which fails RUSTSEC-2026-0374. This patch substitutes maintained toml 1.1.3 (already locked by UniFFI) only for build-time Askama configuration parsing. UniFFI, template parsing/generation, native ABI and export/protocol sources remain unchanged.
 
-The patch changes only the active manifest's optional parser dependency and feature reference,
-and the single `RawConfig::from_toml_str` parser call. It uses maintained `toml` with only parse,
-serde and std features, already resolved by the independently locked shared-core workspace.
-Template parsing, code generation, UniFFI versions, public schemas and cryptography are unchanged.
-Malformed configuration diagnostics can contain the maintained parser's own wording.
+Changes from the published source: Cargo.toml replaces the optional basic-toml dependency/config feature with toml; src/config.rs calls toml::from_str. No other upstream source is changed. Cargo.toml.orig, the packaged Cargo.lock and .cargo_vcs_info.json retain original provenance. HEALTHMD-PROVENANCE.json records every published archive file hash; the two intentional modifications differ from those upstream hashes. Cargo cache metadata is not part of the published archive.
 
-Verification must run the upstream configuration/unit tests, actual UniFFI generation for Swift
-and Kotlin with byte-for-byte baseline comparison, the unchanged dependency-policy check, shared
-core/CLI consumer regressions, Clippy, and the runtime/tooling MSRV gates. Generated sources are never
-edited by hand. A cache hit or source inspection is not binding-generation evidence.
-
-Remove this patch and directory when a released compatible Askama/UniFFI dependency removes
-`basic-toml`; regenerate the lockfile and repeat the binding comparison and policy gates.
-Do not update vendored files without recording and reviewing the upstream source/diff again.
+Remove this path patch when the pinned upstream UniFFI/Askama dependency chain no longer enables basic-toml. Do not add an advisory ignore or relax dependency policy. Qualify the dependency gate, upstream parser tests, shared-core tests/MSRV and byte-identical Swift/Kotlin binding generation after changes.
