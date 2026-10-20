@@ -53,6 +53,10 @@ final class ProductCapabilityManifestTests: XCTestCase {
         let sleepAttributionCapability = inventory.capabilities.first { $0.id == "settings.sleep-attribution" }
         XCTAssertEqual(sleepAttributionCapability?.classification, "planned")
         XCTAssertEqual(sleepAttributionCapability?.profiles, [])
+        XCTAssertEqual(
+            inventory.capabilities.first { $0.id == "direct.full_public_authorized_corpus" }?.classification,
+            "shared"
+        )
 
         for capability in inventory.capabilities {
             let availability = capability.platforms.apple

@@ -1,18 +1,18 @@
 package com.healthmd.presentation.accessibility
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Rect
-import android.view.WindowManager
-import android.view.accessibility.AccessibilityWindowInfo
-import android.app.KeyguardManager
 import android.os.Build
 import android.os.Looper
 import android.os.PowerManager
-import android.view.inspector.WindowInspector
+import android.view.WindowManager
+import android.view.accessibility.AccessibilityWindowInfo
 import android.view.inputmethod.InputMethodManager
+import android.view.inspector.WindowInspector
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
