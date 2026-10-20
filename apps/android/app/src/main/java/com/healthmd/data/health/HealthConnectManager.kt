@@ -41,6 +41,16 @@ import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
+/** Private native observation, never a wire capability or per-metric authorization guarantee.
+ * Null permission fields mean unknown, including unavailable providers and failed SDK lookups. */
+internal data class HealthConnectNativePlanningMetadata(
+    val providerAvailable: Boolean,
+    val availableNativeMetricIds: Set<String>,
+    val hasAnyForegroundReadPermission: Boolean?,
+    val grantedPermissionsSha256: String?,
+    val failedFeatureChecks: Set<Int>,
+)
+
 @OptIn(ExperimentalPersonalHealthRecordApi::class)
 class HealthConnectManager(
     private val context: Context,
@@ -68,6 +78,38 @@ class HealthConnectManager(
     fun isAvailable(): Boolean {
         val status = HealthConnectClient.getSdkStatus(context)
         return status == HealthConnectClient.SDK_AVAILABLE
+    }
+
+    /** Metadata-only SDK sampler for the native planning owner. Never queries health records,
+     * history/earliest dates, preview, saved export preferences, quota, credentials or providers.
+     * Availability is independent of permission grants; callers must not treat "any" as all types. */
+    internal suspend fun nativePlanningMetadata(): HealthConnectNativePlanningMetadata {
+        fun unavailable() = HealthConnectNativePlanningMetadata(false, emptySet(), null, null, emptySet())
+        if (!isAvailable()) return unavailable() // Before lazy client construction or permission lookup.
+        val features = mutableMapOf<Int, HealthConnectFeatureAvailability>()
+        fun feature(id: Int) = features.getOrPut(id) { featureAvailability(id) }
+        val plan = HealthConnectPermissionPolicy.createWithAvailability(::feature)
+        val unavailableIds = com.healthmd.rawexport.HealthConnectRecordCatalog.records
+            .filter { descriptor -> descriptor.featureGate?.let { feature(it.feature) != HealthConnectFeatureAvailability.AVAILABLE } == true }
+            .flatMap { it.metricIds }.toSet()
+        val availableIds = java.util.Collections.unmodifiableSet(HealthMetrics.allMetrics.map { it.id }.toSet() - unavailableIds)
+        val granted = try { healthConnectClient.permissionController.getGrantedPermissions().toSet() }
+        catch (error: CancellationException) { throw error }
+        catch (_: Exception) { null }
+        if (!isAvailable()) return unavailable() // A provider change during the suspended lookup rejects availability.
+        val digest = granted?.let { permissions ->
+            val hash = java.security.MessageDigest.getInstance("SHA-256")
+            hash.update("HealthMd.NativeHealthConnectPermissions.v1\u0000".toByteArray(Charsets.UTF_8))
+            for (permission in permissions.sorted()) {
+                val bytes = permission.toByteArray(Charsets.UTF_8)
+                hash.update(java.nio.ByteBuffer.allocate(4).putInt(bytes.size).array())
+                hash.update(bytes)
+            }
+            hash.digest().joinToString("") { "%02x".format(it) }
+        }
+        return HealthConnectNativePlanningMetadata(true, availableIds,
+            granted?.any { it in plan.foregroundPermissions }, digest,
+            java.util.Collections.unmodifiableSet(features.filterValues { it == HealthConnectFeatureAvailability.ERROR }.keys.toSet()))
     }
 
     /**
@@ -108,6 +150,8 @@ class HealthConnectManager(
         } else {
             HealthConnectFeatureAvailability.UNAVAILABLE
         }
+    } catch (error: CancellationException) {
+        throw error
     } catch (_: Exception) {
         HealthConnectFeatureAvailability.ERROR
     }

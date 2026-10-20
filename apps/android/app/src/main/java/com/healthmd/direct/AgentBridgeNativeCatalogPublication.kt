@@ -26,6 +26,10 @@ internal fun AgentBridgeNativePlanningFacts.fingerprint(sourceInstallationId: St
         put("source_calendar_timezone", sourceCalendarTimezone)
         put("configuration_protection", configurationProtection.name.lowercase(java.util.Locale.ROOT))
         put("native_grants", nativeGrants.name.lowercase(java.util.Locale.ROOT))
+        nativePermissionObservationSha256?.let { digest ->
+            if (!Regex("[0-9a-f]{64}").matches(digest)) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            put("native_permission_observation_sha256", digest)
+        }
         put("entitlement", entitlement.name.lowercase(java.util.Locale.ROOT))
         put("execution_available", userStartedServiceActive); put("data_available", firstUnlockComplete)
     }

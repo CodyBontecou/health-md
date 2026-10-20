@@ -405,6 +405,7 @@ class AgentBridgeNativeConfigurationReaderTest {
             val base = initialState()
             val first = f.store.publishNativeCatalog(f.peer.sourceInstallationId) { base }
             val alternatives = listOf(base.copy(availableNativeMetricIds = setOf("steps")),
+                base.copy(nativePermissionObservationSha256 = "a".repeat(64)),
                 base.copy(deviceSettingsObjectId = AgentBridgeExportPlanningFixture.id(99)), base.copy(sourceCalendarTimezone = "UTC"),
                 base.copy(configurationProtection = AgentBridgeDiscoveryConfigurationProtection.UNLOCKED_NATIVE),
                 base.copy(nativeGrants = AgentBridgeDiscoveryNativeGrants.REQUIRED), base.copy(nativeGrants = AgentBridgeDiscoveryNativeGrants.UNVERIFIED),

@@ -9,6 +9,7 @@
 
 import XCTest
 import HealthKit
+import HealthMdConnectionCore
 @testable import HealthMd
 
 // MARK: - Test Helpers
@@ -3301,5 +3302,52 @@ final class HealthKitManagerObserverTests: XCTestCase {
         let earliest = await sut.findEarliestHealthDataDate()
 
         XCTAssertEqual(earliest, sleepDate)
+    }
+}
+
+final class HealthKitNativePlanningMetadataTests: XCTestCase {
+    @MainActor
+    func testMetadataReportsAvailabilityAndAuthorizationFlowWithoutHealthQueriesOrPrompts() throws {
+        let store = FakeHealthStore(), sut = makeSUT(store: store)
+        let first = sut.nativePlanningMetadata()
+        XCTAssertTrue(first.providerAvailable)
+        XCTAssertEqual(first.availableNativeMetricIDs, HealthMetrics.availableMetricIDsInCurrentBuild)
+        XCTAssertFalse(first.authorizationFlowSatisfied)
+        sut.isAuthorized = true // Flow evidence only: never a claim about per-type read grants.
+        let connected = sut.nativePlanningMetadata()
+        XCTAssertTrue(connected.authorizationFlowSatisfied)
+        let facts = connected.planningFacts(sourceCalendarTimezone: try AgentBridgeZone("UTC"),
+            configurationProtection: .locked, entitlement: .required,
+            foregroundAvailable: true, protectedDataAvailable: true)
+        XCTAssertEqual(facts.availableNativeMetricIDs, connected.availableNativeMetricIDs)
+        XCTAssertEqual(facts.nativeGrants, .satisfied) // Explicit flow evidence, not per-type access.
+        XCTAssertEqual(facts.entitlement, .required) // Native cached readiness is not promoted.
+        XCTAssertFalse(first.authorizationFlowSatisfied)
+        XCTAssertFalse(store.authRequested)
+        XCTAssertTrue(store.requestedReadTypes.isEmpty)
+        XCTAssertTrue(store.statusReadTypes.isEmpty)
+        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty)
+        XCTAssertTrue(store.queriedSumIdentifiers.isEmpty)
+        XCTAssertTrue(store.queriedAverageIdentifiers.isEmpty)
+        XCTAssertTrue(store.queriedDiscreteStatisticsIdentifiers.isEmpty)
+        XCTAssertTrue(store.queriedCategoryIdentifiers.isEmpty)
+        XCTAssertTrue(store.quantitySampleQueries.isEmpty)
+        XCTAssertTrue(store.completedCanonicalQueryIdentifiers.isEmpty)
+        XCTAssertTrue(store.workoutRecordQueries.isEmpty)
+        XCTAssertTrue(store.medicationRecordQueries.isEmpty)
+        XCTAssertTrue(sut.observerQueries.isEmpty)
+    }
+
+    @MainActor
+    func testUnavailableProviderOmitsMetricsDespitePreviouslySatisfiedFlow() {
+        let store = FakeHealthStore(), sut = makeSUT(store: store)
+        sut.isAuthorized = true
+        store.available = false
+        let metadata = sut.nativePlanningMetadata()
+        XCTAssertFalse(metadata.providerAvailable)
+        XCTAssertTrue(metadata.availableNativeMetricIDs.isEmpty)
+        XCTAssertFalse(metadata.authorizationFlowSatisfied)
+        XCTAssertFalse(store.authRequested)
+        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty)
     }
 }

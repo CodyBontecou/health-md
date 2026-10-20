@@ -4,7 +4,7 @@ import HealthMdConnectionCore
 /// A native lifecycle/controller samples these facts and publishes their revision in signed issuer
 /// storage when readiness/configuration changes. This value cannot be decoded from a wire request.
 /// HealthKit's satisfied flag is authorization-flow evidence, never proof of per-type read grants.
-nonisolated struct AgentBridgeNativePlanningFacts: Equatable {
+nonisolated struct AgentBridgeNativePlanningFacts: Equatable, Sendable {
     let availableNativeMetricIDs: Set<String>
     let sourceCalendarTimezone: AgentBridgeZone
     let configurationProtection: AgentBridgeDiscoveryConfigurationProtection
@@ -12,6 +12,21 @@ nonisolated struct AgentBridgeNativePlanningFacts: Equatable {
     let entitlement: AgentBridgeDiscoveryEntitlement
     let foregroundAvailable: Bool
     let protectedDataAvailable: Bool
+}
+
+extension HealthKitNativePlanningMetadata {
+    /// Other values are already-observed native readiness, not wire inputs. This adapter cannot
+    /// read quota/settings/credentials. HealthKit flow evidence is never per-type read-grant proof.
+    nonisolated func planningFacts(sourceCalendarTimezone: AgentBridgeZone,
+        configurationProtection: AgentBridgeDiscoveryConfigurationProtection,
+        entitlement: AgentBridgeDiscoveryEntitlement, foregroundAvailable: Bool,
+        protectedDataAvailable: Bool) -> AgentBridgeNativePlanningFacts {
+        .init(availableNativeMetricIDs: availableNativeMetricIDs, sourceCalendarTimezone: sourceCalendarTimezone,
+              configurationProtection: configurationProtection,
+              nativeGrants: providerAvailable && authorizationFlowSatisfied ? .satisfied : .required,
+              entitlement: entitlement, foregroundAvailable: foregroundAvailable,
+              protectedDataAvailable: protectedDataAvailable)
+    }
 }
 
 /// Selects actual native output configuration without active/default-profile or live-setting

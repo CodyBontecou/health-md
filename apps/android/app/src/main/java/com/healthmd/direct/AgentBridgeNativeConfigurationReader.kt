@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.healthmd.core.CoreMetricRegistryProfile
 import com.healthmd.core.CoreMetricRegistrySnapshot
+import com.healthmd.data.health.HealthConnectNativePlanningMetadata
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.settings.SettingsRepositoryImpl
 import com.healthmd.direct.protocol.*
@@ -32,7 +33,24 @@ internal data class AgentBridgeNativePlanningFacts(
     val entitlement: AgentBridgeDiscoveryEntitlement,
     val userStartedServiceActive: Boolean,
     val firstUnlockComplete: Boolean,
+    // Android exposes actual granted-permission metadata; Apple cannot reveal per-type read grants.
+    // Private observation only, not a new wire field or authorization token.
+    val nativePermissionObservationSha256: String? = null,
 )
+
+/** Other arguments are cached native observations. This adapter performs no quota/settings reads;
+ * permission summary is not an all-metrics grant. The full private digest fences partial changes. */
+internal fun HealthConnectNativePlanningMetadata.planningFacts(deviceSettingsObjectId: String,
+    sourceCalendarTimezone: String, configurationProtection: AgentBridgeDiscoveryConfigurationProtection,
+    entitlement: AgentBridgeDiscoveryEntitlement, userStartedServiceActive: Boolean,
+    firstUnlockComplete: Boolean): AgentBridgeNativePlanningFacts = AgentBridgeNativePlanningFacts(
+        availableNativeMetricIds, deviceSettingsObjectId, sourceCalendarTimezone, configurationProtection,
+        when {
+            !providerAvailable -> AgentBridgeDiscoveryNativeGrants.REQUIRED
+            hasAnyForegroundReadPermission == null -> AgentBridgeDiscoveryNativeGrants.UNVERIFIED
+            hasAnyForegroundReadPermission -> AgentBridgeDiscoveryNativeGrants.SATISFIED
+            else -> AgentBridgeDiscoveryNativeGrants.REQUIRED
+        }, entitlement, userStartedServiceActive, firstUnlockComplete, grantedPermissionsSha256)
 
 /** Actual native stores plus compiled catalog. The synchronous issuer transaction may call this
  * only from a worker: the single preferences read must never block the Android main looper.

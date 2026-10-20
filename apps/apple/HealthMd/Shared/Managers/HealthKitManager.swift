@@ -3,6 +3,14 @@ import HealthKit
 import Combine
 import os.log
 
+/// Native metadata only. HealthKit cannot reveal per-type read grants: completing its authorization
+/// flow is distinct from proving access or completeness. No sample/history/preview/quota work here.
+nonisolated struct HealthKitNativePlanningMetadata: Equatable, Sendable {
+    let providerAvailable: Bool
+    let availableNativeMetricIDs: Set<String>
+    let authorizationFlowSatisfied: Bool
+}
+
 private enum HealthKitOrdinaryRecordQueryKind: Sendable {
     case quantity(HKQuantityTypeIdentifier)
     case category(HKCategoryTypeIdentifier)
@@ -516,6 +524,13 @@ final class HealthKitManager: ObservableObject {
 
     var isHealthDataAvailable: Bool {
         store.isAvailable
+    }
+
+    func nativePlanningMetadata() -> HealthKitNativePlanningMetadata {
+        let available = store.isAvailable
+        return .init(providerAvailable: available,
+                     availableNativeMetricIDs: available ? HealthMetrics.availableMetricIDsInCurrentBuild : [],
+                     authorizationFlowSatisfied: available && isAuthorized)
     }
 
     private func restoreSavedAuthorizationState() {
