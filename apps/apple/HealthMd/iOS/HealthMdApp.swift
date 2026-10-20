@@ -519,6 +519,11 @@ struct HealthMdApp: App {
                     healthKitManager: healthKitManager,
                     externalIntegrations: externalIntegrationManager
                 )
+                if !TestMode.suppressesRuntimeServices {
+                    directCLIService.configureAgentBridgeNativeCatalogRefresh(
+                        health: healthKitManager, purchases: PurchaseManager.shared,
+                        configurationProtection: configurationProtection)
+                }
                 setupSyncMessageHandler()
                 IPhoneMacContextRefreshCoordinator.shared.configure(syncService: syncService)
                 corpusRecoveryManager.applicationDidBecomeActive()

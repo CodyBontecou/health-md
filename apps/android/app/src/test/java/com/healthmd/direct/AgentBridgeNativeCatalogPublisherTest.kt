@@ -18,10 +18,13 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class AgentBridgeNativeCatalogPublisherTest {
+    private fun nativeFacts(f: AgentBridgeExportPlanningFixture) = AgentBridgeNativePlanningFacts(
+        setOf("steps"), f.peer.sourceInstallationId, "UTC",
+        AgentBridgeDiscoveryConfigurationProtection.LOCKED, AgentBridgeDiscoveryNativeGrants.SATISFIED,
+        AgentBridgeDiscoveryEntitlement.SATISFIED, true, true)
+
     private fun lifecycle(f: AgentBridgeExportPlanningFixture) = AgentBridgeNativeCatalogLifecycle().also {
-        it.observe(AgentBridgeNativePlanningFacts(setOf("steps"), f.peer.sourceInstallationId, "UTC",
-            AgentBridgeDiscoveryConfigurationProtection.LOCKED, AgentBridgeDiscoveryNativeGrants.SATISFIED,
-            AgentBridgeDiscoveryEntitlement.SATISFIED, true, true))
+        it.observe(nativeFacts(f))
     }
 
     private suspend fun expect(code: AgentBridgeErrorCode, block: suspend () -> Any?) {
@@ -34,6 +37,80 @@ class AgentBridgeNativeCatalogPublisherTest {
         val peer = WorkerPeer(f.peer)
         AgentBridgeNativeCatalogPublisher.publish(lifecycle(f), peer) { f.store }
         peer.checks.get()
+    }
+
+    @Test fun admissionPublishesWithOwnedChildAndCloseCancelsIt() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f); val peer = WorkerPeer(f.peer)
+            val facts = nativeFacts(f)
+            val published = CompletableDeferred<Unit>(); val ended = CompletableDeferred<Unit>()
+            val owners = kotlinx.coroutines.flow.MutableStateFlow<AgentBridgeNativeCatalogAdmissionOwner?>(null)
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val admission = AgentBridgeNativeCatalogAdmission(scope, owners)
+            try {
+                owners.value = AgentBridgeNativeCatalogAdmissionOwner(lifecycle) { child ->
+                    AgentBridgeNativeCatalogRefresh(child, lifecycle) {
+                        try {
+                            AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, { facts }) { f.store }
+                            published.complete(Unit)
+                            awaitCancellation()
+                        } finally { ended.complete(Unit) }
+                    }.start()
+                }
+                withTimeout(3000) { published.await() }
+                assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+                admission.close()
+                withTimeout(3000) { ended.await() }
+                expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.beginSample() }
+            } finally { admission.close(); scope.cancel(); scope.coroutineContext.job.join() }
+        }
+    }
+
+    @Test fun admissionReplacementCancelsSuspendedOldOwnerBeforeFreshPublication() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val old = lifecycle(f); val current = lifecycle(f); val peer = WorkerPeer(f.peer)
+            val facts = nativeFacts(f)
+            val entered = CompletableDeferred<Unit>(); val ended = CompletableDeferred<Unit>(); val published = CompletableDeferred<Unit>()
+            val owners = kotlinx.coroutines.flow.MutableStateFlow<AgentBridgeNativeCatalogAdmissionOwner?>(null)
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val admission = AgentBridgeNativeCatalogAdmission(scope, owners)
+            try {
+                owners.value = AgentBridgeNativeCatalogAdmissionOwner(old) { child ->
+                    AgentBridgeNativeCatalogRefresh(child, old) {
+                        try { entered.complete(Unit); awaitCancellation() } finally { ended.complete(Unit) }
+                    }.start()
+                }
+                withTimeout(3000) { entered.await() }
+                owners.value = AgentBridgeNativeCatalogAdmissionOwner(current) { child ->
+                    AgentBridgeNativeCatalogRefresh(child, current) {
+                        AgentBridgeNativeCatalogPublisher.refresh(current, peer, { facts }) { f.store }
+                        published.complete(Unit)
+                    }.start()
+                }
+                withTimeout(3000) { ended.await(); published.await() }
+                expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { old.beginSample() }
+                assertThat(current.currentFacts()).isEqualTo(facts)
+            } finally { admission.close(); scope.cancel(); scope.coroutineContext.job.join() }
+        }
+    }
+
+    @Test fun admissionRejectsStoppedOwnerAndContinuesWithNextNativeIdentity() = runBlocking {
+        val stopped = AgentBridgeNativeCatalogLifecycle().also { it.stop() }
+        val fresh = AgentBridgeNativeCatalogLifecycle()
+        val owners = kotlinx.coroutines.flow.MutableStateFlow<AgentBridgeNativeCatalogAdmissionOwner?>(null)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val admitted = CompletableDeferred<Unit>()
+        val admission = AgentBridgeNativeCatalogAdmission(scope, owners)
+        try {
+            owners.value = AgentBridgeNativeCatalogAdmissionOwner(stopped) { throw AssertionError("Closed owner entered SDK") }
+            delay(150)
+            owners.value = AgentBridgeNativeCatalogAdmissionOwner(fresh) { admitted.complete(Unit) }
+            withTimeout(3000) { admitted.await() }
+            admission.close()
+        } finally { admission.close(); scope.cancel(); scope.coroutineContext.job.join() }
+        expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { fresh.beginSample() }
     }
 
     @Test fun controllerSerializesAndCoalescesEventsAcrossActualPublication() = runBlocking {

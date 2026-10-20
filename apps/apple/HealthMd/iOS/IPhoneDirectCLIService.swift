@@ -371,6 +371,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var agentBridgePeer: AgentBridgeExportAuthenticatedPeer?
     private var agentBridgeCatalogLifecycle: AgentBridgeNativeCatalogLifecycle?
     private var agentBridgeCatalogRefresh: AgentBridgeNativeCatalogRefresh?
+    private let agentBridgeCatalogAdmission = AgentBridgeNativeCatalogAdmission()
     private let agentBridgeCatalogEvents: AgentBridgeNativeCatalogEventRelay
     private let agentBridgeCatalogNotifications: AgentBridgeNativeCatalogNotifications
     private var exportTask: Task<Void, Never>?
@@ -441,7 +442,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         defaults.bool(forKey: Self.enabledKey)
     }
 
-    /// LAZY native-only identity/liveness factory, never called by legacy hello/dispatch.
+    /// Native-only identity/liveness factory; app admission runs off the legacy hello/dispatch stack.
     /// No issuer/consent/configuration/health work or creating trust getter is performed.
     func agentBridgeAuthenticatedPeer(
         nativeTrust: AgentBridgeExportNativeTrust = AgentBridgeExportNativeTrust()
@@ -480,7 +481,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     /// Native planning owner only: no issuer/key/configuration lookup or grant issuance. The future
-    /// installed planning adapter must freshly sample SDK facts and publish before reading this cache.
+    /// native planning adapter must freshly sample SDK facts and publish before reading this cache.
     func agentBridgeNativePlanningOwner(
         nativeTrust: AgentBridgeExportNativeTrust = AgentBridgeExportNativeTrust()
     ) throws -> (peer: AgentBridgeExportAuthenticatedPeer, lifecycle: AgentBridgeNativeCatalogLifecycle) {
@@ -532,7 +533,20 @@ final class IPhoneDirectCLIService: ObservableObject {
         }
     }
 
-    /// Explicit native controller admission; never invoked by hello/requests. Repeated starts do
+    /// Application composition only. SDK/store work is deferred off the wire handler's
+    /// stack and bound to its original authenticated owner, never pairing or consent.
+    func configureAgentBridgeNativeCatalogRefresh(health: HealthKitManager, purchases: PurchaseManager,
+                                                 configurationProtection: ConfigurationProtectionManager) {
+        agentBridgeCatalogAdmission.configure { [weak self] original in
+            guard let self, self.agentBridgeCatalogLifecycle === original else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
+            try self.startAgentBridgeNativeCatalogRefresh(health: health, purchases: purchases,
+                                                         configurationProtection: configurationProtection)
+        }
+    }
+
+    /// Native controller admission; repeated starts cannot replace pinned dependencies. Repeated starts do
     /// not replace the pinned sampler/managers or renew an existing owner.
     func startAgentBridgeNativeCatalogRefresh(health: HealthKitManager, purchases: PurchaseManager,
                                              configurationProtection: ConfigurationProtectionManager) throws {
@@ -573,9 +587,11 @@ final class IPhoneDirectCLIService: ObservableObject {
         let lifecycle = AgentBridgeNativeCatalogLifecycle()
         agentBridgeCatalogLifecycle = lifecycle
         agentBridgeCatalogEvents.replace(with: lifecycle)
+        agentBridgeCatalogAdmission.replace(with: lifecycle)
     }
 
     private func invalidateAgentBridgeSession() {
+        agentBridgeCatalogAdmission.replace(with: nil)
         agentBridgeCatalogRefresh?.stop()
         agentBridgeCatalogRefresh = nil
         agentBridgeCatalogEvents.replace(with: nil)

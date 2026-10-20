@@ -94,3 +94,39 @@ final class AgentBridgeNativeCatalogRefresh {
     func stop() { task.cancel(); lifecycle.stop() }
     deinit { task.cancel(); lifecycle.stop() }
 }
+
+
+/// App-owned admission signal. Replacing an accepted owner cancels queued work before
+/// any SDK/store sampler starts. Wire handlers only replace this identity; native
+/// dependencies are installed once by the application composition root.
+@MainActor
+final class AgentBridgeNativeCatalogAdmission {
+    private var start: (@MainActor (AgentBridgeNativeCatalogLifecycle) throws -> Void)?
+    private var current: AgentBridgeNativeCatalogLifecycle?
+    private var pending: Task<Void, Never>?
+
+    func configure(start: @escaping @MainActor (AgentBridgeNativeCatalogLifecycle) throws -> Void) {
+        guard self.start == nil else { return }
+        self.start = start
+        schedule()
+    }
+
+    func replace(with lifecycle: AgentBridgeNativeCatalogLifecycle?) {
+        guard current !== lifecycle else { return }
+        pending?.cancel()
+        current?.stop()
+        current = lifecycle
+        schedule()
+    }
+
+    private func schedule() {
+        guard let original = current, let start else { return }
+        pending = Task { [weak self] in
+            guard !Task.isCancelled, self?.current === original else { return }
+            do { _ = try original.beginSample(); try start(original) }
+            catch { original.stop() } // A rejected owner is never silently renewed.
+        }
+    }
+
+    deinit { pending?.cancel(); current?.stop() }
+}

@@ -1,5 +1,7 @@
 package com.healthmd.direct
 
+import kotlinx.coroutines.flow.collectLatest
+
 import com.healthmd.direct.protocol.AgentBridgeErrorCode
 import com.healthmd.direct.protocol.AgentBridgeException
 import kotlinx.coroutines.Dispatchers
@@ -99,4 +101,35 @@ internal class AgentBridgeNativeCatalogRefresh(
     init { job.invokeOnCompletion { lifecycle.stop() } }
     fun start() { job.start() }
     override fun close() { job.cancel(); lifecycle.stop() }
+}
+
+
+/** Native owner signal only. The foreground service supplies existing dependencies;
+ * the wire handler never runs SDK/store work. The collectLatest child owns its refresh
+ * controller, so replacement/registration close cannot leave a sampler running. */
+internal class AgentBridgeNativeCatalogAdmissionOwner(
+    val lifecycle: AgentBridgeNativeCatalogLifecycle,
+    val start: (kotlinx.coroutines.CoroutineScope) -> Unit,
+)
+
+internal class AgentBridgeNativeCatalogAdmission(scope: kotlinx.coroutines.CoroutineScope,
+    owners: kotlinx.coroutines.flow.Flow<AgentBridgeNativeCatalogAdmissionOwner?>) : AutoCloseable {
+    private val job = scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        owners.collectLatest { owner ->
+            if (owner != null) kotlinx.coroutines.coroutineScope {
+                try {
+                    owner.lifecycle.beginSample()
+                    owner.start(this)
+                    kotlinx.coroutines.awaitCancellation()
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    owner.lifecycle.stop()
+                } finally {
+                    owner.lifecycle.stop()
+                }
+            }
+        }
+    }
+    override fun close() { job.cancel() }
 }

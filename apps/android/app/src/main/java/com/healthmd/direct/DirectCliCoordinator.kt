@@ -77,6 +77,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
@@ -171,6 +172,7 @@ class DirectCliCoordinator @Inject constructor(
     @Volatile private var activeChannel: DirectSecureChannel? = null
     @Volatile private var activeServingScope: ServingScope? = null
     @Volatile private var acceptedNativeOwner: NativeSessionOwner? = null
+    private val nativeCatalogOwners = MutableStateFlow<NativeSessionOwner?>(null)
     private val nativeOwnerLock = Any()
     private val nativeProtectionLock = Any()
     private var nativeProtection: AgentBridgeNativeConfigurationProtection? = null
@@ -383,10 +385,23 @@ class DirectCliCoordinator @Inject constructor(
         owner.startCatalogRefresh(scope, context, healthConnect)
     }
 
+    /** Foreground-service composition only. The callback carries owner identity, not a grant.
+     * Its child scope is canceled on owner replacement or exact registration close. */
+    internal fun observeAgentBridgeNativeCatalogAdmission(scope: CoroutineScope, context: android.content.Context,
+        healthConnect: com.healthmd.data.health.HealthConnectManager): AutoCloseable =
+        AgentBridgeNativeCatalogAdmission(scope, nativeCatalogOwners.map { owner ->
+            owner?.let {
+                AgentBridgeNativeCatalogAdmissionOwner(it.catalogLifecycle) { child ->
+                    it.startCatalogRefresh(child, context, healthConnect)
+                }
+            }
+        })
+
     private fun replaceNativeOwner(owner: NativeSessionOwner?) = synchronized(nativeOwnerLock) {
         if (acceptedNativeOwner !== owner) {
             acceptedNativeOwner?.revoke()
             acceptedNativeOwner = owner
+            nativeCatalogOwners.value = owner
         }
     }
 

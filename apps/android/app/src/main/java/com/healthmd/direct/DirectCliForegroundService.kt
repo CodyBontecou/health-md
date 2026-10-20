@@ -30,9 +30,11 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class DirectCliForegroundService : Service() {
     @Inject lateinit var coordinator: DirectCliCoordinator
+    @Inject lateinit var healthConnect: com.healthmd.data.health.HealthConnectManager
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var operation: Job? = null
+    private var nativeCatalogAdmission: AutoCloseable? = null
     private var nativeActivityEvents: AgentBridgeNativeCatalogActivityEvents? = null
     private var nativeCatalogBroadcasts: AgentBridgeNativeCatalogBroadcasts? = null
     private var nativeEligibilityObservation: AutoCloseable? = null
@@ -54,6 +56,7 @@ class DirectCliForegroundService : Service() {
         servingLifecycle.foregroundAdmitted()
         nativeEligibilityObservation = coordinator.observeAgentBridgeNativeExportEligibility(scope)
         nativeProtectionObservation = coordinator.observeAgentBridgeNativeConfigurationProtection(scope)
+        nativeCatalogAdmission = coordinator.observeAgentBridgeNativeCatalogAdmission(scope, applicationContext, healthConnect)
         // Real SDK notifications latch before worker sampling/publication. First-unlock is not
         // ordinary screen lock; existing native serving/permission fences remain authoritative.
         nativeCatalogBroadcasts = AgentBridgeNativeCatalogBroadcasts(this, coordinator::agentBridgeNativeMetadataChanged)
@@ -139,6 +142,8 @@ class DirectCliForegroundService : Service() {
     }
 
     private fun closeNativeEligibilityObservation() {
+        nativeCatalogAdmission?.close()
+        nativeCatalogAdmission = null
         nativeActivityEvents?.close()
         nativeActivityEvents = null
         nativeProtectionObservation?.close()

@@ -442,6 +442,72 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
 
     #endif
 
+    func testNativeAdmissionDefersSDKUntilConfiguredAndPinsInitialDependencies() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let admission = AgentBridgeNativeCatalogAdmission(), lifecycle = AgentBridgeNativeCatalogLifecycle()
+        let facts = try nativeState(), store = rig.store
+        let published = expectation(description: "admitted owner published")
+        var calls = 0
+        var controller: AgentBridgeNativeCatalogRefresh?
+        admission.replace(with: lifecycle)
+        admission.configure { original in
+            XCTAssertTrue(original === lifecycle)
+            calls += 1
+            controller = try AgentBridgeNativeCatalogRefresh(lifecycle: original) {
+                _ = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: original, peer: rig.peer,
+                    existingDirectory: rig.directory, sample: { facts }, loadStore: { _ in store })
+                published.fulfill()
+            }
+        }
+        admission.configure { _ in XCTFail("Native dependencies were replaced") }
+        XCTAssertEqual(calls, 0, "Native admission must not run on the wire handler stack")
+        await fulfillment(of: [published], timeout: 3)
+        admission.replace(with: lifecycle)
+        XCTAssertEqual(calls, 1)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        admission.replace(with: nil)
+        controller?.stop()
+        XCTAssertThrowsError(try lifecycle.currentPublication())
+    }
+
+    func testNativeAdmissionOwnerReplacementCancelsQueuedIdentityBeforeSampling() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let admission = AgentBridgeNativeCatalogAdmission()
+        let old = AgentBridgeNativeCatalogLifecycle(), current = AgentBridgeNativeCatalogLifecycle()
+        let facts = try nativeState(), store = rig.store
+        let published = expectation(description: "only replacement published")
+        var controller: AgentBridgeNativeCatalogRefresh?
+        var calls = 0
+        admission.configure { original in
+            calls += 1
+            XCTAssertTrue(original === current)
+            controller = try AgentBridgeNativeCatalogRefresh(lifecycle: original) {
+                _ = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: original, peer: rig.peer,
+                    existingDirectory: rig.directory, sample: { facts }, loadStore: { _ in store })
+                published.fulfill()
+            }
+        }
+        admission.replace(with: old)
+        admission.replace(with: current)
+        await fulfillment(of: [published], timeout: 3)
+        XCTAssertEqual(calls, 1)
+        XCTAssertThrowsError(try old.beginSample())
+        XCTAssertEqual(try current.currentFacts(), facts)
+        admission.replace(with: nil); controller?.stop()
+    }
+
+    func testNativeAdmissionCloseAndStoppedOwnerNeverInvokeSampler() async throws {
+        let admission = AgentBridgeNativeCatalogAdmission(), lifecycle = AgentBridgeNativeCatalogLifecycle()
+        let unexpected = expectation(description: "closed owner cannot enter SDK"); unexpected.isInverted = true
+        admission.configure { _ in unexpected.fulfill() }
+        admission.replace(with: lifecycle)
+        admission.replace(with: nil)
+        admission.replace(with: lifecycle) // A terminal identity cannot be renewed.
+        await fulfillment(of: [unexpected], timeout: 0.15)
+        XCTAssertThrowsError(try lifecycle.beginSample())
+        admission.replace(with: nil)
+    }
+
     func testNativeRefreshControllerSerializesAndCoalescesEventsAcrossActualPublication() async throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState(), store = rig.store
