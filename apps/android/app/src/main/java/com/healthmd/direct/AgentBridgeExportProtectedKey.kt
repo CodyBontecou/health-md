@@ -3,9 +3,11 @@ package com.healthmd.direct
 import android.content.Context
 import android.os.Build
 import android.os.UserManager
+import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import java.security.KeyStore
+import javax.crypto.KeyGenerator
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
@@ -48,9 +50,62 @@ internal class AgentBridgeExportProtectedKey(private val context: Context) : Age
         } catch (_: Exception) { null } // Fixed absence; unchanged store maps to permission_required.
     }
 
-    private companion object {
+    internal companion object {
         const val KEYSTORE = "AndroidKeyStore"
         const val ISSUER_ALIAS = "healthmd-agent-bridge-native-export-authority-v1"
         const val ALGORITHM = KeyProperties.KEY_ALGORITHM_HMAC_SHA256
+    }
+}
+
+
+/** Used only after explicit native authorization reserves a new issuer directory. This writer is
+ * never a planning dependency. Existing unreadable aliases are not replaced; failures leave the
+ * reserved issuer unavailable, not a repaired/reset ledger. Ordinary later screen locking remains
+ * compatible with the user-started service's AFU policy; this integrity key grants no export rights. */
+internal class AgentBridgeExportProtectedKeyProvisioner(private val context: Context) {
+    val reader = AgentBridgeExportProtectedKey(context)
+
+    fun requireAvailable() {
+        if (context.isDeviceProtectedStorage ||
+            context.getSystemService(UserManager::class.java)?.isUserUnlocked != true) {
+            throw com.healthmd.direct.protocol.AgentBridgeException(
+                com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        }
+    }
+
+    fun loadOrCreateForNewPrivateStore(): SecretKey {
+        reader.loadExisting()?.let { return it }
+        try {
+            require(!context.isDeviceProtectedStorage)
+            val users = requireNotNull(context.getSystemService(UserManager::class.java))
+            require(users.isUserUnlocked)
+            val store = KeyStore.getInstance(AgentBridgeExportProtectedKey.KEYSTORE)
+            require(store.provider.name == AgentBridgeExportProtectedKey.KEYSTORE)
+            store.load(null)
+            // The exclusive new-directory reservation serializes cooperating native bootstrap
+            // processes. KeyGenerator can overwrite an alias, so never generate over ANY item.
+            require(!store.containsAlias(AgentBridgeExportProtectedKey.ISSUER_ALIAS))
+            val generator = KeyGenerator.getInstance(AgentBridgeExportProtectedKey.ALGORITHM,
+                AgentBridgeExportProtectedKey.KEYSTORE)
+            require(generator.provider.name == AgentBridgeExportProtectedKey.KEYSTORE)
+            generator.init(KeyGenParameterSpec.Builder(AgentBridgeExportProtectedKey.ISSUER_ALIAS,
+                KeyProperties.PURPOSE_SIGN).setKeySize(256).setDigests(KeyProperties.DIGEST_SHA256)
+                .setUserAuthenticationRequired(false).setUnlockedDeviceRequired(false).build())
+            require(users.isUserUnlocked)
+            val generated = generator.generateKey()
+            val current = requireNotNull(reader.loadExisting())
+            val challenge = "HealthMd.AgentBridge.NativeExportKey.Readback.v1".toByteArray(Charsets.UTF_8)
+            val expected = Mac.getInstance(AgentBridgeExportProtectedKey.ALGORITHM).run {
+                init(generated); doFinal(challenge)
+            }
+            val observed = Mac.getInstance(AgentBridgeExportProtectedKey.ALGORITHM).run {
+                init(current); doFinal(challenge)
+            }
+            require(java.security.MessageDigest.isEqual(expected, observed) && users.isUserUnlocked)
+            return current
+        } catch (_: Exception) {
+            throw com.healthmd.direct.protocol.AgentBridgeException(
+                com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        }
     }
 }

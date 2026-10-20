@@ -11,8 +11,8 @@ nonisolated struct AgentBridgeExportProtectedKey: AgentBridgeExportProtectedKeyR
     private let copyMatching: CopyMatching
     // Dedicated purpose/version, independent of channel/trust/cursor/API/provider/wake secrets.
     // A future native provisioning flow must use THIS identity and protection, never another key.
-    private static let service = "com.codybontecou.obsidianhealth.agent-bridge.native-export-authority"
-    private static let account = "integrity-key-v1"
+    fileprivate static let service = "com.codybontecou.obsidianhealth.agent-bridge.native-export-authority"
+    fileprivate static let account = "integrity-key-v1"
 
     /// Injection is solely at the Security lookup boundary; production calls the real native SDK.
     init(copyMatching: @escaping CopyMatching = { SecItemCopyMatching($0, $1) }) {
@@ -59,5 +59,48 @@ nonisolated struct AgentBridgeExportProtectedKey: AgentBridgeExportProtectedKeyR
     private static func isExplicitFalse(_ value: Any?) -> Bool {
         guard let value, CFGetTypeID(value as CFTypeRef) == CFBooleanGetTypeID() else { return false }
         return CFEqual(value as CFTypeRef, kCFBooleanFalse)
+    }
+}
+
+
+/// Writer owned only by explicit native bootstrap, never injected into the read-only planner.
+/// The caller first reserves a NEW private issuer directory; it must not call this to repair a
+/// missing key for an existing ledger. Duplicate/denied/unreadable SDK state is never replaced.
+nonisolated struct AgentBridgeExportProtectedKeyProvisioner: Sendable {
+    typealias Add = @Sendable (CFDictionary) -> OSStatus
+    let reader: AgentBridgeExportProtectedKey
+    private let add: Add
+
+    init(copyMatching: @escaping AgentBridgeExportProtectedKey.CopyMatching = { SecItemCopyMatching($0, $1) },
+         add: @escaping Add = { SecItemAdd($0, nil) }) {
+        reader = .init(copyMatching: copyMatching)
+        self.add = add
+    }
+
+    func loadOrCreateForNewPrivateStore() throws -> SymmetricKey {
+        if let existing = try reader.loadExistingExportAuthorityKey() { return existing }
+        let generated = SymmetricKey(size: .bits256)
+        let context = LAContext()
+        context.interactionNotAllowed = true
+        let attributes: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: AgentBridgeExportProtectedKey.service,
+            kSecAttrAccount as String: AgentBridgeExportProtectedKey.account,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecAttrSynchronizable as String: false,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecUseAuthenticationContext as String: context,
+            kSecValueData as String: generated.withUnsafeBytes { Data($0) }
+        ]
+        guard add(attributes as CFDictionary) == errSecSuccess,
+              let current = try reader.loadExistingExportAuthorityKey() else {
+            throw AgentBridgeValidationError.permissionRequired
+        }
+        let challenge = Data("HealthMd.AgentBridge.NativeExportKey.Readback.v1".utf8)
+        let expected = HMAC<SHA256>.authenticationCode(for: challenge, using: generated)
+        guard HMAC<SHA256>.isValidAuthenticationCode(expected, authenticating: challenge, using: current) else {
+            throw AgentBridgeValidationError.permissionRequired
+        }
+        return current
     }
 }

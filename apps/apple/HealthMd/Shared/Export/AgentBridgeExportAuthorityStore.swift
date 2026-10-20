@@ -134,6 +134,34 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                                    publication: any AgentBridgeExportPublicationObserving = AgentBridgeExportUnobservedPublication()) throws -> AgentBridgeExportAuthorityStore {
         try authorization.requireNativeAuthorization(for: .createPrivateStore)
         let key = try existingKey(protectedKeys)
+        let store = try reservePrivateDirectory(at: directory, protectedKeys: protectedKeys, publication: publication)
+        try store.write(.init(generation: 0, delegations: [], plans: [], decisions: []), key: key)
+        return store
+    }
+
+    /// Explicit human/native setup, distinct from opening or repairing an existing issuer. The
+    /// exclusive directory reservation happens BEFORE any Keychain write. Concurrent setup and
+    /// existing/interrupted ledgers therefore cannot rotate a missing key or erase revocations.
+    /// A failed SDK operation leaves a reserved, unusable directory; readers never repair it.
+    static func createNativePrivateStore(at directory: URL,
+        authorization: any AgentBridgeExportNativeAuthorizing,
+        provisioner: AgentBridgeExportProtectedKeyProvisioner = .init()) throws -> AgentBridgeExportAuthorityStore {
+        try authorization.requireNativeAuthorization(for: .createPrivateStore)
+        let store = try reservePrivateDirectory(at: directory, protectedKeys: provisioner.reader,
+                                               publication: AgentBridgeExportUnobservedPublication())
+        let key = try provisioner.loadOrCreateForNewPrivateStore()
+        // Revalidate the pinned private directory after potentially delaying SDK work,
+        // again after staging/fsync, and before exposing the initialized store.
+        try store.requireCurrentRoot()
+        try store.write(.init(generation: 0, delegations: [], plans: [], decisions: []), key: key,
+                        beforePublish: { _ in try store.requireCurrentRoot() })
+        try store.requireCurrentRoot()
+        return store
+    }
+
+    private static func reservePrivateDirectory(at directory: URL,
+        protectedKeys: any AgentBridgeExportProtectedKeyReading,
+        publication: any AgentBridgeExportPublicationObserving) throws -> AgentBridgeExportAuthorityStore {
         let parent = try AgentBridgeExportPrivateFiles.openDirectory(directory.deletingLastPathComponent(), privateLeaf: false)
         defer { close(parent) }
         let leaf = directory.lastPathComponent
@@ -144,7 +172,6 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         guard lock >= 0 else { throw AgentBridgeValidationError.bindingChanged }
         defer { close(lock) }
         guard fsync(lock) == 0 else { throw AgentBridgeValidationError.bindingChanged }
-        try store.write(.init(generation: 0, delegations: [], plans: [], decisions: []), key: key)
         return store
     }
 
@@ -236,12 +263,16 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         } catch { throw AgentBridgeValidationError.permissionRequired }
     }
 
-    private func transaction<T>(beforeCommit: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { _ in }, _ body: (inout AgentBridgeExportAuthoritySnapshot) throws -> (T, Bool)) throws -> T {
-        // Reopen the entire path without following symlinks: moving/replacing the private root does
-        // not silently redirect authority to a formerly valid retained directory handle.
+    private func requireCurrentRoot() throws {
         let current = try AgentBridgeExportPrivateFiles.openDirectory(directory, privateLeaf: true)
         defer { close(current) }
         guard try AgentBridgeExportPrivateFiles.identity(current) == rootIdentity else { throw AgentBridgeValidationError.bindingChanged }
+    }
+
+    private func transaction<T>(beforeCommit: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { _ in }, _ body: (inout AgentBridgeExportAuthoritySnapshot) throws -> (T, Bool)) throws -> T {
+        // Reopen the entire path without following symlinks: moving/replacing the private root does
+        // not silently redirect authority to a formerly valid retained directory handle.
+        try requireCurrentRoot()
         let lock = try AgentBridgeExportPrivateFiles.openPrivateFile(rootFD, "lock", flags: O_RDWR)
         defer { close(lock) }
         var acquired = false

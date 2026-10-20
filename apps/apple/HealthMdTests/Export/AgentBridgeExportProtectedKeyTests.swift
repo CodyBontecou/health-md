@@ -11,6 +11,91 @@ import XCTest
 #endif
 
 final class AgentBridgeExportProtectedKeyTests: XCTestCase {
+    func testExplicitNativeBootstrapProvisionsDedicatedKeyAndAuthenticatesEmptyLedger() throws {
+        let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+        let directory = parent.appendingPathComponent("issuer")
+        let sdk = NativeBootstrapKeyBoundary()
+        sdk.beforeAdd = {
+            sdk.reservedBeforeAdd = FileManager.default.fileExists(atPath: directory.appendingPathComponent("lock").path)
+                && !FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path)
+        }
+        let store = try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+            authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner)
+        XCTAssertEqual(sdk.additions, 1)
+        XCTAssertTrue(sdk.exactAttributes)
+        XCTAssertTrue(sdk.reservedBeforeAdd)
+        let state = try store.snapshot()
+        XCTAssertEqual(state.generation, 0)
+        XCTAssertTrue(state.delegations.isEmpty && state.plans.isEmpty && state.decisions.isEmpty)
+        let reopened = try AgentBridgeExportAuthorityStore(existingDirectory: directory, protectedKeys: sdk.provisioner.reader)
+        XCTAssertEqual(try reopened.snapshot().generation, 0)
+        XCTAssertEqual(sdk.additions, 1)
+    }
+
+    func testNativeBootstrapDenialAndExistingIssuerNeverCreateOrReplaceKeyMaterial() throws {
+        let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+        let directory = parent.appendingPathComponent("issuer")
+        let sdk = NativeBootstrapKeyBoundary()
+        XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+            authorization: ProtectedKeyNativeAuthorization(allowed: false), provisioner: sdk.provisioner))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        XCTAssertEqual(sdk.lookup.calls, 0)
+        XCTAssertEqual(sdk.additions, 0)
+        let store = try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+            authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner)
+        let before = try Data(contentsOf: directory.appendingPathComponent("state.json"))
+        sdk.lookup.respond(status: errSecItemNotFound, result: nil)
+        let calls = sdk.lookup.calls
+        XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+            authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner))
+        XCTAssertEqual(sdk.lookup.calls, calls)
+        XCTAssertEqual(sdk.additions, 1)
+        XCTAssertThrowsError(try store.snapshot())
+        XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("state.json")), before)
+    }
+
+    func testNativeBootstrapReusesValidProtectedKeyWithoutIssuingAnyDelegation() throws {
+        let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+        let sdk = NativeBootstrapKeyBoundary()
+        sdk.lookup.respond(result: [ProtectedKeyLookup.record()] as CFArray)
+        let store = try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: parent.appendingPathComponent("issuer"),
+            authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner)
+        XCTAssertEqual(sdk.additions, 0)
+        XCTAssertTrue(try store.snapshot().delegations.isEmpty)
+    }
+
+    func testNativeBootstrapSDKFailureAndReadbackMismatchLeaveNoUsableLedgerOrAutomaticRetry() throws {
+        for mode in ["denied", "duplicate", "missing-readback", "changed-readback", "moved-root"] {
+            let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let directory = parent.appendingPathComponent("issuer")
+            let sdk = NativeBootstrapKeyBoundary()
+            if mode == "denied" { sdk.addStatus = errSecInteractionNotAllowed }
+            if mode == "duplicate" { sdk.addStatus = errSecDuplicateItem }
+            sdk.missingReadback = mode == "missing-readback"
+            sdk.changedReadback = mode == "changed-readback"
+            if mode == "moved-root" {
+                sdk.beforeAdd = {
+                    try FileManager.default.moveItem(at: directory, to: parent.appendingPathComponent("retained"))
+                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false,
+                                                           attributes: [.posixPermissions: 0o700])
+                }
+            }
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner), mode)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path), mode)
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner), mode)
+            XCTAssertEqual(sdk.additions, 1, mode)
+            XCTAssertNil(sdk.callbackError, mode)
+        }
+    }
+
+    private func nativeBootstrapParent() throws -> URL {
+        let parent = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("healthmd-native-bootstrap-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        return parent
+    }
+
     func testLoadsOnlyTheDedicatedDeviceLocalIntegrityRecordWithoutInteraction() throws {
         let lookup = ProtectedKeyLookup()
         let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
@@ -309,4 +394,45 @@ nonisolated private final class ProtectedKeyStoreRig {
     }
     func privateBytes() throws -> Data { try Data(contentsOf: directory.appendingPathComponent("state.json")) }
     func cleanup() { try? FileManager.default.removeItem(at: parent) }
+}
+
+
+/// Synthetic interception at the actual Security lookup/add boundary. CryptoKit generation,
+/// readback proof, private directory reservation and authenticated ledger I/O are production code.
+nonisolated private final class NativeBootstrapKeyBoundary: @unchecked Sendable {
+    let lookup = ProtectedKeyLookup()
+    var additions = 0
+    var exactAttributes = false
+    var reservedBeforeAdd = false
+    var addStatus: OSStatus = errSecSuccess
+    var missingReadback = false
+    var changedReadback = false
+    var beforeAdd: (() throws -> Void)?
+    var callbackError: Error?
+    init() { lookup.respond(status: errSecItemNotFound, result: nil) }
+    var provisioner: AgentBridgeExportProtectedKeyProvisioner {
+        .init(copyMatching: { self.lookup.copyMatching($0, $1) }, add: { self.add($0) })
+    }
+    private func add(_ query: CFDictionary) -> OSStatus {
+        additions += 1
+        let attrs = query as NSDictionary
+        let data = attrs[kSecValueData] as? Data
+        exactAttributes = attrs.count == 8
+            && attrs[kSecClass] as? String == kSecClassGenericPassword as String
+            && attrs[kSecAttrService] as? String == "com.codybontecou.obsidianhealth.agent-bridge.native-export-authority"
+            && attrs[kSecAttrAccount] as? String == "integrity-key-v1"
+            && attrs[kSecAttrAccessible] as? String == kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String
+            && attrs[kSecAttrSynchronizable] as? Bool == false
+            && attrs[kSecUseDataProtectionKeychain] as? Bool == true
+            && (attrs[kSecUseAuthenticationContext] as? LAContext)?.interactionNotAllowed == true
+            && data?.count == 32
+        do { try beforeAdd?() }
+        catch { callbackError = error; return errSecParam }
+        if addStatus == errSecSuccess && !missingReadback {
+            var record = ProtectedKeyLookup.record()
+            record[kSecValueData as String] = changedReadback ? Data(repeating: 8, count: 32) : data
+            lookup.respond(result: [record] as CFArray)
+        }
+        return addStatus
+    }
 }

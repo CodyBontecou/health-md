@@ -7,6 +7,31 @@ Acceptance is the [roadmap](../architecture/agent-bridge-parity-roadmap.md) and 
 
 No push, release, deployment, Cloud/Practice work, real health reads, native credential provisioning, user settings/schedule mutations, device notifications or physical-device actions are authorized. B19/B20 remain approval-blocked. Missing evidence is not a pass. Unit tests cannot qualify a physical matrix.
 
+## Native issuer bootstrap increment (2026-10-20)
+
+The current PR acceptance work adds explicit local-native bootstrap APIs on Apple and Android.
+After native authorization, each reserves a new private issuer directory before provisioning or
+reusing a validated dedicated protected key, verifies an actual MAC readback, rechecks the private
+directory identity after SDK work, and publishes an authenticated empty ledger. Existing or
+interrupted issuer directories reject before credential generation, including when the old key is
+missing; setup cannot erase grants or revocations. Default readers remain load-only. Android
+requires the existing credential-protected native `no_backup` parent and first-unlock admission.
+
+Current-source checks pass: 24 focused macOS app XCTest methods; 92 affected macOS XCTest methods
+across five authority, protected-key, trust, planning and request-settings classes; 20 focused Play
+protected-key JVM methods; the full Play app JVM suite (1,567 methods, one existing skip); and 127
+focused F-Droid bridge JVM methods. These counts overlap. The app scheme does not execute the
+separate native-session harness. The contract validator and its 32 bridge tests pass without public
+contract/fixture changes, and the targeted concurrency-warning gate passes. Existing unrelated
+non-targeted compiler warnings remain.
+
+Credential SDK calls were intercepted; real private-file storage and CryptoKit/JCA MAC operations
+ran. This does not qualify actual Keychain/Keystore protection or device credentials. Installed
+human consent/configuration UI, native authorizer adapters, transport routes, bound capture and
+execution, journals, receipts, recipes, resume and physical four-way acceptance remain incomplete.
+No grants, capability advertisement, schema/profile versions or public settings changed. B19/B20
+remain separately approval-blocked. This increment does not make the PR ready to merge.
+
 ## Current consolidated native-session increment (2026-10-06)
 
 After the user cleared the fleet goal and authorized consolidation, all23 bridge branch heads were

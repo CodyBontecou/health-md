@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Process
 import android.os.UserManager
+import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import android.security.keystore.UserNotAuthenticatedException
@@ -33,6 +34,8 @@ import java.security.NoSuchAlgorithmException
 import java.security.Provider
 import java.security.UnrecoverableKeyException
 import java.security.spec.InvalidKeySpecException
+import java.security.spec.AlgorithmParameterSpec
+import javax.crypto.KeyGenerator
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
@@ -47,6 +50,89 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class AgentBridgeExportProtectedKeyTest {
+    @Test
+    fun explicitNativeBootstrapGeneratesFixedKeyAndAuthenticatesEmptyNoBackupLedger() = withNativeKey { os ->
+        AgentBridgeExportPlanningFixture().use { f -> withNativeData(os, f.parent) {
+            os.selected = null
+            val root = f.parent.resolve("no_backup").resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+            var reserved = false
+            os.beforeGeneration = {
+                reserved = Files.isDirectory(root) && !Files.exists(root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+            }
+            val store = AgentBridgeExportAuthorityStore.initializeNative(os.context, f.native)
+            assertThat(reserved).isTrue()
+            val spec = requireNotNull(os.generatedSpec)
+            assertThat(spec.keystoreAlias).isEqualTo("healthmd-agent-bridge-native-export-authority-v1")
+            assertThat(spec.purposes).isEqualTo(KeyProperties.PURPOSE_SIGN)
+            assertThat(spec.keySize).isEqualTo(256)
+            assertThat(spec.digests.toList()).containsExactly(KeyProperties.DIGEST_SHA256)
+            assertThat(spec.isUserAuthenticationRequired).isFalse()
+            assertThat(spec.isUnlockedDeviceRequired).isFalse()
+            store.access { tx -> assertThat(requireNotNull(tx).state.grants).isEmpty() }
+            AgentBridgeExportAuthorityStore.forNoBackup(os.context).access { tx ->
+                assertThat(requireNotNull(tx).state.plans).isEmpty()
+                assertThat(tx.state.decisions).isEmpty()
+            }
+            assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
+            verify(exactly = 1) { os.generator.generateKey() }
+        } }
+    }
+
+    @Test
+    fun deniedAndBeforeFirstUnlockSetupCannotCreateIssuerOrKey() {
+        for (mode in listOf("denied", "before-first-unlock")) withNativeKey { os ->
+            AgentBridgeExportPlanningFixture().use { f -> withNativeData(os, f.parent) {
+                os.selected = null
+                if (mode == "denied") f.native.allowed = false else os.firstUnlocked = false
+                f.expect(if (mode == "denied") AgentBridgeErrorCode.APPROVAL_REQUIRED else AgentBridgeErrorCode.PERMISSION_REQUIRED) {
+                    AgentBridgeExportAuthorityStore.initializeNative(os.context, f.native)
+                }
+                assertThat(Files.exists(f.parent.resolve("no_backup").resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME))).isFalse()
+                verify(exactly = 0) { os.generator.generateKey() }
+                verify(exactly = 0) { os.store.getKey(any(), any()) }
+            } }
+        }
+    }
+
+    @Test
+    fun nativeBootstrapReusesValidKeyButNeverRepairsMissingKeyForExistingLedger() = withNativeKey { os ->
+        AgentBridgeExportPlanningFixture().use { f -> withNativeData(os, f.parent) {
+            val store = AgentBridgeExportAuthorityStore.initializeNative(os.context, f.native)
+            val ledger = f.parent.resolve("no_backup").resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+                .resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val before = Files.readAllBytes(ledger)
+            store.access { tx -> assertThat(requireNotNull(tx).state.grants).isEmpty() }
+            os.selected = null
+            f.expect(AgentBridgeErrorCode.REVISION_CONFLICT) { AgentBridgeExportAuthorityStore.initializeNative(os.context, f.native) }
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { store.access { } }
+            assertThat(Files.readAllBytes(ledger)).isEqualTo(before)
+            verify(exactly = 0) { os.generator.generateKey() }
+        } }
+    }
+
+    @Test
+    fun keyGenerationFailureInvalidAliasReadbackAndChangedReservationCannotPublishLedger() {
+        for (mode in listOf("invalid-alias", "sdk-denied", "changed-readback", "locked-after-generation", "moved-root")) withNativeKey { os ->
+            AgentBridgeExportPlanningFixture().use { f -> withNativeData(os, f.parent) {
+                val root = f.parent.resolve("no_backup").resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+                os.selected = if (mode == "invalid-alias") SecretKeySpec(ByteArray(16), "AES") else null
+                if (mode == "sdk-denied") every { os.generator.generateKey() } throws KeyStoreException("synthetic-generation-denied")
+                if (mode == "changed-readback") os.afterGeneration = { os.selected = SecretKeySpec(ByteArray(32) { 0x49 }, "HmacSHA256") }
+                if (mode == "locked-after-generation") os.afterGeneration = { os.firstUnlocked = false }
+                if (mode == "moved-root") os.beforeGeneration = {
+                    Files.move(root, f.parent.resolve("retained"))
+                    Files.createDirectory(root, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))
+                }
+                f.expect(if (mode == "moved-root") AgentBridgeErrorCode.BINDING_CHANGED else AgentBridgeErrorCode.PERMISSION_REQUIRED) {
+                    AgentBridgeExportAuthorityStore.initializeNative(os.context, f.native)
+                }
+                assertThat(Files.exists(root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isFalse()
+                f.expect(AgentBridgeErrorCode.REVISION_CONFLICT) { AgentBridgeExportAuthorityStore.initializeNative(os.context, f.native) }
+                verify(exactly = if (mode == "invalid-alias") 0 else 1) { os.generator.generateKey() }
+            } }
+        }
+    }
+
     @Test
     fun existingDedicatedNativeSigningKeyIsRetainedForRealMac() = withNativeKey { os ->
         val loaded = AgentBridgeExportProtectedKey(os.context).loadExisting()
@@ -366,8 +452,9 @@ class AgentBridgeExportProtectedKeyTest {
     private fun withNativeKey(block: (NativeKeyBoundary) -> Unit) {
         mockkStatic(KeyStore::class)
         mockkStatic(SecretKeyFactory::class)
+        mockkStatic(KeyGenerator::class)
         try { block(NativeKeyBoundary()) }
-        finally { unmockkStatic(SecretKeyFactory::class); unmockkStatic(KeyStore::class) }
+        finally { unmockkStatic(KeyGenerator::class); unmockkStatic(SecretKeyFactory::class); unmockkStatic(KeyStore::class) }
     }
 
     private class NativeKeyBoundary {
@@ -376,6 +463,10 @@ class AgentBridgeExportProtectedKeyTest {
         val store = mockk<KeyStore>()
         val factory = mockk<SecretKeyFactory>()
         val info = mockk<KeyInfo>()
+        val generator = mockk<KeyGenerator>()
+        var generatedSpec: KeyGenParameterSpec? = null
+        var beforeGeneration: () -> Unit = {}
+        var afterGeneration: () -> Unit = {}
         val key = SecretKeySpec(ByteArray(32) { 0x37 }, "HmacSHA256")
         var selected: Key? = key
         var firstUnlocked = true
@@ -386,6 +477,18 @@ class AgentBridgeExportProtectedKeyTest {
             every { users.isUserUnlocked } answers { firstUnlocked }
             every { KeyStore.getInstance("AndroidKeyStore") } returns store
             every { store.provider } returns provider
+            every { store.containsAlias("healthmd-agent-bridge-native-export-authority-v1") } answers { selected != null }
+            every { KeyGenerator.getInstance("HmacSHA256", "AndroidKeyStore") } returns generator
+            every { generator.provider } returns provider
+            every { generator.init(any<AlgorithmParameterSpec>()) } answers {
+                generatedSpec = firstArg<AlgorithmParameterSpec>() as KeyGenParameterSpec
+            }
+            every { generator.generateKey() } answers {
+                beforeGeneration()
+                selected = key
+                afterGeneration()
+                key
+            }
             every { store.load(null as KeyStore.LoadStoreParameter?) } just Runs
             every { store.getKey("healthmd-agent-bridge-native-export-authority-v1", null) } answers { selected }
             every { SecretKeyFactory.getInstance("HmacSHA256", "AndroidKeyStore") } returns factory

@@ -73,15 +73,24 @@ internal class AgentBridgeExportAuthorityStore private constructor(
     private var observedRootIdentity: Any? = null // Same-instance fence only; no anti-rollback/fresh-open claim.
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = false; isLenient = false; coerceInputValues = false }
 
-    fun initialize(native: AgentBridgeExportNativeAuthorization) = safe {
+    fun initialize(native: AgentBridgeExportNativeAuthorization) = initializeNew(native, true) { key() }
+
+    private fun initializeNew(native: AgentBridgeExportNativeAuthorization, keyBeforeReservation: Boolean,
+        beforeReservation: () -> Unit = {}, prepareKey: () -> SecretKey) = safe {
         native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
         serialized {
             checkParent()
             demand(!Files.exists(root, NOFOLLOW_LINKS), AgentBridgeErrorCode.REVISION_CONFLICT)
-            val key = key()
+            beforeReservation()
+            val existingKey = if (keyBeforeReservation) prepareKey() else null
             Files.createDirectory(root, PosixFilePermissions.asFileAttribute(directoryPermissions))
             val identity = attributes(root, directory = true).fileKey()
             observedRootIdentity = identity
+            val key = existingKey ?: prepareKey()
+            // Credential SDK work may delay. Recheck original native parent and reserved inode
+            // before publishing files; no missing-key repair of an existing ledger is possible.
+            checkParent()
+            demand(attributes(root, directory = true).fileKey() == identity)
             writeNew(root.resolve(LOCK_NAME), ByteArray(0))
             writeNew(root.resolve(LEDGER_NAME), fileBytes(AgentBridgeExportLedger(1, 1, emptyList(), emptyList(), emptyList()), key))
             forceDirectory()
@@ -363,6 +372,16 @@ internal class AgentBridgeExportAuthorityStore private constructor(
                 mode(path), uid to gid, AgentBridgeExportNativeDirectoryAnchor(data, requireNotNull(dataAttrs.fileKey()),
                     dataAttrs.permissions(), mode(data)), keys)
         }
+        /** Human/native setup only, not remote dispatch or an existing-store repair path.
+         * The fixed no-backup directory is reserved exclusively before any Keystore generation.
+         * A lost/invalid key with an existing issuer directory rejects without credential writes. */
+        fun initializeNative(context: Context, native: AgentBridgeExportNativeAuthorization): AgentBridgeExportAuthorityStore {
+            val provisioner = AgentBridgeExportProtectedKeyProvisioner(context)
+            val store = forNoBackup(context, provisioner.reader)
+            store.initializeNew(native, false, provisioner::requireAvailable) { provisioner.loadOrCreateForNewPrivateStore() }
+            return store
+        }
+
         private fun nativeDirectory(path: Path, uid: Int, gid: Int): PosixFileAttributes {
             demand(path.toRealPath() == path)
             val attrs = Files.readAttributes(path, PosixFileAttributes::class.java, NOFOLLOW_LINKS)
