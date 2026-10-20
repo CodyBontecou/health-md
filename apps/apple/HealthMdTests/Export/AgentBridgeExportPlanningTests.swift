@@ -185,14 +185,17 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
     }
 
-    func testObservedNativeChangeInvalidatesIssuedPlanEvenWhenDeferredFactsReturnToOriginalValue() throws {
+    func testNativeLifecycleRejectsPendingChangesBeforeSignedPublicationAndInvalidatesOldPlans() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
         Self.retainedNativeConfigurationObjects.append(profiles)
         let facts = try nativeState()
-        let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: { facts })
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        try lifecycle.observe(facts)
+        XCTAssertThrowsError(try lifecycle.currentFacts())
+        let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: { try lifecycle.currentFacts() })
         let service = AgentBridgeExportPlanningService(store: rig.store, configuration: reader, clock: rig.clock, newPlanID: { try id(6) })
-        let first = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
         let discoveryBytes = try service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload:
             .discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer)))), authenticatedPeer: rig.peer)
         guard case .discovery(let discovery) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: discoveryBytes).payload else {
@@ -207,8 +210,14 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let before = try rig.store.snapshot()
         // An observed transition may coalesce before deferred SDK sampling. It must not
         // become an unchanged-publication retry or silently renew this issued plan.
-        let changed = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID,
-            invalidatingObservedChange: true) { facts }
+        let pendingBytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        try lifecycle.observeNativeChange()
+        try lifecycle.observe(facts) // Deferred sample has returned to the original value.
+        XCTAssertThrowsError(try service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), pendingBytes)
+        let changed = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
         XCTAssertEqual(changed.factsSHA256, first.factsSHA256)
         XCTAssertEqual(changed.revision, first.revision + 1)
         let after = try rig.store.snapshot()
@@ -220,9 +229,54 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
         }
         let file = rig.directory.appendingPathComponent("state.json"), committed = try Data(contentsOf: file)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        XCTAssertEqual(try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), changed)
         let restarted = try AgentBridgeExportAuthorityStore(existingDirectory: rig.directory, protectedKeys: rig.keys, publication: rig.publication)
         XCTAssertEqual(try restarted.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }, changed)
         XCTAssertEqual(try Data(contentsOf: file), committed)
+    }
+
+    func testNativeLifecycleDoesNotClearObservationRacingSignedPublication() throws {
+        for afterSync in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()
+            try lifecycle.observe(facts)
+            let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            try lifecycle.observeNativeChange()
+            var observed = false
+            let callback: (AgentBridgeExportAuthoritySnapshot) -> Void = { _ in
+                observed = true
+                do { try lifecycle.observeNativeChange() }
+                catch { XCTFail("Native observation unexpectedly rejected") }
+            }
+            if afterSync { rig.publication.onPublished = callback } else { rig.publication.onPrepared = callback }
+            XCTAssertThrowsError(try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            XCTAssertTrue(observed)
+            XCTAssertThrowsError(try lifecycle.currentFacts())
+            rig.publication.onPrepared = nil; rig.publication.onPublished = nil
+            let next = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            XCTAssertGreaterThan(next.revision, first.revision)
+            XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        }
+    }
+
+    func testNativeLifecycleOwnerRestartInvalidatesOldCatalogAndStopCannotRevive() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let facts = try nativeState(), firstOwner = AgentBridgeNativeCatalogLifecycle()
+        try firstOwner.observe(facts)
+        let first = try firstOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        firstOwner.stop()
+        XCTAssertThrowsError(try firstOwner.currentFacts()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
+        XCTAssertThrowsError(try firstOwner.observe(facts))
+        XCTAssertThrowsError(try firstOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID))
+        let nextOwner = AgentBridgeNativeCatalogLifecycle()
+        try nextOwner.observe(facts)
+        let next = try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        XCTAssertEqual(next.revision, first.revision + 1)
+        XCTAssertEqual(next.factsSHA256, first.factsSHA256)
+        XCTAssertEqual(try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), next)
     }
 
     func testNativeCatalogResamplesAtStagedAndPostFsyncPublicationBoundaries() throws {

@@ -230,16 +230,26 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
-    @Test fun `observed native change invalidates issued plan even when deferred facts return to original value`() {
+    @Test fun `native lifecycle rejects pending changes before publication and invalidates old plans`() {
         AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()
-            val service = AgentBridgeExportPlanningService(f.store, reader(), f.clock)
-            val first = f.store.publishNativeCatalog(f.peer.sourceInstallationId) { state }
+            val lifecycle = AgentBridgeNativeCatalogLifecycle()
+            lifecycle.observe(state)
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentFacts() }
+            val liveReader = AgentBridgeNativeConfigurationReader(observed, settings, profiles, lifecycle::currentFacts, { AgentBridgeExportTestRegistry.load() })
+            val service = AgentBridgeExportPlanningService(f.store, liveReader, f.clock)
+            val first = lifecycle.publish(f.store, f.peer.sourceInstallationId)
             val discovery = service.discover(f.peerContext, f.discoveryRequest())
             val plan = service.plan(f.peerContext, f.request(discovery))
             service.reviewNativePlan(f.peerContext, plan.planId)
             val before = f.store.access { requireNotNull(it).state }
-            val changed = f.store.publishNativeCatalog(f.peer.sourceInstallationId, invalidatingObservedChange = true) { state }
+            val pendingFile = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val pendingBytes = Files.readAllBytes(pendingFile)
+            lifecycle.observeNativeChange()
+            lifecycle.observe(state)
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { service.reviewNativePlan(f.peerContext, plan.planId) }
+            assertThat(Files.readAllBytes(pendingFile)).isEqualTo(pendingBytes)
+            val changed = lifecycle.publish(f.store, f.peer.sourceInstallationId)
             assertThat(changed.factsSha256).isEqualTo(first.factsSha256)
             assertThat(changed.revision).isEqualTo(first.revision + 1)
             val after = f.store.access { requireNotNull(it).state }
@@ -249,9 +259,56 @@ class AgentBridgeNativeConfigurationReaderTest {
             f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { service.reviewNativePlan(f.peerContext, plan.planId) }
             val file = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
             val committed = Files.readAllBytes(file)
+            assertThat(lifecycle.currentFacts()).isEqualTo(state)
+            assertThat(lifecycle.publish(f.store, f.peer.sourceInstallationId)).isEqualTo(changed)
             val restarted = AgentBridgeExportAuthorityStore.inPrivateDirectory(f.parent, f.keys)
             assertThat(restarted.publishNativeCatalog(f.peer.sourceInstallationId) { state }).isEqualTo(changed)
             assertThat(Files.readAllBytes(file)).isEqualTo(committed)
+        }
+    }
+
+    @Test fun `native lifecycle does not clear observation racing protected key delay`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = AgentBridgeNativeCatalogLifecycle()
+            lifecycle.observe(state)
+            val first = lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            lifecycle.observeNativeChange()
+            var observedChange = false
+            f.keys.onEncode = {
+                if (!observedChange) { observedChange = true; lifecycle.observeNativeChange() }
+            }
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.publish(f.store, f.peer.sourceInstallationId) }
+            assertThat(observedChange).isTrue()
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentFacts() }
+            f.keys.onEncode = null
+            val next = lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            assertThat(next.revision).isGreaterThan(first.revision)
+            assertThat(lifecycle.currentFacts()).isEqualTo(state)
+        }
+    }
+
+    @Test fun `native lifecycle detaches metadata and fresh owner invalidates while stopped owner cannot revive`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val metrics = state.availableNativeMetricIds.toMutableSet()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle()
+            lifecycle.observe(state.copy(availableNativeMetricIds = metrics))
+            metrics.clear()
+            val first = lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            assertThat(lifecycle.currentFacts()).isEqualTo(state)
+            (lifecycle.currentFacts().availableNativeMetricIds as MutableSet).clear()
+            assertThat(lifecycle.currentFacts()).isEqualTo(state)
+            lifecycle.stop()
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.currentFacts() }
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.observe(state) }
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.publish(f.store, f.peer.sourceInstallationId) }
+            val nextOwner = AgentBridgeNativeCatalogLifecycle()
+            nextOwner.observe(state)
+            val next = nextOwner.publish(f.store, f.peer.sourceInstallationId)
+            assertThat(next.revision).isEqualTo(first.revision + 1)
+            assertThat(next.factsSha256).isEqualTo(first.factsSha256)
+            assertThat(nextOwner.publish(f.store, f.peer.sourceInstallationId)).isEqualTo(next)
         }
     }
 
