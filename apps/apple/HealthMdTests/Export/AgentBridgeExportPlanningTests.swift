@@ -308,6 +308,46 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
 
     #if canImport(HealthMd)
+    func testNativeConfigurationProtectionChangesInvalidateCatalogBeforeReturning() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let center = NotificationCenter()
+        let manager = ConfigurationProtectionManager(userDefaults: rig.reader.defaults, nativePlanningNotifications: center)
+        Self.retainedNativeConfigurationObjects.append(manager)
+        let original = manager.isEnabled
+        let facts = try nativeState(), lifecycle = AgentBridgeNativeCatalogLifecycle()
+        try lifecycle.observe(facts)
+        let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let relay = AgentBridgeNativeCatalogEventRelay()
+        relay.replace(with: lifecycle)
+        var notifications: AgentBridgeNativeCatalogNotifications? = .init(
+            center: center, names: [.healthMdConfigurationProtectionDidChange], relay: relay)
+        try withExtendedLifetime(notifications) {
+            manager.setEnabled(original)
+            XCTAssertEqual(try lifecycle.currentFacts(), facts) // Identical assignments emit no event.
+            manager.setEnabled(!original)
+            XCTAssertEqual(manager.isEnabled, !original)
+            XCTAssertThrowsError(try lifecycle.currentFacts()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            manager.setEnabled(original)
+            XCTAssertEqual(manager.isEnabled, original)
+            XCTAssertThrowsError(try lifecycle.currentFacts()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+        }
+        let next = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        XCTAssertEqual(next.revision, first.revision + 1)
+        XCTAssertEqual(next.factsSHA256, first.factsSHA256)
+        notifications = nil
+        manager.setEnabled(!original)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        relay.replace(with: nil)
+        manager.setEnabled(original)
+        XCTAssertThrowsError(try lifecycle.currentFacts()) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+    }
+
     func testNativePurchaseQuotaTransitionsInvalidatePublishedCatalogBeforeReturning() throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let center = NotificationCenter(), keychain = FakeKeychainStore()
