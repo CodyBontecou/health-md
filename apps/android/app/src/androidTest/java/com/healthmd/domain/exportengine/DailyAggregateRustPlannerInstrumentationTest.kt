@@ -57,7 +57,8 @@ class DailyAggregateRustPlannerInstrumentationTest {
                 executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
                 AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
                 DailyAggregateExportIds("device-sleep-precision-$granular", "device-sleep-precision-session-$granular"))
-            val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+            val prepared = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request)
+            val plan = prepared.plan
             assertEquals(4, plan.items.size)
             val native = org.json.JSONObject(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString())
                 .getJSONObject("sleep")
@@ -65,6 +66,68 @@ class DailyAggregateRustPlannerInstrumentationTest {
             assertEquals(7201.728395064, native.getDouble("inBedTime"), 0.0)
             assertEquals(3600.864197532, native.getDouble("deepSleep"), 0.0)
             assertEquals(3600.864197532, native.getDouble("lightSleep"), 0.0)
+            verifyDurableSleepArtifacts(prepared, date)
+        }
+    }
+
+    /** Actual private Android storage and sync, without provider access or production trust state. */
+    private fun verifyDurableSleepArtifacts(prepared: DailyAggregateRustPlan, date: LocalDate) {
+        val app = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val root = java.nio.file.Files.createTempDirectory(app.cacheDir.toPath(), "synthetic-sleep-recovery-").toFile()
+        val context = object : android.content.ContextWrapper(app) {
+            override fun getNoBackupFilesDir(): java.io.File = root
+        }
+        val reopen = { com.healthmd.direct.DirectCliJobStore(com.healthmd.direct.DirectCliTrustStore(context)) }
+        try {
+            val store = reopen()
+            val id = java.util.UUID.randomUUID().toString()
+            val fingerprint = "a".repeat(64)
+            val acceptedAt = java.time.Instant.now()
+            val owner = store.beginPreparation(id, fingerprint, acceptedAt.plusSeconds(3600).toString(), prepared.pin)
+            val directory = store.directory(owner)
+            val files = prepared.plan.items.associate { item ->
+                item.artifactId to java.io.File(directory, "${item.artifactId}.synthetic").apply { writeBytes(item.content) }
+            }
+            val accepted = com.healthmd.direct.protocol.ExportAccepted(id, acceptedAt.toString(),
+                com.healthmd.direct.protocol.PeerBinding(java.util.UUID.randomUUID().toString(), java.util.UUID.randomUUID().toString()),
+                com.healthmd.direct.protocol.ProductId.GENERATED_FILES_V1,
+                com.healthmd.direct.protocol.ResolvedRange(date.toString(), date.toString(), prepared.pin.ianaTimeZone),
+                requestFingerprint = fingerprint)
+            val manifests = prepared.plan.items.map { item ->
+                com.healthmd.direct.protocol.ArtifactManifest(id, item.artifactId,
+                    com.healthmd.direct.protocol.ArtifactKind.GENERATED_FILE,
+                    com.healthmd.direct.protocol.ArtifactSchema("healthmd.generated-files", 1), item.mediaType,
+                    item.content.size.toLong(), item.sha256, relativePath = item.relativePath,
+                    writeMode = com.healthmd.direct.protocol.FileWriteMode.OVERWRITE)
+            }
+            val transfer = com.healthmd.direct.protocol.TransferPlanBuilder.build(accepted, manifests, files,
+                createdAt = acceptedAt.toString())
+            val journal = com.healthmd.direct.DirectJobJournal(requestFingerprint = fingerprint,
+                expiresAt = acceptedAt.plusSeconds(3600).toString(), transfer = transfer, enginePin = prepared.pin)
+            store.savePrepared(journal, owner)
+            assertEquals(journal, reopen().load(id, fingerprint))
+            val lease = reopen().acquireAcceptedLease(journal)
+            var sends = 0
+            reopen().packetSendAuthorization(lease).authorizeEnqueue { sends += 1 }
+            assertEquals(1, sends)
+            val journalFile = java.io.File(directory.parentFile, "job.json")
+            val originalJournal = journalFile.readBytes()
+            for (item in prepared.plan.items) {
+                val file = files.getValue(item.artifactId)
+                assertTrue(item.content.contentEquals(file.readBytes()))
+                val changed = item.content.copyOf()
+                changed[changed.lastIndex] = (changed.last().toInt() xor 1).toByte()
+                file.writeBytes(changed)
+                org.junit.Assert.assertThrows(IllegalStateException::class.java) { reopen().load(id, fingerprint) }
+                org.junit.Assert.assertThrows(IllegalStateException::class.java) { reopen().acquireAcceptedLease(journal) }
+                reopen().sweepExpired(acceptedAt.plusSeconds(7200))
+                assertTrue(changed.contentEquals(file.readBytes()))
+                assertTrue(originalJournal.contentEquals(journalFile.readBytes()))
+                file.writeBytes(item.content)
+            }
+            assertEquals(journal, reopen().load(id, fingerprint))
+        } finally {
+            assertTrue(root.deleteRecursively())
         }
     }
 

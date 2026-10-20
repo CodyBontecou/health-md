@@ -5,13 +5,13 @@ import com.google.common.truth.Truth.assertThat
 import com.healthmd.direct.protocol.ArtifactKind
 import com.healthmd.direct.protocol.ArtifactManifest
 import com.healthmd.direct.protocol.ArtifactSchema
-import com.healthmd.direct.protocol.DirectJson
 import com.healthmd.direct.protocol.ExportAccepted
 import com.healthmd.direct.protocol.FileWriteMode
 import com.healthmd.direct.protocol.PeerBinding
 import com.healthmd.direct.protocol.ProductId
 import com.healthmd.direct.protocol.ResolvedRange
 import com.healthmd.direct.protocol.TransferPlanBuilder
+import com.healthmd.direct.protocol.MINIMUM_PARTITION_BYTES
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
@@ -20,12 +20,76 @@ import io.mockk.mockk
 import java.io.File
 import java.nio.file.Files
 import java.time.Instant
+import java.security.MessageDigest
 import java.util.UUID
 import kotlinx.serialization.encodeToString
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class DirectSleepJobNamespaceTest {
+
+    @Test
+    fun successorRecoveryRejectsSameLengthArtifactCorruption() = rejectsChangedTransfer("artifact")
+
+    @Test
+    fun successorRecoveryRejectsChangedManifestDigest() = rejectsChangedTransfer("manifest")
+
+    @Test
+    fun successorRecoveryRejectsChangedPartitionDigest() = rejectsChangedTransfer("partition")
+
+    @Test
+    fun successorRecoveryStreamsMultiplePartitionsAndAcceptsEmptyArtifacts() = withStores { store, root, reopen ->
+        for (byteCount in listOf(0L, MINIMUM_PARTITION_BYTES + 17)) {
+            val successor = prepare(store, successorPin(), artifactByteCount = byteCount)
+            assertThat(successor.transfer.partitions.size).isEqualTo(if (byteCount == 0L) 0 else 2)
+            val relaunched = reopen()
+            assertThat(relaunched.load(successor.transfer.accepted.jobId, successor.requestFingerprint)).isEqualTo(successor)
+            val lease = relaunched.acquireAcceptedLease(successor)
+            var callbacks = 0
+            relaunched.packetSendAuthorization(lease).authorizeEnqueue { callbacks += 1 }
+            assertThat(callbacks).isEqualTo(1)
+            if (byteCount > 0) {
+                // Change the last byte, in the second partition, without changing length.
+                java.io.RandomAccessFile(File(successor.transfer.artifactPaths.values.single()), "rw").use {
+                    it.seek(byteCount - 1)
+                    it.write(1)
+                }
+                assertThrows(IllegalStateException::class.java) {
+                    reopen().load(successor.transfer.accepted.jobId, successor.requestFingerprint)
+                }
+                assertThat(directory(root, successor).isDirectory).isTrue()
+            }
+        }
+    }
+
+    private fun rejectsChangedTransfer(damage: String) = withStores { store, root, reopen ->
+        val successor = prepare(store, successorPin())
+        val directory = directory(root, successor)
+        val changed = when (damage) {
+            "artifact" -> successor.also {
+                val artifact = File(it.transfer.artifactPaths.values.single())
+                val bytes = artifact.readBytes()
+                bytes[bytes.lastIndex] = (bytes.last().toInt() xor 1).toByte()
+                artifact.writeBytes(bytes)
+            }
+            "manifest" -> successor.copy(transfer = successor.transfer.copy(
+                manifests = successor.transfer.manifests.map { it.copy(sha256 = "0".repeat(64)) },
+            ))
+            "partition" -> successor.copy(transfer = successor.transfer.copy(
+                partitions = successor.transfer.partitions.map { it.copy(sha256 = "0".repeat(64)) },
+            ))
+            else -> error("Unknown synthetic damage")
+        }
+        File(directory, "job.json").writeText(kotlinx.serialization.json.Json.encodeToString(changed))
+        val before = snapshot(directory)
+        val relaunched = reopen()
+        assertThrows(IllegalStateException::class.java) {
+            relaunched.load(changed.transfer.accepted.jobId, changed.requestFingerprint)
+        }
+        assertThrows(IllegalStateException::class.java) { relaunched.acquireAcceptedLease(changed) }
+        relaunched.sweepExpired(Instant.now().plusSeconds(7_200))
+        assertThat(snapshot(directory)).isEqualTo(before)
+    }
 
     @Test
     fun successorSurvivesWholeHistoricalTreeDeletionAndStoreRelaunch() = withStores { store, root, reopen ->
@@ -221,19 +285,40 @@ class DirectSleepJobNamespaceTest {
     ))
 
     private fun prepare(store: DirectCliJobStore, pin: ExportEnginePin?,
-        expiresAt: Instant = Instant.now().plusSeconds(3_600), jobId: String = UUID.randomUUID().toString()): DirectJobJournal {
+        expiresAt: Instant = Instant.now().plusSeconds(3_600), jobId: String = UUID.randomUUID().toString(),
+        artifactByteCount: Long? = null): DirectJobJournal {
         val fingerprint = "a".repeat(64)
         val lease = store.beginPreparation(jobId, fingerprint, expiresAt.toString(), pin)
-        val file = File(store.directory(lease), "synthetic.json").apply { writeText("{\"synthetic\":\"storage authority\"}") }
+        val file = File(store.directory(lease), "synthetic.json").apply {
+            if (artifactByteCount == null) writeText("{\"synthetic\":\"storage authority\"}")
+            else outputStream().use { output ->
+                val buffer = ByteArray(128 * 1024)
+                var remaining = artifactByteCount
+                while (remaining > 0) {
+                    val count = minOf(buffer.size.toLong(), remaining).toInt()
+                    output.write(buffer, 0, count)
+                    remaining -= count
+                }
+            }
+        }
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(128 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
         val accepted = ExportAccepted(jobId = jobId, acceptedAt = Instant.now().toString(),
             peerBinding = PeerBinding(UUID.randomUUID().toString(), UUID.randomUUID().toString()),
             productId = ProductId.GENERATED_FILES_V1,
             resolvedRange = ResolvedRange("2026-10-18", "2026-10-18", "America/Los_Angeles"), requestFingerprint = fingerprint)
         val manifest = ArtifactManifest(jobId = jobId, artifactId = "synthetic-file", kind = ArtifactKind.GENERATED_FILE,
             schema = ArtifactSchema("healthmd.generated-files", 1), mediaType = "application/json",
-            byteCount = file.length(), sha256 = DirectJson.sha256Hex(file.readBytes()), relativePath = "2026-10-18.json", writeMode = FileWriteMode.OVERWRITE)
+            byteCount = file.length(), sha256 = digest.digest().joinToString("") { "%02x".format(it) }, relativePath = "2026-10-18.json", writeMode = FileWriteMode.OVERWRITE)
         val transfer = TransferPlanBuilder.build(accepted, listOf(manifest), mapOf(manifest.artifactId to file),
-            createdAt = accepted.acceptedAt)
+            partitionTargetBytes = MINIMUM_PARTITION_BYTES, createdAt = accepted.acceptedAt)
         val journal = DirectJobJournal(requestFingerprint = fingerprint, expiresAt = expiresAt.toString(), transfer = transfer, enginePin = pin)
         store.savePrepared(journal, lease)
         return journal

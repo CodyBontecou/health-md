@@ -78,6 +78,8 @@ A visible data-sync notification ("Waiting for Health.md CLI" → transfer progr
 
 ## Implementation notes
 
+The gated Android-v6 successor store verifies retained artifact and partition SHA-256 digests before recovery or accepted-lease admission and before terminal accounting/completion. It streams each artifact through a fixed 128 KiB buffer, including zero-length artifacts, and rejects same-length corruption or contradictory stored digests. Invalid expired successor spools remain intact for inspection; unexpired spools are not fully read during unrelated expiry scans. Lightweight per-frame ownership checks remain unchanged. This does not qualify complete production successor admission, OS-kill/power-loss recovery or mutation after a lease was admitted; the receiver still validates transferred bytes. Historical stores, public export profiles and protocol/journal grammar are unchanged.
+
 The portable CLI's RFC-0005 P1 wake window keeps an unavailable export/resume/cancel request open
 for 120 seconds while the user opens this screen and restarts the direct session. It is host-only,
 uses no new protocol bytes, and can be disabled with `--wake-timeout 0`. The deployed P2 APNs

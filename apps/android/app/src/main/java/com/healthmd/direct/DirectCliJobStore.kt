@@ -7,6 +7,7 @@ import com.healthmd.direct.protocol.ProductId
 import com.healthmd.direct.protocol.MINIMUM_PARTITION_BYTES
 import com.healthmd.direct.protocol.MAXIMUM_PARTITION_BYTES
 import com.healthmd.direct.protocol.MAXIMUM_CHUNK_BYTES
+import com.healthmd.direct.protocol.TransferPartition
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
@@ -20,6 +21,7 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.FileVisitResult
 import java.nio.file.attribute.BasicFileAttributes
 import java.io.IOException
+import java.security.MessageDigest
 import java.time.LocalDate
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
@@ -311,7 +313,7 @@ internal class DirectCliNamespaceJobStore(
             if (directory.name in protectedJobIds) return@forEach
             // Unknown, misplaced, incomplete and duplicate authority is never age-deleted.
             val expiresAt = runCatching {
-                validatePlacement(directory.name)
+                validatePlacement(directory.name, verifyArtifactContents = false)
                 val journalFile = File(directory, JOURNAL_NAME)
                 if (journalFile.isFile) {
                     val journal = json.decodeFromString<DirectJobJournal>(journalFile.readText())
@@ -321,6 +323,9 @@ internal class DirectCliNamespaceJobStore(
                 }
             }.getOrNull() ?: return@forEach
             if (!expiresAt.isAfter(now)) {
+                // Avoid streaming every unexpired spool during unrelated lookups.
+                // Corrupt expired authority must still be retained for inspection.
+                try { validatePlacement(directory.name) } catch (_: Exception) { return@forEach }
                 syncAuthorityDirectories(directory)
                 check(deleteOwnedDirectory(directory)) { "Unable to remove expired Direct CLI storage." }
             }
@@ -332,7 +337,7 @@ internal class DirectCliNamespaceJobStore(
     internal fun storageExists(): Boolean = Files.exists(root.toPath(), LinkOption.NOFOLLOW_LINKS)
     internal fun jobIds(): List<String> = root.listFiles()?.filter { it.isDirectory }?.map { it.name }.orEmpty()
 
-    internal fun validatePlacement(jobId: String) {
+    internal fun validatePlacement(jobId: String, verifyArtifactContents: Boolean = true) {
         val directory = jobDirectory(jobId)
         check(directory.isDirectory && !Files.isSymbolicLink(directory.toPath()) &&
             !Files.isSymbolicLink(root.toPath()) && directory.canonicalFile.parentFile == root.canonicalFile) {
@@ -349,7 +354,7 @@ internal class DirectCliNamespaceJobStore(
                 check(journal.version == DirectJobJournal.CURRENT_VERSION && !pendingFile.exists()) {
                     "The successor Direct CLI journal is incomplete."
                 }
-                validateSuccessorJournal(directory, journal)
+                validateSuccessorJournal(directory, journal, verifyArtifactContents)
             }
             journal.enginePin
         } else {
@@ -371,7 +376,7 @@ internal class DirectCliNamespaceJobStore(
         }
     }
 
-    private fun validateSuccessorJournal(directory: File, journal: DirectJobJournal) {
+    private fun validateSuccessorJournal(directory: File, journal: DirectJobJournal, verifyArtifactContents: Boolean = true) {
         val transfer = journal.transfer
         val accepted = transfer.accepted
         val session = transfer.session
@@ -405,8 +410,9 @@ internal class DirectCliNamespaceJobStore(
         transfer.artifactPaths.forEach { (id, path) ->
             val file = File(path)
             val manifest = transfer.manifests.single { it.artifactId == id }
+            val partitions = transfer.partitions.filter { it.artifactId == id }
             var offset = 0L
-            transfer.partitions.filter { it.artifactId == id }.forEach { partition ->
+            partitions.forEach { partition ->
                 check(partition.artifactOffset == offset && partition.byteCount <= manifest.byteCount - offset) {
                     "The successor Direct CLI partition coverage is incomplete."
                 }
@@ -419,8 +425,37 @@ internal class DirectCliNamespaceJobStore(
                 file.canonicalFile.toPath().startsWith(directory.canonicalFile.toPath())) {
                 "The successor Direct CLI artifact is unavailable."
             }
+            if (verifyArtifactContents) validateArtifactDigests(file, manifest.sha256, partitions)
         }
     }
+
+    /** Verify retained bytes once at recovery/admission, with memory independent of artifact size. */
+    private fun validateArtifactDigests(file: File, expectedSha256: String, partitions: List<TransferPartition>) {
+        val artifactDigest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(128 * 1024)
+        file.inputStream().buffered().use { input ->
+            partitions.forEach { partition ->
+                val partitionDigest = MessageDigest.getInstance("SHA-256")
+                var remaining = partition.byteCount
+                while (remaining > 0) {
+                    val count = input.read(buffer, 0, minOf(buffer.size.toLong(), remaining).toInt())
+                    check(count > 0) { "The successor Direct CLI artifact is incomplete." }
+                    artifactDigest.update(buffer, 0, count)
+                    partitionDigest.update(buffer, 0, count)
+                    remaining -= count
+                }
+                check(partitionDigest.digest().toSha256Hex() == partition.sha256) {
+                    "The successor Direct CLI partition checksum changed."
+                }
+            }
+            check(input.read() == -1) { "The successor Direct CLI artifact length changed." }
+        }
+        check(artifactDigest.digest().toSha256Hex() == expectedSha256) {
+            "The successor Direct CLI artifact checksum changed."
+        }
+    }
+
+    private fun ByteArray.toSha256Hex(): String = joinToString("") { "%02x".format(it) }
 
     fun directory(lease: DirectPreparationLease): File = withStoreLock {
         val directory = requirePendingPreparation(lease)
