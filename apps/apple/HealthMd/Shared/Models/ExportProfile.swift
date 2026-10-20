@@ -385,8 +385,11 @@ final class ExportProfileStore: ObservableObject {
     @discardableResult
     func activate(id: UUID) -> Bool {
         guard prepareForListMutation(), profiles.contains(where: { $0.id == id }) else { return false }
+        // Activation selects an existing immutable output snapshot; rewriting the whole list
+        // needlessly re-encodes set order and must not become a settings edit on startup.
+        guard activeProfileID != id else { return true }
         activeProfileID = id
-        persist()
+        userDefaults.set(id.uuidString, forKey: Key.activeProfileID)
         return true
     }
 

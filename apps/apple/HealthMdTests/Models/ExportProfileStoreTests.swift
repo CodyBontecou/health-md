@@ -52,6 +52,21 @@ final class ExportProfileStoreTests: XCTestCase {
         return ExportSettingsSnapshot.from(settings)
     }
 
+    func testActivationPreservesPersistedOutputBytesAndConfigurationRevisions() throws {
+        let store = makeStore()
+        let first = try XCTUnwrap(store.add(name: "First", settings: makeSnapshot(filenameFormat: "first-{date}"), target: .localIPhoneFolder))
+        let second = try XCTUnwrap(store.add(name: "Second", settings: makeSnapshot(filenameFormat: "second-{date}"), target: .connectedMac))
+        let before = try XCTUnwrap(defaults.data(forKey: "exportProfiles.list"))
+        for id in [second.id, first.id, first.id] {
+            XCTAssertTrue(store.activate(id: id))
+            XCTAssertEqual(store.activeProfileID, id)
+            XCTAssertEqual(defaults.string(forKey: "exportProfiles.activeProfileID"), id.uuidString)
+            XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+            XCTAssertEqual(store.profile(id: first.id)?.configurationRevision, 1)
+            XCTAssertEqual(store.profile(id: second.id)?.configurationRevision, 1)
+        }
+    }
+
     func testConfigurationReadUsesExactPersistedProfileWithoutActiveOrCachedFallback() throws {
         let store = makeStore(), original = makeSnapshot(filenameFormat: "selected-{date}")
         let selected = try XCTUnwrap(store.add(name: "Selected", settings: original, target: .localIPhoneFolder))
