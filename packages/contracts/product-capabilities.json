@@ -39,6 +39,27 @@
   ],
   "capabilities": [
     {
+      "id": "support.local-reporting-fallback",
+      "name": "Local reporting fallback",
+      "classification": "planned",
+      "summary": "Explain unsuccessful feedback handoffs and offer editable, copyable report text without requiring another external app.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Next Android support-settings update: replace the no-handler toast-only path with editable, copyable recipient/template/diagnostics text and injected ActivityNotFoundException regression coverage."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/feedback-reporting.md",
+        "apps/apple/HealthMd/Shared/Utilities/FeedbackReporter.swift",
+        "apps/android/app/src/main/java/com/healthmd/presentation/common/FeedbackHelper.kt"
+      ]
+    },
+    {
       "id": "export.daily-files",
       "name": "Daily local export files",
       "classification": "shared",

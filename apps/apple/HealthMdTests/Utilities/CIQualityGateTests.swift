@@ -207,7 +207,7 @@ final class CIQualityGateTests: XCTestCase {
             "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
         )
         XCTAssertTrue(
-            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: macos-26\n    timeout-minutes: 60"),
+            content.contains("ios-ui-shards:\n    name: iOS UI shard ${{ matrix.shard }}\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [0, 1, 2]\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: macos-26\n    timeout-minutes: 60"),
             "The split UI job must allow at least 60 minutes for clean builds"
         )
         XCTAssertEqual(
@@ -220,31 +220,58 @@ final class CIQualityGateTests: XCTestCase {
             4,
             "The three Xcode test jobs and actual Watch build must consume one prepared artifact"
         )
+        let runner = try source("scripts/ios_ui_shards.py")
         XCTAssertTrue(
-            content.contains("-test-timeouts-enabled YES"),
-            "UI tests must fail diagnostically instead of hanging indefinitely"
+            runner.contains("\"-test-timeouts-enabled\", \"YES\"") &&
+                runner.contains("\"-default-test-execution-time-allowance\", \"180\"") &&
+                runner.contains("\"-maximum-test-execution-time-allowance\", \"300\""),
+            "Every UI lane must retain the original diagnostic test timeouts"
         )
         let smokeStep = try XCTUnwrap(
             content.components(separatedBy: "- name: Run UI smoke tests (iOS)").last?
                 .components(separatedBy: "- name: Check warnings (iOS UI)").first
         )
-        XCTAssertFalse(
-            smokeStep.contains("continue-on-error: true"),
-            "Selected PR UI smoke failures must remain blocking"
-        )
-        let smokeInvocations = smokeStep.components(separatedBy: "xcodebuild test").dropFirst()
-        XCTAssertEqual(smokeInvocations.count, 2, "PR smoke must use two deterministic test invocations")
-        for invocation in smokeInvocations {
-            let selectionCount = invocation.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-            XCTAssertGreaterThan(selectionCount, 0, "Each PR smoke invocation must select tests explicitly")
-            XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
+        XCTAssertFalse(smokeStep.contains("continue-on-error: true"), "Selected UI smoke failures must remain blocking")
+        XCTAssertTrue(smokeStep.contains("python3 scripts/ios_ui_shards.py run"))
+        XCTAssertTrue(smokeStep.contains("--shard '${{ matrix.shard }}'"))
+        XCTAssertTrue(runner.contains("\"xcodebuild\", \"test-without-building\""))
+        XCTAssertTrue(runner.contains("selection(index)"), "The real test command must use the lane selection")
+        let inventory = try XCTUnwrap(runner.components(separatedBy: "SHARDS = (").last?
+            .components(separatedBy: "\n)\n").first)
+        let lanes = inventory.components(separatedBy: "\n    (").dropFirst()
+        XCTAssertEqual(lanes.count, 3, "PR smoke must use three deterministic UI lanes")
+        let selectorPattern = try NSRegularExpression(pattern: #""([A-Za-z]+Tests/test[^"\n]+)""#)
+        let selections = lanes.flatMap { lane -> [String] in
+            let matches = selectorPattern.matches(in: lane, range: NSRange(lane.startIndex..., in: lane))
+            let names = matches.compactMap { match -> String? in
+                guard let range = Range(match.range(at: 1), in: lane) else { return nil }
+                return String(lane[range])
+            }
+            XCTAssertGreaterThan(names.count, 0, "Each UI lane must select tests explicitly")
+            XCTAssertLessThanOrEqual(names.count, 10, "Each UI lane must remain bounded")
+            return names
         }
-        let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-        XCTAssertEqual(smokeSelectionCount, 14, "PR smoke must preserve all selected UI regressions")
-        XCTAssertTrue(
-            smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
-            "PR smoke must cover deterministic returning-user release notes"
-        )
+        let expectedSelections: Set<String> = [
+            "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
+            "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
+            "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
+            "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
+            "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
+            "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab",
+            "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
+            "HealthMdUILaunchTests/testAppLaunches",
+            "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
+            "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
+            "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
+            "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+            "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
+            "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
+        ]
+        XCTAssertEqual(selections.count, 14, "PR smoke must preserve every selected UI regression exactly once")
+        XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the exact historical UI inventory")
+        XCTAssertTrue(content.contains("needs: [changes, ios-ui-shards]"))
+        XCTAssertTrue(content.contains("test \"$SHARDS_RESULT\" = success"))
+        XCTAssertTrue(content.contains("python3 apps/apple/scripts/ios_ui_shards.py verify"))
         let makefile = try String(
             contentsOf: projectDir.appendingPathComponent("Makefile"),
             encoding: .utf8
@@ -306,7 +333,7 @@ final class CIQualityGateTests: XCTestCase {
     func testWorkflow_exactFourConsumersValidateOneSharedCoreArtifactAndRemainBlocking() throws {
         let content = try String(contentsOfFile: appleCIWorkflowPath, encoding: .utf8)
         let jobs = try workflowJobs(content)
-        let consumers: Set<String> = ["test-ios", "test-macos", "test-ios-ui", "build-watch"]
+        let consumers: Set<String> = ["test-ios", "test-macos", "ios-ui-shards", "build-watch"]
         let artifactName = "name: apple-shared-core\n"
         let topology = try sharedCoreArtifactTopology(jobs)
         XCTAssertEqual(topology.consumers, consumers.sorted(), "Consumer identities matter, not just a count")
@@ -314,7 +341,10 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertTrue(topology.isExpected, "Exactly one producer and four named consumers, without duplicates")
         XCTAssertEqual(content.components(separatedBy: artifactName).count - 1, 5)
         let producer = try XCTUnwrap(jobs["prepare-shared-core"])
-        XCTAssertEqual(producer.components(separatedBy: "run: make prepare-healthmd-core-rust").count - 1, 1)
+        XCTAssertEqual(producer.components(separatedBy: "scripts/build-apple-xcframework.sh").count - 1, 1)
+        XCTAssertTrue(producer.contains("--assemble"))
+        XCTAssertTrue(producer.contains("ci_apple_core_slices.py verify"))
+        XCTAssertTrue(producer.contains("needs: [changes, prepare-core-slices]"))
         XCTAssertTrue(producer.contains("include-hidden-files: true"))
         XCTAssertTrue(producer.contains("if-no-files-found: error"))
         XCTAssertTrue(producer.contains("Artifacts/.healthmd-core-source.sha256"))
@@ -322,16 +352,24 @@ final class CIQualityGateTests: XCTestCase {
         let invocations = [
             "test-ios": "make test-ios CORE_RUST_PREPARE=:",
             "test-macos": "make coverage CORE_RUST_PREPARE=:",
-            "test-ios-ui": "xcodebuild test",
+            "ios-ui-shards": "python3 scripts/ios_ui_shards.py run",
             "build-watch": "xcodebuild build -project HealthMd.xcodeproj -scheme HealthMdWatch",
         ]
         let resultVariables = [
             "test-ios": "IOS_RESULT", "test-macos": "MACOS_RESULT",
-            "test-ios-ui": "IOS_UI_RESULT", "build-watch": "WATCH_RESULT",
+            "ios-ui-shards": "IOS_UI_RESULT", "build-watch": "WATCH_RESULT",
         ]
-        let selectionOutputs = ["test-ios": "ios", "test-macos": "macos", "test-ios-ui": "ios_ui", "build-watch": "watch"]
+        let selectionOutputs = ["test-ios": "ios", "test-macos": "macos", "ios-ui-shards": "ios_ui", "build-watch": "watch"]
         let gate = try XCTUnwrap(jobs["gate"])
         XCTAssertTrue(gate.contains("if: ${{ always() }}"))
+        // The shard worker consumes the binary; the blocking aggregate qualifies
+        // every shard before contributing the UI result to the final gate.
+        let aggregate = try XCTUnwrap(jobs["test-ios-ui"])
+        XCTAssertTrue(aggregate.contains("needs: [changes, ios-ui-shards]"))
+        XCTAssertTrue(aggregate.contains("if: ${{ always() && needs.changes.outputs.ios_ui == 'true' }}"))
+        XCTAssertTrue(aggregate.contains("SHARDS_RESULT: ${{ needs.ios-ui-shards.result }}"))
+        XCTAssertTrue(aggregate.contains("test \"$SHARDS_RESULT\" = success"))
+        XCTAssertTrue(aggregate.contains("ios_ui_shards.py verify"))
         for id in consumers.sorted() {
             let job = try XCTUnwrap(jobs[id])
             XCTAssertTrue(job.contains("needs: [changes, prepare-shared-core]"), id)
@@ -347,9 +385,10 @@ final class CIQualityGateTests: XCTestCase {
             XCTAssertLessThan(validation.lowerBound, invocation.lowerBound, id)
             XCTAssertFalse(job.contains("run: make prepare-healthmd-core-rust"), id)
             XCTAssertFalse(job.contains("continue-on-error: true"), id)
-            XCTAssertTrue(gate.contains("      - \(id)\n"), id)
+            let resultID = id == "ios-ui-shards" ? "test-ios-ui" : id
+            XCTAssertTrue(gate.contains("      - \(resultID)\n"), id)
             let variable = try XCTUnwrap(resultVariables[id])
-            XCTAssertTrue(gate.contains("\(variable): ${{ needs.\(id).result }}"), id)
+            XCTAssertTrue(gate.contains("\(variable): ${{ needs.\(resultID).result }}"), id)
             let selectedVariable = variable.replacingOccurrences(of: "_RESULT", with: "_SELECTED")
             XCTAssertTrue(gate.contains("\(selectedVariable): ${{ needs.changes.outputs.\(selectedOutput) }}"), id)
             XCTAssertTrue(gate.contains("require_job \"$\(selectedVariable)\" \"$\(variable)\""), id)
@@ -386,7 +425,7 @@ final class CIQualityGateTests: XCTestCase {
     func testSharedCoreArtifactTopology_diagnosticUploadsAreNotProducers() throws {
         let topology = try sharedCoreArtifactTopology(artifactFixtureJobs())
         XCTAssertEqual(topology.producers, ["prepare-shared-core"])
-        XCTAssertEqual(topology.consumers, ["build-watch", "test-ios", "test-ios-ui", "test-macos"])
+        XCTAssertEqual(topology.consumers, ["build-watch", "ios-ui-shards", "test-ios", "test-macos"])
         XCTAssertTrue(topology.isExpected)
     }
 
@@ -429,7 +468,7 @@ final class CIQualityGateTests: XCTestCase {
 
         var isExpected: Bool {
             producers == ["prepare-shared-core"] &&
-                consumers == ["build-watch", "test-ios", "test-ios-ui", "test-macos"]
+                consumers == ["build-watch", "ios-ui-shards", "test-ios", "test-macos"]
         }
     }
 
@@ -476,7 +515,7 @@ final class CIQualityGateTests: XCTestCase {
 
     private func artifactFixtureJobs() -> [String: String] {
         var jobs = ["prepare-shared-core": "    steps:\n" + artifactFixtureStep("upload", name: "apple-shared-core")]
-        for id in ["test-ios", "test-macos", "test-ios-ui", "build-watch"] {
+        for id in ["test-ios", "test-macos", "ios-ui-shards", "build-watch"] {
             // A named download step followed by a uses-first diagnostic upload.
             jobs[id] = "    steps:\n      - name: Restore shared core\n        uses: actions/download-artifact@v4\n        with:\n          name: apple-shared-core\n" +
                 artifactFixtureStep("upload", name: "\(id)-diagnostics")

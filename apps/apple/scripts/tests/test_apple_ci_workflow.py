@@ -29,8 +29,14 @@ class WorkflowRoutingTests(unittest.TestCase):
         blocks = jobs()
         for output, job in JOBS.items():
             with self.subTest(job=job):
-                self.assertIn(f"if: ${{{{ needs.changes.outputs.{output} == 'true' }}}}", blocks[job])
-                if output in {"ios", "ios_ui", "macos", "watch"}:
+                if output == "ios_ui":
+                    self.assertIn("if: ${{ always() && needs.changes.outputs.ios_ui == 'true' }}", blocks[job])
+                    self.assertIn("needs: [changes, ios-ui-shards]", blocks[job])
+                    self.assertIn("test \"$SHARDS_RESULT\" = success", blocks[job])
+                    self.assertIn("ios_ui_shards.py verify", blocks[job])
+                else:
+                    self.assertIn(f"if: ${{{{ needs.changes.outputs.{output} == 'true' }}}}", blocks[job])
+                if output in {"ios", "macos", "watch"}:
                     self.assertIn("needs: [changes, prepare-shared-core]", blocks[job])
                     self.assertIn("name: apple-shared-core", blocks[job])
                 self.assertIn(f"      {output}: ${{{{ steps.detect.outputs.{output} }}}}", blocks["changes"])
@@ -76,8 +82,39 @@ class WorkflowRoutingTests(unittest.TestCase):
                         "make check-export-docs-after-tests", "scripts/check-coverage.sh build/coverage/HealthMd.xcresult",
                         "swift test --package-path apps/apple/Packages/HealthMdConnectivity"):
             self.assertIn(command, workflow)
-        self.assertEqual(14, jobs()["test-ios-ui"].count("-only-testing:HealthMdUITests/"))
+        import sys
+        sys.path.insert(0, str(REPO / "apps/apple/scripts"))
+        from ios_ui_shards import SHARDS
+        self.assertEqual(14, sum(map(len, SHARDS)))
+        workers = jobs()["ios-ui-shards"]
+        self.assertIn("shard: [0, 1, 2]", workers)
+        self.assertIn("fail-fast: false", workers)
+        self.assertIn("needs: [changes, prepare-shared-core]", workers)
+        self.assertIn("name: apple-shared-core", workers)
+        self.assertIn("ios_ui_shards.py run", workers)
         self.assertNotIn("continue-on-error", workflow)
+
+    def test_native_parallel_slices_remain_complete_and_source_validated(self):
+        blocks = jobs()
+        workers = blocks['prepare-core-slices']
+        self.assertIn('fail-fast: false', workers)
+        self.assertIn('target: [aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios, aarch64-apple-darwin, x86_64-apple-darwin]', workers)
+        self.assertIn("--slice '${{ matrix.target }}'", workers)
+        self.assertIn('ci_apple_core_slices.py receipt', workers)
+        collector = blocks['prepare-shared-core']
+        self.assertIn('needs: [changes, prepare-core-slices]', collector)
+        self.assertIn('ci_apple_core_slices.py verify', collector)
+        self.assertIn('generate-apple-bindings.sh --check', collector)
+        self.assertIn('--assemble "$PWD/build/apple-core-slices"', collector)
+        self.assertIn('validate-apple-xcframework.sh', collector)
+        self.assertIn('name: apple-shared-core', collector)
+
+    def test_main_native_tests_keep_complete_suite_and_overlap_boot_with_compile(self):
+        native = jobs()['test-ios']
+        self.assertIn('IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO"', native)
+        self.assertNotIn('-only-testing', native)
+        self.assertNotIn('-skip-testing', native)
+        self.assertLess(native.index('scripts/start-ci-ios-simulator.sh'), native.index('make test-ios'))
 
 
 class GateExecutionTests(unittest.TestCase):

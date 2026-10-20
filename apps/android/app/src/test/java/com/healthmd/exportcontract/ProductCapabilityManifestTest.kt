@@ -46,6 +46,7 @@ class ProductCapabilityManifestTest {
                 "export.range-summary",
                 "setup.share-portable-configuration",
                 "export.watch-origin-manual-api",
+                "support.local-reporting-fallback",
             ),
             idsWithState(states, "planned"),
         )
@@ -178,6 +179,7 @@ class ProductCapabilityManifestTest {
             "account.myself_lifetime_claim",
             "export.watch-origin-manual-api",
             "core.shared-rust-profile-engine",
+            "support.local-reporting-fallback",
         )
     }
 }
