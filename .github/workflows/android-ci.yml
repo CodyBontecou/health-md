@@ -370,6 +370,14 @@ jobs:
             cd apps/android && ./scripts/run-ci-instrumentation.sh
             if [ "${{ matrix.shard }}" = 0 ]; then cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh; fi
 
+      - name: Record the exact source and attempt for this shard
+        if: ${{ always() }}
+        run: |
+          python3 scripts/verify-ci-instrumentation-shards.py \
+            --write-receipt build/logs/instrumentation-source.json \
+            --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}' \
+            --shard '${{ matrix.shard }}' --source-sha "$(git rev-parse HEAD)"
+
       - name: Retain instrumentation reports and per-test results
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -379,6 +387,7 @@ jobs:
           if-no-files-found: warn
           path: |
             apps/android/build/logs/emulator-readiness.log
+            apps/android/build/logs/instrumentation-source.json
             apps/android/app/build/reports/androidTests/connected/**
             apps/android/app/build/outputs/androidTest-results/connected/**
             apps/android/healthmd-core/build/reports/androidTests/connected/**
@@ -399,7 +408,7 @@ jobs:
       - name: Collect all shard reports without overwriting matching XML paths
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          pattern: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}-shard-*
+          pattern: android-instrumentation-${{ github.run_id }}-*-shard-*
           path: shard-reports
       - name: Verify every shard and the combined test reports
         env:
@@ -408,7 +417,8 @@ jobs:
           set -euo pipefail
           test "$SHARDS_RESULT" = success
           python3 apps/android/scripts/verify-ci-instrumentation-shards.py \
-            --reports shard-reports --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}'
+            --reports shard-reports --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}' \
+            --source-sha "$(git rev-parse HEAD)"
       - name: Retain complete instrumentation evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
