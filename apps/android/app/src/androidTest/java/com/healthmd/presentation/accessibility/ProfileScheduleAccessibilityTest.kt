@@ -512,6 +512,11 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
 
     private fun tapNativeAction(tag: String, label: String) {
         val action = compose.onNodeWithTag(tag).scrollIfPossible()
+        // The button container can be visible while IME/scroll layout still clips its label.
+        // Bring the actual text into view before measuring it; keep all fit/touch assertions.
+        val copy = compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true)
+            .scrollIfPossible()
+        awaitNativeControlVisible(copy, "native action label $tag before tapping $label")
         action.assertMinimumTouchTarget().assertInNativeOwner().assertRole(Role.Button)
         assertActionTextFits(tag, label)
         action.performTouchInput { click() }
