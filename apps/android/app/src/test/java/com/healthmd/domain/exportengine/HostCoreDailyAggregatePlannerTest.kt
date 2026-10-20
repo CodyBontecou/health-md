@@ -48,6 +48,53 @@ import org.junit.Test
  * SDK-boundary cases substitute only Health Connect IPC; no real provider, device library or destination is used.
  */
 class HostCoreDailyAggregatePlannerTest {
+    @Test
+    fun nativeMindfulnessSessionsReachEverySuccessorFormatWithExactClocks() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val metadata = mutableMapOf("synthetic" to "mind, source")
+        val sessions = mutableListOf(com.healthmd.domain.model.MindfulnessSessionEntry(
+            startTime = start.atZone(context.zoneId).toLocalDateTime(),
+            endTime = end.atZone(context.zoneId).toLocalDateTime(),
+            sessionType = "meditation", title = "Calm|alert", notes = "quoted \"note\" <test>",
+            source = "synthetic-mindfulness",
+            exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.of("-04:00")),
+            exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.of("-05:00")),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-mindfulness-session"),
+            metadata = metadata))
+        val data = HealthData(date = LocalDate.of(2026, 11, 1),
+            mindfulness = com.healthmd.domain.model.MindfulnessData(sessions = sessions))
+        for (includeMetadata in listOf(false, true)) {
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+                includeMetadata = includeMetadata, metricSelection = MetricSelectionState(enabledMetrics = setOf("mindful_minutes")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings,
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust, DailyAggregateExportIds("mindful-request", "mindful-session"))
+            if (includeMetadata) { metadata["synthetic"] = "mutated"; sessions.clear() }
+            val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request)
+            assertThat(result.plan.items).hasSize(4)
+            for (item in result.plan.items) {
+                val text = item.content.decodeToString()
+                assertThat(text).contains("2026-11-01T05:30:00.123456789Z")
+                assertThat(text).contains("2026-11-01T06:30:00.987654321Z")
+                assertThat(text).contains("synthetic-mindfulness-session")
+                assertThat(text).contains("mind, source")
+                assertThat(text).doesNotContain("mutated")
+                if (item.relativePath.endsWith(".csv")) assertThat(text).contains(",Native Detail,Mindfulness Record,")
+                if (item.relativePath.endsWith("-bases.md")) assertThat(text).contains("native_mindfulness_details:")
+                else if (item.relativePath.endsWith(".md")) assertThat(text).contains("Mindfulness Session Details")
+                System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { directory ->
+                    val output = File(directory, "android-v6-mindfulness-$includeMetadata/${item.relativePath}")
+                    val parent = checkNotNull(output.parentFile)
+                    check(parent.mkdirs() || parent.isDirectory)
+                    output.writeBytes(item.content)
+                }
+            }
+            if (includeMetadata) { metadata["synthetic"] = "mind, source"; sessions.add(request.data.mindfulness.sessions.single()) }
+        }
+    }
+
     @Before
     fun useExplicitTaskOwnedHostCore() {
         val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")

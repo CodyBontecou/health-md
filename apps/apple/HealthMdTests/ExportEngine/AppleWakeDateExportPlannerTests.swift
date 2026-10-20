@@ -12,6 +12,81 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     // state that is unsafe during test teardown; see docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testNativeStateOfMindRecordsReachEverySuccessorFormatWithoutLosingSourceFacts() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let instant = owner.addingTimeInterval(3600.125)
+        let entry = StateOfMindEntry(id: UUID(uuidString: "622C563B-D30C-4C45-A02B-20E45894377A")!,
+            timestamp: instant, endDate: instant.addingTimeInterval(0.5), kind: .momentaryEmotion,
+            valence: -0.123456789, labels: ["Calm|alert", "quoted \"label\""], associations: ["Work <test>"],
+            metadata: ["synthetic": "mind, source"])
+        let day = HealthData(date: owner,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            mindfulness: MindfulnessData(stateOfMind: [entry]))
+        for includeMetadata in [true, false] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                selectionIDs: ["state_of_mind_entries"])
+            snapshot.detailPolicy = .detailedTimeSeries
+            snapshot.includeMetadata = includeMetadata
+            let result = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+            guard case .planned(let operation) = result else { return XCTFail("State of Mind source records require successor planning") }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            for artifact in operation.artifacts {
+                let text = String(decoding: artifact.artifact.inlineData, as: UTF8.self)
+                XCTAssertTrue(text.contains("-0.123456789"))
+                XCTAssertTrue(text.contains("622C563B-D30C-4C45-A02B-20E45894377A"))
+                XCTAssertTrue(text.contains("mind, source"))
+                if artifact.format == .csv { XCTAssertTrue(text.contains(",Native Detail,Mindfulness Record,")) }
+                if artifact.format == .markdown { XCTAssertTrue(text.contains("State of Mind Details")) }
+                if artifact.format == .obsidianBases { XCTAssertTrue(text.contains("native_mindfulness_details:")) }
+                if artifact.format == .json {
+                    let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: artifact.artifact.inlineData) as? [String: Any])
+                    let mood = try XCTUnwrap(root["mindfulness"] as? [String: Any])
+                    let source = try XCTUnwrap((mood["stateOfMindEntries"] as? [[String: Any]])?.first)
+                    XCTAssertEqual(source["timestamp"] as? String, CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: instant))
+                    XCTAssertEqual(source["valence"] as? Double, entry.valence)
+                    XCTAssertEqual(source["labels"] as? [String], entry.labels)
+                    XCTAssertNil(mood["averageValence"])
+                }
+                if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                    let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-mindfulness-\(includeMetadata)")
+                        .appendingPathComponent(artifact.artifact.relativePath)
+                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try artifact.artifact.inlineData.write(to: output)
+                }
+            }
+        }
+    }
+
+    func testUnselectedOrInvalidStateOfMindRecordsNeverEnterSuccessorArtifacts() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let instant = ExportFixtures.referenceDate
+        var day = HealthData(date: instant, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 1), mindfulness: MindfulnessData(stateOfMind: [
+                StateOfMindEntry(timestamp: instant, kind: .dailyMood, valence: 0.5,
+                    labels: ["disabled-source-marker"], associations: [])]))
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["steps"])
+        snapshot.detailPolicy = .detailedTimeSeries
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Disabled source records must not block selected steps") }
+        for artifact in operation.artifacts {
+            XCTAssertFalse(String(decoding: artifact.artifact.inlineData, as: UTF8.self).contains("disabled-source-marker"))
+        }
+        snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["state_of_mind_entries"])
+        snapshot.detailPolicy = .detailedTimeSeries
+        for (end, valence) in [(instant.addingTimeInterval(-1), 0.5), (instant, 1.25)] {
+            day.mindfulness.stateOfMind = [StateOfMindEntry(timestamp: instant, endDate: end,
+                kind: .dailyMood, valence: valence, labels: [], associations: [])]
+            do {
+                _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot,
+                    surface: .localVaultWithoutSideEffects)
+                XCTFail("Invalid native mood records must reject the complete plan")
+            } catch { XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed) }
+        }
+    }
+
     func testCapturedWakeDateSleepDetailsReachConcretePlannerAcrossEveryFormat() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)

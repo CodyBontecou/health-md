@@ -463,7 +463,8 @@ object HealthMdRenderInputAdapter {
                 val selected = frozenSelectedOutputKeys ?: selectedOutputKeys
                 val quantities = mergeDetails(mergeDetails(
                     mergeDetails(quantityDetails(native, ownerDate, selected), bloodPressureDetails(native, ownerDate, selected)),
-                    activityDetails(native, ownerDate, selected)), workoutDetails(native, ownerDate, selected))
+                    activityDetails(native, ownerDate, selected)), mergeDetails(workoutDetails(native, ownerDate, selected),
+                        mindfulnessDetails(native, ownerDate, selected)))
                 val details = if (stages.isNotEmpty() || sessions.isNotEmpty()) {
                     mergeDetails(sleepDetails(stages, sessions, ownerDate, selected), quantities)
                 } else quantities
@@ -495,7 +496,50 @@ object HealthMdRenderInputAdapter {
     private val qualifiedDetailPaths = setOf(listOf("workouts"), listOf("sleep", "sleepStages"), listOf("sleep", "sleepSessions"),
         listOf("heart", "heartRateSamples"), listOf("heart", "hrvSamples"),
         listOf("vitals", "bloodOxygenSamples"), listOf("vitals", "bloodGlucoseSamples"), listOf("vitals", "respiratoryRateSamples"), listOf("vitals", "bloodPressureSamples"),
-        listOf("activity", "stepSamples"), listOf("activity", "activityIntensity"))
+        listOf("activity", "stepSamples"), listOf("activity", "activityIntensity"), listOf("mindfulness", "sessions"))
+
+    private fun mindfulnessDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+        val samples = root["mindfulness"]?.jsonObject?.get("sessions")?.jsonArray ?: JsonArray(emptyList())
+        val owner = listOf("mindful_minutes", "mindful_sessions").firstOrNull(selected::contains)
+        val rows = mutableListOf<JsonObject>()
+        val records = mutableListOf<String>()
+        for (element in samples) {
+            val sample = element as? JsonObject ?: throw AdapterException("wake-date mindfulness record is incompatible")
+            val start = sample["startTimeISO"]?.jsonPrimitive?.contentOrNull
+            val end = sample["endTimeISO"]?.jsonPrimitive?.contentOrNull
+            val startInstant = runCatching { java.time.Instant.parse(start) }.getOrNull()
+            val endInstant = runCatching { java.time.Instant.parse(end) }.getOrNull()
+            if (owner == null || start?.endsWith("Z") != true || end?.endsWith("Z") != true ||
+                startInstant == null || endInstant == null || endInstant <= startInstant) {
+                throw AdapterException("wake-date mindfulness record is incompatible")
+            }
+            val record = buildJsonObject { put("metric", "mindfulness_session"); put("sample", sample) }.toString()
+            records += record
+            rows += buildJsonObject {
+                put("date", ownerDate); put("category", "Native Detail"); put("metric", "Mindfulness Record")
+                put("value", record); put("unit", "json"); put("timestamp", start); put("ordinal", rows.size)
+            }
+        }
+        return buildJsonObject {
+            put("output_keys", JsonArray(if (samples.isEmpty()) emptyList() else listOf(JsonPrimitive(owner))))
+            put("csv_rows", JsonArray(rows))
+            put("markdown_blocks", buildJsonArray {
+                if (records.isNotEmpty()) add(buildJsonObject {
+                    put("heading", "Mindfulness Session Details")
+                    val lines = listOf("| Native Record (JSON) |", "|---|") + records.map { record ->
+                        "| " + record.replace("|", "\\u007c").replace("`", "\\u0060")
+                            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + " |"
+                    }
+                    put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
+                })
+            })
+            put("bases_frontmatter_blocks", buildJsonArray {
+                if (records.isNotEmpty()) add(buildJsonObject {
+                    put("key", "native_mindfulness_details"); put("lines", JsonArray(records.map { JsonPrimitive("  - $it") })); put("ordinal", 0)
+                })
+            })
+        }
+    }
 
     private fun mergeDetails(first: JsonObject, second: JsonObject): JsonObject = buildJsonObject {
         put("output_keys", JsonArray((first.getValue("output_keys").jsonArray + second.getValue("output_keys").jsonArray)

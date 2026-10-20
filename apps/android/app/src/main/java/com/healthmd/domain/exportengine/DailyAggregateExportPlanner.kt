@@ -141,6 +141,11 @@ class FrozenDailyAggregateExportRequest private constructor(
                             session.copy(metadata = Collections.unmodifiableMap(session.metadata.toMap()))
                         }),
                     ),
+                    mindfulness = data.mindfulness.copy(
+                        sessions = Collections.unmodifiableList(data.mindfulness.sessions.map { session ->
+                            session.copy(metadata = Collections.unmodifiableMap(session.metadata.toMap()))
+                        }),
+                    ),
                 ) else data,
                 profile = profile,
                 mode = mode,

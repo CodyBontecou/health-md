@@ -492,6 +492,7 @@ enum HealthMdRenderInputAdapter {
                 details = mergeDetails(sleepDetails, details)
             }
             details = mergeDetails(details, try workoutDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected))
+            details = mergeDetails(details, try mindfulnessDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected))
             if !(details["output_keys"] as? [String] ?? []).isEmpty { renderedDay["native_details"] = details }
         }
         return renderedDay
@@ -510,7 +511,40 @@ enum HealthMdRenderInputAdapter {
     private static let qualifiedDetailPaths: [[String]] = [
         ["workouts"], ["sleep", "sleepStages"], ["heart", "heartRateSamples"], ["heart", "hrvSamples"],
         ["vitals", "bloodOxygenSamples"], ["vitals", "bloodGlucoseSamples"], ["vitals", "respiratoryRateSamples"], ["vitals", "bloodPressureSamples"],
+        ["mindfulness", "stateOfMindEntries"], ["mindfulness", "emotionLabels"], ["mindfulness", "associations"],
     ]
+
+    private static func mindfulnessDetails(_ root: [String: Any], ownerDate: String,
+                                           selectedOutputKeys: [String]) throws -> [String: Any] {
+        let samples = (root["mindfulness"] as? [String: Any])?["stateOfMindEntries"] as? [[String: Any]] ?? []
+        let owner = ["mood_entries", "mood_labels", "mood_associations"].first(where: selectedOutputKeys.contains)
+        var rows: [[String: Any]] = []
+        var yaml: [String] = []
+        var lines = ["| Native Record (JSON) |", "|---|"]
+        let clock = ISO8601DateFormatter()
+        clock.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        for sample in samples {
+            guard owner != nil, let id = sample["id"] as? String, UUID(uuidString: id) != nil,
+                  let timestamp = sample["timestamp"] as? String, timestamp.hasSuffix("Z"),
+                  let end = sample["endDate"] as? String, end.hasSuffix("Z"),
+                  let startDate = clock.date(from: timestamp), let endDate = clock.date(from: end), endDate >= startDate,
+                  let valence = sample["valence"] as? NSNumber, valence.doubleValue.isFinite,
+                  (-1...1).contains(valence.doubleValue),
+                  let kind = sample["kind"] as? String, ["Momentary Emotion", "Daily Mood", "Unknown"].contains(kind)
+            else { throw AdapterError.invalidPresentation }
+            let encoded = String(decoding: try canonicalJSON(["metric": "state_of_mind", "sample": sample]), as: UTF8.self)
+            rows.append(["date": ownerDate, "category": "Native Detail", "metric": "Mindfulness Record",
+                "value": encoded, "unit": "json", "timestamp": timestamp, "ordinal": rows.count])
+            yaml.append("  - \(encoded)")
+            let cell = encoded.replacingOccurrences(of: "|", with: "\\u007c")
+                .replacingOccurrences(of: "`", with: "\\u0060").replacingOccurrences(of: "<", with: "\\u003c")
+                .replacingOccurrences(of: ">", with: "\\u003e").replacingOccurrences(of: "&", with: "\\u0026")
+            lines.append("| \(cell) |")
+        }
+        return ["output_keys": samples.isEmpty ? [] : [try unwrapWorkoutOwner(owner)], "csv_rows": rows,
+            "markdown_blocks": samples.isEmpty ? [] : [["heading": "State of Mind Details", "lines": lines, "ordinal": 0]],
+            "bases_frontmatter_blocks": yaml.isEmpty ? [] : [["key": "native_mindfulness_details", "lines": yaml, "ordinal": 0]]]
+    }
 
     private static func mergeDetails(_ first: [String: Any], _ second: [String: Any]) -> [String: Any] {
         var result: [String: Any] = ["output_keys": Array(Set((first["output_keys"] as? [String] ?? [])

@@ -87,3 +87,8 @@ Two additional switches control extra keys: **legacy Android aliases** re-adds p
 ## Implementation notes
 
 Contract identifier is `healthmd.health_data`; frozen wire version is 4 (`HealthMdExportSchema.VERSION`). The exporter implements the documented iOS parity fixes (sleep `stages` → `sleepStages`, ISO 8601 timestamps, unified `value` keys, `mindfulMinutes`, `pushCount` alias, vitals aliases) — the full Tier-0/Tier-1 ledger is in [`ios-export-contract.md`](../export-contract/ios-export-contract.md) and [`android-ios-gap-matrix.md`](../export-contract/android-ios-gap-matrix.md); profile policy and the freeze guardrail are in [`migration-plan.md`](../export-contract/migration-plan.md). v5 is additive-only and marked with `schemaProfile`/`schemaVersion` at the top of the document; `FormatCustomization.forFrozenApiV4()` pins API v1 delivery to v4. All-connected provenance (cloud providers) is embedded under `metadata.provenance`. Never change frozen v4 bytes to create parity — a new reviewed profile is required (see the repository cross-platform policy).
+
+
+## Gated Morning ends preparation
+
+The independently versioned `android-sleep-v6` preparation path preserves selected Health Connect mindfulness sessions in JSON and carries complete emitted source records through CSV, Markdown and Bases. Exact UTC timestamps, source offsets/identity and metadata remain intact across the DST fold; saved preparation requests freeze session lists and metadata. These sessions are not Apple State of Mind observations. Historical v4/v5 output and capture summaries remain unchanged. This path is synthetic preparation evidence; the Morning ends setting and production admission remain gated pending full feature acceptance under Issue #104.
