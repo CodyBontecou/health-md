@@ -61,6 +61,20 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
         return Int(value)
     }
 
+    func readIntOrThrow(key: String) throws -> Int? {
+        guard let data = try readDataOrThrow(key: key) else { return nil }
+        return try Self.decodeStrictInteger(data)
+    }
+
+    static func decodeStrictInteger(_ data: Data) throws -> Int {
+        guard data.count == MemoryLayout<Int32>.size else {
+            throw SystemKeychainStoreError.readFailed(errSecDecode)
+        }
+        var value: Int32 = 0
+        _ = withUnsafeMutableBytes(of: &value) { data.copyBytes(to: $0) }
+        return Int(value)
+    }
+
     func writeInt(key: String, value: Int) {
         var v = Int32(value)
         let data = Data(bytes: &v, count: MemoryLayout<Int32>.size)

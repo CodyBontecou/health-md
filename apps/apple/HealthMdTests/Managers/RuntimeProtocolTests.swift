@@ -15,12 +15,23 @@ import XCTest
 final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
     var storage: [String: Int] = [:]
     var stringStorage: [String: String] = [:]
+    var strictReadCount = 0
+    var nextReadIntError: Error?
     var nextReadStringError: Error?
     var nextWriteStringError: Error?
     var nextRemoveError: Error?
 
     func readInt(key: String) -> Int {
         storage[key] ?? 0
+    }
+
+    func readIntOrThrow(key: String) throws -> Int? {
+        strictReadCount += 1
+        if let error = nextReadIntError {
+            nextReadIntError = nil
+            throw error
+        }
+        return storage[key]
     }
 
     func writeInt(key: String, value: Int) {
@@ -32,6 +43,7 @@ final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
     }
 
     func readStringOrThrow(key: String) throws -> String? {
+        strictReadCount += 1
         if let error = nextReadStringError {
             nextReadStringError = nil
             throw error
