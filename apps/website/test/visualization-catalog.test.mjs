@@ -281,6 +281,26 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
   assert.equal(parentDay.sleep.sleepStages[0].startDate, "2026-11-01T02:00:00.123456789Z");
   assert.equal(parentDay.sleep.sleepSessions[0].exactEndTime.offset, "-05:00");
   assert.equal(parentDay.sleep.sleepSessions[0].identity.clientRecordId, "synthetic-parent-overnight");
+  const workoutRangeRoot = path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/workout-range-rules-v12");
+  const workoutRangeVariants = (await readdir(workoutRangeRoot, { withFileTypes: true })).filter(item => item.isDirectory());
+  assert.equal(workoutRangeVariants.length, 8);
+  for (const variant of workoutRangeVariants) {
+    const directory = path.join(workoutRangeRoot, variant.name, "Health/Rollups/Range");
+    const filename = (await readdir(directory)).find(name => name.endsWith(".json"));
+    const source = JSON.parse(await readFile(path.join(directory, filename), "utf8"));
+    const parsed = api.parseRollup(source);
+    assert.ok(parsed, variant.name);
+    assert.equal(parsed.rollupRulesVersion, 12);
+    assert.equal(parsed.schemaVersion, 11);
+    assert.equal(parsed.metrics.workout_avg_heart_rate.primaryValue, 175);
+    assert.equal(parsed.metrics.workout_avg_power.primaryValue, 150);
+    assert.equal(parsed.metrics.workout_cycling_cadence.primaryValue, 260 / 3);
+    assert.equal(parsed.metrics.workout_max_heart_rate.primaryValue, 260);
+    assert.equal(parsed.metrics.workout_min_heart_rate.primaryValue, 50);
+    assert.equal(parsed.metrics.workout_max_power.primaryValue, 900);
+    assert.equal(api.parseRollup({ ...source, rollup_rules_version: 13 }), null);
+  }
   const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
     "tests/fixtures/rollup-summary-v11/native-apple-v11.json"), "utf8");
   const range = api.parseRollup(input);
