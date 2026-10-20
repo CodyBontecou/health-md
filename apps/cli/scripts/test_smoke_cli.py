@@ -94,6 +94,23 @@ class SessionTests(unittest.TestCase):
         for read_only in (False, True):
             smoke.check_session(self.responses(read_only), self.catalog, read_only=read_only)
 
+    def test_complete_session_requires_main_capabilities_even_if_catalog_also_loses_them(self):
+        for name in ("healthmd_metric_chart", "healthmd_pairing_start", "healthmd_pairing_status",
+                     "healthmd_export_raw", "healthmd_raw_artifact_read"):
+            with self.subTest(name=name):
+                catalog = [tool for tool in self.catalog if tool["name"] != name]
+                responses = self.responses()
+                responses[2]["result"]["tools"] = catalog
+                with self.assertRaisesRegex(smoke.SmokeError, "missing required MCP tools"):
+                    smoke.check_session(responses, catalog)
+
+    def test_read_only_requires_chart_even_if_catalog_also_loses_it(self):
+        catalog = [tool for tool in self.catalog if tool["name"] != "healthmd_metric_chart"]
+        responses = self.responses(True)
+        responses[2]["result"]["tools"] = smoke.read_only_catalog(catalog)
+        with self.assertRaisesRegex(smoke.SmokeError, "missing required MCP tools"):
+            smoke.check_session(responses, catalog, read_only=True)
+
     def test_read_only_must_reject_every_hidden_operation(self):
         responses = self.responses(True)
         responses[6] = {"result": {}}

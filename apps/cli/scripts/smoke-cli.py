@@ -203,7 +203,15 @@ def check_session(responses: dict, catalog: list[dict], *, read_only: bool = Fal
     require(responses[1]["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"] == [MIME], "missing MCP Apps negotiation")
     expected = read_only_catalog(catalog) if read_only else catalog
     check_tools(responses[2]["result"]["tools"], expected)
-    sleep = tool_index(responses[2]["result"]["tools"])["healthmd_sleep_sessions"]
+    served = tool_index(responses[2]["result"]["tools"])
+    # Catalog equality alone cannot detect a capability removed from both the
+    # runtime and generated declarations. Keep the integration's required tools.
+    required = {"healthmd_metric_chart", "healthmd_sleep_sessions"}
+    if not read_only:
+        required.update({"healthmd_pairing_start", "healthmd_pairing_status",
+                         "healthmd_export_raw", "healthmd_raw_artifact_read"})
+    require(required <= served.keys(), f"missing required MCP tools: {sorted(required - served.keys())}")
+    sleep = served["healthmd_sleep_sessions"]
     require(len(sleep["inputSchema"]["properties"]["dates"]["oneOf"]) == 2, "missing explicit/all-available date alternatives")
     require(sleep["inputSchema"]["examples"][0]["all_pages"] is True, "missing complete traversal example")
     uris = {resource["uri"] for resource in responses[3]["result"]["resources"]}
