@@ -395,9 +395,9 @@ final class AgentBridgeExportPlanningService {
         if !config.protectedDataAvailable { actions.append(.unlockMobile) }
         if config.nativeGrants != .satisfied { actions.append(.grantHealthAccess) }
         if config.entitlement != .satisfied { actions.append(.purchaseRequired) }
-        var policies: [AgentBridgeDiscoverySettingsPolicies] = [.explicit]
-        if !config.inputs.profiles.isEmpty { policies.append(.profile) }
-        if config.inputs.savedDevice != nil { policies.append(.savedDeviceSettings) }
+        // Policy support is installed capability metadata, independent of the private snapshot
+        // selected for this read. Missing/stale configurations fail at resolution, never fall back.
+        let policies: [AgentBridgeDiscoverySettingsPolicies] = [.explicit, .profile, .savedDeviceSettings]
         let support = try AgentBridgeOutputSupport(compatibilityDetail: [.summary], formats: [.json], maxArtifacts: 366, maxPathBytes: 4096,
                                                   nativeArchiveProducts: [.none], pathTokens: [.date, .day, .month, .year],
                                                   settingPointers: leafPointers(Self.defaultOutput, prefix: ""), writeModes: [.overwrite])
