@@ -26,6 +26,8 @@ nonisolated enum AgentBridgeExportNativeAction {
     case revokeDelegation(AgentBridgeAuthorityReference)
     case decideExport(planID: AgentBridgeUUID, binding: AgentBridgeBinding)
 }
+/// Revalidate an already reviewed native decision without prompting or minting authority.
+/// A single native operation calls this repeatedly around delaying SDK/storage boundaries.
 nonisolated protocol AgentBridgeExportNativeAuthorizing {
     func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws
 }
@@ -153,8 +155,16 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         // Revalidate the pinned private directory after potentially delaying SDK work,
         // again after staging/fsync, and before exposing the initialized store.
         try store.requireCurrentRoot()
+        try authorization.requireNativeAuthorization(for: .createPrivateStore)
+        try store.requireCurrentRoot()
         try store.write(.init(generation: 0, delegations: [], plans: [], decisions: []), key: key,
-                        beforePublish: { _ in try store.requireCurrentRoot() })
+                        beforePublish: { _ in
+                            try store.requireCurrentRoot()
+                            try authorization.requireNativeAuthorization(for: .createPrivateStore)
+                            try store.requireCurrentRoot()
+                        })
+        try store.requireCurrentRoot()
+        try authorization.requireNativeAuthorization(for: .createPrivateStore)
         try store.requireCurrentRoot()
         return store
     }

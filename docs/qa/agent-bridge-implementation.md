@@ -32,6 +32,31 @@ execution, journals, receipts, recipes, resume and physical four-way acceptance 
 No grants, capability advertisement, schema/profile versions or public settings changed. B19/B20
 remain separately approval-blocked. This increment does not make the PR ready to merge.
 
+## Native bootstrap consent/publication follow-up (2026-10-20)
+
+Bootstrap now revalidates the same already reviewed native decision after credential SDK work,
+after staging/fsync immediately before publication, and before returning. These callbacks must be
+noninteractive checks, never another prompt or authority issuance. Each callback is followed by an
+original-root check before further storage access. Android also pins the staged file identity and
+removes an unpublished temporary file only while its original root/file identities remain reachable;
+otherwise it preserves the original denial and leaves the orphan, without touching a replacement.
+Apple keeps descriptor-relative publication and checks the root again after native callbacks.
+
+Two new regression methods per platform reproduce three distinct pre-fix failures: late consent
+loss could publish the empty ledger; a publication callback could move the issuer and redirect
+publication/cleanup; and an earlier callback could cause temporary create/delete in the wrong
+directory. The final tests check replacement bytes, absence of ledgers in both roots, and unchanged
+directory timestamps before staging. Final current-source checks pass: 94 affected macOS app XCTest
+methods and 129 bridge JVM methods in each Play/F-Droid flavor, with zero failures/skips. The owning
+protected-key classes contain 18 Apple and 22 Android methods; these are subsets of the affected
+counts. Contract validation/32 tests, targeted Swift-warning and diff gates pass.
+
+SDK/native decisions remain intercepted. These sampled fences do not establish protection from an
+arbitrary same-UID writer, privileged rollback, or actual OS/UI/device consent. A decision lost only
+after publication suppresses return without rolling back the committed empty ledger. No export
+permission is created by this setup. Installed consent/configuration UI, native routes and full
+feature/physical acceptance remain incomplete; the PR remains draft.
+
 ## Current consolidated native-session increment (2026-10-06)
 
 After the user cleared the fleet goal and authorized consolidation, all23 bridge branch heads were

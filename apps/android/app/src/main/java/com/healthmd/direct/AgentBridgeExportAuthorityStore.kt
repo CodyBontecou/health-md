@@ -39,7 +39,8 @@ internal abstract class AgentBridgeExportAuthenticatedPeer protected constructor
 }
 
 /** Non-serializable human/native authorization session, never a Boolean/UUID/JSON permission.
- * A native adapter must independently establish the exact decision before this callback returns.
+ * Revalidate an already reviewed exact decision without prompting or minting authority; a single
+ * operation calls this repeatedly around delaying SDK/storage boundaries.
  * No implementation or consent UI is installed here. Tests supply an independently gated fake. */
 internal abstract class AgentBridgeExportNativeAuthorization protected constructor() {
     abstract fun requireDecision(decision: AgentBridgeExportNativeDecision)
@@ -92,9 +93,28 @@ internal class AgentBridgeExportAuthorityStore private constructor(
             checkParent()
             demand(attributes(root, directory = true).fileKey() == identity)
             writeNew(root.resolve(LOCK_NAME), ByteArray(0))
-            writeNew(root.resolve(LEDGER_NAME), fileBytes(AgentBridgeExportLedger(1, 1, emptyList(), emptyList(), emptyList()), key))
+            val initial = fileBytes(AgentBridgeExportLedger(1, 1, emptyList(), emptyList(), emptyList()), key)
+            if (keyBeforeReservation) {
+                writeNew(root.resolve(LEDGER_NAME), initial)
+            } else {
+                native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                checkParent()
+                demand(attributes(root, true).fileKey() == identity)
+                // Stage/fsync before the final native decision. Revocation during either the
+                // credential SDK or staging must not publish a usable initialized issuer.
+                replace(initial) {
+                    checkParent()
+                    demand(attributes(root, true).fileKey() == identity)
+                    native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                }
+            }
             forceDirectory()
             demand(attributes(root, true).fileKey() == identity)
+            if (!keyBeforeReservation) {
+                native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                checkParent()
+                demand(attributes(root, true).fileKey() == identity)
+            }
         }
     }
 
@@ -272,15 +292,29 @@ internal class AgentBridgeExportAuthorityStore private constructor(
     }
 
     private fun replace(bytes: ByteArray, beforePublication: () -> Unit) {
+        checkParent()
+        val rootIdentity = attributes(root, true).fileKey()
         val temporary = root.resolve("pending-" + UUID.randomUUID())
         writeNew(temporary, bytes)
+        val temporaryIdentity = attributes(temporary, false).fileKey()
+        fun requireOriginalStage() {
+            checkParent()
+            demand(attributes(root, true).fileKey() == rootIdentity)
+            demand(attributes(temporary, false).fileKey() == temporaryIdentity)
+        }
         try {
             beforePublication()
+            // The callback may delay or change native state. Recheck AFTER it, before any
+            // rename/cleanup by absolute path; an earlier pin cannot authorize a replacement.
+            requireOriginalStage()
         } catch (failure: Exception) {
-            // Orderly rejection removes ONLY this invocation's unpublished temporary file. It
-            // does not repair interrupted/corrupt state, erase old records or restore a snapshot.
-            Files.delete(temporary)
-            forceDirectory()
+            // Only clean the original staged file in the original still-reachable directory.
+            // Otherwise retain the orphan and original denial; never touch a replacement root.
+            // These sampled fences do not claim protection from an arbitrary same-UID writer.
+            if (runCatching { requireOriginalStage() }.isSuccess) {
+                runCatching { Files.delete(temporary); forceDirectory() }
+                    .exceptionOrNull()?.let { failure.addSuppressed(it) }
+            }
             throw failure
         }
         // Interrupted leftovers are still corruption, never silently deleted/reused on restart.

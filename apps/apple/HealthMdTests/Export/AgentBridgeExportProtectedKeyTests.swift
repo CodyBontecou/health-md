@@ -90,6 +90,79 @@ final class AgentBridgeExportProtectedKeyTests: XCTestCase {
         }
     }
 
+    func testNativeBootstrapCannotPublishAfterConsentIsLostDuringSDKWorkOrStaging() throws {
+        for stage in ["sdk", "publication"] {
+            let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let directory = parent.appendingPathComponent("issuer")
+            let sdk = NativeBootstrapKeyBoundary()
+            let consent = NativeBootstrapConsentBoundary()
+            if stage == "sdk" { sdk.beforeAdd = { consent.revoked = true } }
+            if stage == "publication" {
+                consent.beforeCheck = { count in
+                    if count == 3 {
+                        consent.sawStagedFile = (try FileManager.default.contentsOfDirectory(atPath: directory.path))
+                            .contains(where: { $0.hasPrefix("transaction-") })
+                        consent.revoked = true
+                    }
+                }
+            }
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: consent, provisioner: sdk.provisioner), stage) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired, stage)
+            }
+            XCTAssertTrue(FileManager.default.fileExists(atPath: directory.path), stage)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path), stage)
+            if stage == "publication" { XCTAssertTrue(consent.sawStagedFile) }
+            // Consent restoration cannot turn an interrupted issuer into a fresh setup.
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner), stage)
+            XCTAssertEqual(sdk.additions, 1, stage)
+            XCTAssertNil(sdk.callbackError, stage)
+        }
+    }
+
+    func testNativeBootstrapConsentCallbackCannotPublishIntoRelocatedOrReplacementIssuer() throws {
+        for checkpoint in [2, 3] {
+            let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let directory = parent.appendingPathComponent("issuer"), retained = parent.appendingPathComponent("retained")
+            let sdk = NativeBootstrapKeyBoundary(), consent = NativeBootstrapConsentBoundary()
+            let marker = Data("unrelated replacement file".utf8)
+            let untouchedDate = Date(timeIntervalSince1970: 0)
+            var replacementFile: URL?
+            consent.beforeCheck = { count in
+                if count == checkpoint {
+                    let temporary = checkpoint == 3
+                        ? try XCTUnwrap(FileManager.default.contentsOfDirectory(atPath: directory.path)
+                            .first(where: { $0.hasPrefix("transaction-") }))
+                        : "transaction-foreign"
+                    try FileManager.default.moveItem(at: directory, to: retained)
+                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false,
+                                                           attributes: [.posixPermissions: 0o700])
+                    let foreign = directory.appendingPathComponent(temporary)
+                    try marker.write(to: foreign)
+                    replacementFile = foreign
+                    if checkpoint == 2 {
+                        try FileManager.default.setAttributes([.modificationDate: untouchedDate], ofItemAtPath: directory.path)
+                        try FileManager.default.setAttributes([.modificationDate: untouchedDate], ofItemAtPath: retained.path)
+                    }
+                }
+            }
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: consent, provisioner: sdk.provisioner)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: retained.appendingPathComponent("state.json").path))
+            XCTAssertEqual(try Data(contentsOf: XCTUnwrap(replacementFile)), marker)
+            if checkpoint == 2 {
+                // A temporary creation+deletion changes directory mtime even with no retained file.
+                XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: directory.path)[.modificationDate] as? Date, untouchedDate)
+                XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: retained.path)[.modificationDate] as? Date, untouchedDate)
+            }
+            XCTAssertNil(sdk.callbackError)
+        }
+    }
+
     private func nativeBootstrapParent() throws -> URL {
         let parent = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("healthmd-native-bootstrap-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
@@ -434,5 +507,19 @@ nonisolated private final class NativeBootstrapKeyBoundary: @unchecked Sendable 
             lookup.respond(result: [record] as CFArray)
         }
         return addStatus
+    }
+}
+
+// Synchronous, intercepted native decision boundary. No platform consent UI is asserted here.
+nonisolated private final class NativeBootstrapConsentBoundary: AgentBridgeExportNativeAuthorizing {
+    var revoked = false
+    var checks = 0
+    var sawStagedFile = false
+    var beforeCheck: ((Int) throws -> Void)?
+    func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws {
+        guard case .createPrivateStore = action else { throw AgentBridgeValidationError.permissionRequired }
+        checks += 1
+        try beforeCheck?(checks)
+        guard !revoked else { throw AgentBridgeValidationError.permissionRequired }
     }
 }

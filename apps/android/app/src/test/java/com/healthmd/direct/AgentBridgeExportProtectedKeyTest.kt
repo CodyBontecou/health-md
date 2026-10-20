@@ -434,6 +434,89 @@ class AgentBridgeExportProtectedKeyTest {
         }
     }
 
+    @Test
+    fun nativeBootstrapCannotPublishAfterConsentIsLostDuringSdkWorkOrStaging() {
+        for (stage in listOf("sdk", "publication")) withNativeKey { os ->
+            AgentBridgeExportPlanningFixture().use { f -> withNativeData(os, f.parent) {
+                os.selected = null
+                val root = f.parent.resolve("no_backup").resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+                var revoked = false
+                var checks = 0
+                var sawStagedFile = false
+                val consent = object : AgentBridgeExportNativeAuthorization() {
+                    override fun requireDecision(decision: AgentBridgeExportNativeDecision) {
+                        assertThat(decision).isEqualTo(AgentBridgeExportNativeDecision.InitializeStore)
+                        checks++
+                        if (stage == "publication" && checks == 3) {
+                            sawStagedFile = Files.newDirectoryStream(root).use { files ->
+                                files.any { it.fileName.toString().startsWith("pending-") }
+                            }
+                            revoked = true
+                        }
+                        if (revoked) throw com.healthmd.direct.protocol.AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                    }
+                }
+                if (stage == "sdk") os.afterGeneration = { revoked = true }
+                f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) {
+                    AgentBridgeExportAuthorityStore.initializeNative(os.context, consent)
+                }
+                assertThat(Files.isDirectory(root)).isTrue()
+                assertThat(Files.exists(root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isFalse()
+                if (stage == "publication") assertThat(sawStagedFile).isTrue()
+                f.expect(AgentBridgeErrorCode.REVISION_CONFLICT) {
+                    AgentBridgeExportAuthorityStore.initializeNative(os.context, f.native)
+                }
+                verify(exactly = 1) { os.generator.generateKey() }
+            } }
+        }
+    }
+
+    @Test
+    fun nativeBootstrapConsentCallbackCannotDeleteOrPublishReplacementRootFiles() {
+        for (checkpoint in listOf(2, 3)) for (deny in listOf(false, true)) withNativeKey { os ->
+            AgentBridgeExportPlanningFixture().use { f -> withNativeData(os, f.parent) {
+                os.selected = null
+                val root = f.parent.resolve("no_backup").resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+                val retained = f.parent.resolve("retained")
+                val marker = "unrelated replacement file".toByteArray()
+                val untouchedTime = java.nio.file.attribute.FileTime.fromMillis(0)
+                var replacementFile: Path? = null
+                var checks = 0
+                val consent = object : AgentBridgeExportNativeAuthorization() {
+                    override fun requireDecision(decision: AgentBridgeExportNativeDecision) {
+                        assertThat(decision).isEqualTo(AgentBridgeExportNativeDecision.InitializeStore)
+                        checks++
+                        if (checks == checkpoint) {
+                            val temporary = if (checkpoint == 3) Files.newDirectoryStream(root).use { files ->
+                                files.single { it.fileName.toString().startsWith("pending-") }.fileName.toString()
+                            } else "pending-foreign"
+                            Files.move(root, retained)
+                            Files.createDirectory(root, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))
+                            replacementFile = root.resolve(temporary)
+                            Files.write(requireNotNull(replacementFile), marker)
+                            if (checkpoint == 2) {
+                                Files.setLastModifiedTime(root, untouchedTime)
+                                Files.setLastModifiedTime(retained, untouchedTime)
+                            }
+                            if (deny) throw com.healthmd.direct.protocol.AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                        }
+                    }
+                }
+                f.expect(if (deny) AgentBridgeErrorCode.APPROVAL_REQUIRED else AgentBridgeErrorCode.BINDING_CHANGED) {
+                    AgentBridgeExportAuthorityStore.initializeNative(os.context, consent)
+                }
+                assertThat(Files.exists(root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isFalse()
+                assertThat(Files.exists(retained.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isFalse()
+                assertThat(Files.readAllBytes(requireNotNull(replacementFile))).isEqualTo(marker)
+                if (checkpoint == 2) {
+                    // A create+delete still changes mtime; final file absence alone is insufficient.
+                    assertThat(Files.getLastModifiedTime(root)).isEqualTo(untouchedTime)
+                    assertThat(Files.getLastModifiedTime(retained)).isEqualTo(untouchedTime)
+                }
+            } }
+        }
+    }
+
     private fun withNativeData(os: NativeKeyBoundary, data: Path, block: () -> Unit) {
         Files.createDirectory(data.resolve("no_backup"),
             PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))
