@@ -33,6 +33,7 @@ class DirectCliForegroundService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var operation: Job? = null
+    private var nativeCatalogBroadcasts: AgentBridgeNativeCatalogBroadcasts? = null
     @Volatile private var stopRequested = false
     private val servingLifecycle by lazy { AgentBridgeExportServingLifecycle(coordinator) }
 
@@ -48,6 +49,9 @@ class DirectCliForegroundService : Service() {
         )
         // Successful native foreground admission is a prerequisite, not an active Boolean.
         servingLifecycle.foregroundAdmitted()
+        // Real SDK notifications latch before worker sampling/publication. First-unlock is not
+        // ordinary screen lock; existing native serving/permission fences remain authoritative.
+        nativeCatalogBroadcasts = AgentBridgeNativeCatalogBroadcasts(this, coordinator::agentBridgeNativeMetadataChanged)
         scope.launch {
             coordinator.state.collectLatest(::updateNotification)
         }
@@ -127,6 +131,8 @@ class DirectCliForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        nativeCatalogBroadcasts?.close()
+        nativeCatalogBroadcasts = null
         servingLifecycle.stopped()
         coordinator.cancelActive()
         operation?.cancel()

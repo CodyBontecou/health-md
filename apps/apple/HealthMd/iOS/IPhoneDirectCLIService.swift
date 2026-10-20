@@ -369,6 +369,9 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var activeSessionID: UUID?
     private var agentBridgeSession: IPhoneDirectCLIAuthenticatedSession?
     private var agentBridgePeer: AgentBridgeExportAuthenticatedPeer?
+    private var agentBridgeCatalogLifecycle: AgentBridgeNativeCatalogLifecycle?
+    private let agentBridgeCatalogEvents: AgentBridgeNativeCatalogEventRelay
+    private let agentBridgeCatalogNotifications: AgentBridgeNativeCatalogNotifications
     private var exportTask: Task<Void, Never>?
     private var activeExportOperationID: UUID?
     private var activeExportJobID: UUID?
@@ -399,6 +402,11 @@ final class IPhoneDirectCLIService: ObservableObject {
         protocolAuthority: AppleDirectProtocolAuthority = .shared,
         wakeManager: (any IPhoneDirectWakeManaging)? = nil
     ) {
+        let catalogEvents = AgentBridgeNativeCatalogEventRelay()
+        agentBridgeCatalogEvents = catalogEvents
+        agentBridgeCatalogNotifications = AgentBridgeNativeCatalogNotifications(
+            names: [.NSSystemTimeZoneDidChange, UIApplication.protectedDataWillBecomeUnavailableNotification,
+                    UIApplication.protectedDataDidBecomeAvailableNotification], relay: catalogEvents)
         self.defaults = defaults
         self.reconnectPolicy = reconnectPolicy
         self.heartbeatPolicy = heartbeatPolicy
@@ -462,9 +470,22 @@ final class IPhoneDirectCLIService: ObservableObject {
             agentBridgePeer = peer // Pin only the first successful capture for this accepted owner.
             return peer
         } catch {
-            agentBridgeSession?.revoke()
+            invalidateAgentBridgeSession()
             throw AgentBridgeValidationError.permissionRequired
         }
+    }
+
+    /// Native planning owner only: no issuer/key/configuration lookup or grant issuance. The future
+    /// installed planning adapter must freshly sample SDK facts and publish before reading this cache.
+    func agentBridgeNativePlanningOwner(
+        nativeTrust: AgentBridgeExportNativeTrust = AgentBridgeExportNativeTrust()
+    ) throws -> (peer: AgentBridgeExportAuthenticatedPeer, lifecycle: AgentBridgeNativeCatalogLifecycle) {
+        guard let lifecycle = agentBridgeCatalogLifecycle else { throw AgentBridgeValidationError.permissionRequired }
+        let peer = try agentBridgeAuthenticatedPeer(nativeTrust: nativeTrust)
+        guard agentBridgeCatalogLifecycle === lifecycle else { throw AgentBridgeValidationError.permissionRequired }
+        try peer.requireCurrent()
+        guard agentBridgeCatalogLifecycle === lifecycle else { throw AgentBridgeValidationError.permissionRequired }
+        return (peer, lifecycle)
     }
 
     private func recordAgentBridgeBaseHello(
@@ -488,9 +509,14 @@ final class IPhoneDirectCLIService: ObservableObject {
                     && self.appIsActive && self.isEnabled
             }
         )
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        agentBridgeCatalogLifecycle = lifecycle
+        agentBridgeCatalogEvents.replace(with: lifecycle)
     }
 
     private func invalidateAgentBridgeSession() {
+        agentBridgeCatalogEvents.replace(with: nil)
+        agentBridgeCatalogLifecycle = nil
         agentBridgeSession?.revoke()
         agentBridgeSession = nil
         agentBridgePeer = nil

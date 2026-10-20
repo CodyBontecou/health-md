@@ -89,3 +89,43 @@ nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
         guard !exhausted else { throw AgentBridgeValidationError.busy }
     }
 }
+
+/// Synchronous native-event relay. Posting threads never read SDK metadata, private settings,
+/// issuer files or keys. Replacing/detaching an accepted owner permanently stops the old barrier.
+nonisolated final class AgentBridgeNativeCatalogEventRelay: @unchecked Sendable {
+    private let lock = NSLock()
+    private var current: AgentBridgeNativeCatalogLifecycle?
+
+    func replace(with lifecycle: AgentBridgeNativeCatalogLifecycle?) {
+        lock.withLock {
+            guard current !== lifecycle else { return }
+            current?.stop()
+            current = lifecycle
+        }
+    }
+
+    func observeNativeChange() {
+        lock.withLock {
+            do { try current?.observeNativeChange() }
+            catch { current?.stop() } // Overflow/stopped observation cannot silently reopen reads.
+        }
+    }
+}
+
+/// Foundation registration with exact owner lifetime. No Task/actor hop can coalesce native
+/// notifications before the relay latches them. Production supplies native notification names;
+/// tests may intercept the SDK boundary using an isolated NotificationCenter.
+nonisolated final class AgentBridgeNativeCatalogNotifications {
+    private let center: NotificationCenter
+    private var tokens: [NSObjectProtocol] = []
+
+    init(center: NotificationCenter = .default, names: [Notification.Name],
+         relay: AgentBridgeNativeCatalogEventRelay) {
+        self.center = center
+        tokens = names.map { name in
+            center.addObserver(forName: name, object: nil, queue: nil) { _ in relay.observeNativeChange() }
+        }
+    }
+
+    deinit { tokens.forEach(center.removeObserver) }
+}

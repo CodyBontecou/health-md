@@ -171,6 +171,7 @@ class DirectCliCoordinator @Inject constructor(
     @Volatile private var activeChannel: DirectSecureChannel? = null
     @Volatile private var activeServingScope: ServingScope? = null
     @Volatile private var acceptedNativeOwner: NativeSessionOwner? = null
+    private val nativeOwnerLock = Any()
 
     private class ServingScope(val epoch: AgentBridgeExportServingEpoch, val operation: kotlinx.coroutines.Job) {
         @Volatile var revoked = false
@@ -179,6 +180,8 @@ class DirectCliCoordinator @Inject constructor(
         override val sourceInstallationId: String, override val hostInstallationId: String,
         private val serving: ServingScope) : AgentBridgeExportNativeSessionOwner {
         @Volatile private var revoked = false
+        val catalogLifecycle = AgentBridgeNativeCatalogLifecycle()
+        fun revoke() { revoked = true; catalogLifecycle.stop() }
         private var nativePeer: AgentBridgeExportNativeSession? = null
         private var nativeContext: android.content.Context? = null
         @Synchronized fun peer(context: android.content.Context): AgentBridgeExportNativeSession {
@@ -197,7 +200,7 @@ class DirectCliCoordinator @Inject constructor(
                     activeServingScope === serving && activeChannel === channel && acceptedNativeOwner === this)
                 serving.epoch.requireCurrent(this@DirectCliCoordinator)
             } catch (_: Exception) {
-                revoked = true
+                revoke()
                 throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
             }
         }
@@ -211,6 +214,31 @@ class DirectCliCoordinator @Inject constructor(
             com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
         owner.requireCurrent()
         return owner.peer(context)
+    }
+
+    /** Native event only: immediate cache invalidation, no SDK/settings/issuer/key access. */
+    internal fun agentBridgeNativeMetadataChanged() {
+        val owner = acceptedNativeOwner ?: return
+        try { owner.catalogLifecycle.observeNativeChange() }
+        catch (_: Exception) { owner.revoke() }
+    }
+
+    /** Native adapter only. Peer/context/owner fences remain separate from publication and consent. */
+    internal fun agentBridgeNativePlanningOwner(context: android.content.Context): Pair<AgentBridgeExportNativeSession, AgentBridgeNativeCatalogLifecycle> {
+        val owner = acceptedNativeOwner ?: throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        val peer = owner.peer(context)
+        owner.requireCurrent()
+        if (acceptedNativeOwner !== owner) throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        return peer to owner.catalogLifecycle
+    }
+
+    private fun replaceNativeOwner(owner: NativeSessionOwner?) = synchronized(nativeOwnerLock) {
+        if (acceptedNativeOwner !== owner) {
+            acceptedNativeOwner?.revoke()
+            acceptedNativeOwner = owner
+        }
     }
 
     suspend fun pair(host: String, port: Int, pairingCode: String) = sessionMutex.withLock {
@@ -316,7 +344,7 @@ class DirectCliCoordinator @Inject constructor(
                         serve(channel, transferNegotiation)
                     } finally {
                         protocolAuthority.endOperation()
-                        acceptedNativeOwner = null
+                        replaceNativeOwner(null)
                         activeChannel = null
                     }
                 }
@@ -348,14 +376,14 @@ class DirectCliCoordinator @Inject constructor(
         }
         } finally {
             serving?.revoked = true
-            acceptedNativeOwner = null
+            replaceNativeOwner(null)
             activeServingScope = null
         }
     }
 
     fun cancelActive() {
         activeServingScope?.revoked = true
-        acceptedNativeOwner = null
+        replaceNativeOwner(null)
         runCatching { activeChannel?.close() }
     }
 
@@ -374,7 +402,7 @@ class DirectCliCoordinator @Inject constructor(
 
     fun resetSession() {
         activeServingScope?.revoked = true
-        acceptedNativeOwner = null
+        replaceNativeOwner(null)
         _state.value = DirectCliConnectionState.Idle
     }
 
@@ -405,7 +433,7 @@ class DirectCliCoordinator @Inject constructor(
         // bound to this exact channel and the original serving coroutine/lease, never UI labels.
         activeServingScope?.let { serving ->
             val owner = NativeSessionOwner(channel, sourceInstallationId, listener.installationId, serving)
-            acceptedNativeOwner = owner
+            replaceNativeOwner(owner)
         }
         return transferNegotiation
     }

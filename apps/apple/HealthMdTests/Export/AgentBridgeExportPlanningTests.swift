@@ -279,6 +279,34 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), next)
     }
 
+    func testFoundationNativeNotificationsLatchBeforeReturnAndDetachWithOwnerLifetime() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let facts = try nativeState(), lifecycle = AgentBridgeNativeCatalogLifecycle()
+        try lifecycle.observe(facts)
+        let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let relay = AgentBridgeNativeCatalogEventRelay(), center = NotificationCenter()
+        relay.replace(with: lifecycle)
+        relay.replace(with: lifecycle) // Reattaching the same owner cannot stop or renew it.
+        var notifications: AgentBridgeNativeCatalogNotifications? = .init(
+            center: center, names: [.NSSystemTimeZoneDidChange], relay: relay)
+        center.post(name: .init("synthetic.unrelated"), object: nil)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        withExtendedLifetime(notifications) {
+            center.post(name: .NSSystemTimeZoneDidChange, object: nil)
+            center.post(name: .NSSystemTimeZoneDidChange, object: nil)
+        }
+        // Both actual Foundation callbacks ran synchronously, before any deferred SDK sampling.
+        XCTAssertThrowsError(try lifecycle.currentFacts()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged) }
+        let next = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        XCTAssertEqual(next.revision, first.revision + 1)
+        notifications = nil
+        center.post(name: .NSSystemTimeZoneDidChange, object: nil)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts) // Exact tokens were removed on teardown.
+        relay.replace(with: nil)
+        relay.observeNativeChange() // No owner means no issuer/settings/key work.
+        XCTAssertThrowsError(try lifecycle.currentFacts()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
+    }
+
     func testNativeCatalogResamplesAtStagedAndPostFsyncPublicationBoundaries() throws {
         for afterSync in [false, true] {
             let rig = try Rig(); defer { rig.cleanup() }

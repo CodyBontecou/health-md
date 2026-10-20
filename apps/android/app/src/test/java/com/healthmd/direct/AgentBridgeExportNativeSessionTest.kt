@@ -66,6 +66,37 @@ class AgentBridgeExportNativeSessionTest {
     }
 
     @Test
+    fun acceptedNativeOwnerReceivesMetadataEventsAndCancellationStopsItsCatalog() = withSession { f ->
+        f.coordinator.agentBridgeNativeMetadataChanged() // Absent owner: no trust/SDK/issuer work.
+        f.start()
+        val before = f.inventory()
+        val (peer, lifecycle) = f.coordinator.agentBridgeNativePlanningOwner(f.context)
+        assertThat(peer.requireCurrent().sourceInstallationId).isEqualTo(SOURCE)
+        AgentBridgeExportPlanningFixture().use { issuer ->
+            issuer.store.initialize(issuer.native)
+            val facts = AgentBridgeNativePlanningFacts(setOf("steps"), SOURCE, "UTC",
+                AgentBridgeDiscoveryConfigurationProtection.LOCKED, AgentBridgeDiscoveryNativeGrants.SATISFIED,
+                AgentBridgeDiscoveryEntitlement.SATISFIED, true, true)
+            lifecycle.observe(facts)
+            issuer.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.publish(issuer.store, SOURCE) }
+            val first = runBlocking(Dispatchers.IO) { lifecycle.publish(issuer.store, SOURCE) }
+            assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+            f.coordinator.agentBridgeNativeMetadataChanged()
+            issuer.expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentFacts() }
+            val next = runBlocking(Dispatchers.IO) { lifecycle.publish(issuer.store, SOURCE) }
+            assertThat(next.revision).isEqualTo(first.revision + 1)
+            assertThat(next.factsSha256).isEqualTo(first.factsSha256)
+            assertThat(f.coordinator.agentBridgeNativePlanningOwner(f.context).second).isSameInstanceAs(lifecycle)
+            f.coordinator.cancelActive()
+            issuer.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.currentFacts() }
+            denied { peer.requireCurrent() }
+            denied { f.coordinator.agentBridgeNativePlanningOwner(f.context) }
+        }
+        assertThat(f.inventory()).isEqualTo(before)
+        f.assertNoEffects()
+    }
+
+    @Test
     fun repeatedLazyGetterCannotRenewOriginalSnapshotOrRevokedCopies() = withSession { f ->
         f.start()
         val peer = f.coordinator.agentBridgeExportNativeSession(f.context)
