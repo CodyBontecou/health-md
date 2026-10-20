@@ -1,171 +1,49 @@
 #!/usr/bin/env python3
-"""Hosted-only propagation control: execute the actual workflow shell with mocks.
+"""Execute actual sharded workflow/owner boundaries with SDK-only interception.
 
-Mock execution is not native/UI qualification. No YAML dependency or alternate
-aggregation implementation; selectors/commands come from the shipped run block.
+Tests native, tee and parser exit propagation on phone and tablet. This is not
+native UI qualification; exact device/case inventory is covered by host contracts.
 """
 import json
 import os
 from pathlib import Path
-import shutil
-import subprocess
-import tempfile
-import textwrap
+import sys
+import unittest
 
-ROOT = Path(__file__).resolve().parents[3]
-workflow = (ROOT / ".github/workflows/apple-ci.yml").read_text()
-block = workflow.split("      - name: Run UI smoke tests (iOS)\n", 1)[1].split(
-    "      - name: Run App Review export regression (iPad)\n", 1
-)[0]
-assert "timeout-minutes: 35" in block
-assert "timeout-minutes: 60" in workflow.split("  test-ios-ui:", 1)[1].split("    steps:", 1)[0]
-script = textwrap.dedent(block.split("        run: |\n", 1)[1]).replace(
-    "${{ steps.simulator.outputs.ios_destination }}", "platform=iOS Simulator,id=mock"
-)
-ipad_block = workflow.split("      - name: Run App Review export regression (iPad)\n", 1)[1].split(
-    "      - name: Check warnings (iOS UI)\n", 1
-)[0]
-assert "timeout-minutes: 15" in ipad_block
-ipad_script = textwrap.dedent(ipad_block.split("        run: |\n", 1)[1]).replace(
-    "${{ steps.simulator.outputs.ios_destination }}", "platform=iOS Simulator,id=mock"
-).replace("${{ steps.ui_artifacts.outputs.app }}", "/prepared/HealthMd.app")
-expected = [
-    ["HealthMdUILaunchTests/testAppLaunches",
-     "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
-     "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
-     "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
-     "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
-     "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
-     "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
-     "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
-     "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab"],
-    ["ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
-     "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
-     "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
-     "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
-     "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
-     "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
-     "HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
-     "HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport"],
-]
-mock = '''#!/usr/bin/env python3
-import json, os, pathlib, sys
-path = pathlib.Path('calls.jsonl')
-call = len(path.read_text().splitlines()) + 1 if path.exists() else 1
-with path.open('a') as f: f.write(json.dumps(sys.argv[1:]) + '\\n')
-print('unmatched mock output' if int(os.environ['NO_MATCH']) == call else f'Test Case mock-{call}')
-sys.exit(int(os.environ[f'MOCK_EXIT_{call}']))
-'''
-tee = '''#!/usr/bin/env bash
-/usr/bin/tee "$@"
-status=$?
-call=$(wc -l < calls.jsonl)
-if [[ "$call" -eq "$TEE_FAIL_CALL" ]]; then echo 'mock tee failure' >&2; exit 17; fi
-exit "$status"
-'''
-grep = '''#!/usr/bin/env bash
-/usr/bin/grep "$@"
-status=$?
-call=$(wc -l < calls.jsonl)
-if [[ "$call" -eq "$GREP_FAIL_CALL" ]]; then echo 'mock grep parser failure' >&2; exit 2; fi
-exit "$status"
-'''
-cases = [(0, 0, 0, 0, 0, 0), (65, 0, 0, 0, 0, 65), (0, 70, 0, 0, 0, 70),
-         (65, 70, 0, 0, 0, 65), (0, 0, 1, 0, 0, 1), (0, 0, 0, 2, 0, 17),
-         (0, 0, 0, 0, 1, 2), (65, 0, 0, 1, 0, 17), (65, 0, 0, 0, 1, 2)]
-for first, second, no_match, tee_fail, grep_fail, expected_exit in cases:
-    with tempfile.TemporaryDirectory(prefix="health172-ui-status-") as directory:
-        cwd = Path(directory)
-        scripts = cwd / "scripts"
-        scripts.mkdir()
-        # Execute the ACTUAL pinned wrapper/anchor, not a mock owner or a
-        # parallel status aggregator. Only native/plumbing outputs are mocked.
-        shutil.copyfile(ROOT / "apps/apple/scripts/run-owned-ui.py", scripts / "run-owned-ui.py")
-        binaries = cwd / "bin"
-        binaries.mkdir()
-        xcrun = '''#!/usr/bin/env python3
-import json, os, sys
-with open('simctl.jsonl', 'a') as f: f.write(json.dumps(sys.argv[1:]) + '\\n')
-if sys.argv[1:5] == ['simctl', 'list', 'devices', 'available']:
-    print('iPad Pro (10000000-0000-0000-0000-000000000001) (Shutdown)')
-if len(sys.argv) > 2 and sys.argv[2] == os.environ.get('SIMCTL_FAIL'):
-    sys.exit(7)
-'''
-        for name, content in [("xcodebuild", mock), ("tee", tee), ("grep", grep), ("xcrun", xcrun)]:
-            file = binaries / name
-            file.write_text(content)
-            file.chmod(0o755)
-        raw = cwd / "build/logs/build-ios-ui.log"
-        raw.parent.mkdir(parents=True)
-        raw.write_text("earlier raw receipt\n")
-        env = dict(os.environ, PATH=str(binaries) + os.pathsep + os.environ["PATH"],
-                   MOCK_EXIT_1=str(first), MOCK_EXIT_2=str(second), MOCK_EXIT_3="0",
-                   NO_MATCH=str(no_match), TEE_FAIL_CALL=str(tee_fail), GREP_FAIL_CALL=str(grep_fail))
-        result = subprocess.run(["bash", "-c", script], cwd=cwd, env=env,
-                                capture_output=True, text=True, timeout=10)
-        assert result.returncode == expected_exit, (first, second, no_match, tee_fail, result)
-        calls = [json.loads(line) for line in (cwd / "calls.jsonl").read_text().splitlines()]
-        assert len(calls) == 2, calls
-        for args, selectors in zip(calls, expected):
-            actual = [arg.split("HealthMdUITests/", 1)[1] for arg in args if arg.startswith("-only-testing:")]
-            assert actual == selectors, actual
-            for flag, value in [("-destination", "platform=iOS Simulator,id=mock"),
-                                ("-xctestrun", "${{ steps.ui_artifacts.outputs.xctestrun }}"), ("-test-timeouts-enabled", "YES"),
-                                ("-default-test-execution-time-allowance", "180"),
-                                ("-maximum-test-execution-time-allowance", "300")]:
-                assert args[args.index(flag) + 1] == value, args
-        receipt = raw.read_text()
-        assert receipt.startswith("earlier raw receipt\n"), receipt
-        assert ("unmatched mock output" if no_match == 1 else "Test Case mock-1") in receipt
-        assert "Test Case mock-2" in receipt
-        ownership = json.loads((raw.parent / "ui-owner-phone.json").read_text())
-        assert ownership["process_clean"] is True and ownership["eligible_to_continue"] is True
-        assert ownership["abort"] is None and ownership["exit_status"] == expected_exit
-        for number, native in enumerate((first, second), 1):
-            assert ownership["stages"][number - 1] == {
-                "native": native, "tee": 17 if tee_fail == number else 0,
-                "parser": 2 if grep_fail == number else (1 if no_match == number else 0),
-            }, ownership
-        assert "Owned UI lane=phone" in result.stdout
-        if tee_fail: assert "mock tee failure" in result.stderr
-        if grep_fail: assert "mock grep parser failure" in result.stderr
-        print(f"PASS actual-shell first={first} second={second} no_match={no_match} tee_call={tee_fail} parser_call={grep_fail} exit={expected_exit}; both invoked/raw appended")
-        if (first, second, no_match, tee_fail, grep_fail) == (0, 0, 0, 0, 0):
-            tablet = subprocess.run(["bash", "-c", ipad_script], cwd=cwd, env=env,
-                                    capture_output=True, text=True, timeout=10)
-            assert tablet.returncode == 0, tablet
-            third = json.loads((cwd / "calls.jsonl").read_text().splitlines()[2])
-            assert [arg.split("HealthMdUITests/", 1)[1] for arg in third if arg.startswith("-only-testing:")] == [
-                "ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError",
-                "HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
-                "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
-                "HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot",
-            ]
-            assert third[third.index("-destination") + 1] == "platform=iOS Simulator,id=10000000-0000-0000-0000-000000000001"
-            assert third[third.index("-default-test-execution-time-allowance") + 1] == "180"
-            assert third[third.index("-maximum-test-execution-time-allowance") + 1] == "300"
-            assert "Test Case mock-3" in raw.read_text()
-            simulator_calls = [json.loads(line) for line in (cwd / "simctl.jsonl").read_text().splitlines()]
-            assert simulator_calls == [
-                ["simctl", "list", "devices", "available", "iOS"],
-                ["simctl", "shutdown", "mock"],
-                ["simctl", "bootstatus", "10000000-0000-0000-0000-000000000001", "-b"],
-                ["simctl", "install", "10000000-0000-0000-0000-000000000001", "/prepared/HealthMd.app"],
-            ], simulator_calls
-            for failure in ["shutdown", "bootstatus", "install"]:
-                (cwd / "simctl.jsonl").unlink()
-                failure_records = cwd / "build" / ("setup-" + failure)
-                failure_records.mkdir()
-                for suffix in [".json", ".owner.json"]:
-                    shutil.copyfile(raw.parent / ("ui-owner-phone" + suffix),
-                                    failure_records / ("ui-owner-phone" + suffix))
-                failure_script = ipad_script.replace("--records build/logs", "--records build/setup-" + failure)
-                failed_setup = subprocess.run(["bash", "-c", failure_script], cwd=cwd,
-                                              env=dict(env, SIMCTL_FAIL=failure),
-                                              capture_output=True, text=True, timeout=10)
-                assert failed_setup.returncode != 0, failed_setup
-                assert len((cwd / "calls.jsonl").read_text().splitlines()) == 3
-                setup_calls = [json.loads(line) for line in (cwd / "simctl.jsonl").read_text().splitlines()]
-                assert setup_calls[-1][1] == failure, setup_calls
-            print("PASS tablet setup targets only selected devices; shutdown/boot/install failures prevent native tests")
-            print("PASS actual tablet setup/ownership/four original selectors/15m step/180-300 case/raw append")
+sys.path.insert(0, str(Path(__file__).with_name("tests")))
+import test_ios_ui_build_contract as fixtures
+
+
+class PipelineStatusControls(unittest.TestCase):
+    def test_phone_and_tablet_native_tee_parser_failures_remain_blocking(self):
+        # One invocation per matrix job; a failure must never publish a passing
+        # case receipt, regardless of the other independently successful shards.
+        scenarios = [(0, 0, 0, 0), (73, 0, 0, 73), (0, 17, 0, 17),
+                     (0, 0, 1, 1), (0, 0, 2, 2), (73, 17, 0, 17), (73, 0, 2, 2)]
+        for shard in (0, 3):
+            for native, tee, parser, expected in scenarios:
+                with self.subTest(shard=shard, native=native, tee=tee, parser=parser):
+                    fixture = fixtures.WorkflowExecutionTests(methodName="runTest")
+                    fixture.setUp()
+                    try:
+                        artifact = fixture.build()
+                        for name, executable, status in [("tee", "/usr/bin/tee", tee), ("grep", "/usr/bin/grep", parser)]:
+                            fixture.executable(fixture.bin / name,
+                                f'#!/bin/bash\n{executable} "$@"\nresult=$?\n'
+                                f'if [[ {status} -ne 0 ]]; then exit {status}; fi\nexit "$result"\n')
+                        if native:
+                            fixture.environment["MD_MOCK_FAILURE"] = "test-without-building"
+                        result = fixture.run_step("Run UI smoke tests (iOS)", artifact, shard)
+                        self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
+                        owner = json.loads((fixture.root / "build/logs/ui-owner-shard.json").read_text())
+                        self.assertTrue(owner["process_clean"])
+                        self.assertTrue(owner["eligible_to_continue"])
+                        self.assertEqual(owner["stages"], [{"native": native, "tee": tee, "parser": parser}])
+                        self.assertEqual((fixture.root / "build/logs/ui-case-receipt.json").exists(), expected == 0)
+                        self.assertTrue((fixture.root / "build/logs/build-ios-ui.log").is_file())
+                    finally:
+                        fixture.doCleanups()
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

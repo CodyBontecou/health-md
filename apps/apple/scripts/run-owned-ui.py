@@ -388,7 +388,7 @@ if __name__ == "__main__":
         anchor(Path(sys.argv[2]), Path(sys.argv[3]), float(sys.argv[4]), sys.argv[5], sys.argv[6], int(sys.argv[7]), int(sys.argv[8]))
     else:
         parser = argparse.ArgumentParser()
-        parser.add_argument("--lane", choices=("phone", "ipad"), required=True)
+        parser.add_argument("--lane", choices=("phone", "ipad", "shard"), required=True)
         parser.add_argument("--records", type=Path, required=True)
         parser.add_argument("--seconds", type=float, required=True)
         parser.add_argument("--cleanup-seconds", type=float, default=6)

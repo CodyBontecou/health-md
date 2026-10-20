@@ -35,6 +35,13 @@ jobs:
       - name: Verify pinned SDK27 compiler and public API
         run: bash scripts/qualify-history-authorization-sdk27.sh
 
+      - name: Fingerprint active Apple toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          fingerprint=$({ xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; xcrun --sdk macosx --show-sdk-version; } | shasum -a 256 | awk '{print $1}')
+          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
       - name: Restore exact-source shared Rust core from Apple CI
         uses: actions/cache/restore@v4
         with:
@@ -42,13 +49,7 @@ jobs:
             apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
           key: >-
-            apple-shared-core-sdk27-27A266a-${{ runner.os }}-${{ runner.arch }}-${{
-            hashFiles('packages/healthmd-core-rust/Cargo.toml',
-            'packages/healthmd-core-rust/Cargo.lock',
-            'packages/healthmd-core-rust/rust-toolchain.toml',
-            'packages/healthmd-core-rust/crates/**',
-            'packages/healthmd-core-rust/scripts/*apple*',
-            'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+            apple-shared-core-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fingerprint }}-${{ hashFiles('packages/healthmd-core-rust/vendor/**', 'packages/healthmd-core-rust/Cargo.toml', 'packages/healthmd-core-rust/Cargo.lock', 'packages/healthmd-core-rust/rust-toolchain.toml', 'packages/healthmd-core-rust/crates/**', 'packages/healthmd-core-rust/scripts/*apple*', 'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
 
       - name: Set up pinned Rust compiler for binding verification
         uses: dtolnay/rust-toolchain@1.88.0

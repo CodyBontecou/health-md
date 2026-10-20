@@ -36,6 +36,48 @@ jobs to pass and rejects missing selection outputs or selected skips. The Rust
 artifact preparation job runs whenever an Xcode test job needs it. Main/testing
 pushes, manual runs, and reusable/exact-SHA qualification retain every job.
 
+### Apple critical-path execution
+
+All five Rust targets (iOS device, both iOS Simulator architectures, and both
+macOS architectures) compile in parallel with the unchanged pinned release
+profile. Each archive is paired with a source digest, commit, toolchain and byte
+hash receipt. The preparation job requires the complete five-slice inventory,
+checks generated bindings, assembles the same three-platform XCFramework and
+runs the existing architecture/symbol validator. Exact-source archive and
+XCFramework caches include the active Xcode/SDK fingerprint; nightly uses the
+same complete-artifact key and still validates source/bindings on cache hits.
+
+The iOS unit job begins booting its selected compatible simulator before
+compilation. Unit and UI products compile only the execution architecture and
+disable the unused compiler index store. The native XCFramework still
+contains all five previously qualified target architectures. Test results are
+never restored from a cache.
+
+The fourteen existing phone UI cases plus three history cases run across three
+phone shards; a fourth shard runs four App Review/history cases on iPad. The
+same history method intentionally runs once per device family. Entire XCTest
+classes remain together within a family to preserve shared fixture state.
+One SDK27 preparation job builds fresh app/runner/test products and publishes a
+qualified archive. Every shard verifies the producer archive SHA, exact source
+and current restored binary fingerprints before execution. The selected actual
+simulator must match its required device family. Setup and the single native
+invocation share an owned deadline inside the existing 35-minute phone or
+15-minute iPad step, with cleanup time reserved. Exact SDK27 compiler/signature
+and producer/consumer provenance checks remain mandatory for core and app jobs.
+
+Each shard checks the authoritative xcresult case tree and summary against its
+exact selection. Missing, duplicate within a device family, failed, skipped or
+unexpected cases fail qualification. The stable `iOS UI regressions` aggregate
+requires successful preparation and all four current-run/source receipts for
+21 device-attributed executions. Compile/runtime warning gates (including
+premature StateObject access), raw logs, process ownership records and xcresults
+remain mandatory. Fail-fast is disabled.
+
+These changes trade additional simultaneous runners for a shorter critical
+path; they do not remove test coverage or claim a fixed hosted-runner speedup.
+Compare cold/warm execution separately from dependency wait, queue time and
+summed runner work. F-Droid and Android Wear remain paused as described below.
+
 ## Android CI selection and accessibility coverage
 
 On pull requests, `apps/android/scripts/android-ci-plan.py` selects the active Android
@@ -58,9 +100,12 @@ or changing results run every active job. Selected jobs must succeed; a skipped
 job is accepted only when its selection output explicitly says `false`. The policy
 job's listing validator discovers every `scripts/tests/test_*.py`.
 
-Phone instrumentation retains four hosted shards. Shard zero also runs the core
+Phone instrumentation uses six hosted shards with the same complete Play test inventory. Shard zero also runs the core
 suite and direct E2E; every shard runs the native-input readiness check using Play.
 The stable instrumentation gate validates the combined Play/core/E2E XML inventory.
+APK preparation reuses compilation outputs through the existing safe Gradle wrapper;
+requested Test tasks still execute freshly. Six workers trade more runner minutes
+for shorter device-test execution; hosted cache and queue evidence determine actual savings.
 Local runs remain unsharded unless shard index/count are explicitly supplied.
 
 Instrumentation runs every core and Play test method with the full ten-display

@@ -317,8 +317,8 @@ class ArtifactQualificationTests(unittest.TestCase):
 
 def ui_steps() -> tuple[str, dict[str, str]]:
     workflow = (REPO / ".github/workflows/apple-ci.yml").read_text()
-    job = workflow.split("  test-ios-ui:\n", 1)[1].split("\n  connectivity-package:", 1)[0]
-    preparation = workflow.split("  prepare-ui-artifacts:\n", 1)[1].split("\n  test-ios-ui:", 1)[0]
+    job = workflow.split("  ios-ui-shards:\n", 1)[1].split("\n  test-ios-ui:", 1)[0]
+    preparation = workflow.split("  prepare-ui-artifacts:\n", 1)[1].split("\n  ios-ui-shards:", 1)[0]
     pieces = re.split(r"^      - name: ", preparation, flags=re.MULTILINE)[1:]
     pieces += re.split(r"^      - name: ", job, flags=re.MULTILINE)[1:]
     return job, {piece.splitlines()[0]: piece for piece in pieces}
@@ -330,17 +330,6 @@ def shell_body(step: str) -> str:
 
 
 class WorkflowExecutionTests(unittest.TestCase):
-    def test_preparation_does_not_consume_the_bounded_native_execution_job(self) -> None:
-        workflow = (REPO / ".github/workflows/apple-ci.yml").read_text()
-        self.assertNotIn("Build UI test artifacts once", self.job)
-        self.assertIn("prepare-ui-artifacts", self.job.split("    steps:", 1)[0])
-        prepared = workflow.split("  prepare-ui-artifacts:\n", 1)[1].split("\n  test-ios-ui:", 1)[0]
-        self.assertIn("Build UI test artifacts once", prepared)
-        self.assertIn("prepare-shared-core", prepared.split("    steps:", 1)[0])
-        self.assertEqual(workflow.count("xcodebuild build-for-testing"), 1)
-        gate = workflow.split("  gate:\n", 1)[1]
-        self.assertIn("needs.prepare-ui-artifacts.result", gate)
-
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -349,8 +338,12 @@ class WorkflowExecutionTests(unittest.TestCase):
         self.bin.mkdir()
         scripts = self.root / "scripts"
         scripts.mkdir()
-        for name in ("validate_ios_ui_xctestrun.py", "run-owned-ui.py", "prepared_ios_ui_artifacts.py"):
-            shutil.copy(SCRIPTS / name, scripts)
+        shutil.copy(SCRIPTS / "validate_ios_ui_xctestrun.py", scripts)
+        shutil.copy(SCRIPTS / "ios_ui_shards.py", scripts)
+        shutil.copy(SCRIPTS / "start-ci-ios-simulator.sh", scripts)
+        shutil.copy(SCRIPTS / "apple_nightly_ui.py", scripts)
+        shutil.copy(SCRIPTS / "run-owned-ui.py", scripts)
+        shutil.copy(SCRIPTS / "prepared_ios_ui_artifacts.py", scripts)
         self.calls = self.root / "calls.jsonl"
         self.device_calls = self.root / "device-calls.jsonl"
         self.output = self.root / "github-output"
@@ -366,6 +359,7 @@ class WorkflowExecutionTests(unittest.TestCase):
             "    make_products(Path(args[args.index('-derivedDataPath')+1]))\n"
             "    print('** TEST BUILD SUCCEEDED **')\n"
             "else:\n"
+            "    Path(args[args.index('-resultBundlePath')+1]).mkdir(parents=True)\n"
             "    print(\"Test Case 'synthetic SDK-free command contract' passed\")\n"
             "    print('Executed 1 test, with 0 failures')\n"
         )
@@ -376,12 +370,23 @@ class WorkflowExecutionTests(unittest.TestCase):
             "args=sys.argv[1:]\n"
             "with Path(os.environ['MD_MOCK_DEVICE_CALLS']).open('a') as f: f.write(json.dumps(args)+'\\n')\n"
             "if os.environ.get('MD_MOCK_SIMCTL_FAILURE')==args[1]: sys.exit(73)\n"
+            "state=Path('mock-simulator-state')\n"
+            "if args[:2]==['simctl','boot']: state.write_text('Booted')\n"
+            "if args[:3]==['simctl','list','devices']:\n"
+            "    print(json.dumps({'devices':{'runtime':[{'udid':u,'state':state.read_text() if state.exists() else 'Shutdown','isAvailable':True,'deviceTypeIdentifier':'com.apple.CoreSimulator.SimDeviceType.'+(('iPad' if family=='iPhone' else 'iPhone') if os.environ.get('MD_MOCK_WRONG_FAMILY') else family)+'-Synthetic'} for u,family in [('11111111-1111-1111-1111-111111111111','iPhone'),('22222222-2222-2222-2222-222222222222','iPad')]]}}))\n"
             "if args[:2]==['simctl','install'] and not Path(args[3]).is_dir(): sys.exit(74)\n"
+            "if args[:3]==['xcresulttool','get','test-results']:\n"
+            "    calls=[json.loads(x) for x in Path(os.environ['MD_MOCK_CALLS']).read_text().splitlines()]\n"
+            "    selected=[a.split('HealthMdUITests/',1)[1] for a in calls[-1] if a.startswith('-only-testing:')]\n"
+            "    if args[3]=='summary':\n"
+            "        print(json.dumps(dict(result='Passed',totalTestCount=len(selected),passedTests=len(selected),failedTests=0,skippedTests=0)))\n"
+            "    else:\n"
+            "        print(json.dumps(dict(testNodes=[dict(nodeType='Test Case',nodeIdentifier=n+'()',result='Passed') for n in selected])))\n"
         ))
         self.executable(scripts / "select-ios-simulator.sh", (
             "#!/bin/sh\ncase \"$*\" in\n"
             "  *iPad*) printf '%s\\n' 'platform=iOS Simulator,id=SYNTHETIC-IPAD';;\n"
-            "  *) printf '%s\\n' 'platform=iOS Simulator,id=SYNTHETIC-IPHONE';;\nesac\n"
+            "  *) printf '%s\\n' 'platform=iOS Simulator,id=11111111-1111-1111-1111-111111111111';;\nesac\n"
         ))
         self.environment = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}", GITHUB_OUTPUT=str(self.output), MD_MOCK_CALLS=str(self.calls), MD_MOCK_DEVICE_CALLS=str(self.device_calls))
         self.job, self.steps = ui_steps()
@@ -391,13 +396,15 @@ class WorkflowExecutionTests(unittest.TestCase):
         path.write_text(content)
         path.chmod(0o755)
 
-    def run_step(self, name: str, artifact: str = "") -> subprocess.CompletedProcess:
+    def run_step(self, name: str, artifact: str = "", shard: int = 0) -> subprocess.CompletedProcess:
         script = shell_body(self.steps[name])
         script = script.replace("${{ steps.ui_artifacts.outputs.xctestrun }}", artifact)
         script = script.replace("${{ steps.ui_artifacts.outputs.app }}", self.app if artifact else "")
-        script = script.replace("${{ steps.simulator.outputs.ios_destination }}", "platform=iOS Simulator,id=SYNTHETIC-IPHONE")
+        script = script.replace("${{ steps.simulator.outputs.ios_destination }}", "platform=iOS Simulator,id=" + ("22222222-2222-2222-2222-222222222222" if shard == 3 else "11111111-1111-1111-1111-111111111111"))
         script = script.replace("${{ steps.ui_artifacts.outputs.derived_data }}", getattr(self, "derived", ""))
         script = script.replace("${{ needs.prepare-ui-artifacts.outputs.sha256 }}", getattr(self, "archive_sha", ""))
+        script = script.replace("${{ matrix.shard }}", str(shard))
+        script = script.replace("${{ github.run_id }}", "12").replace("${{ github.run_attempt }}", "1")
         return subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], cwd=self.root, env=self.environment, text=True, capture_output=True)
 
     def build(self) -> str:
@@ -421,64 +428,75 @@ class WorkflowExecutionTests(unittest.TestCase):
         self.app = consumer["app"]
         return consumer["xctestrun"]
 
-    def test_one_generic_build_and_two_run_only_commands_share_exact_artifact(self) -> None:
+    def test_compile_once_archive_feeds_every_device_attributed_lane(self) -> None:
+        from ios_ui_shards import SHARDS, DEVICE_FAMILIES
+        self.assertNotIn("Build UI test artifacts once", self.job)
+        self.assertIn("prepare-ui-artifacts", self.job.split("    steps:", 1)[0])
         artifact = self.build()
-        for name in ("Select newest compatible iOS Simulator", "Run UI smoke tests (iOS)"):
-            result = self.run_step(name, artifact)
-            self.assertEqual(result.returncode, 0, result.stderr)
+        for index in range(len(SHARDS)):
+            result_path = self.root / "build/test-results/HealthMd-UI-Shard.xcresult"
+            if result_path.exists(): shutil.rmtree(result_path)
+            # Actual matrix jobs have independent filesystems, including ownership records.
+            for record in (self.root / "build/logs").glob("ui-owner-*"): record.unlink()
+            result = self.run_step("Run UI smoke tests (iOS)", artifact, index)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            receipt = json.loads((self.root / "build/logs/ui-case-receipt.json").read_text())
+            self.assertEqual(receipt["cases"], sorted(SHARDS[index]))
+            self.assertEqual(receipt["shard"], index)
+            self.assertEqual(receipt["device_family"], DEVICE_FAMILIES[index])
+            owner = json.loads((self.root / "build/logs/ui-owner-shard.json").read_text())
+            self.assertTrue(owner["eligible_to_continue"])
         calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
-        self.assertEqual([args[0] for args in calls], ["build-for-testing"] + ["test-without-building"] * 2)
+        self.assertEqual([args[0] for args in calls], ["build-for-testing"] + ["test-without-building"] * 4)
         build = calls[0]
         self.assertEqual(build[build.index("-destination") + 1], "generic/platform=iOS Simulator")
         self.assertEqual(build[build.index("-configuration") + 1], "Debug-iOS")
         self.assertEqual(build[build.index("-scheme") + 1], "HealthMd-UITests-iOS")
-        self.assertTrue(Path(build[build.index("-derivedDataPath") + 1]).name.startswith("ios-ui-derived-data."))
-        for setting in ("CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER="):
-            self.assertIn(setting, build)
-        selections = []
-        result_bundles = set()
-        for args, count in zip(calls[1:], (9, 8)):
+        self.assertIn("ONLY_ACTIVE_ARCH=YES", build)
+        self.assertIn("COMPILER_INDEX_STORE_ENABLE=NO", build)
+        self.assertIn("ARCHS=" + os.uname().machine, build)
+        for args, expected in zip(calls[1:], SHARDS):
             self.assertEqual(args[args.index("-xctestrun") + 1], artifact)
-            bundle = Path(args[args.index("-resultBundlePath") + 1])
-            self.assertEqual(bundle.parent, Path("build/test-results"))
-            self.assertTrue(bundle.name.startswith("HealthMd-UI-"))
-            self.assertEqual(bundle.suffix, ".xcresult")
-            result_bundles.add(bundle)
             self.assertFalse(set(args) & {"-project", "-workspace", "-scheme", "-configuration"})
-            self.assertEqual(args[args.index("-test-timeouts-enabled") + 1], "YES")
-            self.assertEqual(args[args.index("-default-test-execution-time-allowance") + 1], "180")
-            self.assertEqual(args[args.index("-maximum-test-execution-time-allowance") + 1], "300")
-            selected = [a.split("HealthMdUITests/", 1)[1] for a in args if a.startswith("-only-testing:")]
-            self.assertEqual(len(selected), count)
-            selections.extend(selected)
-        self.assertEqual(selections, EXPECTED_TESTS)
-        self.assertEqual(len(result_bundles), 2, "Each invocation must preserve its own native result")
-        self.assertEqual(
-            [json.loads(line) for line in self.device_calls.read_text().splitlines()],
-            [
-                ["simctl", "bootstatus", "SYNTHETIC-IPHONE", "-b"],
-                ["simctl", "install", "SYNTHETIC-IPHONE", self.app],
-            ],
-        )
+            for flag, value in [("-test-timeouts-enabled", "YES"), ("-default-test-execution-time-allowance", "180"),
+                                ("-maximum-test-execution-time-allowance", "300")]:
+                self.assertEqual(args[args.index(flag) + 1], value)
+            self.assertEqual([a.split("HealthMdUITests/", 1)[1] for a in args if a.startswith("-only-testing:")], list(expected))
+        installs = [a for line in self.device_calls.read_text().splitlines()
+                    if (a := json.loads(line))[:2] == ["simctl", "install"]]
+        self.assertEqual([a[2] for a in installs], ["11111111-1111-1111-1111-111111111111"] * 3 + ["22222222-2222-2222-2222-222222222222"])
+        self.assertTrue(all(a[3] == self.app for a in installs))
         self.assertTrue((self.root / "build/logs/build-ios-ui-compile.log").is_file())
-        self.assertTrue((self.root / "build/logs/ios-ui-build-receipt.json").is_file())
 
-    def test_tablet_native_result_is_retained_by_the_existing_artifact_upload(self) -> None:
-        tablet = shell_body(self.steps["Run App Review export regression (iPad)"])
-        plan = json.loads(tablet.split("<<'IPAD_PLAN'\n", 1)[1].split("\nIPAD_PLAN", 1)[0])
-        command = plan["pipelines"][0]["command"]
-        bundle = Path(command[command.index("-resultBundlePath") + 1])
-        self.assertEqual(bundle, Path("build/test-results/HealthMd-UI-AppReview-iPad.xcresult"))
-        self.assertIn("apps/apple/build/test-results/HealthMd-UI-*.xcresult",
-                      self.steps["Upload iOS UI artifacts"])
+    def test_wrong_family_or_archive_receipt_cannot_admit_native_execution(self) -> None:
+        artifact = self.build()
+        before = self.calls.read_bytes()
+        self.environment["MD_MOCK_WRONG_FAMILY"] = "1"
+        result = self.run_step("Run UI smoke tests (iOS)", artifact)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("device family", result.stderr)
+        self.assertEqual(self.calls.read_bytes(), before)
+        self.environment.pop("MD_MOCK_WRONG_FAMILY")
+        path = self.root / "build/logs/ios-ui-build-receipt.json"
+        original = json.loads(path.read_text())
+        for mutation in (dict(original, prepared_archive_sha256="f" * 64),
+                         {k: v for k, v in original.items() if k != "prepared_archive_sha256"},
+                         dict(original, source_sha="b" * 40), dict(original, products=[])):
+            path.write_text(json.dumps(mutation))
+            result = self.run_step("Run UI smoke tests (iOS)", artifact)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(self.calls.read_bytes(), before)
+        path.write_text(json.dumps(original))
+        self.assertFalse((self.root / "build/logs/ui-case-receipt.json").exists())
 
-    def test_every_selected_native_case_has_an_implemented_test_method(self) -> None:
-        selections = re.findall(r"-only-testing:HealthMdUITests/([A-Za-z0-9_]+/[A-Za-z0-9_]+)", self.job)
-        self.assertEqual(len(selections), 21, "Preserve all17 phone and4 tablet selections")
-        for selection in selections:
-            suite, method = selection.split("/")
-            source = (REPO / "apps/apple/HealthMdUITests" / (suite + ".swift")).read_text()
-            self.assertRegex(source, r"\bfunc\s+" + re.escape(method) + r"\s*\(", selection)
+    def test_every_phone_and_tablet_case_has_an_implemented_test_method(self) -> None:
+        from ios_ui_shards import SHARDS
+        self.assertEqual(sum(map(len, SHARDS)), 21)
+        for lane in SHARDS:
+            for selection in lane:
+                suite, method = selection.split("/")
+                source = (REPO / "apps/apple/HealthMdUITests" / (suite + ".swift")).read_text()
+                self.assertRegex(source, r"\bfunc\s+" + re.escape(method) + r"\s*\(", selection)
 
     def test_a_second_build_uses_a_new_directory_instead_of_old_artifacts(self) -> None:
         first = self.build()
@@ -498,18 +516,29 @@ class WorkflowExecutionTests(unittest.TestCase):
         self.assertEqual(self.run_step("Run UI smoke tests (iOS)", artifact).returncode, 73)
         self.environment.pop("MD_MOCK_FAILURE")
         self.environment["MD_MOCK_SIMCTL_FAILURE"] = "install"
-        self.assertEqual(self.run_step("Select newest compatible iOS Simulator", artifact).returncode, 73)
+        for record in (self.root / "build/logs").glob("ui-owner-*"): record.unlink()
+        before = self.calls.read_bytes()
+        self.assertEqual(self.run_step("Run UI smoke tests (iOS)", artifact).returncode, 125)
+        self.assertEqual(self.calls.read_bytes(), before, "Failed setup must not admit native execution")
+        owner = json.loads((self.root / "build/logs/ui-owner-shard.json").read_text())
+        self.assertFalse(owner["eligible_to_continue"])
+        self.assertFalse((self.root / "build/logs/ui-case-receipt.json").exists())
 
     def test_existing_gate_budgets_and_compile_warning_retention_are_preserved(self) -> None:
         self.assertIn("timeout-minutes: 60", self.job)
-        self.assertIn("timeout-minutes: 35", self.steps["Run UI smoke tests (iOS)"])
+        self.assertIn("timeout-minutes: ${{ matrix.shard == 3 && 15 || 35 }}", self.steps["Run UI smoke tests (iOS)"])
         for name in ("Check warnings (iOS UI)", "Upload iOS UI artifacts"):
             self.assertIn("!cancelled()", self.steps[name])
             self.assertIn("build/logs/build-ios-ui-compile.log", self.steps[name])
             self.assertIn("build/logs/build-ios-ui.log", self.steps[name])
         self.assertNotIn("continue-on-error", self.job)
         self.assertNotIn("-retry-tests-on-failure", self.job)
-        self.assertIn("test_ios_ui_build_contract.py", self.steps["Test UI build and execution contract"])
+        workflow = (REPO / ".github/workflows/apple-ci.yml").read_text()
+        self.assertIn("test_ios_ui_build_contract.py", workflow)
+        self.assertIn("test_ios_ui_shards.py", workflow)
+        self.assertEqual(workflow.count("xcodebuild build-for-testing"), 1)
+        self.assertIn("--device-family iPad --create-missing", self.steps["Select newest compatible iOS Simulator"])
+        self.assertIn("PREPARE_RESULT: ${{ needs.prepare-ui-artifacts.result }}", workflow)
 
 
 if __name__ == "__main__":

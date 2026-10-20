@@ -193,10 +193,10 @@ sys.exit(result)
                 process.stdin = None
         return process
 
-    def finish(self, process, code):
+    def finish(self, process, code, lane="phone"):
         stdout, stderr = process.communicate(timeout=8)
         self.assertEqual(process.returncode, code, (stdout, stderr))
-        receipt = json.loads((self.cwd / "records/ui-owner-phone.json").read_text())
+        receipt = json.loads((self.cwd / ("records/ui-owner-" + lane + ".json")).read_text())
         if receipt["process_clean"]:
             self.assertTrue(all(not owner.members(g) for g in receipt["groups"]))
         self.assertIsNone(self.sentinel.poll())
@@ -215,6 +215,23 @@ sys.exit(result)
         time.sleep(4.25)  # Beyond actual mocked delayed-write point, not just leader exit.
         self.assertEqual(raw.read_bytes() if raw.exists() else b"", before)
         self.assertFalse((self.cwd / "late-result").exists())
+
+    def test_shard_owns_one_pipeline_and_clean_completion(self):
+        receipt = self.finish(self.launch(("0",), lane="shard"), 0, lane="shard")
+        self.assertTrue(receipt["eligible_to_continue"])
+        self.assertEqual(len(receipt["stages"]), 1)
+        self.assertEqual((self.cwd / "calls").read_text().splitlines(), ["0"])
+
+    def test_shard_rejects_multiple_pipelines_before_native_admission(self):
+        receipt = self.finish(self.launch(("0", "0"), lane="shard"), 125, lane="shard")
+        self.assertFalse(receipt["eligible_to_continue"])
+        self.assertFalse((self.cwd / "calls").exists())
+
+    def test_shard_deadline_stops_the_actual_owned_pipeline(self):
+        receipt = self.finish(self.launch(("slow",), seconds=0.3, lane="shard"), 124, lane="shard")
+        self.assertFalse(receipt["eligible_to_continue"])
+        self.assertTrue(receipt["process_clean"])
+        self.assertEqual(receipt["abort"], "deadline")
 
     def test_deadline_during_each_invocation_no_next_native_or_tablet(self):
         for modes in (("hold", "0"), ("0", "hold")):
