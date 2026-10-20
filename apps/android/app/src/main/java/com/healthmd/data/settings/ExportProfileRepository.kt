@@ -82,10 +82,13 @@ class ExportProfileRepository @Inject constructor(
 
     /** One committed DataStore image supplies the exact row, revision and rebind state. No default,
      * active-profile lookup, migration, preference edit, endpoint or credential read is performed. */
-    internal suspend fun readConfigurationProfile(id: String, expectedRevision: Int): ExportProfileConfigurationSnapshot? {
+    internal suspend fun readConfigurationProfile(id: String, expectedRevision: Int): ExportProfileConfigurationSnapshot? =
+        if (expectedRevision < 1) null else readConfigurationProfile(dataStore.data.first(), id, expectedRevision)
+
+    internal fun readConfigurationProfile(prefs: Preferences, id: String, expectedRevision: Int): ExportProfileConfigurationSnapshot? {
         if (expectedRevision < 1) return null
-        val prefs = dataStore.data.first()
-        val profile = decodeProfiles(prefs[Keys.PROFILES])?.singleOrNull { it.id == id }
+        val raw = try { prefs[Keys.PROFILES] } catch (_: ClassCastException) { return null }
+        val profile = decodeProfiles(raw)?.singleOrNull { it.id == id }
             ?.takeIf { it.configurationRevision == expectedRevision } ?: return null
         val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson) ?: return null
         val blocked = try {

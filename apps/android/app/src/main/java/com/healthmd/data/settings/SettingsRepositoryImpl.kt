@@ -91,9 +91,11 @@ class SettingsRepositoryImpl(
     }
 
     /** Reads exact persisted settings and revision from one committed image, without Flow defaults. */
-    internal suspend fun readSavedExportConfiguration(expectedRevision: Int): SavedDeviceExportConfigurationSnapshot? {
+    internal suspend fun readSavedExportConfiguration(expectedRevision: Int): SavedDeviceExportConfigurationSnapshot? =
+        if (expectedRevision < 1) null else readSavedExportConfiguration(dataStore.data.first(), expectedRevision)
+
+    internal fun readSavedExportConfiguration(prefs: Preferences, expectedRevision: Int): SavedDeviceExportConfigurationSnapshot? {
         if (expectedRevision < 1) return null
-        val prefs = dataStore.data.first()
         val revision = try { prefs[Keys.NATIVE_CONFIGURATION_REVISION] ?: 1 } catch (_: ClassCastException) { return null }
         if (revision != expectedRevision) return null
         val raw = try { prefs[Keys.EXPORT_SETTINGS] } catch (_: ClassCastException) { return null }

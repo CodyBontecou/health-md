@@ -12,6 +12,111 @@ import XCTest
 
 @MainActor
 final class AgentBridgeExportPlanningTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: existing native settings/store tests retain Combine and
+    // MainActor objects through process teardown on older iOS runtimes; these use the same owners.
+    private static var retainedNativeConfigurationObjects: [AnyObject] = []
+
+    private func nativeState(revision: Int64 = 3) throws -> AgentBridgeNativePlanningState {
+        try .init(catalogRevision: revision,
+                  availableNativeMetricIDs: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"],
+                  sourceCalendarTimezone: AgentBridgeZone("America/Los_Angeles"), configurationProtection: .locked,
+                  nativeGrants: .satisfied, entitlement: .satisfied, foregroundAvailable: true, protectedDataAvailable: true)
+    }
+
+    func testNativeConfigurationDiscoveryAndExplicitNeverReadPrivatePreferences() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
+        Self.retainedNativeConfigurationObjects.append(profiles)
+        let state = try nativeState()
+        let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: { state })
+        rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
+        for policy in [nil, AgentBridgeSettingsPolicy.explicit(try output())] {
+            let configuration = try reader.readConfiguration(for: rig.peer, policy: policy)
+            XCTAssertNil(configuration.inputs.savedDevice)
+            XCTAssertTrue(configuration.inputs.profiles.isEmpty)
+        }
+        XCTAssertEqual(rig.reader.defaults.reads, 0)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testNativeConfigurationPlansSupportedPoliciesAndRejectsUnsupportedSavedOutputWithoutMutation() async throws {
+        for kind in ["explicit", "saved", "profile"] {
+            let rig = try Rig(withSaved: true); defer { rig.cleanup() }; try rig.enroll()
+            let original = try XCTUnwrap(rig.reader.saved)
+            let settings = AdvancedExportSettings(snapshot: original, userDefaults: rig.reader.defaults)
+            settings.apply(snapshot: original)
+            try await Task.sleep(for: .milliseconds(350))
+            rig.reader.defaults.set(original.healthSubfolder, forKey: "healthSubfolder")
+            let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
+            Self.retainedNativeConfigurationObjects.append(settings)
+            Self.retainedNativeConfigurationObjects.append(profiles)
+            let selected = try XCTUnwrap(profiles.add(name: "Selected", settings: original, target: .connectedMac))
+            let other = try XCTUnwrap(profiles.add(name: "Active", settings: original, target: .localIPhoneFolder))
+            XCTAssertTrue(profiles.activate(id: other.id))
+            let revision = try XCTUnwrap(AdvancedExportSettings.nativeConfigurationRevision(defaults: SystemUserDefaults(defaults: rig.reader.defaults)))
+            let state = try nativeState()
+            let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: { state })
+            let service = AgentBridgeExportPlanningService(store: rig.store, configuration: reader, clock: rig.clock, newPlanID: { try id(6) })
+            func send(_ document: AgentBridgeDocument) throws -> AgentBridgeDocument {
+                try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: service.handle(
+                    AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: document)), authenticatedPeer: rig.peer)).payload
+            }
+            let before = rig.reader.defaults.persistentDomain(forName: rig.reader.suite)
+            rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
+            guard case .discovery(let discovery) = try send(.discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer))) else {
+                return XCTFail("Expected native discovery")
+            }
+            XCTAssertEqual(rig.reader.defaults.reads, 0)
+            let policy: AgentBridgeSettingsPolicy
+            switch kind {
+            case "saved": policy = .savedDeviceSettings(expectedRevision: revision)
+            case "profile": policy = .profile(profileID: try AgentBridgeUUID(selected.id.uuidString.lowercased()), expectedRevision: 1)
+            default: policy = .explicit(try output())
+            }
+            let response = try send(.planRequest(rig.request(discovery: discovery, policy: policy)))
+            if kind == "saved" {
+                // Native rehydration supplies default frontmatter fields. The current strict output
+                // subset cannot represent them, even for JSON: reject rather than drop output fields.
+                // Full saved-settings output acceptance remains an integration requirement.
+                XCTAssertEqual(try error(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: response))), .unsupportedCapability)
+            } else {
+                guard case .plan(let plan) = response else { return XCTFail("Expected supported native configuration plan") }
+                XCTAssertEqual(try service.reviewNativePlan(planID: plan.planId, authenticatedPeer: rig.peer), plan)
+                XCTAssertEqual(plan.intent.settingsPolicy, policy)
+            }
+            XCTAssertEqual(profiles.activeProfileID, other.id)
+            XCTAssertEqual(rig.reader.defaults.writes, 0)
+            if kind == "explicit" { XCTAssertEqual(rig.reader.defaults.reads, 0) }
+            XCTAssertEqual(rig.reader.defaults.persistentDomain(forName: rig.reader.suite) as NSDictionary?, before as NSDictionary?)
+        }
+    }
+
+    func testNativeConfigurationRejectsStalePinsStateDriftAndRevokedPeerWithoutFallback() throws {
+        for mode in ["stale_saved", "stale_profile", "drift", "revoke"] {
+            let rig = try Rig(withSaved: true); defer { rig.cleanup() }
+            let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
+            Self.retainedNativeConfigurationObjects.append(profiles)
+            let profile = try XCTUnwrap(profiles.add(name: "Selected", settings: XCTUnwrap(rig.reader.saved), target: .localIPhoneFolder))
+            var reads = 0
+            let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles, nativeState: {
+                reads += 1
+                if mode == "revoke", reads == 2 { rig.session.revoke() }
+                return try self.nativeState(revision: mode == "drift" && reads == 2 ? 4 : 3)
+            })
+            let policy: AgentBridgeSettingsPolicy?
+            switch mode {
+            case "stale_saved": policy = .savedDeviceSettings(expectedRevision: 7)
+            case "stale_profile": policy = .profile(profileID: try AgentBridgeUUID(profile.id.uuidString.lowercased()), expectedRevision: 2)
+            default: policy = nil
+            }
+            rig.reader.defaults.writes = 0
+            XCTAssertThrowsError(try reader.readConfiguration(for: rig.peer, policy: policy)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, mode == "revoke" ? .permissionRequired : .bindingChanged)
+            }
+            XCTAssertEqual(rig.reader.defaults.writes, 0)
+        }
+    }
+
     func testDiscoveryAndPlanningKeepPolicySupportStableWhenOnlySelectedConfigurationIsLoaded() throws {
         for kind in ["explicit", "saved", "profile"] {
             let rig = try Rig(withSaved: true); defer { rig.cleanup() }; try rig.enroll()
