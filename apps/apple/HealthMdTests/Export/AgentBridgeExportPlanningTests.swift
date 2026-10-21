@@ -280,6 +280,72 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), next)
     }
 
+    func testNativeAuthorityGrantAndRevokeInvalidateSameOwnerAfterStoreUnlock() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()
+        try lifecycle.observe(facts)
+        let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let relay = AgentBridgeNativeCatalogEventRelay(); relay.replace(with: lifecycle)
+        let notifications = AgentBridgeNativeCatalogNotifications(names: [.healthMdAgentExportAuthorityDidChange], relay: relay)
+        defer { withExtendedLifetime(notifications) {}; relay.replace(with: nil) }
+        try rig.enroll()
+        XCTAssertThrowsError(try lifecycle.currentFacts()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged) }
+        let next = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        XCTAssertEqual(next.revision, first.revision + 1)
+        try rig.store.revokeNativeDelegation(rig.grant().reference(), expectedGeneration: rig.store.snapshot().generation,
+                                            authorization: FakeNativeAuthorization())
+        XCTAssertTrue(try XCTUnwrap(rig.store.snapshot().delegations.first).revoked)
+        XCTAssertThrowsError(try lifecycle.currentFacts()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged) }
+        XCTAssertEqual(try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID).revision,
+                       next.revision + 1)
+    }
+
+    func testNativeAuthoritySetupAndFailedAuthorizedWriteEmitButDeniedAttemptDoesNot() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()
+        try lifecycle.observe(facts)
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let relay = AgentBridgeNativeCatalogEventRelay(); relay.replace(with: lifecycle)
+        let notifications = AgentBridgeNativeCatalogNotifications(names: [.healthMdAgentExportAuthorityDidChange], relay: relay)
+        defer { withExtendedLifetime(notifications) {}; relay.replace(with: nil) }
+        let other = rig.parent.appendingPathComponent("new-native-authority")
+        XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createPrivateStore(at: other, protectedKeys: rig.keys,
+            authorization: FakeNativeAuthorization(deny: true)))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: other.path))
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        _ = try AgentBridgeExportAuthorityStore.createPrivateStore(at: other, protectedKeys: rig.keys, authorization: FakeNativeAuthorization())
+        XCTAssertThrowsError(try lifecycle.currentFacts())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let before = try rig.store.snapshot().generation
+        XCTAssertThrowsError(try rig.store.storeNativeDelegation(rig.grant(), expectedGeneration: before,
+            authorization: FakeNativeAuthorization(deny: true)))
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        XCTAssertThrowsError(try rig.store.storeNativeDelegation(rig.grant(), expectedGeneration: before + 1,
+            authorization: FakeNativeAuthorization()))
+        XCTAssertEqual(try rig.store.snapshot().generation, before)
+        XCTAssertThrowsError(try lifecycle.currentFacts()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged) }
+    }
+
+    func testNativeAuthorityPublicationReadAndDetachedObserverDoNotInvalidate() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()
+        try lifecycle.observe(facts)
+        let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let relay = AgentBridgeNativeCatalogEventRelay(); relay.replace(with: lifecycle)
+        var notifications: AgentBridgeNativeCatalogNotifications? = .init(names: [.healthMdAgentExportAuthorityDidChange], relay: relay)
+        try withExtendedLifetime(notifications) {
+            _ = try rig.store.snapshot()
+        }
+        XCTAssertEqual(try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), first)
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        notifications = nil
+        try rig.enroll()
+        XCTAssertEqual(try lifecycle.currentFacts(), facts)
+        relay.replace(with: nil)
+        NotificationCenter.default.post(name: .healthMdAgentExportAuthorityDidChange, object: nil)
+        XCTAssertThrowsError(try lifecycle.currentFacts()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
+    }
+
     func testFoundationNativeNotificationsLatchBeforeReturnAndDetachWithOwnerLifetime() throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let facts = try nativeState(), lifecycle = AgentBridgeNativeCatalogLifecycle()

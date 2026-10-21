@@ -80,41 +80,43 @@ internal class AgentBridgeExportAuthorityStore private constructor(
     private fun initializeNew(native: AgentBridgeExportNativeAuthorization, keyBeforeReservation: Boolean,
         beforeReservation: () -> Unit = {}, prepareKey: () -> SecretKey) = safe {
         native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
-        serialized {
-            checkParent()
-            demand(!Files.exists(root, NOFOLLOW_LINKS), AgentBridgeErrorCode.REVISION_CONFLICT)
-            beforeReservation()
-            val existingKey = if (keyBeforeReservation) prepareKey() else null
-            Files.createDirectory(root, PosixFilePermissions.asFileAttribute(directoryPermissions))
-            val identity = attributes(root, directory = true).fileKey()
-            observedRootIdentity = identity
-            val key = existingKey ?: prepareKey()
-            // Credential SDK work may delay. Recheck original native parent and reserved inode
-            // before publishing files; no missing-key repair of an existing ledger is possible.
-            checkParent()
-            demand(attributes(root, directory = true).fileKey() == identity)
-            writeNew(root.resolve(LOCK_NAME), ByteArray(0))
-            val initial = fileBytes(AgentBridgeExportLedger(1, 1, emptyList(), emptyList(), emptyList()), key)
-            if (keyBeforeReservation) {
-                writeNew(root.resolve(LEDGER_NAME), initial)
-            } else {
-                native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+        AgentBridgeNativeAuthorityChanges.mutation {
+            serialized {
                 checkParent()
-                demand(attributes(root, true).fileKey() == identity)
-                // Stage/fsync before the final native decision. Revocation during either the
-                // credential SDK or staging must not publish a usable initialized issuer.
-                replace(initial) {
+                demand(!Files.exists(root, NOFOLLOW_LINKS), AgentBridgeErrorCode.REVISION_CONFLICT)
+                beforeReservation()
+                val existingKey = if (keyBeforeReservation) prepareKey() else null
+                Files.createDirectory(root, PosixFilePermissions.asFileAttribute(directoryPermissions))
+                val identity = attributes(root, directory = true).fileKey()
+                observedRootIdentity = identity
+                val key = existingKey ?: prepareKey()
+                // Credential SDK work may delay. Recheck original native parent and reserved inode
+                // before publishing files; no missing-key repair of an existing ledger is possible.
+                checkParent()
+                demand(attributes(root, directory = true).fileKey() == identity)
+                writeNew(root.resolve(LOCK_NAME), ByteArray(0))
+                val initial = fileBytes(AgentBridgeExportLedger(1, 1, emptyList(), emptyList(), emptyList()), key)
+                if (keyBeforeReservation) {
+                    writeNew(root.resolve(LEDGER_NAME), initial)
+                } else {
+                    native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
                     checkParent()
                     demand(attributes(root, true).fileKey() == identity)
-                    native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                    // Stage/fsync before the final native decision. Revocation during either the
+                    // credential SDK or staging must not publish a usable initialized issuer.
+                    replace(initial) {
+                        checkParent()
+                        demand(attributes(root, true).fileKey() == identity)
+                        native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                    }
                 }
-            }
-            forceDirectory()
-            demand(attributes(root, true).fileKey() == identity)
-            if (!keyBeforeReservation) {
-                native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
-                checkParent()
+                forceDirectory()
                 demand(attributes(root, true).fileKey() == identity)
+                if (!keyBeforeReservation) {
+                    native.requireDecision(AgentBridgeExportNativeDecision.InitializeStore)
+                    checkParent()
+                    demand(attributes(root, true).fileKey() == identity)
+                }
             }
         }
     }
@@ -128,33 +130,37 @@ internal class AgentBridgeExportAuthorityStore private constructor(
             AgentBridgeErrorCode.APPROVAL_REQUIRED)
         val decision = AgentBridgeExportNativeDecision.Delegation(AgentBridgeCodec.sha256(bytes), expectedGrantRevision)
         native.requireDecision(decision)
-        access(fence = { native.requireDecision(decision) }) { transaction ->
-            val tx = transaction ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
-            val old = tx.state.grants.singleOrNull { it.delegation().authorityId == frozen.authorityId }
-            if (old == null) {
-                demand(expectedGrantRevision == 0 && frozen.grantRevision == 1, AgentBridgeErrorCode.REVISION_CONFLICT)
-                demand(tx.state.grants.size < MAX_GRANTS, AgentBridgeErrorCode.BUSY)
-            } else {
-                val previous = old.delegation()
-                demand(!old.revoked && previous.peer == frozen.peer, AgentBridgeErrorCode.APPROVAL_REQUIRED)
-                demand(previous.grantRevision == expectedGrantRevision && expectedGrantRevision < Int.MAX_VALUE &&
-                    frozen.grantRevision == expectedGrantRevision + 1, AgentBridgeErrorCode.REVISION_CONFLICT)
+        AgentBridgeNativeAuthorityChanges.mutation {
+            access(fence = { native.requireDecision(decision) }) { transaction ->
+                val tx = transaction ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                val old = tx.state.grants.singleOrNull { it.delegation().authorityId == frozen.authorityId }
+                if (old == null) {
+                    demand(expectedGrantRevision == 0 && frozen.grantRevision == 1, AgentBridgeErrorCode.REVISION_CONFLICT)
+                    demand(tx.state.grants.size < MAX_GRANTS, AgentBridgeErrorCode.BUSY)
+                } else {
+                    val previous = old.delegation()
+                    demand(!old.revoked && previous.peer == frozen.peer, AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                    demand(previous.grantRevision == expectedGrantRevision && expectedGrantRevision < Int.MAX_VALUE &&
+                        frozen.grantRevision == expectedGrantRevision + 1, AgentBridgeErrorCode.REVISION_CONFLICT)
+                }
+                tx.state = tx.state.copy(grants = tx.state.grants.filterNot { it === old } + AgentBridgeExportGrantRecord(bytes.decodeToString(), false))
+                reference(frozen)
             }
-            tx.state = tx.state.copy(grants = tx.state.grants.filterNot { it === old } + AgentBridgeExportGrantRecord(bytes.decodeToString(), false))
-            reference(frozen)
         }
     }
 
     fun revoke(native: AgentBridgeExportNativeAuthorization, peer: AgentBridgePeer, authorityId: String, expectedGrantRevision: Int) = safe {
         val decision = AgentBridgeExportNativeDecision.Revoke(peer, authorityId, expectedGrantRevision)
         native.requireDecision(decision)
-        access(fence = { native.requireDecision(decision) }) { transaction ->
-            val tx = transaction ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
-            val old = tx.state.grants.singleOrNull { it.delegation().authorityId == authorityId } ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
-            val grant = old.delegation()
-            demand(grant.peer == peer, AgentBridgeErrorCode.APPROVAL_REQUIRED)
-            demand(grant.grantRevision == expectedGrantRevision, AgentBridgeErrorCode.REVISION_CONFLICT)
-            tx.state = tx.state.copy(grants = tx.state.grants.map { if (it === old) it.copy(revoked = true) else it })
+        AgentBridgeNativeAuthorityChanges.mutation {
+            access(fence = { native.requireDecision(decision) }) { transaction ->
+                val tx = transaction ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                val old = tx.state.grants.singleOrNull { it.delegation().authorityId == authorityId } ?: fail(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                val grant = old.delegation()
+                demand(grant.peer == peer, AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                demand(grant.grantRevision == expectedGrantRevision, AgentBridgeErrorCode.REVISION_CONFLICT)
+                tx.state = tx.state.copy(grants = tx.state.grants.map { if (it === old) it.copy(revoked = true) else it })
+            }
         }
     }
 

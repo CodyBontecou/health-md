@@ -207,3 +207,9 @@ nonisolated final class AgentBridgeNativeCatalogNotifications {
 
     deinit { tokens.forEach(center.removeObserver) }
 }
+
+
+extension Notification.Name {
+    /// Local native issuer mutation only; no peer, consent, path or health payload.
+    nonisolated static let healthMdAgentExportAuthorityDidChange = Notification.Name("healthMdAgentExportAuthorityDidChange")
+}

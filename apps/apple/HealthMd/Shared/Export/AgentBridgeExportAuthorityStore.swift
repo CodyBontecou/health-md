@@ -136,6 +136,9 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                                    authorization: any AgentBridgeExportNativeAuthorizing,
                                    publication: any AgentBridgeExportPublicationObserving = AgentBridgeExportUnobservedPublication()) throws -> AgentBridgeExportAuthorityStore {
         try authorization.requireNativeAuthorization(for: .createPrivateStore)
+        // After releasing issuer locks, invalidate even on an ambiguous failed write.
+        // Initial native authorization rejection is silent; reads/catalog/decisions never emit.
+        defer { NotificationCenter.default.post(name: .healthMdAgentExportAuthorityDidChange, object: nil) }
         let key = try existingKey(protectedKeys)
         let store = try reservePrivateDirectory(at: directory, protectedKeys: protectedKeys, publication: publication)
         try store.write(.init(generation: 0, delegations: [], plans: [], decisions: []), key: key)
@@ -150,6 +153,9 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         authorization: any AgentBridgeExportNativeAuthorizing,
         provisioner: AgentBridgeExportProtectedKeyProvisioner = .init()) throws -> AgentBridgeExportAuthorityStore {
         try authorization.requireNativeAuthorization(for: .createPrivateStore)
+        // After releasing issuer locks, invalidate even on an ambiguous failed write.
+        // Initial native authorization rejection is silent; reads/catalog/decisions never emit.
+        defer { NotificationCenter.default.post(name: .healthMdAgentExportAuthorityDidChange, object: nil) }
         let store = try reservePrivateDirectory(at: directory, protectedKeys: provisioner.reader,
                                                publication: AgentBridgeExportUnobservedPublication())
         // Permission records remain local to this installation, like their nonmigrating key.
@@ -245,6 +251,9 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         guard bytes.count <= Self.recordLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
         let action = AgentBridgeExportNativeAction.storeDelegation(value)
         try authorization.requireNativeAuthorization(for: action)
+        // After releasing issuer locks, invalidate even on an ambiguous failed write.
+        // Initial native authorization rejection is silent; reads/catalog/decisions never emit.
+        defer { NotificationCenter.default.post(name: .healthMdAgentExportAuthorityDidChange, object: nil) }
         try transaction(beforeCommit: { _ in
             try authorization.requireNativeAuthorization(for: action)
         }) { state in
@@ -266,6 +275,9 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                                 authorization: any AgentBridgeExportNativeAuthorizing) throws {
         let action = AgentBridgeExportNativeAction.revokeDelegation(reference)
         try authorization.requireNativeAuthorization(for: action)
+        // After releasing issuer locks, invalidate even on an ambiguous failed write.
+        // Initial native authorization rejection is silent; reads/catalog/decisions never emit.
+        defer { NotificationCenter.default.post(name: .healthMdAgentExportAuthorityDidChange, object: nil) }
         try transaction(beforeCommit: { _ in
             try authorization.requireNativeAuthorization(for: action)
         }) { state in

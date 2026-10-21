@@ -39,6 +39,72 @@ class AgentBridgeNativeCatalogPublisherTest {
         peer.checks.get()
     }
 
+    @Test fun authorityGrantAndRevokeInvalidateSameOwnerAfterStoreUnlock() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f); val peer = WorkerPeer(f.peer); val facts = nativeFacts(f)
+            val first = AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+            val observation = AgentBridgeNativeAuthorityChanges.observe { lifecycle.recordNativeEvent() }
+            try {
+                withContext(Dispatchers.IO) { f.store.putDelegation(f.native, f.delegation(), 0) }
+                expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentFacts() }
+                val next = AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+                assertThat(next.revision).isEqualTo(first.revision + 1)
+                withContext(Dispatchers.IO) { f.store.revoke(f.native, f.peer, f.delegation().authorityId, 1) }
+                assertThat(withContext(Dispatchers.IO) { f.store.access { it!!.state.grants.single().revoked } }).isTrue()
+                expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentFacts() }
+                assertThat(AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }.revision).isEqualTo(next.revision + 1)
+                assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+            } finally { observation.close(); lifecycle.stop() }
+        }
+    }
+
+    @Test fun authoritySetupAndFailedAuthorizedWriteEmitButDeniedAttemptDoesNot() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f); val peer = WorkerPeer(f.peer); val facts = nativeFacts(f)
+            AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+            val observation = AgentBridgeNativeAuthorityChanges.observe { lifecycle.recordNativeEvent() }
+            try {
+                AgentBridgeExportPlanningFixture().use { fresh ->
+                    fresh.native.allowed = false
+                    expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { withContext(Dispatchers.IO) { fresh.store.initialize(fresh.native) } }
+                    assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+                    fresh.native.allowed = true
+                    withContext(Dispatchers.IO) { fresh.store.initialize(fresh.native) }
+                    expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentFacts() }
+                }
+                AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+                f.native.allowed = false
+                expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { withContext(Dispatchers.IO) { f.store.putDelegation(f.native, f.delegation(), 0) } }
+                assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+                f.native.allowed = true
+                expect(AgentBridgeErrorCode.REVISION_CONFLICT) { withContext(Dispatchers.IO) { f.store.putDelegation(f.native, f.delegation(), 9) } }
+                assertThat(withContext(Dispatchers.IO) { f.store.access { it!!.state.grants.size } }).isEqualTo(0)
+                expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentFacts() }
+            } finally { observation.close(); lifecycle.stop() }
+        }
+    }
+
+    @Test fun authorityReadsPublicationAndClosedRegistrationDoNotInvalidateOrRevive() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = lifecycle(f); val peer = WorkerPeer(f.peer); val facts = nativeFacts(f)
+            val first = AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }
+            val observation = AgentBridgeNativeAuthorityChanges.observe { lifecycle.recordNativeEvent() }
+            try {
+                withContext(Dispatchers.IO) { f.store.access { it!!.state } }
+                assertThat(AgentBridgeNativeCatalogPublisher.publish(lifecycle, peer) { f.store }).isEqualTo(first)
+                observation.close(); observation.close()
+                withContext(Dispatchers.IO) { f.store.putDelegation(f.native, f.delegation(), 0) }
+                assertThat(lifecycle.currentFacts()).isEqualTo(facts)
+                lifecycle.stop()
+                withContext(Dispatchers.IO) { f.store.revoke(f.native, f.peer, f.delegation().authorityId, 1) }
+                expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.currentFacts() }
+            } finally { observation.close(); lifecycle.stop() }
+        }
+    }
+
     @Test fun admissionPublishesWithOwnedChildAndCloseCancelsIt() = runBlocking {
         AgentBridgeExportPlanningFixture().use { f ->
             f.store.initialize(f.native)

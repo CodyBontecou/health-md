@@ -125,3 +125,23 @@ internal class AgentBridgeNativeCatalogLifecycle {
     }
     private fun fail(code: AgentBridgeErrorCode): Nothing = throw AgentBridgeException(code)
 }
+
+
+/** Process-local native issuer event. Payload-free callbacks only invalidate/schedule; no SDK,
+ * key or issuer reads run here. Exact close fences even a previously captured registration. */
+internal object AgentBridgeNativeAuthorityChanges {
+    private val observers = java.util.concurrent.CopyOnWriteArrayList<Registration>()
+    private class Registration(private val listener: () -> Unit) : AutoCloseable {
+        private var active = true
+        fun signal() = synchronized(this) { if (active) listener() }
+        override fun close() {
+            synchronized(this) { active = false }
+            observers.remove(this)
+        }
+    }
+    fun observe(listener: () -> Unit): AutoCloseable = Registration(listener).also { observers.add(it) }
+    private fun post() { observers.forEach { runCatching { it.signal() } } }
+    /** The caller already passed native authorization. Emit after locks unwind, including an
+     * ambiguous failed write; never for initial authorization denial or ordinary store reads. */
+    fun <T> mutation(operation: () -> T): T = try { operation() } finally { post() }
+}
