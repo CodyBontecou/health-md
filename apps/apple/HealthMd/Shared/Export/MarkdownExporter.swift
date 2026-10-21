@@ -122,9 +122,17 @@ extension HealthData {
         }
 
         if !whoop.cycles.isEmpty {
-            lines += ["", "| Cycle ID | Start | End | Strain | Energy (kJ) | Avg HR | Max HR |", "|---|---|---|---:|---:|---:|---:|"]
-            for cycle in whoop.cycles {
-                lines.append("| \(cell(cycle.id)) | \(cell(cycle.startTime)) | \(cell(endTime(cycle.endTime))) | \(value(cycle.strainScore)) | \(value(cycle.energyKilojoules)) | \(value(cycle.averageHeartRateBPM)) | \(value(cycle.maxHeartRateBPM)) |")
+            if whoop.schemaVersion == 2 {
+                lines += ["", "WHOOP cycle steps cover physiological cycles, not calendar days; they do not replace daily steps.",
+                          "", "| Cycle ID | Start | End | Steps (cycle) | Strain | Energy (kJ) | Avg HR | Max HR |", "|---|---|---|---:|---:|---:|---:|---:|"]
+                for cycle in whoop.cycles {
+                    lines.append("| \(cell(cycle.id)) | \(cell(cycle.startTime)) | \(cell(endTime(cycle.endTime))) | \(integer(cycle.stepCount)) | \(value(cycle.strainScore)) | \(value(cycle.energyKilojoules)) | \(value(cycle.averageHeartRateBPM)) | \(value(cycle.maxHeartRateBPM)) |")
+                }
+            } else {
+                lines += ["", "| Cycle ID | Start | End | Strain | Energy (kJ) | Avg HR | Max HR |", "|---|---|---|---:|---:|---:|---:|"]
+                for cycle in whoop.cycles {
+                    lines.append("| \(cell(cycle.id)) | \(cell(cycle.startTime)) | \(cell(endTime(cycle.endTime))) | \(value(cycle.strainScore)) | \(value(cycle.energyKilojoules)) | \(value(cycle.averageHeartRateBPM)) | \(value(cycle.maxHeartRateBPM)) |")
+                }
             }
         }
 

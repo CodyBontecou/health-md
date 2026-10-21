@@ -1,0 +1,157 @@
+import { encodeBase64, parseExportKeyring, unwrapAccountExportKey, wrapAccountExportKey } from "./crypto";
+import type { Env } from "./types";
+
+interface AccountKeyRow {
+  userId?: string;
+  keyId: string;
+  wrappingKeyId: string;
+  wrappedKey: string;
+  wrapIv: string;
+  createdAt?: string;
+  rewrappedAt?: string | null;
+}
+
+function wrappingKeys(env: Env): ReadonlyMap<string, string> {
+  if (!env.ACCOUNT_KEY_WRAPPING_KEYS_JSON) throw new Error("Account export wrapping keys are unavailable");
+  return parseExportKeyring(env.ACCOUNT_KEY_WRAPPING_KEYS_JSON);
+}
+
+async function unwrap(env: Env, userId: string, row: AccountKeyRow): Promise<{ keyId: string; key: string }> {
+  const wrapping = wrappingKeys(env).get(row.wrappingKeyId);
+  if (!wrapping) throw new Error("Historical account export wrapping key is unavailable");
+  return {
+    keyId: row.keyId,
+    key: await unwrapAccountExportKey(row.wrappedKey, row.wrapIv, wrapping, userId,
+      row.keyId, row.wrappingKeyId),
+  };
+}
+
+export async function currentExportKey(env: Env, userId: string): Promise<{ keyId: string; key: string }> {
+  if (env.ACCOUNT_KEY_MODE !== "per_account") {
+    const legacyKeys = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "");
+    const legacyKeyId = env.CURRENT_EXPORT_KEY_ID;
+    if (!legacyKeyId) throw new Error("Current export encryption key is not configured");
+    const key = legacyKeys.get(legacyKeyId);
+    if (!key) throw new Error("Current export encryption key is not configured");
+    return { keyId: legacyKeyId, key };
+  }
+  const wrappingKeyId = env.CURRENT_ACCOUNT_WRAPPING_KEY_ID;
+  if (!wrappingKeyId || !/^[A-Za-z0-9._-]{1,32}$/u.test(wrappingKeyId)) {
+    throw new Error("Current account wrapping key ID is invalid");
+  }
+  const wrapping = wrappingKeys(env).get(wrappingKeyId);
+  if (!wrapping) throw new Error("Current account wrapping key is unavailable");
+  const existing = await env.DB.prepare(
+    `SELECT key_id AS keyId, wrapping_key_id AS wrappingKeyId,
+            wrapped_key AS wrappedKey, wrap_iv AS wrapIv
+     FROM account_export_keys WHERE user_id = ? AND retired_at IS NULL LIMIT 1`,
+  ).bind(userId).first<AccountKeyRow>();
+  if (existing) return unwrap(env, userId, existing);
+
+  const keyId = crypto.randomUUID();
+  const dataKey = encodeBase64(crypto.getRandomValues(new Uint8Array(32)));
+  const wrapped = await wrapAccountExportKey(dataKey, wrapping, userId, keyId, wrappingKeyId);
+  const createdAt = new Date().toISOString();
+  try {
+    await env.DB.prepare(
+      `INSERT INTO account_export_keys
+       (user_id, key_id, wrapping_key_id, wrapped_key, wrap_iv, created_at)
+       SELECT ?, ?, ?, ?, ?, ? FROM users WHERE id = ? AND status = 'active'`,
+    ).bind(userId, keyId, wrappingKeyId, wrapped.wrappedKey, wrapped.iv,
+      createdAt, userId).run();
+  } catch {
+    // A concurrent isolate may have won, or the D1 response may have been lost
+    // after this candidate committed. Verify the durable row below.
+  }
+  let winner: AccountKeyRow | null;
+  try {
+    winner = await env.DB.prepare(
+      `SELECT key_id AS keyId, wrapping_key_id AS wrappingKeyId,
+              wrapped_key AS wrappedKey, wrap_iv AS wrapIv, created_at AS createdAt
+       FROM account_export_keys WHERE user_id = ? AND retired_at IS NULL LIMIT 1`,
+    ).bind(userId).first<AccountKeyRow>();
+  } catch {
+    throw new Error("Account export key creation verification is unavailable");
+  }
+  if (!winner) throw new Error("Active account export key could not be created");
+  if (winner.keyId === keyId && winner.wrappingKeyId === wrappingKeyId &&
+      winner.wrappedKey === wrapped.wrappedKey && winner.wrapIv === wrapped.iv &&
+      winner.createdAt === createdAt) {
+    return { keyId, key: dataKey };
+  }
+  return unwrap(env, userId, winner);
+}
+
+export async function rewrapAccountExportKeys(env: Env, limit = 25): Promise<number> {
+  if (env.ACCOUNT_KEY_MODE !== "per_account" || !env.CURRENT_ACCOUNT_WRAPPING_KEY_ID ||
+      !Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error("Account export key rotation is not configured");
+  }
+  const currentWrappingKeyId = env.CURRENT_ACCOUNT_WRAPPING_KEY_ID;
+  const keys = wrappingKeys(env);
+  const currentWrappingKey = keys.get(currentWrappingKeyId);
+  if (!currentWrappingKey) throw new Error("Current account wrapping key is unavailable");
+  const rows = await env.DB.prepare(
+    `SELECT user_id AS userId, key_id AS keyId, wrapping_key_id AS wrappingKeyId,
+            wrapped_key AS wrappedKey, wrap_iv AS wrapIv
+     FROM account_export_keys WHERE wrapping_key_id != ? ORDER BY created_at, key_id LIMIT ?`,
+  ).bind(currentWrappingKeyId, limit).all<AccountKeyRow>();
+  let changed = 0;
+  for (const row of rows.results) {
+    if (!row.userId) throw new Error("Account export key owner is unavailable");
+    const plaintext = await unwrap(env, row.userId, row);
+    const wrapped = await wrapAccountExportKey(plaintext.key, currentWrappingKey, row.userId,
+      row.keyId, currentWrappingKeyId);
+    const rewrappedAt = new Date().toISOString();
+    try {
+      await env.DB.prepare(
+        `UPDATE account_export_keys SET wrapping_key_id = ?, wrapped_key = ?, wrap_iv = ?, rewrapped_at = ?
+         WHERE user_id = ? AND key_id = ? AND wrapping_key_id = ? AND wrapped_key = ? AND wrap_iv = ?`,
+      ).bind(currentWrappingKeyId, wrapped.wrappedKey, wrapped.iv, rewrappedAt,
+        row.userId, row.keyId, row.wrappingKeyId, row.wrappedKey, row.wrapIv).run();
+    } catch {
+      // A D1 response may be lost after the conditional update commits. Match
+      // the exact newly wrapped bytes below rather than trusting change metadata.
+    }
+    let durable: AccountKeyRow | null;
+    try {
+      durable = await env.DB.prepare(
+        `SELECT key_id AS keyId, wrapping_key_id AS wrappingKeyId,
+                wrapped_key AS wrappedKey, wrap_iv AS wrapIv, rewrapped_at AS rewrappedAt
+         FROM account_export_keys WHERE user_id = ? AND key_id = ? LIMIT 1`,
+      ).bind(row.userId, row.keyId).first<AccountKeyRow>();
+    } catch {
+      throw new Error("Account export key rewrap verification is unavailable");
+    }
+    if (durable?.wrappingKeyId === currentWrappingKeyId &&
+        durable.wrappedKey === wrapped.wrappedKey && durable.wrapIv === wrapped.iv &&
+        durable.rewrappedAt === rewrappedAt) {
+      changed += 1;
+      continue;
+    }
+    // A concurrent invocation may have won with independently randomized wrap
+    // bytes, or account deletion may have removed the row. Both are safe no-ops.
+    if (!durable || durable.wrappingKeyId === currentWrappingKeyId) continue;
+    throw new Error("Account export key rewrap was not recorded");
+  }
+  return changed;
+}
+
+export async function resolveExportKey(
+  env: Env,
+  userId: string,
+  keyId: string,
+): Promise<string> {
+  // Legacy root-key exports remain readable during an explicit migration.
+  const legacy = env.EXPORT_ENCRYPTION_KEYS_JSON ?
+    parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON).get(keyId) : undefined;
+  if (legacy) return legacy;
+  if (env.ACCOUNT_KEY_MODE !== "per_account") throw new Error("Encrypted export key is unavailable");
+  const row = await env.DB.prepare(
+    `SELECT key_id AS keyId, wrapping_key_id AS wrappingKeyId,
+            wrapped_key AS wrappedKey, wrap_iv AS wrapIv
+     FROM account_export_keys WHERE user_id = ? AND key_id = ? LIMIT 1`,
+  ).bind(userId, keyId).first<AccountKeyRow>();
+  if (!row) throw new Error("Account export key is unavailable");
+  return (await unwrap(env, userId, row)).key;
+}

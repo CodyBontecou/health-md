@@ -60,6 +60,14 @@ enum SyncMessage: Codable {
     /// macOS → iOS: structured failure before or during job execution.
     case macExportFailed(MacExportFailure)
 
+    /// iOS → macOS: ask the authenticated connected Mac to create a durable,
+    /// request-scoped encrypted-context refresh job.
+    case iphoneContextRefreshRequest(IPhoneContextRefreshRequest)
+
+    /// macOS → iOS: durable acceptance/pending/failure receipt for a phone-
+    /// initiated encrypted-context refresh.
+    case iphoneContextRefreshStatus(IPhoneContextRefreshStatus)
+
     /// macOS → iOS: ask an open iPhone app to prepare a Mac export for the requested dates.
     case iphoneExportRequest(IPhoneExportRequest)
 
@@ -147,6 +155,8 @@ extension SyncMessage {
         case .macExportResult: return "macExportResult"
         case .macExportCancel: return "macExportCancel"
         case .macExportFailed: return "macExportFailed"
+        case .iphoneContextRefreshRequest: return "iphoneContextRefreshRequest"
+        case .iphoneContextRefreshStatus: return "iphoneContextRefreshStatus"
         case .iphoneExportRequest: return "iphoneExportRequest"
         case .iphoneExportAccepted: return "iphoneExportAccepted"
         case .iphoneExportPreparationProgress: return "iphoneExportPreparationProgress"
@@ -236,6 +246,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer requires and preserves an explicit request-scoped
     /// selection for encrypted query-context acquisition.
     let supportsRequestScopedContextAcquisition: Bool
+    /// Whether this peer can initiate/accept a durable encrypted-context refresh
+    /// from an authenticated iPhone App Intent.
+    let supportsIPhoneInitiatedContextRefresh: Bool
     /// Whether this peer understands additive chunked Mac export job streaming.
     let supportsChunkedMacExportJobs: Bool
     /// Whether this peer supports the versioned, size-bounded binary transfer
@@ -300,6 +313,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsIPhoneExportRequests
         case supportsAllAvailableHistoryExportRequests
         case supportsRequestScopedContextAcquisition
+        case supportsIPhoneInitiatedContextRefresh
         case supportsChunkedMacExportJobs
         case supportsSizeBoundedConnectedTransfers
         case supportsStrictRawStreaming
@@ -336,6 +350,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsIPhoneExportRequests: Bool = false,
         supportsAllAvailableHistoryExportRequests: Bool = false,
         supportsRequestScopedContextAcquisition: Bool = false,
+        supportsIPhoneInitiatedContextRefresh: Bool = false,
         supportsChunkedMacExportJobs: Bool = false,
         supportsSizeBoundedConnectedTransfers: Bool = false,
         supportsStrictRawStreaming: Bool = false,
@@ -370,6 +385,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
         self.supportsAllAvailableHistoryExportRequests = supportsAllAvailableHistoryExportRequests
         self.supportsRequestScopedContextAcquisition = supportsRequestScopedContextAcquisition
+        self.supportsIPhoneInitiatedContextRefresh = supportsIPhoneInitiatedContextRefresh
         self.supportsChunkedMacExportJobs = supportsChunkedMacExportJobs
         self.supportsSizeBoundedConnectedTransfers = supportsSizeBoundedConnectedTransfers
         self.supportsStrictRawStreaming = supportsStrictRawStreaming
@@ -420,6 +436,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsRequestScopedContextAcquisition = try container.decodeIfPresent(
             Bool.self,
             forKey: .supportsRequestScopedContextAcquisition
+        ) ?? false
+        supportsIPhoneInitiatedContextRefresh = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsIPhoneInitiatedContextRefresh
         ) ?? false
         supportsChunkedMacExportJobs = try container.decodeIfPresent(Bool.self, forKey: .supportsChunkedMacExportJobs) ?? false
         supportsSizeBoundedConnectedTransfers = try container.decodeIfPresent(
@@ -613,6 +633,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsIPhoneExportRequests: true,
             supportsAllAvailableHistoryExportRequests: true,
             supportsRequestScopedContextAcquisition: true,
+            supportsIPhoneInitiatedContextRefresh: true,
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,
             supportsStrictRawStreaming: true,
@@ -1292,8 +1313,68 @@ nonisolated struct CanonicalHealthDataSelection: Codable, Equatable, Sendable {
     }
 }
 
-struct IPhoneExportRequest: Codable, Equatable {
-    enum DateSelection: String, Codable, Equatable {
+nonisolated struct IPhoneContextRefreshRequest: Codable, Equatable, Sendable {
+    let jobID: UUID
+    let createdAt: Date
+    let dateSelection: IPhoneExportRequest.DateSelection
+    let dateRangeStart: Date
+    let dateRangeEnd: Date
+    let selection: CanonicalHealthDataSelection
+    let profileID: UUID?
+    let profileName: String?
+
+    init(
+        jobID: UUID = UUID(),
+        createdAt: Date = Date(),
+        dateSelection: IPhoneExportRequest.DateSelection,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        selection: CanonicalHealthDataSelection,
+        profileID: UUID?,
+        profileName: String?
+    ) {
+        self.jobID = jobID
+        self.createdAt = createdAt
+        self.dateSelection = dateSelection
+        self.dateRangeStart = dateRangeStart
+        self.dateRangeEnd = dateRangeEnd
+        self.selection = selection
+        self.profileID = profileID
+        self.profileName = profileName
+    }
+}
+
+nonisolated struct IPhoneContextRefreshStatus: Codable, Equatable, Sendable {
+    enum State: String, Codable, Equatable, Sendable {
+        case accepted
+        case pending
+        case completed
+        case failed
+    }
+
+    let jobID: UUID
+    let state: State
+    let updatedAt: Date
+    let message: String
+    let failureReason: String?
+
+    init(
+        jobID: UUID,
+        state: State,
+        updatedAt: Date = Date(),
+        message: String,
+        failureReason: String? = nil
+    ) {
+        self.jobID = jobID
+        self.state = state
+        self.updatedAt = updatedAt
+        self.message = message
+        self.failureReason = failureReason
+    }
+}
+
+struct IPhoneExportRequest: Codable, Equatable, Sendable {
+    enum DateSelection: String, Codable, Equatable, Sendable {
         /// Use the exact supplied date range or source-calendar identifiers.
         case explicitRange = "explicit_range"
         /// Ask the iPhone to discover the earliest available selected record and
@@ -1301,12 +1382,12 @@ struct IPhoneExportRequest: Codable, Equatable {
         case allAvailable = "all_available"
     }
 
-    enum RequestSource: String, Codable, Equatable {
+    enum RequestSource: String, Codable, Equatable, Sendable {
         case macApp
         case cli
     }
 
-    enum SettingsPolicy: String, Codable, Equatable {
+    enum SettingsPolicy: String, Codable, Equatable, Sendable {
         /// Use the iPhone app's currently saved export settings exactly.
         case currentIPhoneSettings
 
@@ -1316,7 +1397,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         case requestedDatesOnly
     }
 
-    enum ResponseMode: String, Codable, Equatable {
+    enum ResponseMode: String, Codable, Equatable, Sendable {
         /// iPhone sends a MacExportJob and the Mac writes files to its selected destination.
         case writeFiles
 
@@ -1329,7 +1410,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         case contextStore
     }
 
-    enum RawProfile: String, Codable, Equatable {
+    enum RawProfile: String, Codable, Equatable, Sendable {
         /// Lossless canonical daily JSON plus a versioned capture/outcome envelope.
         case canonicalSourceRecordsV1 = "canonical_source_records_v1"
         /// A request-scoped projection of ordinary `healthmd.health_data` documents.

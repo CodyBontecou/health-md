@@ -102,36 +102,18 @@ struct FormatSelectionControl<Value: Hashable>: View {
     }
 }
 
-/// This is the real Menu label, separately measurable without a menu-renderer placeholder.
+/// Wrapping value content; the selection menu owns the shared button style.
 struct FormatSelectionValueLabel: View {
     let value: String
 
     var body: some View {
-        HStack(alignment: .center, spacing: Spacing.xs) {
+        SecondaryMenuLabel {
             Text(value)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Color.textPrimary)
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(Color.textSecondary)
-                .accessibilityHidden(true)
         }
         .multilineTextAlignment(.leading)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.sm)
-        .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.bgSecondary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-        .contentShape(Rectangle())
     }
 }
 

@@ -11,6 +11,7 @@ private struct ExportSizeEstimateConfiguration: Equatable {
     let target: ExportTargetSelection
     let formats: Set<ExportFormat>
     let metricIDs: Set<String>
+    let whoopResources: Set<WHOOPResourceName>
     let formatCustomization: FormatCustomizationSnapshot
     let includesLosslessRecords: Bool
     let includesIndividualEntries: Bool
@@ -36,8 +37,7 @@ struct ExportTabView: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var dateRangePreset: ExportDateRangePreset
-    @Binding var isExporting: Bool
-    @Binding var exportStatusMessage: String
+    let showsBottomStatus: Bool
     @Binding var showFolderPicker: Bool
     @Binding var presentFirstExportPreview: Bool
     /// Fired whenever the export-preview sheet closes. ContentView uses this
@@ -75,15 +75,20 @@ struct ExportTabView: View {
               externalIntegrations.connectedProviderCount > 0 else {
             return nil
         }
+        let whoopResources = advancedSettings.metricSelection.enabledWHOOPResources
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
         return { date in
-            await externalIntegrations.fetchDailyRecords(for: date)
+            await externalIntegrations.fetchDailyRecords(
+                for: date, calendar: calendar, whoopResources: whoopResources
+            )
         }
     }
 
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
-            SchedulingExportScroll(showsFooter: !isExporting) {
+            SchedulingExportScroll(showsFooter: !showsBottomStatus) {
                 VStack(spacing: Spacing.md) {
                     heroHeader
                     statusBadges
@@ -110,11 +115,6 @@ struct ExportTabView: View {
                     .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
             .toolbar(.hidden, for: .navigationBar)
-            .onChange(of: exportStatusMessage) { oldValue, newValue in
-                if !newValue.isEmpty && newValue != oldValue {
-                    UIAccessibility.post(notification: .announcement, argument: newValue)
-                }
-            }
             #if DEBUG
             .onAppear {
                 guard MarketingCapture.pendingAdvancedSubscreen == .exportPreview else { return }
@@ -130,6 +130,13 @@ struct ExportTabView: View {
             }
             #endif
             }
+        }
+        .task(id: historyAssessmentScopeID) {
+            guard healthKitManager.isAuthorized else { return }
+            _ = await healthKitManager.assessHistoryAuthorization(
+                forMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+                publish: true
+            )
         }
         .geistDialog(
             isPresented: $showHealthPermissionsGuide,
@@ -554,9 +561,46 @@ struct ExportTabView: View {
 
     // MARK: - Health Data
 
+    private var historyAssessmentScopeID: String {
+        advancedSettings.metricSelection.enabledMetrics.sorted().joined(separator: ",")
+    }
+
+    @ViewBuilder
+    private var historyAuthorizationWarning: some View {
+        let assessment = healthKitManager.historyAuthorizationAssessment
+        if !assessment.supportsUnqualifiedFullHistoryClaim {
+            let isLimited = assessment.state == .limitedHistory
+            HStack(alignment: .top, spacing: Spacing.s3) {
+                Image(systemName: "calendar.badge.exclamationmark")
+                    .foregroundStyle(Color.warning)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: Spacing.s1) {
+                    Text(isLimited ? "Apple Health history is limited" : "Full Apple Health history is unverified")
+                        .font(.subheadline.weight(.semibold))
+                    Text(isLimited
+                         ? "Earlier data is unknown, not absent. All Time and all-available automation require full history access."
+                         : "All Time and all-available automation require an OS 27+ assessment that covers every selected metric. Use an explicit date range until then.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                    Button("Review Health permissions") {
+                        showHealthPermissionsGuide = true
+                    }
+                    .font(.footnote.weight(.semibold))
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, Spacing.s3)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
     private var healthDataSection: some View {
         sectionCard(title: "Health Data") {
             VStack(spacing: 0) {
+                historyAuthorizationWarning
+                if !healthKitManager.historyAuthorizationAssessment.supportsUnqualifiedFullHistoryClaim {
+                    rowDivider()
+                }
                 inlineNavigationRow(
                     icon: "list.bullet.rectangle",
                     title: "Health Metrics",
@@ -620,20 +664,19 @@ struct ExportTabView: View {
     private func dataDetailPicker(
         presets: [AppleExportDetailPreset]
     ) -> some View {
-        Picker(
+        SecondaryPicker(
             "Data Detail",
+            selectedTitle: AppleExportDetailPreset(policy: advancedSettings.detailPolicy).localizedTitle,
             selection: Binding(
                 get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
                 set: { advancedSettings.detailPolicy = $0.policy }
-            )
+            ),
+            showsTitle: false
         ) {
             ForEach(presets) { preset in
                 Text(preset.localizedTitle).tag(preset)
             }
         }
-        .labelsHidden()
-        .pickerStyle(.menu)
-        .tint(Color.accent)
     }
 
     // MARK: - Export Formats
@@ -997,7 +1040,7 @@ struct ExportTabView: View {
                 onExport: handleExportButtonTapped
             )
         }
-        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
+        .animation(reduceMotion ? nil : AnimationTimings.standard, value: showsBottomStatus)
     }
 
     private var exportDateCount: Int {
@@ -1025,6 +1068,7 @@ struct ExportTabView: View {
             target: exportTargetSelection,
             formats: advancedSettings.exportFormats,
             metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            whoopResources: advancedSettings.metricSelection.enabledWHOOPResources,
             formatCustomization: FormatCustomizationSnapshot.from(
                 advancedSettings.formatCustomization
             ),
@@ -1774,10 +1818,10 @@ struct APIExportSettingsSheet: View {
                 }
             }
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {

@@ -9,6 +9,78 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testHistoricalAPIPinStopsBeforeHealthOrProviderCaptureAndUpload() async throws {
+        let service = HealthMdCoreService()
+        let current = try AppleExportEnginePin(engine: .shadow, calendarTimeZoneIdentifier: "UTC",
+            buildInfo: service.buildInfo(), registrySnapshot: service.metricRegistry(profile: .appleHealthDataV10))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+        object["profile"] = "apple_health_data_v8"
+        object["public_schema_version"] = 8
+        object["core_api_version"] = 4
+        let old = try JSONDecoder().decode(AppleExportEnginePin.self,
+            from: JSONSerialization.data(withJSONObject: object))
+        let settings = makeSettings()
+        settings.executionAppleExportEnginePin = old
+        for dates in [[], days(count: 1)] {
+            for withProvider in [false, true] {
+                let external: APIEndpointExportRunner.ExternalDailyRecordFetcher? = withProvider ? { _ in
+                    XCTFail("Historical authority must stop before provider capture")
+                    return []
+                } : nil
+                do {
+                    _ = try await APIEndpointExportRunner.prepare(
+                        dates: dates,
+                        settings: settings,
+                        destination: destination,
+                        calendarTimeZone: TimeZone(identifier: "UTC"),
+                        connectedAppsEnabled: withProvider,
+                        fetchHealthData: { _, _, _ in
+                            XCTFail("Must not capture")
+                            return ExportFixtures.partialDay
+                        },
+                        fetchExternalDailyRecords: external
+                    )
+                    XCTFail("Historical API pin must not downgrade to current native v10")
+                } catch {
+                    XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
+                }
+            }
+        }
+
+        do {
+            _ = try await APIEndpointExportRunner.preparePreview(
+                records: [], settings: settings, destination: destination,
+                calendarTimeZone: try XCTUnwrap(TimeZone(identifier: "UTC")), connectedAppsEnabled: false
+            )
+            XCTFail("An empty preview cannot bypass pinned authority")
+        } catch {
+            XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
+        }
+
+        let suiteName = "APIEndpointExportEngineTests.historical.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        for dates in [[], days(count: 1)] {
+            let result = await APIEndpointExportRunner.export(
+                dates: dates, settings: settings, apiSettings: apiSettings,
+                fetchHealthData: { _, _, _ in
+                    XCTFail("The compatibility uploader cannot bypass a pin")
+                    return ExportFixtures.partialDay
+                },
+                fetchExternalDailyRecords: { _ in XCTFail("Must not fetch providers"); return [] },
+                upload: { _, _, _, _, _, _, _ in
+                    XCTFail("Must not upload")
+                    return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+                }
+            )
+            XCTAssertEqual(result.successCount, 0)
+            XCTAssertEqual(result.failedDateDetails.first?.errorDetails,
+                APIEndpointExportRunner.EngineError.rustPlanningFailed.rawValue)
+        }
+    }
+
     func testShadowCapturesEachOwnerOnceAndCompletesEveryPlanBeforeUpload() async throws {
         let dates = days(count: 8)
         let settings = makeSettings()

@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | 健康管理を、さらに一歩先へ",
-      "meta.description": "Apple HealthとHealth Connectのデータを、選んだファイル、スクリプト、エージェントにつなぐローカルファーストの橋渡しです。Health.mdはヘルスデータを保存しません。",
+      "meta.description": "Apple HealthとHealth Connectのデータを、選んだファイル、スクリプト、エージェントにつなぐローカルファーストの橋渡しです。任意で利用するHealth.mdクラウドは、自分で送信したエクスポートのみを保存します。",
       "meta.ogTitle": "健康管理を、さらに一歩先へ",
       "meta.twitterDescription": "Apple HealthとHealth Connectのデータを、いつものツールにつなぐプライベートなローカルブリッジです。",
       "schema.description": "Health.mdは、Apple HealthとAndroid Health Connectをローカルファイル、自動化、CLIワークフロー、ローカルエージェントにつなぐプライベートな橋渡しです。",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Google PlayでHealth.mdを入手",
       "fdroidAlt": "F-DroidでHealth.mdを入手",
       "fdroidBadgeKicker": "オープンソース版",
-      "trust": "Health.mdはヘルスデータを保存しません。<br>エクスポート先はすべて自分で選べます。",
+      "trust": "標準ではローカルで処理します。<br>任意のクラウドには、自分で送信したエクスポートのみが保存されます。",
       "exportsTitle": "ヘルスデータを、<br>そのまま扱えるファイルに。",
       "exportsLede": "指標を選び、Markdown、JSON、CSV、Obsidian Basesとしてエクスポートできます。",
       "exportPhoneLabel": "白いiPhone 17 Proに表示されたApple Healthのサマリー",

@@ -72,12 +72,12 @@ struct ClinicianReportView: View {
                     }
                 }
             }
-            .overlay(alignment: .top) {
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 if showExportSuccess {
                     exportSuccessToast
                         .padding(.horizontal, Spacing.s4)
-                        .padding(.top, Spacing.s2)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .padding(.bottom, Spacing.s2)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                         .zIndex(1)
                 }
             }
@@ -104,10 +104,10 @@ struct ClinicianReportView: View {
                 }
             }
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {
@@ -514,27 +514,18 @@ struct ClinicianReportView: View {
     }
 
     private var exportSuccessToast: some View {
-        Label {
-            Text(copy.string(.saved))
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.textPrimary)
-        } icon: {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(Color.success)
-        }
-        .padding(.horizontal, Spacing.s4)
-        .padding(.vertical, Spacing.s3)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(
-            Color.bgPrimary,
-            in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+        ExportActivityBanner(
+            title: copy.string(.saved),
+            systemImage: "checkmark.circle.fill",
+            tint: Color.success,
+            message: "",
+            progress: nil,
+            showsIndeterminateProgress: false,
+            progressAccessibilityLabel: copy.string(.saved),
+            details: [],
+            trailingText: nil,
+            accessibilityIdentifier: AccessibilityID.ClinicianReport.exportSuccess
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.success.opacity(0.35), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 3)
-        .accessibilityIdentifier(AccessibilityID.ClinicianReport.exportSuccess)
     }
 
     private func presentExportSuccess() {

@@ -266,6 +266,11 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
         XCTAssertEqual(object["schema"] as? String, "healthmd.local_capabilities")
         XCTAssertEqual(object["request_scoped"] as? Bool, true)
         XCTAssertEqual(object["request_scoped_context_acquisition"] as? Bool, true)
+        XCTAssertEqual(object["history_authorization_contract"] as? String, "healthmd.history_authorization/1")
+        XCTAssertEqual(object["full_history_claim_requires_os_27_boundary_check"] as? Bool, true)
+        let product = try XCTUnwrap(object["product_readiness"] as? [String: Any])
+        XCTAssertEqual(product["component"] as? String, "bundled_mac_mcp")
+        XCTAssertEqual(product["support_status"] as? String, "production_component")
         XCTAssertNil(object["scoped_fresh_acquisition"])
         XCTAssertNil(object["credentials_required"])
         XCTAssertNil(object["profiles"])
@@ -278,7 +283,9 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
             revision: "revision-1",
             ownerDateCount: 2,
             firstOwnerDate: "2026-07-20",
-            lastOwnerDate: "2026-07-21"
+            lastOwnerDate: "2026-07-21",
+            encryptedByteCount: 4_096,
+            averageEncryptedBytesPerOwnerDate: 2_048
         ))
         let fixture = makeFixture(executor: executor)
         let response = await fixture.service.respond(request: request(
@@ -290,6 +297,13 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
         let object = try jsonObject(response.body)
         XCTAssertEqual(object["schema"] as? String, "healthmd.local_readiness")
         XCTAssertEqual(object["status"] as? String, "ready")
+        let queryStore = try XCTUnwrap(object["query_store"] as? [String: Any])
+        XCTAssertEqual(queryStore["encrypted_byte_count"] as? Int, 4_096)
+        XCTAssertEqual(queryStore["average_encrypted_bytes_per_owner_date"] as? Int, 2_048)
+        let qualification = try XCTUnwrap(object["os_qualification"] as? [String: Any])
+        XCTAssertEqual(qualification["certified_for_macos_27"] as? Bool, false)
+        let history = try XCTUnwrap(object["history_authorization"] as? [String: Any])
+        XCTAssertEqual(history["state"] as? String, "unknown")
         XCTAssertNil(object["registration"])
         XCTAssertNil(object["grants"])
         let iphone = try XCTUnwrap(object["iphone"] as? [String: Any])
@@ -433,7 +447,9 @@ private actor DirectAgentAPIQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
         revision: "fixture-query-store-revision",
         ownerDateCount: 3,
         firstOwnerDate: "2026-07-19",
-        lastOwnerDate: "2026-07-21"
+        lastOwnerDate: "2026-07-21",
+        encryptedByteCount: 6_144,
+        averageEncryptedBytesPerOwnerDate: 2_048
     )
 
     func execute(

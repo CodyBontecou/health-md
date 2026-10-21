@@ -12,7 +12,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         XCTAssertEqual(inventory.schemaVersion, 1)
         XCTAssertEqual(
             Set(inventory.outputProfiles.map(\.id)),
-            ["apple-v8", "android-frozen-v4", "android-analytical-v5"]
+            ["apple-v8", "apple-v10", "android-frozen-v4", "android-analytical-v5"]
         )
 
         let states = Dictionary(uniqueKeysWithValues: inventory.capabilities.map {
@@ -30,7 +30,12 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            ["core.shared-rust-profile-engine", "setup.share-portable-configuration"]
+            [
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+                "cloud.opt-in-export-receiver",
+                "cloud.read-only-mcp",
+            ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
         XCTAssertEqual(
@@ -67,6 +72,17 @@ final class ProductCapabilityManifestTests: XCTestCase {
                 )
             }
         }
+    }
+
+    func testWHOOPResourceSelectionIsAvailableOnAppleAndPlannedOnAndroid() throws {
+        let inventory = try Self.loadInventory()
+        let capability = try XCTUnwrap(inventory.capabilities.first {
+            $0.id == "export.whoop-resource-selection"
+        })
+        XCTAssertEqual(capability.classification, "planned")
+        XCTAssertEqual(capability.platforms.apple.state, .available)
+        XCTAssertEqual(capability.platforms.android.state, .planned)
+        XCTAssertFalse(capability.platforms.android.target?.isEmpty ?? true)
     }
 
     private static func ids(
@@ -123,9 +139,12 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
+        "export.whoop-resource-selection",
+        "export.whoop-physiological-cycle-steps",
         "automation.api-recovery-authority",
         "direct.cli_agent_push_wake",
         "export.range-summary",
+        "authorization.history-window-detection",
         "support.local-reporting-fallback",
     ]
 
@@ -143,7 +162,13 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "core.shared-rust-profile-engine", "setup.share-portable-configuration"])
+            .union([
+                "source.private-platform-database",
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+                "cloud.opt-in-export-receiver",
+                "cloud.read-only-mcp",
+            ])
     }
 
     private enum ManifestError: Error {
@@ -176,6 +201,7 @@ private struct CapabilityInventory: Decodable {
 
     struct Platforms: Decodable {
         let apple: Availability
+        let android: Availability
     }
 
     struct Availability: Decodable {

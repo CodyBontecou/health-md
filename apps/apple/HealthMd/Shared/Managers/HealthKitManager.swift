@@ -60,9 +60,16 @@ nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
     let snapshotOnlyTypeIdentifiers: [String]
     let failedTypeIdentifiers: [String]
     let unresolvedMetricIDs: [String]
+    let historyAuthorization: HealthHistoryAuthorizationAssessment
 
     var isComplete: Bool {
         failedTypeIdentifiers.isEmpty && unresolvedMetricIDs.isEmpty
+    }
+
+    /// Stronger than query completeness: only OS 27+ can prove that HealthKit
+    /// reported no limited-history boundary for the entire selected scope.
+    var supportsUnqualifiedFullHistoryClaim: Bool {
+        isComplete && historyAuthorization.supportsUnqualifiedFullHistoryClaim
     }
 }
 
@@ -120,6 +127,7 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var medicationAuthorizationStatus: String
     @Published private(set) var isVisionAuthorizationRequested: Bool
     @Published private(set) var visionAuthorizationStatus: String
+    @Published private(set) var historyAuthorizationAssessment = HealthHistoryAuthorizationAssessment.unknown
 
     // MARK: - Error Types
 
@@ -584,6 +592,102 @@ final class HealthKitManager: ObservableObject {
         ) == .unnecessary
     }
 
+    /// Assesses the selected sample types using HealthKit's OS 27 limited-history
+    /// API. HealthKit intentionally omits both unrestricted and denied types, so
+    /// `full_history` means "no limited boundary reported", not proof that every
+    /// requested read permission was granted.
+    func assessHistoryAuthorization(
+        forMetricIDs metricIDs: Set<String>,
+        publish: Bool = false
+    ) async -> HealthHistoryAuthorizationAssessment {
+        let selectedMetricIDs = metricIDs.intersection(HealthMetrics.availableMetricIDsInCurrentBuild)
+        let unavailableMetricIDs = metricIDs.subtracting(selectedMetricIDs)
+        let plan = HealthKitRecordCatalog.attributedSelectionPlan(enabledMetricIDs: selectedMetricIDs)
+        var sampleTypes = Set<HKObjectType>()
+        var unassessedMetricIDs = unavailableMetricIDs
+
+        for entry in plan where HealthKitRecordCatalog.isRuntimeAvailable(entry.descriptor) {
+            switch entry.recordKind {
+            case .characteristic, .activitySummary:
+                // Snapshot/current-value APIs do not have a historical sample window.
+                continue
+            case .medicationDoseEvent, .verifiableClinicalRecord, .attachment:
+                // These use dedicated APIs and are not covered by the ordinary
+                // HKObjectType boundary call.
+                unassessedMetricIDs.formUnion(entry.metricIDs)
+            case .other where entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier:
+                continue
+            default:
+                if let type = HealthKitRecordCatalog.resolveObjectType(entry.descriptor),
+                   type is HKSampleType {
+                    sampleTypes.insert(type)
+                } else if HealthKitRecordCatalog.requiresResolvedObjectType(entry.descriptor) {
+                    unassessedMetricIDs.formUnion(entry.metricIDs)
+                }
+            }
+        }
+
+        let assessment: HealthHistoryAuthorizationAssessment
+        if !store.supportsHistoryAuthorizationBoundaries {
+            assessment = HealthHistoryAuthorizationAssessment(
+                state: .apiUnavailable,
+                assessedTypeIdentifiers: sampleTypes.map(\.identifier),
+                unassessedMetricIDs: Array(unassessedMetricIDs),
+                message: "This app build or OS cannot report limited HealthKit history boundaries. Full-history completeness is unverified."
+            )
+        } else if sampleTypes.isEmpty {
+            assessment = HealthHistoryAuthorizationAssessment(
+                state: unassessedMetricIDs.isEmpty ? .fullHistory : .unknown,
+                unassessedMetricIDs: Array(unassessedMetricIDs),
+                checkedAt: Date(),
+                message: unassessedMetricIDs.isEmpty
+                    ? "The selected scope has no date-windowed HealthKit sample types."
+                    : "The selected history scope cannot be fully assessed."
+            )
+        } else {
+            do {
+                let values = try await store.earliestAuthorizedSampleDates(for: sampleTypes)
+                let boundaries = values.map {
+                    HealthHistoryAuthorizationBoundary(
+                        typeIdentifier: $0.key,
+                        earliestAuthorizedSampleDate: $0.value
+                    )
+                }
+                assessment = HealthHistoryAuthorizationAssessment(
+                    state: boundaries.isEmpty ? .fullHistory : .limitedHistory,
+                    assessedTypeIdentifiers: sampleTypes.map(\.identifier),
+                    boundaries: boundaries,
+                    unassessedMetricIDs: Array(unassessedMetricIDs),
+                    checkedAt: Date(),
+                    message: boundaries.isEmpty
+                        ? "HealthKit reported no limited-history date boundary. This does not distinguish unrestricted access from a denied read."
+                        : "Apple Health access is limited by date for one or more selected data types. Earlier data is unknown, not absent."
+                )
+            } catch {
+                assessment = HealthHistoryAuthorizationAssessment(
+                    state: .unknown,
+                    assessedTypeIdentifiers: sampleTypes.map(\.identifier),
+                    unassessedMetricIDs: Array(unassessedMetricIDs),
+                    checkedAt: Date(),
+                    message: "HealthKit could not report the selected history authorization boundary."
+                )
+            }
+        }
+
+        if publish {
+            historyAuthorizationAssessment = assessment
+        }
+        return assessment
+    }
+
+    @discardableResult
+    func refreshHistoryAuthorizationAssessment() async -> HealthHistoryAuthorizationAssessment {
+        await assessHistoryAuthorization(
+            forMetricIDs: HealthMetrics.availableMetricIDsInCurrentBuild,
+            publish: true
+        )
+    }
+
     @discardableResult
     func requestAuthorization() async throws -> AuthorizationRequestOutcome {
         guard isHealthDataAvailable else {
@@ -600,11 +704,13 @@ final class HealthKitManager: ObservableObject {
         )
         if authRequestStatus == .unnecessary {
             markAuthorizationRequested()
+            _ = await refreshHistoryAuthorizationAssessment()
             return .unnecessary
         }
 
         try await store.requestAuth(toShare: [], read: allReadTypes)
         markAuthorizationRequested()
+        _ = await refreshHistoryAuthorizationAssessment()
         return .requested
     }
 
@@ -2409,12 +2515,17 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
+        let historyAuthorization = await assessHistoryAuthorization(
+            forMetricIDs: selectedMetricIDs,
+            publish: true
+        )
         return HealthKitEarliestDataDiscovery(
             earliestDate: earliestDates.min(),
             queriedTypeIdentifiers: Array(Set(queried)).sorted(),
             snapshotOnlyTypeIdentifiers: Array(Set(snapshotOnly)).sorted(),
             failedTypeIdentifiers: Array(Set(failed)).sorted(),
-            unresolvedMetricIDs: unresolved.sorted()
+            unresolvedMetricIDs: unresolved.sorted(),
+            historyAuthorization: historyAuthorization
         )
     }
 

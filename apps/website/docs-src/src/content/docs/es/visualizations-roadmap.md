@@ -25,10 +25,10 @@ Usa `auto` para seguir el sistema de unidades declarado por la exportación, `me
 ## Cobertura actual de visualizaciones
 
 <div class="reference-stats">
-<div><strong>43</strong><span>renderizadores actuales del plugin</span></div>
+<div><strong>62</strong><span>renderizadores actuales del plugin</span></div>
 <div><strong>18</strong><span>categorías de datos de exportación</span></div>
 <div><strong>220+</strong><span>claves canónicas de exportación</span></div>
-<div><strong>1</strong><span>capa genérica de métricas aún necesaria</span></div>
+<div><strong>4</strong><span>vistas específicas de WHOOP</span></div>
 </div>
 
 ## Compatibilidad de plataforma por exportador
@@ -161,6 +161,40 @@ Cada elemento enlaza a su variación pública correspondiente en la [galería de
 - [Tendencias de entrenamiento](/visualizations/workout-analytics/workout-trends/theme-colors/) — `workout-trends`
 - [Intervalos de entrenamiento](/visualizations/workout-analytics/workout-intervals/theme-colors/) — `workout-intervals`
 - [Mapa de entrenamiento](/visualizations/workout-analytics/workout-map/theme-colors/) — `workout-map`
+
+### WHOOP: datos separados del proveedor
+
+En las versiones de Apple con WHOOP habilitado, conéctalo en Ajustes → Apps conectadas e incluye las apps conectadas en la exportación. Estos gráficos leen archivos diarios de Apple `healthmd.health_data` v8 que contienen `providers.whoop` (`healthmd.provider.whoop_daily` v1). No mezclan WHOOP con los resúmenes de Apple o Health Connect; la VFC de WHOOP es RMSSD, no SDNN de Apple.
+
+- [Recuperación × esfuerzo](/visualizations/whoop/whoop-recovery-strain/theme-colors/), `whoop-recovery-strain`: recuperación (0–100%) frente al esfuerzo del ciclo (0–21), unidos por el mismo ID de ciclo en los registros completos. Es una asociación, no una recomendación de entrenamiento.
+- [Sueño logrado frente al necesario](/visualizations/whoop/whoop-sleep-need/theme-colors/), `whoop-sleep-need`: sesiones de sueño y siestas separadas, con necesidad basal, deuda de sueño, esfuerzo reciente y un ajuste de siesta con signo. El marcador de necesidad neta requiere los cuatro componentes reportados; los ajustes negativos de siesta siguen restándose.
+- [Tendencias de evaluación del sueño](/visualizations/whoop/whoop-sleep-trends/theme-colors/), `whoop-sleep-trends`: porcentajes de rendimiento, consistencia y eficiencia reportados por WHOOP, no puntuaciones calculadas localmente.
+- [Esfuerzo y zonas de entrenamiento](/visualizations/whoop/whoop-workout-strain/theme-colors/), `whoop-workout-strain`: esfuerzo de cada entrenamiento y zonas WHOOP 0–5. Las proporciones usan el tiempo total reportado en zonas, no la duración transcurrida ni zonas derivadas de Apple; la cobertura de grabación y el tiempo transcurrido se mantienen como contexto separado.
+
+Usa JSON o CSV estructurado para los registros completos y los componentes de necesidad de sueño. Markdown/Bases solo ofrecen proyecciones escalares inequívocas de un único registro, sin identidad de siesta ni detalle de zonas de entrenamiento. Estos gráficos no leen archivos auxiliares nativos del proveedor, Raw API Snapshots de Android ni resúmenes agregados. Los valores ausentes o sin puntuación no son cero; las capturas parciales siguen visibles. Los filtros de fecha usan el día de la exportación al que pertenece el registro, no las marcas de tiempo del evento. Las vistas previas usan datos sintéticos, no registros de una persona real.
+
+```health-viz
+type: whoop-recovery-strain
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-need
+sleep: main
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-trends
+sleep: all
+last: 30
+```
+
+```health-viz
+type: whoop-workout-strain
+limit: 12
+last: 30
+```
 
 ## Hoja de ruta de la infraestructura básica
 

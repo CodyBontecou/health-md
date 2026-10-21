@@ -46,11 +46,14 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
 
     func queryStoreReadiness() async throws -> HealthMdAgentQueryStoreReadiness {
         let snapshot = try await store.snapshot()
+        let storage = try await store.storageMetrics()
         return HealthMdAgentQueryStoreReadiness(
             revision: snapshot.revision,
             ownerDateCount: snapshot.entries.count,
             firstOwnerDate: snapshot.entries.first?.ownerDate,
-            lastOwnerDate: snapshot.entries.last?.ownerDate
+            lastOwnerDate: snapshot.entries.last?.ownerDate,
+            encryptedByteCount: storage.encryptedByteCount,
+            averageEncryptedBytesPerOwnerDate: storage.averageEncryptedBytesPerOwnerDate
         )
     }
 

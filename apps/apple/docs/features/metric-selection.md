@@ -9,7 +9,7 @@
 
 ## What it does
 
-Metric Selection controls which Apple Health concepts appear in summaries and which source-record queries run when **Lossless Health Records** is on. Health permission and metric selection are separate: Apple controls what Health.md may read; Health.md controls what it requests/exports.
+Metric Selection controls which Apple Health concepts appear in summaries and which source-record queries run when **Lossless Health Records** is on. When Connected Apps is enabled, it also controls which WHOOP API data groups are fetched and exported. Authorization and export selection are separate: Apple/WHOOP control what Health.md may read; Health.md controls what it requests/exports.
 
 The current catalog contains 225+ definitions across 21 categories, including ordinary quantities/categories, reproductive/pregnancy data, specialized records, clinical documents, vision, medications, workouts, and WorkoutKit plans. Runtime OS/API availability still applies. The exact source-generated list is published in the [export reference metric catalog](../reference/data-dictionary-and-rollups.md#metric-catalog).
 
@@ -25,6 +25,22 @@ The current catalog contains 225+ definitions across 21 categories, including or
 Sleep, Activity, Heart, Respiratory, Vitals, Body Measurements, Mobility, Cycling, Nutrition, Vitamins, Minerals, Hearing, Mindfulness, Reproductive Health, Symptoms, Clinical Records, Clinical Documents, Vision, Medications, Other, and Workouts.
 
 Some definitions are **archive-only**: they produce exact canonical JSON/CSV records and diagnostics but may not add a daily summary field. Markdown/Bases can therefore show counts/status without displaying each selected source object.
+
+## WHOOP selection
+
+The WHOOP section has independent switches for **Cycles & Strain**, **Recovery**, **Sleep**, **Workouts**, and **Body Measurements**, plus **All WHOOP Data**. Search matches group names and descriptions, including HRV, naps, and heart rate zones. Connect the account in **Settings → Connected Apps**; selecting data does not grant provider permission.
+
+These are whole API-resource selections, not individual-field switches. For example, Recovery includes its score, HRV RMSSD, resting heart rate, blood oxygen, and skin temperature. This preserves native response fidelity without pretending that a native sidecar was field-redacted. IDs relating a selected record to an unselected cycle/sleep remain in that record; the unselected resource's measurements are not fetched.
+
+- Choices are independent of Apple Health category/bulk actions and protected by **Prevent Accidental Changes**.
+- Selections persist per export profile and are frozen in scheduled, API, Connected Mac, and generated-file/recovery settings. Export preview uses the same selection.
+- Shared Setup does not carry WHOOP resource-selection authority. Imports retain local preferences; v2 Add/Replace seeds imported profiles from the receiver's active profile, so an all-off preference is not silently re-enabled.
+- Disabled groups are neither queried nor included in typed daily output or provider-native sidecars. All off skips WHOOP reads and token refresh without disconnecting the account.
+- New and older configurations default to all groups enabled, preserving prior connected-account behavior. An explicitly saved empty selection remains empty after restart/recovery.
+- Body Measurements remains a current-day profile snapshot, never historical measurements. Existing files are not deleted by changing selection.
+- Apple Health counts and standard-metric bulk actions remain Apple-only; WHOOP has its own group count and master switch.
+
+The controls currently ship on iPhone when the WHOOP rollout is enabled. Android Play resource-selection parity is **planned**: expose these five resource IDs in Health Metrics, freeze them per profile/job, and apply them before compatibility reads and Raw API Snapshot endpoint planning without changing the frozen Android daily profiles. Android's existing metric-to-endpoint raw-snapshot selection is not claimed as the same control.
 
 ## Dependencies and attribution
 

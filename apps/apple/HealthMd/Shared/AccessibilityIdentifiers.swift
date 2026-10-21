@@ -182,6 +182,7 @@ enum AccessibilityID {
     // MARK: - Status Badge
     enum Status {
         static let exportStatusBadge = "status.exportBadge"
+        static let connectionStatusBanner = "status.connectionBanner"
     }
 
     // MARK: - Exported File Viewer

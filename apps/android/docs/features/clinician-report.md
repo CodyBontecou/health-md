@@ -25,7 +25,7 @@ Build a private, factual health summary PDF to hand to a clinician. Pick a perio
 
 ## Prerequisites
 
-- Health Connect permission for the selected measurements
+- Health Connect permission for the selected measurements, regardless of the provider selected for ordinary exports
 - No export folder needed — the report is self-contained
 
 ## Setup
@@ -62,4 +62,4 @@ A multi-page tagged PDF: title and period, per-measurement sections with counts,
 
 ## Implementation notes
 
-Four layers: configuration (`ReportConfiguration`, `ReportDateRangePreset`), data source (`data/clinicianreport/` adapting Health Connect reads with a pinned `ZoneId` — period aggregates are skipped in report mode because Health Connect has no `ZoneId` request; granular reads group from pinned instants and steps aggregate per exact zoned local day), normalized model + generator (`domain/clinicianreport/`), and the PDFBox-Android renderer with a genuine logical structure tree (`AndroidClinicianReportPdfRenderer`; tagged PDF, not a PDF/UA claim). Files live under `cacheDir/clinician-reports`, are published by atomic rename, and partial artifacts are deleted on cancellation. Configuration (including display name) is never persisted or added to export history. Architecture spec: [Clinician Report v1](../../../../docs/features/clinician-report-v1.md).
+Four layers: configuration (`ReportConfiguration`, `ReportDateRangePreset`), data source (`data/clinicianreport/` injecting the concrete `HealthConnectDataProvider`, bypassing cloud/all-connected export preferences without changing them, and adapting local reads with a pinned `ZoneId` — period aggregates are skipped in report mode because Health Connect has no `ZoneId` request; granular reads group from pinned instants and steps aggregate per exact zoned local day), normalized model + generator (`domain/clinicianreport/`), and the PDFBox-Android renderer with a genuine logical structure tree (`AndroidClinicianReportPdfRenderer`; tagged PDF, not a PDF/UA claim). Files live under `cacheDir/clinician-reports`, are published by atomic rename, and partial artifacts are deleted on cancellation. Configuration (including display name) is never persisted or added to export history. Architecture spec: [Clinician Report v1](../../../../docs/features/clinician-report-v1.md).

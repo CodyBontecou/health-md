@@ -171,7 +171,11 @@ struct ConfigurationProtectionToast: View {
             .accessibilityIdentifier(AccessibilityID.ConfigurationProtection.toast)
             .accessibilityLabel("Settings are locked")
             .accessibilityHint("Double tap to open Prevent Accidental Changes in Settings")
+            #if os(iOS)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            #else
             .transition(.move(edge: .top).combined(with: .opacity))
+            #endif
         }
     }
 }

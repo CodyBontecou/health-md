@@ -1769,12 +1769,10 @@ struct SharedSetupConfigurationCard: View {
             Button("Save to Files") { prepareExport() }
             Button("System Share") { prepareShare() }
         } label: {
-            HStack(spacing: Spacing.s2) {
+            SecondaryMenuLabel {
                 Image(systemName: "square.and.arrow.up")
                     .accessibilityHidden(true)
                 Text("Share")
-                Image(systemName: "chevron.down")
-                    .accessibilityHidden(true)
             }
         }
         .buttonStyle(SecondaryButtonStyle())

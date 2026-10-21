@@ -82,9 +82,13 @@ The report intentionally excludes:
 
 ### WHOOP
 
-- For direct OAuth validation, confirm the build has `WHOOP_CLIENT_ID` or `WHOOP_TOKEN_BROKER_URL` configured.
+- For direct OAuth validation, confirm the Play build has `WHOOP_CLIENT_ID` and an Android-compatible `WHOOP_TOKEN_BROKER_URL` configured; the client secret stays server-side. Register `healthmd://oauth2redirect`, not the iOS callback.
 - Export a date with sleep/recovery and workout data.
-- WHOOP recovery is cycle-based; prefer a fully processed prior day.
+- Confirm requests use `/developer/v2`, `limit=25`, and fixed start/end bounds across `nextToken` pages. Recovery is an independent paginated collection, not a `cycleId` fan-out; prefer a fully processed prior day.
+- Confirm sleep/workout UUIDs and `sport_name` survive capture; unknown sports remain `OTHER` with their native name retained. Workout duration comes from start/end instants, not heart-rate zone coverage.
+- Verify current body data appears only on today's compatibility export; raw snapshots label the body singleton `unbounded_non_temporal`.
+- Approve the six read-only/offline scopes, force token expiry, verify a rotated refresh-token pair persists, and verify a missing refresh token does not overwrite existing credentials. Confirm eight-character state and no `read:profile` request.
+- Run compatibility and raw exports across multiple pages, successful-empty and partial failures. Confirm historical v1 snapshots remain readable; Android daily v4/v5 and raw snapshot v1 schema versions are unchanged.
 
 ## Maintainer triage
 

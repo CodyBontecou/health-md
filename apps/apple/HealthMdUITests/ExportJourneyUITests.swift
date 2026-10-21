@@ -43,6 +43,58 @@ final class ExportJourneyUITests: XCTestCase {
         )
     }
 
+    func testNoDataExport_showsGuidanceInsteadOfGenericError() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            exportResult: "no-data"
+        )
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        // The no-data guidance is a Geist-designed in-app dialog (not a native alert),
+        // matched by its localized title text like the other dialogs in this journey.
+        let noDataDialog = app.staticTexts["No Health Data Found"]
+        XCTAssertTrue(
+            noDataDialog.waitForExistence(timeout: 30),
+            "An empty Health store should produce a guided empty state, not a generic error"
+        )
+        XCTAssertTrue(app.buttons["Open Health App"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Done"].exists)
+        XCTAssertFalse(app.staticTexts["Export Couldn\u{2019}t Finish"].exists)
+    }
+
+    func testFailedExport_updatesBottomCardBeforeShowingDetails() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            exportResult: "fail"
+        )
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        let statusCard = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
+        XCTAssertTrue(statusCard.waitForExistence(timeout: 10))
+        XCTAssertTrue(statusCard.label.contains("Export failed"))
+        XCTAssertFalse(
+            app.staticTexts["Export Couldn’t Finish"].exists,
+            "A terminal failure should update the status card instead of also opening a dialog"
+        )
+
+        let detailsButton = app.buttons["Details"]
+        XCTAssertTrue(detailsButton.waitForExistence(timeout: 3))
+        detailsButton.tap()
+        XCTAssertTrue(app.staticTexts["Export Couldn’t Finish"].waitForExistence(timeout: 5))
+    }
+
     func testMultiFileExport_hidesCompletionUntilEntireExportFinishes() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
@@ -68,20 +120,15 @@ final class ExportJourneyUITests: XCTestCase {
         )
         XCTAssertFalse(
             exportButton.exists,
-            "The bottom export bar should hide while the top activity banner owns progress and cancellation"
+            "The export action bar should hide while the unified bottom status card owns progress and cancellation"
         )
 
-        let activityBanner = app.descendants(matching: .any)[UITestLaunchHelper.Export.activityBanner]
+        let statusCard = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertTrue(
-            activityBanner.exists,
-            "The top export activity banner should remain visible while the export is running"
+            statusCard.exists,
+            "The bottom status card should remain visible while the export is running"
         )
 
-        let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
-        XCTAssertFalse(
-            statusBadge.waitForExistence(timeout: 5),
-            "A per-file completion must not show the success view while the batch is running"
-        )
         XCTAssertFalse(app.buttons["View Exported File"].exists)
 
         // Explicitly release the batch after every intermediate-state assertion.
@@ -89,14 +136,21 @@ final class ExportJourneyUITests: XCTestCase {
         finishBatch.tap()
 
         XCTAssertTrue(
-            statusBadge.waitForExistence(timeout: 5),
-            "The success view should appear after the complete export finishes"
+            app.buttons[UITestLaunchHelper.Export.cancelExportButton].exists,
+            "The in-progress status card should expose cancellation"
         )
         XCTAssertFalse(
-            activityBanner.exists,
-            "The top export activity banner should disappear after the export completes"
+            app.buttons["View Exported File"].waitForExistence(timeout: 0.8),
+            "A per-file completion must not replace progress while the batch is running"
         )
-        XCTAssertTrue(app.buttons["View Exported File"].exists)
+
+        XCTAssertTrue(
+            app.buttons["View Exported File"].waitForExistence(timeout: 5),
+            "The same bottom status card should update with terminal export actions"
+        )
+        XCTAssertTrue(statusCard.exists)
+        XCTAssertFalse(app.buttons[UITestLaunchHelper.Export.cancelExportButton].exists)
+        XCTAssertTrue(app.buttons["Browse Export Folder"].exists)
     }
 
     func testSuccessfulExport_previewsExactMarkdownFileInApp() throws {
@@ -174,7 +228,9 @@ final class ExportJourneyUITests: XCTestCase {
             statusBadge.label.contains("Partial export: Health permissions need attention. Tap to fix."),
             "The warning should explain that permission guidance is available"
         )
-        statusBadge.tap()
+        let reviewIssues = app.buttons["Review export issues"]
+        XCTAssertTrue(reviewIssues.waitForExistence(timeout: 3))
+        reviewIssues.tap()
 
         // Geist dialogs are in-tree SwiftUI overlays rather than native UIAlert instances.
         let permissionTitle = app.staticTexts["Health Permissions Needed"]

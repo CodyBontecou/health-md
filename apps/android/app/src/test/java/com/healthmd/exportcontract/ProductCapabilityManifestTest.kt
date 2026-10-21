@@ -25,7 +25,7 @@ class ProductCapabilityManifestTest {
         val profiles = inventory.getValue("output_profiles").jsonArray
             .map { it.jsonObject.getValue("id").jsonPrimitive.content }
             .toSet()
-        assertEquals(setOf("apple-v8", "android-frozen-v4", "android-analytical-v5"), profiles)
+        assertEquals(setOf("apple-v8", "apple-v10", "android-frozen-v4", "android-analytical-v5"), profiles)
 
         val capabilities = inventory.getValue("capabilities").jsonArray.map { it.jsonObject }
         val states = capabilities.associate { capability ->
@@ -40,10 +40,14 @@ class ProductCapabilityManifestTest {
         assertEquals(appleCapabilities + "source.private-platform-database", idsWithState(states, "unavailable"))
         assertEquals(
             setOf(
+                "cloud.opt-in-export-receiver",
+                "cloud.read-only-mcp",
                 "core.shared-rust-profile-engine",
                 "automation.api-recovery-authority",
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
+                "export.whoop-resource-selection",
+                "export.whoop-physiological-cycle-steps",
                 "setup.share-portable-configuration",
                 "support.local-reporting-fallback",
             ),
@@ -85,6 +89,34 @@ class ProductCapabilityManifestTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun whoopResourceSelectionIsExplicitlyPlannedForAndroid() {
+        val inventory = Json.parseToJsonElement(manifestFile().readText()).jsonObject
+        val capability = inventory.getValue("capabilities").jsonArray.single {
+            it.jsonObject.getValue("id").jsonPrimitive.content == "export.whoop-resource-selection"
+        }.jsonObject
+        assertEquals("planned", capability.getValue("classification").jsonPrimitive.content)
+        val platforms = capability.getValue("platforms").jsonObject
+        assertEquals("available", platforms.getValue("apple").jsonObject.getValue("state").jsonPrimitive.content)
+        val android = platforms.getValue("android").jsonObject
+        assertEquals("planned", android.getValue("state").jsonPrimitive.content)
+        assertTrue(android.getValue("target").jsonPrimitive.content.isNotBlank())
+    }
+
+    @Test
+    fun whoopCycleStepsUseASeparateAppleV10ProfileAndConcreteAndroidPlan() {
+        val inventory = Json.parseToJsonElement(manifestFile().readText()).jsonObject
+        val capability = inventory.getValue("capabilities").jsonArray.single {
+            it.jsonObject.getValue("id").jsonPrimitive.content == "export.whoop-physiological-cycle-steps"
+        }.jsonObject
+        assertEquals(setOf("apple-v10"), capability.getValue("profiles").jsonArray.map { it.jsonPrimitive.content }.toSet())
+        val platforms = capability.getValue("platforms").jsonObject
+        assertEquals("available", platforms.getValue("apple").jsonObject.getValue("state").jsonPrimitive.content)
+        val android = platforms.getValue("android").jsonObject
+        assertEquals("planned", android.getValue("state").jsonPrimitive.content)
+        assertTrue(android.getValue("target").jsonPrimitive.content.contains("step_count"))
     }
 
     private fun idsWithState(states: Map<String, String>, state: String): Set<String> =
@@ -131,6 +163,7 @@ class ProductCapabilityManifestTest {
             "apple.wrist-temperature",
             "apple.hearing-and-symptoms",
             "apple.typed-whoop-provider-section",
+            "authorization.history-window-detection",
         )
 
         val androidCapabilities = setOf(
@@ -144,10 +177,14 @@ class ProductCapabilityManifestTest {
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+            "cloud.opt-in-export-receiver",
+            "cloud.read-only-mcp",
             "source.private-platform-database",
             "automation.api-recovery-authority",
             "direct.cli_agent_push_wake",
             "export.range-summary",
+            "export.whoop-resource-selection",
+            "export.whoop-physiological-cycle-steps",
             "setup.share-portable-configuration",
             "account.myself_lifetime_claim",
             "core.shared-rust-profile-engine",

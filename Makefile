@@ -6,18 +6,42 @@ TEST_JOBS ?= 4
 ANDROID_TEST_ARGS ?= --max-workers=2 --init-script scripts/ci-gradle.init.gradle
 APPLE_TEST_DERIVED_DATA_DIR ?= $(CURDIR)/apps/apple/build/local-test-derived-data
 CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
+TEST_COMPONENTS := contracts core apple android cli practice wake cloud website
+.DEFAULT_GOAL := help
 
-.PHONY: test test-components test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
-        test-apple test-android test-cli test-practice test-wake test-website apple-ios apple-macos cli-build \
+.PHONY: help test test-components test-all test-testing-tools test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
+        test-apple test-android test-android-all test-cli test-practice test-wake test-cloud test-website apple-ios apple-macos cli-build \
         android-build android-play-debug android-fdroid-debug android-fdroid-release \
-        practice-build website-build
+        practice-build cloud-build website-build
 
-# Bound component concurrency, preserve every gate, and report all failures.
-# TEST_JOBS=1 retains serial scheduling for diagnosis or smaller machines.
+help:
+	@echo 'Choose a component: make test COMPONENT=<$(TEST_COMPONENTS)>'
+	@echo 'Focused iteration commands: docs/testing-strategy.md'
+	@echo 'Host-side orchestration checks: make test-testing-tools'
+	@echo 'Explicit broad smoke sweep (not release qualification): make test-all'
+
+# Require an explicit owner rather than silently qualifying the monorepo.
 test:
+ifneq ($(words $(COMPONENT)),1)
+	@echo 'Set exactly one COMPONENT: $(TEST_COMPONENTS)' >&2
+	@exit 2
+else ifeq ($(filter $(TEST_COMPONENTS),$(COMPONENT)),)
+	@echo 'Unknown COMPONENT; choose one of: $(TEST_COMPONENTS)' >&2
+	@exit 2
+else
+	$(MAKE) test-$(COMPONENT)
+endif
+
+test-all:
 	$(MAKE) --jobs="$(TEST_JOBS)" --keep-going test-components
 
-test-components: test-contracts test-core test-apple test-android test-cli test-practice test-wake test-website
+test-components: test-contracts test-core test-apple test-android-all test-cli test-practice test-wake test-cloud test-website
+
+test-testing-tools:
+	python3 -m unittest discover -s scripts/tests -p 'test_testing_*.py'
+	python3 -m unittest discover -s apps/apple/scripts/tests -p test_testing_performance.py
+	node --test apps/website/test/build-orchestration.test.mjs
+	node --test scripts/tests/verification-*.test.mjs
 
 test-contracts:
 	python3 packages/contracts/validate.py
@@ -50,21 +74,30 @@ check-core-bindings:
 	diff -ru "$$check_dir/first" "$$check_dir/second"
 
 test-apple:
-	$(MAKE) -C apps/apple test \
+	$(MAKE) -C apps/apple test-platforms \
 	  IOS_DERIVED_DATA_DIR="$(APPLE_TEST_DERIVED_DATA_DIR)/ios" \
 	  MACOS_DERIVED_DATA_DIR="$(APPLE_TEST_DERIVED_DATA_DIR)/macos"
 
+# Local regressions compile one app variant; CI still qualifies every flavor.
 test-android:
-	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew :app:testPlayDebugUnitTest :app:testPlayReleaseUnitTest :app:testPlayE2eUnitTest :healthmd-core:testDebugUnitTest :wearable-contract:test :direct-protocol:test $(ANDROID_TEST_ARGS)
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew --no-daemon --max-workers=2 \
+		:app:testPlayDebugUnitTest :healthmd-core:testDebugUnitTest \
+		:wearable-contract:test :direct-protocol:test
+
+test-android-all:
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew test $(ANDROID_TEST_ARGS)
 
 test-cli:
-	cd apps/cli && cargo test --workspace --all-features
+	cd apps/cli && cargo test --workspace --all-features --locked
 
 test-practice:
 	cd apps/practice && npm run check
 
 test-wake:
 	cd apps/wake && npm test && npm run check
+
+test-cloud:
+	cd apps/cloud && npm run check && npm run test:smoke
 
 test-website:
 	cd apps/website && npm test
@@ -92,6 +125,9 @@ android-fdroid-release:
 
 practice-build:
 	cd apps/practice && npm run build
+
+cloud-build:
+	cd apps/cloud && npm run dry-run
 
 website-build:
 	cd apps/website && npm run build

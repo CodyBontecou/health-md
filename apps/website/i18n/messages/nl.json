@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | Zet de volgende stap met je gezondheid",
-      "meta.description": "Een brug met lokale verwerking van Apple Health en Health Connect naar de bestanden, scripts en agents die je kiest. Health.md slaat je gezondheidsgegevens niet op.",
+      "meta.description": "Een brug met lokale verwerking van Apple Health en Health Connect naar de bestanden, scripts en agents die je kiest. De optionele Health.md-cloud bewaart alleen exports die je bewust verstuurt.",
       "meta.ogTitle": "Zet de volgende stap met je gezondheid",
       "meta.twitterDescription": "Een lokale privéverbinding van Apple Health en Health Connect naar de tools die je al gebruikt.",
       "schema.description": "Health.md is een privéverbinding van Apple Health en Android Health Connect naar lokale bestanden, automatisering, CLI-workflows en lokale agents.",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Download Health.md via Google Play",
       "fdroidAlt": "Download Health.md via F-Droid",
       "fdroidBadgeKicker": "OPEN-SOURCEVERSIE",
-      "trust": "Health.md slaat je gezondheidsgegevens niet op.<br>Jij kiest elke exportbestemming.",
+      "trust": "Standaard lokaal.<br>De optionele cloud bewaart alleen exports die je bewust verstuurt.",
       "exportsTitle": "Je gezondheidsgegevens,<br>als gewone bestanden.",
       "exportsLede": "Kies je meetwaarden. Exporteer ze als Markdown, JSON, CSV of Obsidian Bases.",
       "exportPhoneLabel": "Apple Health-overzicht weergegeven op een witte iPhone 17 Pro",

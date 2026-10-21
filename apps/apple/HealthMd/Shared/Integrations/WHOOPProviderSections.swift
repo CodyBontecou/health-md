@@ -2,17 +2,22 @@ import Foundation
 
 // MARK: - Public typed provider sections
 
-/// Optional provider namespace embedded in Apple `healthmd.health_data` v8 daily records.
+/// Optional provider namespace embedded in Apple daily records (v10 writes, v8 reads).
 /// Provider-native `ExternalDailyRecord` sidecars remain a separate fidelity layer.
 nonisolated struct HealthProviderSections: Codable, Equatable, Sendable {
     var whoop: WHOOPDailyProviderSection?
 
     var isEmpty: Bool { whoop == nil }
 
-    static func normalized(from records: [ExternalDailyRecord]) -> HealthProviderSections? {
+    static func normalized(
+        from records: [ExternalDailyRecord],
+        whoopResources: Set<WHOOPResourceName>? = nil
+    ) -> HealthProviderSections? {
         let whoopRecords = records.filter { $0.provider == .whoop }
-        guard !whoopRecords.isEmpty else { return nil }
-        return HealthProviderSections(whoop: WHOOPProviderNormalizer.normalize(whoopRecords))
+        guard !whoopRecords.isEmpty, whoopResources?.isEmpty != true else { return nil }
+        return HealthProviderSections(whoop: WHOOPProviderNormalizer.normalize(
+            whoopRecords, requestedResources: whoopResources
+        ))
     }
 }
 
@@ -103,6 +108,25 @@ nonisolated struct WHOOPCycle: Codable, Equatable, Sendable {
     let energyKilojoules: Double?
     let averageHeartRateBPM: Double?
     let maxHeartRateBPM: Double?
+    /// WHOOP physiological-cycle count, not a civil-day total. Missing/null is unavailable.
+    let stepCount: Int64?
+
+    init(
+        id: String, startTime: String, endTime: WHOOPNullableTimestamp?, timezoneOffset: String?,
+        scoreState: String?, strainScore: Double?, energyKilojoules: Double?,
+        averageHeartRateBPM: Double?, maxHeartRateBPM: Double?, stepCount: Int64? = nil
+    ) {
+        self.id = id
+        self.startTime = startTime
+        self.endTime = endTime
+        self.timezoneOffset = timezoneOffset
+        self.scoreState = scoreState
+        self.strainScore = strainScore
+        self.energyKilojoules = energyKilojoules
+        self.averageHeartRateBPM = averageHeartRateBPM
+        self.maxHeartRateBPM = maxHeartRateBPM
+        self.stepCount = stepCount
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -114,6 +138,7 @@ nonisolated struct WHOOPCycle: Codable, Equatable, Sendable {
         case energyKilojoules = "energy_kilojoules"
         case averageHeartRateBPM = "average_heart_rate_bpm"
         case maxHeartRateBPM = "max_heart_rate_bpm"
+        case stepCount = "step_count"
     }
 }
 
@@ -273,7 +298,7 @@ nonisolated struct WHOOPBodySnapshot: Codable, Equatable, Sendable {
 
 nonisolated struct WHOOPDailyProviderSection: Codable, Equatable, Sendable {
     static let schemaIdentifier = "healthmd.provider.whoop_daily"
-    static let currentSchemaVersion = 1
+    static let currentSchemaVersion = 2
 
     var schema: String = Self.schemaIdentifier
     var schemaVersion: Int = Self.currentSchemaVersion
@@ -293,6 +318,52 @@ nonisolated struct WHOOPDailyProviderSection: Codable, Equatable, Sendable {
         case captureStatus = "capture_status"
         case fetchedAt = "fetched_at"
         case resources, cycles, recoveries, sleep, workouts, body, warnings
+    }
+
+    init(
+        schema: String = Self.schemaIdentifier, schemaVersion: Int = Self.currentSchemaVersion,
+        captureStatus: WHOOPCaptureStatus, fetchedAt: String?, resources: [WHOOPResourceResult],
+        cycles: [WHOOPCycle], recoveries: [WHOOPRecovery], sleep: [WHOOPSleep],
+        workouts: [WHOOPWorkout], body: WHOOPBodySnapshot?, warnings: [WHOOPWarning]
+    ) {
+        self.schema = schema
+        self.schemaVersion = schemaVersion
+        self.captureStatus = captureStatus
+        self.fetchedAt = fetchedAt
+        self.resources = resources
+        self.cycles = cycles
+        self.recoveries = recoveries
+        self.sleep = sleep
+        self.workouts = workouts
+        self.body = body
+        self.warnings = warnings
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            schema: try container.decode(String.self, forKey: .schema),
+            schemaVersion: try container.decode(Int.self, forKey: .schemaVersion),
+            captureStatus: try container.decode(WHOOPCaptureStatus.self, forKey: .captureStatus),
+            fetchedAt: try container.decodeIfPresent(String.self, forKey: .fetchedAt),
+            resources: try container.decode([WHOOPResourceResult].self, forKey: .resources),
+            cycles: try container.decode([WHOOPCycle].self, forKey: .cycles),
+            recoveries: try container.decode([WHOOPRecovery].self, forKey: .recoveries),
+            sleep: try container.decode([WHOOPSleep].self, forKey: .sleep),
+            workouts: try container.decode([WHOOPWorkout].self, forKey: .workouts),
+            body: try container.decodeIfPresent(WHOOPBodySnapshot.self, forKey: .body),
+            warnings: try container.decode([WHOOPWarning].self, forKey: .warnings)
+        )
+        guard schema == Self.schemaIdentifier, [1, 2].contains(schemaVersion),
+              cycles.allSatisfy({ cycle in
+                  guard let steps = cycle.stepCount else { return true }
+                  return schemaVersion == 2 && steps >= 0 && steps <= Int64(Int32.max)
+              }) else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: decoder.codingPath,
+                debugDescription: "Unsupported or invalid WHOOP provider section."
+            ))
+        }
     }
 
     var recordCountsAreValid: Bool {
@@ -322,6 +393,7 @@ nonisolated struct WHOOPFlatMetricDefinition: Equatable, Sendable {
     static let all: [WHOOPFlatMetricDefinition] = [
         .init(key: "whoop_capture_status", displayName: "WHOOP Capture Status", category: "WHOOP Capture", unit: "status"),
         .init(key: "whoop_cycle_strain_score", displayName: "WHOOP Cycle Strain Score", category: "WHOOP Cycle", unit: "score"),
+        .init(key: "whoop_cycle_step_count", displayName: "WHOOP Physiological-Cycle Steps", category: "WHOOP Cycle", unit: "count"),
         .init(key: "whoop_cycle_energy_kilojoules", displayName: "WHOOP Cycle Energy", category: "WHOOP Cycle", unit: "kJ"),
         .init(key: "whoop_cycle_average_heart_rate_bpm", displayName: "WHOOP Cycle Average Heart Rate", category: "WHOOP Cycle", unit: "bpm"),
         .init(key: "whoop_cycle_max_heart_rate_bpm", displayName: "WHOOP Cycle Maximum Heart Rate", category: "WHOOP Cycle", unit: "bpm"),
@@ -375,6 +447,7 @@ nonisolated extension WHOOPDailyProviderSection {
 
         if cycles.count == 1, let cycle = cycles.first {
             add("whoop_cycle_strain_score", cycle.strainScore)
+            if schemaVersion == 2 { add("whoop_cycle_step_count", cycle.stepCount) }
             add("whoop_cycle_energy_kilojoules", cycle.energyKilojoules)
             add("whoop_cycle_average_heart_rate_bpm", cycle.averageHeartRateBPM)
             add("whoop_cycle_max_heart_rate_bpm", cycle.maxHeartRateBPM)
@@ -434,7 +507,10 @@ private nonisolated enum WHOOPProviderNormalizer {
 
     private static let maximumRecordsPerCollection = 10_000
 
-    static func normalize(_ records: [ExternalDailyRecord]) -> WHOOPDailyProviderSection {
+    static func normalize(
+        _ records: [ExternalDailyRecord],
+        requestedResources: Set<WHOOPResourceName>? = nil
+    ) -> WHOOPDailyProviderSection {
         let sortedRecords = records.sorted { lhs, rhs in
             if lhs.fetchedAt != rhs.fetchedAt { return lhs.fetchedAt < rhs.fetchedAt }
             return lhs.date < rhs.date
@@ -445,9 +521,13 @@ private nonisolated enum WHOOPProviderNormalizer {
         let nativeWarnings = sortedRecords.flatMap(\.warnings)
 
         var builds = Dictionary(uniqueKeysWithValues: WHOOPResourceName.allCases.map { ($0, ResourceBuild()) })
-        var planned: Set<WHOOPResourceName> = [.cycles, .recovery, .sleep, .workouts]
+        // Explicit plans include body only for today's capture. Legacy callers
+        // infer the four collections plus a body singleton when one is present.
+        var planned = requestedResources ?? [.cycles, .recovery, .sleep, .workouts]
+        let allowed = requestedResources ?? Set(WHOOPResourceName.allCases)
         for payload in payloads {
-            guard let resource = resourceName(for: payload.name) else { continue }
+            guard let resource = WHOOPResourceName.resource(forPayloadName: payload.name),
+                  allowed.contains(resource) else { continue }
             planned.insert(resource)
             builds[resource]?.payloads.append(payload)
         }
@@ -618,15 +698,6 @@ private nonisolated enum WHOOPProviderNormalizer {
         )
     }
 
-    private static func resourceName(for payloadName: String) -> WHOOPResourceName? {
-        if payloadName == "cycles" || payloadName.hasPrefix("cycles_page_") || payloadName == "cycles_pagination" { return .cycles }
-        if payloadName == "recovery" || payloadName.hasPrefix("recovery_page_") || payloadName == "recovery_pagination" { return .recovery }
-        if payloadName == "sleep" || payloadName.hasPrefix("sleep_page_") || payloadName == "sleep_pagination" { return .sleep }
-        if payloadName == "workouts" || payloadName.hasPrefix("workouts_page_") || payloadName == "workouts_pagination" { return .workouts }
-        if payloadName == "body_measurements_snapshot" { return .body }
-        return nil
-    }
-
     private static func collectionRecords(_ payload: ExternalProviderPayload) -> [JSONValue] {
         guard case .object(let root)? = payload.data,
               case .array(let records)? = root["records"] else { return [] }
@@ -647,7 +718,10 @@ private nonisolated enum WHOOPProviderNormalizer {
             strainScore: boundedNumber(score["strain"], minimum: 0, maximum: 21),
             energyKilojoules: boundedNumber(score["kilojoule"], minimum: 0),
             averageHeartRateBPM: boundedNumber(score["average_heart_rate"], minimumExclusive: 0, maximum: 300),
-            maxHeartRateBPM: boundedNumber(score["max_heart_rate"], minimumExclusive: 0, maximum: 300)
+            maxHeartRateBPM: boundedNumber(score["max_heart_rate"], minimumExclusive: 0, maximum: 300),
+            stepCount: nonnegativeInteger(object["step_count"]).flatMap {
+                $0 <= Int64(Int32.max) ? $0 : nil
+            }
         )
     }
 
@@ -725,7 +799,10 @@ private nonisolated enum WHOOPProviderNormalizer {
               let sportName = boundedString(object["sport_name"], maximum: 128),
               !sportName.isEmpty else { return nil }
         let score = object["score"]?.object ?? [:]
-        let zone = score["zone_duration"]?.object ?? [:]
+        // The current API uses the plural key. Accept the legacy spelling
+        // only when it is absent; an explicit null/empty canonical value must
+        // not resurrect or blend older zone data.
+        let zone = (score["zone_durations"] ?? score["zone_duration"])?.object ?? [:]
         let zoneDurations = WHOOPZoneDurations(
             zoneZeroMilliseconds: nonnegativeInteger(zone["zone_zero_milli"]),
             zoneOneMilliseconds: nonnegativeInteger(zone["zone_one_milli"]),

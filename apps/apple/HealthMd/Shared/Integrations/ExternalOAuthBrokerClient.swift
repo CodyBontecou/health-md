@@ -4,6 +4,7 @@ enum ExternalOAuthBrokerError: LocalizedError, Equatable {
     case notConfigured
     case invalidResponse
     case brokerRejected(String)
+    case authorizationRejected(String)
 
     var errorDescription: String? {
         switch self {
@@ -13,6 +14,19 @@ enum ExternalOAuthBrokerError: LocalizedError, Equatable {
             return "The OAuth broker returned an invalid response."
         case .brokerRejected(let message):
             return message
+        case .authorizationRejected(let code):
+            switch code {
+            case "access_denied":
+                return "Access was not approved. Try connecting again and approve the requested permissions."
+            case "invalid_scope":
+                return "The requested permissions were rejected. Contact Health.md support."
+            case "invalid_request", "unauthorized_client", "unsupported_response_type", "invalid_client":
+                return "The sign-in request was rejected. Try connecting again. If this continues, contact Health.md support."
+            case "server_error", "temporarily_unavailable":
+                return "The provider is temporarily unavailable. Try again later."
+            default:
+                return "Sign-in could not be completed. Try connecting again."
+            }
         }
     }
 }

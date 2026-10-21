@@ -12,6 +12,7 @@ spec.loader.exec_module(shards)
 
 
 class ShardReportTests(unittest.TestCase):
+    source_sha = "a" * 40
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -20,8 +21,10 @@ class ShardReportTests(unittest.TestCase):
             for kind in ('play',) + (('core', 'direct_e2e') if index == 0 else ()):
                 self.report(index, kind)
 
-    def report(self, index, kind, *, name=None, failed=False, skipped=False, count=1):
-        base = self.root / f'android-instrumentation-12-1-shard-{index}'
+    def report(self, index, kind, *, name=None, failed=False, skipped=False, count=1, attempt=1):
+        base = self.root / f'android-instrumentation-12-{attempt}-shard-{index}'
+        shards.write_source_receipt(base / 'build/logs/instrumentation-source.json',
+                                    '12', str(attempt), index, self.source_sha)
         paths = {'core': 'healthmd-core/build/outputs/androidTest-results/connected/debug',
                  'direct_e2e': 'app/build/outputs/androidTest-results/connected/e2e/flavors/play',
                  'play': 'app/build/outputs/androidTest-results/connected/debug/flavors/play',
@@ -42,6 +45,32 @@ class ShardReportTests(unittest.TestCase):
         result = shards.verify(self.root, '12', '1')
         self.assertEqual((8, 7, 1), (result['tests'], result['passed'], result['skipped']))
         self.assertEqual({0, 1, 2, 3, 4, 5}, {x['shard'] for x in result['cases']})
+
+    def test_partial_retry_keeps_successful_same_run_shards(self):
+        self.report(2, 'play', failed=True)
+        self.report(2, 'play', attempt=2)
+        result = shards.verify(self.root, '12', '2', source_sha=self.source_sha)
+        self.assertEqual(8, result['passed'])
+        self.assertEqual({'0': '1', '1': '1', '2': '2', '3': '1', '4': '1', '5': '1'}, result['shard_attempts'])
+
+    def test_latest_failed_or_incomplete_retry_never_falls_back(self):
+        self.report(2, 'play', failed=True, attempt=2)
+        with self.assertRaisesRegex(ValueError, 'Failed test'):
+            shards.verify(self.root, '12', '2', source_sha=self.source_sha)
+        self.report(2, 'play', attempt=2).unlink()
+        with self.assertRaisesRegex(ValueError, 'groups mismatch'):
+            shards.verify(self.root, '12', '2', source_sha=self.source_sha)
+
+    def test_foreign_run_future_attempt_and_invalid_shard_are_rejected(self):
+        for name in ('android-instrumentation-13-1-shard-2',
+                     'android-instrumentation-12-3-shard-2',
+                     'android-instrumentation-12-2-shard-6'):
+            with self.subTest(name=name):
+                directory = self.root / name
+                directory.mkdir()
+                with self.assertRaisesRegex(ValueError, 'Unexpected shard artifact|Future attempt or unknown shard artifact'):
+                    shards.verify(self.root, '12', '2', source_sha=self.source_sha)
+                directory.rmdir()
 
     def test_missing_artifact_report_or_required_group_fails(self):
         for kind in ('play', 'core', 'direct_e2e'):
@@ -241,6 +270,7 @@ class ShardWorkflowTests(unittest.TestCase):
         self.assertIn('name: Emulator instrumentation and direct E2E', aggregate)
         self.assertIn('test "$SHARDS_RESULT" = success', aggregate)
         self.assertIn('verify-ci-instrumentation-shards.py', aggregate)
+        self.assertIn('pattern: android-instrumentation-${{ github.run_id }}-*-shard-*', aggregate)
         self.assertNotIn('merge-multiple: true', aggregate)
         self.assertIn('name: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}\n', aggregate)
         self.assertIn('INSTRUMENTATION_RESULT: ${{ needs.instrumentation.result }}', workflow)

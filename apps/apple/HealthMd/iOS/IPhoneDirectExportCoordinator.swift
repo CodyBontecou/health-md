@@ -999,6 +999,16 @@ final class IPhoneDirectExportCoordinator {
                     "The iPhone could not prove complete earliest-date coverage for: \(missing.joined(separator: ", "))."
                 )
             }
+            guard discovery.historyAuthorization.state != .limitedHistory else {
+                throw IPhoneDirectExportError.invalidRequest(
+                    "Apple Health access is limited by date. Choose an explicit authorized range or grant full history access before requesting all available history."
+                )
+            }
+            guard discovery.supportsUnqualifiedFullHistoryClaim else {
+                throw IPhoneDirectExportError.invalidRequest(
+                    "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
+                )
+            }
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = sourceTimeZone
             let end = calendar.startOfDay(for: Date())
