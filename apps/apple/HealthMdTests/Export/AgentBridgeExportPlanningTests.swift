@@ -651,6 +651,19 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 XCTAssertEqual(artifact.byteCount, Int64(day.artifact.byteCount))
                 XCTAssertEqual(artifact.profile, .appleV8); XCTAssertEqual(artifact.writeMode, .overwrite)
             }
+            XCTAssertEqual(result.baseFiles.count, manifest.artifacts.count)
+            for (file, artifact) in zip(result.baseFiles, manifest.artifacts) {
+                XCTAssertEqual(file.manifest.jobID.uuidString.lowercased(), request.jobId.rawValue)
+                XCTAssertEqual(file.manifest.fileID.uuidString.lowercased(), artifact.artifactId.rawValue)
+                XCTAssertEqual(file.manifest.relativePath, artifact.relativePath.rawValue)
+                XCTAssertEqual(file.manifest.byteCount, artifact.byteCount)
+                XCTAssertEqual(file.manifest.sha256, artifact.sha256.rawValue)
+                XCTAssertEqual(file.manifest.writeMode, .overwrite)
+                XCTAssertEqual(file.content.count, Int(file.manifest.byteCount))
+                XCTAssertEqual(AgentBridgeV4Codec.sha256(file.content), file.manifest.sha256)
+                XCTAssertEqual(try JSONDecoder().decode(DirectExportFileManifest.self,
+                    from: JSONEncoder().encode(file.manifest)), file.manifest)
+            }
             XCTAssertEqual(result.totalByteCount, result.days.reduce(0) { $0 + $1.artifact.byteCount })
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
             do { _ = try await planner.prepareExport(request, manager: manager); XCTFail("New execution must not replay capture") }
@@ -662,6 +675,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTAssertEqual(restored.totalByteCount, result.totalByteCount)
             XCTAssertEqual(restored.publicArtifactIDs, result.publicArtifactIDs)
             XCTAssertEqual(restored.manifestCanonical, result.manifestCanonical)
+            XCTAssertEqual(restored.baseFiles.map(\.manifest), result.baseFiles.map(\.manifest))
+            XCTAssertEqual(restored.baseFiles.map(\.content), result.baseFiles.map(\.content))
             XCTAssertEqual(try Data(contentsOf: progressURL), progressBefore)
             XCTAssertEqual(restored.days.map(\.day), result.days.map(\.day))
             for (actual, expected) in zip(restored.days, result.days) {
@@ -670,6 +685,44 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             }
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
             XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        }
+    }
+
+    func testNativeBaseManifestAdapterRejectsMetadataAndWholeSetDrift() async throws {
+        try await withNativeExportPreparation { _, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let result = try await planner.prepareExport(request, manager: manager)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: result.manifestCanonical) as? [String: Any])
+            let changes: [(String, Any)] = [("artifact_id", UUID().uuidString.lowercased()),
+                ("relative_path", "different.json"), ("byte_count", 1), ("sha256", String(repeating: "0", count: 64)),
+                ("write_mode", "append"), ("profile", "android-frozen-v4"), ("media_type", "text/csv")]
+            for (key, value) in changes {
+                var changed = object
+                var artifacts = try XCTUnwrap(changed["artifacts"] as? [[String: Any]])
+                artifacts[0][key] = value; changed["artifacts"] = artifacts
+                let bytes = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: changed))
+                XCTAssertThrowsError(try AgentBridgeNativePreparedExport.make(request: request, days: result.days,
+                    totalByteCount: result.totalByteCount, publicArtifactIDs: result.publicArtifactIDs, manifestCanonical: bytes), key)
+            }
+            XCTAssertThrowsError(try AgentBridgeNativePreparedExport.make(request: request, days: Array(result.days.dropLast()),
+                totalByteCount: result.totalByteCount, publicArtifactIDs: result.publicArtifactIDs, manifestCanonical: result.manifestCanonical))
+            XCTAssertThrowsError(try AgentBridgeNativePreparedExport.make(request: request, days: result.days,
+                totalByteCount: result.totalByteCount + 1, publicArtifactIDs: result.publicArtifactIDs, manifestCanonical: result.manifestCanonical))
+            var changed = object; changed["request_sha256"] = String(repeating: "0", count: 64)
+            XCTAssertThrowsError(try AgentBridgeNativePreparedExport.make(request: request, days: result.days,
+                totalByteCount: result.totalByteCount, publicArtifactIDs: result.publicArtifactIDs,
+                manifestCanonical: AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: changed))))
+            let artifacts = try XCTUnwrap(object["artifacts"] as? [[String: Any]])
+            var partial = object; partial["artifacts"] = Array(artifacts.dropLast())
+            XCTAssertThrowsError(try AgentBridgeNativePreparedExport.make(request: request, days: Array(result.days.dropLast()),
+                totalByteCount: result.days[0].artifact.byteCount,
+                publicArtifactIDs: result.publicArtifactIDs.filter { $0.key == result.days[0].day.rawValue },
+                manifestCanonical: AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: partial))))
+            var reversed = object; reversed["artifacts"] = Array(artifacts.reversed())
+            XCTAssertThrowsError(try AgentBridgeNativePreparedExport.make(request: request, days: Array(result.days.reversed()),
+                totalByteCount: result.totalByteCount, publicArtifactIDs: result.publicArtifactIDs,
+                manifestCanonical: AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: reversed))))
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
         }
     }
 

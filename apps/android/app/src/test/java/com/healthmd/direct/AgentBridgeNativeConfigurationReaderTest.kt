@@ -93,11 +93,11 @@ class AgentBridgeNativeConfigurationReaderTest {
     private fun ownedDiscoveryBytes(f: AgentBridgeExportPlanningFixture) = AgentBridgeCodec.encodeEnvelope(
         AgentBridgeMessage("discovery_request", f.discoveryRequest()), nativeNegotiation())
 
-    private fun nativeCaptureRequest(f: AgentBridgeExportPlanningFixture, planner: AgentBridgeNativePlanningSession, metrics: List<String> = listOf("heart_rate_avg", "steps")): AgentBridgeExecuteRequest {
+    private fun nativeCaptureRequest(f: AgentBridgeExportPlanningFixture, planner: AgentBridgeNativePlanningSession, metrics: List<String> = listOf("heart_rate_avg", "steps"), dates: AgentBridgeDates = AgentBridgeDatesExact(AgentBridgeRange("2026-03-08", "2026-03-07"), "exact")): AgentBridgeExecuteRequest {
         fun send(message: AgentBridgeMessage) = AgentBridgeCodec.decodeEnvelope(planner.handleEnvelope(
             AgentBridgeCodec.encodeEnvelope(message, nativeNegotiation()), nativeNegotiation()), nativeNegotiation()).payload
         val discovery = send(AgentBridgeMessage("discovery_request", f.discoveryRequest())) as AgentBridgeDiscovery
-        val plan = send(AgentBridgeMessage("plan_request", f.request(discovery, f.intent(metrics = metrics)))) as AgentBridgeGeneratedPlan
+        val plan = send(AgentBridgeMessage("plan_request", f.request(discovery, f.intent(metrics = metrics, dates = dates)))) as AgentBridgeGeneratedPlan
         val approval = planner.authorizeExactApproval(f.native, plan.planId, AgentBridgeValidation.bindingFor(plan))
         return AgentBridgeExecuteRequest(approval, AgentBridgeExportPlanningFixture.id(81), AgentBridgeExportPlanningFixture.id(82), plan,
             AgentBridgeExportPlanningFixture.id(83), "healthmd.agent_execute_request", 1)
@@ -132,12 +132,12 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
-    private suspend fun withNativeExportPreparation(operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager) -> Unit) {
+    private suspend fun withNativeExportPreparation(dates: AgentBridgeDates = AgentBridgeDatesExact(AgentBridgeRange("2026-03-08", "2026-03-07"), "exact"), operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager) -> Unit) {
         AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
             val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true))
-            val request = nativeCaptureRequest(f, planner, listOf("steps"))
+            val request = nativeCaptureRequest(f, planner, listOf("steps"), dates)
             val client = mockk<HealthConnectClient>(relaxed = true)
             coEvery { client.permissionController.getGrantedPermissions() } returns setOf(HealthPermission.getReadPermission(StepsRecord::class))
             val manager = HealthConnectManager(mockk<Context>(relaxed = true), client)
@@ -189,6 +189,22 @@ class AgentBridgeNativeConfigurationReaderTest {
                 assertThat(artifact.profile).isEqualTo(AgentBridgeArtifactProfile.ANDROID_FROZEN_V4)
                 assertThat(artifact.writeMode).isEqualTo(AgentBridgeWriteMode.OVERWRITE)
             }
+            assertThat(result.baseFiles).hasSize(manifest.artifacts.size)
+            result.baseFiles.zip(manifest.artifacts).forEach { (file, artifact) ->
+                val base = file.manifest
+                assertThat(base.jobId).isEqualTo(request.jobId); assertThat(base.artifactId).isEqualTo(artifact.artifactId)
+                assertThat(base.kind).isEqualTo(ArtifactKind.GENERATED_FILE)
+                assertThat(base.schema).isEqualTo(ArtifactSchema("healthmd.generated-files", 1))
+                assertThat(base.relativePath).isEqualTo(artifact.relativePath); assertThat(base.byteCount).isEqualTo(artifact.byteCount)
+                assertThat(base.sha256).isEqualTo(artifact.sha256); assertThat(base.writeMode).isEqualTo(FileWriteMode.OVERWRITE)
+                assertThat(base.mediaType).isEqualTo("application/json")
+                assertThat(AgentBridgeCodec.sha256(file.content)).isEqualTo(base.sha256)
+                val copy = file.content; copy.fill(0)
+                assertThat(AgentBridgeCodec.sha256(file.content)).isEqualTo(base.sha256)
+                assertThat(Json.decodeFromString(ArtifactManifest.serializer(), Json.encodeToString(ArtifactManifest.serializer(), base))).isEqualTo(base)
+            }
+            try { (result.baseFiles as MutableList<AgentBridgeNativePreparedFile>).clear(); throw AssertionError("Base files must be immutable") }
+            catch (_: UnsupportedOperationException) { }
             val callerCopy = result.manifestCanonical; callerCopy.fill(0)
             assertThat(result.manifestCanonical).isEqualTo(AgentBridgeCodec.encode(manifest))
             assertThat(result.totalByteCount).isEqualTo(result.days.fold(0uL) { n, day -> n + day.artifact.byteCount })
@@ -202,6 +218,8 @@ class AgentBridgeNativeConfigurationReaderTest {
             assertThat(restored.totalByteCount).isEqualTo(result.totalByteCount)
             assertThat(restored.publicArtifactIDs).isEqualTo(result.publicArtifactIDs)
             assertThat(restored.manifestCanonical).isEqualTo(result.manifestCanonical)
+            assertThat(restored.baseFiles.map { it.manifest }).isEqualTo(result.baseFiles.map { it.manifest })
+            restored.baseFiles.zip(result.baseFiles).forEach { (actual, expected) -> assertThat(actual.content).isEqualTo(expected.content) }
             assertThat(Files.readAllBytes(progressPath)).isEqualTo(progressBefore)
             assertThat(restored.days.map { it.day }).isEqualTo(result.days.map { it.day })
             restored.days.zip(result.days).forEach { (actual, expected) ->
@@ -212,6 +230,63 @@ class AgentBridgeNativeConfigurationReaderTest {
             }
             coVerify(exactly = 2) { client.aggregate(any()) }
             assertThat(Files.readAllBytes(f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(before)
+        }
+    }
+
+    @Test fun `native base manifest adapter rejects metadata and whole set drift`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val result = planner.prepareExport(request, manager, journalRenderer(resolution))
+            val objectValue = Json.parseToJsonElement(result.manifestCanonical.decodeToString()).jsonObject
+            val changes = mapOf("artifact_id" to JsonPrimitive(java.util.UUID.randomUUID().toString()),
+                "relative_path" to JsonPrimitive("different.json"), "byte_count" to JsonPrimitive(1),
+                "sha256" to JsonPrimitive("0".repeat(64)), "write_mode" to JsonPrimitive("append"),
+                "profile" to JsonPrimitive("apple-v8"), "media_type" to JsonPrimitive("text/csv"))
+            fun reject(bytes: ByteArray, days: List<AgentBridgeNativeRenderedDay> = result.days, total: ULong = result.totalByteCount) {
+                try { AgentBridgeNativePreparedExport.make(request, days, total, result.publicArtifactIDs, bytes)
+                    throw AssertionError("Changed base/v4 binding must reject")
+                } catch (_: AgentBridgeNativeRenderException) { } catch (_: AgentBridgeException) { }
+            }
+            changes.forEach { (key, value) ->
+                val artifacts = objectValue.getValue("artifacts").jsonArray.toMutableList()
+                artifacts[0] = JsonObject(artifacts[0].jsonObject.toMutableMap().also { it[key] = value })
+                reject(AgentBridgeCodec.canonicalize(JsonObject(objectValue.toMutableMap().also { it["artifacts"] = JsonArray(artifacts) }).toString().toByteArray()))
+            }
+            reject(result.manifestCanonical, days = result.days.dropLast(1))
+            reject(result.manifestCanonical, total = result.totalByteCount + 1uL)
+            reject(AgentBridgeCodec.canonicalize(JsonObject(objectValue.toMutableMap().also { it["request_sha256"] = JsonPrimitive("0".repeat(64)) }).toString().toByteArray()))
+            val artifacts = objectValue.getValue("artifacts").jsonArray
+            val partial = AgentBridgeCodec.canonicalize(JsonObject(objectValue.toMutableMap().also {
+                it["artifacts"] = JsonArray(artifacts.dropLast(1)) }).toString().toByteArray())
+            try {
+                AgentBridgeNativePreparedExport.make(request, result.days.dropLast(1), result.days.first().artifact.byteCount,
+                    result.publicArtifactIDs.filterKeys { it == result.days.first().day }, partial)
+                throw AssertionError("Coordinated truncation must not narrow the approved plan")
+            } catch (_: AgentBridgeNativeRenderException) { } catch (_: AgentBridgeException) { }
+            reject(AgentBridgeCodec.canonicalize(JsonObject(objectValue.toMutableMap().also {
+                it["artifacts"] = JsonArray(artifacts.reversed()) }).toString().toByteArray()), days = result.days.reversed())
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `native base adapter rejects coordinated malformed interior day`() = runBlocking {
+        withNativeExportPreparation(dates = AgentBridgeDatesExact(AgentBridgeRange("2026-03-09", "2026-03-07"), "exact")) { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val result = planner.prepareExport(request, manager, journalRenderer(resolution))
+            assertThat(result.days).hasSize(3)
+            val middle = result.days[1]
+            val changedDay = middle.day + "x"
+            val days = result.days.toMutableList().also { it[1] = AgentBridgeNativeRenderedDay(changedDay, middle.artifact, middle.pin) }
+            val ids = result.publicArtifactIDs.toMutableMap().also { it[changedDay] = it.remove(middle.day)!! }
+            try {
+                AgentBridgeNativePreparedExport.make(request, days, result.totalByteCount, ids, result.manifestCanonical)
+                throw AssertionError("Malformed interior day cannot satisfy original approved range")
+            } catch (_: AgentBridgeNativeRenderException) { }
+            coVerify(exactly = 3) { client.aggregate(any()) }
         }
     }
 
