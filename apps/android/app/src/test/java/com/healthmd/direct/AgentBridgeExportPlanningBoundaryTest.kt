@@ -10,6 +10,62 @@ import org.junit.Test
 
 /** Actual production service/store/resolver boundaries; no native Context, key or health reads. */
 class AgentBridgeExportPlanningBoundaryTest {
+    private fun executionRequest(f: AgentBridgeExportPlanningFixture, storeDecision: Boolean = true): AgentBridgeExecuteRequest {
+        val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))
+        val approval = if (storeDecision) f.service.authorizeExactApproval(f.peerContext, f.native, plan.planId,
+            AgentBridgeValidation.bindingFor(plan)) else AgentBridgeApproval(AgentBridgeExportPlanningFixture.id(81),
+                f.clock.instant().toString(), plan.authorityReferences.native.authorityId, AgentBridgeValidation.bindingFor(plan),
+                listOf(AgentBridgeApprovalRightsItem.EXPORT_EXECUTE), "healthmd.agent_approval", 1)
+        return AgentBridgeExecuteRequest(approval, AgentBridgeExportPlanningFixture.id(82), AgentBridgeExportPlanningFixture.id(83),
+            plan, AgentBridgeExportPlanningFixture.id(84), "healthmd.agent_execute_request", 1)
+    }
+
+    @Test
+    fun executionPreparationPinsStoredDecisionAndResolutionAcrossRestartWithoutMutation() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            val before = ledgerBytes(f)
+            for (service in listOf(f.service, f.restart())) {
+                val prepared = service.prepareExecution(f.peerContext, request)
+                assertThat(prepared.requestBytes()).isEqualTo(AgentBridgeCodec.encode(request))
+                assertThat(prepared.requestSha256).isEqualTo(AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)))
+                val resolution = prepared.resolution()
+                assertThat(resolution.peer).isEqualTo((request.plan as AgentBridgeGeneratedPlan).intent.peer)
+                assertThat(resolution.destination).isEqualTo((request.plan as AgentBridgeGeneratedPlan).intent.destination)
+                assertThat(resolution.predictedRelativePaths).isEqualTo((request.plan as AgentBridgeGeneratedPlan).predictedPaths)
+                assertThat(resolution.selection.map { it.semanticId }).isEqualTo((request.plan as AgentBridgeGeneratedPlan).resolvedMetricIds)
+                val bytes = prepared.requestBytes(); bytes.fill(0)
+                assertThat(prepared.requestBytes()).isEqualTo(AgentBridgeCodec.encode(request))
+            }
+            assertThat(ledgerBytes(f)).isEqualTo(before)
+            assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
+        }
+    }
+
+    @Test
+    fun executionPreparationRejectsUnstoredOrReplacedApproval() {
+        for (stored in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f, stored)
+            val supplied = if (stored) request.copy(approval = request.approval.copy(approvalId = AgentBridgeExportPlanningFixture.id(85))) else request
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.prepareExecution(f.peerContext, supplied) }
+        }
+    }
+
+    @Test
+    fun executionPreparationRechecksKeyDelayRevocationConfigurationAndMissingKey() {
+        for (mode in listOf("expired_key", "revoked_key", "configuration", "missing_key")) AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            when (mode) {
+                "expired_key" -> f.keys.onLoad = { f.clock.now = Instant.parse((request.plan as AgentBridgeGeneratedPlan).expiresAt) }
+                "revoked_key" -> f.keys.onLoad = { f.peerContext.trusted = false }
+                "configuration" -> f.configuration.active = false
+                else -> f.keys.key = null
+            }
+            try { f.service.prepareExecution(f.peerContext, request); throw AssertionError("Expected rejection") }
+            catch (_: AgentBridgeException) { }
+        }
+    }
+
     @Test
     fun configurationReaderCannotMutateTheIssuedExplicitIntentThroughListAliases() {
         AgentBridgeExportPlanningFixture().use { f ->

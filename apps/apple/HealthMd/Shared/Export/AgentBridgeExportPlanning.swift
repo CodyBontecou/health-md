@@ -149,6 +149,31 @@ final class AgentBridgeExportPlanningService {
         }
     }
 
+    /// New-job preflight only. This material is NOT capture permission or a durable job.
+    /// The execution adapter must persist the exact request/fingerprint before reads, then
+    /// revalidate current native authority at each read boundary. Resume uses its own journal.
+    func prepareExecution(_ supplied: AgentBridgeExecute,
+                          authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeExportExecutionPreparation {
+        let bytes = try AgentBridgeV4Codec.encode(supplied)
+        let request = try AgentBridgeV4Codec.decode(AgentBridgeExecute.self, from: bytes)
+        try authenticatedPeer.requireCurrent()
+        let material = try store.inspectCurrent { state in
+            let record = try state.issued(id: request.plan.planId, peer: authenticatedPeer.peer)
+            guard try record.plan() == request.plan else { throw AgentBridgeValidationError.bindingChanged }
+            guard try self.currentDecision(in: state, planID: request.plan.planId, peer: authenticatedPeer) == request.approval else {
+                throw AgentBridgeValidationError.approvalRequired
+            }
+            // Decode only issuer-owned bytes whose exact resolution currentDecision revalidated.
+            _ = try PropertyListDecoder().decode(AgentBridgeRequestSettingsResolution.self, from: record.nativeResolution)
+            return AgentBridgeExportExecutionPreparation(requestBytes: bytes,
+                requestSHA256: try AgentBridgeDigest(AgentBridgeV4Codec.digest(request)),
+                nativeResolutionBytes: record.nativeResolution)
+        }
+        // Trust/key callbacks after the first inspection can revoke or expire its approval.
+        try requireCurrentForTransmission(.init(payload: .approval(request.approval)), peer: authenticatedPeer)
+        return material
+    }
+
     /// Separate local-native exact decision. NOT reachable from handle(), JSON or an MCP annotation.
     /// The native authorizer must independently approve this complete issued binding, never a flag.
     func storeNativeDecision(planID: AgentBridgeUUID, binding: AgentBridgeBinding, approvalID: AgentBridgeUUID,
@@ -496,4 +521,21 @@ final class AgentBridgeExportPlanningService {
         individualEntries: .init(enabled: false, metricIDs: [], folderTemplate: "", filenameTemplate: "{metric}-{date}", categoryFolders: false),
         dailyNotes: .init(enabled: false, only: false, folderTemplate: "", filenameTemplate: "{date}", createIfMissing: false, sectionIDs: []),
         packaging: .looseFiles, dictionary: .none)
+}
+
+
+/// Immutable input to future journal acceptance, never an execution permit. No Codable conformance:
+/// callers cannot deserialize this wrapper as authority. Every use still needs live native fences.
+struct AgentBridgeExportExecutionPreparation {
+    let requestBytes: Data
+    let requestSHA256: AgentBridgeDigest
+    private let nativeResolutionBytes: Data
+
+    fileprivate init(requestBytes: Data, requestSHA256: AgentBridgeDigest, nativeResolutionBytes: Data) {
+        self.requestBytes = requestBytes; self.requestSHA256 = requestSHA256
+        self.nativeResolutionBytes = nativeResolutionBytes
+    }
+    func resolution() throws -> AgentBridgeRequestSettingsResolution {
+        try PropertyListDecoder().decode(AgentBridgeRequestSettingsResolution.self, from: nativeResolutionBytes)
+    }
 }

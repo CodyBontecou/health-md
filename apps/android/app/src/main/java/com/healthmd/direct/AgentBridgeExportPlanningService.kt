@@ -72,6 +72,31 @@ internal class AgentBridgeExportPlanningService(
         return encoded
     }
 
+    /** New-job preflight only, not capture authority or durable acceptance. A future adapter must
+     * persist these exact bytes/fingerprint before reads and revalidate native authority at read
+     * boundaries. Resume must use its immutable journal rather than rerunning this preflight. */
+    fun prepareExecution(authenticated: AgentBridgeExportAuthenticatedPeer,
+        supplied: AgentBridgeExecuteRequest): AgentBridgeExportExecutionPreparation {
+        val bytes = AgentBridgeCodec.encode(supplied)
+        val request = AgentBridgeCodec.decode(bytes) as? AgentBridgeExecuteRequest
+            ?: throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+        val plan = request.plan as? AgentBridgeGeneratedPlan
+            ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val expected = authenticated.requireCurrent()
+        var resolution: String? = null
+        access(authenticated, expected) { transaction ->
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val record = tx.plan(expected, plan.planId)
+            require(record.plan() == request.plan, AgentBridgeErrorCode.BINDING_CHANGED)
+            require(tx.decision(plan.planId) == request.approval, AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            json.decodeFromString<AgentBridgeRequestSettingsResolution>(record.resolutionCanonical)
+            resolution = record.resolutionCanonical
+            request.approval // Existing full live approval/configuration/grant/expiry return fences.
+        }
+        return AgentBridgeExportExecutionPreparation(bytes.decodeToString(),
+            AgentBridgeCodec.sha256(bytes), requireNotNull(resolution))
+    }
+
     fun discover(authenticated: AgentBridgeExportAuthenticatedPeer, value: AgentBridgeDiscoveryRequest): AgentBridgeDiscovery {
         val request = AgentBridgeCodec.decode(AgentBridgeCodec.encode(value)) as AgentBridgeDiscoveryRequest
         val peer = peer(authenticated, request.peer)
@@ -433,4 +458,17 @@ internal class AgentBridgeExportPlanningService(
                 AgentBridgeFrontmatter(emptyList(), emptyList(), false, true), true, true, "en-US", "canonical",
                 AgentBridgeMarkdown("", emptyList(), AgentBridgeMarkdownStyle.LISTS)), "", AgentBridgeWriteMode.OVERWRITE)
     }
+}
+
+
+/** Immutable journal inputs, not an execution permit. Getters decode detached values so mutable
+ * lists in wire/native DTOs cannot alter the accepted request or resolution through aliases. */
+internal class AgentBridgeExportExecutionPreparation internal constructor(
+    private val requestCanonical: String,
+    val requestSha256: String,
+    private val resolutionCanonical: String,
+) {
+    fun requestBytes(): ByteArray = requestCanonical.toByteArray(Charsets.UTF_8)
+    fun resolution(): AgentBridgeRequestSettingsResolution =
+        Json { encodeDefaults = true; ignoreUnknownKeys = false }.decodeFromString(resolutionCanonical)
 }

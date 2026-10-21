@@ -27,6 +27,65 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                   nativeGrants: grants, entitlement: entitlement, foregroundAvailable: foregroundAvailable, protectedDataAvailable: protectedDataAvailable)
     }
 
+    private func executionRequest(_ rig: Rig, storeDecision: Bool = true) throws -> AgentBridgeExecute {
+        let plan = try rig.makePlan()
+        let binding = try AgentBridgeSemantics.binding(plan)
+        if storeDecision {
+            try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8),
+                authenticatedPeer: rig.peer, authorization: FakeNativeAuthorization(binding: binding))
+        }
+        let approval = AgentBridgeApproval(approvalId: try id(8), approvedAt: try AgentBridgeUTC("2026-03-09T00:00:00Z"),
+            authorityId: plan.authorityReferences.native.authorityId, binding: binding, rights: [.exportExecute])
+        return try AgentBridgeExecute(approval: approval, idempotencyKey: id(81), jobId: id(82), plan: plan, requestId: id(83))
+    }
+
+    func testExecutionPreparationUsesExactStoredDecisionAndResolutionWithoutMutationAcrossRestart() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        for service in [rig.service, try rig.restartedService()] {
+            let prepared = try service.prepareExecution(request, authenticatedPeer: rig.peer)
+            XCTAssertEqual(prepared.requestBytes, try AgentBridgeV4Codec.encode(request))
+            XCTAssertEqual(prepared.requestSHA256.rawValue, try AgentBridgeV4Codec.digest(request))
+            let resolution = try prepared.resolution()
+            XCTAssertEqual(resolution.peer, request.plan.intent.peer)
+            XCTAssertEqual(resolution.destination, request.plan.intent.destination)
+            XCTAssertEqual(resolution.predictedRelativePaths, request.plan.predictedPaths.map(\.rawValue))
+            XCTAssertEqual(resolution.selection.map(\.semanticID), request.plan.resolvedMetricIds.map(\.rawValue))
+        }
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testExecutionPreparationRejectsUnstoredOrReplacedApprovalID() throws {
+        for stored in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let original = try executionRequest(rig, storeDecision: stored)
+            let approval = AgentBridgeApproval(approvalId: try id(stored ? 84 : 8), approvedAt: original.approval.approvedAt,
+                authorityId: original.approval.authorityId, binding: original.approval.binding, rights: [.exportExecute])
+            let request = AgentBridgeExecute(approval: approval, idempotencyKey: original.idempotencyKey,
+                jobId: original.jobId, plan: original.plan, requestId: original.requestId)
+            XCTAssertThrowsError(try rig.service.prepareExecution(request, authenticatedPeer: rig.peer)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .approvalRequired)
+            }
+        }
+    }
+
+    func testExecutionPreparationRevalidatesLiveStateAfterKeyAndConfigurationCallbacks() throws {
+        for mode in ["expired_key", "revoked_key", "configuration", "missing_key"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            switch mode {
+            case "expired_key": rig.keys.onNextLoad { rig.clock.advance(seconds: 600) }
+            case "revoked_key": rig.keys.onNextLoad { rig.session.revoke() }
+            case "configuration": rig.reader.entitlement = .required
+            default: break
+            }
+            let service = mode == "missing_key" ? AgentBridgeExportPlanningService(store: try .init(existingDirectory: rig.directory, protectedKeys: FakeProtectedKeys(key: nil)), configuration: rig.reader, clock: rig.clock) : rig.service
+            XCTAssertThrowsError(try service.prepareExecution(request, authenticatedPeer: rig.peer))
+        }
+    }
+
     func testNativeConfigurationDiscoveryAndExplicitNeverReadPrivatePreferences() throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
