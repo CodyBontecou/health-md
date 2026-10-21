@@ -1428,4 +1428,22 @@
     <string name="agent_export_grant_day">এক দিন</string>
     <string name="agent_export_grant_week">এক সপ্তাহ</string>
     <string name="agent_export_grant_day_limit">দিনের সীমা</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">এক্সপোর্টের অনুরোধ</string>
+    <string name="agent_export_review_refresh">এক্সপোর্টের অনুরোধ রিফ্রেশ করুন</string>
+    <string name="agent_export_review_failed">এক্সপোর্টের অনুরোধ যাচাই করতে কম্পিউটার সংযুক্ত করে এই স্ক্রিনটি আবার খুলুন।</string>
+    <string name="agent_export_review_empty">অনুমোদনের অপেক্ষায় কোনো এক্সপোর্টের অনুরোধ নেই।</string>
+    <string name="agent_export_review_title">এক্সপোর্টের অনুরোধ পর্যালোচনা করুন</string>
+    <string name="agent_export_review_write_mode">লেখার মোড</string>
+    <string name="agent_export_review_folder">ফোল্ডার টেমপ্লেট</string>
+    <string name="agent_export_review_filename">ফাইলের নামের টেমপ্লেট</string>
+    <string name="agent_export_review_subfolder">সাবফোল্ডার</string>
+    <string name="agent_export_review_destination">কম্পিউটারে গন্তব্য</string>
+    <string name="agent_export_review_destination_note">এই গন্তব্যটি কম্পিউটারে অনুমোদিত গন্তব্যের সঙ্গে মিলছে কি না যাচাই করুন। লেখার মোড অনুযায়ী বিদ্যমান ফাইল প্রতিস্থাপিত হতে পারে।</string>
+    <string name="agent_export_review_paths">সম্ভাব্য ফাইল</string>
+    <string name="agent_export_review_details">অনুরোধের সম্পূর্ণ বিবরণ</string>
+    <string name="agent_export_review_scope_note">এই অনুমোদন শুধু এই অনুরোধের জন্য প্রযোজ্য। এটি সংরক্ষিত এক্সপোর্ট সেটিংস বদলায় না বা ভবিষ্যতের অনুরোধ অনুমোদন করে না।</string>
+    <string name="agent_export_review_allow">এই এক্সপোর্টের অনুমতি দিন</string>
+    <string name="agent_export_review_confirm">ঠিক এই বিবরণ অনুযায়ী এক্সপোর্টের অনুমতি দেবেন?</string>
 </resources>

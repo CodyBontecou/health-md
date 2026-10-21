@@ -1428,4 +1428,22 @@
     <string name="agent_export_grant_day">एक दिन</string>
     <string name="agent_export_grant_week">एक सप्ताह</string>
     <string name="agent_export_grant_day_limit">दिनों की सीमा</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">एक्सपोर्ट अनुरोध</string>
+    <string name="agent_export_review_refresh">एक्सपोर्ट अनुरोध रीफ़्रेश करें</string>
+    <string name="agent_export_review_failed">एक्सपोर्ट अनुरोधों की पुष्टि करने के लिए कंप्यूटर कनेक्ट करें और यह स्क्रीन दोबारा खोलें।</string>
+    <string name="agent_export_review_empty">कोई एक्सपोर्ट अनुरोध मंज़ूरी की प्रतीक्षा में नहीं है।</string>
+    <string name="agent_export_review_title">एक्सपोर्ट अनुरोध की समीक्षा करें</string>
+    <string name="agent_export_review_write_mode">लिखने का मोड</string>
+    <string name="agent_export_review_folder">फ़ोल्डर टेम्पलेट</string>
+    <string name="agent_export_review_filename">फ़ाइल नाम का टेम्पलेट</string>
+    <string name="agent_export_review_subfolder">सबफ़ोल्डर</string>
+    <string name="agent_export_review_destination">कंप्यूटर पर गंतव्य</string>
+    <string name="agent_export_review_destination_note">पुष्टि करें कि यह गंतव्य कंप्यूटर पर मंज़ूर किए गए गंतव्य से मेल खाता है। लिखने के मोड के अनुसार मौजूदा फ़ाइलें बदली जा सकती हैं।</string>
+    <string name="agent_export_review_paths">अनुमानित फ़ाइलें</string>
+    <string name="agent_export_review_details">अनुरोध की पूरी जानकारी</string>
+    <string name="agent_export_review_scope_note">यह मंज़ूरी केवल इस अनुरोध पर लागू होती है। इससे सहेजी गई एक्सपोर्ट सेटिंग नहीं बदलती और भविष्य के अनुरोध मंज़ूर नहीं होते।</string>
+    <string name="agent_export_review_allow">इस एक्सपोर्ट की अनुमति दें</string>
+    <string name="agent_export_review_confirm">इन्हीं विवरणों वाले इस एक्सपोर्ट की अनुमति दें?</string>
 </resources>

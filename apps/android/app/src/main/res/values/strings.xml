@@ -1503,7 +1503,7 @@
     <string name="agent_export_grant_week">One week</string>
     <string name="agent_export_grant_day_limit">Day limit</string>
 
-    <!-- Native exact-plan review; other locales use Android resource fallback. -->
+    <!-- Native exact-plan review. -->
     <string name="agent_export_review_requests">Export requests</string>
     <string name="agent_export_review_refresh">Refresh export requests</string>
     <string name="agent_export_review_failed">Connect the computer and reopen this screen to verify export requests.</string>

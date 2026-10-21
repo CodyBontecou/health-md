@@ -1277,4 +1277,22 @@
     <string name="agent_export_grant_day">一天</string>
     <string name="agent_export_grant_week">一周</string>
     <string name="agent_export_grant_day_limit">天数上限</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">导出请求</string>
+    <string name="agent_export_review_refresh">刷新导出请求</string>
+    <string name="agent_export_review_failed">连接电脑并重新打开此屏幕，以验证导出请求。</string>
+    <string name="agent_export_review_empty">没有待批准的导出请求。</string>
+    <string name="agent_export_review_title">审核导出请求</string>
+    <string name="agent_export_review_write_mode">写入模式</string>
+    <string name="agent_export_review_folder">文件夹模板</string>
+    <string name="agent_export_review_filename">文件名模板</string>
+    <string name="agent_export_review_subfolder">子文件夹</string>
+    <string name="agent_export_review_destination">电脑上的目标位置</string>
+    <string name="agent_export_review_destination_note">请确认此目标位置与电脑上批准的位置一致。现有文件可能会根据写入模式被替换。</string>
+    <string name="agent_export_review_paths">预计生成的文件</string>
+    <string name="agent_export_review_details">完整请求详情</string>
+    <string name="agent_export_review_scope_note">此批准仅适用于本次请求，不会更改已保存的导出设置，也不会批准未来的请求。</string>
+    <string name="agent_export_review_allow">允许本次导出</string>
+    <string name="agent_export_review_confirm">允许按此确切内容导出？</string>
 </resources>

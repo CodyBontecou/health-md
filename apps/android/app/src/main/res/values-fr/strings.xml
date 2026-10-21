@@ -1502,4 +1502,22 @@
     <string name="agent_export_grant_day">Un jour</string>
     <string name="agent_export_grant_week">Une semaine</string>
     <string name="agent_export_grant_day_limit">Limite de jours</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">Demandes d’exportation</string>
+    <string name="agent_export_review_refresh">Actualiser les demandes d’exportation</string>
+    <string name="agent_export_review_failed">Connectez l’ordinateur et rouvrez cet écran pour vérifier les demandes d’exportation.</string>
+    <string name="agent_export_review_empty">Aucune demande d’exportation en attente d’approbation.</string>
+    <string name="agent_export_review_title">Examiner la demande d’exportation</string>
+    <string name="agent_export_review_write_mode">Mode d’écriture</string>
+    <string name="agent_export_review_folder">Modèle de dossier</string>
+    <string name="agent_export_review_filename">Modèle de nom de fichier</string>
+    <string name="agent_export_review_subfolder">Sous-dossier</string>
+    <string name="agent_export_review_destination">Destination sur l’ordinateur</string>
+    <string name="agent_export_review_destination_note">Vérifiez que cette destination correspond à celle approuvée sur l’ordinateur. Les fichiers existants peuvent être remplacés selon le mode d’écriture.</string>
+    <string name="agent_export_review_paths">Fichiers prévus</string>
+    <string name="agent_export_review_details">Détails complets de la demande</string>
+    <string name="agent_export_review_scope_note">Cette approbation s’applique uniquement à cette demande. Elle ne modifie pas les réglages d’exportation enregistrés et n’approuve pas les demandes futures.</string>
+    <string name="agent_export_review_allow">Autoriser cette exportation</string>
+    <string name="agent_export_review_confirm">Autoriser exactement cette exportation ?</string>
 </resources>

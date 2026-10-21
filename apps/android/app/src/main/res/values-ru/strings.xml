@@ -1556,4 +1556,22 @@
     <string name="agent_export_grant_day">Один день</string>
     <string name="agent_export_grant_week">Одна неделя</string>
     <string name="agent_export_grant_day_limit">Ограничение дней</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">Запросы на экспорт</string>
+    <string name="agent_export_review_refresh">Обновить запросы на экспорт</string>
+    <string name="agent_export_review_failed">Подключите компьютер и снова откройте этот экран, чтобы проверить запросы на экспорт.</string>
+    <string name="agent_export_review_empty">Нет запросов на экспорт, ожидающих одобрения.</string>
+    <string name="agent_export_review_title">Проверить запрос на экспорт</string>
+    <string name="agent_export_review_write_mode">Режим записи</string>
+    <string name="agent_export_review_folder">Шаблон папки</string>
+    <string name="agent_export_review_filename">Шаблон имени файла</string>
+    <string name="agent_export_review_subfolder">Подпапка</string>
+    <string name="agent_export_review_destination">Путь назначения на компьютере</string>
+    <string name="agent_export_review_destination_note">Убедитесь, что этот путь назначения совпадает с одобренным на компьютере. Существующие файлы могут быть заменены в соответствии с режимом записи.</string>
+    <string name="agent_export_review_paths">Ожидаемые файлы</string>
+    <string name="agent_export_review_details">Полные сведения о запросе</string>
+    <string name="agent_export_review_scope_note">Это одобрение действует только для данного запроса. Оно не изменяет сохранённые настройки экспорта и не одобряет будущие запросы.</string>
+    <string name="agent_export_review_allow">Разрешить этот экспорт</string>
+    <string name="agent_export_review_confirm">Разрешить именно этот экспорт?</string>
 </resources>

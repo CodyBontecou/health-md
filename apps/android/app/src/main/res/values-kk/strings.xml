@@ -1395,4 +1395,22 @@
     <string name="agent_export_grant_day">Бір күн</string>
     <string name="agent_export_grant_week">Бір апта</string>
     <string name="agent_export_grant_day_limit">Күндер шегі</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">Экспорт сұраулары</string>
+    <string name="agent_export_review_refresh">Экспорт сұрауларын жаңарту</string>
+    <string name="agent_export_review_failed">Экспорт сұрауларын тексеру үшін компьютерді қосып, осы экранды қайта ашыңыз.</string>
+    <string name="agent_export_review_empty">Мақұлдауды күтіп тұрған экспорт сұраулары жоқ.</string>
+    <string name="agent_export_review_title">Экспорт сұрауын тексеру</string>
+    <string name="agent_export_review_write_mode">Жазу режимі</string>
+    <string name="agent_export_review_folder">Қалта үлгісі</string>
+    <string name="agent_export_review_filename">Файл атауының үлгісі</string>
+    <string name="agent_export_review_subfolder">Ішкі қалта</string>
+    <string name="agent_export_review_destination">Компьютердегі тағайындалған орын</string>
+    <string name="agent_export_review_destination_note">Осы орынның компьютерде мақұлданған орынмен сәйкес келетінін тексеріңіз. Бар файлдар жазу режиміне қарай ауыстырылуы мүмкін.</string>
+    <string name="agent_export_review_paths">Күтілетін файлдар</string>
+    <string name="agent_export_review_details">Сұраудың толық мәліметтері</string>
+    <string name="agent_export_review_scope_note">Бұл мақұлдау тек осы сұрауға қатысты. Ол сақталған экспорт параметрлерін өзгертпейді және болашақ сұрауларды мақұлдамайды.</string>
+    <string name="agent_export_review_allow">Осы экспортқа рұқсат беру</string>
+    <string name="agent_export_review_confirm">Дәл осы экспортқа рұқсат берілсін бе?</string>
 </resources>

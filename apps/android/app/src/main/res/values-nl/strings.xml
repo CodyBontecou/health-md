@@ -1454,4 +1454,22 @@
     <string name="agent_export_grant_day">Eén dag</string>
     <string name="agent_export_grant_week">Eén week</string>
     <string name="agent_export_grant_day_limit">Dagenlimiet</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">Exportverzoeken</string>
+    <string name="agent_export_review_refresh">Exportverzoeken vernieuwen</string>
+    <string name="agent_export_review_failed">Verbind de computer en open dit scherm opnieuw om exportverzoeken te controleren.</string>
+    <string name="agent_export_review_empty">Er wachten geen exportverzoeken op goedkeuring.</string>
+    <string name="agent_export_review_title">Exportverzoek controleren</string>
+    <string name="agent_export_review_write_mode">Schrijfmodus</string>
+    <string name="agent_export_review_folder">Mapsjabloon</string>
+    <string name="agent_export_review_filename">Bestandsnaamsjabloon</string>
+    <string name="agent_export_review_subfolder">Submap</string>
+    <string name="agent_export_review_destination">Bestemming op computer</string>
+    <string name="agent_export_review_destination_note">Controleer of deze bestemming overeenkomt met de bestemming die op de computer is goedgekeurd. Bestaande bestanden kunnen worden vervangen volgens de schrijfmodus.</string>
+    <string name="agent_export_review_paths">Verwachte bestanden</string>
+    <string name="agent_export_review_details">Volledige verzoekdetails</string>
+    <string name="agent_export_review_scope_note">Deze goedkeuring geldt alleen voor dit verzoek. Opgeslagen exportinstellingen blijven ongewijzigd en toekomstige verzoeken worden hiermee niet goedgekeurd.</string>
+    <string name="agent_export_review_allow">Deze export toestaan</string>
+    <string name="agent_export_review_confirm">Precies deze export toestaan?</string>
 </resources>

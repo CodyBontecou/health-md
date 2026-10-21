@@ -1502,4 +1502,22 @@
     <string name="agent_export_grant_day">Um dia</string>
     <string name="agent_export_grant_week">Uma semana</string>
     <string name="agent_export_grant_day_limit">Limite de dias</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">Solicitações de exportação</string>
+    <string name="agent_export_review_refresh">Atualizar solicitações de exportação</string>
+    <string name="agent_export_review_failed">Conecte o computador e reabra esta tela para verificar as solicitações de exportação.</string>
+    <string name="agent_export_review_empty">Nenhuma solicitação de exportação aguardando aprovação.</string>
+    <string name="agent_export_review_title">Revisar solicitação de exportação</string>
+    <string name="agent_export_review_write_mode">Modo de gravação</string>
+    <string name="agent_export_review_folder">Modelo de pasta</string>
+    <string name="agent_export_review_filename">Modelo de nome de arquivo</string>
+    <string name="agent_export_review_subfolder">Subpasta</string>
+    <string name="agent_export_review_destination">Destino no computador</string>
+    <string name="agent_export_review_destination_note">Confira se este destino corresponde ao aprovado no computador. Os arquivos existentes podem ser substituídos conforme o modo de gravação.</string>
+    <string name="agent_export_review_paths">Arquivos previstos</string>
+    <string name="agent_export_review_details">Detalhes completos da solicitação</string>
+    <string name="agent_export_review_scope_note">Esta aprovação se aplica apenas a esta solicitação. Ela não altera as configurações de exportação salvas nem aprova solicitações futuras.</string>
+    <string name="agent_export_review_allow">Permitir esta exportação</string>
+    <string name="agent_export_review_confirm">Permitir exatamente esta exportação?</string>
 </resources>

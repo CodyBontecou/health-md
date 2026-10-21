@@ -1556,4 +1556,22 @@
     <string name="agent_export_grant_day">Один день</string>
     <string name="agent_export_grant_week">Один тиждень</string>
     <string name="agent_export_grant_day_limit">Обмеження днів</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">Запити на експорт</string>
+    <string name="agent_export_review_refresh">Оновити запити на експорт</string>
+    <string name="agent_export_review_failed">Підключіть комп’ютер і знову відкрийте цей екран, щоб перевірити запити на експорт.</string>
+    <string name="agent_export_review_empty">Немає запитів на експорт, що очікують схвалення.</string>
+    <string name="agent_export_review_title">Перевірити запит на експорт</string>
+    <string name="agent_export_review_write_mode">Режим запису</string>
+    <string name="agent_export_review_folder">Шаблон папки</string>
+    <string name="agent_export_review_filename">Шаблон назви файлу</string>
+    <string name="agent_export_review_subfolder">Підпапка</string>
+    <string name="agent_export_review_destination">Місце призначення на комп’ютері</string>
+    <string name="agent_export_review_destination_note">Перевірте, чи це місце призначення збігається зі схваленим на комп’ютері. Наявні файли можуть бути замінені відповідно до режиму запису.</string>
+    <string name="agent_export_review_paths">Очікувані файли</string>
+    <string name="agent_export_review_details">Повні відомості про запит</string>
+    <string name="agent_export_review_scope_note">Це схвалення стосується лише цього запиту. Воно не змінює збережені налаштування експорту й не схвалює майбутні запити.</string>
+    <string name="agent_export_review_allow">Дозволити цей експорт</string>
+    <string name="agent_export_review_confirm">Дозволити саме цей експорт?</string>
 </resources>

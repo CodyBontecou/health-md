@@ -1502,4 +1502,22 @@
     <string name="agent_export_grant_day">O zi</string>
     <string name="agent_export_grant_week">O săptămână</string>
     <string name="agent_export_grant_day_limit">Limită de zile</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">Cereri de export</string>
+    <string name="agent_export_review_refresh">Actualizează cererile de export</string>
+    <string name="agent_export_review_failed">Conectează computerul și redeschide acest ecran pentru a verifica cererile de export.</string>
+    <string name="agent_export_review_empty">Nu există cereri de export care așteaptă aprobarea.</string>
+    <string name="agent_export_review_title">Examinează cererea de export</string>
+    <string name="agent_export_review_write_mode">Mod de scriere</string>
+    <string name="agent_export_review_folder">Șablon de dosar</string>
+    <string name="agent_export_review_filename">Șablon de nume de fișier</string>
+    <string name="agent_export_review_subfolder">Subdosar</string>
+    <string name="agent_export_review_destination">Destinație pe computer</string>
+    <string name="agent_export_review_destination_note">Verifică dacă această destinație corespunde celei aprobate pe computer. Fișierele existente pot fi înlocuite în funcție de modul de scriere.</string>
+    <string name="agent_export_review_paths">Fișiere estimate</string>
+    <string name="agent_export_review_details">Detaliile complete ale cererii</string>
+    <string name="agent_export_review_scope_note">Această aprobare se aplică doar acestei cereri. Nu modifică setările de export salvate și nu aprobă cereri viitoare.</string>
+    <string name="agent_export_review_allow">Permite acest export</string>
+    <string name="agent_export_review_confirm">Permiți exact acest export?</string>
 </resources>

@@ -1454,4 +1454,22 @@
     <string name="agent_export_grant_day">Ein Tag</string>
     <string name="agent_export_grant_week">Eine Woche</string>
     <string name="agent_export_grant_day_limit">Tageslimit</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">Exportanfragen</string>
+    <string name="agent_export_review_refresh">Exportanfragen aktualisieren</string>
+    <string name="agent_export_review_failed">Verbinde den Computer und öffne diesen Bildschirm erneut, um Exportanfragen zu prüfen.</string>
+    <string name="agent_export_review_empty">Keine Exportanfragen warten auf Genehmigung.</string>
+    <string name="agent_export_review_title">Exportanfrage prüfen</string>
+    <string name="agent_export_review_write_mode">Schreibmodus</string>
+    <string name="agent_export_review_folder">Ordnervorlage</string>
+    <string name="agent_export_review_filename">Dateinamenvorlage</string>
+    <string name="agent_export_review_subfolder">Unterordner</string>
+    <string name="agent_export_review_destination">Ziel auf dem Computer</string>
+    <string name="agent_export_review_destination_note">Gleiche dieses Ziel mit dem auf dem Computer genehmigten Ziel ab. Vorhandene Dateien können je nach Schreibmodus ersetzt werden.</string>
+    <string name="agent_export_review_paths">Voraussichtliche Dateien</string>
+    <string name="agent_export_review_details">Vollständige Anfragedetails</string>
+    <string name="agent_export_review_scope_note">Diese Genehmigung gilt nur für diese Anfrage. Sie ändert keine gespeicherten Exporteinstellungen und genehmigt keine zukünftigen Anfragen.</string>
+    <string name="agent_export_review_allow">Diesen Export erlauben</string>
+    <string name="agent_export_review_confirm">Genau diesen Export erlauben?</string>
 </resources>

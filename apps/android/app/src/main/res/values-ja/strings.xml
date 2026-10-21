@@ -1279,4 +1279,22 @@
     <string name="agent_export_grant_day">1日</string>
     <string name="agent_export_grant_week">1週間</string>
     <string name="agent_export_grant_day_limit">日数の上限</string>
+
+    <!-- Native exact-plan review. -->
+    <string name="agent_export_review_requests">エクスポートリクエスト</string>
+    <string name="agent_export_review_refresh">エクスポートリクエストを更新</string>
+    <string name="agent_export_review_failed">コンピュータを接続し、この画面を開き直してエクスポートリクエストを確認してください。</string>
+    <string name="agent_export_review_empty">承認待ちのエクスポートリクエストはありません。</string>
+    <string name="agent_export_review_title">エクスポートリクエストを確認</string>
+    <string name="agent_export_review_write_mode">書き込みモード</string>
+    <string name="agent_export_review_folder">フォルダのテンプレート</string>
+    <string name="agent_export_review_filename">ファイル名のテンプレート</string>
+    <string name="agent_export_review_subfolder">サブフォルダ</string>
+    <string name="agent_export_review_destination">コンピュータ上の保存先</string>
+    <string name="agent_export_review_destination_note">この保存先がコンピュータで承認した保存先と一致することを確認してください。書き込みモードに応じて既存のファイルが置き換えられる場合があります。</string>
+    <string name="agent_export_review_paths">作成予定のファイル</string>
+    <string name="agent_export_review_details">リクエストの全詳細</string>
+    <string name="agent_export_review_scope_note">この承認はこのリクエストにのみ適用されます。保存済みのエクスポート設定は変更されず、今後のリクエストも承認されません。</string>
+    <string name="agent_export_review_allow">このエクスポートを許可</string>
+    <string name="agent_export_review_confirm">この内容のエクスポートを許可しますか？</string>
 </resources>
