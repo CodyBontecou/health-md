@@ -50,7 +50,7 @@
             "name": "Which AI assistants work with Health.md?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Claude and Codex can query Health.md directly through its MCP server. Any assistant — including ChatGPT — can analyze exported CSV or JSON files you provide."
+              "text": "Local Claude and Codex MCP hosts can use either topology when configured for stdio. Standalone is an explicitly unqualified preview; this is not a hosted-client compatibility guarantee. Any assistant — including ChatGPT — can analyze exported CSV or JSON files you provide."
             }
           },
           {
@@ -58,7 +58,7 @@
             "name": "Do I need the Mac app to use MCP?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "For the bundled MCP helper, yes: Health.md for Mac ships a signed healthmd-mcp helper, and it works while the Mac app is open with your iPhone connected. File exports work from the iPhone app alone."
+              "text": "No for standalone: healthmd mcp serve runs on macOS, Linux, and Windows as an explicitly unqualified preview, not a qualified stable release. It connects directly to a paired foreground phone without the Mac app. Install the CLI, enable Direct CLI Access, and pair with healthmd direct pair. Typed queries require a query-capable iPhone; Android typed MCP queries are not supported. The legacy bundled healthmd-mcp helper requires Health.md for Mac installed and open. It queries encrypted Mac context; use a connected foreground iPhone for explicit refreshes and fresh exports. Both topologies need a local MCP host with stdio support. File exports work from the iPhone app alone."
             }
           },
           {
@@ -82,7 +82,7 @@
             "name": "Is my health data sent to Health.md's servers for AI use?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. Health.md is local-first and keeps no health-data cloud. Your records go only to the destinations and clients you choose."
+              "text": "Not automatically. Neither local MCP topology automatically uploads health records to Health.md Cloud. Local pairing does not authorize Cloud uploads or third-party Cloud reads. The separately authorized read-only Cloud MCP pilot reads retained exports, not a live phone. This disposable single-user VM pilot has no backups or independent security-review sign-off. General production rollout remains unapproved. You choose which files or query results to share with an AI client."
             }
           }
         ]
@@ -115,7 +115,7 @@
         <p class="about-eyebrow">Health data × AI</p>
         <h1 id="ai-title">Put your health data to work with AI.</h1>
         <p class="about-value-prop"><strong>Two paths from your Apple Health records to an AI assistant: hand it a file, or let it ask scoped questions through Health.md's MCP server.</strong></p>
-        <p class="about-intro">Either way, you control what the agent sees — and Health.md never stores your health data.</p>
+        <p class="about-intro">With either local path, you choose what to share and which client receives it. Connecting local MCP does not enable Cloud uploads.</p>
         <div class="hero-actions" aria-label="Download Health.md">
           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
             <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
@@ -139,25 +139,29 @@
             </div>
             <div class="about-card">
               <h3>2. Let an agent ask directly</h3>
-              <p>Health.md for Mac ships a signed <code>healthmd-mcp</code> helper. Codex, Claude, and other MCP hosts use it to run scoped queries — metric charts, sleep sessions, workouts, coverage — and get back factual answers with units, evidence, and explicit missingness instead of guesses.</p>
+              <p><strong>Standalone direct MCP:</strong> <code>healthmd mcp serve</code> runs on macOS, Linux, and Windows as an explicitly unqualified preview, not a qualified stable release. It connects directly to a paired foreground phone without the Mac app. Typed queries require a query-capable iPhone; Android typed MCP queries are not supported.</p>
+              <p><strong>Legacy bundled Mac helper:</strong> The signed <code>healthmd-mcp</code> requires Health.md for Mac installed and open. It queries encrypted Mac context; use a connected foreground iPhone for explicit refreshes and fresh exports. Both topologies return bounded factual results with units, coverage, and explicit missingness.</p>
             </div>
           </div>
-          <p class="section-lede">File export works from the iPhone app alone. The MCP path needs Health.md for Mac open with your iPhone connected, plus a local MCP host. <a href="/docs/mcp/">Read the MCP setup guide</a></p>
+          <p class="section-lede">Both topologies need a local MCP host with stdio support. For standalone, install the CLI, enable Direct CLI Access, and pair with <code>healthmd direct pair</code> over Manual IP or Tailscale. File export works from the iPhone app alone. <a href="/docs/mcp/">Read the MCP setup guide</a></p>
         </section>
 
         <section class="about-section" id="per-assistant">
           <p class="section-kicker">Per assistant</p>
           <h2>Setup notes</h2>
+          <p class="section-lede">The standalone <code>healthmd mcp serve</code> server runs on macOS, Linux, and Windows as an explicitly unqualified preview, not a qualified stable release. It connects directly to a paired foreground phone without the Mac app. Typed queries require a query-capable iPhone; Android typed MCP queries are not supported.</p>
+          <p>The legacy bundled <code>healthmd-mcp</code> helper requires Health.md for Mac installed and open. It queries encrypted Mac context; use a connected foreground iPhone for explicit refreshes and fresh exports.</p>
+          <p>Both topologies need a local MCP host with stdio support. For standalone, install the CLI, enable Direct CLI Access, and pair with <code>healthmd direct pair</code> over Manual IP or Tailscale. Keep Health.md foreground on the phone for each new request. Use native credential storage: Keychain on macOS, an unlocked Secret Service on Linux, or Credential Manager on Windows.</p>
           <div class="difference-list">
             <div>
               <span>01</span>
               <h3>Claude</h3>
-              <p>Add the <code>healthmd-mcp</code> helper to Claude Desktop's MCP configuration or a Claude Code <code>.mcp.json</code>. Hosts that support MCP Apps render Health.md's interactive charts inline; text-first clients get exact JSON with image fallbacks.</p>
+              <p>For standalone, configure the absolute installed <code>healthmd</code> path with arguments <code>mcp serve</code> in Claude Desktop's MCP configuration or a trusted Claude Code <code>.mcp.json</code>. For the legacy Mac topology, use the bundled <code>healthmd-mcp</code> path instead. Hosts that negotiate MCP Apps render Health.md's interactive charts inline; text-first clients get exact JSON with image fallbacks.</p>
             </div>
             <div>
               <span>02</span>
               <h3>Codex</h3>
-              <p>Register the helper under <code>mcp_servers.healthmd</code> in <code>~/.codex/config.toml</code>, restart Codex, then run <code>healthmd_doctor</code> and list metrics with <code>healthmd_metrics</code>. Export and refresh tools stay approval-gated.</p>
+              <p>For standalone, use <code>healthmd setup codex</code> to pair a foreground iPhone and configure <code>healthmd mcp serve</code>. For the legacy Mac topology, register the bundled helper under <code>mcp_servers.healthmd</code> in <code>~/.codex/config.toml</code>. Restart Codex, then run <code>healthmd_doctor</code> and list metrics with <code>healthmd_metrics</code>. Export and Mac refresh tools stay approval-gated.</p>
             </div>
             <div>
               <span>03</span>
@@ -171,7 +175,8 @@
           <p class="section-kicker">Privacy</p>
           <h2>Scoped by default</h2>
           <p class="section-lede"><strong>Every request carries its own scope.</strong> An agent can only ask about what you approve — queries return bounded pages with coverage, missing intervals, and limitations spelled out, so nothing is silently extrapolated.</p>
-          <p>Generated-file writes are approval-gated operations, and Health.md reports factual observations only: units, provenance, coverage, missingness. It does not diagnose or recommend treatment — and there is no Health.md health-data cloud in the loop.</p>
+          <p>Generated-file writes and Mac context refreshes are approval-gated operations, and Health.md reports factual observations only: units, provenance, coverage, missingness. It does not diagnose or recommend treatment. Neither local MCP topology automatically uploads health records to Health.md Cloud.</p>
+          <p>Local pairing does not authorize Cloud uploads or third-party Cloud reads. The separately authorized read-only Cloud MCP pilot reads retained exports, not a live phone. This disposable single-user VM pilot has no backups or independent security-review sign-off. General production rollout remains unapproved.</p>
         </section>
 
         <section class="about-section" id="keep-going">
@@ -200,11 +205,11 @@
           <div class="faq-list">
             <div>
               <h3>Which AI assistants work with Health.md?</h3>
-              <p>Claude and Codex can query Health.md directly through its MCP server. Any assistant — including ChatGPT — can analyze exported CSV or JSON files you provide.</p>
+              <p>Local Claude and Codex MCP hosts can use either topology when configured for stdio. Standalone is an explicitly unqualified preview; this is not a hosted-client compatibility guarantee. Any assistant — including ChatGPT — can analyze exported CSV or JSON files you provide.</p>
             </div>
             <div>
               <h3>Do I need the Mac app to use MCP?</h3>
-              <p>For the bundled MCP helper, yes: Health.md for Mac ships a signed <code>healthmd-mcp</code> helper, and it works while the Mac app is open with your iPhone connected. File exports work from the iPhone app alone.</p>
+              <p>No for standalone: <code>healthmd mcp serve</code> runs on macOS, Linux, and Windows as an explicitly unqualified preview, not a qualified stable release. It connects directly to a paired foreground phone without the Mac app. Install the CLI, enable Direct CLI Access, and pair with <code>healthmd direct pair</code>. Typed queries require a query-capable iPhone; Android typed MCP queries are not supported. The legacy bundled <code>healthmd-mcp</code> helper requires Health.md for Mac installed and open. It queries encrypted Mac context; use a connected foreground iPhone for explicit refreshes and fresh exports. Both topologies need a local MCP host with stdio support. File exports work from the iPhone app alone.</p>
             </div>
             <div>
               <h3>Does the agent see all of my health data?</h3>
@@ -216,7 +221,7 @@
             </div>
             <div>
               <h3>Is my health data sent to Health.md's servers for AI use?</h3>
-              <p>No. Health.md is local-first and keeps no health-data cloud. Your records go only to the destinations and clients you choose.</p>
+              <p>Not automatically. Neither local MCP topology automatically uploads health records to Health.md Cloud. Local pairing does not authorize Cloud uploads or third-party Cloud reads. The separately authorized read-only Cloud MCP pilot reads retained exports, not a live phone. This disposable single-user VM pilot has no backups or independent security-review sign-off. General production rollout remains unapproved. You choose which files or query results to share with an AI client.</p>
             </div>
           </div>
         </section>

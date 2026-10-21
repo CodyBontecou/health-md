@@ -55,7 +55,7 @@ A render session is created from:
 
 It accepts ordered batches of presentation facts and retained extension payloads, then finalizes one artifact plan. Batches are transactional: malformed or cancelled input does not advance the expected batch index. A session is terminal after completion or observed cancellation.
 
-Configuration and semantic result must agree on request/session identity, profile, profile revision, registry hash, canonical model version, calendar timezone, and owner dates. Android roll-up input is rejected. Android API v1 is rendered only from `android_frozen_v4`; analytical-v5 local settings cannot silently upgrade API/plugin output.
+Configuration and semantic result must agree on request/session identity, profile, profile revision, registry hash, canonical model version, calendar timezone, and owner dates. The precise registry digest shipped at v3.4.2 remains supported without relabeling results or artifacts; see the [historical authority policy](../../../healthmd-core-rust/docs/historical-export-authorities.md). Unknown or crossed authorities still fail closed. Android roll-up input is rejected. Android API v1 is rendered only from `android_frozen_v4`; analytical-v5 local settings cannot silently upgrade API/plugin output.
 
 ## Presentation facts
 

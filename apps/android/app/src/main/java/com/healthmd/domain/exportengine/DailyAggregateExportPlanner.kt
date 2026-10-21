@@ -203,7 +203,9 @@ class HealthMdRustDailyAggregatePlanner(
     ): DailyAggregateRustPlan = withContext(defaultDispatcher) {
         val timeZone = request.suppliedPin?.ianaTimeZone ?: zoneIdProvider().id
         val readiness = coreService.checkReadiness()
-        val registry = coreService.getMetricRegistry(request.profile.coreProfile)
+        val registry = request.suppliedPin?.let {
+            coreService.getMetricRegistryAtAuthority(request.profile.coreProfile, it.registryVersion, it.registrySha256)
+        } ?: coreService.getMetricRegistry(request.profile.coreProfile)
         val pin = request.suppliedPin?.also { persisted ->
             val compatibility = ExportEnginePinValidator().validate(persisted, readiness, registry)
             if (!compatibility.isCompatible || persisted.engine != request.mode || persisted.profile != request.profile) {

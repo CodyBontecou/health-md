@@ -277,6 +277,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.truth)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.uiautomator)
     androidTestImplementation(platform(libs.compose.bom))

@@ -5,6 +5,25 @@ import XCTest
 
 @MainActor
 final class AppleExportEngineFoundationTests: XCTestCase {
+    func testShippedAuthorityPinUsesExactHistoricalSnapshotAndRejectsCrossedAuthority() throws {
+        let service = HealthMdCoreService()
+        let build = try service.buildInfo()
+        let registry = try service.metricRegistryAtAuthority(profile: .appleHealthDataV8, registrySHA256: AppleExportEnginePin.historicalRegistrySHA256)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(makeSyntheticAppleExportEnginePin(calendarTimeZoneIdentifier: "UTC"))) as? [String: Any])
+        object["profile"] = "apple_health_data_v8"
+        object["public_schema_version"] = 8
+        object["core_api_version"] = 4
+        object["registry_sha256"] = AppleExportEnginePin.historicalRegistrySHA256
+        let pin = try JSONDecoder().decode(AppleExportEnginePin.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertNoThrow(try pin.validateCompatibility(buildInfo: build, registrySnapshot: registry))
+        XCTAssertEqual(pin.registrySHA256, registry.registrySha256)
+        XCTAssertFalse(pin.isCompatible(buildInfo: build, registrySnapshot: try service.metricRegistry(profile: .appleHealthDataV8)))
+        object["render_profile_revision"] = 1
+        let crossed = try JSONDecoder().decode(AppleExportEnginePin.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertFalse(crossed.isCompatible(buildInfo: build, registrySnapshot: registry))
+        XCTAssertThrowsError(try service.metricRegistryAtAuthority(profile: .appleHealthDataV8, registrySHA256: String(repeating: "0", count: 64)))
+    }
+
     func testUnknownModesAndMissingPersistedPinsFailClosedToLegacy() throws {
         XCTAssertEqual(try JSONDecoder().decode(ExportEngineMode.self, from: Data(#""rust""#.utf8)), .rust)
         XCTAssertThrowsError(

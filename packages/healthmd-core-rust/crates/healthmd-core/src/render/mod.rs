@@ -12,12 +12,15 @@ use serde_json::Value;
 use thiserror::Error;
 
 use crate::{
-    CANONICAL_MODEL_VERSION, REGISTRY_SHA256, REGISTRY_VERSION,
+    CANONICAL_MODEL_VERSION, REGISTRY_VERSION,
     semantic::{
         ExactNumber, RollupPeriod, SemanticProfile, SemanticResult, SemanticResultState,
         SemanticValue,
     },
 };
+
+#[cfg(test)]
+use crate::REGISTRY_SHA256;
 
 mod android_analytical_v5;
 mod android_frozen_v4;
@@ -646,7 +649,8 @@ impl RenderSession {
                 )
             })
             .collect();
-        let presentation_categories = profile_presentation_categories(config.profile)?;
+        let presentation_categories =
+            profile_presentation_categories(config.profile, &config.registry_sha256)?;
         let retained_extensions = semantic
             .retained_extensions
             .iter()
@@ -802,6 +806,7 @@ impl RenderSession {
 
 fn profile_presentation_categories(
     profile: SemanticProfile,
+    registry_sha256: &str,
 ) -> Result<HashMap<String, BTreeSet<String>>, RenderError> {
     let registry_profile = match profile {
         SemanticProfile::AppleHealthDataV8 => {
@@ -815,8 +820,12 @@ fn profile_presentation_categories(
             crate::registry::MetricRegistryProfile::AndroidAnalyticalV5
         }
     };
-    let snapshot = crate::registry::metric_registry_snapshot(registry_profile, REGISTRY_VERSION)
-        .map_err(|_| RenderError::InvalidConfig)?;
+    let snapshot = crate::registry::metric_registry_snapshot_at_authority(
+        registry_profile,
+        REGISTRY_VERSION,
+        registry_sha256,
+    )
+    .map_err(|_| RenderError::InvalidConfig)?;
     let categories_by_selection = snapshot
         .metrics
         .into_iter()
@@ -879,18 +888,23 @@ fn validate_config(
     if config.artifact_plan_version != ARTIFACT_PLAN_VERSION {
         return Err(RenderError::UnsupportedArtifactPlanVersion);
     }
-    if config.render_profile_revision != RENDER_PROFILE_REVISION
-        || !matches!(config.profile_revision, 1 | 2)
-    {
+    if !crate::authority::supports_render(
+        &config.registry_sha256,
+        config.profile.id(),
+        config.render_profile_revision,
+    ) || !crate::authority::supports_semantic(
+        &config.registry_sha256,
+        config.profile.id(),
+        config.profile_revision,
+    ) {
         return Err(RenderError::UnsupportedProfileRevision);
     }
     if config.schema != "healthmd.render_session_config"
         || config.canonical_model_version != CANONICAL_MODEL_VERSION
         || config.registry_version != REGISTRY_VERSION
-        || config.registry_sha256 != REGISTRY_SHA256
         || semantic.schema != "healthmd.semantic_result"
         || semantic.canonical_model_version != CANONICAL_MODEL_VERSION
-        || semantic.registry_sha256 != REGISTRY_SHA256
+        || semantic.registry_sha256 != config.registry_sha256
         || semantic.profile_revision != config.profile_revision
         || semantic.session_id != config.session_id
         || semantic.profile != config.profile
@@ -2371,6 +2385,11 @@ mod tests {
 
     fn input_bytes(profile: SemanticProfile) -> (Vec<u8>, Vec<u8>) {
         let profile_name = profile_id(profile);
+        let registry_hash = if profile == SemanticProfile::AppleHealthDataV10 {
+            crate::authority::HISTORICAL_REGISTRY_SHA256
+        } else {
+            REGISTRY_SHA256
+        };
         let api = if profile == SemanticProfile::AndroidFrozenV4 {
             json!({"enabled":true,"envelope_version":1,"exported_at":"2026-07-25T00:00:00Z","source":"android","date_range_start":"2026-07-25","date_range_end":"2026-07-25","failed_date_details":[],"external_record_schema":null,"external_record_schema_version":null,"external_records":[],"max_days_per_batch":7,"max_encoded_bytes":8_388_608})
         } else {
@@ -2378,7 +2397,7 @@ mod tests {
         };
         let config = json!({
             "schema":"healthmd.render_session_config","render_input_version":1,"artifact_plan_version":1,
-            "canonical_model_version":1,"registry_version":1,"registry_sha256":REGISTRY_SHA256,
+            "canonical_model_version":1,"registry_version":1,"registry_sha256":registry_hash,
             "profile_revision":1,"render_profile_revision":2,"request_id":"render-test","session_id":"render-session",
             "profile":profile_name,"calendar_time_zone":"UTC","locale":"en-US",
             "formats":["csv","markdown","json","obsidian_bases"],"unit_system":"metric",
@@ -2392,7 +2411,7 @@ mod tests {
         });
         let semantic = json!({
             "schema":"healthmd.semantic_result","semantic_input_version":1,"canonical_model_version":1,"core_api_version":3,
-            "registry_sha256":REGISTRY_SHA256,"profile_revision":1,"session_id":"render-session","profile":profile_name,
+            "registry_sha256":registry_hash,"profile_revision":1,"session_id":"render-session","profile":profile_name,
             "state":"completed","next_batch_index":1,"records_accepted":1,"records_filtered":0,
             "days":[{"owner_date":"2026-07-25","values":[{"output_key":"steps","semantic_id":"steps","aggregation":"sum","value":{"value_type":"number","number":{"representation":"unsigned_integer","decimal":"1234"},"unit":{"id":"count"}},"source_record_ids":["record-1"]}]}],
             "rollups":[],"retained_extensions":[]

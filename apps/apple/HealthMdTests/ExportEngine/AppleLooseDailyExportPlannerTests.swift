@@ -11,37 +11,50 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedManagers: [VaultManager] = []
 
-    func testHistoricalPinsFailClosedBeforeLegacyEmptyOrProviderFallback() async throws {
-        let service = HealthMdCoreService()
-        let registry = try service.metricRegistry(profile: .appleHealthDataV10)
-        for engine in [ExportEngineMode.legacy, .shadow, .rust] {
-            let current = try AppleExportEnginePin(engine: engine, calendarTimeZoneIdentifier: "UTC",
-                buildInfo: service.buildInfo(), registrySnapshot: registry)
+    func testShippedAuthorityUnmaterializedJobsResumeWithoutUpgradingTheirPin() async throws {
+        for mode in [ExportEngineMode.shadow, .rust] {
+            let current = try makeSyntheticAppleExportEnginePin(engine: mode, calendarTimeZoneIdentifier: "UTC")
             var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+            // Exact authority embedded at the v3.4.2 source tag (837687662aa2853d1872724c72a97e1526519bbc).
             object["profile"] = "apple_health_data_v8"
             object["public_schema_version"] = 8
             object["core_api_version"] = 4
-            let bytes = try JSONSerialization.data(withJSONObject: object)
-            if engine == .legacy {
-                XCTAssertThrowsError(try JSONDecoder().decode(AppleExportEnginePin.self, from: bytes))
-                continue // Persisted explicit legacy pins are structurally forbidden.
-            }
-            let pin = try JSONDecoder().decode(AppleExportEnginePin.self, from: bytes)
-            XCTAssertEqual(pin.profile, "apple_health_data_v8")
-            XCTAssertEqual(pin.publicSchemaVersion, 8)
-            let planner = AppleLooseDailyExportPlanner(nativeRendererPreflight: {
-                XCTFail("Incompatible authority must not open a renderer")
-            })
-            var snapshot = ExportSettingsSnapshot.from(makeSimpleSettings(), healthSubfolder: "Health",
-                calendarTimeZoneIdentifier: "UTC")
-            snapshot.appleExportEnginePin = pin
-            for records in [[], [ExportFixtures.partialDay], [ExportFixtures.whoopDay]] {
+            object["registry_sha256"] = "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
+            let original = try JSONDecoder().decode(AppleExportEnginePin.self, from: JSONSerialization.data(withJSONObject: object))
+            let settings = makeSimpleSettings(formats: [.json])
+            var snapshot = ExportSettingsSnapshot.from(
+                settings,
+                healthSubfolder: "Health",
+                appleExportEnginePin: original,
+                calendarTimeZoneIdentifier: "UTC"
+            )
+            snapshot = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: JSONEncoder().encode(snapshot))
+            let planner = AppleLooseDailyExportPlanner(identitySource: fixedIdentitySource)
+            for surface in [AppleExportOperationSurface.localVaultWithoutSideEffects, .directGeneratedFilesWithoutSideEffects, .connectedReceivedFilesWithoutSideEffects] {
                 do {
-                    _ = try await planner.planRange(healthData: records, settingsSnapshot: snapshot,
-                        surface: .connectedReceivedFilesWithoutSideEffects)
-                    XCTFail("Historical pin must fail closed for \(engine)")
+                    _ = try await planner.plan(healthData: ExportFixtures.partialDay,
+                        settingsSnapshot: snapshot, surface: surface)
+                    XCTFail("Unsupported historical daily operations must fail closed")
                 } catch {
                     XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
+                }
+            }
+            if mode == .rust {
+                settings.generateRangeSummary = true
+                settings.summaryOnlyExport = true
+                snapshot = ExportSettingsSnapshot.from(settings, healthSubfolder: "Health",
+                    appleExportEnginePin: original, calendarTimeZoneIdentifier: "UTC")
+                for surface in [AppleExportOperationSurface.localVaultRangeWithoutSideEffects,
+                                .directGeneratedFilesWithoutSideEffects, .connectedReceivedRangeWithoutSideEffects] {
+                    let operation = try unwrapPlanned(try await planner.planRange(
+                        healthData: [ExportFixtures.partialDay], dailyOutputOwnerDates: [],
+                        settingsSnapshot: snapshot, surface: surface))
+                    XCTAssertEqual(operation.pin, original)
+                    XCTAssertEqual(operation.authority, .rust)
+                    let body = try XCTUnwrap(JSONSerialization.jsonObject(
+                        with: operation.selectedPlan.artifacts[0].inlineData) as? [String: Any])
+                    XCTAssertEqual(body["schema_version"] as? Int, 9)
+                    XCTAssertEqual(body["source_schema_version"] as? Int, 8)
                 }
             }
         }

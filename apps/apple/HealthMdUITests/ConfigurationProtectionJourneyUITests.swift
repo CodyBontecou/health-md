@@ -60,6 +60,28 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         return element.exists && element.isHittable
     }
 
+    /// Once the pinned protection toast is visible, XCUITest can still report an action beneath it
+    /// as hittable. Move each later action fully outside the toast before tapping it.
+    private func scrollUntilHittableAboveProtectionToast(
+        _ element: XCUIElement,
+        in app: XCUIApplication,
+        maxSwipes: Int = 8
+    ) -> Bool {
+        let toastQuery = app.buttons.matching(
+            identifier: UITestLaunchHelper.ConfigurationProtection.toast
+        )
+        for _ in 0..<maxSwipes {
+            let toast = toastQuery.allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable })
+            let isOutsideToast = toast.map { !element.frame.intersects($0.frame) } ?? true
+            if element.exists, element.isHittable, isOutsideToast {
+                return true
+            }
+            app.scrollViews.firstMatch.swipeUp()
+        }
+        let toast = toastQuery.allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable })
+        return element.exists && element.isHittable && (toast.map { !element.frame.intersects($0.frame) } ?? true)
+    }
+
     /// Disabled controls have no hit point, but must still be visible for guard assertions.
     private func scrollUntilVisible(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 8) -> Bool {
         func isVisible() -> Bool {
@@ -88,6 +110,39 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             app.buttons["export.profiles.row.Default"].waitForExistence(timeout: 5),
             "The migrated Default profile should remain readable"
         )
+    }
+
+    private func openProtectedDefaultProfileDetail(_ app: XCUIApplication) {
+        openProfilesManagementSheet(app)
+        openDefaultProfileDetailFromManagement(app)
+    }
+
+    private func openDefaultProfileDetailFromManagement(_ app: XCUIApplication) {
+        let defaultRow = app.buttons["export.profiles.row.Default"]
+        XCTAssertTrue(waitHittable(defaultRow), "The Default profile row should be tappable")
+        defaultRow.tap()
+        XCTAssertTrue(
+            app.buttons["export.profiles.edit.button"].waitForExistence(timeout: 5),
+            "Profile detail should stay inspectable while protected"
+        )
+    }
+
+    /// UI tests deliberately pin protection toasts so loaded runners cannot
+    /// miss their hittable window. Follow the toast's supported Settings route,
+    /// then reopen the detail before testing another independent blocked action.
+    private func followProtectionToastAndReopenDetail(_ app: XCUIApplication) -> Bool {
+        guard let toast = waitForHittableToast(in: app) else {
+            XCTFail("A blocked profile action must show a tappable protection toast")
+            return false
+        }
+        toast.tap()
+        guard app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
+            .waitForExistence(timeout: 5) else {
+            XCTFail("The protection toast must route to the protection setting")
+            return false
+        }
+        openProtectedDefaultProfileDetail(app)
+        return true
     }
 
     func testManualExportAndPreviewRemainUsableWhileProtected() {
@@ -160,6 +215,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
     }
 
     func testProtectedProfileDetailActionsAreBlocked() {
+        executionTimeAllowance = 300
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             vaultSelected: true,
@@ -168,21 +224,26 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        openProfilesManagementSheet(app)
-        let defaultRow = app.buttons["export.profiles.row.Default"]
-        XCTAssertTrue(waitHittable(defaultRow), "The Default profile row should be tappable")
-        defaultRow.tap()
-        XCTAssertTrue(
-            app.buttons["export.profiles.edit.button"].waitForExistence(timeout: 5),
-            "Profile detail should stay inspectable while protected"
-        )
+        openProtectedDefaultProfileDetail(app)
+
+        // Test the last-profile guard before producing a deliberately pinned
+        // protection toast. The disabled action presents no confirmation.
+        let delete = app.buttons["Delete Profile…"]
+        XCTAssertTrue(scrollUntilHittable(delete, in: app), "The Delete action should be reachable")
+        XCTAssertFalse(delete.isEnabled, "The last remaining profile must not be deletable")
+        delete.tap()
+        XCTAssertFalse(app.staticTexts["Delete this profile?"].waitForExistence(timeout: 1))
+
+        // Return to a fresh top-of-detail position after the delete assertion.
+        app.navigationBars.buttons.firstMatch.tap()
+        openDefaultProfileDetailFromManagement(app)
 
         // Editing the frozen snapshot is rejected with the shared toast.
         let editButton = app.buttons["export.profiles.edit.button"]
         XCTAssertTrue(waitHittable(editButton))
         editButton.tap()
-        XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.navigationBars["Edit Profile"].waitForExistence(timeout: 1))
+        guard followProtectionToastAndReopenDetail(app) else { return }
 
         // Schedule editing never opens the cadence sheet.
         let editSchedule = app.buttons["Edit Schedule…"]
@@ -191,19 +252,22 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             "The Edit Schedule action should be reachable in the scrollable profile detail"
         )
         editSchedule.tap()
-        XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.switches["Enabled"].waitForExistence(timeout: 1))
+        guard followProtectionToastAndReopenDetail(app) else { return }
 
         // Duplicating is rejected without creating a copy.
         let duplicate = app.buttons["Duplicate"]
         XCTAssertTrue(scrollUntilHittable(duplicate, in: app), "The Duplicate action should be reachable")
         duplicate.tap()
-        XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.buttons["export.profiles.row.Default 2"].waitForExistence(timeout: 1))
 
-        // Renaming never presents the rename alert.
+        // Keep the duplicate toast pinned, then move the preceding Rename row above it rather than
+        // paying for a third toast-to-Settings navigation cycle.
         let rename = app.buttons["Rename…"]
-        XCTAssertTrue(scrollUntilHittable(rename, in: app), "The Rename action should be reachable")
+        XCTAssertTrue(
+            scrollUntilHittableAboveProtectionToast(rename, in: app),
+            "The Rename action should be reachable above the protection toast"
+        )
         rename.tap()
         XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.alerts.firstMatch.waitForExistence(timeout: 1))
@@ -211,10 +275,10 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         // With the migrated single Default profile, Delete is additionally
         // disabled by the last-profile guard, so tapping it must present
         // neither the confirmation dialog nor mutate anything.
-        let delete = app.buttons["Delete Profile…"]
-        XCTAssertTrue(scrollUntilVisible(delete, in: app), "The disabled Delete action should be visible")
-        XCTAssertFalse(delete.isEnabled, "The last remaining profile must not be deletable")
-        delete.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let disabledDelete = app.buttons["Delete Profile…"]
+        XCTAssertTrue(scrollUntilVisible(disabledDelete, in: app), "The disabled Delete action should be visible")
+        XCTAssertFalse(disabledDelete.isEnabled, "The last remaining profile must not be deletable")
+        disabledDelete.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertFalse(app.staticTexts["Delete this profile?"].waitForExistence(timeout: 1))
     }
 

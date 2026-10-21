@@ -117,9 +117,9 @@
       "sha256" : "4af01c7c7354abf92655475b0828c9995db1872f8a8643d58142e3b9b918ac89"
     },
     {
-      "bytes" : 1686,
+      "bytes" : 1685,
       "path" : "peer-capabilities.json",
-      "sha256" : "66441092056c59e33592b6c1bfc80508405d5e0acf210d6e35a16ae4a25fb015"
+      "sha256" : "38e63c7875a51fb0b9e84088a88878417b1b0f4bb12f1161b156e3d81670df55"
     },
     {
       "bytes" : 3241,

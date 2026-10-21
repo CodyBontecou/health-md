@@ -65,7 +65,29 @@ nonisolated protocol AppleLooseDailyCoreExecuting: Sendable {
     ) async throws -> CoreArtifactPlan
 }
 
+extension AppleLooseDailyCoreExecuting {
+    /// A resumed operation chooses its original registry, not the new-operation default.
+    nonisolated func loadContext(pin: AppleExportEnginePin?) async throws -> AppleLooseDailyCoreContext {
+        let current = try await loadContext()
+        guard let pin,
+              pin.registrySHA256 != current.registry.registrySha256
+                || pin.profile != current.registry.profileId else { return current }
+        let registry = try await SystemAppleLooseDailyCoreExecutor.registry(for: pin)
+        return AppleLooseDailyCoreContext(buildInfo: current.buildInfo, registry: registry)
+    }
+}
+
 nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuting, Sendable {
+    static func registry(for pin: AppleExportEnginePin) async throws -> CoreMetricRegistrySnapshot {
+        try await SystemAppleLooseDailyCoreExecutor().runDetached {
+            try HealthMdCoreService().metricRegistryAtAuthority(
+                profile: pin.coreProfile,
+                expectedRegistryVersion: pin.registryVersion,
+                registrySHA256: pin.registrySHA256
+            )
+        }
+    }
+
     func loadContext() async throws -> AppleLooseDailyCoreContext {
         try await runDetached {
             let service = HealthMdCoreService()
@@ -301,7 +323,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         let persistedContext: AppleLooseDailyCoreContext?
         if let suppliedPin, records.isEmpty || suppliedPin.engine == .legacy {
             do {
-                let context = try await coreExecutor.loadContext()
+                let context = try await coreExecutor.loadContext(pin: suppliedPin)
                 guard suppliedPin.calendarTimeZoneIdentifier == settingsSnapshot.calendarTimeZoneIdentifier,
                       suppliedPin.isCompatible(buildInfo: context.buildInfo, registrySnapshot: context.registry) else {
                     throw AppleLooseDailyExportPlannerError.rustPlanningFailed
@@ -397,7 +419,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             if let persistedContext {
                 context = persistedContext
             } else {
-                context = try await coreExecutor.loadContext()
+                context = try await coreExecutor.loadContext(pin: suppliedPin)
             }
         } catch is CancellationError {
             throw CancellationError()
@@ -466,6 +488,11 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         var expectedOutputs: [ExpectedOutput] = []
         let nativePlan: NativeExportArtifactPlan?
         if requestedMode == .shadow {
+            // The native renderer emits the current schema. A retained older shadow pin
+            // cannot be compared or resumed by silently substituting current native bytes.
+            guard pin.profile == AppleExportEnginePin.profileID else {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
             // Shadow intentionally invokes both renderers; native bytes remain authoritative.
             try nativeRendererPreflight()
             expectedOutputs = try Self.expectedOutputs(
