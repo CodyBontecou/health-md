@@ -341,6 +341,32 @@ public final class DirectSecureChannel: @unchecked Sendable {
                                 authorize: @escaping @Sendable () async throws -> Void) async throws {
         guard negotiation.baseVersion == HealthMdDirectProtocol.currentVersion else { throw AgentBridgeValidationError.unsupportedCapability }
         let bytes = try negotiation.encode(envelope) // Unsupported peers reject before native IO.
+        try await sendGuardedAgentBridgePayload(bytes, authorize: authorize)
+    }
+
+    /// Unchanged base-v1 grammar for a v4-owned operation. This callback must retain the original
+    /// native owner; transport negotiation alone never grants export or configuration authority.
+    public func sendBaseForAgentBridge(_ message: DirectMessage, negotiation: AgentBridgeNegotiation,
+        authorize: @escaping @Sendable () async throws -> Void) async throws {
+        guard negotiation.baseVersion == HealthMdDirectProtocol.currentVersion, negotiation.agentBridgeV4 else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        let bytes = try messageCanonicalizer.canonicalizeDirectMessage(encoder.encode(message))
+        try await sendGuardedAgentBridgePayload(bytes, authorize: authorize)
+    }
+
+    /// Existing frame-v1 bytes and chunk bounds, sharing the original channel sequence domain.
+    public func sendTransferChunkForAgentBridge(_ chunk: DirectTransferChunk, negotiation: AgentBridgeNegotiation,
+        authorize: @escaping @Sendable () async throws -> Void) async throws {
+        guard negotiation.baseVersion == HealthMdDirectProtocol.currentVersion, negotiation.agentBridgeV4 else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        guard DirectTransferFile.sha256Hex(chunk.data) == chunk.sha256 else { throw DirectTransferError.invalidDigest }
+        try await sendGuardedAgentBridgePayload(DirectTransferBinaryFrame.encode(chunk), authorize: authorize)
+    }
+
+    private func sendGuardedAgentBridgePayload(_ bytes: Data,
+        authorize: @escaping @Sendable () async throws -> Void) async throws {
         guard let guarded = packetConnection as? any DirectGuardedPacketTransport else { throw AgentBridgeValidationError.unsupportedCapability }
         do {
             try await withTaskCancellationHandler {

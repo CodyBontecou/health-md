@@ -259,7 +259,33 @@ class DirectSecureChannel internal constructor(
     fun sendAgentBridge(message: AgentBridgeMessage, negotiation: AgentBridgeNegotiation, authorize: () -> Unit) {
         AgentBridgeChecks.require(negotiation.baseApplication == ANDROID_APPLICATION_PROTOCOL_VERSION && negotiation.agentExtension,
             AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
-        val plaintext = AgentBridgeCodec.encodeEnvelope(message, negotiation)
+        sendGuardedAgentBridgePayload(AgentBridgeCodec.encodeEnvelope(message, negotiation), authorize)
+    }
+
+    /** Existing base-v2 grammar for v4-owned work; the original native owner must fence every
+     * bounded write. This transport callback cannot create export/configuration authority. */
+    fun <T> sendV2ForAgentBridge(type: String, serializer: SerializationStrategy<T>, payload: T,
+        negotiation: AgentBridgeNegotiation, authorize: () -> Unit) {
+        AgentBridgeChecks.require(negotiation.baseApplication == ANDROID_APPLICATION_PROTOCOL_VERSION && negotiation.agentExtension,
+            AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val nativeBytes = V2Codec.encode(type, serializer, payload)
+        sendGuardedAgentBridgePayload(deterministicCore.canonicalizeV2Envelope(nativeBytes), authorize)
+    }
+
+    /** Unchanged bounded frame-v1 encoding and secure sequence domain, including the selected
+     * deterministic-core validation used by deployed sendTransferChunk. */
+    fun sendTransferChunkForAgentBridge(transferId: String, sequence: Int, data: ByteArray,
+        negotiation: AgentBridgeNegotiation, authorize: () -> Unit) {
+        AgentBridgeChecks.require(negotiation.baseApplication == ANDROID_APPLICATION_PROTOCOL_VERSION && negotiation.agentExtension,
+            AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val nativeFrame = BinaryTransferFrame.encode(transferId, sequence, data)
+        val frame = deterministicCore.encodeTransferFrame(transferId, sequence, data, nativeFrame)
+        require(frame.startsWithBytes(BINARY_MAGIC)) { "Invalid transfer frame." }
+        sendGuardedAgentBridgePayload(frame, authorize)
+    }
+
+    private fun sendGuardedAgentBridgePayload(bytes: ByteArray, authorize: () -> Unit) {
+        val plaintext = bytes.copyOf() // No callback can mutate a borrowed encoder/core buffer.
         try {
             synchronized(sendLock) {
                 requireBridgeCurrent(); authorize(); requireBridgeCurrent()

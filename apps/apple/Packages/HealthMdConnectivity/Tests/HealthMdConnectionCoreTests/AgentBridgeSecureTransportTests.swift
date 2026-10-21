@@ -31,6 +31,57 @@ final class AgentBridgeSecureTransportTests: XCTestCase {
         XCTAssertNil(pair.sender.clientAuthenticatedContext) // Transport is never authenticated native authority.
     }
 
+    func testGuardedBaseAndMaximumChunkShareUnchangedBridgeSequence() async throws {
+        let pair = try await pair(); defer { pair.close() }
+        let fence = WireFence(), neg = try negotiation(), expected = try request()
+        let data = Data(repeating: 0xab, count: DirectTransferLimits.chunkBytes)
+        let chunk = try DirectTransferChunk(transferID: UUID(), sequence: 1, data: data, sha256: DirectTransferFile.sha256Hex(data))
+        try await pair.sender.sendAgentBridge(expected, negotiation: neg) { try fence.requireCurrent() }
+        let first = try await pair.receiver.receiveAllowingAgentBridge(negotiation: neg) { try fence.requireCurrent() }
+        XCTAssertEqual(first, .agent(expected))
+        try await pair.sender.sendBaseForAgentBridge(.ping, negotiation: neg) { try fence.requireCurrent() }
+        let second = try await pair.receiver.receiveAllowingAgentBridge(negotiation: neg) { try fence.requireCurrent() }
+        XCTAssertEqual(second, .base(.ping))
+        // Receive concurrently: maximum binary payloads can fill a native socket buffer.
+        async let received = pair.receiver.receiveAllowingAgentBridge(negotiation: neg) { try fence.requireCurrent() }
+        try await pair.sender.sendTransferChunkForAgentBridge(chunk, negotiation: neg) { try fence.requireCurrent() }
+        let third = try await received
+        XCTAssertEqual(third, .binaryTransferFrame(try DirectTransferBinaryFrame.encode(chunk)))
+        try await pair.sender.send(.ping)
+        let fourth = try await pair.receiver.receiveAllowingAgentBridge(negotiation: neg) { try fence.requireCurrent() }
+        XCTAssertEqual(fourth, .base(.ping))
+        XCTAssertGreaterThan(fence.checks, 64, "Maximum chunks must use repeated bounded owner fences")
+    }
+
+    func testGuardedChunkRevocationStopsPartialPacketAndCannotRevive() async throws {
+        let pair = try await pair(); defer { pair.close() }
+        let data = Data(repeating: 0xab, count: 96 * 1024)
+        let chunk = try DirectTransferChunk(transferID: UUID(), sequence: 1, data: data, sha256: DirectTransferFile.sha256Hex(data))
+        let fence = WireFence(failAt: 4), neg = try negotiation()
+        do { try await pair.sender.sendTransferChunkForAgentBridge(chunk, negotiation: neg) { try fence.requireCurrent() }; XCTFail("Expected partial chunk denial") }
+        catch { }
+        let partial = try await readUntilClosed(pair.server.connection)
+        XCTAssertEqual(fence.checks, 4); XCTAssertFalse(partial.isEmpty)
+        XCTAssertLessThanOrEqual(partial.count, 16 * 1024)
+        XCTAssertTrue(pair.sender.isLocallyTerminal)
+        let restored = WireFence()
+        do { try await pair.sender.sendBaseForAgentBridge(.ping, negotiation: neg) { try restored.requireCurrent() }; XCTFail("No revival") }
+        catch { }
+        XCTAssertEqual(restored.checks, 0)
+    }
+
+    func testGuardedChunkRejectsIncorrectDigestBeforeOwnerOrSequence() async throws {
+        let pair = try await pair(); defer { pair.close() }
+        let fence = WireFence(), neg = try negotiation()
+        let chunk = try DirectTransferChunk(transferID: UUID(), sequence: 1, data: Data([1]), sha256: String(repeating: "0", count: 64))
+        do { try await pair.sender.sendTransferChunkForAgentBridge(chunk, negotiation: neg) { try fence.requireCurrent() }; XCTFail("Expected digest denial") }
+        catch { XCTAssertEqual(error as? DirectTransferError, .invalidDigest) }
+        XCTAssertEqual(fence.checks, 0); XCTAssertFalse(pair.sender.isLocallyTerminal)
+        try await pair.sender.sendBaseForAgentBridge(.ping, negotiation: neg) { try fence.requireCurrent() }
+        let value = try await pair.receiver.receiveAllowingAgentBridge(negotiation: neg) { try fence.requireCurrent() }
+        XCTAssertEqual(value, .base(.ping))
+    }
+
     func testUnnegotiatedOrUnguardedTransportCannotProbeOrConsumeIO() async throws {
         let transport = UnguardedWirePeer()
         let channel = DirectSecureChannel(packetConnection: transport, sessionKey: SymmetricKey(data: Data(repeating: 7, count: 32)), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
@@ -38,6 +89,12 @@ final class AgentBridgeSecureTransportTests: XCTestCase {
         do { try await channel.sendAgentBridge(request(), negotiation: negotiation([1, 3]), authorize: { try fence.requireCurrent() }); XCTFail("Expected unsupported peer") } catch { }
         do { _ = try await channel.receiveAllowingAgentBridge(negotiation: negotiation([1]), authorize: { try fence.requireCurrent() }); XCTFail("Expected no probe") } catch { }
         do { try await channel.sendAgentBridge(request(), negotiation: negotiation(), authorize: { try fence.requireCurrent() }); XCTFail("No unguarded fallback") } catch { }
+        do { try await channel.sendBaseForAgentBridge(.ping, negotiation: negotiation([1]), authorize: { try fence.requireCurrent() }); XCTFail("Unsupported base route") } catch { }
+        do { try await channel.sendBaseForAgentBridge(.ping, negotiation: negotiation(), authorize: { try fence.requireCurrent() }); XCTFail("No unguarded base fallback") } catch { }
+        let bytes = Data([1])
+        let chunk = try DirectTransferChunk(transferID: UUID(), sequence: 1, data: bytes, sha256: DirectTransferFile.sha256Hex(bytes))
+        do { try await channel.sendTransferChunkForAgentBridge(chunk, negotiation: negotiation([1]), authorize: { try fence.requireCurrent() }); XCTFail("Unsupported chunk route") } catch { }
+        do { try await channel.sendTransferChunkForAgentBridge(chunk, negotiation: negotiation(), authorize: { try fence.requireCurrent() }); XCTFail("No unguarded chunk fallback") } catch { }
         XCTAssertEqual(fence.checks, 0)
         XCTAssertEqual(transport.io, 0)
         XCTAssertFalse(channel.isLocallyTerminal)

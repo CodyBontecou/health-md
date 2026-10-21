@@ -40,11 +40,57 @@ class AgentBridgeSecureTransportTest {
             assertNull(pair.channel.nativeAuthenticatedSession())
         }
     }
+    @Test fun guardedBaseAndMaximumChunkShareUnchangedBridgeSequence() {
+        WirePair().use { pair ->
+            val neg = negotiation(); var checks = 0
+            pair.channel.sendAgentBridge(message(), neg) { checks++ }
+            assertEquals(0L, pair.read().first)
+            pair.channel.sendV2ForAgentBridge("ping", JsonObject.serializer(), buildJsonObject {}, neg) { checks++ }
+            val base = pair.read(); assertEquals(1L, base.first)
+            assertArrayEquals(V2Codec.encode("ping", JsonObject.serializer(), buildJsonObject {}), base.second)
+            val data = ByteArray(MAXIMUM_CHUNK_BYTES) { 0x7a }
+            val id = "00000000-0000-4000-8000-000000000003"
+            val executor = Executors.newSingleThreadExecutor()
+            try {
+                val received = executor.submit<Pair<Long, ByteArray>> { pair.read() }
+                pair.channel.sendTransferChunkForAgentBridge(id, 1, data, neg) { checks++ }
+                val frame = received.get(5, TimeUnit.SECONDS)
+                assertEquals(2L, frame.first); assertArrayEquals(BinaryTransferFrame.encode(id, 1, data), frame.second)
+            } finally { executor.shutdownNow(); assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS)) }
+            pair.channel.sendV2("ping", JsonObject.serializer(), buildJsonObject {})
+            assertEquals(3L, pair.read().first)
+            assertTrue("Maximum chunks require repeated bounded owner fences", checks > 64)
+        }
+    }
+    @Test fun guardedChunkRevocationStopsPartialPacketAndCannotRevive() {
+        WirePair().use { pair ->
+            val neg = negotiation(); var checks = 0
+            rejected { pair.channel.sendTransferChunkForAgentBridge("00000000-0000-4000-8000-000000000003", 1,
+                ByteArray(96 * 1024) { 0x7a }, neg) { checks++; if (checks == 4) error("revoked") } }
+            val partial = pair.server.getInputStream().readBytes()
+            assertEquals(4, checks); assertTrue(partial.isNotEmpty()); assertTrue(partial.size <= 16 * 1024)
+            var restored = 0
+            rejected { pair.channel.sendV2ForAgentBridge("ping", JsonObject.serializer(), buildJsonObject {}, neg) { restored++ } }
+            assertEquals(0, restored)
+        }
+    }
+    @Test fun guardedChunkRejectsOversizeBeforeOwnerOrSequence() {
+        WirePair().use { pair ->
+            val neg = negotiation(); var checks = 0
+            rejected { pair.channel.sendTransferChunkForAgentBridge("00000000-0000-4000-8000-000000000003", 1,
+                ByteArray(MAXIMUM_CHUNK_BYTES + 1), neg) { checks++ } }
+            assertEquals(0, checks)
+            pair.channel.sendV2ForAgentBridge("ping", JsonObject.serializer(), buildJsonObject {}, neg) { checks++ }
+            assertEquals(0L, pair.read().first)
+        }
+    }
     @Test fun unnegotiatedBridgeCannotProbeOrConsumeNativeIO() {
         WirePair().use { pair ->
             var checks = 0
             rejected { pair.channel.sendAgentBridge(message(), negotiation(listOf(2))) { checks++ } }
             rejected { pair.channel.receiveAllowingAgentBridge(negotiation(listOf(2))) { checks++ } }
+            rejected { pair.channel.sendV2ForAgentBridge("ping", JsonObject.serializer(), buildJsonObject {}, negotiation(listOf(2))) { checks++ } }
+            rejected { pair.channel.sendTransferChunkForAgentBridge("00000000-0000-4000-8000-000000000003", 1, byteArrayOf(1), negotiation(listOf(2))) { checks++ } }
             assertEquals(0, checks)
             pair.channel.sendV2("ping", JsonObject.serializer(), buildJsonObject {})
             assertEquals(0L, pair.read().first) // No bridge sequence consumed.
