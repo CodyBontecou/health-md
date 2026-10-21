@@ -374,6 +374,7 @@ internal class AgentBridgeNativePlanningSession(
             if (envelope.type != type) invalid()
             return V2Codec.decodePayload(envelope, serializer)
         }
+        var frontier = context.preserveTransferFrontier()
         val manifest = AgentBridgeCodec.decode(transfer.export.manifestCanonical) as? AgentBridgeArtifactManifest ?: invalid()
         channel.sendAgentBridge(AgentBridgeMessage("artifact_manifest", manifest), negotiation, validate)
         send("transfer_session", TransferSession.serializer(), transfer.session)
@@ -385,6 +386,7 @@ internal class AgentBridgeNativePlanningSession(
                 disposition.partitionIndex != partition.index || disposition.partitionSha256 != partition.sha256 ||
                 disposition.disposition == TransferDispositionKind.REJECTED) invalid()
             if (disposition.disposition == TransferDispositionKind.NEEDED) {
+                if (partition.index < frontier.committedPartitionCount) invalid()
                 // One reviewed bounded chunk per daily artifact; stop-and-wait respects every
                 // admitted original window and uses one receiver for the entire operation.
                 channel.sendTransferChunkForAgentBridge(partition.transferId, 1, file.content, negotiation, validate)
@@ -396,7 +398,9 @@ internal class AgentBridgeNativePlanningSession(
                 if (!ack.accepted || ack.sessionId != transfer.session.sessionId || ack.jobId != transfer.session.jobId ||
                     ack.partitionIndex != partition.index || ack.transferId != partition.transferId || ack.partitionSha256 != partition.sha256) invalid()
             }
+            frontier = context.recordAcknowledgedTransferPartition(partition.index)
         }
+        if (frontier.committedPartitionCount != transfer.partitions.size.toLong()) invalid()
         val finalize = TransferFinalize(transfer.session.sessionId, transfer.session.jobId, transfer.session.requestFingerprint,
             transfer.partitions.size.toLong(), transfer.export.totalByteCount.toLong(), transfer.partitions.lastOrNull()?.sha256)
         send("transfer_finalize", TransferFinalize.serializer(), finalize)
@@ -404,7 +408,7 @@ internal class AgentBridgeNativePlanningSession(
         if (!ack.accepted || ack.sessionId != finalize.sessionId || ack.jobId != finalize.jobId ||
             ack.totalPartitions != finalize.totalPartitions || ack.totalBytes != finalize.totalBytes ||
             ack.finalPartitionSha256 != finalize.finalPartitionSha256) invalid()
-        // Host commit receipts, durable source frontier and final source confirmation still own
+        // Host commit receipts and final source confirmation still own
         // completion. Never emit completion_confirmed or a complete execution receipt here.
         context.configurationForRead()
     }
@@ -564,6 +568,20 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
         try {
             val result = spool.preserveTransferPlan(transferNegotiationForRead())
             AgentBridgeNativeTransferCheckpoint.requireSupported(AgentBridgeNativeTransferCheckpoint.decode(result).negotiation(), peerTransferCapabilities)
+            configurationForRead(); return result
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
+    fun preserveTransferFrontier(): AgentBridgeTransferFrontier {
+        try {
+            configurationForRead()
+            val result = spool.preserveTransferFrontier()
+            configurationForRead(); return result
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
+    fun recordAcknowledgedTransferPartition(index: Long): AgentBridgeTransferFrontier {
+        try {
+            configurationForRead()
+            val result = spool.recordAcknowledgedTransferPartition(index)
             configurationForRead(); return result
         } catch (failure: Throwable) { invalidate(); throw failure }
     }

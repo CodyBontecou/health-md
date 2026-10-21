@@ -19,7 +19,7 @@ struct AgentBridgeSystemNativeCaptureProtection: AgentBridgeNativeCaptureProtect
 }
 
 /// Private captured values, engine identity and immutable generated artifacts. This is not a
-/// transfer sender/frontier or permission token. The accepted job, protected key and original fence own it.
+/// permission token. A signed transfer frontier records only verified base acknowledgements. The accepted job, protected key and original fence own it.
 @MainActor
 final class AgentBridgeNativeCaptureSpool {
     nonisolated private struct Record: Codable, Equatable {
@@ -46,6 +46,8 @@ final class AgentBridgeNativeCaptureSpool {
         var manifestByteCount: Int? = nil
         var transferSHA256: String? = nil
         var transferByteCount: Int? = nil
+        var committedPartitionCount: Int64? = nil
+        var frontierSHA256: String? = nil
     }
     nonisolated struct ArtifactCheckpoint: Sendable { let engine: Data; let payload: Data }
     private static let payloadLimit = 64 * 1024
@@ -366,6 +368,70 @@ final class AgentBridgeNativeCaptureSpool {
         try check(); return bytes
     }
 
+    /// Initialize only from the exact pinned manifest/session. Legacy v5 had no durable
+    /// acknowledged prefix; its explicit migration starts at zero and never remints metadata.
+    func preserveTransferFrontier() throws -> AgentBridgeTransferFrontier {
+        do {
+            try check(); try validateStoredProgress()
+            let (previous, state) = try progress()
+            if state.version == 6 { return try checkedTransferFrontier(state) }
+            guard state.version == 5 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            let frontier = try computedTransferFrontier(state, count: 0)
+            var next = state; next.version = 6
+            next.committedPartitionCount = 0; next.frontierSHA256 = frontier.sha256.rawValue
+            try publish("progress.json", record: record(kind: "progress", day: nil, payload: progressBytes(next)), replacing: previous)
+            let result = try checkedTransferFrontier(progress().1)
+            try check(); return result
+        } catch { throw Self.safe(error) }
+    }
+
+    /// Called only after the original owner validated a partition acknowledgement or an exact
+    /// alreadyCommitted disposition. Publication must finish before the next send/finalize.
+    func recordAcknowledgedTransferPartition(_ index: Int64) throws -> AgentBridgeTransferFrontier {
+        do {
+            try check(); try validateStoredProgress()
+            let (previous, state) = try progress()
+            let current = try checkedTransferFrontier(state)
+            guard index >= 0, index <= current.committedPartitionCount else { throw AgentBridgeValidationError.bindingChanged }
+            // Exact earlier dispositions are idempotent; they do not reset or rewrite the prefix.
+            if index < current.committedPartitionCount { try check(); return current }
+            let frontier = try computedTransferFrontier(state, count: index + 1)
+            var next = state; next.committedPartitionCount = frontier.committedPartitionCount
+            next.frontierSHA256 = frontier.sha256.rawValue
+            try publish("progress.json", record: record(kind: "progress", day: nil, payload: progressBytes(next)), replacing: previous)
+            let result = try checkedTransferFrontier(progress().1)
+            try check(); return result
+        } catch { throw Self.safe(error) }
+    }
+    private func checkedTransferFrontier(_ state: Progress) throws -> AgentBridgeTransferFrontier {
+        guard state.version == 6, let count = state.committedPartitionCount, let hash = state.frontierSHA256 else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        let result = try computedTransferFrontier(state, count: count)
+        guard result.sha256.rawValue == hash else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        try check(); return result
+    }
+    private func computedTransferFrontier(_ state: Progress, count: Int64) throws -> AgentBridgeTransferFrontier {
+        let checkpoint = try AgentBridgeNativeTransferCheckpoint.decode(readTransferPlan(state))
+        let bytes = try readManifest(state)
+        let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: bytes)
+        guard count >= 0, count <= Int64(manifest.artifacts.count) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        let ids = try checkpoint.validate(requestSHA256: acceptedRequestSHA256, manifestSHA256: AgentBridgeV4Codec.sha256(bytes),
+            createdAt: reservation.job.acceptedAt.rawValue, expiresAt: reservation.job.expiresAt.rawValue,
+            artifactIDs: manifest.artifacts.map { $0.artifactId.rawValue })
+        var frontier = try AgentBridgeTransferFrontier(jobID: manifest.jobId, requestSHA256: manifest.requestSha256,
+            manifestSHA256: AgentBridgeDigest(AgentBridgeV4Codec.sha256(bytes)), sessionID: AgentBridgeUUID(checkpoint.sessionID))
+        for index in 0..<Int(count) {
+            let artifact = manifest.artifacts[index]
+            guard artifact.byteCount > 0, artifact.byteCount <= Int64(DirectTransferLimits.chunkBytes) else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            frontier = try frontier.appending(.init(partitionIndex: Int64(index), transferID: AgentBridgeUUID(ids[index].uuidString.lowercased()),
+                artifactID: artifact.artifactId, artifactOffset: 0, byteCount: artifact.byteCount, chunkCount: 1, sha256: artifact.sha256))
+        }
+        try check(); return frontier
+    }
+
     var acceptedRequestSHA256: String { reservation.job.requestSHA256.rawValue }
 
     func close() {
@@ -407,6 +473,7 @@ final class AgentBridgeNativeCaptureSpool {
             expected.insert("transfer.json")
             _ = try readTransferPlan(state)
         }
+        if state.version == 6 { _ = try checkedTransferFrontier(state) }
         let names = Set(try Self.entries(directoryFD).filter { !Self.pendingName($0) })
         guard names == expected else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
     }
@@ -422,11 +489,13 @@ final class AgentBridgeNativeCaptureSpool {
         } else { state = try JSONDecoder().decode(Progress.self, from: value.payload) }
         let noManifest = state.manifestSHA256 == nil && state.manifestByteCount == nil
         let noTransfer = state.transferSHA256 == nil && state.transferByteCount == nil
+        let noFrontier = state.committedPartitionCount == nil && state.frontierSHA256 == nil
         guard value.kind == "progress", value.day == nil,
-              (state.version == 2 && state.publicArtifactIDs == nil && noManifest && noTransfer) ||
+              ((state.version == 2 && state.publicArtifactIDs == nil && noManifest && noTransfer) ||
               (state.version == 3 && state.publicArtifactIDs != nil && noManifest && noTransfer) ||
               (state.version == 4 && state.publicArtifactIDs != nil && state.manifestSHA256 != nil && state.manifestByteCount != nil && noTransfer) ||
-              (state.version == 5 && state.publicArtifactIDs != nil && state.manifestSHA256 != nil && state.manifestByteCount != nil && state.transferSHA256 != nil && state.transferByteCount != nil),
+              (state.version == 5 && state.publicArtifactIDs != nil && state.manifestSHA256 != nil && state.manifestByteCount != nil && state.transferSHA256 != nil && state.transferByteCount != nil)) && noFrontier ||
+              (state.version == 6 && state.publicArtifactIDs != nil && state.manifestSHA256 != nil && state.manifestByteCount != nil && state.transferSHA256 != nil && state.transferByteCount != nil && state.committedPartitionCount != nil && state.frontierSHA256 != nil),
               state.engine.count <= 4096, state.artifacts.isEmpty == state.engine.isEmpty,
               try progressBytes(state) == value.payload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         for days in [state.captures, state.artifacts] {
@@ -440,16 +509,22 @@ final class AgentBridgeNativeCaptureSpool {
                 throw AgentBridgeValidationError.spoolMissingRestartRequired
             }
         }
-        if state.version == 5 {
+        if state.version >= 5 {
             guard let hash = state.transferSHA256, hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil,
                   let count = state.transferByteCount, count > 0, count <= AgentBridgeNativeTransferCheckpoint.maximumBytes else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+        }
+        if state.version == 6 {
+            guard let count = state.committedPartitionCount, (0...4096).contains(count),
+                  let hash = state.frontierSHA256, hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil else {
                 throw AgentBridgeValidationError.spoolMissingRestartRequired
             }
         }
         return (value, state)
     }
     private static func publicIDs(_ state: Progress) throws -> [String: String] {
-        guard (3...5).contains(state.version), let data = state.publicArtifactIDs,
+        guard (3...6).contains(state.version), let data = state.publicArtifactIDs,
               !state.artifacts.isEmpty, state.artifacts.count <= 4096,
               state.captures == state.artifacts, data.count == state.artifacts.count * 16 else {
             throw AgentBridgeValidationError.spoolMissingRestartRequired

@@ -282,6 +282,55 @@ still be current. Current revoked trust/native grants/protection are rechecked; 
 not migrate it. Missing preserved spool returns `spool_missing_restart_required` with a fresh approved
 job required. Local timeouts/disconnects do not mean source cancellation.
 
+### Committed transfer frontier1
+
+After publishing the immutable v4 manifest, `frontier_sha256` identifies the exact contiguous
+committed partition prefix. Let `C` be the canonical JSON encoding defined above and `H` lowercase
+SHA-256 of those bytes. The empty post-manifest prefix is `F0 = H(C(seed))`:
+
+```json
+{"schema":"healthmd.agent_transfer_frontier_seed","schema_version":1,"job_id":"<original job UUID>","request_sha256":"<full original execute digest>","manifest_sha256":"<exact canonical v4 manifest digest>","session_id":"<original transfer session UUID>"}
+```
+
+For partition index `i`, require `i` to equal the current committed partition count and compute
+`F(i+1) = H(C(step))` with `previous_frontier_sha256 = Fi`:
+
+```json
+{"schema":"healthmd.agent_transfer_frontier_step","schema_version":1,"previous_frontier_sha256":"<Fi>","partition":{"partition_index":0,"transfer_id":"<original partition transfer UUID>","artifact_id":"<original public artifact UUID>","artifact_offset":0,"byte_count":3,"chunk_count":1,"sha256":"<exact partition bytes digest>"}}
+```
+
+These are hash preimages, **not new wire controls or authority documents**. All members are required;
+unknown members, duplicate keys, floats, booleans used as integers, invalid UTF-8, noncanonical
+UUIDs/digests and out-of-bounds integers reject. Existing UUID/digest rules apply. Partition index is
+0…2147483646; the resulting committed count is at most2147483647. Byte count is0…67108864, chunk count
+0…128, and artifact offset is nonnegative with offset+byte count at most1099511627776 (the existing
+v4 artifact bound). Zero-byte metadata remains representable; this hash shape does not relax the
+original producer/receiver's actual partition, frame or artifact validation.
+
+The neutral row maps exactly to Android base-v2 `index`, `transfer_id`, `artifact_id`, `artifact_offset`,
+`byte_count`, `chunk_count` and `sha256`; on Apple base-v1, artifact ID/offset come from the original
+`itemSegment.itemID`/`offset`. Apple requires the generated-file item segment and its exact original
+manifest membership/byte range/final-segment status. Both callers must verify immutable session and
+request binding, unique original transfer IDs, ordered artifact membership/coverage, actual bytes,
+base previous-partition digest chain and original negotiated limits. Related raw-day metadata without
+that generated-file artifact identity cannot be guessed into this row.
+
+Implementations expose an immutable computed prefix: start with the exact original binding and append
+only the next partition. Recovery recomputes from the immutable original manifest/checkpoint and
+compares the count/digest with the trusted signed journal. Incoming resume fields cannot install a
+prefix. Native source persistence advances only after validating the exact host acknowledgement and
+atomically committing the new contiguous prefix; the next partition/finalization cannot outrun that
+publication. Hash computation alone is never evidence of a durable output write or current permission.
+Host commit receipts and final source confirmation remain independently required for completion.
+
+Pre-capture `accepted` receipts retain their existing zero manifest/frontier digests; they are not `F0`.
+After a real manifest is published, even an empty prefix uses its bound seed. Frontier1 adds semantics
+to this deferred extension without changing deployed base messages, frames, envelope schemas or health
+export profiles. A future hash construction must not silently replace frontier1 for a retained job;
+it requires an independently reviewed/versioned protocol change. Historical conformance examples
+that test shape/exact trusted-journal comparison do not claim a frontier computed from transfer bytes.
+The separate [frontier vectors](fixtures/transfer-frontier-v1.json) freeze the actual computation.
+
 For generated daily-summary JSON (`apple-v8` and `android-frozen-v4`), each selected
 branch's `record_count` counts successfully captured daily summary observations for that selector.
 An absent observation contributes zero; an explicit numeric zero contributes one. Across days the

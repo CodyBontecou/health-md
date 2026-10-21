@@ -212,3 +212,7 @@ Require old-peer hello/query/export regression, exact new canonical/digest agree
 path, revision, cursor, quota/zero-read tests. Preserve all historical fixtures. Native/cross-platform
 physical and consumer tests remain explicitly not run in this foundation; see
 [conformance and integration instructions](../../agent-bridge/v1/conformance.md).
+
+## Committed transfer frontier
+
+The existing receipt/resume fields use [frontier1](../../agent-bridge/v1/contract.md#committed-transfer-frontier1): a canonical seed bound to the original job/execute/manifest/session and one ordered step per exact committed generated-file partition. This defines hash semantics only; no new discriminator, base message, frame or export schema is introduced. Pure prefix agreement is not native permission, host commit evidence or physical acceptance.

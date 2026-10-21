@@ -421,6 +421,82 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    @Test fun `native transfer frontier migrates v5 and recovers exact prefix without SDK or rewrite`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val transfer = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(transfer.export.requestSha256)
+            val path = directory.resolve("progress.json"); val old = Files.readAllBytes(path)
+            var prefix: AgentBridgeTransferFrontier? = null
+            planner.withRetainedCaptureContext(request) { context ->
+                context.begin(); assertThat(context.preserveTransferFrontier().committedPartitionCount).isEqualTo(0L)
+                prefix = context.recordAcknowledgedTransferPartition(0)
+                assertThat(prefix!!.committedPartitionCount).isEqualTo(1L)
+            }
+            val retained = Files.readAllBytes(path); assertThat(retained).isNotEqualTo(old)
+            coEvery { client.aggregate(any()) } throws IllegalStateException("No SDK on frontier recovery")
+            planner.withRetainedCaptureContext(request) { context ->
+                context.begin()
+                assertThat(context.preserveTransferFrontier().sha256).isEqualTo(prefix!!.sha256)
+                assertThat(context.recordAcknowledgedTransferPartition(0).sha256).isEqualTo(prefix!!.sha256)
+            }
+            assertThat(Files.readAllBytes(path)).isEqualTo(retained)
+            assertThat(Files.readAllBytes(directory.resolve("transfer.json"))).isEqualTo(transfer.checkpointCanonical)
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+    @Test fun `native transfer frontier rejects skipped index without advancing`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val transfer = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(transfer.export.requestSha256).resolve("progress.json")
+            var before = byteArrayOf()
+            try {
+                planner.withRetainedCaptureContext(request) { context ->
+                    context.begin(); context.preserveTransferFrontier(); before = Files.readAllBytes(path)
+                    context.recordAcknowledgedTransferPartition(1); throw AssertionError("Skipped ack cannot advance")
+                }
+            } catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED) }
+            assertThat(Files.readAllBytes(path)).isEqualTo(before)
+        }
+    }
+    @Test fun `native transfer frontier rejects signed inconsistent or partial progress without repair`() = runBlocking {
+        for (mode in listOf("digest", "count", "partial", "old-with-frontier")) withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val transfer = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(transfer.export.requestSha256).resolve("progress.json")
+            planner.withRetainedCaptureContext(request) { context -> context.begin(); context.preserveTransferFrontier() }
+            val signed = Json.parseToJsonElement(Files.readAllBytes(path).decodeToString()).jsonObject.toMutableMap()
+            val record = signed.getValue("record").jsonObject.toMutableMap()
+            val payload = Json.parseToJsonElement(String(java.util.Base64.getDecoder().decode(record.getValue("payload").jsonPrimitive.content))).jsonObject.toMutableMap()
+            when (mode) {
+                "digest" -> payload["frontierSHA256"] = JsonPrimitive("f".repeat(64))
+                "count" -> payload["committedPartitionCount"] = JsonPrimitive(3)
+                "partial" -> payload.remove("frontierSHA256")
+                "old-with-frontier" -> payload["version"] = JsonPrimitive(5)
+            }
+            record["payload"] = JsonPrimitive(java.util.Base64.getEncoder().encodeToString(AgentBridgeCodec.canonicalize(JsonObject(payload).toString().toByteArray())))
+            val body = AgentBridgeCodec.canonicalize(JsonObject(record).toString().toByteArray())
+            val signer = javax.crypto.Mac.getInstance("HmacSHA256"); signer.init(requireNotNull(f.keys.key))
+            signer.update("HealthMd.AgentBridge.AndroidCaptureSpool.v1\u0000".toByteArray())
+            signed["record"] = JsonObject(record)
+            signed["mac"] = JsonPrimitive(signer.doFinal(body).joinToString("") { "%02x".format(it) })
+            val damaged = AgentBridgeCodec.canonicalize(JsonObject(signed).toString().toByteArray())
+            Files.write(path, damaged, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING)
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("No render") }, pinLoader = { error("No core") })
+            try { planner.prepareRetainedTransferExport(request, manager, forbidden); throw AssertionError("Invalid signed prefix cannot repair") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+            assertThat(Files.readAllBytes(path)).isEqualTo(damaged)
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
     @Test fun `native transfer sender carries original bytes without completion claim`() = runBlocking { checkNativeTransferSender("needed") }
     @Test fun `native transfer sender rejects competing readers without abandoning owner`() = runBlocking { checkNativeTransferSender("contended") }
     @Test fun `native transfer sender skips already committed bytes`() = runBlocking { checkNativeTransferSender("already") }
@@ -429,12 +505,19 @@ class AgentBridgeNativeConfigurationReaderTest {
     }
     @Test fun `native transfer sender checks owner after receive before further writes`() = runBlocking { checkNativeTransferSender("revoke") }
 
+    @Test fun `native transfer sender resumes exact prefix without replaying bytes`() = runBlocking { checkNativeTransferSender("resume") }
+    @Test fun `native transfer sender rejects host rewind of recorded prefix`() = runBlocking { checkNativeTransferSender("rewind") }
+    @Test fun `native transfer sender publication failure prevents next partition and finalize`() = runBlocking { checkNativeTransferSender("publication") }
+
     private suspend fun checkNativeTransferSender(mode: String) {
         withNativeExportPreparation { f, planner, request, client, manager ->
             val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
             coEvery { client.aggregate(any()) } returns values
             val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
             val original = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            if (mode == "resume" || mode == "rewind") planner.withRetainedCaptureContext(request) { context ->
+                context.begin(); context.preserveTransferFrontier(); context.recordAcknowledgedTransferPartition(0)
+            }
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
             val channel = mockk<DirectSecureChannel>(relaxed = true)
             val agent = mutableListOf<AgentBridgeMessage>(); val base = mutableListOf<ReceivedEnvelope>()
@@ -444,10 +527,11 @@ class AgentBridgeNativeConfigurationReaderTest {
                 responses.add(ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode(type, serializer, payload))))
             }
             original.partitions.forEach { partition ->
+                val already = mode == "already" || (mode == "resume" && partition.index == 0L)
                 response("transfer_disposition", TransferDisposition.serializer(), TransferDisposition(original.session.sessionId,
                     if (mode == "bad-disposition") java.util.UUID.randomUUID().toString() else original.session.jobId,
-                    partition.index, partition.sha256, if (mode == "already") TransferDispositionKind.ALREADY_COMMITTED else TransferDispositionKind.NEEDED))
-                if (mode != "already") {
+                    partition.index, partition.sha256, if (already) TransferDispositionKind.ALREADY_COMMITTED else TransferDispositionKind.NEEDED))
+                if (!already) {
                     response("transfer_chunk_acknowledgement", TransferChunkAcknowledgement.serializer(), TransferChunkAcknowledgement(
                         partition.transferId, if (mode == "bad-chunk") 2 else 1, true, partition.sha256))
                     response("transfer_partition_acknowledgement", TransferPartitionAcknowledgement.serializer(), TransferPartitionAcknowledgement(
@@ -483,10 +567,20 @@ class AgentBridgeNativeConfigurationReaderTest {
             val reconnect = ownedPlanner(f, lifecycle, channel)
             val job = f.store.access { it!!.state.acceptedJobs!!.single() }
             val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256)
-            val progress = Files.readAllBytes(directory.resolve("progress.json"))
             coEvery { client.aggregate(any()) } throws IllegalStateException("No SDK on immutable carriage")
             val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("No render") }, pinLoader = { error("No core load") })
-            val fails = mode.startsWith("bad-") || mode == "revoke"
+            var publicationInterrupted = false
+            if (mode == "publication") f.peerContext.onCheck = {
+                val count = runCatching {
+                    val signed = Json.parseToJsonElement(Files.readAllBytes(directory.resolve("progress.json")).decodeToString()).jsonObject
+                    val payload = java.util.Base64.getDecoder().decode(signed.getValue("record").jsonObject.getValue("payload").jsonPrimitive.content)
+                    Json.parseToJsonElement(payload.decodeToString()).jsonObject["committedPartitionCount"]?.jsonPrimitive?.long
+                }.getOrNull()
+                if (!publicationInterrupted && count == 1L) {
+                    publicationInterrupted = true; throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                }
+            }
+            val fails = mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication")
             try {
                 if (mode == "contended") {
                     reconnect.transmitTransfer(request, true) { context ->
@@ -509,6 +603,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 catch (_: AgentBridgeException) { assertThat(base.size + chunks.size + agent.size).isEqualTo(count) }
                 verify(atLeast = 1) { channel.close() }
             }
+            f.peerContext.onCheck = null
             assertThat(agent.map { it.type }).containsExactly("artifact_manifest")
             assertThat(AgentBridgeCodec.encode(agent.single().payload)).isEqualTo(original.export.manifestCanonical)
             assertThat(V2Codec.decodePayload(base.first(), TransferSession.serializer())).isEqualTo(original.session)
@@ -516,12 +611,29 @@ class AgentBridgeNativeConfigurationReaderTest {
             assertThat(files).containsExactlyElementsIn(original.export.baseFiles.map { it.manifest }).inOrder()
             assertThat(base.none { it.type == "completion_confirmed" }).isTrue()
             if (!fails) {
-                assertThat(chunks.size).isEqualTo(if (mode == "already") 0 else original.partitions.size)
-                chunks.zip(original.export.baseFiles).forEach { (chunk, file) -> assertThat(chunk.second).isEqualTo(file.content) }
+                assertThat(chunks.size).isEqualTo(if (mode == "already") 0 else original.partitions.size - if (mode == "resume") 1 else 0)
+                chunks.zip(original.export.baseFiles.drop(if (mode == "resume") 1 else 0)).forEach { (chunk, file) -> assertThat(chunk.second).isEqualTo(file.content) }
                 assertThat(responses).isEmpty()
             }
             if (mode == "revoke") assertThat(base.size).isEqualTo(2 + original.export.baseFiles.size)
-            assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(progress)
+            if (mode == "rewind") assertThat(chunks).isEmpty()
+            if (mode == "publication") {
+                assertThat(publicationInterrupted).isTrue(); assertThat(chunks).hasSize(1)
+                assertThat(base.filter { it.type == "transfer_open" }).hasSize(1)
+                assertThat(base.none { it.type == "transfer_finalize" }).isTrue()
+            }
+            val record = Json.parseToJsonElement(Files.readAllBytes(directory.resolve("progress.json")).decodeToString()).jsonObject.getValue("record").jsonObject
+            val progress = Json.parseToJsonElement(String(java.util.Base64.getDecoder().decode(record.getValue("payload").jsonPrimitive.content))).jsonObject
+            val count = if (!fails || mode == "bad-final") original.partitions.size else if (mode in listOf("rewind", "publication")) 1 else 0
+            var expected = AgentBridgeTransferFrontier.start(request.jobId, original.export.requestSha256,
+                AgentBridgeCodec.sha256(original.export.manifestCanonical), original.session.sessionId)
+            original.partitions.take(count).forEachIndexed { index, partition ->
+                expected = expected.appending(AgentBridgeTransferFrontierPartition(index.toLong(), partition.transferId,
+                    original.export.baseFiles[index].manifest.artifactId, 0, partition.byteCount, partition.chunkCount, partition.sha256))
+            }
+            assertThat(progress.getValue("version").jsonPrimitive.int).isEqualTo(6)
+            assertThat(progress.getValue("committedPartitionCount").jsonPrimitive.long).isEqualTo(count.toLong())
+            assertThat(progress.getValue("frontierSHA256").jsonPrimitive.content).isEqualTo(expected.sha256)
             assertThat(Files.readAllBytes(directory.resolve("transfer.json"))).isEqualTo(original.checkpointCanonical)
             coVerify(exactly = 2) { client.aggregate(any()) }
         }

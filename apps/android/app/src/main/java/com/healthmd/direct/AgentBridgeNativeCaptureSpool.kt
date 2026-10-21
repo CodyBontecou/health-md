@@ -38,7 +38,8 @@ internal class AgentBridgeNativeCaptureSpool(
     @Serializable private data class Progress(val version: Int = 2, val captures: List<String>,
         val artifacts: List<String> = emptyList(), val engine: String = "", val publicArtifactIDs: String? = null,
         val manifestSHA256: String? = null, val manifestByteCount: Int? = null,
-        val transferSHA256: String? = null, val transferByteCount: Int? = null)
+        val transferSHA256: String? = null, val transferByteCount: Int? = null,
+        val committedPartitionCount: Long? = null, val frontierSHA256: String? = null)
     // Preserve existing v2 bytes. Version3 adds exactly16 UUID bytes per sorted artifact day.
     @Serializable private data class LegacyProgress(val version: Int, val captures: List<String>,
         val artifacts: List<String>, val engine: String)
@@ -47,6 +48,9 @@ internal class AgentBridgeNativeCaptureSpool(
     @Serializable private data class LegacyProgress4(val version: Int, val captures: List<String>,
         val artifacts: List<String>, val engine: String, val publicArtifactIDs: String,
         val manifestSHA256: String, val manifestByteCount: Int)
+    @Serializable private data class LegacyProgress5(val version: Int, val captures: List<String>,
+        val artifacts: List<String>, val engine: String, val publicArtifactIDs: String?,
+        val manifestSHA256: String?, val manifestByteCount: Int?, val transferSHA256: String?, val transferByteCount: Int?)
     class ArtifactCheckpoint(val engine: ByteArray, val payload: ByteArray)
 
     private val json = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
@@ -304,6 +308,56 @@ internal class AgentBridgeNativeCaptureSpool(
         } catch (_: Exception) { fail() }
         guard(); return bytes
     }
+    /** Explicit v5 migration: seed from original pinned metadata; never remint or infer acks. */
+    @Synchronized fun preserveTransferFrontier(): AgentBridgeTransferFrontier = safeCall {
+        guard(); validateStoredProgress()
+        val (previous, state) = progress()
+        if (state.version == 6) checkedTransferFrontier(state) else {
+            if (state.version != 5) fail()
+            val frontier = computedTransferFrontier(state, 0)
+            val next = state.copy(version = 6, committedPartitionCount = 0, frontierSHA256 = frontier.sha256)
+            publish("progress.json", record("progress", null, progressPayload(next)), previous)
+            val result = checkedTransferFrontier(progress().second)
+            guard(); result
+        }
+    }
+    /** Original owner must first validate the matching ack/disposition. Durable publication
+     * precedes the next open/finalize; earlier exact dispositions never rewind the prefix. */
+    @Synchronized fun recordAcknowledgedTransferPartition(index: Long): AgentBridgeTransferFrontier = safeCall {
+        guard(); validateStoredProgress()
+        val (previous, state) = progress()
+        val current = checkedTransferFrontier(state)
+        if (index < 0 || index > current.committedPartitionCount) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        if (index < current.committedPartitionCount) { guard(); current } else {
+            val frontier = computedTransferFrontier(state, index + 1)
+            val next = state.copy(committedPartitionCount = frontier.committedPartitionCount, frontierSHA256 = frontier.sha256)
+            publish("progress.json", record("progress", null, progressPayload(next)), previous)
+            val result = checkedTransferFrontier(progress().second)
+            guard(); result
+        }
+    }
+    private fun checkedTransferFrontier(state: Progress): AgentBridgeTransferFrontier {
+        if (state.version != 6) fail()
+        val result = computedTransferFrontier(state, state.committedPartitionCount ?: fail())
+        if (result.sha256 != state.frontierSHA256) fail()
+        guard(); return result
+    }
+    private fun computedTransferFrontier(state: Progress, count: Long): AgentBridgeTransferFrontier {
+        val checkpoint = AgentBridgeNativeTransferCheckpoint.decode(readTransferPlan(state))
+        val bytes = readManifest(state)
+        val manifest = AgentBridgeCodec.decode(bytes) as? AgentBridgeArtifactManifest ?: fail()
+        if (count < 0 || count > manifest.artifacts.size) fail()
+        val ids = checkpoint.validate(acceptedRequestSha256, AgentBridgeCodec.sha256(bytes), reservation.job.acceptedAt,
+            reservation.job.expiresAt, manifest.artifacts.map { it.artifactId })
+        var frontier = AgentBridgeTransferFrontier.start(manifest.jobId, manifest.requestSha256, AgentBridgeCodec.sha256(bytes), checkpoint.sessionID)
+        for (index in 0 until count.toInt()) {
+            val artifact = manifest.artifacts[index]
+            if (artifact.byteCount !in 1..MAXIMUM_CHUNK_BYTES.toLong()) fail()
+            frontier = frontier.appending(AgentBridgeTransferFrontierPartition(index.toLong(), ids[index], artifact.artifactId,
+                0, artifact.byteCount, 1, artifact.sha256))
+        }
+        guard(); return frontier
+    }
     @Synchronized override fun close() {
         if (closed) return
         closed = true
@@ -338,6 +392,7 @@ internal class AgentBridgeNativeCaptureSpool(
             expected += "transfer.json"
             readTransferPlan(state)
         }
+        if (state.version == 6) checkedTransferFrontier(state)
         val names = Files.newDirectoryStream(directory).use { stream ->
             stream.map { it.fileName.toString() }.filter { !PENDING_NAME.matches(it) }.toSet()
         }
@@ -350,6 +405,8 @@ internal class AgentBridgeNativeCaptureSpool(
                 state.artifacts, state.engine, state.publicArtifactIDs)).toByteArray())
             else if (state.version == 4) AgentBridgeCodec.canonicalize(json.encodeToString(LegacyProgress4(state.version, state.captures,
                 state.artifacts, state.engine, state.publicArtifactIDs, state.manifestSHA256 ?: fail(), state.manifestByteCount ?: fail())).toByteArray())
+            else if (state.version == 5) AgentBridgeCodec.canonicalize(json.encodeToString(LegacyProgress5(state.version, state.captures,
+                state.artifacts, state.engine, state.publicArtifactIDs, state.manifestSHA256, state.manifestByteCount, state.transferSHA256, state.transferByteCount)).toByteArray())
             else AgentBridgeCodec.canonicalize(json.encodeToString(state).toByteArray())
         return Base64.getEncoder().encodeToString(bytes)
     }
@@ -360,11 +417,13 @@ internal class AgentBridgeNativeCaptureSpool(
             else json.decodeFromString<Progress>(bytes.decodeToString())
         val noManifest = state.manifestSHA256 == null && state.manifestByteCount == null
         val noTransfer = state.transferSHA256 == null && state.transferByteCount == null
+        val noFrontier = state.committedPartitionCount == null && state.frontierSHA256 == null
         if (value.kind != "progress" || value.day != null ||
-            !((state.version == 2 && state.publicArtifactIDs == null && noManifest && noTransfer) ||
+            !(((state.version == 2 && state.publicArtifactIDs == null && noManifest && noTransfer) ||
                 (state.version == 3 && state.publicArtifactIDs != null && noManifest && noTransfer) ||
                 (state.version == 4 && state.publicArtifactIDs != null && state.manifestSHA256 != null && state.manifestByteCount != null && noTransfer) ||
-                (state.version == 5 && state.publicArtifactIDs != null && state.manifestSHA256 != null && state.manifestByteCount != null && state.transferSHA256 != null && state.transferByteCount != null)) ||
+                (state.version == 5 && state.publicArtifactIDs != null && state.manifestSHA256 != null && state.manifestByteCount != null && state.transferSHA256 != null && state.transferByteCount != null)) && noFrontier ||
+                (state.version == 6 && state.publicArtifactIDs != null && state.manifestSHA256 != null && state.manifestByteCount != null && state.transferSHA256 != null && state.transferByteCount != null && state.committedPartitionCount != null && state.frontierSHA256 != null)) ||
             state.engine.length > 5500 || state.artifacts.isEmpty() != state.engine.isEmpty() || progressPayload(state) != value.payload) fail()
         listOf(state.captures, state.artifacts).forEach { days ->
             if (days.size > 4096 || days.distinct().size != days.size || days != days.sorted()) fail()
@@ -373,12 +432,14 @@ internal class AgentBridgeNativeCaptureSpool(
         if (state.version >= 3) publicIDs(state)
         if (state.version >= 4 && (state.manifestSHA256?.matches(Regex("[0-9a-f]{64}")) != true ||
             (state.manifestByteCount ?: -1) !in 1..MANIFEST_LIMIT)) fail()
-        if (state.version == 5 && (state.transferSHA256?.matches(Regex("[0-9a-f]{64}")) != true ||
+        if (state.version >= 5 && (state.transferSHA256?.matches(Regex("[0-9a-f]{64}")) != true ||
             (state.transferByteCount ?: -1) !in 1..AgentBridgeNativeTransferCheckpoint.MAXIMUM_BYTES)) fail()
+        if (state.version == 6 && ((state.committedPartitionCount ?: -1) !in 0..4096L ||
+            state.frontierSHA256?.matches(Regex("[0-9a-f]{64}")) != true)) fail()
         return value to state
     }
     private fun publicIDs(state: Progress): Map<String, String> {
-        if (state.version !in 3..5 || state.publicArtifactIDs == null || state.artifacts.isEmpty() ||
+        if (state.version !in 3..6 || state.publicArtifactIDs == null || state.artifacts.isEmpty() ||
             state.artifacts.size > 4096 || state.captures != state.artifacts) fail()
         val bytes = Base64.getDecoder().decode(state.publicArtifactIDs)
         if (bytes.size != state.artifacts.size * 16 || Base64.getEncoder().encodeToString(bytes) != state.publicArtifactIDs) fail()

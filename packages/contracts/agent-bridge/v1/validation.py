@@ -10,6 +10,7 @@ import hmac
 import json
 import math
 import re
+import runpy
 import struct
 from fractions import Fraction
 import unicodedata
@@ -1017,6 +1018,11 @@ def validate_case(case, root, schema_validator):
     elif schema == "healthmd.source_data_projection": projection_checks(value, context.get("projection_request"), context.get("catalog"))
 
 def validate_asset(root, path, schema_validator, fail):
+    if path.name == "transfer-frontier-v1.json":
+        reference = runpy.run_path(str(HERE / "transfer_frontier.py"))
+        try: reference["validate_fixture"](path)
+        except reference["Invalid"]: fail("agent bridge: invalid transfer frontier vectors")
+        return
     if path.name == "conformance.json":
         return validate_fixture(root, path, schema_validator, fail)
     value = json.loads(path.read_text(encoding="utf-8"))

@@ -361,6 +361,7 @@ final class AgentBridgeNativePlanningSession {
             }
             return message
         }
+        var frontier = try context.preserveTransferFrontier()
         let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: transfer.export.manifestCanonical)
         try await channel.sendAgentBridge(AgentBridgeEnvelope(payload: .manifest(manifest)), negotiation: negotiation, authorize: validate)
         try await send(.transferSession(transfer.session))
@@ -372,6 +373,7 @@ final class AgentBridgeNativePlanningSession {
                   disposition.partitionIndex == partition.index, disposition.partitionSHA256 == partition.sha256,
                   disposition.disposition != .rejected else { throw AgentBridgeValidationError.bindingChanged }
             if disposition.disposition == .needed {
+                guard Int64(partition.index) >= frontier.committedPartitionCount else { throw AgentBridgeValidationError.bindingChanged }
                 // Reviewed daily JSON is one bounded frame per partition. Stop-and-wait is
                 // within every admitted original in-flight window; no extra reader runs.
                 let chunk = try DirectTransferChunk(transferID: partition.transferID, sequence: 1,
@@ -389,7 +391,9 @@ final class AgentBridgeNativePlanningSession {
                       ack.partitionIndex == partition.index, ack.transferID == partition.transferID,
                       ack.partitionSHA256 == partition.sha256 else { throw AgentBridgeValidationError.bindingChanged }
             }
+            frontier = try context.recordAcknowledgedTransferPartition(Int64(partition.index))
         }
+        guard frontier.committedPartitionCount == Int64(transfer.partitions.count) else { throw AgentBridgeValidationError.bindingChanged }
         let finalize = try DirectTransferFinalize(sessionID: transfer.session.sessionID, jobID: transfer.session.jobID,
             requestFingerprint: transfer.session.requestFingerprint, totalPartitions: transfer.partitions.count,
             totalBytes: Int64(transfer.export.totalByteCount), finalPartitionSHA256: transfer.partitions.last?.sha256)
@@ -548,6 +552,20 @@ final class AgentBridgeNativeCaptureContext {
             let negotiation = try transferNegotiationForRead()
             let result = try spool.preserveTransferPlan(negotiation)
             try AgentBridgeNativeTransferCheckpoint.requireSupported(AgentBridgeNativeTransferCheckpoint.decode(result).negotiation, peer: peerTransferCapabilities)
+            _ = try configurationForRead(); return result
+        } catch { invalidate(); throw error }
+    }
+    func preserveTransferFrontier() throws -> AgentBridgeTransferFrontier {
+        do {
+            _ = try configurationForRead()
+            let result = try spool.preserveTransferFrontier()
+            _ = try configurationForRead(); return result
+        } catch { invalidate(); throw error }
+    }
+    func recordAcknowledgedTransferPartition(_ index: Int64) throws -> AgentBridgeTransferFrontier {
+        do {
+            _ = try configurationForRead()
+            let result = try spool.recordAcknowledgedTransferPartition(index)
             _ = try configurationForRead(); return result
         } catch { invalidate(); throw error }
     }

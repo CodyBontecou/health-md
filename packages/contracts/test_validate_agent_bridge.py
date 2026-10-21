@@ -39,12 +39,26 @@ class AgentBridgeTests(unittest.TestCase):
         mirrors = ROOT / "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures"
         sources = {
             "agent-bridge-v1-conformance.json": HERE / "agent-bridge/v1/fixtures/conformance.json",
+            "agent-transfer-frontier-v1.json": HERE / "agent-bridge/v1/fixtures/transfer-frontier-v1.json",
             "agent-bridge-projection-catalog-v1.json": HERE / "agent-bridge/v1/reviewed-projection-catalog.json",
             "agent-bridge-metric-registry-v1.json": ROOT / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
         }
         for filename, source in sources.items():
             with self.subTest(mirror=filename):
                 self.assertEqual((mirrors / filename).read_bytes(), source.read_bytes())
+
+    def test_transfer_frontier_vectors_are_reproducible_and_strict(self):
+        reference = runpy.run_path(str(HERE / "agent-bridge/v1/transfer_frontier.py"))
+        path = HERE / "agent-bridge/v1/fixtures/transfer-frontier-v1.json"
+        reference["validate_fixture"](path)
+        build = runpy.run_path(str(HERE / "agent-bridge/v1/build_transfer_frontier_fixtures.py"))
+        bundle = json.loads(path.read_text())
+        self.assertEqual(build["build"](), bundle)
+        positive = [c for c in bundle["cases"] if c["expected"] == "valid"]
+        self.assertEqual(len({c["prefix_sha256"][-1] for c in positive}), len(positive))
+        for count in [-1, 2_147_483_647, 2**63 - 1]:
+            with self.assertRaisesRegex(reference["Invalid"], "invalid_request"):
+                reference["step_document"]("1" * 64, count, positive[1]["partitions"][0])
 
     def test_every_fixed_operation_has_request_response_and_negative(self):
         operations = {"metric_catalog", "metric_series", "sleep_session_listing", "workout_listing", "coverage", "period_comparison", "workout_sleep_alignment", "source_record_listing", "derive_packet"}

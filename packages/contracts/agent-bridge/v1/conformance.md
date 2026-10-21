@@ -113,3 +113,7 @@ Coordinator's baseline `make check-core-registry` reports pre-existing importer 
 it never edits metric registry or frozen setup/semantic fixtures. Coordinator must centrally regenerate
 health-free capability indices after serial integration, review that no metric/profile data changed,
 and rerun all registry/consumer gates. A local contract validation pass is not that regeneration gate.
+
+## Frontier1 computation
+
+`fixtures/transfer-frontier-v1.json` is a separate Python-reference bundle consumed independently by Swift, Kotlin and Rust. It covers seed/partition binding changes, empty and two-step prefixes, segmented artifact identity/offsets, numeric bounds, repeated/skipped order and raw float/duplicate/UTF-8 denials. Rust's test packaging mirror is byte-pinned in the manifest. These controls qualify pure computation only; signed native prefix publication/recovery, host output commit receipts, installed resume and physical execution remain distinct required evidence. Existing shape/journal-comparison candidates are not relabeled actual transfer frontiers.

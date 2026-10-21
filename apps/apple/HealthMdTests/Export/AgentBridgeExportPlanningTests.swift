@@ -620,6 +620,86 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         if let failure { throw failure }
     }
 
+    func testNativeTransferFrontierMigratesV5AndRecoversExactPrefixWithoutSDKOrRewrite() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let transfer = try await planner.prepareTransferExport(request, manager: manager)
+            let directory = rig.directory.appendingPathComponent("captures/" + transfer.export.requestSHA256)
+            let progressURL = directory.appendingPathComponent("progress.json")
+            let old = try Data(contentsOf: progressURL)
+            var prefix: AgentBridgeTransferFrontier?
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin()
+                let seed = try context.preserveTransferFrontier()
+                XCTAssertEqual(seed.committedPartitionCount, 0)
+                prefix = try context.recordAcknowledgedTransferPartition(0)
+                XCTAssertEqual(prefix?.committedPartitionCount, 1)
+            }
+            let retained = try Data(contentsOf: progressURL)
+            XCTAssertNotEqual(retained, old)
+            store.querySumResult = { _, _ in XCTFail("No SDK for frontier recovery"); return nil }
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin()
+                XCTAssertEqual(try context.preserveTransferFrontier(), prefix)
+                XCTAssertEqual(try context.recordAcknowledgedTransferPartition(0), prefix)
+            }
+            XCTAssertEqual(try Data(contentsOf: progressURL), retained)
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("transfer.json")), transfer.checkpointCanonical)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+    func testNativeTransferFrontierRejectsSkippedIndexWithoutAdvancing() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let transfer = try await planner.prepareTransferExport(request, manager: manager)
+            let path = rig.directory.appendingPathComponent("captures/" + transfer.export.requestSHA256 + "/progress.json")
+            var before = Data()
+            do {
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin(); _ = try context.preserveTransferFrontier()
+                    before = try Data(contentsOf: path)
+                    _ = try context.recordAcknowledgedTransferPartition(1)
+                    XCTFail("Skipped acknowledgement cannot advance")
+                }
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+            XCTAssertEqual(try Data(contentsOf: path), before)
+        }
+    }
+    func testNativeTransferFrontierRejectsSignedInconsistentOrPartialProgressWithoutRepair() async throws {
+        for mode in ["digest", "count", "partial", "old-with-frontier"] {
+            try await withNativeExportPreparation { rig, planner, request, store, manager in
+                store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+                let transfer = try await planner.prepareTransferExport(request, manager: manager)
+                let path = rig.directory.appendingPathComponent("captures/" + transfer.export.requestSHA256 + "/progress.json")
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin(); _ = try context.preserveTransferFrontier()
+                }
+                var signed = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: path)) as? [String: Any])
+                var record = try XCTUnwrap(signed["record"] as? [String: Any])
+                let bytes = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(record["payload"] as? String)))
+                var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+                if mode == "digest" { payload["frontierSHA256"] = String(repeating: "f", count: 64) }
+                if mode == "count" { payload["committedPartitionCount"] = 3 }
+                if mode == "partial" { payload.removeValue(forKey: "frontierSHA256") }
+                if mode == "old-with-frontier" { payload["version"] = 5 }
+                record["payload"] = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: payload)).base64EncodedString()
+                let body = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: record))
+                signed["record"] = record
+                signed["mac"] = Data(HMAC<SHA256>.authenticationCode(for: Data("HealthMd.AgentBridge.NativeCaptureSpool.v1\0".utf8) + body,
+                    using: try XCTUnwrap(rig.keys.key))).base64EncodedString()
+                let damaged = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: signed))
+                let handle = try FileHandle(forWritingTo: path); try handle.truncate(atOffset: 0)
+                try handle.write(contentsOf: damaged); try handle.synchronize(); try handle.close()
+                do {
+                    _ = try await planner.prepareRetainedTransferExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+                    XCTFail("Signed inconsistent prefix cannot reset or repair")
+                } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+                XCTAssertEqual(try Data(contentsOf: path), damaged)
+                XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+            }
+        }
+    }
+
     func testNativeTransferSenderCarriesOriginalBytesWithoutCompletionClaim() async throws {
         try await checkNativeTransferSender("needed")
     }
@@ -629,23 +709,35 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     func testNativeTransferSenderSkipsAlreadyCommittedBytes() async throws {
         try await checkNativeTransferSender("already")
     }
-    func testNativeTransferSenderRejectsWrongAcknowledgementsAndAbandonsOwner() async throws {
-        for mode in ["bad-disposition", "bad-chunk", "bad-partition", "bad-final"] { try await checkNativeTransferSender(mode) }
-    }
+    func testNativeTransferSenderRejectsWrongDispositionAndAbandonsOwner() async throws { try await checkNativeTransferSender("bad-disposition") }
+    func testNativeTransferSenderRejectsWrongChunkAcknowledgementAndAbandonsOwner() async throws { try await checkNativeTransferSender("bad-chunk") }
+    func testNativeTransferSenderRejectsWrongPartitionAcknowledgementAndAbandonsOwner() async throws { try await checkNativeTransferSender("bad-partition") }
+    func testNativeTransferSenderRejectsWrongFinalAcknowledgementAndAbandonsOwner() async throws { try await checkNativeTransferSender("bad-final") }
     func testNativeTransferSenderRechecksOwnerAfterReceiveBeforeAnyFurtherWrite() async throws {
         try await checkNativeTransferSender("revoke")
     }
+    func testNativeTransferSenderResumesExactPrefixWithoutReplayingBytes() async throws { try await checkNativeTransferSender("resume") }
+    func testNativeTransferSenderRejectsHostRewindOfRecordedPrefix() async throws { try await checkNativeTransferSender("rewind") }
+    func testNativeTransferSenderPublicationFailurePreventsNextPartitionAndFinalize() async throws { try await checkNativeTransferSender("publication") }
+
     private func checkNativeTransferSender(_ mode: String) async throws {
         try await withNativeExportPreparation { rig, planner, request, store, manager in
             store.querySumResult = { _, _ in 123 }
             let original = try await planner.prepareTransferExport(request, manager: manager)
+            if mode == "resume" || mode == "rewind" {
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin(); _ = try context.preserveTransferFrontier()
+                    _ = try context.recordAcknowledgedTransferPartition(0)
+                }
+            }
             let key = SymmetricKey(data: Data(repeating: 19, count: 32))
             var responses: [DirectMessage] = []
             for partition in original.partitions {
+                let already = mode == "already" || (mode == "resume" && partition.index == 0)
                 responses.append(.transferDisposition(try .init(sessionID: original.session.sessionID,
                     jobID: mode == "bad-disposition" ? UUID() : original.session.jobID, partitionIndex: partition.index,
-                    partitionSHA256: partition.sha256, disposition: mode == "already" ? .alreadyCommitted : .needed)))
-                if mode != "already" {
+                    partitionSHA256: partition.sha256, disposition: already ? .alreadyCommitted : .needed)))
+                if !already {
                     responses.append(.transferChunkAcknowledgement(try .init(transferID: partition.transferID,
                         sequence: mode == "bad-chunk" ? 2 : 1, accepted: true, sha256: partition.sha256)))
                     responses.append(.transferPartitionAcknowledgement(try .init(sessionID: original.session.sessionID,
@@ -669,9 +761,20 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             let reconnect = try nativePlanningSession(rig, lifecycle, profiles: profiles, responseChannel: channel)
             let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
             let directory = rig.directory.appendingPathComponent("captures/" + job.requestSHA256.rawValue)
-            let progress = try Data(contentsOf: directory.appendingPathComponent("progress.json"))
             store.querySumResult = { _, _ in XCTFail("No SDK on immutable carriage"); return nil }
-            let fails = mode.hasPrefix("bad-") || mode == "revoke"
+            var publicationInterrupted = false
+            if mode == "publication" {
+                rig.captureProtection.onRequire = { _ in
+                    guard !publicationInterrupted, let bytes = try? Data(contentsOf: directory.appendingPathComponent("progress.json")),
+                          let signed = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+                          let record = signed["record"] as? [String: Any], let encoded = record["payload"] as? String,
+                          let payload = Data(base64Encoded: encoded), let progress = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+                          progress["committedPartitionCount"] as? Int == 1 else { return }
+                    publicationInterrupted = true; throw AgentBridgeValidationError.bindingChanged
+                }
+            }
+            defer { rig.captureProtection.onRequire = nil }
+            let fails = mode.hasPrefix("bad-") || ["revoke", "rewind", "publication"].contains(mode)
             do {
                 if mode == "contended" {
                     try await reconnect.transmitTransfer(request, retained: true) { context in
@@ -713,12 +816,34 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTAssertEqual(Array(messages.dropFirst().prefix(original.export.baseFiles.count)), original.export.baseFiles.map { .fileManifest($0.manifest) })
             XCTAssertFalse(messages.contains { if case .completionConfirmed = $0 { return true }; return false })
             if !fails {
-                XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count)
-                for (chunk, file) in zip(chunks, original.export.baseFiles) { XCTAssertEqual(chunk.sequence, 1); XCTAssertEqual(chunk.data, file.content); XCTAssertEqual(chunk.sha256, file.manifest.sha256) }
+                XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count - (mode == "resume" ? 1 : 0))
+                for (chunk, file) in zip(chunks, original.export.baseFiles.dropFirst(mode == "resume" ? 1 : 0)) { XCTAssertEqual(chunk.sequence, 1); XCTAssertEqual(chunk.data, file.content); XCTAssertEqual(chunk.sha256, file.manifest.sha256) }
                 XCTAssertEqual(wire.receiveCount, responses.count)
             }
             if mode == "revoke" { XCTAssertEqual(messages.count, 2 + original.export.baseFiles.count) }
-            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), progress)
+            if mode == "rewind" { XCTAssertTrue(chunks.isEmpty) }
+            if mode == "publication" {
+                XCTAssertTrue(publicationInterrupted)
+                XCTAssertEqual(chunks.count, 1)
+                XCTAssertFalse(messages.contains { if case .transferFinalize = $0 { return true }; return false })
+                XCTAssertEqual(messages.filter { if case .transferOpen = $0 { return true }; return false }.count, 1)
+            }
+            let signed = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent("progress.json"))) as? [String: Any])
+            let record = try XCTUnwrap(signed["record"] as? [String: Any])
+            let payload = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(record["payload"] as? String)))
+            let progress = try XCTUnwrap(JSONSerialization.jsonObject(with: payload) as? [String: Any])
+            let count = (!fails || mode == "bad-final") ? original.partitions.count : (["rewind", "publication"].contains(mode) ? 1 : 0)
+            var expected = try AgentBridgeTransferFrontier(jobID: request.jobId, requestSHA256: AgentBridgeDigest(original.export.requestSHA256),
+                manifestSHA256: AgentBridgeDigest(AgentBridgeV4Codec.sha256(original.export.manifestCanonical)),
+                sessionID: AgentBridgeUUID(original.session.sessionID.uuidString.lowercased()))
+            for (index, partition) in original.partitions.prefix(count).enumerated() {
+                expected = try expected.appending(.init(partitionIndex: Int64(index), transferID: AgentBridgeUUID(partition.transferID.uuidString.lowercased()),
+                    artifactID: AgentBridgeUUID(original.export.baseFiles[index].manifest.fileID.uuidString.lowercased()),
+                    artifactOffset: 0, byteCount: partition.byteCount, chunkCount: Int64(partition.chunkCount), sha256: AgentBridgeDigest(partition.sha256)))
+            }
+            XCTAssertEqual(progress["version"] as? Int, 6)
+            XCTAssertEqual(progress["committedPartitionCount"] as? Int, count)
+            XCTAssertEqual(progress["frontierSHA256"] as? String, expected.sha256.rawValue)
             XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("transfer.json")), original.checkpointCanonical)
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
         }

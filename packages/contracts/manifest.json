@@ -711,7 +711,8 @@
         "packages/contracts/agent-bridge/v1/agent.schema.json"
       ],
       "implementations": [
-        "packages/contracts/agent-bridge/v1/validation.py"
+        "packages/contracts/agent-bridge/v1/validation.py",
+        "packages/contracts/agent-bridge/v1/transfer_frontier.py"
       ],
       "consumers": [
         "packages/contracts/test_validate_agent_bridge.py",
@@ -738,6 +739,14 @@
           "provenance": "Python-generated synthetic B01/B05/v4 bootstrap/control approval, accepted projection selector/job/transfer journeys and native identity/metadata/precision candidates. Partial native codec/constructor evidence is recorded in docs/qa/agent-bridge-implementation.md; full native/runtime conformance remains unproven. No live identities, credentials or health data.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/agent-bridge-v1-conformance.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/agent-bridge/v1/fixtures/transfer-frontier-v1.json",
+          "sha256": "12f317b3f85b239afd5d4a3ccd1e42558c418700d72dcf167fa7425858343f5b",
+          "provenance": "Independent Python frontier1 seed/partition-chain computation vectors. Pure Swift/Kotlin/Rust agreement is not native permission, durable output commit, resume or physical acceptance.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/agent-transfer-frontier-v1.json"
           ]
         }
       ]

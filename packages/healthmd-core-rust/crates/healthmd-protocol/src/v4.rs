@@ -7,6 +7,7 @@
 
 mod codec;
 mod contexts;
+mod frontier;
 mod integers;
 mod models;
 mod paths;
@@ -16,6 +17,7 @@ mod source;
 pub use crate::transfer::sha256_hex;
 pub use codec::{canonical_json, parse_strict};
 pub use contexts::*;
+pub use frontier::*;
 pub use models::*;
 pub use paths::{predicted_paths, validate_path_collisions, validate_relative_path};
 pub use semantics::*;
