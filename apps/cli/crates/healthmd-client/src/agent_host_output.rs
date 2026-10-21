@@ -258,16 +258,9 @@ impl OutputTransaction {
         let name = format!("output-{}.json", binding.request.job_id.0);
         let (journal, persisted, is_new) = match dir.symlink_metadata(&name) {
             Ok(_) => {
-                let bytes = private::read_private(&dir, &name, MAX_OUTPUT_BYTES)?;
-                let signed: SignedJournal = private_json::decode(&bytes)?;
-                let expected = output_mac(&signed.journal, &key)?;
-                if !healthmd_protocol::crypto::constant_time_equal(
-                    expected.0.as_bytes(),
-                    signed.mac.0.as_bytes(),
-                ) {
-                    return Err(ClientError::AgentAuthorityUnavailable);
-                }
-                (signed.journal, Some(bytes), false)
+                let (journal, bytes) =
+                    read_retained_output(&dir, &store.host, &binding.request.job_id, &key)?;
+                (journal, Some(bytes), false)
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 let own_attempt = dir
@@ -562,6 +555,34 @@ impl OutputTransaction {
         self.require_current()
     }
 }
+/// Load original immutable metadata by a validated local job ID, never caller-provided
+/// request/receipt/frontier facts. The caller owns the existing output lock and must still
+/// perform current authority/key/root fences before using this metadata for any operation.
+fn read_retained_output(
+    dir: &cap_std::fs::Dir,
+    host: &ControlUuid,
+    job: &ControlUuid,
+    key: &SecretBox<[u8; 32]>,
+) -> Result<(OutputJournal, Vec<u8>), ClientError> {
+    host.validate_shape()?;
+    job.validate_shape()?;
+    let name = format!("output-{}.json", job.0);
+    let bytes = private::read_private(dir, &name, MAX_OUTPUT_BYTES)?;
+    let signed: SignedJournal = private_json::decode(&bytes)?;
+    let expected = output_mac(&signed.journal, key)?;
+    if !healthmd_protocol::crypto::constant_time_equal(
+        expected.0.as_bytes(),
+        signed.mac.0.as_bytes(),
+    ) || signed.journal.version != 1
+        || signed.journal.host != *host
+        || signed.journal.binding.request.job_id != *job
+    {
+        return Err(ClientError::AgentAuthorityUnavailable);
+    }
+    validate_plans(&signed.journal)?;
+    Ok((signed.journal, bytes))
+}
+
 fn lock_outputs(dir: &cap_std::fs::Dir) -> Result<File, ClientError> {
     let lock = match dir.symlink_metadata(OUTPUT_LOCK) {
         Ok(_) => private::open_private(dir, OUTPUT_LOCK, true, false)?,
@@ -691,3 +712,7 @@ fn validate_plans(journal: &OutputJournal) -> Result<(), ClientError> {
     }
     Ok(())
 }
+
+#[cfg(all(test, unix))]
+#[path = "agent_retained_output_tests.rs"]
+mod retained_output_tests;

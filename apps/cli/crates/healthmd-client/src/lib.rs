@@ -113,3 +113,6 @@ use crate as client_crate;
 #[cfg(all(test, unix))]
 #[path = "../tests/support/agent.rs"]
 mod agent_test_support;
+
+#[cfg(all(test, unix))]
+mod agent_retained_test_support;
