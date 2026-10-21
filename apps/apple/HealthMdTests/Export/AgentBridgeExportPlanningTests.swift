@@ -601,6 +601,68 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         if let originalFailure { throw originalFailure }
     }
 
+    private func withNativeExportPreparation(_ operation: (Rig, AgentBridgeNativePlanningSession, AgentBridgeExecute, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner)
+        let store = FakeHealthStore()
+        let manager = HealthKitManager(store: store, userDefaults: rig.reader.defaults)
+        Self.retainedNativeConfigurationObjects.append(manager)
+        let reads = rig.reader.defaults.reads, writes = rig.reader.defaults.writes
+        var failure: Error?
+        do { try await operation(rig, planner, request, store, manager) } catch { failure = error }
+        XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
+        XCTAssertEqual(rig.reader.defaults.reads, reads); XCTAssertEqual(rig.reader.defaults.writes, writes)
+        if let failure { throw failure }
+    }
+
+    func testNativeExportProducerPreparesEveryApprovedDayAndRecoversExactSet() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let result = try await planner.prepareExport(request, manager: manager)
+            let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+            let resolution = try PropertyListDecoder().decode(AgentBridgeRequestSettingsResolution.self, from: job.nativeResolution)
+            XCTAssertEqual(result.requestSHA256, job.requestSHA256.rawValue)
+            XCTAssertEqual(result.days.map(\.day), resolution.requestedDays)
+            XCTAssertEqual(result.days.map { $0.artifact.relativePath }, resolution.predictedRelativePaths)
+            XCTAssertEqual(result.days.count, 2)
+            XCTAssertEqual(result.totalByteCount, result.days.reduce(0) { $0 + $1.artifact.byteCount })
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+            do { _ = try await planner.prepareExport(request, manager: manager); XCTFail("New execution must not replay capture") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
+            store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "must-not-query", code: 1)
+            let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            let restored = try await planner.prepareRetainedExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+            XCTAssertEqual(restored.requestSHA256, result.requestSHA256)
+            XCTAssertEqual(restored.totalByteCount, result.totalByteCount)
+            XCTAssertEqual(restored.days.map(\.day), result.days.map(\.day))
+            for (actual, expected) in zip(restored.days, result.days) {
+                XCTAssertEqual(actual.artifact, expected.artifact)
+                XCTAssertEqual(actual.buildInfo, expected.buildInfo)
+            }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+            XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        }
+    }
+
+    func testNativeExportProducerNeverReturnsPartialSetAfterLaterSDKFailure() async throws {
+        try await withNativeExportPreparation { _, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 1
+            var core = BridgeRenderTamperCore(mode: "normal")
+            core.afterRender = { store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "synthetic-sdk", code: 1) }
+            do { _ = try await planner.prepareExport(request, manager: manager, core: core); XCTFail("A successful partial export must never return") }
+            catch { XCTAssertEqual(store.queriedSumIdentifiers.count, 2) }
+            do {
+                _ = try await planner.prepareRetainedExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+                XCTFail("Ambiguous later SDK day must not be retried")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
     func testBridgeCapturedDayRendersActualFrozenV8WithoutUnselectedMetrics() async throws {
         for value: Double? in [nil, 0, 123] {
             try await withNativeSDKCapture(metrics: ["steps"]) { _, context, store, manager in

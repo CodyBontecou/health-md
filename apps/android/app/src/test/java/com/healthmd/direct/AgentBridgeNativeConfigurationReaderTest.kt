@@ -132,6 +132,74 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    private suspend fun withNativeExportPreparation(operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager) -> Unit) {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true))
+            val request = nativeCaptureRequest(f, planner, listOf("steps"))
+            val client = mockk<HealthConnectClient>(relaxed = true)
+            coEvery { client.permissionController.getGrantedPermissions() } returns setOf(HealthPermission.getReadPermission(StepsRecord::class))
+            val manager = HealthConnectManager(mockk<Context>(relaxed = true), client)
+            val preferenceReads = reads; val preferenceWrites = writes
+            try { operation(f, planner, request, client, manager) }
+            finally {
+                assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
+                assertThat(reads).isEqualTo(preferenceReads); assertThat(writes).isEqualTo(preferenceWrites)
+            }
+        }
+    }
+
+    @Test fun `native export producer prepares every approved day and recovers exact set`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val result = planner.prepareExport(request, manager, journalRenderer(resolution))
+            val job = f.store.access { it!!.state.acceptedJobs!!.single() }
+            assertThat(result.requestSha256).isEqualTo(job.requestSha256)
+            assertThat(result.days.map { it.day }).isEqualTo(resolution.requestedDays)
+            assertThat(result.days.map { it.artifact.relativePath }).isEqualTo(resolution.predictedRelativePaths)
+            assertThat(result.days.size).isEqualTo(2)
+            assertThat(result.totalByteCount).isEqualTo(result.days.fold(0uL) { n, day -> n + day.artifact.byteCount })
+            try { planner.prepareExport(request, manager, journalRenderer(resolution)); throw AssertionError("New execution must not replay capture") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
+            coEvery { client.aggregate(any()) } throws IllegalStateException("Must not query")
+            val before = Files.readAllBytes(f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load current core") })
+            val restored = planner.prepareRetainedExport(request, manager, forbidden)
+            assertThat(restored.requestSha256).isEqualTo(result.requestSha256)
+            assertThat(restored.totalByteCount).isEqualTo(result.totalByteCount)
+            assertThat(restored.days.map { it.day }).isEqualTo(result.days.map { it.day })
+            restored.days.zip(result.days).forEach { (actual, expected) ->
+                assertThat(actual.artifact.artifactId).isEqualTo(expected.artifact.artifactId)
+                assertThat(actual.artifact.content).isEqualTo(expected.artifact.content)
+                assertThat(actual.artifact.relativePath).isEqualTo(expected.artifact.relativePath)
+                assertThat(actual.pin).isEqualTo(expected.pin)
+            }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+            assertThat(Files.readAllBytes(f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(before)
+        }
+    }
+
+    @Test fun `native export producer never returns partial set after later SDK failure`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 1L
+            var reads = 0
+            coEvery { client.aggregate(any()) } coAnswers {
+                if (++reads == 2) throw IllegalStateException("Synthetic SDK failure")
+                values
+            }
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            try { planner.prepareExport(request, manager, journalRenderer(resolution)); throw AssertionError("A successful partial export must never return") }
+            catch (e: AgentBridgeNativeRenderException) { assertThat(e.code).isEqualTo(AgentBridgeNativeRenderFailure.RENDER_FAILED); assertThat(reads).isEqualTo(2) }
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load current core") })
+            try { planner.prepareRetainedExport(request, manager, forbidden); throw AssertionError("Ambiguous later SDK day must not be retried") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
     @Test fun `bridge rendering binds exact request scope paths and frozen profile`() = runBlocking {
         withNativeSDKCapture(listOf("steps")) { _, context, client, manager ->
             val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 0L
