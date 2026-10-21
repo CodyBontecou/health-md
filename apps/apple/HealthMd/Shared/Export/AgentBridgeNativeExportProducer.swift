@@ -73,6 +73,125 @@ nonisolated struct AgentBridgeNativePreparedExport: Sendable {
     }
 }
 
+/// Private transfer metadata1. The signed original-job progress record pins its canonical bytes.
+/// This is metadata only: sender/frontier/terminal acknowledgement are separate obligations.
+nonisolated struct AgentBridgeNativeTransferCheckpoint: Codable, Sendable {
+    let version: Int
+    let requestContract: String
+    let requestSHA256: String
+    let manifestSHA256: String
+    let sessionID: String
+    let partitionIDs: [Data]
+    let protocolVersion: Int
+    let binaryFrameVersion: Int
+    let partitionTargetBytes: Int64
+    let maximumInFlightChunks: Int
+    let createdAt: String
+    let expiresAt: String
+    static let maximumBytes = 128 * 1024
+    static func validateNegotiation(_ value: DirectTransferNegotiation) throws {
+        guard validLimits(value.protocolVersion, value.binaryFrameVersion, value.partitionTargetBytes, value.maximumInFlightChunks) else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+    }
+    private static func validLimits(_ protocolVersion: Int, _ binary: Int, _ target: Int64, _ window: Int) -> Bool {
+        protocolVersion == 1 && binary == 1 && (DirectTransferLimits.minimumPartitionBytes...DirectTransferLimits.maximumPartitionBytes).contains(target) && (1...8).contains(window)
+    }
+    static func create(requestSHA256: String, manifestSHA256: String, createdAt: String, expiresAt: String,
+        count: Int, negotiation: DirectTransferNegotiation) throws -> Self {
+        try validateNegotiation(negotiation)
+        guard (1...4096).contains(count) else { throw AgentBridgeValidationError.queryBudgetExceeded }
+        var ids = Data()
+        for _ in 0..<count { var uuid = UUID().uuid; withUnsafeBytes(of: &uuid) { ids.append(contentsOf: $0) } }
+        return .init(version: 1, requestContract: "healthmd.agent_execute_request/1", requestSHA256: requestSHA256,
+            manifestSHA256: manifestSHA256, sessionID: UUID().uuidString.lowercased(), partitionIDs: stride(from: 0, to: ids.count, by: 16 * 1024).map { Data(ids[$0..<min($0 + 16 * 1024, ids.count)]) },
+            protocolVersion: negotiation.protocolVersion, binaryFrameVersion: negotiation.binaryFrameVersion,
+            partitionTargetBytes: negotiation.partitionTargetBytes, maximumInFlightChunks: negotiation.maximumInFlightChunks,
+            createdAt: createdAt, expiresAt: expiresAt)
+    }
+    func canonical() throws -> Data { try AgentBridgeV4Codec.canonicalize(JSONEncoder().encode(self)) }
+    static func decode(_ bytes: Data) throws -> Self {
+        guard bytes.count <= maximumBytes, try AgentBridgeV4Codec.canonicalize(bytes) == bytes else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        let value = try JSONDecoder().decode(Self.self, from: bytes)
+        guard try value.canonical() == bytes else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        return value
+    }
+    func validate(requestSHA256: String, manifestSHA256: String, createdAt: String, expiresAt: String,
+        artifactIDs: [String]) throws -> [UUID] {
+        guard (1...4096).contains(artifactIDs.count), partitionIDs.count == (artifactIDs.count * 16 + 16 * 1024 - 1) / (16 * 1024) else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        var table = Data()
+        for (index, chunk) in partitionIDs.enumerated() {
+            guard chunk.count == min(16 * 1024, artifactIDs.count * 16 - index * 16 * 1024) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            table.append(chunk)
+        }
+        guard version == 1, requestContract == "healthmd.agent_execute_request/1",
+              self.requestSHA256 == requestSHA256, self.manifestSHA256 == manifestSHA256,
+              self.createdAt == createdAt, self.expiresAt == expiresAt,
+              Self.validLimits(protocolVersion, binaryFrameVersion, partitionTargetBytes, maximumInFlightChunks),
+              (1...4096).contains(artifactIDs.count), table.count == artifactIDs.count * 16,
+              let session = UUID(uuidString: sessionID), session.uuidString.lowercased() == sessionID,
+              session.uuid.6 >> 4 == 4, session.uuid.8 & 0xc0 == 0x80 else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        var ids: [UUID] = []
+        for index in 0..<artifactIDs.count {
+            let tuple = table.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: index * 16, as: uuid_t.self) }
+            guard tuple.6 >> 4 == 4, tuple.8 & 0xc0 == 0x80 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            ids.append(UUID(uuid: tuple))
+        }
+        let all = ids.map { $0.uuidString.lowercased() } + artifactIDs + [sessionID]
+        guard Set(all).count == all.count else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        return ids
+    }
+}
+
+/// Exact retained base session and partition descriptors. This value is never send authority.
+nonisolated struct AgentBridgeNativePreparedTransfer: Sendable {
+    let export: AgentBridgeNativePreparedExport
+    let session: DirectTransferSession
+    let partitions: [DirectTransferPartition]
+    let maximumInFlightChunks: Int
+    let checkpointCanonical: Data
+    static func make(request: AgentBridgeExecute, export: AgentBridgeNativePreparedExport, checkpointCanonical: Data) throws -> Self {
+        let checkpoint = try AgentBridgeNativeTransferCheckpoint.decode(checkpointCanonical)
+        let ids = try checkpoint.validate(requestSHA256: export.requestSHA256,
+            manifestSHA256: AgentBridgeV4Codec.sha256(export.manifestCanonical), createdAt: checkpoint.createdAt,
+            expiresAt: checkpoint.expiresAt, artifactIDs: export.baseFiles.map { $0.manifest.fileID.uuidString.lowercased() })
+        let time = ISO8601DateFormatter()
+        guard export.requestSHA256 == AgentBridgeV4Codec.sha256(try AgentBridgeV4Codec.encode(request)),
+              let createdAt = time.date(from: checkpoint.createdAt), let expiresAt = time.date(from: checkpoint.expiresAt),
+              expiresAt.timeIntervalSince(createdAt) == 7 * 24 * 60 * 60,
+              let sessionID = UUID(uuidString: checkpoint.sessionID), let jobID = UUID(uuidString: request.jobId.rawValue),
+              let source = UUID(uuidString: request.plan.intent.peer.sourceInstallationID.rawValue),
+              let host = UUID(uuidString: request.plan.intent.peer.hostInstallationID.rawValue) else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        let session = try DirectTransferSession(sessionID: sessionID, jobID: jobID,
+            requestFingerprint: DirectRequestFingerprint(sha256: export.requestSHA256),
+            peerBinding: .init(sourceInstallationID: source, destinationInstallationID: host),
+            partitionTargetBytes: checkpoint.partitionTargetBytes, createdAt: createdAt)
+        var previous: String?
+        var partitions: [DirectTransferPartition] = []
+        for (index, file) in export.baseFiles.enumerated() {
+            let itemID = file.manifest.fileID.uuidString.lowercased()
+            // The currently reviewed signed daily-JSON payloads fit one unchanged binary chunk.
+            guard file.manifest.byteCount > 0, file.manifest.byteCount <= Int64(DirectTransferLimits.chunkBytes) else {
+                throw AgentBridgeValidationError.queryBudgetExceeded
+            }
+            partitions.append(try .init(index: index, transferID: ids[index], sourceDates: [itemID],
+                byteCount: file.manifest.byteCount, chunkCount: 1, sha256: file.manifest.sha256, previousSHA256: previous,
+                itemSegment: .init(itemID: itemID, offset: 0, itemByteCount: file.manifest.byteCount, isFinalSegment: true)))
+            previous = file.manifest.sha256
+        }
+        return .init(export: export, session: session, partitions: partitions,
+            maximumInFlightChunks: checkpoint.maximumInFlightChunks, checkpointCanonical: checkpointCanonical)
+    }
+}
+
 @MainActor
 extension AgentBridgeNativePlanningSession {
     func prepareExport(_ request: AgentBridgeExecute, manager: HealthKitManager,
@@ -80,6 +199,21 @@ extension AgentBridgeNativePlanningSession {
     ) async throws -> AgentBridgeNativePreparedExport {
         try await withCaptureContext(request) { context in
             try await AgentBridgeNativeExportProducer.prepare(request: request, manager: manager, context: context, core: core)
+        }
+    }
+
+    func prepareTransferExport(_ request: AgentBridgeExecute, manager: HealthKitManager,
+        core: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor(profile: .appleHealthDataV8)
+    ) async throws -> AgentBridgeNativePreparedTransfer {
+        try await withCaptureContext(request) { context in
+            try await AgentBridgeNativeExportProducer.prepareTransfer(request: request, manager: manager, context: context, core: core)
+        }
+    }
+    func prepareRetainedTransferExport(_ request: AgentBridgeExecute, manager: HealthKitManager,
+        core: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor(profile: .appleHealthDataV8)
+    ) async throws -> AgentBridgeNativePreparedTransfer {
+        try await withRetainedCaptureContext(request) { context in
+            try await AgentBridgeNativeExportProducer.prepareTransfer(request: request, manager: manager, context: context, core: core)
         }
     }
 
@@ -95,10 +229,20 @@ extension AgentBridgeNativePlanningSession {
 
 @MainActor
 private enum AgentBridgeNativeExportProducer {
+    static func prepareTransfer(request: AgentBridgeExecute, manager: HealthKitManager, context: AgentBridgeNativeCaptureContext,
+        core: any AppleLooseDailyCoreExecuting) async throws -> AgentBridgeNativePreparedTransfer {
+        do {
+            let prepared = try await prepare(request: request, manager: manager, context: context, core: core, requireTransfer: true)
+            let result = try AgentBridgeNativePreparedTransfer.make(request: request, export: prepared, checkpointCanonical: context.preserveTransferPlan())
+            guard try context.requestFingerprintForRead() == prepared.requestSHA256 else { throw AgentBridgeValidationError.bindingChanged }
+            return result
+        } catch { context.invalidate(); throw error }
+    }
     static func prepare(request: AgentBridgeExecute, manager: HealthKitManager, context: AgentBridgeNativeCaptureContext,
-        core: any AppleLooseDailyCoreExecuting) async throws -> AgentBridgeNativePreparedExport {
+        core: any AppleLooseDailyCoreExecuting, requireTransfer: Bool = false) async throws -> AgentBridgeNativePreparedExport {
         do {
             let resolution = try context.begin()
+            if requireTransfer { _ = try context.transferNegotiationForRead() }
             let fingerprint = try context.requestFingerprintForRead()
             let approved = resolution.requestedDays
             guard !approved.isEmpty, approved.count <= 4096,

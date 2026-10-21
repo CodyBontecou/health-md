@@ -8,6 +8,7 @@ nonisolated final class IPhoneDirectCLIAuthenticatedSession: @unchecked Sendable
     let sessionID: UUID
     let channel: DirectSecureChannel
     let bridgeNegotiation: AgentBridgeNegotiation?
+    let transferNegotiation: DirectTransferNegotiation?
     private weak var owner: AnyObject?
     private let defaults: UserDefaults
     private let enabledKey: String
@@ -18,6 +19,7 @@ nonisolated final class IPhoneDirectCLIAuthenticatedSession: @unchecked Sendable
     fileprivate init(owner: AnyObject, defaults: UserDefaults, enabledKey: String,
                      sourceInstallationID: UUID, sessionID: UUID, channel: DirectSecureChannel,
                      bridgeNegotiation: AgentBridgeNegotiation? = nil,
+                     transferNegotiation: DirectTransferNegotiation? = nil,
                      currentOwner: @escaping @MainActor @Sendable () -> Bool) {
         self.owner = owner
         self.defaults = defaults
@@ -26,6 +28,7 @@ nonisolated final class IPhoneDirectCLIAuthenticatedSession: @unchecked Sendable
         self.sessionID = sessionID
         self.channel = channel
         self.bridgeNegotiation = bridgeNegotiation
+        self.transferNegotiation = transferNegotiation
         self.currentOwner = currentOwner
     }
 
@@ -515,7 +518,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             throw AgentBridgeValidationError.permissionRequired
         }
         let planner = try AgentBridgeNativePlanningSession(peer: owner.peer, lifecycle: owner.lifecycle, store: store,
-            configuration: reader, responseChannel: originalOwner.channel, responseNegotiation: originalOwner.bridgeNegotiation)
+            configuration: reader, responseChannel: originalOwner.channel, responseNegotiation: originalOwner.bridgeNegotiation, responseTransferNegotiation: originalOwner.transferNegotiation)
         let current = try agentBridgeNativePlanningOwner()
         guard current.lifecycle === owner.lifecycle else { throw AgentBridgeValidationError.permissionRequired }
         try planner.requireCurrent()
@@ -610,7 +613,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         agentBridgeSession = IPhoneDirectCLIAuthenticatedSession(
             owner: self, defaults: defaults, enabledKey: Self.enabledKey,
             sourceInstallationID: installationID, sessionID: sessionID, channel: channel,
-            bridgeNegotiation: negotiation, currentOwner: { [weak self, weak channel] in
+            bridgeNegotiation: negotiation, transferNegotiation: DirectTransferCapabilities.current.negotiated(with: capabilities.transfer), currentOwner: { [weak self, weak channel] in
                 guard let self, let channel else { return false }
                 return self.activeSessionID == sessionID && self.channel === channel
                     && self.appIsActive && self.isEnabled

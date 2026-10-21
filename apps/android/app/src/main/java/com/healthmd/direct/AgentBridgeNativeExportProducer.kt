@@ -2,6 +2,13 @@ package com.healthmd.direct
 
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.direct.protocol.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import java.nio.ByteBuffer
+import java.util.Base64
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 
 /** Owned base-v2 bytes and metadata. Neither this value nor its descriptor grants authority. */
@@ -60,10 +67,104 @@ internal class AgentBridgeNativePreparedExport private constructor(val requestSh
     }
 }
 
+/** Private metadata1, pinned by signed original-job progress. Not a sender/frontier/receipt. */
+@Serializable
+internal data class AgentBridgeNativeTransferCheckpoint(val version: Int, val requestContract: String,
+    val requestSHA256: String, val manifestSHA256: String, val sessionID: String, private val partitionIDs: List<String>,
+    val protocolVersion: Int, val binaryFrameVersion: Int, val partitionTargetBytes: Long,
+    val maximumInFlightChunks: Int, val createdAt: String, val expiresAt: String) {
+    fun canonical(): ByteArray = AgentBridgeCodec.canonicalize(Json.encodeToString(this).toByteArray())
+    fun validate(requestSHA256: String, manifestSHA256: String, createdAt: String, expiresAt: String, artifactIDs: List<String>): List<String> {
+        if (version != 1 || requestContract != "healthmd.agent_execute_request/1" || this.requestSHA256 != requestSHA256 ||
+            this.manifestSHA256 != manifestSHA256 || this.createdAt != createdAt || this.expiresAt != expiresAt ||
+            !validLimits(protocolVersion, binaryFrameVersion, partitionTargetBytes, maximumInFlightChunks) || artifactIDs.size !in 1..4096 || !v4(sessionID)) invalid()
+        if (partitionIDs.size != (artifactIDs.size * 16 + 16 * 1024 - 1) / (16 * 1024)) invalid()
+        val bytes = ByteBuffer.allocate(artifactIDs.size * 16)
+        partitionIDs.forEachIndexed { index, encoded ->
+            val chunk = Base64.getDecoder().decode(encoded)
+            if (chunk.size != minOf(16 * 1024, artifactIDs.size * 16 - index * 16 * 1024) || Base64.getEncoder().encodeToString(chunk) != encoded) invalid()
+            bytes.put(chunk)
+        }
+        val buffer = ByteBuffer.wrap(bytes.array())
+        val ids = artifactIDs.map { UUID(buffer.long, buffer.long).toString().also { if (!v4(it)) invalid() } }
+        val all = ids + artifactIDs + sessionID
+        if (all.toSet().size != all.size) invalid()
+        return java.util.Collections.unmodifiableList(ids)
+    }
+    companion object {
+        const val MAXIMUM_BYTES = 128 * 1024
+        private fun validLimits(protocol: Int, binary: Int, target: Long, window: Int) =
+            protocol == 1 && binary == 1 && target in MINIMUM_PARTITION_BYTES..MAXIMUM_PARTITION_BYTES && window in 1..8
+        fun validateNegotiation(value: TransferNegotiation) {
+            if (!validLimits(value.protocolVersion, value.binaryFrameVersion, value.partitionTargetBytes, value.maximumInFlightChunks))
+                throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        }
+        fun create(requestSHA256: String, manifestSHA256: String, createdAt: String, expiresAt: String,
+            count: Int, negotiation: TransferNegotiation): AgentBridgeNativeTransferCheckpoint {
+            validateNegotiation(negotiation)
+            if (count !in 1..4096) throw AgentBridgeException(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+            val buffer = ByteBuffer.allocate(count * 16)
+            repeat(count) { val id = UUID.randomUUID(); buffer.putLong(id.mostSignificantBits); buffer.putLong(id.leastSignificantBits) }
+            val bytes = buffer.array()
+            val chunks = java.util.Collections.unmodifiableList((0 until bytes.size step 16 * 1024).map { offset ->
+                Base64.getEncoder().encodeToString(bytes.copyOfRange(offset, minOf(offset + 16 * 1024, bytes.size))) })
+            return AgentBridgeNativeTransferCheckpoint(1, "healthmd.agent_execute_request/1", requestSHA256, manifestSHA256,
+                UUID.randomUUID().toString(), chunks, negotiation.protocolVersion,
+                negotiation.binaryFrameVersion, negotiation.partitionTargetBytes, negotiation.maximumInFlightChunks, createdAt, expiresAt)
+        }
+        fun decode(bytes: ByteArray): AgentBridgeNativeTransferCheckpoint {
+            if (bytes.size > MAXIMUM_BYTES || !AgentBridgeCodec.canonicalize(bytes).contentEquals(bytes)) invalid()
+            return Json.decodeFromString<AgentBridgeNativeTransferCheckpoint>(bytes.decodeToString()).also { if (!it.canonical().contentEquals(bytes)) invalid() }
+        }
+        private fun v4(value: String): Boolean = try { val id = UUID.fromString(value); id.toString() == value && id.version() == 4 && id.variant() == 2 } catch (_: IllegalArgumentException) { false }
+        private fun invalid(): Nothing = throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+    }
+}
+
+/** Retained base session/partitions only. New sender compatibility and every live native fence
+ * remain required; this metadata value cannot authorize a send or declare completion. */
+internal class AgentBridgeNativePreparedTransfer private constructor(val export: AgentBridgeNativePreparedExport,
+    val session: TransferSession, partitions: List<TransferPartition>, val maximumInFlightChunks: Int, checkpointCanonical: ByteArray) {
+    val partitions: List<TransferPartition> = java.util.Collections.unmodifiableList(ArrayList(partitions))
+    private val checkpointBytes = checkpointCanonical.copyOf()
+    val checkpointCanonical: ByteArray get() = checkpointBytes.copyOf()
+    companion object {
+        fun make(request: AgentBridgeExecuteRequest, export: AgentBridgeNativePreparedExport, checkpointCanonical: ByteArray): AgentBridgeNativePreparedTransfer {
+            val checkpoint = AgentBridgeNativeTransferCheckpoint.decode(checkpointCanonical)
+            val ids = checkpoint.validate(export.requestSha256, AgentBridgeCodec.sha256(export.manifestCanonical),
+                checkpoint.createdAt, checkpoint.expiresAt, export.baseFiles.map { it.manifest.artifactId })
+            val peer = (request.plan as? AgentBridgeGeneratedPlan)?.intent?.peer ?: invalid()
+            if (export.requestSha256 != AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)) ||
+                java.time.Duration.between(java.time.Instant.parse(checkpoint.createdAt), java.time.Instant.parse(checkpoint.expiresAt)) != java.time.Duration.ofSeconds(JOB_LIFETIME_SECONDS)) invalid()
+            val session = TransferSession(checkpoint.sessionID, request.jobId, export.requestSha256,
+                PeerBinding(peer.sourceInstallationId, peer.hostInstallationId), checkpoint.partitionTargetBytes, checkpoint.createdAt)
+            var previous: String? = null
+            val partitions = export.baseFiles.mapIndexed { index, file ->
+                val item = file.manifest
+                if (item.byteCount !in 1..MAXIMUM_CHUNK_BYTES.toLong()) throw AgentBridgeException(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+                TransferPartition(index.toLong(), ids[index], item.artifactId, 0, item.byteCount, 1, item.sha256, previous).also { previous = item.sha256 }
+            }
+            return AgentBridgeNativePreparedTransfer(export, session, partitions, checkpoint.maximumInFlightChunks, checkpointCanonical)
+        }
+        private fun invalid(): Nothing = throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+    }
+}
+
 internal suspend fun AgentBridgeNativePlanningSession.prepareExport(request: AgentBridgeExecuteRequest,
     manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()
 ): AgentBridgeNativePreparedExport = withCaptureContext(request) { context ->
     AgentBridgeNativeExportProducer.prepare(request, manager, context, renderer)
+}
+
+internal suspend fun AgentBridgeNativePlanningSession.prepareTransferExport(request: AgentBridgeExecuteRequest,
+    manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()
+): AgentBridgeNativePreparedTransfer = withCaptureContext(request) { context ->
+    AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer)
+}
+internal suspend fun AgentBridgeNativePlanningSession.prepareRetainedTransferExport(request: AgentBridgeExecuteRequest,
+    manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()
+): AgentBridgeNativePreparedTransfer = withRetainedCaptureContext(request) { context ->
+    AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer)
 }
 
 /** Explicit retained recovery; failed new execution never falls back to this operation. */
@@ -74,10 +175,20 @@ internal suspend fun AgentBridgeNativePlanningSession.prepareRetainedExport(requ
 }
 
 private object AgentBridgeNativeExportProducer {
+    suspend fun prepareTransfer(request: AgentBridgeExecuteRequest, manager: HealthConnectManager, context: AgentBridgeNativeCaptureContext,
+        renderer: AgentBridgeNativeDayRenderer): AgentBridgeNativePreparedTransfer {
+        try {
+            val prepared = prepare(request, manager, context, renderer, requireTransfer = true)
+            val result = AgentBridgeNativePreparedTransfer.make(request, prepared, context.preserveTransferPlan())
+            if (context.requestFingerprintForRead() != prepared.requestSha256) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            return result
+        } catch (failure: Throwable) { context.invalidate(); throw failure }
+    }
     suspend fun prepare(request: AgentBridgeExecuteRequest, manager: HealthConnectManager, context: AgentBridgeNativeCaptureContext,
-        renderer: AgentBridgeNativeDayRenderer): AgentBridgeNativePreparedExport {
+        renderer: AgentBridgeNativeDayRenderer, requireTransfer: Boolean = false): AgentBridgeNativePreparedExport {
         try {
             val resolution = context.begin()
+            if (requireTransfer) context.transferNegotiationForRead()
             val fingerprint = context.requestFingerprintForRead()
             val approved = resolution.requestedDays
             if (approved.isEmpty() || approved.size > 4096 || approved.toSet().size != approved.size ||

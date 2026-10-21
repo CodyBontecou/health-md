@@ -85,10 +85,10 @@ class AgentBridgeNativeConfigurationReaderTest {
         readConfiguration(policy, AgentBridgeNativeCatalogPublication(1, AgentBridgeExportPlanningFixture.id(1),
             state.fingerprint(AgentBridgeExportPlanningFixture.id(1))))
 
-    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle, channel: DirectSecureChannel? = null, negotiation: AgentBridgeNegotiation = nativeNegotiation()) =
+    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle, channel: DirectSecureChannel? = null, negotiation: AgentBridgeNegotiation = nativeNegotiation(), transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities())) =
         AgentBridgeNativePlanningSession(f.peerContext, lifecycle, f.store,
             AgentBridgeNativeConfigurationReader(observed, settings, profiles, { lifecycle.currentFacts() },
-                { AgentBridgeExportTestRegistry.load() }), f.clock, responseChannel = channel, responseNegotiation = negotiation)
+                { AgentBridgeExportTestRegistry.load() }), f.clock, responseChannel = channel, responseNegotiation = negotiation, responseTransferNegotiation = transferNegotiation)
     private fun nativeNegotiation() = AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, listOf(2, 4), listOf(2, 4))
     private fun ownedDiscoveryBytes(f: AgentBridgeExportPlanningFixture) = AgentBridgeCodec.encodeEnvelope(
         AgentBridgeMessage("discovery_request", f.discoveryRequest()), nativeNegotiation())
@@ -132,11 +132,11 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
-    private suspend fun withNativeExportPreparation(dates: AgentBridgeDates = AgentBridgeDatesExact(AgentBridgeRange("2026-03-08", "2026-03-07"), "exact"), operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager) -> Unit) {
+    private suspend fun withNativeExportPreparation(transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities()), dates: AgentBridgeDates = AgentBridgeDatesExact(AgentBridgeRange("2026-03-08", "2026-03-07"), "exact"), operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager) -> Unit) {
         AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
-            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true))
+            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true), transferNegotiation = transferNegotiation)
             val request = nativeCaptureRequest(f, planner, listOf("steps"), dates)
             val client = mockk<HealthConnectClient>(relaxed = true)
             coEvery { client.permissionController.getGrantedPermissions() } returns setOf(HealthPermission.getReadPermission(StepsRecord::class))
@@ -287,6 +287,144 @@ class AgentBridgeNativeConfigurationReaderTest {
                 throw AssertionError("Malformed interior day cannot satisfy original approved range")
             } catch (_: AgentBridgeNativeRenderException) { }
             coVerify(exactly = 3) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `native transfer plan retains original session partitions and bytes`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val result = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val job = f.store.access { it!!.state.acceptedJobs!!.single() }
+            val checkpoint = AgentBridgeNativeTransferCheckpoint.decode(result.checkpointCanonical)
+            assertThat(checkpoint.requestContract).isEqualTo("healthmd.agent_execute_request/1")
+            assertThat(checkpoint.requestSHA256).isEqualTo(job.requestSha256)
+            assertThat(checkpoint.manifestSHA256).isEqualTo(AgentBridgeCodec.sha256(result.export.manifestCanonical))
+            assertThat(checkpoint.createdAt).isEqualTo(job.acceptedAt); assertThat(checkpoint.expiresAt).isEqualTo(job.expiresAt)
+            assertThat(result.session.jobId).isEqualTo(request.jobId); assertThat(result.session.sessionId).isEqualTo(checkpoint.sessionID)
+            assertThat(result.session.requestFingerprint).isEqualTo(job.requestSha256)
+            assertThat(result.session.peerBinding).isEqualTo(PeerBinding(f.peer.sourceInstallationId, f.peer.hostInstallationId))
+            assertThat(result.maximumInFlightChunks).isEqualTo(4)
+            assertThat(result.partitions).hasSize(result.export.baseFiles.size)
+            var previous: String? = null
+            result.partitions.zip(result.export.baseFiles).forEachIndexed { index, (partition, file) ->
+                assertThat(partition.index).isEqualTo(index.toLong()); assertThat(partition.previousSha256).isEqualTo(previous)
+                assertThat(partition.artifactId).isEqualTo(file.manifest.artifactId); assertThat(partition.artifactOffset).isEqualTo(0)
+                assertThat(partition.byteCount).isEqualTo(file.manifest.byteCount); assertThat(partition.chunkCount).isEqualTo(1)
+                assertThat(partition.sha256).isEqualTo(AgentBridgeCodec.sha256(file.content)); previous = partition.sha256
+            }
+            val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256)
+            val progress = Files.readAllBytes(directory.resolve("progress.json"))
+            coEvery { client.aggregate(any()) } throws IllegalStateException("Must not query")
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load core") })
+            val restored = planner.prepareRetainedTransferExport(request, manager, forbidden)
+            assertThat(restored.session).isEqualTo(result.session); assertThat(restored.partitions).isEqualTo(result.partitions)
+            assertThat(restored.checkpointCanonical).isEqualTo(result.checkpointCanonical)
+            assertThat(restored.export.manifestCanonical).isEqualTo(result.export.manifestCanonical)
+            assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(progress)
+            assertThat(Files.readAllBytes(directory.resolve("transfer.json"))).isEqualTo(result.checkpointCanonical)
+            val copy = result.checkpointCanonical; copy.fill(0)
+            assertThat(result.checkpointCanonical).isEqualTo(restored.checkpointCanonical)
+            try { (result.partitions as MutableList<TransferPartition>).clear(); throw AssertionError("Partitions must be immutable") }
+            catch (_: UnsupportedOperationException) { }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+    @Test fun `native transfer plan requires original negotiation before SDK read`() = runBlocking {
+        withNativeExportPreparation(transferNegotiation = null) { f, planner, request, client, manager ->
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            try { planner.prepareTransferExport(request, manager, journalRenderer(resolution)); throw AssertionError("Missing original negotiation cannot default") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) }
+            coVerify(exactly = 0) { client.aggregate(any()) }
+        }
+    }
+    @Test fun `missing native transfer plan never remints on recovery`() = runBlocking { checkNativeTransferDamage(false) }
+    @Test fun `corrupt native transfer plan never remints on recovery`() = runBlocking { checkNativeTransferDamage(true) }
+    private suspend fun checkNativeTransferDamage(corrupt: Boolean) {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val result = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(result.export.requestSha256).resolve("transfer.json")
+            if (corrupt) Files.write(path, "{}".toByteArray(), java.nio.file.StandardOpenOption.TRUNCATE_EXISTING) else Files.delete(path)
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load core") })
+            try { planner.prepareRetainedTransferExport(request, manager, forbidden); throw AssertionError("Pinned transfer metadata cannot remint") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+    @Test fun `interrupted native transfer plan cannot regenerate after owner restored`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val fingerprint = AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request))
+            val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(fingerprint)
+            var interrupted = false
+            f.peerContext.onCheck = {
+                val version = runCatching {
+                    val signed = Json.parseToJsonElement(Files.readAllBytes(directory.resolve("progress.json")).decodeToString()).jsonObject
+                    val payload = java.util.Base64.getDecoder().decode(signed.getValue("record").jsonObject.getValue("payload").jsonPrimitive.content)
+                    Json.parseToJsonElement(payload.decodeToString()).jsonObject.getValue("version").jsonPrimitive.int
+                }.getOrNull()
+                if (!interrupted && version == 5) {
+                    interrupted = true; assertThat(Files.exists(directory.resolve("transfer.json"))).isFalse()
+                    throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                }
+            }
+            try { planner.prepareTransferExport(request, manager, journalRenderer(resolution)); throw AssertionError("Interrupted transfer plan cannot return success") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED) }
+            finally { f.peerContext.onCheck = null }
+            assertThat(interrupted).isTrue()
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load core") })
+            try { planner.prepareRetainedTransferExport(request, manager, forbidden); throw AssertionError("Missing pinned plan cannot regenerate") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+    @Test fun `manifest only progress v4 gains transfer without changing artifacts`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val original = planner.prepareExport(request, manager, journalRenderer(resolution))
+            val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(original.requestSha256)
+            val signed = Json.parseToJsonElement(Files.readAllBytes(directory.resolve("progress.json")).decodeToString()).jsonObject
+            val payload = java.util.Base64.getDecoder().decode(signed.getValue("record").jsonObject.getValue("payload").jsonPrimitive.content)
+            val state = Json.parseToJsonElement(payload.decodeToString()).jsonObject
+            assertThat(state.getValue("version").jsonPrimitive.int).isEqualTo(4)
+            assertThat(state.keys).containsExactly("version", "captures", "artifacts", "engine", "publicArtifactIDs", "manifestSHA256", "manifestByteCount")
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load core") })
+            val transfer = planner.prepareRetainedTransferExport(request, manager, forbidden)
+            assertThat(transfer.export.publicArtifactIDs).isEqualTo(original.publicArtifactIDs)
+            assertThat(transfer.export.manifestCanonical).isEqualTo(original.manifestCanonical)
+            assertThat(transfer.export.baseFiles.map { it.manifest }).isEqualTo(original.baseFiles.map { it.manifest })
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+    @Test fun `native transfer checkpoint fits maximum artifact set`() {
+        val checkpoint = AgentBridgeNativeTransferCheckpoint.create("a".repeat(64), "b".repeat(64), "2026-05-29T00:00:00Z", "2026-06-05T00:00:00Z",
+            4096, TransferCapabilities().negotiatedWith(TransferCapabilities())!!)
+        val bytes = checkpoint.canonical(); assertThat(bytes.size).isAtMost(AgentBridgeNativeTransferCheckpoint.MAXIMUM_BYTES)
+        val ids = (0 until 4096).map { java.util.UUID.randomUUID().toString() }
+        assertThat(AgentBridgeNativeTransferCheckpoint.decode(bytes).validate(checkpoint.requestSHA256, checkpoint.manifestSHA256,
+            checkpoint.createdAt, checkpoint.expiresAt, ids)).hasSize(4096)
+    }
+    @Test fun `native transfer plan owner revocation after publication suppresses return`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val fingerprint = AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request))
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(fingerprint).resolve("transfer.json")
+            var revoked = false
+            f.peerContext.onCheck = { if (Files.exists(path)) { revoked = true; f.peerContext.trusted = false } }
+            try { planner.prepareTransferExport(request, manager, journalRenderer(resolution)); throw AssertionError("Final native revocation cannot return transfer plan") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+            finally { f.peerContext.onCheck = null }
+            assertThat(revoked).isTrue(); coVerify(exactly = 2) { client.aggregate(any()) }
         }
     }
 

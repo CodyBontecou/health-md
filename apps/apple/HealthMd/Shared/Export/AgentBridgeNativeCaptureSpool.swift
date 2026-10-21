@@ -19,7 +19,7 @@ struct AgentBridgeSystemNativeCaptureProtection: AgentBridgeNativeCaptureProtect
 }
 
 /// Private captured values, engine identity and immutable generated artifacts. This is not a
-/// transfer journal or permission token. The accepted job, protected key and original fence own it.
+/// transfer sender/frontier or permission token. The accepted job, protected key and original fence own it.
 @MainActor
 final class AgentBridgeNativeCaptureSpool {
     nonisolated private struct Record: Codable, Equatable {
@@ -44,6 +44,8 @@ final class AgentBridgeNativeCaptureSpool {
         var publicArtifactIDs: Data? = nil
         var manifestSHA256: String? = nil
         var manifestByteCount: Int? = nil
+        var transferSHA256: String? = nil
+        var transferByteCount: Int? = nil
     }
     nonisolated struct ArtifactCheckpoint: Sendable { let engine: Data; let payload: Data }
     private static let payloadLimit = 64 * 1024
@@ -103,7 +105,7 @@ final class AgentBridgeNativeCaptureSpool {
             guard try fileSize("lock") == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             try check()
             for name in try Self.entries(directoryFD) {
-                guard name == "lock" || name == "header.json" || name == "progress.json" || name == "manifest.json" || Self.dayName(name) || Self.pendingName(name) else {
+                guard name == "lock" || name == "header.json" || name == "progress.json" || name == "manifest.json" || name == "transfer.json" || Self.dayName(name) || Self.pendingName(name) else {
                     throw AgentBridgeValidationError.spoolMissingRestartRequired
                 }
                 storedBytes += try fileSize(name)
@@ -309,6 +311,50 @@ final class AgentBridgeNativeCaptureSpool {
         try check(); return bytes
     }
 
+    /// Pin compact exact session/partition metadata before raw publication. A pin without its
+    /// original bytes is ambiguous and never permits a new session or random partition IDs.
+    func preserveTransferPlan(_ negotiation: DirectTransferNegotiation) throws -> Data {
+        do {
+            try check(); try validateStoredProgress()
+            let (previous, state) = try progress()
+            if state.transferSHA256 != nil { return try readTransferPlan(state) }
+            try AgentBridgeNativeTransferCheckpoint.validateNegotiation(negotiation)
+            let manifestBytes = try readManifest(state)
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: manifestBytes)
+            let checkpoint = try AgentBridgeNativeTransferCheckpoint.create(requestSHA256: acceptedRequestSHA256,
+                manifestSHA256: AgentBridgeV4Codec.sha256(manifestBytes), createdAt: reservation.job.acceptedAt.rawValue,
+                expiresAt: reservation.job.expiresAt.rawValue, count: manifest.artifacts.count, negotiation: negotiation)
+            _ = try checkpoint.validate(requestSHA256: acceptedRequestSHA256, manifestSHA256: AgentBridgeV4Codec.sha256(manifestBytes),
+                createdAt: reservation.job.acceptedAt.rawValue, expiresAt: reservation.job.expiresAt.rawValue,
+                artifactIDs: manifest.artifacts.map { $0.artifactId.rawValue })
+            let bytes = try checkpoint.canonical()
+            guard bytes.count <= AgentBridgeNativeTransferCheckpoint.maximumBytes else { throw AgentBridgeValidationError.queryBudgetExceeded }
+            var next = state; next.version = 5
+            next.transferSHA256 = AgentBridgeV4Codec.sha256(bytes); next.transferByteCount = bytes.count
+            try publish("progress.json", record: record(kind: "progress", day: nil, payload: progressBytes(next)), replacing: previous)
+            try publishBytes("transfer.json", bytes: bytes, previousBytes: nil)
+            let retained = try readTransferPlan(progress().1)
+            try check(); return retained
+        } catch { throw Self.safe(error) }
+    }
+    private func readTransferPlan(_ state: Progress) throws -> Data {
+        try check()
+        guard let digest = state.transferSHA256, let count = state.transferByteCount, try exists("transfer.json") else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        let bytes = try readProtectedFile("transfer.json", maximumBytes: AgentBridgeNativeTransferCheckpoint.maximumBytes)
+        do {
+            guard bytes.count == count, AgentBridgeV4Codec.sha256(bytes) == digest else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            let manifestBytes = try readManifest(state)
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: manifestBytes)
+            let checkpoint = try AgentBridgeNativeTransferCheckpoint.decode(bytes)
+            _ = try checkpoint.validate(requestSHA256: acceptedRequestSHA256, manifestSHA256: AgentBridgeV4Codec.sha256(manifestBytes),
+                createdAt: reservation.job.acceptedAt.rawValue, expiresAt: reservation.job.expiresAt.rawValue,
+                artifactIDs: manifest.artifacts.map { $0.artifactId.rawValue })
+        } catch { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        try check(); return bytes
+    }
+
     var acceptedRequestSHA256: String { reservation.job.requestSHA256.rawValue }
 
     func close() {
@@ -346,6 +392,10 @@ final class AgentBridgeNativeCaptureSpool {
             expected.insert("manifest.json")
             _ = try readManifest(state)
         }
+        if state.transferSHA256 != nil {
+            expected.insert("transfer.json")
+            _ = try readTransferPlan(state)
+        }
         let names = Set(try Self.entries(directoryFD).filter { !Self.pendingName($0) })
         guard names == expected else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
     }
@@ -360,10 +410,12 @@ final class AgentBridgeNativeCaptureSpool {
             state = .init(version: 2, captures: days, artifacts: [], engine: Data())
         } else { state = try JSONDecoder().decode(Progress.self, from: value.payload) }
         let noManifest = state.manifestSHA256 == nil && state.manifestByteCount == nil
+        let noTransfer = state.transferSHA256 == nil && state.transferByteCount == nil
         guard value.kind == "progress", value.day == nil,
-              (state.version == 2 && state.publicArtifactIDs == nil && noManifest) ||
-              (state.version == 3 && state.publicArtifactIDs != nil && noManifest) ||
-              (state.version == 4 && state.publicArtifactIDs != nil && state.manifestSHA256 != nil && state.manifestByteCount != nil),
+              (state.version == 2 && state.publicArtifactIDs == nil && noManifest && noTransfer) ||
+              (state.version == 3 && state.publicArtifactIDs != nil && noManifest && noTransfer) ||
+              (state.version == 4 && state.publicArtifactIDs != nil && state.manifestSHA256 != nil && state.manifestByteCount != nil && noTransfer) ||
+              (state.version == 5 && state.publicArtifactIDs != nil && state.manifestSHA256 != nil && state.manifestByteCount != nil && state.transferSHA256 != nil && state.transferByteCount != nil),
               state.engine.count <= 4096, state.artifacts.isEmpty == state.engine.isEmpty,
               try progressBytes(state) == value.payload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         for days in [state.captures, state.artifacts] {
@@ -371,16 +423,22 @@ final class AgentBridgeNativeCaptureSpool {
             for day in days { _ = try AgentBridgeDate(day) }
         }
         if state.version >= 3 { _ = try Self.publicIDs(state) }
-        if state.version == 4 {
+        if state.version >= 4 {
             guard let hash = state.manifestSHA256, hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil,
                   let count = state.manifestByteCount, count > 0, count <= AgentBridgeV4Codec.maximumBytes else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+        }
+        if state.version == 5 {
+            guard let hash = state.transferSHA256, hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil,
+                  let count = state.transferByteCount, count > 0, count <= AgentBridgeNativeTransferCheckpoint.maximumBytes else {
                 throw AgentBridgeValidationError.spoolMissingRestartRequired
             }
         }
         return (value, state)
     }
     private static func publicIDs(_ state: Progress) throws -> [String: String] {
-        guard (state.version == 3 || state.version == 4), let data = state.publicArtifactIDs,
+        guard (3...5).contains(state.version), let data = state.publicArtifactIDs,
               !state.artifacts.isEmpty, state.artifacts.count <= 4096,
               state.captures == state.artifacts, data.count == state.artifacts.count * 16 else {
             throw AgentBridgeValidationError.spoolMissingRestartRequired
@@ -434,7 +492,7 @@ final class AgentBridgeNativeCaptureSpool {
         guard try AgentBridgeExportPrivateFiles.identity(fd) == expected else { throw AgentBridgeValidationError.bindingChanged }
         try AgentBridgeExportPrivateFiles.checkPath(directoryFD, name, fd: fd)
         var value = stat()
-        guard fstat(fd, &value) == 0, value.st_size >= 0, value.st_size <= (name == "manifest.json" ? AgentBridgeV4Codec.maximumBytes : Self.recordLimit) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        guard fstat(fd, &value) == 0, value.st_size >= 0, value.st_size <= (name == "manifest.json" ? AgentBridgeV4Codec.maximumBytes : (name == "transfer.json" ? AgentBridgeNativeTransferCheckpoint.maximumBytes : Self.recordLimit)) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         return Int(value.st_size)
     }
     private func read(_ name: String) throws -> Record {

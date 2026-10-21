@@ -37,12 +37,16 @@ internal class AgentBridgeNativeCaptureSpool(
     @Serializable private data class Signed(val record: Record, val mac: String)
     @Serializable private data class Progress(val version: Int = 2, val captures: List<String>,
         val artifacts: List<String> = emptyList(), val engine: String = "", val publicArtifactIDs: String? = null,
-        val manifestSHA256: String? = null, val manifestByteCount: Int? = null)
+        val manifestSHA256: String? = null, val manifestByteCount: Int? = null,
+        val transferSHA256: String? = null, val transferByteCount: Int? = null)
     // Preserve existing v2 bytes. Version3 adds exactly16 UUID bytes per sorted artifact day.
     @Serializable private data class LegacyProgress(val version: Int, val captures: List<String>,
         val artifacts: List<String>, val engine: String)
     @Serializable private data class LegacyProgress3(val version: Int, val captures: List<String>,
         val artifacts: List<String>, val engine: String, val publicArtifactIDs: String)
+    @Serializable private data class LegacyProgress4(val version: Int, val captures: List<String>,
+        val artifacts: List<String>, val engine: String, val publicArtifactIDs: String,
+        val manifestSHA256: String, val manifestByteCount: Int)
     class ArtifactCheckpoint(val engine: ByteArray, val payload: ByteArray)
 
     private val json = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
@@ -88,10 +92,10 @@ internal class AgentBridgeNativeCaptureSpool(
                 for (path in stream) {
                     if (++count > 16450) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
                     val name = path.fileName.toString()
-                    if (name !in setOf("lock", "header.json", "progress.json", "manifest.json") && !DAY_NAME.matches(name) && !PENDING_NAME.matches(name)) fail()
+                    if (name !in setOf("lock", "header.json", "progress.json", "manifest.json", "transfer.json") && !DAY_NAME.matches(name) && !PENDING_NAME.matches(name)) fail()
                     attributes(path, false)
                     val size = Files.size(path)
-                    if (size !in 0..(if (name == "manifest.json") MANIFEST_LIMIT else RECORD_LIMIT).toLong()) fail()
+                    if (size !in 0..(if (name == "manifest.json") MANIFEST_LIMIT else if (name == "transfer.json") AgentBridgeNativeTransferCheckpoint.MAXIMUM_BYTES else RECORD_LIMIT).toLong()) fail()
                     storedBytes += size
                     if (storedBytes > JOB_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
                 }
@@ -257,6 +261,42 @@ internal class AgentBridgeNativeCaptureSpool(
         } catch (_: Exception) { fail() }
         guard(); return bytes
     }
+    /** Compact exact session metadata is pinned before publication; a missing pinned file
+     * never permits a fresh session or new random partition IDs. */
+    @Synchronized fun preserveTransferPlan(negotiation: TransferNegotiation): ByteArray = safeCall {
+        guard(); validateStoredProgress()
+        val (previous, state) = progress()
+        if (state.transferSHA256 != null) readTransferPlan(state) else {
+            AgentBridgeNativeTransferCheckpoint.validateNegotiation(negotiation)
+            val manifestBytes = readManifest(state)
+            val manifest = AgentBridgeCodec.decode(manifestBytes) as? AgentBridgeArtifactManifest ?: fail()
+            val checkpoint = AgentBridgeNativeTransferCheckpoint.create(acceptedRequestSha256, AgentBridgeCodec.sha256(manifestBytes),
+                reservation.job.acceptedAt, reservation.job.expiresAt, manifest.artifacts.size, negotiation)
+            checkpoint.validate(acceptedRequestSha256, AgentBridgeCodec.sha256(manifestBytes), reservation.job.acceptedAt,
+                reservation.job.expiresAt, manifest.artifacts.map { it.artifactId })
+            val bytes = checkpoint.canonical()
+            if (bytes.size > AgentBridgeNativeTransferCheckpoint.MAXIMUM_BYTES) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+            val next = state.copy(version = 5, transferSHA256 = AgentBridgeCodec.sha256(bytes), transferByteCount = bytes.size)
+            publish("progress.json", record("progress", null, progressPayload(next)), previous)
+            publishBytes("transfer.json", bytes, null)
+            val retained = readTransferPlan(progress().second)
+            guard(); retained
+        }
+    }
+    private fun readTransferPlan(state: Progress): ByteArray {
+        guard()
+        val digest = state.transferSHA256 ?: fail(); val count = state.transferByteCount ?: fail()
+        if (!exists("transfer.json")) fail()
+        val bytes = currentBytes("transfer.json", AgentBridgeNativeTransferCheckpoint.MAXIMUM_BYTES)
+        try {
+            if (bytes.size != count || AgentBridgeCodec.sha256(bytes) != digest) fail()
+            val manifestBytes = readManifest(state)
+            val manifest = AgentBridgeCodec.decode(manifestBytes) as? AgentBridgeArtifactManifest ?: fail()
+            AgentBridgeNativeTransferCheckpoint.decode(bytes).validate(acceptedRequestSha256, AgentBridgeCodec.sha256(manifestBytes),
+                reservation.job.acceptedAt, reservation.job.expiresAt, manifest.artifacts.map { it.artifactId })
+        } catch (_: Exception) { fail() }
+        guard(); return bytes
+    }
     @Synchronized override fun close() {
         if (closed) return
         closed = true
@@ -287,6 +327,10 @@ internal class AgentBridgeNativeCaptureSpool(
             expected += "manifest.json"
             readManifest(state)
         }
+        if (state.transferSHA256 != null) {
+            expected += "transfer.json"
+            readTransferPlan(state)
+        }
         val names = Files.newDirectoryStream(directory).use { stream ->
             stream.map { it.fileName.toString() }.filter { !PENDING_NAME.matches(it) }.toSet()
         }
@@ -297,6 +341,8 @@ internal class AgentBridgeNativeCaptureSpool(
             else if (state.publicArtifactIDs == null) AgentBridgeCodec.canonicalize(json.encodeToString(LegacyProgress(state.version, state.captures, state.artifacts, state.engine)).toByteArray())
             else if (state.version == 3) AgentBridgeCodec.canonicalize(json.encodeToString(LegacyProgress3(state.version, state.captures,
                 state.artifacts, state.engine, state.publicArtifactIDs)).toByteArray())
+            else if (state.version == 4) AgentBridgeCodec.canonicalize(json.encodeToString(LegacyProgress4(state.version, state.captures,
+                state.artifacts, state.engine, state.publicArtifactIDs, state.manifestSHA256 ?: fail(), state.manifestByteCount ?: fail())).toByteArray())
             else AgentBridgeCodec.canonicalize(json.encodeToString(state).toByteArray())
         return Base64.getEncoder().encodeToString(bytes)
     }
@@ -306,22 +352,26 @@ internal class AgentBridgeNativeCaptureSpool(
         val state = if (bytes.firstOrNull() == '['.code.toByte()) Progress(captures = json.decodeFromString<List<String>>(bytes.decodeToString()))
             else json.decodeFromString<Progress>(bytes.decodeToString())
         val noManifest = state.manifestSHA256 == null && state.manifestByteCount == null
+        val noTransfer = state.transferSHA256 == null && state.transferByteCount == null
         if (value.kind != "progress" || value.day != null ||
-            !((state.version == 2 && state.publicArtifactIDs == null && noManifest) ||
-                (state.version == 3 && state.publicArtifactIDs != null && noManifest) ||
-                (state.version == 4 && state.publicArtifactIDs != null && state.manifestSHA256 != null && state.manifestByteCount != null)) ||
+            !((state.version == 2 && state.publicArtifactIDs == null && noManifest && noTransfer) ||
+                (state.version == 3 && state.publicArtifactIDs != null && noManifest && noTransfer) ||
+                (state.version == 4 && state.publicArtifactIDs != null && state.manifestSHA256 != null && state.manifestByteCount != null && noTransfer) ||
+                (state.version == 5 && state.publicArtifactIDs != null && state.manifestSHA256 != null && state.manifestByteCount != null && state.transferSHA256 != null && state.transferByteCount != null)) ||
             state.engine.length > 5500 || state.artifacts.isEmpty() != state.engine.isEmpty() || progressPayload(state) != value.payload) fail()
         listOf(state.captures, state.artifacts).forEach { days ->
             if (days.size > 4096 || days.distinct().size != days.size || days != days.sorted()) fail()
             days.forEach(::validDay)
         }
         if (state.version >= 3) publicIDs(state)
-        if (state.version == 4 && (state.manifestSHA256?.matches(Regex("[0-9a-f]{64}")) != true ||
+        if (state.version >= 4 && (state.manifestSHA256?.matches(Regex("[0-9a-f]{64}")) != true ||
             (state.manifestByteCount ?: -1) !in 1..MANIFEST_LIMIT)) fail()
+        if (state.version == 5 && (state.transferSHA256?.matches(Regex("[0-9a-f]{64}")) != true ||
+            (state.transferByteCount ?: -1) !in 1..AgentBridgeNativeTransferCheckpoint.MAXIMUM_BYTES)) fail()
         return value to state
     }
     private fun publicIDs(state: Progress): Map<String, String> {
-        if (state.version !in 3..4 || state.publicArtifactIDs == null || state.artifacts.isEmpty() ||
+        if (state.version !in 3..5 || state.publicArtifactIDs == null || state.artifacts.isEmpty() ||
             state.artifacts.size > 4096 || state.captures != state.artifacts) fail()
         val bytes = Base64.getDecoder().decode(state.publicArtifactIDs)
         if (bytes.size != state.artifacts.size * 16 || Base64.getEncoder().encodeToString(bytes) != state.publicArtifactIDs) fail()

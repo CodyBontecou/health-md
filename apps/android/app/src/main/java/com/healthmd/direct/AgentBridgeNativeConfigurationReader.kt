@@ -141,6 +141,7 @@ internal class AgentBridgeNativePlanningSession(
     clock: java.time.Clock = java.time.Clock.systemUTC(),
     private val responseChannel: DirectSecureChannel? = null,
     private val responseNegotiation: AgentBridgeNegotiation? = null,
+    private val responseTransferNegotiation: TransferNegotiation? = null,
 ) {
     private val service: AgentBridgeExportPlanningService
     @Volatile private var wireAbandoned = false
@@ -308,7 +309,7 @@ internal class AgentBridgeNativePlanningSession(
                 } catch (failure: Throwable) { caller.ensureActive(); throw failure }
             }
             val spool = store.openCaptureSpool(reservation, !retained) { validate(); Unit }
-            val context = AgentBridgeNativeCaptureContext(spool, validate)
+            val context = AgentBridgeNativeCaptureContext(spool, responseTransferNegotiation, validate)
             return try {
                 val result = operation(context)
                 caller.ensureActive()
@@ -364,7 +365,7 @@ internal class AgentBridgeNativePlanningSession(
 
 
 /** Native-only operation lease. It cannot be decoded as permission or reused after its callback. */
-internal class AgentBridgeNativeCaptureContext internal constructor(private val spool: AgentBridgeNativeCaptureSpool, read: () -> AgentBridgeRequestSettingsResolution) {
+internal class AgentBridgeNativeCaptureContext internal constructor(private val spool: AgentBridgeNativeCaptureSpool, private val transferNegotiation: TransferNegotiation?, read: () -> AgentBridgeRequestSettingsResolution) {
     private val lock = Any()
     private var started = false
     private var closed = false
@@ -427,6 +428,20 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
         try {
             configurationForRead()
             val result = spool.preserveManifest()
+            configurationForRead(); return result
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
+    fun transferNegotiationForRead(): TransferNegotiation {
+        try {
+            configurationForRead()
+            val value = transferNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+            AgentBridgeNativeTransferCheckpoint.validateNegotiation(value)
+            configurationForRead(); return value
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
+    fun preserveTransferPlan(): ByteArray {
+        try {
+            val result = spool.preserveTransferPlan(transferNegotiationForRead())
             configurationForRead(); return result
         } catch (failure: Throwable) { invalidate(); throw failure }
     }

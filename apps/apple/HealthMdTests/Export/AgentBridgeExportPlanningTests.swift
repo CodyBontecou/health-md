@@ -542,7 +542,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), next)
     }
 
-    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil, responseVersions: [Int] = [1, 3, 4], captureProtection: (any AgentBridgeNativeCaptureProtecting)? = nil) throws -> AgentBridgeNativePlanningSession {
+    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil, responseVersions: [Int] = [1, 3, 4], captureProtection: (any AgentBridgeNativeCaptureProtecting)? = nil, transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current)) throws -> AgentBridgeNativePlanningSession {
         let profiles = existingProfiles ?? ExportProfileStore(userDefaults: rig.reader.defaults)
         Self.retainedNativeConfigurationObjects.append(profiles)
         let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles) {
@@ -551,7 +551,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         return try AgentBridgeNativePlanningSession(peer: rig.peer, lifecycle: lifecycle, store: rig.store,
             configuration: reader, responseChannel: responseChannel,
             responseNegotiation: AgentBridgeNegotiation(localVersions: responseVersions, remoteVersions: [1, 3, 4], deployedBaseVersion: 1),
-            captureProtection: captureProtection ?? rig.captureProtection,
+            responseTransferNegotiation: transferNegotiation, captureProtection: captureProtection ?? rig.captureProtection,
             clock: rig.clock, newPlanID: { try id(6) })
     }
 
@@ -602,12 +602,12 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         if let originalFailure { throw originalFailure }
     }
 
-    private func withNativeExportPreparation(_ operation: (Rig, AgentBridgeNativePlanningSession, AgentBridgeExecute, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
+    private func withNativeExportPreparation(transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), _ operation: (Rig, AgentBridgeNativePlanningSession, AgentBridgeExecute, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
         _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
         let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
-        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel, transferNegotiation: transferNegotiation)
         let request = try nativeCaptureRequest(rig, planner: planner)
         let store = FakeHealthStore()
         let manager = HealthKitManager(store: store, userDefaults: rig.reader.defaults)
@@ -723,6 +723,135 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 totalByteCount: result.totalByteCount, publicArtifactIDs: result.publicArtifactIDs,
                 manifestCanonical: AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: reversed))))
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
+    func testNativeTransferPlanRetainsOriginalSessionPartitionsAndBytes() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let result = try await planner.prepareTransferExport(request, manager: manager)
+            let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+            let checkpoint = try AgentBridgeNativeTransferCheckpoint.decode(result.checkpointCanonical)
+            XCTAssertEqual(checkpoint.requestContract, "healthmd.agent_execute_request/1")
+            XCTAssertEqual(checkpoint.requestSHA256, job.requestSHA256.rawValue)
+            XCTAssertEqual(checkpoint.manifestSHA256, AgentBridgeV4Codec.sha256(result.export.manifestCanonical))
+            XCTAssertEqual(checkpoint.createdAt, job.acceptedAt.rawValue); XCTAssertEqual(checkpoint.expiresAt, job.expiresAt.rawValue)
+            XCTAssertEqual(result.session.jobID.uuidString.lowercased(), request.jobId.rawValue)
+            XCTAssertEqual(result.session.sessionID.uuidString.lowercased(), checkpoint.sessionID)
+            XCTAssertEqual(result.session.requestFingerprint.sha256, job.requestSHA256.rawValue)
+            XCTAssertEqual(result.session.peerBinding.sourceInstallationID.uuidString.lowercased(), request.plan.intent.peer.sourceInstallationID.rawValue)
+            XCTAssertEqual(result.session.peerBinding.destinationInstallationID.uuidString.lowercased(), request.plan.intent.peer.hostInstallationID.rawValue)
+            XCTAssertEqual(result.maximumInFlightChunks, 4)
+            XCTAssertEqual(result.partitions.count, result.export.baseFiles.count)
+            var previous: String?
+            for (index, pair) in zip(result.partitions, result.export.baseFiles).enumerated() {
+                let (partition, file) = pair
+                XCTAssertEqual(partition.index, index); XCTAssertEqual(partition.previousSHA256, previous)
+                XCTAssertEqual(partition.sourceDates, [file.manifest.fileID.uuidString.lowercased()])
+                XCTAssertEqual(partition.itemSegment?.offset, 0); XCTAssertEqual(partition.itemSegment?.isFinalSegment, true)
+                XCTAssertEqual(partition.byteCount, file.manifest.byteCount); XCTAssertEqual(partition.chunkCount, 1)
+                XCTAssertEqual(partition.sha256, AgentBridgeV4Codec.sha256(file.content)); previous = partition.sha256
+            }
+            let directory = rig.directory.appendingPathComponent("captures").appendingPathComponent(job.requestSHA256.rawValue)
+            let progress = try Data(contentsOf: directory.appendingPathComponent("progress.json"))
+            store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "must-not-query", code: 1)
+            let restored = try await planner.prepareRetainedTransferExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+            XCTAssertEqual(restored.session, result.session); XCTAssertEqual(restored.partitions, result.partitions)
+            XCTAssertEqual(restored.checkpointCanonical, result.checkpointCanonical)
+            XCTAssertEqual(restored.export.manifestCanonical, result.export.manifestCanonical)
+            XCTAssertEqual(restored.export.baseFiles.map(\.content), result.export.baseFiles.map(\.content))
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), progress)
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("transfer.json")), result.checkpointCanonical)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+    func testNativeTransferPlanRequiresOriginalNegotiationBeforeSDKRead() async throws {
+        try await withNativeExportPreparation(transferNegotiation: nil) { _, planner, request, store, manager in
+            do { _ = try await planner.prepareTransferExport(request, manager: manager); XCTFail("Missing negotiated limits cannot default") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, .unsupportedCapability) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 0)
+        }
+    }
+    func testMissingNativeTransferPlanNeverRemintsOnRecovery() async throws { try await checkNativeTransferDamage(corrupt: false) }
+    func testCorruptNativeTransferPlanNeverRemintsOnRecovery() async throws { try await checkNativeTransferDamage(corrupt: true) }
+    private func checkNativeTransferDamage(corrupt: Bool) async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let result = try await planner.prepareTransferExport(request, manager: manager)
+            let path = rig.directory.appendingPathComponent("captures").appendingPathComponent(result.export.requestSHA256).appendingPathComponent("transfer.json")
+            if corrupt {
+                let handle = try FileHandle(forWritingTo: path); defer { try? handle.close() }
+                try handle.truncate(atOffset: 0); try handle.write(contentsOf: Data("{}".utf8)); try handle.synchronize()
+            } else { try FileManager.default.removeItem(at: path) }
+            do {
+                _ = try await planner.prepareRetainedTransferExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+                XCTFail("Pinned transfer metadata cannot be reminted")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+    func testInterruptedNativeTransferPlanCannotRegenerateAfterOwnerRestored() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let fingerprint = AgentBridgeV4Codec.sha256(try AgentBridgeV4Codec.encode(request))
+            let directory = rig.directory.appendingPathComponent("captures").appendingPathComponent(fingerprint)
+            var interrupted = false
+            rig.captureProtection.onRequire = { _ in
+                guard !interrupted, let bytes = try? Data(contentsOf: directory.appendingPathComponent("progress.json")),
+                      let signed = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+                      let record = signed["record"] as? [String: Any], let encoded = record["payload"] as? String,
+                      let payload = Data(base64Encoded: encoded), let state = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+                      state["version"] as? Int == 5 else { return }
+                interrupted = true
+                XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("transfer.json").path))
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            defer { rig.captureProtection.onRequire = nil }
+            do { _ = try await planner.prepareTransferExport(request, manager: manager); XCTFail("Interrupted transfer plan cannot return success") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+            XCTAssertTrue(interrupted); rig.captureProtection.onRequire = nil
+            do { _ = try await planner.prepareRetainedTransferExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid")); XCTFail("Missing pinned plan cannot regenerate") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+    func testManifestOnlyProgressV4GainsTransferWithoutChangingArtifacts() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let original = try await planner.prepareExport(request, manager: manager)
+            let directory = rig.directory.appendingPathComponent("captures").appendingPathComponent(original.requestSHA256)
+            let signed = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent("progress.json"))) as? [String: Any])
+            let record = try XCTUnwrap(signed["record"] as? [String: Any]); let payload = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(record["payload"] as? String)))
+            let state = try XCTUnwrap(JSONSerialization.jsonObject(with: payload) as? [String: Any])
+            XCTAssertEqual(state["version"] as? Int, 4)
+            XCTAssertEqual(Set(state.keys), ["version", "captures", "artifacts", "engine", "publicArtifactIDs", "manifestSHA256", "manifestByteCount"])
+            let transfer = try await planner.prepareRetainedTransferExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+            XCTAssertEqual(transfer.export.publicArtifactIDs, original.publicArtifactIDs)
+            XCTAssertEqual(transfer.export.manifestCanonical, original.manifestCanonical)
+            XCTAssertEqual(transfer.export.baseFiles.map(\.manifest), original.baseFiles.map(\.manifest))
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+    func testNativeTransferCheckpointFitsMaximumArtifactSet() throws {
+        let negotiation = try XCTUnwrap(DirectTransferCapabilities.current.negotiated(with: .current))
+        let checkpoint = try AgentBridgeNativeTransferCheckpoint.create(requestSHA256: String(repeating: "a", count: 64),
+            manifestSHA256: String(repeating: "b", count: 64), createdAt: "2026-05-29T00:00:00Z", expiresAt: "2026-06-05T00:00:00Z", count: 4096, negotiation: negotiation)
+        let bytes = try checkpoint.canonical(); XCTAssertLessThanOrEqual(bytes.count, AgentBridgeNativeTransferCheckpoint.maximumBytes)
+        let ids = (0..<4096).map { _ in UUID().uuidString.lowercased() }
+        XCTAssertEqual(try AgentBridgeNativeTransferCheckpoint.decode(bytes).validate(requestSHA256: checkpoint.requestSHA256,
+            manifestSHA256: checkpoint.manifestSHA256, createdAt: checkpoint.createdAt, expiresAt: checkpoint.expiresAt, artifactIDs: ids).count, 4096)
+    }
+    func testNativeTransferPlanOwnerRevocationAfterPublicationSuppressesReturn() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let fingerprint = AgentBridgeV4Codec.sha256(try AgentBridgeV4Codec.encode(request))
+            let path = rig.directory.appendingPathComponent("captures").appendingPathComponent(fingerprint).appendingPathComponent("transfer.json")
+            var revoked = false
+            let session = rig.session
+            session.observeChecks { _ in if FileManager.default.fileExists(atPath: path.path) { revoked = true; session.revoke() } }
+            do { _ = try await planner.prepareTransferExport(request, manager: manager); XCTFail("Final native revocation cannot return transfer plan") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+            XCTAssertTrue(revoked); XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
         }
     }
 

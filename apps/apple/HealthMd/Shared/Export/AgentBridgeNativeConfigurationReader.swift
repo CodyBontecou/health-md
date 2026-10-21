@@ -97,6 +97,7 @@ final class AgentBridgeNativePlanningSession {
     private let store: AgentBridgeExportAuthorityStore
     private let responseChannel: DirectSecureChannel?
     private let responseNegotiation: AgentBridgeNegotiation?
+    private let responseTransferNegotiation: DirectTransferNegotiation?
     private let captureProtection: any AgentBridgeNativeCaptureProtecting
     private var wireAbandoned = false
 
@@ -127,12 +128,13 @@ final class AgentBridgeNativePlanningSession {
          store: AgentBridgeExportAuthorityStore, configuration: any AgentBridgeExportPlanningConfigurationReading,
          responseChannel: DirectSecureChannel? = nil,
          responseNegotiation: AgentBridgeNegotiation? = nil,
+         responseTransferNegotiation: DirectTransferNegotiation? = nil,
          captureProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection(),
          clock: any AgentBridgeExportClock = AgentBridgeExportSystemClock(),
          newPlanID: @escaping () throws -> AgentBridgeUUID = { try AgentBridgeUUID(UUID().uuidString.lowercased()) }) throws {
         try peer.requireCurrent()
         let publication = try lifecycle.currentPublication()
-        self.peer = peer; self.lifecycle = lifecycle; self.store = store; self.responseChannel = responseChannel; self.responseNegotiation = responseNegotiation; self.captureProtection = captureProtection
+        self.peer = peer; self.lifecycle = lifecycle; self.store = store; self.responseChannel = responseChannel; self.responseNegotiation = responseNegotiation; self.responseTransferNegotiation = responseTransferNegotiation; self.captureProtection = captureProtection
         service = AgentBridgeExportPlanningService(store: store,
             configuration: OwnerBoundConfiguration(peer: peer, lifecycle: lifecycle, base: configuration),
             clock: clock, newPlanID: newPlanID)
@@ -284,7 +286,7 @@ final class AgentBridgeNativePlanningSession {
                     return result
                 }
                 let spool = try store.openCaptureSpool(reservation, create: !retained, fileProtection: captureProtection) { _ = try validate() }
-                let context = AgentBridgeNativeCaptureContext(spool: spool, read: validate)
+                let context = AgentBridgeNativeCaptureContext(spool: spool, transferNegotiation: responseTransferNegotiation, read: validate)
                 defer { context.close() }
                 let result = try await operation(context)
                 try cancellation.requireActive(); try Task.checkCancellation()
@@ -335,7 +337,8 @@ final class AgentBridgeNativeCaptureContext {
     private var claimedDays: Set<String> = []
     private var read: (() throws -> AgentBridgeRequestSettingsResolution)?
     private let spool: AgentBridgeNativeCaptureSpool
-    fileprivate init(spool: AgentBridgeNativeCaptureSpool, read: @escaping () throws -> AgentBridgeRequestSettingsResolution) { self.spool = spool; self.read = read }
+    private let transferNegotiation: DirectTransferNegotiation?
+    fileprivate init(spool: AgentBridgeNativeCaptureSpool, transferNegotiation: DirectTransferNegotiation?, read: @escaping () throws -> AgentBridgeRequestSettingsResolution) { self.spool = spool; self.transferNegotiation = transferNegotiation; self.read = read }
     func begin() throws -> AgentBridgeRequestSettingsResolution {
         guard !started, !closed else { close(); throw AgentBridgeValidationError.busy }
         started = true
@@ -391,6 +394,21 @@ final class AgentBridgeNativeCaptureContext {
         do {
             _ = try configurationForRead()
             let result = try spool.preserveManifest()
+            _ = try configurationForRead(); return result
+        } catch { invalidate(); throw error }
+    }
+    func transferNegotiationForRead() throws -> DirectTransferNegotiation {
+        do {
+            _ = try configurationForRead()
+            guard let transferNegotiation else { throw AgentBridgeValidationError.unsupportedCapability }
+            try AgentBridgeNativeTransferCheckpoint.validateNegotiation(transferNegotiation)
+            _ = try configurationForRead(); return transferNegotiation
+        } catch { invalidate(); throw error }
+    }
+    func preserveTransferPlan() throws -> Data {
+        do {
+            let negotiation = try transferNegotiationForRead()
+            let result = try spool.preserveTransferPlan(negotiation)
             _ = try configurationForRead(); return result
         } catch { invalidate(); throw error }
     }
