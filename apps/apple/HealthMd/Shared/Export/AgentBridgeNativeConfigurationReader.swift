@@ -299,6 +299,7 @@ final class AgentBridgeNativePlanningSession {
 final class AgentBridgeNativeCaptureContext {
     private var started = false
     private var closed = false
+    private var claimedDays: Set<String> = []
     private var read: (() throws -> AgentBridgeRequestSettingsResolution)?
     fileprivate init(read: @escaping () throws -> AgentBridgeRequestSettingsResolution) { self.read = read }
     func begin() throws -> AgentBridgeRequestSettingsResolution {
@@ -306,6 +307,16 @@ final class AgentBridgeNativeCaptureContext {
         started = true
         return try configurationForRead()
     }
+    /// One attempt per approved day inside this single capture operation. This is not a
+    /// durable frontier; missing spool after interruption still requires explicit recovery.
+    func claimDay(_ day: AgentBridgeDate) throws -> AgentBridgeRequestSettingsResolution {
+        let resolution = try configurationForRead()
+        guard resolution.requestedDays.contains(day) else { close(); throw AgentBridgeValidationError.invalidRequest }
+        guard claimedDays.insert(day.rawValue).inserted else { close(); throw AgentBridgeValidationError.busy }
+        return resolution
+    }
+    /// Monotonic denial only: a caught SDK/result failure cannot revive the operation.
+    func invalidate() { close() }
     func configurationForRead() throws -> AgentBridgeRequestSettingsResolution {
         guard started, !closed, let read else { throw AgentBridgeValidationError.permissionRequired }
         do {
@@ -314,7 +325,7 @@ final class AgentBridgeNativeCaptureContext {
             return result
         } catch { close(); throw error }
     }
-    fileprivate func close() { closed = true; read = nil }
+    fileprivate func close() { closed = true; read = nil; claimedDays.removeAll() }
 }
 nonisolated private final class AgentBridgeCaptureCancellation: @unchecked Sendable {
     private let lock = NSLock()

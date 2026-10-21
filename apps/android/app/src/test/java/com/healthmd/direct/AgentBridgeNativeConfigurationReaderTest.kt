@@ -1,6 +1,17 @@
 package com.healthmd.direct
 
 import android.content.Context
+import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.aggregate.AggregationResult
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.request.AggregateRequest
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.response.ReadRecordsResponse
+import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.AgentBridgeNativeCaptureFailure
+import java.time.Instant
 import android.os.Looper
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
@@ -82,14 +93,207 @@ class AgentBridgeNativeConfigurationReaderTest {
     private fun ownedDiscoveryBytes(f: AgentBridgeExportPlanningFixture) = AgentBridgeCodec.encodeEnvelope(
         AgentBridgeMessage("discovery_request", f.discoveryRequest()), nativeNegotiation())
 
-    private fun nativeCaptureRequest(f: AgentBridgeExportPlanningFixture, planner: AgentBridgeNativePlanningSession): AgentBridgeExecuteRequest {
+    private fun nativeCaptureRequest(f: AgentBridgeExportPlanningFixture, planner: AgentBridgeNativePlanningSession, metrics: List<String> = listOf("heart_rate_avg", "steps")): AgentBridgeExecuteRequest {
         fun send(message: AgentBridgeMessage) = AgentBridgeCodec.decodeEnvelope(planner.handleEnvelope(
             AgentBridgeCodec.encodeEnvelope(message, nativeNegotiation()), nativeNegotiation()), nativeNegotiation()).payload
         val discovery = send(AgentBridgeMessage("discovery_request", f.discoveryRequest())) as AgentBridgeDiscovery
-        val plan = send(AgentBridgeMessage("plan_request", f.request(discovery))) as AgentBridgeGeneratedPlan
+        val plan = send(AgentBridgeMessage("plan_request", f.request(discovery, f.intent(metrics = metrics)))) as AgentBridgeGeneratedPlan
         val approval = planner.authorizeExactApproval(f.native, plan.planId, AgentBridgeValidation.bindingFor(plan))
         return AgentBridgeExecuteRequest(approval, AgentBridgeExportPlanningFixture.id(81), AgentBridgeExportPlanningFixture.id(82), plan,
             AgentBridgeExportPlanningFixture.id(83), "healthmd.agent_execute_request", 1)
+    }
+
+    private suspend fun withNativeSDKCapture(metrics: List<String>, operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativeCaptureContext, HealthConnectClient, HealthConnectManager) -> Unit) {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true))
+            val request = nativeCaptureRequest(f, planner, metrics)
+            val client = mockk<HealthConnectClient>(relaxed = true)
+            coEvery { client.permissionController.getGrantedPermissions() } returns setOf(
+                HealthPermission.getReadPermission(StepsRecord::class), HealthPermission.getReadPermission(HeartRateRecord::class),
+                HealthPermission.getReadPermission(RestingHeartRateRecord::class), HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class))
+            val manager = HealthConnectManager(mockk<Context>(relaxed = true), client)
+            val preferenceReads = reads; val preferenceWrites = writes
+            try {
+                planner.withCaptureContext(request) { context ->
+                    context.begin()
+                    operation(f, context, client, manager)
+                }
+            } finally {
+                assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
+                assertThat(reads).isEqualTo(preferenceReads); assertThat(writes).isEqualTo(preferenceWrites)
+            }
+        }
+    }
+
+    @Test fun `native SDK capture reads only approved metrics over exact DST day`() = runBlocking {
+        withNativeSDKCapture(listOf("steps", "heart_rate_avg")) { _, context, client, manager ->
+            val requests = mutableListOf<AggregateRequest>()
+            val values = mockk<AggregationResult>()
+            every { values[StepsRecord.COUNT_TOTAL] } returns 0L
+            every { values[HeartRateRecord.BPM_AVG] } returns 72L
+            coEvery { client.aggregate(capture(requests)) } returns values
+            val result = manager.captureAgentBridgeDay("2026-03-08", context)
+            assertThat(result.activity.steps).isEqualTo(0)
+            assertThat(result.heart.averageHeartRate).isEqualTo(72.0)
+            assertThat(result.heart.heartRateMin).isNull(); assertThat(result.heart.heartRateMax).isNull()
+            assertThat(result.heart.hrv).isNull(); assertThat(result.heart.restingHeartRate).isNull()
+            assertThat(requests.map { request -> AggregateRequest::class.java.getDeclaredField("metrics").apply { isAccessible = true }.get(request) }).containsExactly(setOf(StepsRecord.COUNT_TOTAL), setOf(HeartRateRecord.BPM_AVG)).inOrder()
+            for (request in requests) {
+                val range = AggregateRequest::class.java.getDeclaredField("timeRangeFilter").apply { isAccessible = true }.get(request) as androidx.health.connect.client.time.TimeRangeFilter
+                assertThat(range.startTime).isEqualTo(Instant.parse("2026-03-08T08:00:00Z"))
+                assertThat(range.endTime).isEqualTo(Instant.parse("2026-03-09T07:00:00Z"))
+            }
+            coVerify(exactly = 0) { client.readRecords(any<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()) }
+        }
+    }
+
+    @Test fun `native SDK capture keeps native reducers and bounded latest records without inventing empty values`() = runBlocking {
+        for (populated in listOf(false, true)) withNativeSDKCapture(listOf("steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "android.hrv_rmssd")) { _, context, client, manager ->
+            val values = mockk<AggregationResult>()
+            every { values[StepsRecord.COUNT_TOTAL] } returns if (populated) 123L else null
+            every { values[HeartRateRecord.BPM_AVG] } returns if (populated) 72L else null
+            every { values[HeartRateRecord.BPM_MIN] } returns if (populated) 40L else null
+            every { values[HeartRateRecord.BPM_MAX] } returns if (populated) 150L else null
+            coEvery { client.aggregate(any()) } returns values
+            val time = Instant.parse("2026-03-08T12:00:00Z")
+            coEvery { client.readRecords(any<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()) } coAnswers {
+                val request = firstArg<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()
+                assertThat(request.pageSize).isEqualTo(1); assertThat(request.ascendingOrder).isFalse()
+                when (request.recordType) {
+                    RestingHeartRateRecord::class -> ReadRecordsResponse<androidx.health.connect.client.records.Record>(if (populated) listOf(RestingHeartRateRecord(time, null, 55, Metadata.manualEntry())) else emptyList(), null)
+                    HeartRateVariabilityRmssdRecord::class -> ReadRecordsResponse<androidx.health.connect.client.records.Record>(if (populated) listOf(HeartRateVariabilityRmssdRecord(time, null, 31.0, Metadata.manualEntry())) else emptyList(), null)
+                    else -> error("Unselected record family")
+                }
+            }
+            val result = manager.captureAgentBridgeDay("2026-03-08", context)
+            assertThat(result.activity.steps).isEqualTo(if (populated) 123 else null)
+            assertThat(result.heart.averageHeartRate).isEqualTo(if (populated) 72.0 else null)
+            assertThat(result.heart.heartRateMin).isEqualTo(if (populated) 40.0 else null)
+            assertThat(result.heart.heartRateMax).isEqualTo(if (populated) 150.0 else null)
+            assertThat(result.heart.restingHeartRate).isEqualTo(if (populated) 55.0 else null)
+            assertThat(result.heart.hrv).isEqualTo(if (populated) 31.0 else null)
+        }
+    }
+
+    @Test fun `native SDK capture rejects unapproved day missing permission and native failures before fallback`() = runBlocking {
+        for (mode in listOf("day", "permission", "sdk", "invalid")) {
+            try {
+                withNativeSDKCapture(listOf("steps")) { _, context, client, manager ->
+                    if (mode == "permission") coEvery { client.permissionController.getGrantedPermissions() } returns emptySet()
+                    if (mode == "invalid") {
+                        val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns Long.MAX_VALUE
+                        coEvery { client.aggregate(any()) } returns values
+                    } else coEvery { client.aggregate(any()) } throws IllegalStateException("synthetic SDK body")
+                    try { manager.captureAgentBridgeDay(if (mode == "day") "2026-03-06" else "2026-03-08", context) }
+                    finally { coVerify(exactly = if (mode in listOf("day", "permission")) 0 else 1) { client.aggregate(any()) } }
+                }
+                throw AssertionError("Expected capture failure")
+            } catch (e: AgentBridgeException) {
+                assertThat(e.code).isEqualTo(if (mode == "day") AgentBridgeErrorCode.INVALID_REQUEST else AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            } catch (e: AgentBridgeNativeCaptureFailure) {
+                assertThat(mode).isAnyOf("sdk", "invalid"); assertThat(e.cause).isNull(); assertThat(e.message).isEqualTo("native_capture_failed")
+            }
+        }
+    }
+
+    @Test fun `native SDK failure cannot be caught to retry or return success`() = runBlocking {
+        try {
+            withNativeSDKCapture(listOf("steps")) { _, context, client, manager ->
+                coEvery { client.aggregate(any()) } throws IllegalStateException("synthetic SDK body")
+                try { manager.captureAgentBridgeDay("2026-03-08", context); throw AssertionError("Expected SDK failure") }
+                catch (_: AgentBridgeNativeCaptureFailure) { }
+                val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+                coEvery { client.aggregate(any()) } returns values
+                try { manager.captureAgentBridgeDay("2026-03-08", context); throw AssertionError("Cannot retry failed capture") }
+                catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+                coVerify(exactly = 1) { client.aggregate(any()) }
+                // Deliberately swallow SDK error and return; enclosing operation must reject.
+            }
+            throw AssertionError("Cannot return success after SDK failure")
+        } catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+    }
+
+    @Test fun `native SDK cannot capture successful day twice even when duplicate caught`() = runBlocking {
+        try {
+            withNativeSDKCapture(listOf("steps")) { _, context, client, manager ->
+                val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+                coEvery { client.aggregate(any()) } returns values
+                manager.captureAgentBridgeDay("2026-03-08", context)
+                manager.captureAgentBridgeDay("2026-03-07", context)
+                try { manager.captureAgentBridgeDay("2026-03-08", context); throw AssertionError("Cannot recapture successful day") }
+                catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
+                coVerify(exactly = 2) { client.aggregate(any()) }
+            }
+            throw AssertionError("Duplicate attempt permanently invalidates operation")
+        } catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+    }
+
+    @Test fun `native SDK latest reads continue empty pages until value or terminal token`() = runBlocking {
+        for (populated in listOf(false, true)) withNativeSDKCapture(listOf("resting_heart_rate", "android.hrv_rmssd")) { _, context, client, manager ->
+            val requests = mutableListOf<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()
+            val time = Instant.parse("2026-03-08T12:00:00Z")
+            coEvery { client.readRecords(any<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()) } coAnswers {
+                val request = firstArg<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()
+                requests += request
+                assertThat(request.ascendingOrder).isFalse(); assertThat(request.pageSize).isEqualTo(1)
+                if (request.pageToken == null) ReadRecordsResponse(emptyList(), "next")
+                else {
+                    assertThat(request.pageToken).isEqualTo("next")
+                    val record = when (request.recordType) {
+                        RestingHeartRateRecord::class -> RestingHeartRateRecord(time, null, 55, Metadata.manualEntry())
+                        HeartRateVariabilityRmssdRecord::class -> HeartRateVariabilityRmssdRecord(time, null, 31.0, Metadata.manualEntry())
+                        else -> error("Unselected native record")
+                    }
+                    ReadRecordsResponse(if (populated) listOf(record) else emptyList(), if (populated) "older-not-needed" else "")
+                }
+            }
+            val result = manager.captureAgentBridgeDay("2026-03-08", context)
+            assertThat(result.heart.restingHeartRate).isEqualTo(if (populated) 55.0 else null)
+            assertThat(result.heart.hrv).isEqualTo(if (populated) 31.0 else null)
+            assertThat(requests).hasSize(4)
+            coVerify(exactly = 0) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `native SDK latest reads reject token cycles budget exhaustion and cancellation between pages`() = runBlocking {
+        for (mode in listOf("cycle", "budget", "cancel")) supervisorScope {
+            var reads = 0
+            val child = async {
+                withNativeSDKCapture(listOf("resting_heart_rate")) { _, context, client, manager ->
+                    coEvery { client.readRecords(any<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()) } coAnswers {
+                        reads++
+                        yield()
+                        if (mode == "cancel") currentCoroutineContext().job.cancel()
+                        ReadRecordsResponse<androidx.health.connect.client.records.Record>(emptyList(), if (mode == "budget") "page-$reads" else "next")
+                    }
+                    manager.captureAgentBridgeDay("2026-03-08", context)
+                }
+            }
+            try { child.await(); throw AssertionError("Cannot return empty from unfinished pagination") }
+            catch (e: AgentBridgeException) { assertThat(mode).isEqualTo("budget"); assertThat(e.code).isEqualTo(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED) }
+            catch (_: AgentBridgeNativeCaptureFailure) { assertThat(mode).isEqualTo("cycle") }
+            catch (_: CancellationException) { assertThat(mode).isEqualTo("cancel") }
+            when (mode) {
+                "cycle" -> assertThat(reads).isEqualTo(2)
+                "budget" -> { assertThat(reads).isGreaterThan(1); assertThat(reads).isAtMost(64) }
+                else -> assertThat(reads).isEqualTo(1)
+            }
+        }
+    }
+
+    @Test fun `native SDK capture rechecks original authority after native suspension`() = runBlocking {
+        try {
+            withNativeSDKCapture(listOf("steps", "heart_rate_avg")) { f, context, client, manager ->
+                var reads = 0
+                val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+                coEvery { client.aggregate(any()) } coAnswers { reads++; yield(); f.peerContext.trusted = false; values }
+                try { manager.captureAgentBridgeDay("2026-03-08", context) }
+                finally { assertThat(reads).isEqualTo(1) }
+            }
+            throw AssertionError("Cannot return SDK value after revocation")
+        } catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
     }
 
     @Test fun `native capture context owns one claim and escaped context expires`() = runBlocking {

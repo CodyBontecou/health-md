@@ -342,6 +342,7 @@ internal class AgentBridgeNativeCaptureContext internal constructor(read: () -> 
     private val lock = Any()
     private var started = false
     private var closed = false
+    private val claimedDays = mutableSetOf<String>()
     private var read: (() -> AgentBridgeRequestSettingsResolution)? = read
     fun begin(): AgentBridgeRequestSettingsResolution {
         synchronized(lock) {
@@ -350,6 +351,18 @@ internal class AgentBridgeNativeCaptureContext internal constructor(read: () -> 
         }
         return configurationForRead()
     }
+    /** One in-memory attempt per approved day; not a durable frontier or resume journal. */
+    fun claimDay(day: String): AgentBridgeRequestSettingsResolution {
+        val resolution = configurationForRead()
+        if (day !in resolution.requestedDays) { close(); throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST) }
+        synchronized(lock) {
+            if (closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            if (!claimedDays.add(day)) { close(); throw AgentBridgeException(AgentBridgeErrorCode.BUSY) }
+        }
+        return resolution
+    }
+    /** Monotonic denial so catching an SDK/result failure cannot revive the operation. */
+    internal fun invalidate() { close() }
     fun configurationForRead(): AgentBridgeRequestSettingsResolution {
         val callback = synchronized(lock) {
             if (!started || closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
@@ -361,5 +374,5 @@ internal class AgentBridgeNativeCaptureContext internal constructor(read: () -> 
             result
         } catch (failure: Throwable) { close(); throw failure }
     }
-    internal fun close() { synchronized(lock) { closed = true; read = null } }
+    internal fun close() { synchronized(lock) { closed = true; read = null; claimedDays.clear() } }
 }

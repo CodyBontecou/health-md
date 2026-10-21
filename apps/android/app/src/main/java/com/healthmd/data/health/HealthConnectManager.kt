@@ -17,6 +17,10 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthmd.R
+import com.healthmd.direct.AgentBridgeNativeCaptureContext
+import com.healthmd.direct.protocol.AgentBridgeException
+import com.healthmd.direct.protocol.AgentBridgeErrorCode
+import androidx.health.connect.client.permission.HealthPermission
 import com.healthmd.data.isHealthConnectRateLimit
 import com.healthmd.domain.model.*
 import kotlinx.coroutines.CancellationException
@@ -454,6 +458,100 @@ class HealthConnectManager(
         }
 
         return dates.map { date -> dataByDate[date]?.filtered(selection) ?: HealthData(date) }
+    }
+
+    /** Exact native bridge day, bound to the original operation and this Health Connect client.
+     * No live provider/settings lookup, broad category read, archive, or error-to-empty fallback. */
+    internal suspend fun captureAgentBridgeDay(day: String, context: AgentBridgeNativeCaptureContext): HealthData {
+        val resolution = context.claimDay(day)
+        try {
+            if (day !in resolution.requestedDays) throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+            val date = LocalDate.parse(day)
+            val zone = ZoneId.of(resolution.calendarTimezone)
+            val start = date.atStartOfDay(zone).toInstant()
+            val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+            val range = TimeRangeFilter.between(start, end)
+            val selected = resolution.selection.map { it.nativeMetricId }.toSet()
+            if (selected.isEmpty() || !setOf("steps", "avg_hr", "min_hr", "max_hr", "resting_hr", "hrv").containsAll(selected)) {
+                throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_METRIC)
+            }
+            val required = selected.map { id ->
+                when (id) {
+                    "steps" -> HealthPermission.getReadPermission(StepsRecord::class)
+                    "avg_hr", "min_hr", "max_hr" -> HealthPermission.getReadPermission(HeartRateRecord::class)
+                    "resting_hr" -> HealthPermission.getReadPermission(RestingHeartRateRecord::class)
+                    else -> HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
+                }
+            }.toSet()
+            suspend fun <T> sdk(query: suspend () -> T): T {
+                context.configurationForRead()
+                val value = try { query() }
+                catch (error: Exception) {
+                    context.configurationForRead() // Original cancellation and authority loss win.
+                    if (error is CancellationException) throw error
+                    throw AgentBridgeNativeCaptureFailure()
+                }
+                context.configurationForRead()
+                return value
+            }
+            suspend fun <T> read(query: suspend () -> T): T {
+                val permissions = sdk { healthConnectClient.permissionController.getGrantedPermissions() }
+                if (!permissions.containsAll(required)) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+                return sdk(query)
+            }
+            suspend fun <T : androidx.health.connect.client.records.Record> latest(type: KClass<T>, time: (T) -> Instant): T? {
+                var token: String? = null
+                val seen = mutableSetOf<String>()
+                // Empty intermediate pages are not exhaustion. Bound native work and retain no
+                // source arrays: the first descending record is sufficient for the latest reducer.
+                repeat(64) {
+                    val page = read { healthConnectClient.readRecords(ReadRecordsRequest(type, range, ascendingOrder = false, pageSize = 1, pageToken = token)) }
+                    if (page.records.size > 1) throw AgentBridgeNativeCaptureFailure()
+                    val record = page.records.singleOrNull()
+                    if (record != null) {
+                        if (time(record) < start || time(record) >= end) throw AgentBridgeNativeCaptureFailure()
+                        return record
+                    }
+                    val next = page.pageToken
+                    if (next.isNullOrEmpty()) return null
+                    if (!seen.add(next)) throw AgentBridgeNativeCaptureFailure()
+                    token = next
+                }
+                throw AgentBridgeException(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+            }
+            var result = HealthData(date)
+            if ("steps" in selected) {
+                val values = read { healthConnectClient.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), range)) }
+                val count = values[StepsRecord.COUNT_TOTAL]
+                if (count != null && count !in 0..Int.MAX_VALUE.toLong()) throw AgentBridgeNativeCaptureFailure()
+                result = result.copy(activity = result.activity.copy(steps = count?.toInt()))
+            }
+            val metrics = buildSet<AggregateMetric<*>> {
+                if ("avg_hr" in selected) add(HeartRateRecord.BPM_AVG)
+                if ("min_hr" in selected) add(HeartRateRecord.BPM_MIN)
+                if ("max_hr" in selected) add(HeartRateRecord.BPM_MAX)
+            }
+            if (metrics.isNotEmpty()) {
+                val values = read { healthConnectClient.aggregate(AggregateRequest(metrics, range)) }
+                result = result.copy(heart = result.heart.copy(
+                    averageHeartRate = if ("avg_hr" in selected) values[HeartRateRecord.BPM_AVG]?.toDouble() else null,
+                    heartRateMin = if ("min_hr" in selected) values[HeartRateRecord.BPM_MIN]?.toDouble() else null,
+                    heartRateMax = if ("max_hr" in selected) values[HeartRateRecord.BPM_MAX]?.toDouble() else null,
+                ))
+            }
+            if ("resting_hr" in selected) {
+                val record = latest(RestingHeartRateRecord::class) { it.time }
+                result = result.copy(heart = result.heart.copy(restingHeartRate = record?.beatsPerMinute?.toDouble()))
+            }
+            if ("hrv" in selected) {
+                val record = latest(HeartRateVariabilityRmssdRecord::class) { it.time }
+                result = result.copy(heart = result.heart.copy(hrv = record?.heartRateVariabilityMillis))
+            }
+            if (listOfNotNull(result.heart.averageHeartRate, result.heart.heartRateMin, result.heart.heartRateMax,
+                    result.heart.restingHeartRate, result.heart.hrv).any { !it.isFinite() || it < 0 }) throw AgentBridgeNativeCaptureFailure()
+            context.configurationForRead()
+            return result
+        } catch (error: Throwable) { context.invalidate(); throw error }
     }
 
     /**
@@ -3576,3 +3674,6 @@ private fun Exception.isHistoricalOrBackgroundAccessFailure(): Boolean {
         message.contains("historical", ignoreCase = true) ||
         message.contains("background", ignoreCase = true)
 }
+
+/** Fixed internal failure: no SDK exception body or health value can escape through this error. */
+internal class AgentBridgeNativeCaptureFailure : Exception("native_capture_failed")

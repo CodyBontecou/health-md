@@ -555,13 +555,13 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer))))
     }
 
-    private func nativeCaptureRequest(_ rig: Rig, planner: AgentBridgeNativePlanningSession) throws -> AgentBridgeExecute {
+    private func nativeCaptureRequest(_ rig: Rig, planner: AgentBridgeNativePlanningSession, metrics: [String] = ["steps"]) throws -> AgentBridgeExecute {
         func send(_ document: AgentBridgeDocument) throws -> AgentBridgeDocument {
             try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: planner.handle(
                 AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: document)))).payload
         }
         guard case .discovery(let discovery) = try send(.discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer))),
-              case .plan(let plan) = try send(.planRequest(rig.request(discovery: discovery))) else { throw AgentBridgeValidationError.invalidRequest }
+              case .plan(let plan) = try send(.planRequest(rig.request(discovery: discovery, metrics: metrics))) else { throw AgentBridgeValidationError.invalidRequest }
         let binding = AgentBridgeSemantics.binding(plan)
         try planner.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authorization: FakeNativeAuthorization(binding: binding))
         guard case .approval(let approval) = try send(.approvalRequest(.init(binding: binding, planId: plan.planId, requestId: id(103)))) else {
@@ -569,6 +569,140 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
         return try AgentBridgeExecute(approval: approval, idempotencyKey: id(81), jobId: id(82), plan: plan, requestId: id(83))
     }
+
+    #if canImport(HealthMd)
+    private func withNativeSDKCapture(metrics: [String], operation: (Rig, AgentBridgeNativeCaptureContext, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner, metrics: metrics)
+        let store = FakeHealthStore()
+        let capture = HealthKitManager(store: store, userDefaults: rig.reader.defaults)
+        Self.retainedNativeConfigurationObjects.append(capture)
+        let preferenceReads = rig.reader.defaults.reads, preferenceWrites = rig.reader.defaults.writes
+        defer {
+            XCTAssertEqual(try? rig.store.snapshot().captureClaims?.count, 1)
+            XCTAssertEqual(rig.reader.defaults.reads, preferenceReads)
+            XCTAssertEqual(rig.reader.defaults.writes, preferenceWrites)
+        }
+        try await planner.withCaptureContext(request) { context in
+            _ = try context.begin()
+            try await operation(rig, context, store, capture)
+        }
+    }
+
+    func testNativeSDKCaptureReadsOnlyApprovedMetricsAndPinnedDSTDay() async throws {
+        try await withNativeSDKCapture(metrics: ["steps", "heart_rate_avg"]) { _, context, store, manager in
+            let start = ISO8601DateFormatter().date(from: "2026-03-08T08:00:00Z")!
+            let end = ISO8601DateFormatter().date(from: "2026-03-09T07:00:00Z")!
+            var checkedPredicate = false
+            store.querySumResult = { identifier, predicate in
+                XCTAssertEqual(identifier, .stepCount)
+                XCTAssertEqual(predicate, HKQuery.predicateForSamples(withStart: start, end: end))
+                checkedPredicate = true
+                return 0
+            }
+            store.statisticsAverages[HKQuantityTypeIdentifier.heartRate.rawValue] = 72
+            store.statisticsMins[HKQuantityTypeIdentifier.heartRate.rawValue] = 40
+            store.statisticsMaxes[HKQuantityTypeIdentifier.heartRate.rawValue] = 150
+            let result = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
+            XCTAssertTrue(checkedPredicate)
+            XCTAssertEqual(result.date, start)
+            XCTAssertEqual(result.timeContext.calendarTimeZoneIdentifier, "America/Los_Angeles")
+            XCTAssertEqual(result.activity.steps, 0)
+            XCTAssertEqual(result.heart.averageHeartRate, 72)
+            XCTAssertNil(result.heart.heartRateMin); XCTAssertNil(result.heart.heartRateMax)
+            XCTAssertNil(result.heart.hrv); XCTAssertNil(result.heart.restingHeartRate)
+            XCTAssertEqual(store.queriedSumIdentifiers, [HKQuantityTypeIdentifier.stepCount.rawValue])
+            XCTAssertEqual(store.queriedDiscreteStatisticsOptions, [.average])
+            XCTAssertTrue(store.quantitySampleQueries.isEmpty)
+            XCTAssertTrue(store.queriedQuantityRecordIdentifiers.isEmpty)
+            XCTAssertTrue(store.queriedCategoryIdentifiers.isEmpty)
+        }
+    }
+
+    func testNativeSDKCaptureUsesReviewedReducersAndPreservesEmptyValues() async throws {
+        for populated in [false, true] {
+            try await withNativeSDKCapture(metrics: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"]) { _, context, store, manager in
+                if populated {
+                    store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+                    store.statisticsAverages[HKQuantityTypeIdentifier.heartRate.rawValue] = 72
+                    store.statisticsMins[HKQuantityTypeIdentifier.heartRate.rawValue] = 40
+                    store.statisticsMaxes[HKQuantityTypeIdentifier.heartRate.rawValue] = 150
+                    store.statisticsMostRecent[HKQuantityTypeIdentifier.restingHeartRate.rawValue] = 55
+                    store.statisticsAverages[HKQuantityTypeIdentifier.heartRateVariabilitySDNN.rawValue] = 31
+                }
+                let result = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
+                XCTAssertEqual(result.activity.steps, populated ? 123 : nil)
+                XCTAssertEqual(result.heart.averageHeartRate, populated ? 72 : nil)
+                XCTAssertEqual(result.heart.heartRateMin, populated ? 40 : nil)
+                XCTAssertEqual(result.heart.heartRateMax, populated ? 150 : nil)
+                XCTAssertEqual(result.heart.restingHeartRate, populated ? 55 : nil)
+                XCTAssertEqual(result.heart.hrv, populated ? 31 : nil)
+                XCTAssertEqual(store.queriedDiscreteStatisticsOptions, [[.average, .minimum, .maximum]])
+            }
+        }
+    }
+
+    func testNativeSDKCaptureRejectsOutOfScopeAndSDKFailureWithoutFallback() async throws {
+        for mode in ["day", "sdk", "invalid"] {
+            do {
+                try await withNativeSDKCapture(metrics: ["steps"]) { _, context, store, manager in
+                    defer { XCTAssertEqual(store.queriedSumIdentifiers.count, mode == "day" ? 0 : 1); XCTAssertTrue(store.quantitySampleQueries.isEmpty) }
+                    if mode == "sdk" { store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "synthetic", code: 1) }
+                    if mode == "invalid" { store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = .infinity }
+                    _ = try await manager.captureAgentBridgeDay(AgentBridgeDate(mode == "day" ? "2026-03-06" : "2026-03-08"), context: context)
+                }
+                XCTFail("Must reject")
+            } catch {
+                if mode == "day" { XCTAssertEqual(error as? AgentBridgeValidationError, .invalidRequest) }
+                else { XCTAssertNotNil(error as? AgentBridgeNativeCaptureFailure) }
+            }
+        }
+    }
+
+    func testNativeSDKCaptureFailureCannotBeCaughtToRetryOrReturnSuccess() async throws {
+        do {
+            try await withNativeSDKCapture(metrics: ["steps"]) { _, context, store, manager in
+                defer { XCTAssertEqual(store.queriedSumIdentifiers.count, 1) }
+                store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "synthetic", code: 1)
+                do { _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context); XCTFail("Expected SDK failure") }
+                catch { XCTAssertNotNil(error as? AgentBridgeNativeCaptureFailure) }
+                store.errorsForSum = [:]
+                do { _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context); XCTFail("Cannot retry failed capture") }
+                catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+                // Deliberately ignore the SDK error and return normally; outer operation must reject.
+            }
+            XCTFail("Cannot return success after SDK failure")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+    }
+
+    func testNativeSDKCaptureCannotCaptureSuccessfulDayTwiceEvenWhenDuplicateCaught() async throws {
+        do {
+            try await withNativeSDKCapture(metrics: ["steps"]) { _, context, store, manager in
+                defer { XCTAssertEqual(store.queriedSumIdentifiers.count, 2) }
+                _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
+                _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-07"), context: context)
+                do { _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context); XCTFail("Cannot recapture successful day") }
+                catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
+            }
+            XCTFail("Duplicate attempt permanently invalidates operation")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+    }
+
+    func testNativeSDKCaptureRechecksAuthorityAfterActualSDKCallback() async throws {
+        do {
+            try await withNativeSDKCapture(metrics: ["steps", "heart_rate_avg"]) { rig, context, store, manager in
+                store.querySumResult = { _, _ in rig.session.revoke(); return 123 }
+                defer { XCTAssertEqual(store.queriedSumIdentifiers.count, 1); XCTAssertTrue(store.queriedDiscreteStatisticsIdentifiers.isEmpty) }
+                _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
+            }
+            XCTFail("Cannot return SDK value after authority loss")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+    }
+    #endif
 
     func testNativeCaptureContextOwnsOneClaimAndExpiresEscapedContext() async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()

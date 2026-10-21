@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+import HealthMdConnectionCore
 import Combine
 import os.log
 
@@ -1029,6 +1030,69 @@ final class HealthKitManager: ObservableObject {
     }
 
     /// Fetches HealthKit data for the requested date without presenting additional authorization UI.
+    /// Exact bridge summary capture from this owner's HealthKit store. Never reads preferences,
+    /// providers, archives or unselected types, and never converts SDK failure into empty success.
+    /// The enclosing original-session operation must begin its context once and preserve its spool.
+    func captureAgentBridgeDay(_ day: AgentBridgeDate, context: AgentBridgeNativeCaptureContext) async throws -> HealthData {
+        let resolution = try context.claimDay(day)
+        do {
+            guard resolution.requestedDays.contains(day),
+                  let zoneID = resolution.settings.calendarTimeZoneIdentifier,
+                  let zone = TimeZone(identifier: zoneID) else { throw AgentBridgeValidationError.invalidRequest }
+            let parts = day.rawValue.split(separator: "-").compactMap { Int($0) }
+            var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+            guard parts.count == 3,
+                  let start = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])),
+                  let end = calendar.date(byAdding: .day, value: 1, to: start) else { throw AgentBridgeValidationError.invalidRequest }
+            let selected = Set(resolution.selection.map(\.nativeMetricID))
+            guard !selected.isEmpty, selected.isSubset(of: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"]) else {
+                throw AgentBridgeValidationError.unsupportedMetric
+            }
+            func read<T>(_ query: () async throws -> T) async throws -> T {
+                _ = try context.configurationForRead()
+                let value: T
+                do { value = try await query() }
+                catch {
+                    _ = try context.configurationForRead() // Original cancellation/authority loss wins.
+                    if error is CancellationError { throw error }
+                    throw AgentBridgeNativeCaptureFailure.sdkReadFailed
+                }
+                _ = try context.configurationForRead()
+                return value
+            }
+            func checked(_ value: Double?) throws -> Double? {
+                guard let value else { return nil }
+                guard value.isFinite, value >= 0 else { throw AgentBridgeNativeCaptureFailure.invalidResult }
+                return value
+            }
+            let statisticsPredicate = Self.compatibilityStatisticsPredicate(dayStart: start, dayEnd: end)
+            let samplePredicate = Self.compatibilitySamplePredicate(dayStart: start, dayEnd: end)
+            var result = HealthData(date: start, timeContext: ExportTimeContext(timeZone: zone))
+            if selected.contains("steps"), let steps = try checked(await read({ try await store.querySum(identifier: .stepCount, predicate: statisticsPredicate) })) {
+                guard let count = Int(exactly: steps) else { throw AgentBridgeNativeCaptureFailure.invalidResult }
+                result.activity.steps = count
+            }
+            var options: HealthKitDiscreteStatisticsOptions = []
+            if selected.contains("heart_rate_avg") { options.insert(.average) }
+            if selected.contains("heart_rate_min") { options.insert(.minimum) }
+            if selected.contains("heart_rate_max") { options.insert(.maximum) }
+            if !options.isEmpty {
+                let values = try await read { try await store.queryDiscreteStatistics(identifier: .heartRate, predicate: statisticsPredicate, options: options) }
+                if options.contains(.average) { result.heart.averageHeartRate = try checked(values.average) }
+                if options.contains(.minimum) { result.heart.heartRateMin = try checked(values.minimum) }
+                if options.contains(.maximum) { result.heart.heartRateMax = try checked(values.maximum) }
+            }
+            if selected.contains("resting_heart_rate") {
+                result.heart.restingHeartRate = try checked(await read { try await store.queryMostRecent(identifier: .restingHeartRate, predicate: samplePredicate) })
+            }
+            if selected.contains("hrv") {
+                result.heart.hrv = try checked(await read { try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: statisticsPredicate) })
+            }
+            _ = try context.configurationForRead()
+            return result
+        } catch { context.invalidate(); throw error }
+    }
+
     func fetchHealthData(
         for date: Date,
         detailPolicy: AppleExportDetailPolicy,
@@ -4136,3 +4200,6 @@ extension WorkoutType {
         return (workoutType, workoutType.healthKitActivityTypeName)
     }
 }
+
+/// Health-free internal capture failures; native error descriptions never become wire output.
+enum AgentBridgeNativeCaptureFailure: Error { case sdkReadFailed, invalidResult }
