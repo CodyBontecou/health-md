@@ -229,6 +229,41 @@ final class AgentBridgeNativePlanningSession {
         return result.sorted { $0.issuedAt.rawValue == $1.issuedAt.rawValue ? $0.planId.rawValue < $1.planId.rawValue : $0.issuedAt.rawValue > $1.issuedAt.rawValue }
     }
 
+    /// Own the whole native capture operation, never an escaping permission token. Only the
+    /// original negotiated session may accept/claim once; a retry must inspect/resume its job.
+    func withCaptureContext<T>(_ request: AgentBridgeExecute,
+                               operation: (AgentBridgeNativeCaptureContext) async throws -> T) async throws -> T {
+        guard let negotiation = responseNegotiation, negotiation.baseVersion == 1,
+              negotiation.agentBridgeV4, responseChannel != nil else { throw AgentBridgeValidationError.unsupportedCapability }
+        let cancellation = AgentBridgeCaptureCancellation()
+        return try await withTaskCancellationHandler {
+            do {
+                try cancellation.requireActive(); try Task.checkCancellation()
+                let publication = try requireCurrent()
+                let accepted = try service.acceptExecution(request, authenticatedPeer: peer)
+                try cancellation.requireActive(); try Task.checkCancellation()
+                guard accepted.newlyAccepted else { throw AgentBridgeValidationError.busy }
+                let reservation = try service.claimCapture(request, authenticatedPeer: peer)
+                try cancellation.requireActive(); try Task.checkCancellation()
+                guard !wireAbandoned, try lifecycle.currentPublication() == publication else { throw AgentBridgeValidationError.bindingChanged }
+                let context = AgentBridgeNativeCaptureContext { [self] in
+                    try cancellation.requireActive(); try Task.checkCancellation()
+                    let result = try captureReadConfiguration(reservation)
+                    try cancellation.requireActive(); try Task.checkCancellation()
+                    return result
+                }
+                defer { context.close() }
+                let result = try await operation(context)
+                try cancellation.requireActive(); try Task.checkCancellation()
+                _ = try context.configurationForRead() // Full native fence after suspended capture too.
+                return result
+            } catch {
+                try cancellation.requireActive(); try Task.checkCancellation()
+                throw error
+            }
+        } onCancel: { cancellation.cancel() }
+    }
+
     /// Native producer pre-read boundary only; does not reserve again or install an SDK route.
     func captureReadConfiguration(_ reservation: AgentBridgeExportCaptureReservation) throws -> AgentBridgeRequestSettingsResolution {
         try Task.checkCancellation()
@@ -254,5 +289,39 @@ final class AgentBridgeNativePlanningSession {
         try service.storeNativeDecision(planID: planID, binding: binding, approvalID: approvalID,
                                         authenticatedPeer: peer, authorization: authorization)
         guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
+    }
+}
+
+
+/// Native-only, non-Codable operation lease. Begin once; check before/after actual SDK reads.
+/// Escaping the callback does not retain usable authority or the original owner callback.
+@MainActor
+final class AgentBridgeNativeCaptureContext {
+    private var started = false
+    private var closed = false
+    private var read: (() throws -> AgentBridgeRequestSettingsResolution)?
+    fileprivate init(read: @escaping () throws -> AgentBridgeRequestSettingsResolution) { self.read = read }
+    func begin() throws -> AgentBridgeRequestSettingsResolution {
+        guard !started, !closed else { close(); throw AgentBridgeValidationError.busy }
+        started = true
+        return try configurationForRead()
+    }
+    func configurationForRead() throws -> AgentBridgeRequestSettingsResolution {
+        guard started, !closed, let read else { throw AgentBridgeValidationError.permissionRequired }
+        do {
+            let result = try read()
+            guard !closed else { throw AgentBridgeValidationError.permissionRequired }
+            return result
+        } catch { close(); throw error }
+    }
+    fileprivate func close() { closed = true; read = nil }
+}
+nonisolated private final class AgentBridgeCaptureCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    func cancel() { lock.lock(); cancelled = true; lock.unlock() }
+    func requireActive() throws {
+        lock.lock(); let value = cancelled; lock.unlock()
+        if value { throw CancellationError() }
     }
 }

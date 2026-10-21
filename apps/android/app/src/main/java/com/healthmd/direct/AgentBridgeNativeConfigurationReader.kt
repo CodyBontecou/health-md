@@ -24,6 +24,8 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -258,6 +260,38 @@ internal class AgentBridgeNativePlanningSession(
         finally { finished.set(true); cancellation.cancel() }
     }
 
+    /** Own the whole native capture operation. Caller identity is captured once from the actual
+     * coroutine; no request, later read or escaped context can replace it with a fresh Job. */
+    suspend fun <T> withCaptureContext(request: AgentBridgeExecuteRequest,
+        operation: suspend (AgentBridgeNativeCaptureContext) -> T): T {
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        if (negotiation.baseApplication != 2 || !negotiation.agentExtension || negotiation.appleQueryExtension || responseChannel == null)
+            throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val caller = currentCoroutineContext().job
+        try {
+            caller.ensureActive()
+            val publication = requireCurrent()
+            val accepted = service.acceptExecution(peer, request)
+            caller.ensureActive()
+            if (!accepted.newlyAccepted) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
+            val reservation = service.claimCapture(peer, request)
+            caller.ensureActive()
+            if (wireAbandoned || lifecycle.currentPublication() != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            val context = AgentBridgeNativeCaptureContext {
+                try {
+                    caller.ensureActive()
+                    captureReadConfiguration(reservation, caller).also { caller.ensureActive() }
+                } catch (failure: Throwable) { caller.ensureActive(); throw failure }
+            }
+            return try {
+                val result = operation(context)
+                caller.ensureActive()
+                context.configurationForRead() // Native fence after suspended capture, before return.
+                result
+            } finally { context.close() }
+        } catch (failure: Throwable) { caller.ensureActive(); throw failure }
+    }
+
     /** Original-owner native producer boundary. No SDK reads, claim renewal or installed route. */
     fun captureReadConfiguration(reservation: AgentBridgeExportCaptureReservation, caller: Job): AgentBridgeRequestSettingsResolution {
         caller.ensureActive()
@@ -300,4 +334,32 @@ internal class AgentBridgeNativePlanningSession(
         requireSamePublication(publication)
         return result
     }
+}
+
+
+/** Native-only operation lease. It cannot be decoded as permission or reused after its callback. */
+internal class AgentBridgeNativeCaptureContext internal constructor(read: () -> AgentBridgeRequestSettingsResolution) {
+    private val lock = Any()
+    private var started = false
+    private var closed = false
+    private var read: (() -> AgentBridgeRequestSettingsResolution)? = read
+    fun begin(): AgentBridgeRequestSettingsResolution {
+        synchronized(lock) {
+            if (started || closed) { closed = true; read = null; throw AgentBridgeException(AgentBridgeErrorCode.BUSY) }
+            started = true
+        }
+        return configurationForRead()
+    }
+    fun configurationForRead(): AgentBridgeRequestSettingsResolution {
+        val callback = synchronized(lock) {
+            if (!started || closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            read ?: throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        }
+        return try {
+            val result = callback()
+            synchronized(lock) { if (closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+            result
+        } catch (failure: Throwable) { close(); throw failure }
+    }
+    internal fun close() { synchronized(lock) { closed = true; read = null } }
 }

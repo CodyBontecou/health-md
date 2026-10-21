@@ -555,6 +555,130 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer))))
     }
 
+    private func nativeCaptureRequest(_ rig: Rig, planner: AgentBridgeNativePlanningSession) throws -> AgentBridgeExecute {
+        func send(_ document: AgentBridgeDocument) throws -> AgentBridgeDocument {
+            try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: planner.handle(
+                AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: document)))).payload
+        }
+        guard case .discovery(let discovery) = try send(.discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer))),
+              case .plan(let plan) = try send(.planRequest(rig.request(discovery: discovery))) else { throw AgentBridgeValidationError.invalidRequest }
+        let binding = AgentBridgeSemantics.binding(plan)
+        try planner.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authorization: FakeNativeAuthorization(binding: binding))
+        guard case .approval(let approval) = try send(.approvalRequest(.init(binding: binding, planId: plan.planId, requestId: id(103)))) else {
+            throw AgentBridgeValidationError.invalidRequest
+        }
+        return try AgentBridgeExecute(approval: approval, idempotencyKey: id(81), jobId: id(82), plan: plan, requestId: id(83))
+    }
+
+    func testNativeCaptureContextOwnsOneClaimAndExpiresEscapedContext() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner)
+        let unsupported = try nativePlanningSession(rig, lifecycle, responseChannel: channel, responseVersions: [1, 3])
+        let generation = try rig.store.snapshot().generation, checks = rig.session.checks
+        do { _ = try await unsupported.withCaptureContext(request) { _ in XCTFail("Unsupported before callback"); return false }; XCTFail("Expected unsupported") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .unsupportedCapability) }
+        XCTAssertEqual(rig.session.checks, checks)
+        XCTAssertEqual(try rig.store.snapshot().generation, generation)
+        var escaped: AgentBridgeNativeCaptureContext?
+        let result = try await planner.withCaptureContext(request) { context in
+            escaped = context
+            let resolution = try context.begin()
+            XCTAssertEqual(resolution.selection.map(\.semanticID), request.plan.resolvedMetricIds.map(\.rawValue))
+            _ = try context.configurationForRead()
+            return "synthetic capture callback"
+        }
+        XCTAssertEqual(result, "synthetic capture callback")
+        XCTAssertThrowsError(try XCTUnwrap(escaped).configurationForRead()) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        do { _ = try await planner.withCaptureContext(request) { _ in XCTFail("No second callback"); return false }; XCTFail("Expected existing job") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
+        XCTAssertEqual(try rig.store.snapshot().acceptedJobs?.count, 1)
+        XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
+    }
+
+    func testNativeCaptureContextCannotBeginTwiceOrReviveAfterOwnerStop() async throws {
+        for stop in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+            _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+            let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+            let request = try nativeCaptureRequest(rig, planner: planner)
+            do {
+                _ = try await planner.withCaptureContext(request) { context in
+                    _ = try context.begin()
+                    if stop { lifecycle.stop() }
+                    else { XCTAssertThrowsError(try context.begin()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .busy) } }
+                    XCTAssertThrowsError(try context.configurationForRead())
+                    return false
+                }
+                XCTFail("Cannot return from closed context")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+            XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
+        }
+    }
+
+    func testNativeCaptureContextRejectsConfigurationWhenReadReentrantlyClosesContext() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner)
+        var attempted = false, rejectedDuplicate = false
+        do {
+            _ = try await planner.withCaptureContext(request) { context in
+                _ = try context.begin()
+                rig.session.observeChecks { _ in
+                    guard !attempted else { return }
+                    attempted = true
+                    do { _ = try context.begin() }
+                    catch { rejectedDuplicate = error as? AgentBridgeValidationError == .busy }
+                }
+                XCTAssertThrowsError(try context.configurationForRead()) {
+                    XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+                }
+                return false
+            }
+            XCTFail("Cannot return from reentrantly closed context")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+        XCTAssertTrue(attempted)
+        XCTAssertTrue(rejectedDuplicate)
+        XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
+    }
+
+    func testNativeCaptureContextKeepsOriginalTaskCancellationAcrossSuspensionAndFreshCaller() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner)
+        let ready = expectation(description: "capture context suspended")
+        var escaped: AgentBridgeNativeCaptureContext?
+        var continuation: CheckedContinuation<Void, Never>?
+        let task = Task { @MainActor in
+            try await planner.withCaptureContext(request) { context in
+                _ = try context.begin(); escaped = context
+                await withCheckedContinuation { continuation = $0; ready.fulfill() }
+                return "ignored cancellation callback"
+            }
+        }
+        defer { task.cancel(); continuation?.resume(); continuation = nil }
+        await fulfillment(of: [ready], timeout: 5)
+        task.cancel()
+        XCTAssertThrowsError(try XCTUnwrap(escaped).configurationForRead()) { XCTAssertTrue($0 is CancellationError) }
+        continuation?.resume(); continuation = nil
+        do { _ = try await task.value; XCTFail("Original cancellation must win") }
+        catch { XCTAssertTrue(error is CancellationError) }
+        XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
+    }
+
     func testNativeReceiveRoutesDiscoveryAndPreservesBaseAndBinaryFrames() async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())

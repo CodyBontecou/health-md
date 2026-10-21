@@ -82,6 +82,115 @@ class AgentBridgeNativeConfigurationReaderTest {
     private fun ownedDiscoveryBytes(f: AgentBridgeExportPlanningFixture) = AgentBridgeCodec.encodeEnvelope(
         AgentBridgeMessage("discovery_request", f.discoveryRequest()), nativeNegotiation())
 
+    private fun nativeCaptureRequest(f: AgentBridgeExportPlanningFixture, planner: AgentBridgeNativePlanningSession): AgentBridgeExecuteRequest {
+        fun send(message: AgentBridgeMessage) = AgentBridgeCodec.decodeEnvelope(planner.handleEnvelope(
+            AgentBridgeCodec.encodeEnvelope(message, nativeNegotiation()), nativeNegotiation()), nativeNegotiation()).payload
+        val discovery = send(AgentBridgeMessage("discovery_request", f.discoveryRequest())) as AgentBridgeDiscovery
+        val plan = send(AgentBridgeMessage("plan_request", f.request(discovery))) as AgentBridgeGeneratedPlan
+        val approval = planner.authorizeExactApproval(f.native, plan.planId, AgentBridgeValidation.bindingFor(plan))
+        return AgentBridgeExecuteRequest(approval, AgentBridgeExportPlanningFixture.id(81), AgentBridgeExportPlanningFixture.id(82), plan,
+            AgentBridgeExportPlanningFixture.id(83), "healthmd.agent_execute_request", 1)
+    }
+
+    @Test fun `native capture context owns one claim and escaped context expires`() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val planner = ownedPlanner(f, lifecycle, channel); val request = nativeCaptureRequest(f, planner)
+            val unsupported = ownedPlanner(f, lifecycle, channel, AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, listOf(2), listOf(2, 4)))
+            val revision = f.store.access { it!!.state.revision }; val checks = f.peerContext.checks
+            try { unsupported.withCaptureContext(request) { error("Must not call unsupported callback") }; throw AssertionError("Expected unsupported") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) }
+            assertThat(f.peerContext.checks).isEqualTo(checks)
+            assertThat(f.store.access { it!!.state.revision }).isEqualTo(revision)
+            var escaped: AgentBridgeNativeCaptureContext? = null
+            val result = planner.withCaptureContext(request) { context ->
+                escaped = context
+                assertThat(context.begin().selection.map { it.semanticId }).isEqualTo((request.plan as AgentBridgeGeneratedPlan).resolvedMetricIds)
+                context.configurationForRead()
+                "synthetic capture callback"
+            }
+            assertThat(result).isEqualTo("synthetic capture callback")
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { escaped!!.configurationForRead() }
+            try { planner.withCaptureContext(request) { error("No second callback") }; throw AssertionError("Expected existing job") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
+            assertThat(f.store.access { it!!.state.acceptedJobs!!.size }).isEqualTo(1)
+            assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
+        }
+    }
+
+    @Test fun `native capture context cannot begin twice or revive stopped owner`() = runBlocking {
+        for (stop in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true)); val request = nativeCaptureRequest(f, planner)
+            try {
+                planner.withCaptureContext(request) { context ->
+                    context.begin()
+                    if (stop) lifecycle.stop() else f.expect(AgentBridgeErrorCode.BUSY) { context.begin() }
+                    f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { context.configurationForRead() }
+                    false
+                }
+                throw AssertionError("Cannot return from closed context")
+            } catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+            assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
+        }
+    }
+
+    @Test fun `native capture context rejects configuration when read reentrantly closes context`() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true)); val request = nativeCaptureRequest(f, planner)
+            var attempted = false
+            var rejectedDuplicate = false
+            try {
+                planner.withCaptureContext(request) { context ->
+                    context.begin()
+                    f.peerContext.onCheck = {
+                        if (!attempted) {
+                            attempted = true
+                            try { context.begin() }
+                            catch (e: AgentBridgeException) { rejectedDuplicate = e.code == AgentBridgeErrorCode.BUSY }
+                        }
+                    }
+                    f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { context.configurationForRead() }
+                    false
+                }
+                throw AssertionError("Cannot return from reentrantly closed context")
+            } catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+            assertThat(attempted).isTrue()
+            assertThat(rejectedDuplicate).isTrue()
+            assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
+        }
+    }
+
+    @Test fun `native capture context retains original cancelled coroutine across fresh caller`() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true)); val request = nativeCaptureRequest(f, planner)
+            val ready = CompletableDeferred<AgentBridgeNativeCaptureContext>(); val release = CompletableDeferred<Unit>()
+            val child = async {
+                planner.withCaptureContext(request) { context ->
+                    context.begin(); ready.complete(context)
+                    withContext(NonCancellable) { release.await() }
+                    "ignored cancellation callback"
+                }
+            }
+            try {
+                val context = withTimeout(5000) { ready.await() }
+                child.cancel()
+                try { context.configurationForRead(); throw AssertionError("Original caller cancelled") }
+                catch (_: CancellationException) { }
+                release.complete(Unit); child.join()
+                assertThat(child.isCancelled).isTrue()
+                assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
+            } finally { release.complete(Unit); child.cancelAndJoin() }
+        }
+    }
+
     @Test fun `native receive cancellation interrupts a blocked real socket`() {
         AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()
