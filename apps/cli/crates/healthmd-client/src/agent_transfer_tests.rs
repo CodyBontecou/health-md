@@ -20,6 +20,7 @@ pub(super) enum TransferCase {
     CompletionCorruptAtReturn,
     Large,
     BadDigest,
+    BadAggregate,
     PartitionTamper,
     PartitionFifo,
     CheckpointDelete,
@@ -74,7 +75,11 @@ pub(super) fn binding(
             unreachable!()
         };
         item.byte_count = data.len() as u64;
-        item.sha256 = Digest(healthmd_protocol::transfer::sha256_hex(&data));
+        item.sha256 = if case == TransferCase::BadAggregate {
+            Digest("f".repeat(64))
+        } else {
+            Digest(healthmd_protocol::transfer::sha256_hex(&data))
+        };
     }
     binding
 }
@@ -460,6 +465,10 @@ pub(super) async fn send_transfer_from(
                 .unwrap();
             previous = Some(digest);
             index += 1;
+        }
+        if case == TransferCase::BadAggregate {
+            no_response(channel, platform).await;
+            return;
         }
     }
     let finalize = v2::TransferFinalize {

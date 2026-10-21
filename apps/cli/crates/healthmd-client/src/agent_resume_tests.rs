@@ -11,6 +11,7 @@ use transfer_tests::{TransferCase, payload};
 enum RecoveryCase {
     Exact,
     CommittedOutput,
+    BadAggregate,
     AfterPlanExpiry,
     BadAccepted,
     BadManifest,
@@ -83,11 +84,65 @@ impl CurrentBridgeTrust for CountedRecoveryTrust<'_> {
     }
 }
 
+impl<'a> CountedRecoveryTrust<'a> {
+    fn new(
+        client: &'a DirectClient<MemoryCredentials>,
+        issuer: &Path,
+        checkpoint: &Path,
+        original: &[u8],
+        request: &ExecuteRequest,
+        case: RecoveryCase,
+        final_call: Option<usize>,
+    ) -> Self {
+        let retained: serde_json::Value = serde_json::from_slice(original).unwrap();
+        let partition = retained["journal"]["partitions"]
+            .as_array()
+            .unwrap()
+            .first()
+            .map(|record| issuer.join(record["stage_name"].as_str().unwrap()))
+            .unwrap_or_default();
+        Self {
+            client,
+            calls: AtomicUsize::new(0),
+            attack: final_call.filter(|_| case.final_fence()).map(|at| {
+                (
+                    at,
+                    case,
+                    issuer.join(format!("output-{}.json", request.job_id.0)),
+                    checkpoint.to_path_buf(),
+                    partition,
+                )
+            }),
+        }
+    }
+}
+
 struct CountedRecoveryClock {
     time: UtcTimestamp,
     calls: AtomicUsize,
     cancel: Option<(usize, CancellationToken)>,
 }
+impl CountedRecoveryClock {
+    fn new(
+        request: &ExecuteRequest,
+        case: RecoveryCase,
+        final_call: Option<usize>,
+        cancellation: CancellationToken,
+    ) -> Self {
+        Self {
+            time: if case == RecoveryCase::AfterPlanExpiry {
+                later(&request.plan.expires_at, 1)
+            } else {
+                now()
+            },
+            calls: AtomicUsize::new(0),
+            cancel: final_call
+                .filter(|_| case == RecoveryCase::CancelAtFinalClock)
+                .map(|at| (at, cancellation)),
+        }
+    }
+}
+
 impl crate::agent_planning::PlanningClock for CountedRecoveryClock {
     fn now(&self) -> UtcTimestamp {
         let call = self.calls.fetch_add(1, Ordering::SeqCst) + 1;
@@ -169,7 +224,7 @@ async fn seed_committed_outputs(
             write_mode: item.write_mode.clone(),
             input_sha256: item.sha256.clone(),
             before_sha256: Digest("0".repeat(64)),
-            after_sha256: item.sha256.clone(),
+            after_sha256: Digest(healthmd_protocol::transfer::sha256_hex(&bytes)),
             commit_key: Digest("0".repeat(64)),
             status: CommitReceiptStatus::Committed,
         };
@@ -204,7 +259,10 @@ async fn retained_fixture(
         .save(|| async { Ok(output.to_path_buf()) })
         .await
         .unwrap();
-    if case == RecoveryCase::CommittedOutput {
+    if matches!(
+        case,
+        RecoveryCase::CommittedOutput | RecoveryCase::BadAggregate
+    ) {
         seed_committed_outputs(&mut transaction, output, binding).await;
     }
     let session_id = id(30);
@@ -352,7 +410,11 @@ async fn recovery_peer(
         &mut channel,
         &binding.request,
         platform,
-        TransferCase::Confirmed,
+        if case == RecoveryCase::BadAggregate {
+            TransferCase::BadAggregate
+        } else {
+            TransferCase::Confirmed
+        },
         prefix as u64,
     )
     .await;
@@ -421,7 +483,15 @@ async fn recover_case(
     let (_temporary, client, saved, peer) = stored_pair(platform).await;
     let (store, output) = enroll(&client.layout.root, &peer, &now()).await;
     let request = approved_request(&store, &peer).await;
-    let binding = transfer_tests::binding(&request, platform, TransferCase::Exact);
+    let binding = transfer_tests::binding(
+        &request,
+        platform,
+        if case == RecoveryCase::BadAggregate {
+            TransferCase::BadAggregate
+        } else {
+            TransferCase::Exact
+        },
+    );
     let original = Box::pin(retained_fixture(&store, &output, &binding, prefix, case)).await;
     let issuer = client.layout.root.join("agent-host-v1");
     let checkpoint = issuer.join(format!("transfer-{}.json", request.job_id.0));
@@ -449,38 +519,17 @@ async fn recover_case(
     )
     .await
     .unwrap();
-    let retained: serde_json::Value = serde_json::from_slice(&original).unwrap();
-    let partition = retained["journal"]["partitions"]
-        .as_array()
-        .unwrap()
-        .first()
-        .map(|record| issuer.join(record["stage_name"].as_str().unwrap()))
-        .unwrap_or_default();
-    let trust = CountedRecoveryTrust {
-        client: &client,
-        calls: AtomicUsize::new(0),
-        attack: final_call.filter(|_| case.final_fence()).map(|at| {
-            (
-                at,
-                case,
-                issuer.join(format!("output-{}.json", request.job_id.0)),
-                checkpoint.clone(),
-                partition,
-            )
-        }),
-    };
+    let trust = CountedRecoveryTrust::new(
+        &client,
+        &issuer,
+        &checkpoint,
+        &original,
+        &request,
+        case,
+        final_call,
+    );
     let mut bridge = bridge.with_test_trust(&trust);
-    let clock = CountedRecoveryClock {
-        time: if case == RecoveryCase::AfterPlanExpiry {
-            later(&request.plan.expires_at, 1)
-        } else {
-            now()
-        },
-        calls: AtomicUsize::new(0),
-        cancel: final_call
-            .filter(|_| case == RecoveryCase::CancelAtFinalClock)
-            .map(|at| (at, cancellation)),
-    };
+    let clock = CountedRecoveryClock::new(&request, case, final_call, cancellation);
     let result = Box::pin(bridge.resume_execution(&store, request.job_id.clone(), &clock)).await;
     let admission_calls = trust.calls.load(Ordering::SeqCst);
     let admission_clock_calls = clock.calls.load(Ordering::SeqCst);
@@ -495,7 +544,20 @@ async fn recover_case(
             "attack must run at the absolute final callback/clock read"
         );
     }
-    if matches!(
+    if case == RecoveryCase::BadAggregate {
+        let mut owner = result.unwrap();
+        assert!(matches!(
+            Box::pin(owner.receive_and_commit()).await,
+            Err(ClientError::Agent(Error::BindingChanged))
+        ));
+        assert_eq!(std::fs::read(&output_record).unwrap(), original_output);
+        for path in &request.plan.predicted_paths {
+            assert_eq!(
+                std::fs::read(output.join(&path.0)).unwrap(),
+                payload(TransferCase::Exact)
+            );
+        }
+    } else if matches!(
         case,
         RecoveryCase::Exact | RecoveryCase::AfterPlanExpiry | RecoveryCase::CommittedOutput
     ) {
@@ -588,5 +650,12 @@ async fn authenticated_resume_replays_original_committed_receipts() {
             ))
             .await;
         }
+    }
+}
+
+#[tokio::test]
+async fn authenticated_resume_rejects_inconsistent_whole_artifact_for_committed_plan() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        Box::pin(recover_case(platform, 4, RecoveryCase::BadAggregate, None)).await;
     }
 }
