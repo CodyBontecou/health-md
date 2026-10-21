@@ -21,6 +21,19 @@ internal class AgentBridgeNativeRenderedDay(val day: String, val artifact: Expor
 internal class AgentBridgeNativeDayRenderer(
     private val core: DailyAggregateRustPlanner? = null,
 ) {
+    /** Real SDK → frozen renderer composition. Durable artifact publication remains required. */
+    suspend fun capture(day: String, manager: com.healthmd.data.health.HealthConnectManager,
+        context: AgentBridgeNativeCaptureContext): AgentBridgeNativeRenderedDay {
+        try {
+            val fingerprint = context.requestFingerprintForRead()
+            val data = manager.captureAgentBridgeDay(day, context)
+            val resolution = context.configurationForRead()
+            val result = render(day, data, resolution, fingerprint)
+            context.configurationForRead()
+            return result
+        } catch (failure: Throwable) { context.invalidate(); throw failure }
+    }
+
     suspend fun render(day: String, data: HealthData, resolution: AgentBridgeRequestSettingsResolution,
         requestSha256: String): AgentBridgeNativeRenderedDay {
         try {

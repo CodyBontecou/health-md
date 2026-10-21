@@ -123,6 +123,8 @@ final class AgentBridgeNativeCaptureSpool {
             try publish("day-\(day.rawValue).json", record: record(kind: "captured", day: day.rawValue, payload: payload))
         } catch { throw Self.safe(error) }
     }
+    var acceptedRequestSHA256: String { reservation.job.requestSHA256.rawValue }
+
     func close() {
         if closed { return }; closed = true
         if lockFD >= 0 { _ = flock(lockFD, LOCK_UN); Darwin.close(lockFD); lockFD = -1 }

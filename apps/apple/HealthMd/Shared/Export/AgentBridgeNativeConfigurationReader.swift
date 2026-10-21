@@ -357,6 +357,11 @@ final class AgentBridgeNativeCaptureContext {
             _ = try configurationForRead()
         } catch { close(); throw error }
     }
+    /// A fingerprint names the original accepted bytes; it never grants capture permission.
+    func requestFingerprintForRead() throws -> String {
+        _ = try configurationForRead()
+        return spool.acceptedRequestSHA256
+    }
     /// Monotonic denial only: a caught SDK/result failure cannot revive the operation.
     func invalidate() { close() }
     func configurationForRead() throws -> AgentBridgeRequestSettingsResolution {

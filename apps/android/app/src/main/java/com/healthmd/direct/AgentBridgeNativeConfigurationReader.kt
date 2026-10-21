@@ -397,6 +397,11 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
             configurationForRead()
         } catch (failure: Throwable) { close(); throw failure }
     }
+    /** Names the original accepted bytes; a fingerprint is never capture permission. */
+    fun requestFingerprintForRead(): String {
+        configurationForRead()
+        return spool.acceptedRequestSha256
+    }
     /** Monotonic denial so catching an SDK/result failure cannot revive the operation. */
     internal fun invalidate() { close() }
     fun configurationForRead(): AgentBridgeRequestSettingsResolution {

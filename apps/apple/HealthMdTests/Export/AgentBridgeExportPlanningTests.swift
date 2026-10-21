@@ -675,6 +675,45 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testNativeArtifactProducerUsesAcceptedFingerprintAndOriginalOwner() async throws {
+        try await withNativeSDKCapture(metrics: ["steps"]) { rig, context, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let day = try AgentBridgeDate("2026-03-08")
+            let fingerprint = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first?.requestSHA256.rawValue)
+            let result = try await AgentBridgeNativeDayRenderer.capture(day: day, manager: manager, context: context)
+            let resolution = try context.configurationForRead()
+            let index = try XCTUnwrap(resolution.requestedDays.firstIndex(of: day))
+            let path = resolution.predictedRelativePaths[index]
+            XCTAssertEqual(result.artifact.id, NativeExportArtifactPlan.artifactID(requestID: fingerprint,
+                sessionID: fingerprint + "-" + day.rawValue, profile: .appleHealthDataV8,
+                relativePath: path, mediaType: "application/json", writeMode: .overwrite,
+                contentSHA256: result.artifact.sha256))
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+        }
+    }
+
+    func testNativeArtifactProducerFailureOrOwnerLossClosesOperation() async throws {
+        for mode in ["profile", "owner"] {
+            do { try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { _, _, _, _, _, failure in
+                XCTAssertNotNil(failure)
+            }) { rig, context, store, manager in
+                store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 1
+                var core = BridgeRenderTamperCore(mode: mode)
+                if mode == "owner" { core.afterRender = { rig.session.revoke() } }
+                do {
+                    _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"),
+                        manager: manager, context: context, core: core)
+                    XCTFail("Invalid or ownerless artifact returned")
+                } catch {
+                    XCTAssertThrowsError(try context.configurationForRead())
+                    XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+                    if mode == "profile" { XCTAssertEqual(error as? AgentBridgeNativeRenderFailure, .invalidArtifact) }
+                    // Swallowing the failure must still make the original operation fail.
+                }
+            } } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+        }
+    }
+
     func testFrozenAppleSemanticProfileRequiresExplicitSelection() throws {
         let v8 = try HealthMdCoreService().metricRegistry(profile: .appleHealthDataV8)
         XCTAssertThrowsError(try HealthMdSemanticInputAdapter.sessionConfiguration(sessionID: "ordinary-default",
@@ -3275,6 +3314,7 @@ nonisolated private final class NativePlanningResponsePackets: DirectGuardedPack
 #if canImport(HealthMd)
 nonisolated private struct BridgeRenderTamperCore: AppleLooseDailyCoreExecuting {
     let mode: String
+    var afterRender: (@MainActor @Sendable () -> Void)? = nil
     private var actual: SystemAppleLooseDailyCoreExecutor { .init(profile: .appleHealthDataV8) }
     func loadContext() async throws -> AppleLooseDailyCoreContext {
         if mode == "registry" { return try await SystemAppleLooseDailyCoreExecutor().loadContext() }
@@ -3304,6 +3344,7 @@ nonisolated private struct BridgeRenderTamperCore: AppleLooseDailyCoreExecuting 
         case "cancel": withUnsafeCurrentTask { $0?.cancel() }
         default: break
         }
+        await afterRender?()
         return plan
     }
 }

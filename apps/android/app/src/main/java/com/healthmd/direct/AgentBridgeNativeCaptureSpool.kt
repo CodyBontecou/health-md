@@ -97,6 +97,8 @@ internal class AgentBridgeNativeCaptureSpool(
             guard()
         } catch (error: Exception) { close(); throw safe(error) }
     }
+    val acceptedRequestSha256: String get() = reservation.job.requestSha256
+
     /** An existing successful capture is reused verbatim. A started marker without bytes is
      * ambiguous and never grants a second SDK attempt, including across process restart. */
     @Synchronized fun loadOrBegin(day: String): ByteArray? = safeCall {

@@ -178,6 +178,41 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    @Test fun `native artifact producer binds accepted fingerprint and terminal failures`() = runBlocking {
+        for (mode in listOf("normal", "profile", "owner")) {
+            try {
+                withNativeSDKCapture(listOf("steps"), afterCapture = { _, _, _, _, _, failure ->
+                    assertThat(failure == null).isEqualTo(mode == "normal")
+                }) { f, context, client, manager ->
+                    val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+                    coEvery { client.aggregate(any()) } returns values
+                    val resolution = context.configurationForRead()
+                    val fingerprint = f.store.access { it!!.state.acceptedJobs!!.single().requestSha256 }
+                    val renderer = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { request ->
+                        assertThat(request.ids.requestId).isEqualTo(fingerprint)
+                        assertThat(request.ids.sessionId).isEqualTo("$fingerprint-2026-03-08")
+                        val result = bridgeRenderedPlan(request, resolution, mode)
+                        if (mode == "owner") f.peerContext.trusted = false
+                        result
+                    })
+                    try {
+                        val result = renderer.capture("2026-03-08", manager, context)
+                        assertThat(mode).isEqualTo("normal")
+                        assertThat(result.artifact.relativePath).isEqualTo(resolution.predictedRelativePaths.last())
+                    } catch (failure: Exception) {
+                        try { context.configurationForRead(); throw AssertionError("Failed producer owner remained usable") }
+                        catch (_: AgentBridgeException) { }
+                        if (mode == "profile") assertThat((failure as AgentBridgeNativeRenderException).code).isEqualTo(AgentBridgeNativeRenderFailure.INVALID_ARTIFACT)
+                        // Catching the failure must not let the outer native owner succeed.
+                    } finally { coVerify(exactly = 1) { client.aggregate(any()) } }
+                }
+            } catch (failure: AgentBridgeException) {
+                assertThat(mode).isNotEqualTo("normal")
+                assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            }
+        }
+    }
+
     /** Separate host JNI qualification. Default JVM runs report this native-dependent case skipped;
      * the local qualification command supplies a freshly source-built compatible host library. */
     @Test fun `bridge captured days render through actual host UniFFI frozen v4`() = runBlocking {
@@ -216,8 +251,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                     else -> error("Unselected record family")
                 }
             }
-            val captured = manager.captureAgentBridgeDay("2026-03-08", context)
-            val rendered = AgentBridgeNativeDayRenderer().render("2026-03-08", captured, context.configurationForRead(), "a".repeat(64))
+            val rendered = AgentBridgeNativeDayRenderer().capture("2026-03-08", manager, context)
             val heart = Json.parseToJsonElement(rendered.artifact.content.decodeToString()).jsonObject.getValue("heart").jsonObject
             assertThat(heart.keys).containsExactly("averageHeartRate", "heartRateMin", "heartRateMax", "restingHeartRate", "hrv")
             mapOf("averageHeartRate" to 72.0, "heartRateMin" to 40.0, "heartRateMax" to 150.0, "restingHeartRate" to 55.0, "hrv" to 31.0).forEach { (key, value) ->

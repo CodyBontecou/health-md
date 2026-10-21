@@ -22,6 +22,25 @@ nonisolated struct AgentBridgeNativeRenderedDay: Sendable {
 /// v8 core profile, never a v10 native document relabeled as v8. No SDK, preference or destination IO.
 @MainActor
 enum AgentBridgeNativeDayRenderer {
+    /// Compose the real native SDK adapter and frozen renderer under the original capture owner.
+    /// The result still requires durable artifact-journal publication before any transfer.
+    static func capture(
+        day: AgentBridgeDate,
+        manager: HealthKitManager,
+        context: AgentBridgeNativeCaptureContext,
+        core: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor(profile: .appleHealthDataV8)
+    ) async throws -> AgentBridgeNativeRenderedDay {
+        do {
+            let fingerprint = try context.requestFingerprintForRead()
+            let data = try await manager.captureAgentBridgeDay(day, context: context)
+            let resolution = try context.configurationForRead()
+            let result = try await render(day: day, data: data, resolution: resolution,
+                requestSHA256: fingerprint, core: core)
+            _ = try context.configurationForRead()
+            return result
+        } catch { context.invalidate(); throw error }
+    }
+
     static func render(
         day: AgentBridgeDate,
         data: HealthData,
