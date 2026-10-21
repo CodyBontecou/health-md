@@ -226,7 +226,6 @@ pub(crate) struct OutputTransaction {
     name: String,
     journal: OutputJournal,
     is_new: bool,
-    retained_bytes: u64,
     stage_slots: AtomicUsize,
 }
 impl OutputTransaction {
@@ -307,9 +306,58 @@ impl OutputTransaction {
             name,
             journal,
             is_new,
-            retained_bytes,
-            stage_slots: AtomicUsize::new(8192 - usize::min(entries + usize::from(is_new), 8192)),
+            stage_slots: AtomicUsize::new(8191 - usize::min(entries + usize::from(is_new), 8191)),
         })
+    }
+    /// Exact private checkpoint publication under the same output-operation lease.
+    /// The original v1 output journal remains byte-compatible and independently signed.
+    pub async fn save_transfer<T, F, Fut>(
+        &self,
+        data: &T,
+        previous: Option<&[u8]>,
+        fence: F,
+    ) -> Result<Vec<u8>, ClientError>
+    where
+        T: Serialize,
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<PathBuf, ClientError>>,
+    {
+        #[derive(Serialize)]
+        struct Signed<'a, T> {
+            journal: &'a T,
+            mac: Digest,
+        }
+        let name = format!("transfer-{}.json", self.journal.binding.request.job_id.0);
+        let check_previous = || -> Result<(), ClientError> {
+            self.require_current()?;
+            match (previous, self.dir.symlink_metadata(&name)) {
+                (Some(expected), Ok(_))
+                    if private::read_private(&self.dir, &name, MAX_OUTPUT_BYTES)? == expected =>
+                {
+                    Ok(())
+                }
+                (None, Err(error)) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                _ => Err(Error::BindingChanged.into()),
+            }
+        };
+        check_previous()?;
+        if previous.is_none() {
+            self.reserve_stage_entry()?;
+        }
+        self.reserve_stage_bytes(0)?;
+        let mut signer = Hmac::<Sha256>::new_from_slice(self.key.expose_secret())
+            .map_err(private::unavailable)?;
+        signer.update(b"HealthMd.AgentBridge.HostTransferJournal.v1\0");
+        signer.update(self.journal.binding.request.job_id.0.as_bytes());
+        signer.update(&private_json::encode(data)?);
+        let mac = Digest(format!("{:x}", signer.finalize().into_bytes()));
+        let bytes = private_json::encode(&Signed { journal: data, mac })?;
+        private::publish(&self.dir, &name, &bytes, previous.is_none(), || async {
+            fence().await?;
+            check_previous()
+        })
+        .await?;
+        Ok(bytes)
     }
     pub fn plan(&self, id: &ControlUuid) -> Option<&OutputPlan> {
         self.journal
@@ -351,8 +399,8 @@ impl OutputTransaction {
         let capacity = bytes
             .checked_add(MAX_OUTPUT_BYTES as u64)
             .ok_or(ClientError::AgentStoreFull)?;
-        if self
-            .retained_bytes
+        if scan_output_usage(&self.dir)?
+            .2
             .checked_add(capacity)
             .is_none_or(|n| n > crate::limits::MAXIMUM_RETAINED_STORAGE_BYTES)
         {
@@ -421,9 +469,9 @@ fn require_absent_job(
     include_attempt: bool,
 ) -> Result<(), ClientError> {
     for prefix in if include_attempt {
-        &["output", "attempt"][..]
+        &["output", "attempt", "transfer"][..]
     } else {
-        &["output"][..]
+        &["output", "transfer"][..]
     } {
         match dir.symlink_metadata(format!("{prefix}-{}.json", job.0)) {
             Ok(_) => return Err(Error::BindingChanged.into()),

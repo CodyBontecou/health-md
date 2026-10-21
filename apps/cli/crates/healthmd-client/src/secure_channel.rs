@@ -102,12 +102,26 @@ impl SecureChannel {
     {
         let plaintext = healthmd_protocol::v4::canonical_json(message)?;
         healthmd_protocol::v4::decode_envelope(&plaintext, negotiation)?;
+        self.send_bridge_plaintext_guarded(&plaintext, authorize)
+            .await
+    }
+
+    /// Bridge-only base response path; callers validate/encode original v1/v2 messages.
+    pub(crate) async fn send_bridge_plaintext_guarded<F, Fut>(
+        &mut self,
+        plaintext: &[u8],
+        authorize: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut + Send,
+        Fut: Future<Output = Result<(), ClientError>> + Send,
+    {
         let sequence = self.next_send_sequence;
         self.next_send_sequence = self.next_send_sequence.wrapping_add(1);
         let mut envelope = Vec::with_capacity(16 + plaintext.len());
         envelope.extend_from_slice(ENVELOPE_MAGIC);
         envelope.extend_from_slice(&sequence.to_be_bytes());
-        envelope.extend_from_slice(&plaintext);
+        envelope.extend_from_slice(plaintext);
         let frame = crypto::seal(&envelope, &self.session_key).map_err(crypto_error)?;
         self.packet
             .send_guarded(&SyncPacket::Encrypted(Unlabeled::from(frame)), authorize)

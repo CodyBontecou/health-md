@@ -2816,6 +2816,8 @@ mod tests {
     async fn guarded_install_rejects_root_replacement_during_fence() {
         let (temporary, destination, stage, prepared) = guarded_fixture();
         let calls = std::cell::Cell::new(0);
+        #[cfg(windows)]
+        let prevented = std::cell::Cell::new(false);
         let retired = temporary.path().join("retired");
         let result = destination
             .install_stage_guarded(
@@ -2827,6 +2829,8 @@ mod tests {
                     let call = calls.get() + 1;
                     calls.set(call);
                     let retired = &retired;
+                    #[cfg(windows)]
+                    let prevented = &prevented;
                     let root = destination.root();
                     async move {
                         if call == 2 {
@@ -2836,7 +2840,16 @@ mod tests {
                                 .find(|entry| entry.file_name() != "daily.md")
                                 .unwrap()
                                 .file_name();
-                            fs::rename(root, retired).unwrap();
+                            if let Err(error) = fs::rename(root, retired) {
+                                // Windows retains a directory handle that prohibits renaming it.
+                                // That OS-level protection must also leave unpublished cleanup exact.
+                                #[cfg(windows)]
+                                if error.raw_os_error() == Some(32) {
+                                    prevented.set(true);
+                                    return Err(ClientError::AgentAuthorityUnavailable);
+                                }
+                                panic!("directory replacement failed unexpectedly: {error}");
+                            }
                             fs::create_dir(root).unwrap();
                             fs::write(root.join(sibling), b"foreign sibling").unwrap();
                             fs::write(root.join("daily.md"), b"replacement").unwrap();
@@ -2847,6 +2860,16 @@ mod tests {
             )
             .await;
         assert!(result.is_err());
+        #[cfg(windows)]
+        if prevented.get() {
+            assert_eq!(
+                fs::read(destination.root().join("daily.md")).unwrap(),
+                b"old"
+            );
+            assert!(!retired.exists());
+            assert_eq!(fs::read_dir(destination.root()).unwrap().count(), 1);
+            return;
+        }
         assert_eq!(
             fs::read(destination.root().join("daily.md")).unwrap(),
             b"replacement"
@@ -2870,6 +2893,8 @@ mod tests {
         fs::create_dir(&nested).unwrap();
         fs::rename(destination.root().join("daily.md"), nested.join("daily.md")).unwrap();
         let calls = std::cell::Cell::new(0);
+        #[cfg(windows)]
+        let prevented = std::cell::Cell::new(false);
         let result = destination
             .install_stage_guarded(
                 "nested/daily.md",
@@ -2881,6 +2906,8 @@ mod tests {
                     calls.set(call);
                     let nested = &nested;
                     let retired = &retired;
+                    #[cfg(windows)]
+                    let prevented = &prevented;
                     async move {
                         if call == 2 {
                             let sibling = fs::read_dir(nested)
@@ -2889,7 +2916,16 @@ mod tests {
                                 .find(|entry| entry.file_name() != "daily.md")
                                 .unwrap()
                                 .file_name();
-                            fs::rename(nested, retired).unwrap();
+                            if let Err(error) = fs::rename(nested, retired) {
+                                // Windows retains a directory handle that prohibits renaming it.
+                                // That OS-level protection must also leave unpublished cleanup exact.
+                                #[cfg(windows)]
+                                if error.raw_os_error() == Some(32) {
+                                    prevented.set(true);
+                                    return Err(ClientError::AgentAuthorityUnavailable);
+                                }
+                                panic!("directory replacement failed unexpectedly: {error}");
+                            }
                             fs::create_dir(nested).unwrap();
                             fs::write(nested.join(sibling), b"foreign sibling").unwrap();
                             fs::write(nested.join("daily.md"), b"replacement").unwrap();
@@ -2900,6 +2936,13 @@ mod tests {
             )
             .await;
         assert!(result.is_err());
+        #[cfg(windows)]
+        if prevented.get() {
+            assert_eq!(fs::read(nested.as_path().join("daily.md")).unwrap(), b"old");
+            assert!(!retired.exists());
+            assert_eq!(fs::read_dir(nested.as_path()).unwrap().count(), 1);
+            return;
+        }
         assert_eq!(fs::read(nested.join("daily.md")).unwrap(), b"replacement");
         assert_eq!(fs::read(retired.join("daily.md")).unwrap(), b"old");
         assert_eq!(fs::read_dir(retired).unwrap().count(), 1);

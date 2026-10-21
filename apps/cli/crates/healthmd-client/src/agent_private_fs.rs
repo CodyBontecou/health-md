@@ -123,6 +123,9 @@ pub(crate) fn open_private(
     {
         use cap_std::fs::OpenOptionsExt as _;
         options.mode(0o600);
+        // Reject substituted non-regular objects without blocking before fstat validation.
+        options
+            .custom_flags(i32::try_from(rustix::fs::OFlags::NONBLOCK.bits()).map_err(unavailable)?);
     }
     let file = dir.open_with(name, &options).map_err(unavailable)?;
     let metadata = file.metadata().map_err(unavailable)?;

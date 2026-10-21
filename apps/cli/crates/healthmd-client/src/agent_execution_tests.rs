@@ -7,10 +7,13 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
+#[path = "agent_transfer_tests.rs"]
+mod transfer_tests;
 struct AdversarialOutputTrust<'a> {
     inner: &'a dyn CurrentBridgeTrust,
     remaining: AtomicUsize,
     action: Mutex<Option<Box<dyn FnOnce() + Send>>>,
+    trigger: Mutex<Option<Box<dyn Fn() -> bool + Send>>>,
 }
 impl<'a> AdversarialOutputTrust<'a> {
     fn new(inner: &'a dyn CurrentBridgeTrust) -> Self {
@@ -18,7 +21,16 @@ impl<'a> AdversarialOutputTrust<'a> {
             inner,
             remaining: AtomicUsize::new(0),
             action: Mutex::new(None),
+            trigger: Mutex::new(None),
         }
+    }
+    fn arm_when(
+        &self,
+        trigger: impl Fn() -> bool + Send + 'static,
+        action: impl FnOnce() + Send + 'static,
+    ) {
+        *self.trigger.lock().unwrap() = Some(Box::new(trigger));
+        *self.action.lock().unwrap() = Some(Box::new(action));
     }
     fn arm(&self, count: usize, action: impl FnOnce() + Send + 'static) {
         *self.action.lock().unwrap() = Some(Box::new(action));
@@ -37,7 +49,14 @@ impl CurrentBridgeTrust for AdversarialOutputTrust<'_> {
             .remaining
             .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
             == Ok(1)
+            || self
+                .trigger
+                .lock()
+                .unwrap()
+                .as_ref()
+                .is_some_and(|trigger| trigger())
         {
+            self.trigger.lock().unwrap().take();
             let action = self.action.lock().unwrap().take().unwrap();
             tokio::task::yield_now().await;
             action();
@@ -48,6 +67,7 @@ impl CurrentBridgeTrust for AdversarialOutputTrust<'_> {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum OutputCase {
+    Transfer(transfer_tests::TransferCase),
     ExactReplay,
     WrongAccepted,
     WrongManifest,
@@ -64,6 +84,7 @@ enum OutputCase {
     LockReplacement,
     OutputLockReplacement,
     FullStoreBeforeSend,
+    TransferBeforeSend,
     RestoredJournalBeforeSend,
     ConcurrentAdmission,
     NativeRejection,
@@ -209,7 +230,9 @@ async fn output_peer(
                 assert!(
                     !matches!(
                         case,
-                        OutputCase::FullStoreBeforeSend | OutputCase::RestoredJournalBeforeSend
+                        OutputCase::FullStoreBeforeSend
+                            | OutputCase::TransferBeforeSend
+                            | OutputCase::RestoredJournalBeforeSend
                     ),
                     "freshness rejection must precede complete Execute delivery"
                 );
@@ -259,7 +282,11 @@ async fn output_peer(
                     let _ = release.await;
                     return;
                 }
-                let mut manifest = synthetic_binding(&request, platform).manifest;
+                let mut manifest = if let OutputCase::Transfer(transfer_case) = case {
+                    transfer_tests::binding(&request, platform, transfer_case).manifest
+                } else {
+                    synthetic_binding(&request, platform).manifest
+                };
                 if case == OutputCase::OmittedPath {
                     manifest.artifacts.pop();
                 }
@@ -276,6 +303,19 @@ async fn output_peer(
                     )
                     .await
                     .unwrap();
+                if let OutputCase::Transfer(transfer_case) = case {
+                    transfer_tests::send_transfer(&mut channel, &request, platform, transfer_case)
+                        .await;
+                    if transfer_case == transfer_tests::TransferCase::Disconnect {
+                        return;
+                    }
+                    if !matches!(
+                        transfer_case,
+                        transfer_tests::TransferCase::Exact | transfer_tests::TransferCase::Large
+                    ) {
+                        transfer_tests::no_response(&mut channel, platform).await;
+                    }
+                }
                 let _ = release.await;
                 return;
             }
@@ -365,6 +405,19 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
                 .unwrap();
         }
     }
+    if case == OutputCase::TransferBeforeSend {
+        let path = client
+            .layout
+            .root
+            .join("agent-host-v1")
+            .join(format!("transfer-{}.json", request.job_id.0));
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(path)
+            .unwrap();
+    }
     if case == OutputCase::RestoredJournalBeforeSend {
         let journal = client
             .layout
@@ -413,6 +466,7 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
             | OutputCase::OmittedPath
             | OutputCase::ReorderedPaths
             | OutputCase::FullStoreBeforeSend
+            | OutputCase::TransferBeforeSend
             | OutputCase::RestoredJournalBeforeSend
             | OutputCase::NativeRejection
             | OutputCase::WrongRejectionID
@@ -462,6 +516,17 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
                     .exists()
             );
         }
+        if case == OutputCase::TransferBeforeSend {
+            let issuer = client.layout.root.join("agent-host-v1");
+            assert!(!issuer.join(format!("attempt-{}.json", id(20).0)).exists());
+            assert!(!issuer.join(format!("output-{}.json", id(20).0)).exists());
+            assert_eq!(
+                std::fs::metadata(issuer.join(format!("transfer-{}.json", id(20).0)))
+                    .unwrap()
+                    .len(),
+                0
+            );
+        }
         if case == OutputCase::FullStoreBeforeSend {
             let issuer = client.layout.root.join("agent-host-v1");
             assert_eq!(std::fs::read_dir(&issuer).unwrap().count(), 8192);
@@ -470,6 +535,216 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
         }
     } else {
         let mut owner = result.unwrap();
+        if let OutputCase::Transfer(transfer_case) = case {
+            if transfer_case == transfer_tests::TransferCase::Quota {
+                let issuer = client.layout.root.join("agent-host-v1");
+                let count = std::fs::read_dir(&issuer).unwrap().count();
+                for i in count..8191 {
+                    std::fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .mode(0o600)
+                        .open(issuer.join(format!("quota-transfer-{i}")))
+                        .unwrap();
+                }
+            }
+            if matches!(
+                transfer_case,
+                transfer_tests::TransferCase::PartitionTamper
+                    | transfer_tests::TransferCase::PartitionFifo
+                    | transfer_tests::TransferCase::CheckpointDelete
+                    | transfer_tests::TransferCase::FinalPrefixDelete
+                    | transfer_tests::TransferCase::FinalOutputEdit
+            ) {
+                let journal = client
+                    .layout
+                    .root
+                    .join("agent-host-v1")
+                    .join(format!("transfer-{}.json", retry_request.job_id.0));
+                let observed = journal.clone();
+                let final_stage = matches!(
+                    transfer_case,
+                    transfer_tests::TransferCase::FinalPrefixDelete
+                        | transfer_tests::TransferCase::FinalOutputEdit
+                );
+                let output_path = match &owner.manifest().artifacts[0] {
+                    Artifact::Branch1(item) => output.join(&item.relative_path.0),
+                    _ => unreachable!(),
+                };
+                adversarial_trust.arm_when(
+                    move || {
+                        std::fs::read(&observed)
+                            .ok()
+                            .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+                            .is_some_and(|j| {
+                                if final_stage {
+                                    j["journal"]["final_ack_may_have_sent"] == true
+                                } else {
+                                    j["journal"]["partitions"]
+                                        .as_array()
+                                        .is_some_and(|a| a.len() == 1)
+                                }
+                            })
+                    },
+                    move || {
+                        let saved_checkpoint: serde_json::Value =
+                            serde_json::from_slice(&std::fs::read(&journal).unwrap()).unwrap();
+                        let stage = journal.parent().unwrap().join(
+                            saved_checkpoint["journal"]["partitions"][0]["stage_name"]
+                                .as_str()
+                                .unwrap(),
+                        );
+                        match transfer_case {
+                            transfer_tests::TransferCase::PartitionTamper => {
+                                std::fs::write(stage, b"bad bytes").unwrap();
+                            }
+                            transfer_tests::TransferCase::PartitionFifo => {
+                                std::fs::remove_file(&stage).unwrap();
+                                assert!(
+                                    std::process::Command::new("mkfifo")
+                                        .arg("-m")
+                                        .arg("600")
+                                        .arg(stage)
+                                        .status()
+                                        .unwrap()
+                                        .success()
+                                );
+                            }
+                            transfer_tests::TransferCase::CheckpointDelete => {
+                                std::fs::remove_file(journal).unwrap();
+                            }
+                            transfer_tests::TransferCase::FinalPrefixDelete => {
+                                std::fs::remove_file(stage).unwrap();
+                            }
+                            transfer_tests::TransferCase::FinalOutputEdit => {
+                                std::fs::write(output_path, b"independent edit").unwrap();
+                            }
+                            _ => unreachable!(),
+                        }
+                    },
+                );
+            }
+            let expected = owner.manifest().clone();
+            let result = Box::pin(owner.receive_and_commit()).await;
+            let issuer = client.layout.root.join("agent-host-v1");
+            if matches!(
+                transfer_case,
+                transfer_tests::TransferCase::Exact | transfer_tests::TransferCase::Large
+            ) {
+                let received = result.unwrap();
+                assert_eq!(received.receipts.len(), 2);
+                let expected_payload = transfer_tests::payload(transfer_case);
+                let part_bytes = if transfer_case == transfer_tests::TransferCase::Large {
+                    expected_payload.len()
+                } else {
+                    9
+                };
+                let count = expected_payload.len().div_ceil(part_bytes) * 2;
+                assert_eq!(received.committed_partition_count, count as u64);
+                let mut frontier = TransferFrontier::new(
+                    &retry_request.job_id,
+                    &document_digest(&retry_request).unwrap(),
+                    &document_digest(&expected).unwrap(),
+                    &id(30),
+                )
+                .unwrap();
+                let mut index = 0_usize;
+                for item in &expected.artifacts {
+                    let Artifact::Branch1(item) = item else {
+                        unreachable!()
+                    };
+                    for (part_index, segment) in expected_payload.chunks(part_bytes).enumerate() {
+                        frontier = frontier
+                            .appending(&TransferFrontierPartition {
+                                partition_index: i64::try_from(index).unwrap(),
+                                transfer_id: id(31 + index as u64),
+                                artifact_id: item.artifact_id.clone(),
+                                artifact_offset: i64::try_from(part_index * part_bytes).unwrap(),
+                                byte_count: i64::try_from(segment.len()).unwrap(),
+                                chunk_count: i64::try_from(
+                                    segment
+                                        .len()
+                                        .div_ceil(healthmd_protocol::TRANSFER_FRAME_BYTES),
+                                )
+                                .unwrap(),
+                                sha256: Digest(healthmd_protocol::transfer::sha256_hex(segment)),
+                            })
+                            .unwrap();
+                        index += 1;
+                    }
+                }
+                assert_eq!(received.frontier_sha256, *frontier.sha256());
+                for receipt in &received.receipts {
+                    validate_commit_receipt(receipt, None).unwrap();
+                    assert_eq!(
+                        std::fs::read(output.join(&receipt.relative_path.0)).unwrap(),
+                        expected_payload
+                    );
+                }
+                let journal: serde_json::Value = serde_json::from_slice(
+                    &std::fs::read(
+                        issuer.join(format!("transfer-{}.json", retry_request.job_id.0)),
+                    )
+                    .unwrap(),
+                )
+                .unwrap();
+                assert_eq!(
+                    journal["journal"]["partitions"].as_array().unwrap().len(),
+                    count
+                );
+                assert_eq!(journal["journal"]["final_ack_may_have_sent"], true);
+                for record in journal["journal"]["partitions"].as_array().unwrap() {
+                    let name = record["stage_name"].as_str().unwrap();
+                    assert_eq!(
+                        std::fs::metadata(issuer.join(name)).unwrap().len(),
+                        record["partition"]["byte_count"].as_u64().unwrap()
+                    );
+                }
+            } else {
+                assert!(result.is_err(), "{transfer_case:?}");
+                if !matches!(
+                    transfer_case,
+                    transfer_tests::TransferCase::BadFinalize
+                        | transfer_tests::TransferCase::FinalPrefixDelete
+                        | transfer_tests::TransferCase::FinalOutputEdit
+                ) {
+                    for item in expected.artifacts {
+                        let Artifact::Branch1(item) = item else {
+                            unreachable!()
+                        };
+                        assert!(!output.join(item.relative_path.0).exists());
+                    }
+                }
+                let journal = issuer.join(format!("transfer-{}.json", retry_request.job_id.0));
+                if journal.exists() {
+                    let json: serde_json::Value =
+                        serde_json::from_slice(&std::fs::read(journal).unwrap()).unwrap();
+                    if !matches!(
+                        transfer_case,
+                        transfer_tests::TransferCase::FinalPrefixDelete
+                            | transfer_tests::TransferCase::FinalOutputEdit
+                    ) {
+                        assert_eq!(json["journal"]["final_ack_may_have_sent"], false);
+                    }
+                }
+            }
+            if matches!(
+                transfer_case,
+                transfer_tests::TransferCase::PartitionTamper
+                    | transfer_tests::TransferCase::PartitionFifo
+                    | transfer_tests::TransferCase::CheckpointDelete
+                    | transfer_tests::TransferCase::FinalPrefixDelete
+                    | transfer_tests::TransferCase::FinalOutputEdit
+            ) {
+                assert!(adversarial_trust.action.lock().unwrap().is_none());
+            }
+            assert!(owner.receive_and_commit().await.is_err());
+            drop(owner);
+            assert!(bridge.discover().await.is_err());
+            let _ = release.send(());
+            source.await.unwrap();
+            return;
+        }
         let artifact = match &owner.manifest().artifacts[0] {
             Artifact::Branch1(a) => a.clone(),
             _ => unreachable!(),
@@ -767,5 +1042,12 @@ async fn authenticated_output_preserves_exact_native_rejection_and_rejects_wrong
         for case in [OutputCase::NativeRejection, OutputCase::WrongRejectionID] {
             Box::pin(check_output_case(platform, case)).await;
         }
+    }
+}
+
+#[tokio::test]
+async fn authenticated_output_admission_rejects_retained_transfer_before_execute() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        Box::pin(check_output_case(platform, OutputCase::TransferBeforeSend)).await;
     }
 }

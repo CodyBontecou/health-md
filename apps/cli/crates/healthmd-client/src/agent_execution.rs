@@ -29,6 +29,9 @@ pub struct HostExecution<'s, 'h, 'trust> {
     store: &'h HostAuthorityStore,
     clock: &'h dyn PlanningClock,
     binding: NativeBinding,
+    transfer_started: bool,
+    transfer_guard: Option<transfer::TransferGuard>,
+    final_output: Option<(GeneratedDestination, Vec<CommitReceipt>)>,
 }
 impl Drop for HostExecution<'_, '_, '_> {
     fn drop(&mut self) {
@@ -135,6 +138,9 @@ impl<'trust> BridgeSession<'trust> {
             store,
             clock,
             binding,
+            transfer_started: false,
+            transfer_guard: None,
+            final_output: None,
         };
         let mut transaction = admission.bind(&execution.binding)?;
         transaction.save(|| execution.require_current()).await?;
@@ -180,7 +186,8 @@ impl HostExecution<'_, '_, '_> {
         {
             return Err(Error::BindingChanged.into());
         }
-        self.store
+        let root = self
+            .store
             .require_output_current(
                 &self.binding.request,
                 Some(&self.binding.accepted.expires_at),
@@ -199,7 +206,13 @@ impl HostExecution<'_, '_, '_> {
                     Ok(())
                 },
             )
-            .await
+            .await?;
+        if let Some((destination, receipts)) = &self.final_output {
+            for receipt in receipts {
+                self.verify_installed(destination, receipt)?;
+            }
+        }
+        Ok(root)
     }
     #[must_use]
     pub fn manifest(&self) -> &ArtifactManifest {
@@ -215,6 +228,9 @@ impl HostExecution<'_, '_, '_> {
         artifact_id: &ControlUuid,
         input: &Path,
     ) -> Result<CommitReceipt, ClientError> {
+        if self.transfer_started {
+            return Err(Error::BindingChanged.into());
+        }
         let cancellation = self.bridge.cancellation.clone();
         let timeout = self.bridge.timeout;
         tokio::select! {
@@ -231,6 +247,17 @@ impl HostExecution<'_, '_, '_> {
         artifact_id: &ControlUuid,
         input: &Path,
     ) -> Result<CommitReceipt, ClientError> {
+        let mut transaction =
+            OutputTransaction::open(self.store, &self.binding, || self.require_current()).await?;
+        self.commit_artifact_transaction(&mut transaction, artifact_id, input)
+            .await
+    }
+    async fn commit_artifact_transaction(
+        &mut self,
+        transaction: &mut OutputTransaction,
+        artifact_id: &ControlUuid,
+        input: &Path,
+    ) -> Result<CommitReceipt, ClientError> {
         let root = self.require_current().await?;
         let artifact = self
             .binding
@@ -242,13 +269,11 @@ impl HostExecution<'_, '_, '_> {
                 _ => None,
             })
             .ok_or(Error::BindingChanged)?;
-        let mut transaction =
-            OutputTransaction::open(self.store, &self.binding, || self.require_current()).await?;
         let destination = GeneratedDestination::open(&root)?;
         let mut plan = if let Some(plan) = transaction.plan(artifact_id) {
             plan.clone()
         } else {
-            Box::pin(self.prepare_output(&transaction, &destination, &artifact, input)).await?
+            Box::pin(self.prepare_output(transaction, &destination, &artifact, input)).await?
         };
         let installed = destination
             .output_sha256(&artifact.relative_path.0)?
@@ -530,3 +555,7 @@ impl Drop for PrivateOutputFile {
         }
     }
 }
+
+#[path = "agent_transfer.rs"]
+mod transfer;
+pub use transfer::ReceivedArtifacts;
