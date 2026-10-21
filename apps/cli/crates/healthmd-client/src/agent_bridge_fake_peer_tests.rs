@@ -1,12 +1,10 @@
 //! Actual authenticated encrypted bridge send/receive, with synthetic native peers only.
 #![cfg(unix)] // Private host issuer storage intentionally fails closed on Windows.
 use super::*;
-use crate as client_crate;
 use crate::agent_planning::{HostPlanner, PlanningSource};
+use crate::agent_test_support as support;
 use healthmd_protocol::v4::{self, *};
 use healthmd_protocol::wire::PeerPlatform;
-#[path = "../tests/support/agent.rs"]
-mod support;
 use support::*;
 
 #[path = "agent_bridge_send_boundary_tests.rs"]

@@ -334,6 +334,41 @@ impl OutputTransaction {
         )
         .await
     }
+    /// Read existing canonical checkpoint bytes without publishing, repairing or accepting
+    /// caller-supplied recovery metadata. Permission and transfer semantics remain separate.
+    pub fn read_transfer<T>(&self) -> Result<(T, Vec<u8>), ClientError>
+    where
+        T: serde::de::DeserializeOwned + Serialize,
+    {
+        #[derive(Deserialize, Serialize)]
+        #[serde(deny_unknown_fields)]
+        struct Signed<T> {
+            journal: T,
+            mac: Digest,
+        }
+        self.require_current()?;
+        let name = format!("transfer-{}.json", self.journal.binding.request.job_id.0);
+        let bytes = private::read_private(&self.dir, &name, MAX_OUTPUT_BYTES)?;
+        let signed: Signed<T> = private_json::decode(&bytes)?;
+        signed.mac.validate_shape()?;
+        let mut verifier = Hmac::<Sha256>::new_from_slice(self.key.expose_secret())
+            .map_err(private::unavailable)?;
+        verifier.update(b"HealthMd.AgentBridge.HostTransferJournal.v1\0");
+        verifier.update(self.journal.binding.request.job_id.0.as_bytes());
+        verifier.update(&private_json::encode(&signed.journal)?);
+        let expected = format!("{:x}", verifier.finalize().into_bytes());
+        if !healthmd_protocol::crypto::constant_time_equal(
+            expected.as_bytes(),
+            signed.mac.0.as_bytes(),
+        ) {
+            return Err(ClientError::AgentAuthorityUnavailable);
+        }
+        self.require_current()?;
+        if private::read_private(&self.dir, &name, MAX_OUTPUT_BYTES)? != bytes {
+            return Err(Error::BindingChanged.into());
+        }
+        Ok((signed.journal, bytes))
+    }
     pub async fn save_completion<T, F, Fut>(
         &self,
         data: &T,

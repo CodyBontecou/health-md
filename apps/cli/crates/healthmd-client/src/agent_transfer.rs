@@ -4,7 +4,7 @@ use healthmd_protocol::{
     v2,
     v4::{TransferFrontier, TransferFrontierPartition},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt as _, AsyncSeekExt as _, AsyncWriteExt as _};
 #[path = "agent_transfer_wire.rs"]
 pub(super) mod wire;
@@ -19,14 +19,16 @@ pub struct ReceivedArtifacts {
     pub committed_partition_count: u64,
     pub frontier_sha256: Digest,
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 struct PartitionRecord {
     partition: TransferFrontierPartition,
     stage_name: String,
 }
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 struct TransferJournal {
-    schema: &'static str,
+    schema: String,
     schema_version: u64,
     job_id: ControlUuid,
     request_sha256: Digest,
@@ -45,18 +47,28 @@ pub(super) struct TransferGuard {
 impl TransferGuard {
     fn new(
         transaction: &OutputTransaction,
-        journal: &TransferJournal,
-        bytes: &[u8],
+        binding: &NativeBinding,
+        expected: &[u8],
     ) -> Result<Self, ClientError> {
-        Ok(Self {
+        let (journal, bytes) = transaction.read_transfer::<TransferJournal>()?;
+        if bytes != expected {
+            return Err(Error::BindingChanged.into());
+        }
+        validate_retained_prefix(binding, &journal)?;
+        for record in &journal.partitions {
+            let _ = transaction.stage_path(&record.stage_name)?;
+        }
+        let guard = Self {
             dir: transaction
                 .directory()
                 .try_clone()
                 .map_err(private::unavailable)?,
             name: format!("transfer-{}.json", journal.job_id.0),
-            bytes: bytes.to_vec(),
-            partitions: journal.partitions.clone(),
-        })
+            bytes,
+            partitions: journal.partitions,
+        };
+        guard.verify()?;
+        Ok(guard)
     }
     pub(super) fn verify(&self) -> Result<(), ClientError> {
         if private::read_private(&self.dir, &self.name, 64 * 1024 * 1024)? != self.bytes {
@@ -132,7 +144,7 @@ impl HostExecution<'_, '_, '_> {
             &session_id,
         )?;
         let mut journal = TransferJournal {
-            schema: "healthmd.agent_host_transfer",
+            schema: "healthmd.agent_host_transfer".into(),
             schema_version: 1,
             job_id: self.binding.request.job_id.clone(),
             request_sha256: self.binding.manifest.request_sha256.clone(),
@@ -334,8 +346,11 @@ impl HostExecution<'_, '_, '_> {
                         Ok(root)
                     })
                     .await?;
-                self.transfer_guard =
-                    Some(TransferGuard::new(&transaction, &journal, &checkpoint)?);
+                self.transfer_guard = Some(TransferGuard::new(
+                    &transaction,
+                    &self.binding,
+                    &checkpoint,
+                )?);
                 self.send_base(
                     &transaction,
                     Response::Partition(v2::TransferPartitionAcknowledgement {
@@ -405,7 +420,11 @@ impl HostExecution<'_, '_, '_> {
         let checkpoint = transaction
             .save_transfer(&journal, Some(&checkpoint), || self.require_current())
             .await?;
-        self.transfer_guard = Some(TransferGuard::new(&transaction, &journal, &checkpoint)?);
+        self.transfer_guard = Some(TransferGuard::new(
+            &transaction,
+            &self.binding,
+            &checkpoint,
+        )?);
         self.send_base(
             &transaction,
             Response::Final(v2::TransferFinalAcknowledgement {
@@ -437,23 +456,7 @@ impl HostExecution<'_, '_, '_> {
         Ok(received)
     }
     fn validate_session(&self, session: &Session) -> Result<(), ClientError> {
-        let peer = &self.binding.request.plan.intent.peer;
-        let value = &session.0;
-        ControlUuid(value.session_id.to_string()).validate_shape()?;
-        if value.job_id.to_string() != self.binding.request.job_id.0
-            || value.request_fingerprint != self.binding.manifest.request_sha256.0
-            || value.peer_binding.source_installation_id.to_string()
-                != peer.source_installation_id.0
-            || value.peer_binding.destination_installation_id.to_string()
-                != peer.host_installation_id.0
-            || !(33_554_432..=67_108_864).contains(&value.partition_target_bytes)
-            || value.created_at.timestamp_subsec_nanos() != 0
-            || value.created_at.timestamp().checked_add(604_800)
-                != Some(self.binding.accepted.expires_at.seconds()?)
-        {
-            return Err(Error::BindingChanged.into());
-        }
-        Ok(())
+        validate_retained_session(&self.binding, session)
     }
     async fn validate_base_manifest(
         &mut self,
@@ -496,6 +499,89 @@ impl HostExecution<'_, '_, '_> {
     }
 }
 
+/// Rebuild the trusted host prefix from the original binding and ordered retained rows.
+/// A requested count/digest never installs a checkpoint or replaces its original session.
+fn validate_retained_prefix(
+    binding: &NativeBinding,
+    journal: &TransferJournal,
+) -> Result<TransferFrontier, ClientError> {
+    binding.validate()?;
+    validate_retained_session(binding, &journal.session)?;
+    let manifest = document_digest(&binding.manifest)?;
+    if journal.schema != "healthmd.agent_host_transfer"
+        || journal.schema_version != 1
+        || journal.job_id != binding.request.job_id
+        || journal.request_sha256 != binding.manifest.request_sha256
+        || journal.manifest_sha256 != manifest
+        || journal.partitions.len() as u64 > crate::limits::MAXIMUM_PARTITIONS_PER_JOB
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    let mut frontier = TransferFrontier::new(
+        &binding.request.job_id,
+        &binding.manifest.request_sha256,
+        &manifest,
+        &ControlUuid(journal.session.0.session_id.to_string()),
+    )?;
+    let mut artifact_index = 0;
+    let mut offset = 0_u64;
+    let mut transfers = std::collections::BTreeSet::new();
+    let mut stages = std::collections::BTreeSet::new();
+    for (index, record) in journal.partitions.iter().enumerate() {
+        let partition = &record.partition;
+        partition.validate_shape()?;
+        let item = artifact(binding, artifact_index)?;
+        let bytes = u64::try_from(partition.byte_count).map_err(private::unavailable)?;
+        let end = offset.checked_add(bytes).ok_or(Error::BindingChanged)?;
+        if partition.partition_index != i64::try_from(index).map_err(private::unavailable)?
+            || partition.artifact_id != item.artifact_id
+            || u64::try_from(partition.artifact_offset).map_err(private::unavailable)? != offset
+            || end > item.byte_count
+            || (bytes == 0 && item.byte_count != 0)
+            || u64::try_from(partition.chunk_count).map_err(private::unavailable)?
+                != bytes.div_ceil(healthmd_protocol::TRANSFER_FRAME_BYTES as u64)
+            || !transfers.insert(&partition.transfer_id)
+            || !stages.insert(&record.stage_name)
+        {
+            return Err(Error::BindingChanged.into());
+        }
+        frontier = frontier.appending(partition)?;
+        offset = end;
+        if offset == item.byte_count {
+            artifact_index += 1;
+            offset = 0;
+        }
+    }
+    if journal.frontier_sha256 != *frontier.sha256()
+        || (journal.final_ack_may_have_sent
+            && (artifact_index != binding.manifest.artifacts.len() || offset != 0))
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    Ok(frontier)
+}
+
+fn validate_retained_session(
+    binding: &NativeBinding,
+    session: &Session,
+) -> Result<(), ClientError> {
+    let peer = &binding.request.plan.intent.peer;
+    let value = &session.0;
+    ControlUuid(value.session_id.to_string()).validate_shape()?;
+    if value.job_id.to_string() != binding.request.job_id.0
+        || value.request_fingerprint != binding.manifest.request_sha256.0
+        || value.peer_binding.source_installation_id.to_string() != peer.source_installation_id.0
+        || value.peer_binding.destination_installation_id.to_string() != peer.host_installation_id.0
+        || !(33_554_432..=67_108_864).contains(&value.partition_target_bytes)
+        || value.created_at.timestamp_subsec_nanos() != 0
+        || value.created_at.timestamp().checked_add(604_800)
+            != Some(binding.accepted.expires_at.seconds()?)
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    Ok(())
+}
+
 fn verify_partition_file(
     dir: &cap_std::fs::Dir,
     name: &str,
@@ -530,3 +616,7 @@ fn verify_partition_file(
     }
     Ok(())
 }
+
+#[cfg(all(test, unix))]
+#[path = "agent_retained_checkpoint_tests.rs"]
+mod retained_prefix_tests;

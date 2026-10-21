@@ -107,3 +107,9 @@ pub enum ClientError {
     #[error("the native credential mutation may have completed; inspect trust before retrying")]
     CredentialMutationOutcomeUnknown,
 }
+
+#[cfg(all(test, unix))]
+use crate as client_crate;
+#[cfg(all(test, unix))]
+#[path = "../tests/support/agent.rs"]
+mod agent_test_support;
