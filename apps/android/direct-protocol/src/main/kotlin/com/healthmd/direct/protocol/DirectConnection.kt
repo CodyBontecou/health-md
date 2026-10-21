@@ -12,6 +12,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.UUID
+import kotlinx.serialization.json.*
 import kotlinx.serialization.SerializationStrategy
 
 private val SECURE_MAGIC = "HMDSC001".toByteArray(StandardCharsets.US_ASCII)
@@ -28,11 +29,31 @@ class DirectPacketConnection private constructor(
     private var pendingPayload: ByteArray? = null
     private var pendingPayloadBytes = 0
 
-    fun send(packet: ByteArray) {
+    private val writeLock = Any()
+
+    fun send(packet: ByteArray) = synchronized(writeLock) {
         require(packet.isNotEmpty() && packet.size <= MAXIMUM_PACKET_BYTES) { "Invalid direct packet size." }
         output.writeLong(packet.size.toLong())
         output.write(packet)
         output.flush()
+    }
+
+    /** New bridge-only path. Same length/framing bytes, at most16KiB per native write.
+     * Any failed/uncertain guarded write closes the connection; no partial frame can be retried. */
+    fun sendGuarded(packet: ByteArray, authorize: () -> Unit) = synchronized(writeLock) {
+        require(packet.isNotEmpty() && packet.size <= MAXIMUM_PACKET_BYTES) { "Invalid direct packet size." }
+        try {
+            val framed = ByteBuffer.allocate(8 + packet.size).putLong(packet.size.toLong()).put(packet).array()
+            var offset = 0
+            while (offset < framed.size) {
+                authorize()
+                val count = minOf(16 * 1024, framed.size - offset)
+                output.write(framed, offset, count)
+                output.flush()
+                authorize()
+                offset += count
+            }
+        } catch (failure: Throwable) { close(); throw failure }
     }
 
     @Synchronized
@@ -134,6 +155,13 @@ sealed interface NativeAuthenticatedDirectSession {
         hostInstallationId: String, reconnectSecret: ByteArray): Boolean
 }
 
+/** Separate negotiated surface; receiveV2 and deployed callers keep their original API. */
+sealed interface ReceivedAgentBridgePayload {
+    data class Base(val envelope: ReceivedEnvelope) : ReceivedAgentBridgePayload
+    data class Agent(val message: AgentBridgeMessage) : ReceivedAgentBridgePayload
+    data class Binary(val bytes: ByteArray) : ReceivedAgentBridgePayload
+}
+
 class DirectSecureChannel internal constructor(
     private val packet: DirectPacketConnection,
     private val sessionKey: ByteArray,
@@ -223,7 +251,60 @@ class DirectSecureChannel internal constructor(
         }
     }
 
+    private val sendLock = Any()
+    private val agentReceiveLock = Any()
+    @Volatile private var bridgeAbandoned = false
+
+    /** Mandatory current native-owner callback, not native export consent. */
+    fun sendAgentBridge(message: AgentBridgeMessage, negotiation: AgentBridgeNegotiation, authorize: () -> Unit) {
+        AgentBridgeChecks.require(negotiation.baseApplication == ANDROID_APPLICATION_PROTOCOL_VERSION && negotiation.agentExtension,
+            AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val plaintext = AgentBridgeCodec.encodeEnvelope(message, negotiation)
+        try {
+            synchronized(sendLock) {
+                requireBridgeCurrent(); authorize(); requireBridgeCurrent()
+                check(nextSendSequence != Long.MAX_VALUE) { "Direct send sequence exhausted." }
+                val sequence = nextSendSequence++
+                val envelope = ByteBuffer.allocate(16 + plaintext.size).put(SECURE_MAGIC).putLong(sequence).put(plaintext).array()
+                val encrypted = LegacyCodec.encrypted(DirectCrypto.seal(envelope, sessionKey))
+                packet.sendGuarded(encrypted) { requireBridgeCurrent(); authorize(); requireBridgeCurrent() }
+                authorize(); requireBridgeCurrent()
+            }
+        } catch (failure: Throwable) { bridgeAbandoned = true; close(); throw failure }
+    }
+
+    fun receiveAllowingAgentBridge(negotiation: AgentBridgeNegotiation, authorize: () -> Unit): ReceivedAgentBridgePayload {
+        AgentBridgeChecks.require(negotiation.baseApplication == ANDROID_APPLICATION_PROTOCOL_VERSION && negotiation.agentExtension,
+            AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        try {
+            return synchronized(agentReceiveLock) {
+                requireBridgeCurrent(); authorize(); requireBridgeCurrent()
+                val result = when (val payload = receive()) {
+                    is ReceivedSecurePayload.Binary -> ReceivedAgentBridgePayload.Binary(payload.bytes)
+                    is ReceivedSecurePayload.Control -> {
+                        val canonical = AgentBridgeCodec.canonicalize(payload.bytes)
+                        val root = DirectJson.json.parseToJsonElement(canonical.decodeToString()).jsonObject
+                        val version = root["protocol_version"] as? JsonPrimitive
+                        if (version != null && !version.isString && version.content == "4") {
+                            ReceivedAgentBridgePayload.Agent(AgentBridgeCodec.decodeEnvelope(canonical, negotiation))
+                        } else {
+                            AgentBridgeChecks.require(version != null && !version.isString && version.content == "2")
+                            ReceivedAgentBridgePayload.Base(V2Codec.decode(deterministicCore.canonicalizeV2Envelope(canonical)))
+                        }
+                    }
+                }
+                authorize(); requireBridgeCurrent()
+                result
+            }
+        } catch (failure: Throwable) { bridgeAbandoned = true; close(); throw failure }
+    }
+
+    private fun requireBridgeCurrent() {
+        AgentBridgeChecks.require(!bridgeAbandoned, AgentBridgeErrorCode.PERMISSION_REQUIRED)
+    }
+
     override fun close() {
+        bridgeAbandoned = true
         DirectClient.revokeAuthentication(this)
         packet.close()
     }
@@ -243,14 +324,16 @@ class DirectSecureChannel internal constructor(
 
     @Synchronized
     private fun sendEncrypted(plaintext: ByteArray) = observingFailure {
-        check(nextSendSequence != Long.MAX_VALUE) { "Direct send sequence exhausted." }
-        val envelope = ByteBuffer.allocate(SECURE_MAGIC.size + Long.SIZE_BYTES + plaintext.size)
-            .put(SECURE_MAGIC)
-            .putLong(nextSendSequence)
-            .put(plaintext)
-            .array()
-        nextSendSequence += 1
-        packet.send(LegacyCodec.encrypted(DirectCrypto.seal(envelope, sessionKey)))
+        synchronized(sendLock) {
+            check(nextSendSequence != Long.MAX_VALUE) { "Direct send sequence exhausted." }
+            val envelope = ByteBuffer.allocate(SECURE_MAGIC.size + Long.SIZE_BYTES + plaintext.size)
+                .put(SECURE_MAGIC)
+                .putLong(nextSendSequence)
+                .put(plaintext)
+                .array()
+            nextSendSequence += 1
+            packet.send(LegacyCodec.encrypted(DirectCrypto.seal(envelope, sessionKey)))
+        }
     }
 }
 
