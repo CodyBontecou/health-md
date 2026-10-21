@@ -472,12 +472,12 @@ fn require_live_plan(plan: &ExportPlan, clock: &dyn PlanningClock) -> Result<(),
     Ok(())
 }
 
-struct ReviewedConfiguration {
+pub(crate) struct ReviewedConfiguration {
     zones: Vec<CalendarZone>,
     metrics: Vec<MetricSupport>,
 }
 impl ReviewedConfiguration {
-    fn context(&self) -> ConfigurationContext<'_> {
+    pub(crate) fn context(&self) -> ConfigurationContext<'_> {
         ConfigurationContext {
             calendar_zones: &self.zones,
             metrics: &self.metrics,
@@ -485,7 +485,7 @@ impl ReviewedConfiguration {
         }
     }
 }
-fn reviewed_configuration() -> ReviewedConfiguration {
+pub(crate) fn reviewed_configuration() -> ReviewedConfiguration {
     let mut metrics = Vec::new();
     for platform in [PeerPlatform::Apple, PeerPlatform::Android] {
         for id in [

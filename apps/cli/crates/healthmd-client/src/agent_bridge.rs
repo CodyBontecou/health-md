@@ -310,3 +310,25 @@ impl PlanningSource for BridgeSession<'_> {
         Ok(*approval)
     }
 }
+
+#[path = "agent_execution.rs"]
+mod execution;
+pub use execution::HostExecution;
+
+#[cfg(test)]
+impl BridgeSession<'_> {
+    /// Preserve the real channel/peer while injecting an adversarial synthetic trust await.
+    pub(crate) fn with_test_trust(self, trust_fence: &dyn CurrentBridgeTrust) -> BridgeSession<'_> {
+        BridgeSession {
+            channel: self.channel,
+            trust_fence,
+            expected_trust: self.expected_trust,
+            requested_device: self.requested_device,
+            peer: self.peer,
+            negotiation: self.negotiation,
+            timeout: self.timeout,
+            cancellation: self.cancellation,
+            send_interrupted: self.send_interrupted,
+        }
+    }
+}

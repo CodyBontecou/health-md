@@ -1,6 +1,6 @@
 //! Handle-relative, read-only root inspection and private issuer-file hardening.
 use std::{
-    io::{Read as _, Write as _},
+    io::{Read as _, Seek as _, Write as _},
     path::{Component, Path},
 };
 
@@ -165,36 +165,132 @@ pub(crate) async fn publish<F: std::future::Future<Output = Result<(), ClientErr
     fence: impl FnOnce() -> F,
 ) -> Result<(), ClientError> {
     let temporary = format!(".issuer-{}.tmp", uuid::Uuid::new_v4());
-    let result = async {
-        let mut file = open_private(dir, &temporary, true, true)?;
-        file.write_all(bytes).map_err(unavailable)?;
-        file.sync_all().map_err(unavailable)?;
-        fence().await?;
-        if new {
-            dir.hard_link(&temporary, dir, name).map_err(unavailable)?;
-            dir.remove_file(&temporary).map_err(unavailable)?;
-        } else {
-            dir.rename(&temporary, dir, name).map_err(unavailable)?;
+    let mut staged = UnpublishedPrivateFile {
+        dir,
+        name: &temporary,
+        file: open_private(dir, &temporary, true, true)?,
+    };
+    staged.file.write_all(bytes).map_err(unavailable)?;
+    staged.file.sync_all().map_err(unavailable)?;
+    fence().await?;
+    require_named_file(dir, &temporary, &staged.file)?;
+    staged.file.rewind().map_err(unavailable)?;
+    let mut actual = Vec::new();
+    (&mut staged.file)
+        .take(bytes.len() as u64 + 1)
+        .read_to_end(&mut actual)
+        .map_err(unavailable)?;
+    if actual != bytes {
+        return Err(ClientError::AgentAuthorityUnavailable);
+    }
+    if new {
+        dir.hard_link(&temporary, dir, name).map_err(unavailable)?;
+        dir.remove_file(&temporary).map_err(unavailable)?;
+    } else {
+        dir.rename(&temporary, dir, name).map_err(unavailable)?;
+    }
+    // Linux capability directory handles may use O_PATH, which fsync rejects.
+    dir.open(".")
+        .map_err(unavailable)?
+        .sync_all()
+        .map_err(unavailable)
+}
+
+pub(crate) fn require_named_file(
+    dir: &Dir,
+    name: &str,
+    held: &std::fs::File,
+) -> Result<(), ClientError> {
+    use cap_fs_ext::MetadataExt as _;
+    let named = open_private(dir, name, false, false)?;
+    let named = Metadata::from_file(&named).map_err(unavailable)?;
+    let held = Metadata::from_file(held).map_err(unavailable)?;
+    if named.dev() != held.dev() || named.ino() != held.ino() {
+        return Err(ClientError::AgentAuthorityUnavailable);
+    }
+    Ok(())
+}
+struct UnpublishedPrivateFile<'a> {
+    dir: &'a Dir,
+    name: &'a str,
+    file: std::fs::File,
+}
+impl Drop for UnpublishedPrivateFile<'_> {
+    fn drop(&mut self) {
+        if require_named_file(self.dir, self.name, &self.file).is_ok() {
+            let _ = self.dir.remove_file(self.name);
         }
-        // Linux capability directory handles may use O_PATH, which fsync rejects.
-        // Reopen this same directory relative to its retained handle with read access;
-        // synchronizing it remains mandatory after publishing either directory entry.
-        dir.open(".")
-            .map_err(unavailable)?
-            .sync_all()
-            .map_err(unavailable)
     }
-    .await;
-    if result.is_err() {
-        let _ = dir.remove_file(&temporary);
-    }
-    result
 }
 
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt as _;
+
+    fn publication_fixture() -> (tempfile::TempDir, Dir) {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = std::fs::canonicalize(temporary.path()).unwrap();
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let (dir, _) = inspect_root(&root).unwrap();
+        (temporary, dir)
+    }
+    #[tokio::test]
+    async fn dropped_private_publication_removes_only_its_unpublished_stage() {
+        let (_temporary, dir) = publication_fixture();
+        let entered = tokio::sync::Notify::new();
+        let mut operation = Box::pin(publish(&dir, "issuer.json", b"original", true, || async {
+            entered.notify_one();
+            std::future::pending::<()>().await;
+            Ok(())
+        }));
+        tokio::select! {
+            biased;
+            result=&mut operation=>panic!("unexpected completion: {result:?}"),
+            ()=entered.notified()=>{}
+        }
+        drop(operation);
+        assert_eq!(dir.entries().unwrap().count(), 0);
+    }
+    #[tokio::test]
+    async fn private_publication_rejects_substitution_without_deleting_foreign_stage() {
+        let (_temporary, dir) = publication_fixture();
+        let result = publish(&dir, "issuer.json", b"original", true, || async {
+            let name = dir.entries().unwrap().next().unwrap().unwrap().file_name();
+            dir.rename(&name, &dir, "held-original").unwrap();
+            let mut file = open_private(&dir, name.to_str().unwrap(), true, true).unwrap();
+            file.write_all(b"foreign").unwrap();
+            Ok(())
+        })
+        .await;
+        assert!(result.is_err());
+        assert!(dir.symlink_metadata("issuer.json").is_err());
+        assert_eq!(dir.entries().unwrap().count(), 2);
+        let foreign = dir
+            .entries()
+            .unwrap()
+            .map(Result::unwrap)
+            .find(|entry| entry.file_name() != "held-original")
+            .unwrap();
+        assert_eq!(
+            read_private(&dir, foreign.file_name().to_str().unwrap(), 64).unwrap(),
+            b"foreign"
+        );
+    }
+    #[tokio::test]
+    async fn private_publication_rechecks_bytes_after_awaited_fence() {
+        let (_temporary, dir) = publication_fixture();
+        let result = publish(&dir, "issuer.json", b"original", true, || async {
+            let name = dir.entries().unwrap().next().unwrap().unwrap().file_name();
+            let mut file = open_private(&dir, name.to_str().unwrap(), true, false).unwrap();
+            file.write_all(b"tampered").unwrap();
+            file.sync_all().unwrap();
+            Ok(())
+        })
+        .await;
+        assert!(result.is_err());
+        assert_eq!(dir.entries().unwrap().count(), 0);
+    }
 
     #[tokio::test]
     async fn private_publication_syncs_created_and_replaced_directory_entries() {

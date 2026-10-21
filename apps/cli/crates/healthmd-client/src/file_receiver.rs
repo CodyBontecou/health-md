@@ -256,6 +256,16 @@ impl GeneratedDestination {
         })
     }
 
+    pub(crate) fn output_sha256(&self, relative_path: &str) -> Result<Option<String>, ClientError> {
+        self.ensure_identity()?;
+        let relative = validate_generated_relative_path(relative_path)?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let Some((parent, name)) = open_existing_safe_parent(root, &relative)? else {
+            return Ok(None);
+        };
+        digest_cap_file(&parent, &name)
+    }
+
     /// Install a prepared stage iff the destination still has the expected digest.
     ///
     /// # Errors

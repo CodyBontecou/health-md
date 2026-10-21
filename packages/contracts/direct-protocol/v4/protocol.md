@@ -129,6 +129,14 @@ an explicit v4 source adapter/availability review.
 7. Host validates every partition/artifact and commits handle-relatively with durable digest-bound commit
    plans/receipts. Source completion confirmation plus exact manifest/frontier enables terminal v4 receipt.
 
+Host commit receipts use the all-zero 64-hex `before_sha256` sentinel when the destination
+file did not exist. The private signed commit plan separately retains that absence; an existing
+empty file uses its actual SHA-256 digest. Replay never rebuilds an append/merge from a new before
+state: it verifies the exact installed after digest under current host/source ownership. A persisted
+committed receipt followed by an independent destination edit is a conflict, not permission to
+restore the prior output. This defines the existing v4 receipt field; no base message, export
+profile, fixture or public schema version changes.
+
 This is a new adapter path, not permission to pass an unvalidated v4 request through an old raw receiver.
 No silent v4-to-v1/v2 request conversion: unavailable feature rejects, preserving old peers/bytes/jobs.
 

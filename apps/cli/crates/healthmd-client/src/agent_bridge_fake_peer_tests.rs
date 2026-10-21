@@ -673,3 +673,6 @@ async fn old_peers_and_android_without_base_never_receive_a_v4_probe() {
         source.await.unwrap();
     }
 }
+
+#[path = "agent_execution_tests.rs"]
+mod execution_tests;

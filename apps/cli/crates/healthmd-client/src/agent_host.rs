@@ -573,6 +573,94 @@ impl HostAuthorityStore {
         .await
     }
 
+    /// Output authority remains owned by this issuer and the original authenticated session.
+    /// The shared issuer lock spans the native trust fence; output locks never block revocation.
+    pub(crate) async fn require_output_current<F, Fut>(
+        &self,
+        request: &v4::ExecuteRequest,
+        expires_at: Option<&UtcTimestamp>,
+        clock: &dyn PlanningClock,
+        native_fence: F,
+    ) -> Result<PathBuf, ClientError>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        request.validate_shape()?;
+        let key = key_bytes(&self.protected_key.load_existing(&self.host).await?)?;
+        let dir = self.directory()?;
+        let lock = private::open_private(&dir, LOCK, false, false)?;
+        fs2::FileExt::try_lock_shared(&lock).map_err(|_| ClientError::AgentStoreBusy)?;
+        let state = self.read_locked(&dir, &key)?;
+        let issued = state
+            .plans
+            .iter()
+            .find(|p| p.plan == request.plan)
+            .ok_or(Error::BindingChanged)?;
+        if issued.native_approval.as_ref() != Some(&request.approval)
+            || issued
+                .decision
+                .as_ref()
+                .is_none_or(|d| d.binding != approval_binding(&request.plan))
+            || request.approval.binding != approval_binding(&request.plan)
+            || !request.plan.required_actions.is_empty()
+        {
+            return Err(Error::ApprovalRequired.into());
+        }
+        native_fence().await?;
+        self.directory()?;
+        private::require_named_file(&dir, LOCK, &lock)?;
+        let host = self.authorization_locked(
+            &state,
+            &request.plan.intent.peer,
+            &request.plan.intent.destination.binding_id,
+            Some(&request.plan.authority_references.host),
+            clock,
+        )?;
+        if let Some(expires_at) = expires_at {
+            // A genuinely accepted job retains its original lifetime; a plan's admission
+            // deadline must not silently shorten or renew immutable accepted work.
+            let now = clock.now();
+            now.validate_shape()?;
+            expires_at.validate_shape()?;
+            if *expires_at <= now || host.destination != request.plan.intent.destination {
+                return Err(Error::BindingChanged.into());
+            }
+            let configuration = crate::agent_planning::reviewed_configuration();
+            crate::agent_validation::validate_issuer_plan_scope(
+                &host.delegation,
+                &host.reference,
+                &request.plan.intent,
+                &request.plan.effective_settings,
+                &ExportDelegationRightsItem::ExportExecute,
+                &crate::agent_validation::IssuerScopeContext {
+                    configuration: &configuration.context(),
+                    now: &now,
+                    issuer: AuthorityReferenceIssuer::AuthorizedHost,
+                },
+            )?;
+            if *expires_at <= clock.now() || host.delegation.expires_at <= clock.now() {
+                return Err(Error::ApprovalRequired.into());
+            }
+        } else {
+            validate_host_plan_authorization(
+                &request.plan,
+                &host,
+                &ExportDelegationRightsItem::ExportExecute,
+                clock,
+            )?;
+        }
+        state
+            .roots
+            .iter()
+            .find(|r| {
+                r.peer == request.plan.intent.peer
+                    && r.destination == request.plan.intent.destination
+            })
+            .map(|r| r.path.clone())
+            .ok_or_else(|| Error::BindingChanged.into())
+    }
+
     async fn read(&self) -> Result<State, ClientError> {
         let key = key_bytes(&self.protected_key.load_existing(&self.host).await?)?;
         let dir = self.directory()?;
@@ -747,3 +835,6 @@ fn validate_state(state: &State) -> Result<(), ClientError> {
     }
     Ok(())
 }
+
+#[path = "agent_host_output.rs"]
+pub(crate) mod output;
