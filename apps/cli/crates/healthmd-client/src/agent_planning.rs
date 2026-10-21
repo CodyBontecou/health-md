@@ -8,11 +8,10 @@ use healthmd_protocol::v4::{
     DiscoverySettingsPoliciesItem, Error, ExecuteRequest, ExportDelegationRightsItem, ExportIntent,
     ExportIntentProduct, ExportIntentProductType, ExportIntentSchema,
     ExportIntentTimestampTimezone, ExportPlan, MetricSupport, OutputSettings,
-    OutputSettingsFormatsItem, OutputSettingsWriteMode, OutputSupportNativeArchiveProductsItem,
-    OutputSupportPathTokensItem, Peer, PeerPlatform, PlanRequest, PlanRequestSchema, Policy,
-    Selection, SemanticId, UtcTimestamp, ValidateShape, approval_binding, derived_export_authority,
-    predicted_paths, resolve_dates, setting_origins, validate_discovery, validate_export_intent,
-    validate_export_plan,
+    OutputSupportNativeArchiveProductsItem, OutputSupportPathTokensItem, Peer, PeerPlatform,
+    PlanRequest, PlanRequestSchema, Policy, Selection, SemanticId, UtcTimestamp, ValidateShape,
+    approval_binding, derived_export_authority, predicted_paths, resolve_dates, setting_origins,
+    validate_discovery, validate_export_intent, validate_export_plan,
 };
 
 use crate::{
@@ -545,10 +544,11 @@ fn check_capabilities(intent: &ExportIntent, discovery: &Discovery) -> Result<()
             .settings_policies
             .contains(&DiscoverySettingsPoliciesItem::Explicit)
         || !discovery.output_profiles.contains(&settings.output_profile)
-        || !support.formats.contains(&OutputSettingsFormatsItem::Json)
-        || !support
-            .write_modes
-            .contains(&OutputSettingsWriteMode::Overwrite)
+        || !settings
+            .formats
+            .iter()
+            .all(|format| support.formats.contains(format))
+        || !support.write_modes.contains(&settings.write_mode)
         || !support
             .compatibility_detail
             .contains(&CaptureCompatibilityDetail::Summary)

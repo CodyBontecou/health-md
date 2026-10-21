@@ -113,8 +113,13 @@ pub(crate) fn validate_supported_settings(settings: &OutputSettings) -> Result<(
     let entries = &settings.individual_entries;
     let notes = &settings.daily_notes;
     require(
-        settings.formats == [OutputSettingsFormatsItem::Json]
-            && settings.write_mode == OutputSettingsWriteMode::Overwrite
+        matches!(
+            settings.formats.as_slice(),
+            [OutputSettingsFormatsItem::Json | OutputSettingsFormatsItem::Markdown]
+        ) && (matches!(
+            settings.write_mode,
+            OutputSettingsWriteMode::Overwrite | OutputSettingsWriteMode::Append
+        ) || settings.formats == [OutputSettingsFormatsItem::Markdown])
             && settings.output_profile != OutputSettingsOutputProfile::AndroidAnalyticalV5
             && p.display_units == PresentationDisplayUnits::Metric
             && p.locale == "en-US"

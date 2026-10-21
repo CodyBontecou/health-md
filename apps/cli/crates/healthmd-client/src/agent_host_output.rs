@@ -81,6 +81,19 @@ impl NativeBinding {
                 .predicted_paths
                 .contains(&artifact.relative_path)
                 || artifact.write_mode != request.plan.effective_settings.write_mode
+                || !matches!(
+                    (
+                        request.plan.effective_settings.formats.as_slice(),
+                        &artifact.media_type
+                    ),
+                    (
+                        [v4::OutputSettingsFormatsItem::Json],
+                        v4::ArtifactBranch1MediaType::ApplicationJson
+                    ) | (
+                        [v4::OutputSettingsFormatsItem::Markdown],
+                        v4::ArtifactBranch1MediaType::TextMarkdown
+                    )
+                )
                 || serde_json::to_value(&artifact.profile).map_err(private::unavailable)?
                     != serde_json::to_value(&request.plan.effective_settings.output_profile)
                         .map_err(private::unavailable)?

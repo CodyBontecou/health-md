@@ -156,13 +156,22 @@ impl crate::agent_planning::PlanningClock for CountedRecoveryClock {
 }
 
 async fn approved_request(store: &HostAuthorityStore, peer: &v4::Peer) -> ExecuteRequest {
+    Box::pin(approved_request_with(
+        store,
+        &mut NativeFake::new(peer.clone(), now()),
+        input(peer),
+    ))
+    .await
+}
+
+async fn approved_request_with(
+    store: &HostAuthorityStore,
+    native: &mut NativeFake,
+    plan_input: crate::agent_planning::HostPlanInput,
+) -> ExecuteRequest {
     let clock = FixedClock(now());
     let planner = HostPlanner::new(store.clone());
-    let mut native = NativeFake::new(peer.clone(), now());
-    let plan = planner
-        .plan(&mut native, input(peer), &clock)
-        .await
-        .unwrap();
+    let plan = planner.plan(native, plan_input, &clock).await.unwrap();
     store
         .record_local_decision(
             store.revision().await.unwrap(),
@@ -175,7 +184,7 @@ async fn approved_request(store: &HostAuthorityStore, peer: &v4::Peer) -> Execut
     native.store_exact_native_decision();
     let approval = planner
         .relay_approval(
-            &mut native,
+            native,
             ApprovalRequest {
                 schema: ApprovalRequestSchema::HealthmdAgentApprovalRequest,
                 schema_version: 1,
@@ -251,6 +260,25 @@ async fn retained_fixture(
     prefix: usize,
     case: RecoveryCase,
 ) -> Vec<u8> {
+    retained_fixture_with_payload(
+        store,
+        output,
+        binding,
+        prefix,
+        case,
+        &payload(TransferCase::Exact),
+    )
+    .await
+}
+
+async fn retained_fixture_with_payload(
+    store: &HostAuthorityStore,
+    output: &Path,
+    binding: &NativeBinding,
+    prefix: usize,
+    case: RecoveryCase,
+    data: &[u8],
+) -> Vec<u8> {
     let mut transaction =
         OutputTransaction::open(store, binding, || async { Ok(output.to_path_buf()) })
             .await
@@ -279,7 +307,7 @@ async fn retained_fixture(
         let Artifact::Branch1(item) = item else {
             unreachable!()
         };
-        for (segment, bytes) in payload(TransferCase::Exact).chunks(9).enumerate() {
+        for (segment, bytes) in data.chunks(9).enumerate() {
             if index >= prefix {
                 break;
             }
@@ -659,3 +687,6 @@ async fn authenticated_resume_rejects_inconsistent_whole_artifact_for_committed_
         Box::pin(recover_case(platform, 4, RecoveryCase::BadAggregate, None)).await;
     }
 }
+
+#[path = "agent_resume_modes_tests.rs"]
+mod modes;

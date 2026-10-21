@@ -9,6 +9,7 @@ use healthmd_protocol::{
 pub(super) enum TransferCase {
     Exact,
     Confirmed,
+    MarkdownConfirmed,
     BadConfirmationJob,
     BadSourceReceipt,
     MissingSourceReceipt,
@@ -41,6 +42,7 @@ impl TransferCase {
         matches!(
             self,
             Self::Confirmed
+                | Self::MarkdownConfirmed
                 | Self::BadConfirmationJob
                 | Self::BadSourceReceipt
                 | Self::MissingSourceReceipt
@@ -54,7 +56,9 @@ impl TransferCase {
     }
 }
 pub(super) fn payload(case: TransferCase) -> Vec<u8> {
-    if case == TransferCase::Large {
+    if case == TransferCase::MarkdownConfirmed {
+        b"Fresh preamble\n\n## Steps\n\n- 42 synthetic steps in the recovered day\n".to_vec()
+    } else if case == TransferCase::Large {
         let mut bytes = b"{\"synthetic\":\"".to_vec();
         bytes.resize(700_000, b'x');
         bytes.extend_from_slice(b"\"}");
@@ -141,8 +145,7 @@ pub(super) async fn send_transfer(
     send_transfer_from(channel, request, platform, case, 0).await;
 }
 
-// The resume transcript repeats original metadata and sends only partitions beyond the prefix.
-#[allow(clippy::too_many_lines)]
+// Ordinary fixture binding remains independently constructed for existing cases.
 pub(super) async fn send_transfer_from(
     channel: &mut SecureChannel,
     request: &ExecuteRequest,
@@ -150,7 +153,29 @@ pub(super) async fn send_transfer_from(
     case: TransferCase,
     prefix: u64,
 ) {
-    let binding = binding(request, platform, case);
+    send_transfer_with_original(
+        channel,
+        request,
+        platform,
+        case,
+        prefix,
+        binding(request, platform, case),
+        None,
+    )
+    .await;
+}
+
+// The resume transcript repeats original metadata and sends only partitions beyond the prefix.
+#[allow(clippy::too_many_lines)]
+pub(super) async fn send_transfer_with_original(
+    channel: &mut SecureChannel,
+    request: &ExecuteRequest,
+    platform: PeerPlatform,
+    case: TransferCase,
+    prefix: u64,
+    binding: crate::agent_host::output::NativeBinding,
+    expected_receipts: Option<&[CommitReceipt]>,
+) {
     let payload = payload(case);
     let mut session = v2::TransferSession {
         session_id: Uuid::parse_str(&id(30).0).unwrap(),
@@ -205,7 +230,8 @@ pub(super) async fn send_transfer_from(
                 relative_path: path.clone(),
                 byte_count: i64::try_from(item.byte_count).unwrap(),
                 sha256: item.sha256.0.clone(),
-                write_mode: a::FileWriteMode::Overwrite,
+                write_mode: serde_json::from_value(serde_json::to_value(&item.write_mode).unwrap())
+                    .unwrap(),
             })),
             v2::Message::ArtifactManifest(v2::ArtifactManifest {
                 job_id: session.job_id,
@@ -215,11 +241,18 @@ pub(super) async fn send_transfer_from(
                     id: "healthmd.generated-files".into(),
                     major: 1,
                 },
-                media_type: "application/json".into(),
+                media_type: serde_json::to_value(&item.media_type)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_owned(),
                 byte_count: item.byte_count,
                 sha256: item.sha256.0.clone(),
                 relative_path: Some(path),
-                write_mode: Some(v2::FileWriteMode::Overwrite),
+                write_mode: Some(
+                    serde_json::from_value(serde_json::to_value(&item.write_mode).unwrap())
+                        .unwrap(),
+                ),
                 logical_checksum_sha256: None,
                 snapshot_status: None,
                 provider_id: None,
@@ -546,7 +579,7 @@ pub(super) async fn send_transfer_from(
         ) {
             return;
         }
-        for item in &binding.manifest.artifacts {
+        for (receipt_index, item) in binding.manifest.artifacts.iter().enumerate() {
             let Message::CommitReceipt(receipt) = channel
                 .receive_v4(
                     v4::negotiate(
@@ -570,7 +603,11 @@ pub(super) async fn send_transfer_from(
             assert_eq!(receipt.artifact_id, item.artifact_id);
             assert_eq!(receipt.request_sha256, binding.manifest.request_sha256);
             assert_eq!(receipt.input_sha256, item.sha256);
-            assert_eq!(receipt.after_sha256, item.sha256);
+            if let Some(expected) = expected_receipts {
+                assert_eq!(*receipt, expected[receipt_index]);
+            } else {
+                assert_eq!(receipt.after_sha256, item.sha256);
+            }
             assert_eq!(
                 receipt.manifest_sha256,
                 document_digest(&binding.manifest).unwrap()
