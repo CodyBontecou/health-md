@@ -188,6 +188,24 @@ final class AgentBridgeExportPlanningService {
         }
     }
 
+    /// Queue preflight only. Storage, key, configuration and session failures propagate. Only
+    /// pure validation of verified issuer records may classify a request as no longer eligible.
+    func nativePlanIsReviewable(planID: AgentBridgeUUID, authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> Bool {
+        try authenticatedPeer.requireCurrent()
+        return try store.inspectCurrent { state in
+            let record = try state.issued(id: planID, peer: authenticatedPeer.peer)
+            let config = try readConfiguration(state: state, peer: authenticatedPeer, policy: record.request().intent.settingsPolicy)
+            try authenticatedPeer.requireCurrent()
+            do {
+                _ = try revalidate(record, state: state, config: config, peer: authenticatedPeer,
+                                   now: clock.now(), right: .exportExecute)
+                return true
+            } catch let error as AgentBridgeValidationError where [.planExpired, .bindingChanged, .revisionConflict, .approvalRequired].contains(error) {
+                return false
+            }
+        }
+    }
+
     /// Native presentation read only. The plan comes from this issuer's stored record, never
     /// host-provided review text. Eligibility is rechecked after key/trust/configuration reads;
     /// returning the plan neither approves it nor supplies a proof to storeNativeDecision.

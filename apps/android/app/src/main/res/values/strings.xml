@@ -1502,4 +1502,22 @@
     <string name="agent_export_grant_day">One day</string>
     <string name="agent_export_grant_week">One week</string>
     <string name="agent_export_grant_day_limit">Day limit</string>
+
+    <!-- Native exact-plan review; other locales use Android resource fallback. -->
+    <string name="agent_export_review_requests">Export requests</string>
+    <string name="agent_export_review_refresh">Refresh export requests</string>
+    <string name="agent_export_review_failed">Connect the computer and reopen this screen to verify export requests.</string>
+    <string name="agent_export_review_empty">No export requests awaiting approval.</string>
+    <string name="agent_export_review_title">Review export request</string>
+    <string name="agent_export_review_write_mode">Write mode</string>
+    <string name="agent_export_review_folder">Folder template</string>
+    <string name="agent_export_review_filename">Filename template</string>
+    <string name="agent_export_review_subfolder">Subfolder</string>
+    <string name="agent_export_review_destination">Destination on computer</string>
+    <string name="agent_export_review_destination_note">Match this destination with the one approved on the computer. Existing files may be replaced according to the write mode.</string>
+    <string name="agent_export_review_paths">Predicted files</string>
+    <string name="agent_export_review_details">Complete request details</string>
+    <string name="agent_export_review_scope_note">This approval applies only to this request. It does not change saved export settings or approve future requests.</string>
+    <string name="agent_export_review_allow">Allow this export</string>
+    <string name="agent_export_review_confirm">Allow this exact export?</string>
 </resources>

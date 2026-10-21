@@ -138,6 +138,26 @@ internal class AgentBridgeExportPlanningService(
         }
     }
 
+    /** Queue preflight only. IO/key/configuration/trust failures are outside stale classification;
+     * only pure validation against verified issuer state may exclude an obsolete request. */
+    fun nativePlanIsReviewable(authenticated: AgentBridgeExportAuthenticatedPeer, planId: String): Boolean {
+        val expected = peer(authenticated, authenticated.requireCurrent())
+        return store.access(fence = { peer(authenticated, expected) }) { transaction ->
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val record = tx.plan(expected, planId)
+            val snapshot = readConfiguration(record.plan().intent.settingsPolicy, tx, expected)
+            peer(authenticated, expected)
+            try {
+                validateCurrent(record, tx, snapshot, expected, now(), AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE)
+                true
+            } catch (failure: AgentBridgeException) {
+                if (failure.code in setOf(AgentBridgeErrorCode.PLAN_EXPIRED, AgentBridgeErrorCode.BINDING_CHANGED,
+                        AgentBridgeErrorCode.REVISION_CONFLICT, AgentBridgeErrorCode.APPROVAL_REQUIRED)) false
+                else throw failure
+            }
+        }
+    }
+
     /** Native presentation read only. Issuer-owned bytes supply the review, not host display text.
      * No native decision, grant, approval or health capture is created by returning this plan. */
     fun reviewNativePlan(authenticated: AgentBridgeExportAuthenticatedPeer, planId: String): AgentBridgeGeneratedPlan {

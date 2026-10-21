@@ -314,7 +314,49 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         try planner.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8),
             authorization: FakeNativeAuthorization(binding: binding))
         XCTAssertEqual(try rig.store.snapshot().decisions.count, 1)
+        XCTAssertTrue(try planner.nativePlansAwaitingReview().isEmpty)
         XCTAssertEqual(rig.reader.defaults.reads, 0); XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testNativeReviewQueueIsReadOnlyAndRemovesConfirmedAndStalePlans() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let planner = try nativePlanningSession(rig, lifecycle)
+        guard case .discovery(let discovery) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self,
+            from: planner.handle(nativeDiscoveryBytes(rig))).payload else { return XCTFail("Expected discovery") }
+        let bytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .planRequest(rig.request(discovery: discovery, policy: .explicit(output())))))
+        guard case .plan(let plan) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: planner.handle(bytes)).payload else { return XCTFail("Expected plan") }
+        rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
+        let before = try rig.store.snapshot().generation
+        XCTAssertEqual(try planner.nativePlansAwaitingReview(), [plan])
+        XCTAssertEqual(try rig.store.snapshot().generation, before)
+        XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+        try lifecycle.recordNativeEvent()
+        XCTAssertThrowsError(try planner.nativePlansAwaitingReview())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        XCTAssertTrue(try planner.nativePlansAwaitingReview().isEmpty)
+        XCTAssertEqual(rig.reader.defaults.reads, 0); XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testNativeReviewQueueRejectsStorageLossAfterItsInitialSnapshot() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let planner = try nativePlanningSession(rig, lifecycle)
+        guard case .discovery(let discovery) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self,
+            from: planner.handle(nativeDiscoveryBytes(rig))).payload else { return XCTFail("Expected discovery") }
+        _ = try planner.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .planRequest(rig.request(discovery: discovery, policy: .explicit(output()))))))
+        let removeAt = rig.session.checks + 2
+        var removed = false
+        rig.session.observeChecks { count in
+            if count == removeAt {
+                try! FileManager.default.removeItem(at: rig.directory.appendingPathComponent("state.json"))
+                removed = true
+            }
+        }
+        XCTAssertThrowsError(try planner.nativePlansAwaitingReview())
+        XCTAssertTrue(removed)
     }
 
     func testOwnerBoundPlannerRejectsPendingAndStoppedOwnerDespiteSamePeerReplacement() throws {

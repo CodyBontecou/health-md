@@ -94,6 +94,7 @@ final class AgentBridgeNativePlanningSession {
     private let peer: AgentBridgeExportAuthenticatedPeer
     private let lifecycle: AgentBridgeNativeCatalogLifecycle
     private let service: AgentBridgeExportPlanningService
+    private let store: AgentBridgeExportAuthorityStore
 
     /// The issuer transaction and lifecycle must agree on the exact signed publication, including
     /// revision. Equal facts alone cannot identify an event that returned to the same state.
@@ -124,7 +125,7 @@ final class AgentBridgeNativePlanningSession {
          newPlanID: @escaping () throws -> AgentBridgeUUID = { try AgentBridgeUUID(UUID().uuidString.lowercased()) }) throws {
         try peer.requireCurrent()
         let publication = try lifecycle.currentPublication()
-        self.peer = peer; self.lifecycle = lifecycle
+        self.peer = peer; self.lifecycle = lifecycle; self.store = store
         service = AgentBridgeExportPlanningService(store: store,
             configuration: OwnerBoundConfiguration(peer: peer, lifecycle: lifecycle, base: configuration),
             clock: clock, newPlanID: newPlanID)
@@ -142,6 +143,25 @@ final class AgentBridgeNativePlanningSession {
         let result = try service.handle(bytes, authenticatedPeer: peer)
         guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
         return result
+    }
+
+    /// Native presentation only: signed issuer records for the original peer, excluding decisions
+    /// already made. Stale/expired/revoked requests are omitted; storage and owner failures reject.
+    func nativePlansAwaitingReview() throws -> [AgentBridgePlan] {
+        let publication = try requireCurrent()
+        let state = try store.snapshot()
+        guard state.nativeCatalog == publication else { throw AgentBridgeValidationError.bindingChanged }
+        let decided = Set(state.decisions.map(\.planID))
+        var result: [AgentBridgePlan] = []
+        for record in state.plans {
+            let plan = try record.plan()
+            guard plan.intent.peer == peer.peer, !decided.contains(plan.planId) else { continue }
+            if try service.nativePlanIsReviewable(planID: plan.planId, authenticatedPeer: peer) {
+                result.append(try service.reviewNativePlan(planID: plan.planId, authenticatedPeer: peer))
+            }
+        }
+        guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
+        return result.sorted { $0.issuedAt.rawValue == $1.issuedAt.rawValue ? $0.planId.rawValue < $1.planId.rawValue : $0.issuedAt.rawValue > $1.issuedAt.rawValue }
     }
 
     func reviewNativePlan(planID: AgentBridgeUUID) throws -> AgentBridgePlan {

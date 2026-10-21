@@ -39,7 +39,7 @@ private class NativeGrantEditorContext(val trust: AgentBridgeExportNativeTrust.S
     }
 }
 
-private fun requireNativeGrantPolicy(context: Context, lifecycle: Lifecycle, protected: Boolean) {
+internal fun requireNativeAgentConsentPolicy(context: Context, lifecycle: Lifecycle, protected: Boolean) {
     if (Looper.myLooper() != Looper.getMainLooper() || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) ||
         protected || context.isDeviceProtectedStorage || context.getSystemService(UserManager::class.java)?.isUserUnlocked != true ||
         context.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked != false) {
@@ -91,13 +91,14 @@ internal fun AgentExportPermissionsManagementControls() {
         Button(onClick = {
             if (protection.enabled) protection.onBlockedChange()
             else try {
-                requireNativeGrantPolicy(context, lifecycle, protection.enabled)
+                requireNativeAgentConsentPolicy(context, lifecycle, protection.enabled)
                 val trust = AgentBridgeExportNativeTrust(context).loadExisting()
                 if (trust == null) message = R.string.agent_export_grant_pair_required
                 else { editor = NativeGrantEditorContext(trust); message = null }
             } catch (_: Exception) { message = R.string.agent_export_grant_unverified }
         }, modifier = Modifier.testTag("agent_export_permissions_add")) { Text(stringResource(R.string.agent_export_grant_add)) }
         TextButton(onClick = ::refresh) { Text(stringResource(R.string.agent_export_grant_refresh)) }
+        AgentExportPlanReviewControls()
     }
     editor?.let { review -> NativeGrantEditor(review, onDismiss = { editor = null; refresh() }) }
     revocation?.let { review ->
@@ -112,7 +113,7 @@ internal fun AgentExportPermissionsManagementControls() {
                     try {
                         AgentBridgeExportNativeConsent.withNativeConfirmation(
                             AgentBridgeExportNativeDecision.Revoke(review.peer, review.authorityId, review.grantRevision),
-                            requireCurrentNativePolicy = { requireNativeGrantPolicy(context, lifecycle, protection.enabled) }) { consent ->
+                            requireCurrentNativePolicy = { requireNativeAgentConsentPolicy(context, lifecycle, protection.enabled) }) { consent ->
                             // Forgetting pairing must not strand an existing grant: revocation needs no pairing read.
                             AgentBridgeExportAuthorityStore.forNoBackup(context).revoke(consent, review.peer, review.authorityId, review.grantRevision)
                         }
@@ -173,7 +174,7 @@ private fun NativeGrantEditor(reviewContext: NativeGrantEditorContext, onDismiss
                 Button(enabled = metrics.isNotEmpty() && !failed && candidate == null, onClick = {
                     if (protection.enabled) protection.onBlockedChange()
                     else try {
-                        requireNativeGrantPolicy(context, lifecycle, protection.enabled)
+                        requireNativeAgentConsentPolicy(context, lifecycle, protection.enabled)
                         reviewContext.requireOriginalPairing(context)
                         val now = Instant.now()
                         candidate = AgentBridgeExportNativeGrantDraft.make(reviewContext.peer, metrics, start, end, zone.id, now.plus(hours.toLong(), ChronoUnit.HOURS), now)
@@ -208,7 +209,7 @@ private fun NativeGrantEditor(reviewContext: NativeGrantEditorContext, onDismiss
                     val sha = AgentBridgeCodec.fingerprint(review)
                     AgentBridgeExportNativeConsent.withNativeConfirmation(AgentBridgeExportNativeDecision.Delegation(sha, 0),
                         requireCurrentNativePolicy = {
-                            requireNativeGrantPolicy(context, lifecycle, protection.enabled)
+                            requireNativeAgentConsentPolicy(context, lifecycle, protection.enabled)
                             reviewContext.requireOriginalPairing(context)
                             if (!Instant.parse(review.expiresAt).isAfter(Instant.now())) throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
                         }) { consent -> AgentBridgeExportAuthorityStore.forNoBackup(context).putDelegation(consent, review, 0) }

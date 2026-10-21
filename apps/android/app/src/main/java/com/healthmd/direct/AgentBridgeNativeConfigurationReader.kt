@@ -127,7 +127,7 @@ internal class AgentBridgeNativeConfigurationReader(
 internal class AgentBridgeNativePlanningSession(
     private val peer: AgentBridgeExportAuthenticatedPeer,
     private val lifecycle: AgentBridgeNativeCatalogLifecycle,
-    store: AgentBridgeExportAuthorityStore,
+    private val store: AgentBridgeExportAuthorityStore,
     configuration: AgentBridgeExportPlanningConfigurationReader,
     clock: java.time.Clock = java.time.Clock.systemUTC(),
 ) {
@@ -161,6 +161,23 @@ internal class AgentBridgeNativePlanningSession(
         requireSamePublication(publication)
         return result
     }
+    /** Native signed-record queue, never host display text. Listing creates no decision. */
+    fun nativePlansAwaitingReview(): List<AgentBridgeGeneratedPlan> {
+        val publication = requireCurrent()
+        val expected = peer.requireCurrent()
+        val candidates = store.access { transaction ->
+            val state = transaction?.state ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            if (state.nativeCatalog != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            val decided = state.decisions.map { it.planId }.toSet()
+            state.plans.map { it.plan() }.filter { it.intent.peer == expected && it.planId !in decided }
+        }
+        val results = candidates.mapNotNull { plan ->
+            if (service.nativePlanIsReviewable(peer, plan.planId)) service.reviewNativePlan(peer, plan.planId) else null
+        }
+        requireSamePublication(publication)
+        return results.sortedWith(compareByDescending<AgentBridgeGeneratedPlan> { it.issuedAt }.thenBy { it.planId })
+    }
+
     fun reviewNativePlan(planId: String): AgentBridgeGeneratedPlan {
         val publication = requireCurrent()
         val result = service.reviewNativePlan(peer, planId)

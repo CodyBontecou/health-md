@@ -91,7 +91,52 @@ class AgentBridgeNativeConfigurationReaderTest {
             assertThat(planner.authorizeExactApproval(f.native, plan.planId, AgentBridgeValidation.bindingFor(plan)).binding)
                 .isEqualTo(AgentBridgeValidation.bindingFor(plan))
             assertThat(f.store.access { it!!.state.decisions }).hasSize(1)
+            assertThat(planner.nativePlansAwaitingReview()).isEmpty()
             assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
+        }
+    }
+
+    @Test fun `native review queue is read only and removes stale plans`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state)
+            lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle); val negotiation = nativeNegotiation()
+            val discovery = AgentBridgeCodec.decodeEnvelope(planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation), negotiation).payload as AgentBridgeDiscovery
+            val bytes = AgentBridgeCodec.encodeEnvelope(AgentBridgeMessage("plan_request", f.request(discovery)), negotiation)
+            val plan = AgentBridgeCodec.decodeEnvelope(planner.handleEnvelope(bytes, negotiation), negotiation).payload as AgentBridgeGeneratedPlan
+            reset()
+            val before = f.store.access { it!!.state.revision }
+            assertThat(planner.nativePlansAwaitingReview()).containsExactly(plan)
+            assertThat(f.store.access { it!!.state.revision }).isEqualTo(before)
+            assertThat(f.store.access { it!!.state.decisions }).isEmpty()
+            lifecycle.recordNativeEvent()
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { planner.nativePlansAwaitingReview() }
+            lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            assertThat(planner.nativePlansAwaitingReview()).isEmpty()
+            assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
+        }
+    }
+
+    @Test fun `native review queue rejects storage loss after initial snapshot`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state)
+            lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle); val negotiation = nativeNegotiation()
+            val discovery = AgentBridgeCodec.decodeEnvelope(planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation), negotiation).payload as AgentBridgeDiscovery
+            planner.handleEnvelope(AgentBridgeCodec.encodeEnvelope(AgentBridgeMessage("plan_request", f.request(discovery)), negotiation), negotiation)
+            val removeAt = f.peerContext.checks + 3
+            var removed = false
+            f.peerContext.onCheck = {
+                if (f.peerContext.checks == removeAt) {
+                    Files.delete(f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+                    removed = true
+                }
+            }
+            try { planner.nativePlansAwaitingReview(); Assert.fail("Expected verification failure, never an empty verified queue") }
+            catch (_: AgentBridgeException) { }
+            assertThat(removed).isTrue()
         }
     }
 

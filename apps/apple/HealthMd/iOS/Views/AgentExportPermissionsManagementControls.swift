@@ -62,6 +62,7 @@ struct AgentExportPermissionsManagementControls: View {
             Button("Add export permission", action: beginGrant)
                 .accessibilityIdentifier("agentExportPermissions.add")
             Button("Refresh permissions", action: refresh)
+            AgentExportPlanReviewControls()
         }
         .onAppear(perform: refresh)
         .onChange(of: scenePhase) { _, phase in
@@ -240,6 +241,172 @@ private enum AgentGrantCopy {
                 grant.bounds.formats.map { $0.rawValue.uppercased() }.joined(separator: ", "),
                 String(localized: "Permission expires") + ": " + grant.expiresAt.rawValue,
                 String(localized: "Allow planning and separately approved exports within this scope. Files may replace existing files at locations approved on this computer.")].joined(separator: "\n")
+    }
+}
+
+/// Holds the issuer-owned plan and its ORIGINAL accepted session throughout native presentation.
+/// A refreshed/replaced owner cannot silently retarget an open confirmation.
+private struct AgentNativePlanReview: Identifiable {
+    let planner: AgentBridgeNativePlanningSession
+    let plan: AgentBridgePlan
+    var id: AgentBridgeUUID { plan.planId }
+}
+
+private struct AgentExportPlanReviewControls: View {
+    @EnvironmentObject private var direct: IPhoneDirectCLIService
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var requests: [AgentNativePlanReview] = []
+    @State private var selection: AgentNativePlanReview?
+    @State private var failed = false
+    @State private var checked = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Export requests").font(.headline)
+            Button("Refresh export requests", action: refresh)
+                .accessibilityIdentifier("agentExportRequests.refresh")
+            if failed {
+                Text("Connect the computer and reopen this screen to verify export requests.").font(.footnote)
+            } else if checked && requests.isEmpty {
+                Text("No export requests awaiting approval.").font(.footnote).foregroundStyle(Color.textSecondary)
+            }
+            ForEach(requests) { request in
+                Button { select(request) } label: {
+                    VStack(alignment: .leading) {
+                        Text(AgentNativePlanCopy.dates(request.plan))
+                        Text(request.plan.intent.peer.hostInstallationID.rawValue).font(.caption.monospaced())
+                    }
+                }
+                .accessibilityLabel(Text("Review export request") + Text(": ") + Text(AgentNativePlanCopy.dates(request.plan)))
+                .accessibilityIdentifier("agentExportRequests.review.\(request.id.rawValue)")
+            }
+        }
+        .sheet(item: $selection, onDismiss: refresh) { review in AgentExportPlanReviewSheet(review: review) }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { selection = nil; requests = []; checked = false }
+        }
+    }
+
+    private func refresh() {
+        do {
+            guard UIApplication.shared.applicationState == .active, UIApplication.shared.isProtectedDataAvailable,
+                  let profiles = SharedSetupV2ExportProfileBridge.current?.profileStore else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
+            let planner = try direct.agentBridgeNativePlanningSession(profiles: profiles)
+            requests = try planner.nativePlansAwaitingReview().map { .init(planner: planner, plan: $0) }
+            failed = false; checked = true
+        } catch { requests = []; failed = true; checked = true }
+    }
+
+    private func select(_ request: AgentNativePlanReview) {
+        do {
+            guard try request.planner.reviewNativePlan(planID: request.id) == request.plan else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            selection = request; failed = false
+        } catch { requests = []; failed = true }
+    }
+}
+
+private struct AgentExportPlanReviewSheet: View {
+    let review: AgentNativePlanReview
+    @EnvironmentObject private var protection: ConfigurationProtectionManager
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var confirming = false
+    @State private var finished = false
+    @State private var failed = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Computer") {
+                    Text(review.plan.intent.peer.hostInstallationID.rawValue).font(.footnote.monospaced()).textSelection(.enabled)
+                }
+                Section("Export scope") {
+                    LabeledContent("Dates", value: AgentNativePlanCopy.dates(review.plan))
+                    LabeledContent("Time zone", value: review.plan.intent.calendarTimezone.rawValue)
+                    Text(review.plan.resolvedMetricIds.map { AgentGrantCopy.metricName($0.rawValue) }.joined(separator: ", "))
+                    LabeledContent("Permission expires", value: review.plan.expiresAt.rawValue)
+                }
+                Section("Export options") {
+                    LabeledContent("Format", value: review.plan.effectiveSettings.formats.map { $0.rawValue.uppercased() }.joined(separator: ", "))
+                    LabeledContent("Write mode", value: review.plan.effectiveSettings.writeMode.rawValue)
+                    LabeledContent("Folder template", value: review.plan.effectiveSettings.folderTemplate)
+                    LabeledContent("Filename template", value: review.plan.effectiveSettings.filenameTemplate)
+                    LabeledContent("Subfolder", value: review.plan.effectiveSettings.subfolder)
+                }
+                Section("Destination on computer") {
+                    Text(review.plan.intent.destination.bindingID.rawValue).font(.footnote.monospaced()).textSelection(.enabled)
+                    Text(review.plan.intent.destination.identitySHA256.rawValue).font(.caption.monospaced()).textSelection(.enabled)
+                    Text("Match this destination with the one approved on the computer. Existing files may be replaced according to the write mode.").font(.footnote)
+                }
+                Section("Predicted files") {
+                    ForEach(review.plan.predictedPaths, id: \.self) { Text($0.rawValue).font(.footnote.monospaced()) }
+                }
+                Section {
+                    DisclosureGroup("Complete request details") {
+                        Text(AgentNativePlanCopy.details(review.plan)).font(.caption.monospaced()).textSelection(.enabled)
+                    }
+                    Text("This approval applies only to this request. It does not change saved export settings or approve future requests.").font(.footnote)
+                    if failed { Text("The request could not be verified. Close this review and refresh before trying again.") }
+                    Button("Allow this export") {
+                        protection.performConfigurationChange { confirming = true }
+                    }
+                    .disabled(failed || finished)
+                    .accessibilityIdentifier("agentExportRequests.allow")
+                }
+            }
+            .navigationTitle("Review export request")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .confirmationDialog("Allow this exact export?", isPresented: $confirming, titleVisibility: .visible) {
+                Button("Allow this export", action: confirm)
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text(AgentNativePlanCopy.dates(review.plan) + "\n" + review.plan.intent.peer.hostInstallationID.rawValue + "\n" + review.plan.intent.destination.bindingID.rawValue)
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in if phase != .active { confirming = false; finished = true; dismiss() } }
+    }
+
+    private func confirm() {
+        guard !finished, !failed else { return }
+        finished = true
+        let protection = protection, planner = review.planner, plan = review.plan
+        do {
+            let binding = try AgentBridgeSemantics.binding(plan)
+            try AgentBridgeExportNativeConsent.withNativeConfirmation(for: .decideExport(planID: plan.planId, binding: binding),
+                requireCurrentNativePolicy: {
+                    guard Thread.isMainThread else { throw AgentBridgeValidationError.approvalRequired }
+                    try MainActor.assumeIsolated {
+                        try AgentGrantNativePolicy.require(protection)
+                        try planner.requireCurrent()
+                    }
+                }) { consent in
+                    try planner.storeNativeDecision(planID: plan.planId, binding: binding,
+                        approvalID: AgentBridgeUUID(UUID().uuidString.lowercased()), authorization: consent)
+                }
+            dismiss()
+        } catch { failed = true }
+    }
+}
+
+private enum AgentNativePlanCopy {
+    static func dates(_ plan: AgentBridgePlan) -> String {
+        switch plan.resolvedDates {
+        case .exact(let range): range.startDate.rawValue + " – " + range.endDate.rawValue
+        case .allAvailable: String(localized: "All available dates")
+        case .pastCompleteDays(let days, let anchor): String(days) + " / " + anchor.rawValue
+        }
+    }
+    static func details(_ plan: AgentBridgePlan) -> String {
+        // All effective options, origins, revisions, limitations, capability context and binding
+        // remain available locally. Pretty printing is presentation only, never authority bytes.
+        do {
+            let value = try JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(plan))
+            return String(decoding: try JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys]), as: UTF8.self)
+        } catch { return String(localized: "The request could not be verified. Close this review and refresh before trying again.") }
     }
 }
 #endif
