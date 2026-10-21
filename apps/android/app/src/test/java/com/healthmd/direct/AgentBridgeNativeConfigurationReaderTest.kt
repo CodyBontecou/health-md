@@ -19,7 +19,7 @@ import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.settings.SettingsRepositoryImpl
 import com.healthmd.direct.protocol.*
-import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.*
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -37,7 +37,7 @@ import java.time.ZoneId
 import javax.crypto.Mac
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.*
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -130,6 +130,118 @@ class AgentBridgeNativeConfigurationReaderTest {
                 assertThat(reads).isEqualTo(preferenceReads); assertThat(writes).isEqualTo(preferenceWrites)
             }
         }
+    }
+
+    @Test fun `bridge rendering binds exact request scope paths and frozen profile`() = runBlocking {
+        withNativeSDKCapture(listOf("steps")) { _, context, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 0L
+            coEvery { client.aggregate(any()) } returns values
+            val captured = manager.captureAgentBridgeDay("2026-03-08", context)
+            val resolution = context.configurationForRead()
+            var calls = 0
+            val renderer = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { request ->
+                calls++
+                assertThat(request.data.activity.steps).isEqualTo(captured.activity.steps)
+                assertThat(request.data.heart.averageHeartRate).isNull()
+                assertThat(request.metricSelection.enabledMetrics).containsExactly("steps")
+                assertThat(request.profile).isEqualTo(AndroidExportProfile.android_frozen_v4)
+                assertThat(request.mode).isEqualTo(ExportEngineMode.rust)
+                bridgeRenderedPlan(request, resolution)
+            })
+            val rendered = renderer.render("2026-03-08", captured, resolution, "a".repeat(64))
+            assertThat(rendered.artifact.relativePath).isEqualTo(resolution.predictedRelativePaths.last())
+            assertThat(calls).isEqualTo(1)
+            coVerify(exactly = 1) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `bridge rendering rejects core profile path and relabeled schema bytes`() = runBlocking {
+        withNativeSDKCapture(listOf("steps")) { _, context, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 1L
+            coEvery { client.aggregate(any()) } returns values
+            val captured = manager.captureAgentBridgeDay("2026-03-08", context)
+            val resolution = context.configurationForRead()
+            for (mode in listOf("profile", "path", "body", "ids", "extra", "pin", "cancel")) {
+                val renderer = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { request ->
+                    val result = bridgeRenderedPlan(request, resolution, mode)
+                    if (mode == "cancel") currentCoroutineContext().cancel()
+                    result
+                })
+                supervisorScope {
+                    val child = async { renderer.render("2026-03-08", captured, resolution, "a".repeat(64)) }
+                    try { child.await(); throw AssertionError("Invalid artifact returned: $mode") }
+                    catch (failure: AgentBridgeNativeRenderException) {
+                        assertThat(failure.code).isEqualTo(if (mode == "pin") AgentBridgeNativeRenderFailure.INCOMPATIBLE_CORE else AgentBridgeNativeRenderFailure.INVALID_ARTIFACT)
+                    } catch (failure: CancellationException) { assertThat(mode).isEqualTo("cancel") }
+                }
+            }
+        }
+    }
+
+    /** Separate host JNI qualification. Default JVM runs report this native-dependent case skipped;
+     * the local qualification command supplies a freshly source-built compatible host library. */
+    @Test fun `bridge captured days render through actual host UniFFI frozen v4`() = runBlocking {
+        val library = System.getenv("HEALTHMD_BRIDGE_HOST_CORE_DIRECTORY")
+        Assume.assumeTrue("Host native-core qualification requires its explicit library directory", !library.isNullOrBlank())
+        System.setProperty("jna.library.path", library!!)
+        for (value in listOf<Long?>(null, 0L, 123L)) withNativeSDKCapture(listOf("steps")) { _, context, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns value
+            coEvery { client.aggregate(any()) } returns values
+            val captured = manager.captureAgentBridgeDay("2026-03-08", context).let {
+                it.copy(heart = it.heart.copy(averageHeartRate = 99.0))
+            }
+            val rendered = AgentBridgeNativeDayRenderer().render("2026-03-08", captured,
+                context.configurationForRead(), "a".repeat(64))
+            val json = Json.parseToJsonElement(rendered.artifact.content.decodeToString()).jsonObject
+            assertThat(json["schema_version"]).isNull()
+            assertThat(json["units"]!!.jsonPrimitive.content).isEqualTo("metric")
+            assertThat(json["activity"]?.jsonObject?.get("steps")?.jsonPrimitive?.intOrNull).isEqualTo(value?.toInt())
+            assertThat(json["heart"]).isNull()
+            assertThat(rendered.pin.ianaTimeZone).isEqualTo("America/Los_Angeles")
+            coVerify(exactly = 1) { client.aggregate(any()) }
+        }
+        withNativeSDKCapture(listOf("steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "android.hrv_rmssd")) { _, context, client, manager ->
+            val values = mockk<AggregationResult>()
+            every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            every { values[HeartRateRecord.BPM_AVG] } returns 72L
+            every { values[HeartRateRecord.BPM_MIN] } returns 40L
+            every { values[HeartRateRecord.BPM_MAX] } returns 150L
+            coEvery { client.aggregate(any()) } returns values
+            val time = Instant.parse("2026-03-08T12:00:00Z")
+            coEvery { client.readRecords(any<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()) } coAnswers {
+                val request = firstArg<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()
+                when (request.recordType) {
+                    RestingHeartRateRecord::class -> ReadRecordsResponse<androidx.health.connect.client.records.Record>(listOf(RestingHeartRateRecord(time, null, 55, Metadata.manualEntry())), null)
+                    HeartRateVariabilityRmssdRecord::class -> ReadRecordsResponse<androidx.health.connect.client.records.Record>(listOf(HeartRateVariabilityRmssdRecord(time, null, 31.0, Metadata.manualEntry())), null)
+                    else -> error("Unselected record family")
+                }
+            }
+            val captured = manager.captureAgentBridgeDay("2026-03-08", context)
+            val rendered = AgentBridgeNativeDayRenderer().render("2026-03-08", captured, context.configurationForRead(), "a".repeat(64))
+            val heart = Json.parseToJsonElement(rendered.artifact.content.decodeToString()).jsonObject.getValue("heart").jsonObject
+            assertThat(heart.keys).containsExactly("averageHeartRate", "heartRateMin", "heartRateMax", "restingHeartRate", "hrv")
+            mapOf("averageHeartRate" to 72.0, "heartRateMin" to 40.0, "heartRateMax" to 150.0, "restingHeartRate" to 55.0, "hrv" to 31.0).forEach { (key, value) ->
+                assertThat(heart.getValue(key).jsonPrimitive.double).isEqualTo(value)
+            }
+        }
+    }
+
+    private fun bridgeRenderedPlan(request: FrozenDailyAggregateExportRequest, resolution: AgentBridgeRequestSettingsResolution,
+        mode: String = "normal"): DailyAggregateRustPlan {
+        val profile = if (mode == "profile") AndroidExportProfile.android_analytical_v5 else request.profile
+        val path = if (mode == "path") "unapproved.json" else request.relativePath(com.healthmd.domain.model.ExportFormat.JSON)
+        val bytes = Json.encodeToString(buildJsonObject {
+            if (mode == "body") put("schema_version", 5)
+            put("date", request.data.date.toString()); put("type", "health-data"); put("units", "metric")
+        }).toByteArray()
+        val session = if (mode == "ids") "other-session" else request.ids.sessionId
+        val item = testArtifact(path = path, content = bytes, requestId = request.ids.requestId, sessionId = session, profile = profile)
+        val items = if (mode == "extra") listOf(item, testArtifact(path = "extra.json", content = bytes,
+            requestId = request.ids.requestId, sessionId = session, profile = profile)) else listOf(item)
+        val plan = ExportArtifactPlan(ExportArtifactPlan.SCHEMA, ExportArtifactPlan.VERSION, request.ids.requestId, session, profile, items)
+        val pin = testPin(ExportEngineMode.rust).copy(registrySha256 = resolution.registrySha256,
+            publicSchemaVersion = if (mode == "pin") 5u else 4u)
+        return DailyAggregateRustPlan(pin, plan)
     }
 
     @Test fun `retained SDK capture reopens immutable signed zero empty and populated days without SDK`() = runBlocking {

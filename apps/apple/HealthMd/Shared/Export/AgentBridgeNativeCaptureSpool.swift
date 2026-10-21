@@ -266,7 +266,8 @@ final class AgentBridgeNativeCaptureSpool {
         #if os(iOS)
         let path = try protectedPath(fd)
         let attributes = try FileManager.default.attributesOfItem(atPath: path)
-        guard attributes[.protectionKey] as? FileProtectionType == .complete,
+        // Foundation returns the protection attribute as NSString, not FileProtectionType.
+        guard attributes[.protectionKey] as? String == FileProtectionType.complete.rawValue,
               try protectedPath(fd) == path else { throw AgentBridgeValidationError.permissionRequired }
         #endif
     }

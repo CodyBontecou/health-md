@@ -11,6 +11,15 @@ nonisolated enum HealthMdSemanticInputAdapter {
     static let canonicalModelVersion: UInt32 = 1
     static let registryVersion: UInt32 = 1
 
+    /// Explicit historical rendering only. Ordinary exports continue to require the current profile.
+    enum Profile: String, Sendable {
+        case current = "apple_health_data_v10"
+        case frozenV8 = "apple_health_data_v8"
+
+        var publicProfileID: String { self == .current ? "apple-v10" : "apple-v8" }
+        var schemaVersion: UInt32 { self == .current ? UInt32(HealthMdExportSchema.version) : 8 }
+    }
+
     enum AdapterError: Error, Equatable {
         case invalidRegistry
         case invalidTimeZone
@@ -47,16 +56,17 @@ nonisolated enum HealthMdSemanticInputAdapter {
         sessionID: String,
         selection: MetricSelectionState,
         registry: CoreMetricRegistrySnapshot,
+        profile: Profile = .current,
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
         retainPlatformExtensions: Bool,
         rollupPeriods: [HealthRollupPeriod],
         requestedRange: HealthRollupRangeRequest? = nil
     ) throws -> Data {
-        guard registry.profileId == AppleExportEnginePin.profileID,
-              registry.publicProfileId == AppleExportEnginePin.publicProfileID,
+        guard registry.profileId == profile.rawValue,
+              registry.publicProfileId == profile.publicProfileID,
               registry.publicSchema == HealthMdExportSchema.identifier,
-              registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
+              registry.publicSchemaVersion == profile.schemaVersion,
               registry.profileRevision == 1,
               registry.registryVersion == registryVersion,
               registry.registrySha256 == HealthMetrics.registrySHA256
@@ -98,7 +108,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
             "registry_sha256": registry.registrySha256,
             "profile_revision": semanticProfileRevision,
             "session_id": sessionID,
-            "profile": AppleExportEnginePin.profileID,
+            "profile": profile.rawValue,
             "calendar_time_zone": calendarTimeZoneIdentifier,
             "selected_selection_ids": selected,
             "disabled_output_keys": disabledOutputKeys,
@@ -129,14 +139,15 @@ nonisolated enum HealthMdSemanticInputAdapter {
         finalBatch: Bool,
         healthData: [HealthData],
         registry: CoreMetricRegistrySnapshot,
+        profile: Profile = .current,
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
         startingSourceOrdinal: UInt64 = 0
     ) throws -> EncodedBatch {
-        guard registry.profileId == AppleExportEnginePin.profileID,
-              registry.publicProfileId == AppleExportEnginePin.publicProfileID,
+        guard registry.profileId == profile.rawValue,
+              registry.publicProfileId == profile.publicProfileID,
               registry.publicSchema == HealthMdExportSchema.identifier,
-              registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
+              registry.publicSchemaVersion == profile.schemaVersion,
               registry.profileRevision == 1,
               registry.registryVersion == registryVersion,
               registry.registrySha256 == HealthMetrics.registrySHA256 else {
@@ -298,6 +309,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
         firstBatchIndex: UInt32 = 0,
         healthData: [HealthData],
         registry: CoreMetricRegistrySnapshot,
+        profile: Profile = .current,
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
         startingSourceOrdinal: UInt64 = 0
@@ -334,6 +346,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
                 finalBatch: false,
                 healthData: [capturedDay.day],
                 registry: registry,
+                profile: profile,
                 customization: customization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
                 startingSourceOrdinal: sourceOrdinal

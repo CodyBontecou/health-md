@@ -12,9 +12,16 @@ enum HealthMdRenderInputAdapter {
         case serializationFailed
     }
 
+    enum JSONPlacement: Sendable, Equatable {
+        case semanticKeys
+        /// Exact public paths for the bridge's six reviewed scalar outputs, without a v10 document.
+        case appleV8Summary
+    }
+
     struct Options: Sendable, Equatable {
         var requestID: String
         var formats: [String]
+        var jsonPlacement: JSONPlacement = .semanticKeys
         var unitSystem: String = "metric"
         var includeMetadata: Bool = true
         var groupByCategory: Bool = true
@@ -108,6 +115,10 @@ enum HealthMdRenderInputAdapter {
               let semanticRollups = root["rollups"] as? [[String: Any]],
               TimeZone(identifier: calendarTimeZoneIdentifier) != nil
         else { throw AdapterError.invalidSemanticResult }
+        guard options.jsonPlacement != .appleV8Summary ||
+                (registry.profileId == "apple_health_data_v8" && registry.publicSchemaVersion == 8 && !allowNativeProfileDocuments) else {
+            throw AdapterError.invalidPresentation
+        }
         guard allowNativeProfileDocuments || presentationByOwnerDate.isEmpty else {
             throw AdapterError.invalidPresentation
         }
@@ -334,13 +345,28 @@ enum HealthMdRenderInputAdapter {
             } else {
                 publicUnit = output.unit
             }
+            let jsonPath: [String]
+            switch options.jsonPlacement {
+            case .semanticKeys: jsonPath = [categoryIdentifier(metric.categoryId), outputKey]
+            case .appleV8Summary:
+                let publicPaths = [
+                    "steps": ["activity", "steps"],
+                    "average_heart_rate": ["heart", "averageHeartRate"],
+                    "heart_rate_min": ["heart", "heartRateMin"],
+                    "heart_rate_max": ["heart", "heartRateMax"],
+                    "resting_heart_rate": ["heart", "restingHeartRate"],
+                    "hrv_ms": ["heart", "hrv"],
+                ]
+                guard let path = publicPaths[outputKey] else { throw AdapterError.invalidPresentation }
+                jsonPath = path
+            }
             return [
                 "output_key": outputKey,
                 "category_id": categoryIdentifier(metric.categoryId),
                 "category_label": metric.categoryId,
                 "label": metric.referenceName,
                 "frontmatter_key": frontmatterKey,
-                "json_path": [categoryIdentifier(metric.categoryId), outputKey],
+                "json_path": jsonPath,
                 "public_value": publicValue,
                 "display_value": display,
                 "unit": publicUnit,

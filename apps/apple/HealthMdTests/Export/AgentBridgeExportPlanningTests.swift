@@ -582,11 +582,6 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let capture = HealthKitManager(store: store, userDefaults: rig.reader.defaults)
         Self.retainedNativeConfigurationObjects.append(capture)
         let preferenceReads = rig.reader.defaults.reads, preferenceWrites = rig.reader.defaults.writes
-        defer {
-            XCTAssertEqual(try? rig.store.snapshot().captureClaims?.count, 1)
-            XCTAssertEqual(rig.reader.defaults.reads, preferenceReads)
-            XCTAssertEqual(rig.reader.defaults.writes, preferenceWrites)
-        }
         var originalFailure: Error?
         do {
             try await planner.withCaptureContext(request) { context in
@@ -594,8 +589,104 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 try await operation(rig, context, store, capture)
             }
         } catch { originalFailure = error }
-        try await afterCapture?(rig, planner, request, store, capture, originalFailure)
+        do { try await afterCapture?(rig, planner, request, store, capture, originalFailure) }
+        catch { if originalFailure == nil { originalFailure = error } }
+        let claimCount = try rig.store.snapshot().captureClaims?.count
+        XCTAssertEqual(claimCount, 1)
+        XCTAssertEqual(rig.reader.defaults.reads, preferenceReads)
+        XCTAssertEqual(rig.reader.defaults.writes, preferenceWrites)
         if let originalFailure { throw originalFailure }
+    }
+
+    func testBridgeCapturedDayRendersActualFrozenV8WithoutUnselectedMetrics() async throws {
+        for value: Double? in [nil, 0, 123] {
+            try await withNativeSDKCapture(metrics: ["steps"]) { _, context, store, manager in
+                if let value { store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = value }
+                let day = try AgentBridgeDate("2026-03-08")
+                var captured = try await manager.captureAgentBridgeDay(day, context: context)
+                captured.heart.averageHeartRate = 99 // Unselected facts cannot widen the frozen scope.
+                let resolution = try context.configurationForRead()
+                let result = try await AgentBridgeNativeDayRenderer.render(day: day, data: captured,
+                    resolution: resolution, requestSHA256: String(repeating: "a", count: 64))
+                let bytes = try result.artifact.content.materializedData()
+                let json = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+                XCTAssertEqual(json["schema_version"] as? Int, 8)
+                XCTAssertEqual((json["activity"] as? [String: Any])?["steps"] as? Int, value.map(Int.init))
+                XCTAssertNil(json["heart"])
+                XCTAssertEqual(json["date"] as? String, day.rawValue)
+                XCTAssertEqual(result.artifact.relativePath, resolution.predictedRelativePaths.last)
+                XCTAssertEqual(result.artifact.sha256, NativeExportArtifact.sha256(of: bytes))
+                XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+            }
+        }
+    }
+
+    func testBridgeFrozenV8PreservesPublicHeartFieldNames() async throws {
+        try await withNativeSDKCapture(metrics: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"]) { _, context, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            store.statisticsAverages[HKQuantityTypeIdentifier.heartRate.rawValue] = 72
+            store.statisticsMins[HKQuantityTypeIdentifier.heartRate.rawValue] = 40
+            store.statisticsMaxes[HKQuantityTypeIdentifier.heartRate.rawValue] = 150
+            store.statisticsMostRecent[HKQuantityTypeIdentifier.restingHeartRate.rawValue] = 55
+            store.statisticsAverages[HKQuantityTypeIdentifier.heartRateVariabilitySDNN.rawValue] = 31
+            let day = try AgentBridgeDate("2026-03-08")
+            let captured = try await manager.captureAgentBridgeDay(day, context: context)
+            let result = try await AgentBridgeNativeDayRenderer.render(day: day, data: captured,
+                resolution: context.configurationForRead(), requestSHA256: String(repeating: "a", count: 64))
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: result.artifact.content.materializedData()) as? [String: Any])
+            let heart = try XCTUnwrap(json["heart"] as? [String: Any])
+            XCTAssertEqual(Set(heart.keys), ["averageHeartRate", "heartRateMin", "heartRateMax", "restingHeartRate", "hrv"])
+            for (key, value) in ["averageHeartRate": 72, "heartRateMin": 40, "heartRateMax": 150, "restingHeartRate": 55, "hrv": 31] {
+                XCTAssertEqual(heart[key] as? Int, value, key)
+            }
+        }
+    }
+
+    func testBridgeFrozenRendererRejectsWrongCoreAndCorruptArtifacts() async throws {
+        try await withNativeSDKCapture(metrics: ["steps"]) { _, context, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 1
+            let day = try AgentBridgeDate("2026-03-08")
+            let captured = try await manager.captureAgentBridgeDay(day, context: context)
+            let resolution = try context.configurationForRead()
+            for mode in ["profile", "path", "digest", "body", "ids", "extra", "registry"] {
+                do {
+                    _ = try await AgentBridgeNativeDayRenderer.render(day: day, data: captured, resolution: resolution,
+                        requestSHA256: String(repeating: "a", count: 64), core: BridgeRenderTamperCore(mode: mode))
+                    XCTFail("Invalid core artifact returned: \(mode)")
+                } catch let failure as AgentBridgeNativeRenderFailure {
+                    XCTAssertEqual(failure, mode == "registry" ? .incompatibleCore : .invalidArtifact)
+                }
+            }
+        }
+    }
+
+    func testBridgeFrozenRendererChecksCancellationAfterCoreReturn() async throws {
+        try await withNativeSDKCapture(metrics: ["steps"]) { _, context, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 1
+            let day = try AgentBridgeDate("2026-03-08")
+            let captured = try await manager.captureAgentBridgeDay(day, context: context)
+            let resolution = try context.configurationForRead()
+            let child = Task {
+                try await AgentBridgeNativeDayRenderer.render(day: day, data: captured, resolution: resolution,
+                    requestSHA256: String(repeating: "a", count: 64), core: BridgeRenderTamperCore(mode: "cancel"))
+            }
+            do { _ = try await child.value; XCTFail("Cancelled rendering cannot return an artifact") }
+            catch is CancellationError { }
+        }
+    }
+
+    func testFrozenAppleSemanticProfileRequiresExplicitSelection() throws {
+        let v8 = try HealthMdCoreService().metricRegistry(profile: .appleHealthDataV8)
+        XCTAssertThrowsError(try HealthMdSemanticInputAdapter.sessionConfiguration(sessionID: "ordinary-default",
+            selection: MetricSelectionState(), registry: v8, customization: FormatCustomization(),
+            calendarTimeZoneIdentifier: "UTC", retainPlatformExtensions: false, rollupPeriods: []))
+        _ = try HealthMdSemanticInputAdapter.sessionConfiguration(sessionID: "explicit-historical",
+            selection: MetricSelectionState(), registry: v8, profile: .frozenV8, customization: FormatCustomization(),
+            calendarTimeZoneIdentifier: "UTC", retainPlatformExtensions: false, rollupPeriods: [])
+        let v10 = try HealthMdCoreService().metricRegistry(profile: .appleHealthDataV10)
+        XCTAssertThrowsError(try HealthMdSemanticInputAdapter.sessionConfiguration(sessionID: "wrong-historical",
+            selection: MetricSelectionState(), registry: v10, profile: .frozenV8, customization: FormatCustomization(),
+            calendarTimeZoneIdentifier: "UTC", retainPlatformExtensions: false, rollupPeriods: []))
     }
 
     func testNativeSDKRetainedCaptureReopensSignedBytesWithoutSDKReads() async throws {
@@ -902,7 +993,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             }
         }
         defer { task.cancel(); continuation?.resume(); continuation = nil }
-        await fulfillment(of: [ready], timeout: 5)
+        // Protected fsync-backed setup can exceed five seconds on hosted coverage runners.
+        await fulfillment(of: [ready], timeout: 30)
         task.cancel()
         XCTAssertThrowsError(try XCTUnwrap(escaped).configurationForRead()) { XCTAssertTrue($0 is CancellationError) }
         continuation?.resume(); continuation = nil
@@ -3179,3 +3271,40 @@ nonisolated private final class NativePlanningResponsePackets: DirectGuardedPack
     }
     func cancel() {}
 }
+
+#if canImport(HealthMd)
+nonisolated private struct BridgeRenderTamperCore: AppleLooseDailyCoreExecuting {
+    let mode: String
+    private var actual: SystemAppleLooseDailyCoreExecutor { .init(profile: .appleHealthDataV8) }
+    func loadContext() async throws -> AppleLooseDailyCoreContext {
+        if mode == "registry" { return try await SystemAppleLooseDailyCoreExecutor().loadContext() }
+        return try await actual.loadContext()
+    }
+    func processSemantic(configuration: Data, batches: [Data]) async throws -> Data {
+        try await actual.processSemantic(configuration: configuration, batches: batches)
+    }
+    func render(configuration: Data, semanticResult: Data, batches: [Data]) async throws -> CoreArtifactPlan {
+        var plan = try await actual.render(configuration: configuration, semanticResult: semanticResult, batches: batches)
+        switch mode {
+        case "profile": plan.profile = .appleHealthDataV10
+        case "path": plan.items[0].relativePath = "unapproved.json"
+        case "digest": plan.items[0].sha256 = String(repeating: "0", count: 64)
+        case "ids": plan.sessionId = "other-session"
+        case "extra": plan.items.append(plan.items[0])
+        case "body":
+            var json = try JSONSerialization.jsonObject(with: plan.items[0].content) as! [String: Any]
+            json["schema_version"] = 10
+            let bytes = try JSONSerialization.data(withJSONObject: json, options: [.sortedKeys])
+            plan.items[0].content = bytes; plan.items[0].byteCount = UInt64(bytes.count)
+            plan.items[0].sha256 = NativeExportArtifact.sha256(of: bytes)
+            plan.items[0].artifactId = NativeExportArtifactPlan.artifactID(requestID: plan.requestId, sessionID: plan.sessionId,
+                profile: plan.profile, relativePath: plan.items[0].relativePath, mediaType: plan.items[0].mediaType,
+                writeMode: plan.items[0].writeMode, contentSHA256: plan.items[0].sha256)
+            plan.totalByteCount = UInt64(bytes.count)
+        case "cancel": withUnsafeCurrentTask { $0?.cancel() }
+        default: break
+        }
+        return plan
+    }
+}
+#endif
