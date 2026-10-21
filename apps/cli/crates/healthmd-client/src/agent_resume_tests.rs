@@ -10,6 +10,7 @@ use transfer_tests::{TransferCase, payload};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RecoveryCase {
     Exact,
+    CommittedOutput,
     AfterPlanExpiry,
     BadAccepted,
     BadManifest,
@@ -142,6 +143,52 @@ async fn approved_request(store: &HostAuthorityStore, peer: &v4::Peer) -> Execut
     }
 }
 
+async fn seed_committed_outputs(
+    transaction: &mut OutputTransaction,
+    output: &Path,
+    binding: &NativeBinding,
+) {
+    for item in &binding.manifest.artifacts {
+        let Artifact::Branch1(item) = item else {
+            unreachable!()
+        };
+        let bytes = payload(TransferCase::Exact);
+        let installed = output.join(&item.relative_path.0);
+        std::fs::create_dir_all(installed.parent().unwrap()).unwrap();
+        std::fs::write(installed, &bytes).unwrap();
+        let mut receipt = CommitReceipt {
+            schema: CommitReceiptSchema::HealthmdAgentCommitReceipt,
+            schema_version: 1,
+            job_id: binding.request.job_id.clone(),
+            artifact_id: item.artifact_id.clone(),
+            peer: binding.request.plan.intent.peer.clone(),
+            destination: binding.request.plan.intent.destination.clone(),
+            request_sha256: binding.manifest.request_sha256.clone(),
+            manifest_sha256: document_digest(&binding.manifest).unwrap(),
+            relative_path: item.relative_path.clone(),
+            write_mode: item.write_mode.clone(),
+            input_sha256: item.sha256.clone(),
+            before_sha256: Digest("0".repeat(64)),
+            after_sha256: item.sha256.clone(),
+            commit_key: Digest("0".repeat(64)),
+            status: CommitReceiptStatus::Committed,
+        };
+        receipt.commit_key = commit_key(&receipt).unwrap();
+        transaction
+            .record(crate::agent_host::output::OutputPlan {
+                receipt,
+                before_exists: false,
+                stage_name: format!(".output-{}.stage", Uuid::new_v4()),
+                committed: true,
+            })
+            .unwrap();
+    }
+    transaction
+        .save(|| async { Ok(output.to_path_buf()) })
+        .await
+        .unwrap();
+}
+
 async fn retained_fixture(
     store: &HostAuthorityStore,
     output: &Path,
@@ -157,6 +204,9 @@ async fn retained_fixture(
         .save(|| async { Ok(output.to_path_buf()) })
         .await
         .unwrap();
+    if case == RecoveryCase::CommittedOutput {
+        seed_committed_outputs(&mut transaction, output, binding).await;
+    }
     let session_id = id(30);
     let mut frontier = TransferFrontier::new(
         &binding.request.job_id,
@@ -345,6 +395,12 @@ async fn finish_recovery(
     let received = Box::pin(owner.receive_and_commit()).await.unwrap();
     assert_eq!(received.committed_partition_count, 4);
     assert_eq!(received.receipts.len(), 2);
+    assert!(
+        received
+            .receipts
+            .iter()
+            .all(|receipt| receipt.status == CommitReceiptStatus::Committed)
+    );
     let completed = Box::pin(owner.confirm_source_completion()).await.unwrap();
     assert!(completed.source_acknowledged);
     assert_eq!(completed.expires_at, later(&now(), 604_800));
@@ -369,6 +425,8 @@ async fn recover_case(
     let original = Box::pin(retained_fixture(&store, &output, &binding, prefix, case)).await;
     let issuer = client.layout.root.join("agent-host-v1");
     let checkpoint = issuer.join(format!("transfer-{}.json", request.job_id.0));
+    let output_record = issuer.join(format!("output-{}.json", request.job_id.0));
+    let original_output = std::fs::read(&output_record).unwrap();
     prepare_rejection(&store, &request, &issuer, &checkpoint, case).await;
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
@@ -437,9 +495,15 @@ async fn recover_case(
             "attack must run at the absolute final callback/clock read"
         );
     }
-    if matches!(case, RecoveryCase::Exact | RecoveryCase::AfterPlanExpiry) {
+    if matches!(
+        case,
+        RecoveryCase::Exact | RecoveryCase::AfterPlanExpiry | RecoveryCase::CommittedOutput
+    ) {
         let mut owner = result.unwrap();
         Box::pin(finish_recovery(&mut owner, &store, &request, &output)).await;
+        if case == RecoveryCase::CommittedOutput {
+            assert_eq!(std::fs::read(&output_record).unwrap(), original_output);
+        }
     } else {
         assert!(result.is_err(), "accepted {case:?}");
         if checkpoint.exists() {
@@ -509,5 +573,20 @@ async fn authenticated_resume_rejects_cancellation_at_absolute_final_clock() {
             Some(final_clock),
         ))
         .await;
+    }
+}
+
+#[tokio::test]
+async fn authenticated_resume_replays_original_committed_receipts() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for prefix in [2, 4] {
+            Box::pin(recover_case(
+                platform,
+                prefix,
+                RecoveryCase::CommittedOutput,
+                None,
+            ))
+            .await;
+        }
     }
 }

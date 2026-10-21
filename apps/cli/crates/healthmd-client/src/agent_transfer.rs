@@ -602,14 +602,29 @@ impl HostExecution<'_, '_, '_> {
                 }
             }
             drop(output);
-            receipts.push(
-                self.commit_artifact_transaction(
-                    &mut transaction,
-                    &item.artifact_id,
-                    &assembled.path,
-                )
-                .await?,
-            );
+            // Even a previously committed plan must not bypass validation of the
+            // reconstructed original input. Partition hashes alone do not prove it.
+            verify_partition_file(
+                &assembled.dir,
+                &assembled.name,
+                &assembled.file,
+                item.byte_count,
+                &item.sha256.0,
+            )?;
+            let replay = self
+                .commit_artifact_transaction(&mut transaction, &item.artifact_id, &assembled.path)
+                .await?;
+            let plan = transaction
+                .plan(&item.artifact_id)
+                .ok_or(Error::BindingChanged)?;
+            let mut canonical = replay;
+            canonical.status = CommitReceiptStatus::Committed;
+            if !plan.committed || canonical != plan.receipt {
+                return Err(Error::BindingChanged.into());
+            }
+            // Source confirmation replays the signed original receipt. The local
+            // explicit commit API may separately report AlreadyCommitted.
+            receipts.push(plan.receipt.clone());
         }
         let Incoming::Finalize(finalize) = self.receive_base(&transaction).await? else {
             return Err(ClientError::UnexpectedMessage);
