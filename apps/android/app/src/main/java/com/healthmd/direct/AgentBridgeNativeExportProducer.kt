@@ -173,6 +173,13 @@ internal suspend fun AgentBridgeNativePlanningSession.prepareExport(request: Age
     AgentBridgeNativeExportProducer.prepare(request, manager, context, renderer)
 }
 
+/** Byte carriage only; does not publish a v4 completion receipt or source frontier. */
+internal suspend fun AgentBridgeNativePlanningSession.sendTransferExport(request: AgentBridgeExecuteRequest,
+    manager: HealthConnectManager, retained: Boolean = false,
+    renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()) {
+    transmitTransfer(request, retained) { context -> AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer) }
+}
+
 internal suspend fun AgentBridgeNativePlanningSession.prepareTransferExport(request: AgentBridgeExecuteRequest,
     manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()
 ): AgentBridgeNativePreparedTransfer = withCaptureContext(request) { context ->

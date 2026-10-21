@@ -620,6 +620,110 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         if let failure { throw failure }
     }
 
+    func testNativeTransferSenderCarriesOriginalBytesWithoutCompletionClaim() async throws {
+        try await checkNativeTransferSender("needed")
+    }
+    func testNativeTransferSenderRejectsCompetingReadersWithoutAbandoningOwner() async throws {
+        try await checkNativeTransferSender("contended")
+    }
+    func testNativeTransferSenderSkipsAlreadyCommittedBytes() async throws {
+        try await checkNativeTransferSender("already")
+    }
+    func testNativeTransferSenderRejectsWrongAcknowledgementsAndAbandonsOwner() async throws {
+        for mode in ["bad-disposition", "bad-chunk", "bad-partition", "bad-final"] { try await checkNativeTransferSender(mode) }
+    }
+    func testNativeTransferSenderRechecksOwnerAfterReceiveBeforeAnyFurtherWrite() async throws {
+        try await checkNativeTransferSender("revoke")
+    }
+    private func checkNativeTransferSender(_ mode: String) async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.querySumResult = { _, _ in 123 }
+            let original = try await planner.prepareTransferExport(request, manager: manager)
+            let key = SymmetricKey(data: Data(repeating: 19, count: 32))
+            var responses: [DirectMessage] = []
+            for partition in original.partitions {
+                responses.append(.transferDisposition(try .init(sessionID: original.session.sessionID,
+                    jobID: mode == "bad-disposition" ? UUID() : original.session.jobID, partitionIndex: partition.index,
+                    partitionSHA256: partition.sha256, disposition: mode == "already" ? .alreadyCommitted : .needed)))
+                if mode != "already" {
+                    responses.append(.transferChunkAcknowledgement(try .init(transferID: partition.transferID,
+                        sequence: mode == "bad-chunk" ? 2 : 1, accepted: true, sha256: partition.sha256)))
+                    responses.append(.transferPartitionAcknowledgement(try .init(sessionID: original.session.sessionID,
+                        jobID: mode == "bad-partition" ? UUID() : original.session.jobID, partitionIndex: partition.index,
+                        transferID: partition.transferID, partitionSHA256: partition.sha256, accepted: true)))
+                }
+            }
+            responses.append(.transferFinalAcknowledgement(try .init(sessionID: original.session.sessionID,
+                jobID: original.session.jobID, accepted: true, totalPartitions: original.partitions.count,
+                totalBytes: Int64(original.export.totalByteCount) + (mode == "bad-final" ? 1 : 0),
+                finalPartitionSHA256: original.partitions.last?.sha256)))
+            let inbound = try responses.enumerated().map { try nativeResponsePacket(JSONEncoder().encode($0.element), sequence: UInt64($0.offset), key: key) }
+            let wire = NativePlanningResponsePackets(inbound: inbound, beforeReceive: {
+                if mode == "revoke" { await MainActor.run { rig.session.revoke() } }
+            })
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+            _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let profiles = try XCTUnwrap(Self.retainedNativeConfigurationObjects.compactMap { $0 as? ExportProfileStore }.last)
+            let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic sender")
+            defer { channel.cancel() }
+            let reconnect = try nativePlanningSession(rig, lifecycle, profiles: profiles, responseChannel: channel)
+            let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+            let directory = rig.directory.appendingPathComponent("captures/" + job.requestSHA256.rawValue)
+            let progress = try Data(contentsOf: directory.appendingPathComponent("progress.json"))
+            store.querySumResult = { _, _ in XCTFail("No SDK on immutable carriage"); return nil }
+            let fails = mode.hasPrefix("bad-") || mode == "revoke"
+            do {
+                if mode == "contended" {
+                    try await reconnect.transmitTransfer(request, retained: true) { context in
+                        _ = try context.begin()
+                        do { _ = try await reconnect.receiveAndHandleNext(); XCTFail("Competing reader must reject") }
+                        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
+                        do { try await reconnect.handleAndSend(nativeDiscoveryBytes(rig)); XCTFail("Competing response must reject") }
+                        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
+                        do { try await reconnect.withRetainedCaptureContext(request) { _ in XCTFail("Competing capture must reject") }; XCTFail("Expected busy") }
+                        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
+                        return original
+                    }
+                } else {
+                    try await reconnect.sendTransferExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid"))
+                }
+                if fails { XCTFail("Expected acknowledgement/owner rejection") }
+            } catch {
+                if !fails { throw error }
+                XCTAssertNotNil(error as? AgentBridgeValidationError)
+                let count = wire.packets.count
+                do { try await reconnect.sendTransferExport(request, manager: manager, retained: true); XCTFail("Failed owner cannot revive") }
+                catch { XCTAssertEqual(wire.packets.count, count) }
+            }
+            var messages: [DirectMessage] = []; var chunks: [DirectTransferChunk] = []
+            let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+            for (sequence, packet) in wire.packets.enumerated() {
+                guard case .encrypted(let frame) = packet else { return XCTFail("Expected guarded encrypted packet") }
+                let plaintext = try ManualIPSyncSecurity.open(frame, using: key)
+                let bytes = Data(plaintext.dropFirst(16))
+                if sequence == 0 {
+                    let envelope = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes)
+                    guard case .manifest(let manifest) = envelope.payload else { return XCTFail("Expected original v4 manifest first") }
+                    XCTAssertEqual(try AgentBridgeV4Codec.encode(manifest), original.export.manifestCanonical)
+                } else if DirectTransferBinaryFrame.isBinaryFrame(bytes) {
+                    chunks.append(try DirectTransferBinaryFrame.decode(bytes).chunk)
+                } else { messages.append(try decoder.decode(DirectMessage.self, from: bytes)) }
+            }
+            XCTAssertEqual(messages.first, .transferSession(original.session))
+            XCTAssertEqual(Array(messages.dropFirst().prefix(original.export.baseFiles.count)), original.export.baseFiles.map { .fileManifest($0.manifest) })
+            XCTAssertFalse(messages.contains { if case .completionConfirmed = $0 { return true }; return false })
+            if !fails {
+                XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count)
+                for (chunk, file) in zip(chunks, original.export.baseFiles) { XCTAssertEqual(chunk.sequence, 1); XCTAssertEqual(chunk.data, file.content); XCTAssertEqual(chunk.sha256, file.manifest.sha256) }
+                XCTAssertEqual(wire.receiveCount, responses.count)
+            }
+            if mode == "revoke" { XCTAssertEqual(messages.count, 2 + original.export.baseFiles.count) }
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), progress)
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("transfer.json")), original.checkpointCanonical)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
     func testNativeExportProducerPreparesEveryApprovedDayAndRecoversExactSet() async throws {
         try await withNativeExportPreparation { rig, planner, request, store, manager in
             store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123

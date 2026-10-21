@@ -101,6 +101,7 @@ final class AgentBridgeNativePlanningSession {
     private let responsePeerTransferCapabilities: DirectTransferCapabilities?
     private let captureProtection: any AgentBridgeNativeCaptureProtecting
     private var wireAbandoned = false
+    private var wireOperationActive = false
 
     /// The issuer transaction and lifecycle must agree on the exact signed publication, including
     /// revision. Equal facts alone cannot identify an event that returned to the same state.
@@ -161,6 +162,11 @@ final class AgentBridgeNativePlanningSession {
     /// The owner supplies its channel ONCE at construction, never from a request/call argument.
     /// Keep the publication admitted before planning across every bounded native write and return.
     func handleAndSend(_ bytes: Data) async throws {
+        guard !wireOperationActive else { throw AgentBridgeValidationError.busy }
+        wireOperationActive = true; defer { wireOperationActive = false }
+        try await handleAndSendOwned(bytes)
+    }
+    private func handleAndSendOwned(_ bytes: Data) async throws {
         guard let negotiation = responseNegotiation, negotiation.baseVersion == 1, negotiation.agentBridgeV4, let responseChannel else {
             throw AgentBridgeValidationError.unsupportedCapability
         }
@@ -194,6 +200,8 @@ final class AgentBridgeNativePlanningSession {
     /// base messages and binary frames are returned intact to the existing native controller.
     /// The controller must not run another channel reader concurrently. This adds no advertisement.
     func receiveAndHandleNext() async throws -> AgentBridgeSecurePayload? {
+        guard !wireOperationActive else { throw AgentBridgeValidationError.busy }
+        wireOperationActive = true; defer { wireOperationActive = false }
         guard let negotiation = responseNegotiation, negotiation.baseVersion == 1, negotiation.agentBridgeV4,
               let responseChannel else { throw AgentBridgeValidationError.unsupportedCapability }
         do {
@@ -203,7 +211,7 @@ final class AgentBridgeNativePlanningSession {
                 try Task.checkCancellation()
             }
             if case .agent(let request) = received {
-                try await handleAndSend(negotiation.encode(request))
+                try await handleAndSendOwned(negotiation.encode(request))
                 return nil
             }
             _ = try requireCurrent()
@@ -251,6 +259,8 @@ final class AgentBridgeNativePlanningSession {
 
     private func captureContext<T>(_ request: AgentBridgeExecute, retained: Bool,
                                    operation: (AgentBridgeNativeCaptureContext) async throws -> T) async throws -> T {
+        guard !wireOperationActive else { throw AgentBridgeValidationError.busy }
+        wireOperationActive = true; defer { wireOperationActive = false }
         guard let negotiation = responseNegotiation, negotiation.baseVersion == 1,
               negotiation.agentBridgeV4, responseChannel != nil else { throw AgentBridgeValidationError.unsupportedCapability }
         let cancellation = AgentBridgeCaptureCancellation()
@@ -301,6 +311,96 @@ final class AgentBridgeNativePlanningSession {
                 throw error
             }
         } onCancel: { cancellation.cancel() }
+    }
+
+    /// The prepared value never escapes as send authority. Keep capture, carriage and every
+    /// acknowledgement inside the original owner callback; this is not a completion receipt.
+    func transmitTransfer(_ request: AgentBridgeExecute, retained: Bool,
+        prepare: (AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
+    ) async throws {
+        let operation: (AgentBridgeNativeCaptureContext) async throws -> Void = { [self] context in
+            do {
+                let supplied = try await prepare(context)
+                guard supplied.export.requestSHA256 == (try context.requestFingerprintForRead()),
+                      supplied.export.manifestCanonical == (try context.preserveManifest()),
+                      supplied.checkpointCanonical == (try context.preserveTransferPlan()) else {
+                    throw AgentBridgeValidationError.bindingChanged
+                }
+                // Rebuild from the exact original request and pinned metadata. A caller-supplied
+                // session, partition table or content descriptor cannot replace retained bytes.
+                let export = try AgentBridgeNativePreparedExport.make(request: request, days: supplied.export.days,
+                    totalByteCount: supplied.export.totalByteCount, publicArtifactIDs: supplied.export.publicArtifactIDs,
+                    manifestCanonical: supplied.export.manifestCanonical)
+                let transfer = try AgentBridgeNativePreparedTransfer.make(request: request, export: export,
+                    checkpointCanonical: supplied.checkpointCanonical)
+                try await sendTransferBytes(transfer, context: context)
+                _ = try context.configurationForRead()
+            } catch {
+                context.invalidate(); wireAbandoned = true; responseChannel?.cancel(); throw error
+            }
+        }
+        if retained { try await withRetainedCaptureContext(request, operation: operation) }
+        else { try await withCaptureContext(request, operation: operation) }
+    }
+
+    private func sendTransferBytes(_ transfer: AgentBridgeNativePreparedTransfer,
+        context: AgentBridgeNativeCaptureContext
+    ) async throws {
+        guard let channel = responseChannel, let negotiation = responseNegotiation else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        let validate: @Sendable () async throws -> Void = {
+            try await MainActor.run { _ = try context.configurationForRead() }
+        }
+        func send(_ message: DirectMessage) async throws {
+            try await channel.sendBaseForAgentBridge(message, negotiation: negotiation, authorize: validate)
+        }
+        func receive() async throws -> DirectMessage {
+            guard case .base(let message) = try await channel.receiveAllowingAgentBridge(negotiation: negotiation, authorize: validate) else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            return message
+        }
+        let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: transfer.export.manifestCanonical)
+        try await channel.sendAgentBridge(AgentBridgeEnvelope(payload: .manifest(manifest)), negotiation: negotiation, authorize: validate)
+        try await send(.transferSession(transfer.session))
+        for file in transfer.export.baseFiles { try await send(.fileManifest(file.manifest)) }
+        for (partition, file) in zip(transfer.partitions, transfer.export.baseFiles) {
+            try await send(.transferOpen(DirectTransferOpen(session: transfer.session, partition: partition)))
+            guard case .transferDisposition(let disposition) = try await receive(),
+                  disposition.sessionID == transfer.session.sessionID, disposition.jobID == transfer.session.jobID,
+                  disposition.partitionIndex == partition.index, disposition.partitionSHA256 == partition.sha256,
+                  disposition.disposition != .rejected else { throw AgentBridgeValidationError.bindingChanged }
+            if disposition.disposition == .needed {
+                // Reviewed daily JSON is one bounded frame per partition. Stop-and-wait is
+                // within every admitted original in-flight window; no extra reader runs.
+                let chunk = try DirectTransferChunk(transferID: partition.transferID, sequence: 1,
+                    data: file.content, sha256: partition.sha256)
+                try await channel.sendTransferChunkForAgentBridge(chunk, negotiation: negotiation, authorize: validate)
+                guard case .transferChunkAcknowledgement(let ack) = try await receive(), ack.accepted,
+                      ack.transferID == partition.transferID, ack.sequence == 1, ack.sha256 == partition.sha256 else {
+                    throw AgentBridgeValidationError.bindingChanged
+                }
+                try await send(.transferPartitionComplete(DirectTransferPartitionComplete(sessionID: transfer.session.sessionID,
+                    jobID: transfer.session.jobID, partitionIndex: partition.index, transferID: partition.transferID,
+                    partitionSHA256: partition.sha256)))
+                guard case .transferPartitionAcknowledgement(let ack) = try await receive(), ack.accepted,
+                      ack.sessionID == transfer.session.sessionID, ack.jobID == transfer.session.jobID,
+                      ack.partitionIndex == partition.index, ack.transferID == partition.transferID,
+                      ack.partitionSHA256 == partition.sha256 else { throw AgentBridgeValidationError.bindingChanged }
+            }
+        }
+        let finalize = try DirectTransferFinalize(sessionID: transfer.session.sessionID, jobID: transfer.session.jobID,
+            requestFingerprint: transfer.session.requestFingerprint, totalPartitions: transfer.partitions.count,
+            totalBytes: Int64(transfer.export.totalByteCount), finalPartitionSHA256: transfer.partitions.last?.sha256)
+        try await send(.transferFinalize(finalize))
+        guard case .transferFinalAcknowledgement(let ack) = try await receive(), ack.accepted,
+              ack.sessionID == finalize.sessionID, ack.jobID == finalize.jobID,
+              ack.totalPartitions == finalize.totalPartitions, ack.totalBytes == finalize.totalBytes,
+              ack.finalPartitionSHA256 == finalize.finalPartitionSHA256 else { throw AgentBridgeValidationError.bindingChanged }
+        // Base byte acknowledgement is not the v4 host commit receipt or final source confirmation.
+        // Do not emit completionConfirmed or a complete execution receipt here.
+        _ = try context.configurationForRead()
     }
 
     /// Acceptance is durable before this first execution response; no capture claim or SDK read

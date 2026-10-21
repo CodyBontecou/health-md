@@ -223,6 +223,16 @@ extension AgentBridgeNativePlanningSession {
         }
     }
 
+    /// Byte carriage only. Full v4 commit/frontier/receipt completion remains a separate step.
+    func sendTransferExport(_ request: AgentBridgeExecute, manager: HealthKitManager,
+        retained: Bool = false,
+        core: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor(profile: .appleHealthDataV8)
+    ) async throws {
+        try await transmitTransfer(request, retained: retained) { context in
+            try await AgentBridgeNativeExportProducer.prepareTransfer(request: request, manager: manager, context: context, core: core)
+        }
+    }
+
     func prepareTransferExport(_ request: AgentBridgeExecute, manager: HealthKitManager,
         core: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor(profile: .appleHealthDataV8)
     ) async throws -> AgentBridgeNativePreparedTransfer {

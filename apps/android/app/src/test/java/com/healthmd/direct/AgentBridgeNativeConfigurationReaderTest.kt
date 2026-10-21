@@ -421,6 +421,112 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    @Test fun `native transfer sender carries original bytes without completion claim`() = runBlocking { checkNativeTransferSender("needed") }
+    @Test fun `native transfer sender rejects competing readers without abandoning owner`() = runBlocking { checkNativeTransferSender("contended") }
+    @Test fun `native transfer sender skips already committed bytes`() = runBlocking { checkNativeTransferSender("already") }
+    @Test fun `native transfer sender rejects wrong acknowledgements and abandons owner`() = runBlocking {
+        for (mode in listOf("bad-disposition", "bad-chunk", "bad-partition", "bad-final")) checkNativeTransferSender(mode)
+    }
+    @Test fun `native transfer sender checks owner after receive before further writes`() = runBlocking { checkNativeTransferSender("revoke") }
+
+    private suspend fun checkNativeTransferSender(mode: String) {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val original = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val agent = mutableListOf<AgentBridgeMessage>(); val base = mutableListOf<ReceivedEnvelope>()
+            val chunks = mutableListOf<Pair<String, ByteArray>>()
+            val responses = java.util.ArrayDeque<ReceivedAgentBridgePayload>()
+            fun <T> response(type: String, serializer: kotlinx.serialization.SerializationStrategy<T>, payload: T) {
+                responses.add(ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode(type, serializer, payload))))
+            }
+            original.partitions.forEach { partition ->
+                response("transfer_disposition", TransferDisposition.serializer(), TransferDisposition(original.session.sessionId,
+                    if (mode == "bad-disposition") java.util.UUID.randomUUID().toString() else original.session.jobId,
+                    partition.index, partition.sha256, if (mode == "already") TransferDispositionKind.ALREADY_COMMITTED else TransferDispositionKind.NEEDED))
+                if (mode != "already") {
+                    response("transfer_chunk_acknowledgement", TransferChunkAcknowledgement.serializer(), TransferChunkAcknowledgement(
+                        partition.transferId, if (mode == "bad-chunk") 2 else 1, true, partition.sha256))
+                    response("transfer_partition_acknowledgement", TransferPartitionAcknowledgement.serializer(), TransferPartitionAcknowledgement(
+                        original.session.sessionId, if (mode == "bad-partition") java.util.UUID.randomUUID().toString() else original.session.jobId,
+                        partition.index, partition.transferId, partition.sha256, true))
+                }
+            }
+            response("transfer_final_acknowledgement", TransferFinalAcknowledgement.serializer(), TransferFinalAcknowledgement(
+                original.session.sessionId, original.session.jobId, true, original.partitions.size.toLong(),
+                original.export.totalByteCount.toLong() + if (mode == "bad-final") 1 else 0, original.partitions.last().sha256))
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                thirdArg<() -> Unit>()(); agent += firstArg<AgentBridgeMessage>(); thirdArg<() -> Unit>()()
+            }
+            every { channel.sendV2ForAgentBridge(any(), any<kotlinx.serialization.SerializationStrategy<Any>>(), any<Any>(), any(), any()) } answers {
+                lastArg<() -> Unit>()()
+                base += V2Codec.decode(V2Codec.encode(firstArg(), secondArg<kotlinx.serialization.SerializationStrategy<Any>>(), thirdArg()))
+                lastArg<() -> Unit>()()
+            }
+            every { channel.sendTransferChunkForAgentBridge(any(), any(), any(), any(), any()) } answers {
+                lastArg<() -> Unit>()(); assertThat(secondArg<Int>()).isEqualTo(1)
+                // Exercise the deployed frame encoder as well as the native owner callback.
+                // A permissive mock must not accept invalid sequence/size/identifier values.
+                val frame = BinaryTransferFrame.encode(firstArg(), secondArg(), thirdArg())
+                assertThat(frame.size).isEqualTo(66 + thirdArg<ByteArray>().size)
+                chunks += firstArg<String>() to thirdArg<ByteArray>().copyOf(); lastArg<() -> Unit>()()
+            }
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                secondArg<() -> Unit>()()
+                val result = responses.removeFirst()
+                if (mode == "revoke") lifecycle.stop()
+                secondArg<() -> Unit>()(); result
+            }
+            val reconnect = ownedPlanner(f, lifecycle, channel)
+            val job = f.store.access { it!!.state.acceptedJobs!!.single() }
+            val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256)
+            val progress = Files.readAllBytes(directory.resolve("progress.json"))
+            coEvery { client.aggregate(any()) } throws IllegalStateException("No SDK on immutable carriage")
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("No render") }, pinLoader = { error("No core load") })
+            val fails = mode.startsWith("bad-") || mode == "revoke"
+            try {
+                if (mode == "contended") {
+                    reconnect.transmitTransfer(request, true) { context ->
+                        context.begin()
+                        val caller = currentCoroutineContext().job
+                        try { reconnect.receiveAndHandleNext(caller); throw AssertionError("Competing reader must reject") }
+                        catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
+                        try { reconnect.handleAndSend(ownedDiscoveryBytes(f), caller); throw AssertionError("Competing response must reject") }
+                        catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
+                        try { reconnect.withRetainedCaptureContext(request) { error("Competing capture must reject") }; throw AssertionError("Expected busy") }
+                        catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
+                        original
+                    }
+                } else reconnect.sendTransferExport(request, manager, true, forbidden)
+                if (fails) throw AssertionError("Expected acknowledgement/owner rejection")
+            } catch (failure: AgentBridgeException) {
+                if (!fails) throw failure
+                val count = base.size + chunks.size + agent.size
+                try { reconnect.sendTransferExport(request, manager, true, forbidden); throw AssertionError("No owner revival") }
+                catch (_: AgentBridgeException) { assertThat(base.size + chunks.size + agent.size).isEqualTo(count) }
+                verify(atLeast = 1) { channel.close() }
+            }
+            assertThat(agent.map { it.type }).containsExactly("artifact_manifest")
+            assertThat(AgentBridgeCodec.encode(agent.single().payload)).isEqualTo(original.export.manifestCanonical)
+            assertThat(V2Codec.decodePayload(base.first(), TransferSession.serializer())).isEqualTo(original.session)
+            val files = base.filter { it.type == "artifact_manifest" }.map { V2Codec.decodePayload(it, ArtifactManifest.serializer()) }
+            assertThat(files).containsExactlyElementsIn(original.export.baseFiles.map { it.manifest }).inOrder()
+            assertThat(base.none { it.type == "completion_confirmed" }).isTrue()
+            if (!fails) {
+                assertThat(chunks.size).isEqualTo(if (mode == "already") 0 else original.partitions.size)
+                chunks.zip(original.export.baseFiles).forEach { (chunk, file) -> assertThat(chunk.second).isEqualTo(file.content) }
+                assertThat(responses).isEmpty()
+            }
+            if (mode == "revoke") assertThat(base.size).isEqualTo(2 + original.export.baseFiles.size)
+            assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(progress)
+            assertThat(Files.readAllBytes(directory.resolve("transfer.json"))).isEqualTo(original.checkpointCanonical)
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
     @Test fun `native transfer plan retains original session partitions and bytes`() = runBlocking {
         withNativeExportPreparation { f, planner, request, client, manager ->
             val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
