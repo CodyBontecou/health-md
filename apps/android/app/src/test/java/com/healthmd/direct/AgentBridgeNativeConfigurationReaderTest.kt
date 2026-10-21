@@ -15,11 +15,19 @@ import com.healthmd.domain.model.ExportTarget
 import com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence
 import io.mockk.*
 import java.io.IOException
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.util.concurrent.Executors
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import java.nio.file.Files
 import java.time.ZoneId
 import javax.crypto.Mac
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.junit.*
@@ -66,13 +74,108 @@ class AgentBridgeNativeConfigurationReaderTest {
         readConfiguration(policy, AgentBridgeNativeCatalogPublication(1, AgentBridgeExportPlanningFixture.id(1),
             state.fingerprint(AgentBridgeExportPlanningFixture.id(1))))
 
-    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle, channel: DirectSecureChannel? = null) =
+    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle, channel: DirectSecureChannel? = null, negotiation: AgentBridgeNegotiation = nativeNegotiation()) =
         AgentBridgeNativePlanningSession(f.peerContext, lifecycle, f.store,
             AgentBridgeNativeConfigurationReader(observed, settings, profiles, { lifecycle.currentFacts() },
-                { AgentBridgeExportTestRegistry.load() }), f.clock, responseChannel = channel)
+                { AgentBridgeExportTestRegistry.load() }), f.clock, responseChannel = channel, responseNegotiation = negotiation)
     private fun nativeNegotiation() = AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, listOf(2, 4), listOf(2, 4))
     private fun ownedDiscoveryBytes(f: AgentBridgeExportPlanningFixture) = AgentBridgeCodec.encodeEnvelope(
         AgentBridgeMessage("discovery_request", f.discoveryRequest()), nativeNegotiation())
+
+    @Test fun `native receive cancellation interrupts a blocked real socket`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { listener ->
+                listener.soTimeout = 5_000
+                val packet = DirectPacketConnection.connect(requireNotNull(listener.inetAddress.hostAddress), listener.localPort, 5_000)
+                try {
+                    listener.accept().use { remote ->
+                        remote.soTimeout = 2_000
+                        // Kotlin internal constructor is reflectively entered only in this test.
+                        // Ordinary crypto channel + synthetic native peer, never authentication proof.
+                        val channel = DirectSecureChannel::class.java.getDeclaredConstructor(
+                            DirectPacketConnection::class.java, ByteArray::class.java, String::class.java,
+                            String::class.java, DirectProtocolDeterministicCore::class.java,
+                        ).newInstance(packet, ByteArray(32) { 7 }, f.peer.hostInstallationId,
+                            "Synthetic", NativeDirectProtocolDeterministicCore)
+                        val planner = ownedPlanner(f, lifecycle, channel)
+                        val caller = Job()
+                        val worker = AtomicReference<Thread>()
+                        val executor = Executors.newSingleThreadExecutor { action -> Thread(action, "native-bridge-blocked-read").also(worker::set) }
+                        try {
+                            val future = executor.submit<ReceivedAgentBridgePayload?> { planner.receiveAndHandleNext(caller) }
+                            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+                            var blockedInNativeRead = false
+                            while (System.nanoTime() < deadline && !future.isDone) {
+                                blockedInNativeRead = worker.get()?.stackTrace?.any {
+                                    it.className == "sun.nio.ch.NioSocketImpl" && it.methodName in setOf("read", "timedRead", "park")
+                                } == true
+                                if (blockedInNativeRead) break
+                                Thread.sleep(10)
+                            }
+                            Assert.assertTrue("Actual socket read must be suspended before cancellation", blockedInNativeRead)
+                            caller.cancel()
+                            Assert.assertThrows(ExecutionException::class.java) { future.get(2, TimeUnit.SECONDS) }
+                            assertThat(remote.getInputStream().read()).isEqualTo(-1)
+                            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { planner.requireCurrent() }
+                        } finally {
+                            caller.cancel(); channel.close(); executor.shutdownNow()
+                            Assert.assertTrue("Owned socket worker terminated", executor.awaitTermination(2, TimeUnit.SECONDS))
+                        }
+                    }
+                } finally { packet.close() }
+            }
+        }
+    }
+
+    @Test fun `native receive routes discovery and preserves base and binary payloads`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val base = ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode("ping", JsonObject.serializer(), buildJsonObject {})))
+            val binary = ReceivedAgentBridgePayload.Binary("HMDDIRCTsynthetic".toByteArray())
+            val incoming = ArrayDeque<ReceivedAgentBridgePayload>(listOf(base,
+                ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("discovery_request", f.discoveryRequest())), binary))
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                val fence = secondArg<() -> Unit>(); fence(); val message = incoming.removeFirst(); fence(); message
+            }
+            var sent: AgentBridgeMessage? = null
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                val fence = thirdArg<() -> Unit>(); fence(); sent = firstArg(); fence()
+            }
+            val planner = ownedPlanner(f, lifecycle, channel); val caller = Job()
+            val before = f.store.access { it!!.state.revision }; reset()
+            assertThat(planner.receiveAndHandleNext(caller)).isSameInstanceAs(base)
+            assertThat(planner.receiveAndHandleNext(caller)).isNull()
+            assertThat(planner.receiveAndHandleNext(caller)).isSameInstanceAs(binary)
+            assertThat((sent!!.payload as AgentBridgeDiscovery).peer).isEqualTo(f.peer)
+            assertThat(f.store.access { it!!.state.revision }).isEqualTo(before)
+            assertThat(f.store.access { it!!.state.decisions }).isEmpty()
+            assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
+            caller.complete()
+        }
+    }
+
+    @Test fun `native receive revoked owner cannot return base or revive`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            var receives = 0
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                val fence = secondArg<() -> Unit>(); fence(); receives++
+                lifecycle.stop(); fence()
+                ReceivedAgentBridgePayload.Binary(byteArrayOf())
+            }
+            val planner = ownedPlanner(f, lifecycle, channel)
+            repeat(2) { f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { planner.receiveAndHandleNext(Job()) } }
+            assertThat(receives).isEqualTo(1)
+            verify(atLeast = 1) { channel.close() }
+            verify(exactly = 0) { channel.sendAgentBridge(any(), any(), any()) }
+        }
+    }
 
     @Test fun `native response uses pinned guarded channel without issuing authority`() {
         AgentBridgeExportPlanningFixture().use { f ->
@@ -88,7 +191,7 @@ class AgentBridgeNativeConfigurationReaderTest {
             val planner = ownedPlanner(f, lifecycle, channel)
             val before = f.store.access { it!!.state.revision }; reset()
             val caller = Job()
-            planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), caller)
+            planner.handleAndSend(ownedDiscoveryBytes(f), caller)
             caller.complete()
             assertThat((sent!!.payload as AgentBridgeDiscovery).peer).isEqualTo(f.peer)
             assertThat(f.store.access { it!!.state.revision }).isEqualTo(before)
@@ -102,9 +205,10 @@ class AgentBridgeNativeConfigurationReaderTest {
             f.enrolled()
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
             val channel = mockk<DirectSecureChannel>(relaxed = true)
-            val planner = ownedPlanner(f, lifecycle, channel); val checks = f.peerContext.checks
-            val negotiation = AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, listOf(2), listOf(2))
-            f.expect(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) { planner.handleAndSend(byteArrayOf(0), negotiation, Job()) }
+            val negotiation = AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, ANDROID_NATIVE_APPLICATION_VERSIONS, listOf(2, 4))
+            val planner = ownedPlanner(f, lifecycle, channel, negotiation); val checks = f.peerContext.checks
+            f.expect(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) { planner.handleAndSend(byteArrayOf(0), Job()) }
+            f.expect(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) { planner.receiveAndHandleNext(Job()) }
             assertThat(f.peerContext.checks).isEqualTo(checks)
             verify { channel wasNot Called }
         }
@@ -125,10 +229,10 @@ class AgentBridgeNativeConfigurationReaderTest {
                 if (!afterWrite) writes++
             }
             val planner = ownedPlanner(f, lifecycle, channel)
-            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), Job()) }
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { planner.handleAndSend(ownedDiscoveryBytes(f), Job()) }
             assertThat(lifecycle.currentPublication().revision).isEqualTo(original.revision + 1)
             assertThat(writes).isEqualTo(if (afterWrite) 1 else 0)
-            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), Job()) }
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { planner.handleAndSend(ownedDiscoveryBytes(f), Job()) }
             verify(atLeast = 1) { channel.close() }
         }
     }
@@ -159,7 +263,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                     f.peerContext.onCheck = { if (f.peerContext.checks == target) caller.cancel() }
                 }
                 try {
-                    planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), caller)
+                    planner.handleAndSend(ownedDiscoveryBytes(f), caller)
                     if (cancel) Assert.fail("Canceled final validator cannot admit another write or return success")
                 } catch (failure: CancellationException) {
                     if (!cancel) throw failure
@@ -184,7 +288,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 Assert.fail("Expired discovery cannot reach native write")
             }
             val planner = ownedPlanner(f, lifecycle, channel)
-            f.expect(AgentBridgeErrorCode.PLAN_EXPIRED) { planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), Job()) }
+            f.expect(AgentBridgeErrorCode.PLAN_EXPIRED) { planner.handleAndSend(ownedDiscoveryBytes(f), Job()) }
             verify { channel.close() }
         }
     }

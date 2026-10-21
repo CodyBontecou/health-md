@@ -7,6 +7,7 @@ nonisolated final class IPhoneDirectCLIAuthenticatedSession: @unchecked Sendable
     let sourceInstallationID: UUID
     let sessionID: UUID
     let channel: DirectSecureChannel
+    let bridgeNegotiation: AgentBridgeNegotiation?
     private weak var owner: AnyObject?
     private let defaults: UserDefaults
     private let enabledKey: String
@@ -16,6 +17,7 @@ nonisolated final class IPhoneDirectCLIAuthenticatedSession: @unchecked Sendable
 
     fileprivate init(owner: AnyObject, defaults: UserDefaults, enabledKey: String,
                      sourceInstallationID: UUID, sessionID: UUID, channel: DirectSecureChannel,
+                     bridgeNegotiation: AgentBridgeNegotiation? = nil,
                      currentOwner: @escaping @MainActor @Sendable () -> Bool) {
         self.owner = owner
         self.defaults = defaults
@@ -23,6 +25,7 @@ nonisolated final class IPhoneDirectCLIAuthenticatedSession: @unchecked Sendable
         self.sourceInstallationID = sourceInstallationID
         self.sessionID = sessionID
         self.channel = channel
+        self.bridgeNegotiation = bridgeNegotiation
         self.currentOwner = currentOwner
     }
 
@@ -293,6 +296,9 @@ struct IPhoneDirectCLIBackgroundPolicy {
 /// iOS remains the HealthKit owner.
 @MainActor
 final class IPhoneDirectCLIService: ObservableObject {
+    // Single source for the actual hello and its accepted-owner negotiation. Extension4 remains off.
+    private static let applicationProtocolVersions = [HealthMdDirectProtocol.currentVersion, HealthMdDirectProtocol.queryVersion]
+
     private struct ProvisionalPairingTrust {
         let sessionID: UUID
         let previousServer: ManualIPTrustedMac?
@@ -505,11 +511,11 @@ final class IPhoneDirectCLIService: ObservableObject {
             return try owner.lifecycle.currentFacts()
         }
         let store = try AgentBridgeExportAuthorityStore(existingDirectory: AgentExportPermissionsStorage.directory(createParent: false))
-        guard let originalChannel = agentBridgeSession?.channel, channel === originalChannel else {
+        guard let originalOwner = agentBridgeSession, channel === originalOwner.channel else {
             throw AgentBridgeValidationError.permissionRequired
         }
         let planner = try AgentBridgeNativePlanningSession(peer: owner.peer, lifecycle: owner.lifecycle, store: store,
-            configuration: reader, responseChannel: originalChannel)
+            configuration: reader, responseChannel: originalOwner.channel, responseNegotiation: originalOwner.bridgeNegotiation)
         let current = try agentBridgeNativePlanningOwner()
         guard current.lifecycle === owner.lifecycle else { throw AgentBridgeValidationError.permissionRequired }
         try planner.requireCurrent()
@@ -599,10 +605,12 @@ final class IPhoneDirectCLIService: ObservableObject {
               context.sourceInstallationID == installationID,
               context.hostInstallationID == channel.peerInstallationID,
               (try? context.requireCurrent(on: channel)) != nil else { return }
+        guard let negotiation = try? AgentBridgeNegotiation(localVersions: Self.applicationProtocolVersions,
+            remoteVersions: capabilities.protocolVersions, deployedBaseVersion: HealthMdDirectProtocol.currentVersion) else { return }
         agentBridgeSession = IPhoneDirectCLIAuthenticatedSession(
             owner: self, defaults: defaults, enabledKey: Self.enabledKey,
             sourceInstallationID: installationID, sessionID: sessionID, channel: channel,
-            currentOwner: { [weak self, weak channel] in
+            bridgeNegotiation: negotiation, currentOwner: { [weak self, weak channel] in
                 guard let self, let channel else { return false }
                 return self.activeSessionID == sessionID && self.channel === channel
                     && self.appIsActive && self.isEnabled
@@ -1063,10 +1071,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             pairingTrustWasWritten = isCodePairing
             provisionalChannel = connected
             try await connected.send(.hello(DirectPeerCapabilities(
-                protocolVersions: [
-                    HealthMdDirectProtocol.currentVersion,
-                    HealthMdDirectProtocol.queryVersion
-                ],
+                protocolVersions: Self.applicationProtocolVersions,
                 platform: .iOS,
                 installationID: installationID,
                 query: .current,
@@ -1287,10 +1292,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             guard capabilities.platform == .macOSCLI,
                   capabilities.installationID == channel.peerInstallationID,
                   DirectPeerCapabilities(
-                    protocolVersions: [
-                        HealthMdDirectProtocol.currentVersion,
-                        HealthMdDirectProtocol.queryVersion
-                    ],
+                    protocolVersions: Self.applicationProtocolVersions,
                     platform: .iOS,
                     installationID: installationID,
                     query: .current

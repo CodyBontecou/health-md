@@ -18,6 +18,11 @@ import java.io.IOException
 import java.time.DateTimeException
 import java.time.ZoneId
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
@@ -133,6 +138,7 @@ internal class AgentBridgeNativePlanningSession(
     configuration: AgentBridgeExportPlanningConfigurationReader,
     clock: java.time.Clock = java.time.Clock.systemUTC(),
     private val responseChannel: DirectSecureChannel? = null,
+    private val responseNegotiation: AgentBridgeNegotiation? = null,
 ) {
     private val service: AgentBridgeExportPlanningService
     @Volatile private var wireAbandoned = false
@@ -169,34 +175,87 @@ internal class AgentBridgeNativePlanningSession(
     /** Native composition only. The accepted owner pins its channel at construction. A caller
      * supplies its live operation Job; pure cancellation checks run after issuer callbacks.
      * No wire identity or fresh peer can retarget this response. The coordinator also closes its active channel on explicit cancelActive. */
-    fun handleAndSend(bytes: ByteArray, negotiation: AgentBridgeNegotiation, caller: Job) {
+    fun handleAndSend(bytes: ByteArray, caller: Job) {
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         if (negotiation.baseApplication != 2 || !negotiation.agentExtension || negotiation.appleQueryExtension)
             throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         try {
-            caller.ensureActive()
-            val publication = requireCurrent()
-            val response = AgentBridgeCodec.decodeEnvelope(handleEnvelope(bytes, negotiation), negotiation)
-            channel.sendAgentBridge(response, negotiation) {
+            withTransportCancellation(caller, channel) {
+                caller.ensureActive()
+                val publication = requireCurrent()
+                val response = AgentBridgeCodec.decodeEnvelope(handleEnvelope(bytes, negotiation), negotiation)
+                channel.sendAgentBridge(response, negotiation) {
+                    caller.ensureActive()
+                    requireSamePublication(publication)
+                    caller.ensureActive()
+                    service.requireCurrentForTransmission(response, peer)
+                    // Local lifecycle only after issuer validation, never a fresh SDK callback.
+                    if (lifecycle.currentPublication() != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                    caller.ensureActive()
+                }
                 caller.ensureActive()
                 requireSamePublication(publication)
                 caller.ensureActive()
                 service.requireCurrentForTransmission(response, peer)
-                // Local lifecycle only after issuer validation, never a fresh SDK callback.
                 if (lifecycle.currentPublication() != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
                 caller.ensureActive()
             }
-            caller.ensureActive()
-            requireSamePublication(publication)
-            caller.ensureActive()
-            service.requireCurrentForTransmission(response, peer)
-            if (lifecycle.currentPublication() != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
-            caller.ensureActive()
         } catch (failure: Throwable) {
             wireAbandoned = true
-            channel.close()
+            runCatching { channel.close() }
+            caller.ensureActive()
             throw failure
         }
+    }
+
+
+    /** One native receive iteration. This exact original planner handles bridge requests; base
+     * envelopes and binary frames return intact to the existing controller. No concurrent reader
+     * may consume the same channel. Native advertisement/dispatcher remain unchanged. */
+    fun receiveAndHandleNext(caller: Job): ReceivedAgentBridgePayload? {
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        if (negotiation.baseApplication != 2 || !negotiation.agentExtension || negotiation.appleQueryExtension)
+            throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        try {
+            return withTransportCancellation(caller, channel) {
+                val received = channel.receiveAllowingAgentBridge(negotiation) {
+                    caller.ensureActive(); requireCurrent(); caller.ensureActive()
+                }
+                if (received is ReceivedAgentBridgePayload.Agent) {
+                    handleAndSend(AgentBridgeCodec.encodeEnvelope(received.message, negotiation), caller)
+                    null
+                } else {
+                    requireCurrent(); caller.ensureActive()
+                    received
+                }
+            }
+        } catch (failure: Throwable) {
+            wireAbandoned = true
+            runCatching { channel.close() }
+            caller.ensureActive()
+            throw failure
+        }
+    }
+
+    /** Child of the actual caller Job, armed before native I/O. Unconfined resumption performs
+     * only local abandonment/socket close on cancellation, even while its parent's thread blocks.
+     * It never does SDK/issuer/UI work and is canceled/disposed on every normal or failing exit. */
+    private fun <T> withTransportCancellation(caller: Job, channel: DirectSecureChannel, operation: () -> T): T {
+        caller.ensureActive()
+        val finished = AtomicBoolean(false)
+        val cancellation = CoroutineScope(caller + Dispatchers.Unconfined).launch(start = CoroutineStart.UNDISPATCHED) {
+            try { awaitCancellation() }
+            finally {
+                if (!finished.get()) {
+                    wireAbandoned = true
+                    runCatching { channel.close() }
+                }
+            }
+        }
+        try { caller.ensureActive(); return operation() }
+        finally { finished.set(true); cancellation.cancel() }
     }
 
     /** Native signed-record queue, never host display text. Listing creates no decision. */

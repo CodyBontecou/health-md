@@ -2,6 +2,7 @@ package com.healthmd.direct.protocol
 
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.ByteBuffer
@@ -114,9 +115,12 @@ class AgentBridgeSecureTransportTest {
         assertTrue("Expected native transport rejection", failed)
     }
     private class WirePair : AutoCloseable {
-        private val listener = ServerSocket(0)
-        val packet = DirectPacketConnection.connect("127.0.0.1", listener.localPort, 5_000)
-        val server: Socket = listener.accept().apply { soTimeout = 5_000 }
+        private val listener = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).apply { soTimeout = 5_000 }
+        val packet = try {
+            DirectPacketConnection.connect(requireNotNull(listener.inetAddress.hostAddress), listener.localPort, 5_000)
+        } catch (failure: Throwable) { listener.close(); throw failure }
+        val server: Socket = try { listener.accept().apply { soTimeout = 5_000 } }
+            catch (failure: Throwable) { packet.close(); listener.close(); throw failure }
         private val key = ByteArray(32) { 0x51 }
         val channel = DirectSecureChannel(packet, key, "00000000-0000-4000-8000-000000000002", "Synthetic host")
         private val input = DataInputStream(server.getInputStream())

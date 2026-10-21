@@ -280,18 +280,75 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), next)
     }
 
-    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil) throws -> AgentBridgeNativePlanningSession {
+    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil, responseVersions: [Int] = [1, 3, 4]) throws -> AgentBridgeNativePlanningSession {
         let profiles = existingProfiles ?? ExportProfileStore(userDefaults: rig.reader.defaults)
         Self.retainedNativeConfigurationObjects.append(profiles)
         let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles) {
             try lifecycle.currentFacts()
         }
         return try AgentBridgeNativePlanningSession(peer: rig.peer, lifecycle: lifecycle, store: rig.store,
-            configuration: reader, responseChannel: responseChannel, clock: rig.clock, newPlanID: { try id(6) })
+            configuration: reader, responseChannel: responseChannel,
+            responseNegotiation: AgentBridgeNegotiation(localVersions: responseVersions, remoteVersions: [1, 3, 4], deployedBaseVersion: 1),
+            clock: rig.clock, newPlanID: { try id(6) })
     }
 
     private func nativeDiscoveryBytes(_ rig: Rig) throws -> Data {
         try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer))))
+    }
+
+    func testNativeReceiveRoutesDiscoveryAndPreservesBaseAndBinaryFrames() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let key = SymmetricKey(data: Data(repeating: 7, count: 32)), binary = Data("HMDDIRCTsynthetic".utf8)
+        let wire = NativePlanningResponsePackets(inbound: [
+            try nativeResponsePacket(JSONEncoder().encode(DirectMessage.ping), sequence: 0, key: key),
+            try nativeResponsePacket(nativeDiscoveryBytes(rig), sequence: 1, key: key),
+            try nativeResponsePacket(binary, sequence: 2, key: key),
+        ])
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        defer { channel.cancel() }
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let before = try rig.store.snapshot().generation
+        rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
+        let base = try await planner.receiveAndHandleNext()
+        XCTAssertEqual(base, .base(.ping))
+        let handled = try await planner.receiveAndHandleNext()
+        XCTAssertNil(handled)
+        let frame = try await planner.receiveAndHandleNext()
+        XCTAssertEqual(frame, .binaryTransferFrame(binary))
+        XCTAssertEqual(wire.receiveCount, 3); XCTAssertEqual(wire.packets.count, 1)
+        guard case .encrypted(let response) = try XCTUnwrap(wire.packets.first) else { return XCTFail("Expected owned encrypted response") }
+        let plaintext = try ManualIPSyncSecurity.open(response, using: key)
+        guard case .discovery(let discovery) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: Data(plaintext.dropFirst(16))).payload else { return XCTFail("Expected discovery") }
+        XCTAssertEqual(discovery.peer, rig.peer.peer)
+        XCTAssertEqual(try rig.store.snapshot().generation, before)
+        XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+        XCTAssertEqual(rig.reader.defaults.reads, 0); XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testNativeReceiveRevokedOwnerCannotReturnBaseOrRevive() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let key = SymmetricKey(data: Data(repeating: 7, count: 32))
+        let wire = NativePlanningResponsePackets(inbound: [try nativeResponsePacket(JSONEncoder().encode(DirectMessage.ping), sequence: 0, key: key)],
+            beforeReceive: { await MainActor.run { lifecycle.stop() } })
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        for _ in 0..<2 {
+            do { _ = try await planner.receiveAndHandleNext(); XCTFail("Stopped owner cannot return or revive") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+        }
+        XCTAssertEqual(wire.receiveCount, 1); XCTAssertTrue(wire.packets.isEmpty)
+        XCTAssertTrue(channel.isLocallyTerminal)
+    }
+
+    private func nativeResponsePacket(_ bytes: Data, sequence: UInt64, key: SymmetricKey) throws -> ManualIPSyncPacket {
+        var plaintext = Data("HMDSC001".utf8), number = sequence.bigEndian
+        withUnsafeBytes(of: &number) { plaintext.append(contentsOf: $0) }
+        plaintext.append(bytes)
+        return .encrypted(try ManualIPSyncSecurity.seal(plaintext, using: key))
     }
 
     func testNativeResponseUsesPinnedGuardedChannelWithoutIssuingAuthority() async throws {
@@ -305,7 +362,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let before = try rig.store.snapshot().generation
         rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
         let negotiation = try AgentBridgeNegotiation(localVersions: [1, 4], remoteVersions: [1, 4], deployedBaseVersion: 1)
-        try await planner.handleAndSend(nativeDiscoveryBytes(rig), negotiation: negotiation)
+        try await planner.handleAndSend(nativeDiscoveryBytes(rig))
         guard case .encrypted(let frame) = try XCTUnwrap(wire.packets.first) else { return XCTFail("Expected encrypted response") }
         let plaintext = try ManualIPSyncSecurity.open(frame, using: key)
         guard case .discovery(let response) = try negotiation.decode(Data(plaintext.dropFirst(16))).payload else { return XCTFail("Expected owned discovery") }
@@ -322,11 +379,13 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let wire = NativePlanningResponsePackets()
         let channel = DirectSecureChannel(packetConnection: wire, sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
         defer { channel.cancel() }
-        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel, responseVersions: [1, 3])
         let checks = rig.session.checks
-        let negotiation = try AgentBridgeNegotiation(localVersions: [1], remoteVersions: [1], deployedBaseVersion: 1)
-        do { try await planner.handleAndSend(Data("invalid".utf8), negotiation: negotiation); XCTFail("Expected no extension") }
+        do { try await planner.handleAndSend(Data("invalid".utf8)); XCTFail("Expected no extension") }
         catch { XCTAssertEqual(error as? AgentBridgeValidationError, .unsupportedCapability) }
+        do { _ = try await planner.receiveAndHandleNext(); XCTFail("Remote4 cannot override the owner's local hello") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .unsupportedCapability) }
+        XCTAssertEqual(wire.receiveCount, 0)
         XCTAssertEqual(rig.session.checks, checks)
         XCTAssertTrue(wire.packets.isEmpty); XCTAssertFalse(channel.isLocallyTerminal)
     }
@@ -345,13 +404,12 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             let wire = NativePlanningResponsePackets(beforeWrite: { if !afterWrite { try await change() } }, afterWrite: { if afterWrite { try await change() } })
             let channel = DirectSecureChannel(packetConnection: wire, sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
             let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
-            let negotiation = try AgentBridgeNegotiation(localVersions: [1, 4], remoteVersions: [1, 4], deployedBaseVersion: 1)
-            do { try await planner.handleAndSend(nativeDiscoveryBytes(rig), negotiation: negotiation); XCTFail("Expected original publication fence") }
+                do { try await planner.handleAndSend(nativeDiscoveryBytes(rig)); XCTFail("Expected original publication fence") }
             catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
             XCTAssertEqual(try lifecycle.currentPublication().revision, original.revision + 1)
             XCTAssertEqual(wire.packets.count, afterWrite ? 1 : 0)
             XCTAssertTrue(channel.isLocallyTerminal)
-            do { try await planner.handleAndSend(nativeDiscoveryBytes(rig), negotiation: negotiation); XCTFail("Cannot revive abandoned response owner") }
+            do { try await planner.handleAndSend(nativeDiscoveryBytes(rig)); XCTFail("Cannot revive abandoned response owner") }
             catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
         }
     }
@@ -366,13 +424,12 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             let channel = DirectSecureChannel(packetConnection: wire, sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
             defer { channel.cancel() }
             let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
-            let negotiation = try AgentBridgeNegotiation(localVersions: [1, 4], remoteVersions: [1, 4], deployedBaseVersion: 1)
-            let before = rig.session.checks
+                let before = rig.session.checks
             if cancel {
                 let target = before + finalCheckCount
                 rig.session.observeChecks { check in if check == target { withUnsafeCurrentTask { $0?.cancel() } } }
             }
-            let task = Task { try await planner.handleAndSend(nativeDiscoveryBytes(rig), negotiation: negotiation) }
+            let task = Task { try await planner.handleAndSend(nativeDiscoveryBytes(rig)) }
             do {
                 try await task.value
                 if cancel { XCTFail("Cancellation during final validator cannot return success") }
@@ -393,8 +450,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let wire = NativePlanningResponsePackets(beforeWrite: { await MainActor.run { rig.clock.advance(seconds: 600) } })
         let channel = DirectSecureChannel(packetConnection: wire, sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
         let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
-        let negotiation = try AgentBridgeNegotiation(localVersions: [1, 4], remoteVersions: [1, 4], deployedBaseVersion: 1)
-        do { try await planner.handleAndSend(nativeDiscoveryBytes(rig), negotiation: negotiation); XCTFail("Expected expiry after planning") }
+        do { try await planner.handleAndSend(nativeDiscoveryBytes(rig)); XCTFail("Expected expiry after planning") }
         catch { XCTAssertEqual(error as? AgentBridgeValidationError, .planExpired) }
         XCTAssertTrue(wire.packets.isEmpty); XCTAssertTrue(channel.isLocallyTerminal)
     }
@@ -2479,11 +2535,16 @@ private final class Rig {
 nonisolated private final class NativePlanningResponsePackets: DirectGuardedPacketTransport, @unchecked Sendable {
     private let lock = NSLock()
     private var stored: [ManualIPSyncPacket] = []
+    private var inbound: [ManualIPSyncPacket]
+    private var receives = 0
+    private let beforeReceive: @concurrent @Sendable () async throws -> Void
     private let beforeWrite: @concurrent @Sendable () async throws -> Void
     private let afterWrite: @concurrent @Sendable () async throws -> Void
+    var receiveCount: Int { lock.withLock { receives } }
     var packets: [ManualIPSyncPacket] { lock.withLock { stored } }
-    init(beforeWrite: @escaping @concurrent @Sendable () async throws -> Void = {}, afterWrite: @escaping @concurrent @Sendable () async throws -> Void = {}) {
-        self.beforeWrite = beforeWrite; self.afterWrite = afterWrite
+    init(beforeWrite: @escaping @concurrent @Sendable () async throws -> Void = {}, afterWrite: @escaping @concurrent @Sendable () async throws -> Void = {},
+         inbound: [ManualIPSyncPacket] = [], beforeReceive: @escaping @concurrent @Sendable () async throws -> Void = {}) {
+        self.beforeWrite = beforeWrite; self.afterWrite = afterWrite; self.inbound = inbound; self.beforeReceive = beforeReceive
     }
     @concurrent func sendGuarded(_ packet: ManualIPSyncPacket, authorize: @escaping @concurrent @Sendable () async throws -> Void) async throws {
         try await beforeWrite()
@@ -2493,6 +2554,13 @@ nonisolated private final class NativePlanningResponsePackets: DirectGuardedPack
         try await authorize()
     }
     @concurrent func send(_ packet: ManualIPSyncPacket) async throws { throw AgentBridgeValidationError.unsupportedCapability }
-    @concurrent func receive() async throws -> ManualIPSyncPacket { throw AgentBridgeValidationError.unsupportedCapability }
+    @concurrent func receive() async throws -> ManualIPSyncPacket {
+        try await beforeReceive()
+        return try lock.withLock {
+            guard !inbound.isEmpty else { throw DirectChannelError.connectionClosed }
+            receives += 1
+            return inbound.removeFirst()
+        }
+    }
     func cancel() {}
 }

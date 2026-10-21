@@ -184,7 +184,8 @@ class DirectCliCoordinator @Inject constructor(
     }
     private inner class NativeSessionOwner(override val channel: DirectSecureChannel,
         override val sourceInstallationId: String, override val hostInstallationId: String,
-        private val serving: ServingScope) : AgentBridgeExportNativeSessionOwner {
+        private val serving: ServingScope,
+        private val bridgeNegotiation: com.healthmd.direct.protocol.AgentBridgeNegotiation) : AgentBridgeExportNativeSessionOwner {
         @Volatile private var revoked = false
         val catalogLifecycle = AgentBridgeNativeCatalogLifecycle()
         private val catalogRefreshLock = Any()
@@ -216,7 +217,7 @@ class DirectCliCoordinator @Inject constructor(
             nativePlanner?.let { it.requireCurrent(); return it }
             catalogLifecycle.currentPublication() // No issuer open for an unpublished/pending owner.
             val result = AgentBridgeNativePlanningSession(peer(context), catalogLifecycle,
-                AgentBridgeExportAuthorityStore.forNoBackup(context), configuration(), responseChannel = channel)
+                AgentBridgeExportAuthorityStore.forNoBackup(context), configuration(), responseChannel = channel, responseNegotiation = bridgeNegotiation)
             requireCurrent()
             result.requireCurrent()
             nativePlanner = result
@@ -632,7 +633,10 @@ class DirectCliCoordinator @Inject constructor(
         // Mint only after the existing encrypted base2 role/identity/transfer admission succeeds,
         // bound to this exact channel and the original serving coroutine/lease, never UI labels.
         activeServingScope?.let { serving ->
-            val owner = NativeSessionOwner(channel, sourceInstallationId, listener.installationId, serving)
+            val negotiation = com.healthmd.direct.protocol.AgentBridgeNegotiation.negotiate(
+                com.healthmd.direct.protocol.AgentBridgePlatform.ANDROID,
+                com.healthmd.direct.protocol.ANDROID_NATIVE_APPLICATION_VERSIONS, listener.protocolVersions)
+            val owner = NativeSessionOwner(channel, sourceInstallationId, listener.installationId, serving, negotiation)
             replaceNativeOwner(owner)
         }
         return transferNegotiation

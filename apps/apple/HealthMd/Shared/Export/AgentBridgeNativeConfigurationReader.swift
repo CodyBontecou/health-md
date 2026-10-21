@@ -96,6 +96,7 @@ final class AgentBridgeNativePlanningSession {
     private let service: AgentBridgeExportPlanningService
     private let store: AgentBridgeExportAuthorityStore
     private let responseChannel: DirectSecureChannel?
+    private let responseNegotiation: AgentBridgeNegotiation?
     private var wireAbandoned = false
 
     /// The issuer transaction and lifecycle must agree on the exact signed publication, including
@@ -124,11 +125,12 @@ final class AgentBridgeNativePlanningSession {
     init(peer: AgentBridgeExportAuthenticatedPeer, lifecycle: AgentBridgeNativeCatalogLifecycle,
          store: AgentBridgeExportAuthorityStore, configuration: any AgentBridgeExportPlanningConfigurationReading,
          responseChannel: DirectSecureChannel? = nil,
+         responseNegotiation: AgentBridgeNegotiation? = nil,
          clock: any AgentBridgeExportClock = AgentBridgeExportSystemClock(),
          newPlanID: @escaping () throws -> AgentBridgeUUID = { try AgentBridgeUUID(UUID().uuidString.lowercased()) }) throws {
         try peer.requireCurrent()
         let publication = try lifecycle.currentPublication()
-        self.peer = peer; self.lifecycle = lifecycle; self.store = store; self.responseChannel = responseChannel
+        self.peer = peer; self.lifecycle = lifecycle; self.store = store; self.responseChannel = responseChannel; self.responseNegotiation = responseNegotiation
         service = AgentBridgeExportPlanningService(store: store,
             configuration: OwnerBoundConfiguration(peer: peer, lifecycle: lifecycle, base: configuration),
             clock: clock, newPlanID: newPlanID)
@@ -152,8 +154,8 @@ final class AgentBridgeNativePlanningSession {
     /// Native response composition only; does not advertise or install the extension route.
     /// The owner supplies its channel ONCE at construction, never from a request/call argument.
     /// Keep the publication admitted before planning across every bounded native write and return.
-    func handleAndSend(_ bytes: Data, negotiation: AgentBridgeNegotiation) async throws {
-        guard negotiation.baseVersion == 1, negotiation.agentBridgeV4, let responseChannel else {
+    func handleAndSend(_ bytes: Data) async throws {
+        guard let negotiation = responseNegotiation, negotiation.baseVersion == 1, negotiation.agentBridgeV4, let responseChannel else {
             throw AgentBridgeValidationError.unsupportedCapability
         }
         do {
@@ -175,6 +177,32 @@ final class AgentBridgeNativePlanningSession {
             try service.requireCurrentForTransmission(response, peer: peer)
             guard try lifecycle.currentPublication() == publication else { throw AgentBridgeValidationError.bindingChanged }
             try Task.checkCancellation()
+        } catch {
+            wireAbandoned = true
+            responseChannel.cancel()
+            throw error
+        }
+    }
+
+    /// One native receive iteration. Bridge requests use this SAME original planner; deployed
+    /// base messages and binary frames are returned intact to the existing native controller.
+    /// The controller must not run another channel reader concurrently. This adds no advertisement.
+    func receiveAndHandleNext() async throws -> AgentBridgeSecurePayload? {
+        guard let negotiation = responseNegotiation, negotiation.baseVersion == 1, negotiation.agentBridgeV4,
+              let responseChannel else { throw AgentBridgeValidationError.unsupportedCapability }
+        do {
+            let received = try await responseChannel.receiveAllowingAgentBridge(negotiation: negotiation) { [self] in
+                try Task.checkCancellation()
+                try await MainActor.run { _ = try requireCurrent() }
+                try Task.checkCancellation()
+            }
+            if case .agent(let request) = received {
+                try await handleAndSend(negotiation.encode(request))
+                return nil
+            }
+            _ = try requireCurrent()
+            try Task.checkCancellation()
+            return received
         } catch {
             wireAbandoned = true
             responseChannel.cancel()

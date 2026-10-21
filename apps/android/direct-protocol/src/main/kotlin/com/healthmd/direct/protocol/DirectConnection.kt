@@ -179,7 +179,7 @@ class DirectSecureChannel internal constructor(
 
     fun sendNegotiationHello(installationId: String) {
         val hello = NegotiationHello(
-            protocolVersions = listOf(ANDROID_APPLICATION_PROTOCOL_VERSION),
+            protocolVersions = ANDROID_NATIVE_APPLICATION_VERSIONS,
             platform = "android",
             installationId = installationId.lowercase(),
             supportedRawProfiles = emptyList(),
