@@ -160,17 +160,12 @@ fn signed_restored_journal(request: &ExecuteRequest, platform: PeerPlatform) -> 
     canonical_json(&serde_json::json!({"journal":journal,"mac":mac})).unwrap()
 }
 
-// Keep the independently constructed synthetic native transcript visible for review.
-#[allow(clippy::too_many_lines)]
-async fn output_peer(
+async fn output_channel(
     port: u16,
     saved: FakeMobileTrust,
-    peer: v4::Peer,
+    peer: &v4::Peer,
     platform: PeerPlatform,
-    case: OutputCase,
-    mut release: oneshot::Receiver<()>,
-    admission_gate: Option<(oneshot::Sender<()>, oneshot::Receiver<()>)>,
-) {
+) -> (SecureChannel, Negotiation) {
     let (mut channel, trust) =
         connect_fake_mobile(port, 3, &saved.display_name, None, Some(&saved)).await;
     let local = receive_cli_hello(&mut channel).await;
@@ -208,6 +203,21 @@ async fn output_peer(
         true,
     )
     .unwrap();
+    (channel, negotiation)
+}
+
+// Keep the independently constructed synthetic native transcript visible for review.
+#[allow(clippy::too_many_lines)]
+async fn output_peer(
+    port: u16,
+    saved: FakeMobileTrust,
+    peer: v4::Peer,
+    platform: PeerPlatform,
+    case: OutputCase,
+    mut release: oneshot::Receiver<()>,
+    admission_gate: Option<(oneshot::Sender<()>, oneshot::Receiver<()>)>,
+) {
+    let (mut channel, negotiation) = output_channel(port, saved, &peer, platform).await;
     let mut native = NativeFake::new(peer.clone(), now());
     loop {
         let received = tokio::select! {
@@ -351,9 +361,8 @@ async fn output_peer(
 async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
     let (_temporary, client, saved, peer) = stored_pair(platform).await;
     let (store, output) = enroll(&client.layout.root, &peer, &now()).await;
-    let probe = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let port = probe.local_addr().unwrap().port();
-    drop(probe);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
     let (release, wait) = oneshot::channel();
     let (admission_ready, ready) = oneshot::channel();
     let (resume, await_resume) = oneshot::channel();
@@ -368,15 +377,15 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
         gate,
     ));
     let adversarial_trust = AdversarialOutputTrust::new(&client);
-    let bridge = client
-        .connect_bridge(
-            Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
-            port,
-            Duration::from_secs(10),
-            CancellationToken::new(),
-        )
-        .await
-        .unwrap();
+    let bridge = connect_bound_bridge(
+        &client,
+        Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
+        &listener,
+        Duration::from_secs(10),
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap();
     let mut bridge = bridge.with_test_trust(&adversarial_trust);
     let planner = HostPlanner::new(store.clone());
     let clock = AdvancingClock::new();
@@ -1165,3 +1174,6 @@ async fn authenticated_output_admission_rejects_retained_transfer_before_execute
         Box::pin(check_output_case(platform, OutputCase::TransferBeforeSend)).await;
     }
 }
+
+#[path = "agent_resume_tests.rs"]
+mod resume_tests;

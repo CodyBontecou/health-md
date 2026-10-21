@@ -1,6 +1,7 @@
 //! Actual authenticated encrypted bridge send/receive, with synthetic native peers only.
 #![cfg(unix)] // Private host issuer storage intentionally fails closed on Windows.
 use super::*;
+use crate::agent_bridge::BridgeSession;
 use crate::agent_planning::{HostPlanner, PlanningSource};
 use crate::agent_test_support as support;
 use healthmd_protocol::v4::{self, *};
@@ -51,6 +52,32 @@ async fn stored_pair(
     (temporary, client, trust, peer)
 }
 
+// Keep the kernel listener bound from port selection through authentication. A probe
+// that is dropped before connect_bridge can hand the same port to a concurrent test.
+async fn connect_bound_bridge<'a>(
+    client: &'a DirectClient<MemoryCredentials>,
+    device: Option<Uuid>,
+    listener: &TcpListener,
+    timeout: Duration,
+    cancellation: CancellationToken,
+) -> Result<BridgeSession<'a>, ClientError> {
+    let peer = client.planning_peer(device).await?;
+    let selected = Uuid::parse_str(&peer.source_installation_id.0)
+        .map_err(|_| ClientError::InvalidTrustState)?;
+    let trust = client.load_trust().await?;
+    BridgeSession::accept(
+        listener,
+        client.identity.installation_id,
+        selected,
+        trust,
+        timeout,
+        cancellation,
+        client,
+        device,
+    )
+    .await
+}
+
 // One coherent authenticated public-seam flow with separate decision and revocation fences.
 #[allow(clippy::too_many_lines)]
 #[tokio::test]
@@ -64,9 +91,8 @@ async fn bridge_real_store_and_encrypted_fake_sources_plan_then_relay_exact_deci
         let (_temporary, client, saved, peer) = stored_pair(platform).await;
         let (store, output) = enroll(&client.layout.root, &peer, &now()).await;
         let before = client.load_trust().await.unwrap();
-        let probe = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let port = probe.local_addr().unwrap().port();
-        drop(probe);
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
         let (consent_sender, consent_receiver) = oneshot::channel::<()>();
         let (approval_ready, response_ready) = oneshot::channel::<()>();
         let (response_release, approval_release) = oneshot::channel::<()>();
@@ -193,15 +219,15 @@ async fn bridge_real_store_and_encrypted_fake_sources_plan_then_relay_exact_deci
                     .unwrap();
             }
         });
-        let mut bridge = client
-            .connect_bridge(
-                Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
-                port,
-                Duration::from_secs(10),
-                CancellationToken::new(),
-            )
-            .await
-            .unwrap();
+        let mut bridge = connect_bound_bridge(
+            &client,
+            Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
+            &listener,
+            Duration::from_secs(10),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
         assert_eq!(
             bridge.negotiation().base,
             if platform == PeerPlatform::Ios { 1 } else { 2 }
@@ -296,9 +322,8 @@ async fn bridge_real_store_and_encrypted_fake_sources_plan_then_relay_exact_deci
 async fn revocation_during_actual_encrypted_plan_response_prevents_persistence_and_return() {
     let (_temporary, client, saved, peer) = stored_pair(PeerPlatform::Ios).await;
     let (store, output) = enroll(&client.layout.root, &peer, &now()).await;
-    let probe = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let port = probe.local_addr().unwrap().port();
-    drop(probe);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
     let (ready_sender, ready_receiver) = oneshot::channel::<()>();
     let (release_sender, release_receiver) = oneshot::channel::<()>();
     let source_peer = peer.clone();
@@ -353,15 +378,15 @@ async fn revocation_during_actual_encrypted_plan_response_prevents_persistence_a
             .await
             .unwrap();
     });
-    let mut bridge = client
-        .connect_bridge(
-            Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
-            port,
-            Duration::from_secs(10),
-            CancellationToken::new(),
-        )
-        .await
-        .unwrap();
+    let mut bridge = connect_bound_bridge(
+        &client,
+        Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
+        &listener,
+        Duration::from_secs(10),
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap();
     let planner = HostPlanner::new(store.clone());
     let clock = FixedClock(now());
     let (result, ()) = tokio::join!(planner.plan(&mut bridge, input(&peer), &clock), async {
@@ -440,9 +465,8 @@ async fn delayed_publication_key_rechecks_original_backing_trust_for_plan_and_ap
             key.clone(),
         )
         .await;
-        let probe = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let port = probe.local_addr().unwrap().port();
-        drop(probe);
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
         let (decision_sender, decision_receiver) = oneshot::channel();
         let source_peer = peer.clone();
         let source_key = key.clone();
@@ -543,15 +567,15 @@ async fn delayed_publication_key_rechecks_original_backing_trust_for_plan_and_ap
                     .unwrap();
             }
         });
-        let mut bridge = client
-            .connect_bridge(
-                Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
-                port,
-                Duration::from_secs(10),
-                CancellationToken::new(),
-            )
-            .await
-            .unwrap();
+        let mut bridge = connect_bound_bridge(
+            &client,
+            Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
+            &listener,
+            Duration::from_secs(10),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
         let planner = HostPlanner::new(store.clone());
         let clock = FixedClock(now());
         let request = if approval_phase {
@@ -632,9 +656,8 @@ async fn old_peers_and_android_without_base_never_receive_a_v4_probe() {
     ] {
         let (_temporary, client, saved, peer) = stored_pair(platform).await;
         let before = client.load_trust().await.unwrap();
-        let probe = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let port = probe.local_addr().unwrap().port();
-        drop(probe);
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
         let source = tokio::spawn(async move {
             let (mut channel, trust) =
                 connect_fake_mobile(port, 3, &saved.display_name, None, Some(&saved)).await;
@@ -654,14 +677,14 @@ async fn old_peers_and_android_without_base_never_receive_a_v4_probe() {
                     .is_err()
             );
         });
-        let result = client
-            .connect_bridge(
-                Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
-                port,
-                Duration::from_secs(10),
-                CancellationToken::new(),
-            )
-            .await;
+        let result = connect_bound_bridge(
+            &client,
+            Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
+            &listener,
+            Duration::from_secs(10),
+            CancellationToken::new(),
+        )
+        .await;
         match result {
             Err(ClientError::Agent(Error::UnsupportedCapability)) => (),
             Err(error) => panic!("unexpected old-peer outcome: {error}"),

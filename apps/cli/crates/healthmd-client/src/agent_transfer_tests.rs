@@ -133,6 +133,18 @@ pub(super) async fn send_transfer(
     platform: PeerPlatform,
     case: TransferCase,
 ) {
+    send_transfer_from(channel, request, platform, case, 0).await;
+}
+
+// The resume transcript repeats original metadata and sends only partitions beyond the prefix.
+#[allow(clippy::too_many_lines)]
+pub(super) async fn send_transfer_from(
+    channel: &mut SecureChannel,
+    request: &ExecuteRequest,
+    platform: PeerPlatform,
+    case: TransferCase,
+    prefix: u64,
+) {
     let binding = binding(request, platform, case);
     let payload = payload(case);
     let mut session = v2::TransferSession {
@@ -249,6 +261,22 @@ pub(super) async fn send_transfer(
             }
             if case == TransferCase::BadOffset {
                 partition.artifact_offset = 1;
+            }
+            if index < prefix {
+                frontier = frontier
+                    .appending(&TransferFrontierPartition {
+                        partition_index: i64::try_from(index).unwrap(),
+                        transfer_id: ControlUuid(partition.transfer_id.to_string()),
+                        artifact_id: item.artifact_id.clone(),
+                        artifact_offset: i64::try_from(partition.artifact_offset).unwrap(),
+                        byte_count: i64::try_from(partition.byte_count).unwrap(),
+                        chunk_count: i64::try_from(partition.chunk_count).unwrap(),
+                        sha256: Digest(partition.sha256.clone()),
+                    })
+                    .unwrap();
+                previous = Some(digest);
+                index += 1;
+                continue;
             }
             let apple_partition = a::TransferPartition {
                 index: i64::try_from(index).unwrap(),

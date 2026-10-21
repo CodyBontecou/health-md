@@ -230,6 +230,36 @@ pub(crate) struct OutputTransaction {
     stage_slots: AtomicUsize,
 }
 impl OutputTransaction {
+    /// Existing job only: recovery must neither create a lease file nor enroll a new job.
+    pub async fn open_retained(
+        store: &HostAuthorityStore,
+        job: &ControlUuid,
+    ) -> Result<Self, ClientError> {
+        job.validate_shape()?;
+        let key = key_bytes(&store.protected_key.load_existing(&store.host).await?)?;
+        let dir = store.directory()?;
+        let lock = private::open_private(&dir, OUTPUT_LOCK, true, false)?;
+        lock.try_lock_exclusive()
+            .map_err(|_| ClientError::AgentStoreBusy)?;
+        let entries = scan_output_usage(&dir)?.0;
+        let (journal, bytes) = read_retained_output(&dir, &store.host, job, &key)?;
+        let transaction = Self {
+            store: store.clone(),
+            dir,
+            lock,
+            key,
+            name: format!("output-{}.json", job.0),
+            journal,
+            persisted: Some(bytes),
+            is_new: false,
+            stage_slots: AtomicUsize::new(8191 - usize::min(entries, 8191)),
+        };
+        transaction.require_current()?;
+        Ok(transaction)
+    }
+    pub fn binding(&self) -> &NativeBinding {
+        &self.journal.binding
+    }
     pub async fn open<F, Fut>(
         store: &HostAuthorityStore,
         binding: &NativeBinding,

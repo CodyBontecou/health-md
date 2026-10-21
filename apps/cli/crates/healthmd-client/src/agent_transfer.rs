@@ -38,6 +38,40 @@ struct TransferJournal {
     frontier_sha256: Digest,
     final_ack_may_have_sent: bool,
 }
+pub(super) struct ResumedTransfer {
+    transaction: OutputTransaction,
+    journal: TransferJournal,
+    checkpoint: Vec<u8>,
+}
+impl ResumedTransfer {
+    async fn open(store: &HostAuthorityStore, job: &ControlUuid) -> Result<Self, ClientError> {
+        let transaction = OutputTransaction::open_retained(store, job).await?;
+        let (journal, checkpoint) = transaction.read_transfer::<TransferJournal>()?;
+        validate_retained_prefix(transaction.binding(), &journal)?;
+        TransferGuard::new(&transaction, transaction.binding(), &checkpoint)?.verify()?;
+        Ok(Self {
+            transaction,
+            journal,
+            checkpoint,
+        })
+    }
+    fn request(&self) -> Result<v4::ResumeRequest, ClientError> {
+        let binding = self.transaction.binding();
+        Ok(v4::ResumeRequest {
+            schema: v4::ResumeRequestSchema::HealthmdAgentResumeRequest,
+            schema_version: 1,
+            job_id: binding.request.job_id.clone(),
+            request_sha256: binding.manifest.request_sha256.clone(),
+            manifest_sha256: document_digest(&binding.manifest)?,
+            peer: binding.request.plan.intent.peer.clone(),
+            binding: approval_binding(&binding.request.plan),
+            destination: binding.request.plan.intent.destination.clone(),
+            committed_partition_count: self.journal.partitions.len() as u64,
+            frontier_sha256: self.journal.frontier_sha256.clone(),
+        })
+    }
+}
+
 pub(super) struct TransferGuard {
     dir: cap_std::fs::Dir,
     name: String,
@@ -103,7 +137,162 @@ fn expected_mode(mode: &OutputSettingsWriteMode) -> v2::FileWriteMode {
         }
     }
 }
+impl<'trust> BridgeSession<'trust> {
+    /// Reopen the original immutable host job on this authenticated channel. No caller
+    /// request, receipt or frontier replaces retained facts; no fresh Execute is sent.
+    /// # Errors
+    /// Missing/changed private evidence, current authority, source metadata or prefix rejects.
+    pub async fn resume_execution<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        job: ControlUuid,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
+        let cancellation = self.cancellation.clone();
+        let timeout = self.timeout;
+        tokio::select! {
+            biased;
+            () = cancellation.cancelled() => Err(ClientError::WaitCancelled),
+            result = tokio::time::timeout(timeout, Box::pin(self.resume_execution_inner(store, job, clock))) => {
+                result.map_err(|_| ClientError::TimedOut)?
+            }
+        }
+    }
+    async fn resume_execution_inner<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        job: ControlUuid,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
+        if self.send_interrupted {
+            return Err(Error::BindingChanged.into());
+        }
+        self.send_interrupted = true;
+        let retained = ResumedTransfer::open(store, &job).await?;
+        let binding = retained.transaction.binding().clone();
+        if self.peer != binding.request.plan.intent.peer {
+            return Err(Error::BindingChanged.into());
+        }
+        let host = store
+            .authorization(
+                &binding.request.plan.intent.peer,
+                &binding.request.plan.intent.destination.binding_id,
+                Some(&binding.request.plan.authority_references.host),
+                clock,
+            )
+            .await?;
+        let resume = retained.request()?;
+        let guard = TransferGuard::new(&retained.transaction, &binding, &retained.checkpoint)?;
+        let trust = self.trust_fence;
+        let expected = &self.expected_trust;
+        let selected = self.requested_device;
+        let cancellation = &self.cancellation;
+        let current = || async {
+            store
+                .require_output_current(
+                    &binding.request,
+                    Some(&binding.accepted.expires_at),
+                    clock,
+                    || async {
+                        if cancellation.is_cancelled() {
+                            return Err(ClientError::WaitCancelled);
+                        }
+                        trust.require_current(selected, expected).await?;
+                        if cancellation.is_cancelled() {
+                            return Err(ClientError::WaitCancelled);
+                        }
+                        Ok(())
+                    },
+                )
+                .await?;
+            retained.transaction.require_current()?;
+            guard.verify()?;
+            require_resume_lifetime(&binding, &host.delegation.expires_at, clock, cancellation)
+        };
+        current().await?;
+        self.channel
+            .send_v4_guarded(
+                &Envelope::new(Message::ResumeRequest(Box::new(resume))),
+                self.negotiation,
+                current,
+            )
+            .await?;
+        let received = self.channel.receive_v4(self.negotiation).await?.message;
+        current().await?;
+        let Message::ExecutionReceipt(accepted) =
+            execution_response(received, &binding.request.request_id)?
+        else {
+            return Err(ClientError::UnexpectedMessage);
+        };
+        if *accepted != binding.accepted {
+            return Err(Error::BindingChanged.into());
+        }
+        let received = self.channel.receive_v4(self.negotiation).await?.message;
+        current().await?;
+        let Message::ArtifactManifest(manifest) =
+            execution_response(received, &binding.request.request_id)?
+        else {
+            return Err(ClientError::UnexpectedMessage);
+        };
+        if *manifest != binding.manifest {
+            return Err(Error::BindingChanged.into());
+        }
+        self.send_interrupted = false;
+        let execution = HostExecution {
+            bridge: self,
+            store,
+            clock,
+            binding,
+            transfer_started: false,
+            resumed: Some(retained),
+            received: None,
+            confirmation_started: false,
+            transfer_guard: Some(guard),
+            final_output: None,
+        };
+        execution.require_current().await?;
+        // The last native trust callback may invalidate any retained evidence. No await
+        // follows this local tail before ownership is returned to the caller.
+        execution.verify_retained_admission()?;
+        require_resume_lifetime(
+            &execution.binding,
+            &host.delegation.expires_at,
+            clock,
+            &execution.bridge.cancellation,
+        )?;
+        Ok(execution)
+    }
+}
+
+fn require_resume_lifetime(
+    binding: &NativeBinding,
+    host_expiry: &v4::UtcTimestamp,
+    clock: &dyn PlanningClock,
+    cancellation: &tokio_util::sync::CancellationToken,
+) -> Result<(), ClientError> {
+    let now = clock.now();
+    now.validate_shape()?;
+    if cancellation.is_cancelled() {
+        return Err(ClientError::WaitCancelled);
+    }
+    if binding.accepted.expires_at <= now || *host_expiry <= now {
+        return Err(Error::ApprovalRequired.into());
+    }
+    Ok(())
+}
+
 impl HostExecution<'_, '_, '_> {
+    fn verify_retained_admission(&self) -> Result<(), ClientError> {
+        self.resumed
+            .as_ref()
+            .ok_or(Error::BindingChanged)?
+            .transaction
+            .require_current()?;
+        self.transfer_guard
+            .as_ref()
+            .ok_or(Error::BindingChanged)?
+            .verify()
+    }
     /// Receive the original source's base transfer, persist verified partitions before their
     /// acknowledgements, and durably commit every exact output before final acknowledgement.
     /// Dropping/failing this future makes this execution unusable; immutable Resume is separate.
@@ -129,42 +318,78 @@ impl HostExecution<'_, '_, '_> {
     // Keep the original-session state machine and durable-ACK ordering in one audited flow.
     #[allow(clippy::too_many_lines)]
     async fn receive_and_commit_inner(&mut self) -> Result<ReceivedArtifacts, ClientError> {
-        let mut transaction =
-            OutputTransaction::open(self.store, &self.binding, || self.require_current()).await?;
+        let retained = self.resumed.take();
+        let (mut transaction, restored) = if let Some(retained) = retained {
+            (
+                retained.transaction,
+                Some((retained.journal, retained.checkpoint)),
+            )
+        } else {
+            (
+                OutputTransaction::open(self.store, &self.binding, || self.require_current())
+                    .await?,
+                None,
+            )
+        };
         let Incoming::Session(session) = self.receive_base(&transaction).await? else {
             return Err(ClientError::UnexpectedMessage);
         };
         self.validate_session(&session)?;
         let session_id = ControlUuid(session.0.session_id.to_string());
         let manifest_digest = document_digest(&self.binding.manifest)?;
-        let mut frontier = TransferFrontier::new(
-            &self.binding.request.job_id,
-            &self.binding.manifest.request_sha256,
-            &manifest_digest,
-            &session_id,
-        )?;
-        let mut journal = TransferJournal {
-            schema: "healthmd.agent_host_transfer".into(),
-            schema_version: 1,
-            job_id: self.binding.request.job_id.clone(),
-            request_sha256: self.binding.manifest.request_sha256.clone(),
-            manifest_sha256: manifest_digest,
-            session: session.clone(),
-            partitions: vec![],
-            frontier_sha256: frontier.sha256().clone(),
-            final_ack_may_have_sent: false,
-        };
-        let mut checkpoint = transaction
-            .save_transfer(&journal, None, || self.require_current())
-            .await?;
+        let (mut journal, mut checkpoint, mut frontier) =
+            if let Some((journal, checkpoint)) = restored {
+                if journal.session != session {
+                    return Err(Error::BindingChanged.into());
+                }
+                let frontier = validate_retained_prefix(&self.binding, &journal)?;
+                (journal, checkpoint, frontier)
+            } else {
+                let frontier = TransferFrontier::new(
+                    &self.binding.request.job_id,
+                    &self.binding.manifest.request_sha256,
+                    &manifest_digest,
+                    &session_id,
+                )?;
+                let journal = TransferJournal {
+                    schema: "healthmd.agent_host_transfer".into(),
+                    schema_version: 1,
+                    job_id: self.binding.request.job_id.clone(),
+                    request_sha256: self.binding.manifest.request_sha256.clone(),
+                    manifest_sha256: manifest_digest,
+                    session: session.clone(),
+                    partitions: vec![],
+                    frontier_sha256: frontier.sha256().clone(),
+                    final_ack_may_have_sent: false,
+                };
+                let checkpoint = transaction
+                    .save_transfer(&journal, None, || self.require_current())
+                    .await?;
+                (journal, checkpoint, frontier)
+            };
         for index in 0..self.binding.manifest.artifacts.len() {
             let item = artifact(&self.binding, index)?.clone();
             self.validate_base_manifest(&transaction, &item).await?;
         }
         let mut receipts = vec![];
-        let mut total = 0_u64;
-        let mut previous = None;
-        let mut transfer_ids = std::collections::BTreeSet::new();
+        let mut total = journal.partitions.iter().try_fold(0_u64, |total, record| {
+            total
+                .checked_add(
+                    u64::try_from(record.partition.byte_count).map_err(private::unavailable)?,
+                )
+                .ok_or_else(|| ClientError::from(Error::BindingChanged))
+        })?;
+        let mut previous = journal
+            .partitions
+            .last()
+            .map(|record| record.partition.sha256.0.clone());
+        let mut transfer_ids = journal
+            .partitions
+            .iter()
+            .map(|record| {
+                uuid::Uuid::parse_str(&record.partition.transfer_id.0).map_err(private::unavailable)
+            })
+            .collect::<Result<std::collections::BTreeSet<_>, _>>()?;
         for index in 0..self.binding.manifest.artifacts.len() {
             let item = artifact(&self.binding, index)?.clone();
             transaction.reserve_stage_bytes(
@@ -176,8 +401,11 @@ impl HostExecution<'_, '_, '_> {
             let mut output = tokio::fs::File::from_std(
                 assembled.file.try_clone().map_err(private::unavailable)?,
             );
-            let mut offset = 0_u64;
-            loop {
+            let restored = self
+                .restore_artifact_prefix(&transaction, &journal, &item, &mut output)
+                .await?;
+            let mut offset = restored.0;
+            while offset < item.byte_count || (item.byte_count == 0 && !restored.1) {
                 let Incoming::Open {
                     session: opened,
                     partition,
@@ -455,6 +683,79 @@ impl HostExecution<'_, '_, '_> {
         self.received = Some(received.clone());
         Ok(received)
     }
+    async fn restore_artifact_prefix(
+        &self,
+        transaction: &OutputTransaction,
+        journal: &TransferJournal,
+        item: &ArtifactBranch1,
+        output: &mut tokio::fs::File,
+    ) -> Result<(u64, bool), ClientError> {
+        let mut offset = 0_u64;
+        let mut found = false;
+        for record in journal
+            .partitions
+            .iter()
+            .filter(|record| record.partition.artifact_id == item.artifact_id)
+        {
+            self.require_current().await?;
+            transaction.require_current()?;
+            let file =
+                private::open_private(transaction.directory(), &record.stage_name, false, false)?;
+            let count = u64::try_from(record.partition.byte_count).map_err(private::unavailable)?;
+            verify_partition_file(
+                transaction.directory(),
+                &record.stage_name,
+                &file,
+                count,
+                &record.partition.sha256.0,
+            )?;
+            let mut input =
+                tokio::fs::File::from_std(file.try_clone().map_err(private::unavailable)?);
+            // Verification cloned the same open-file description and left its cursor at EOF.
+            input.rewind().await.map_err(private::unavailable)?;
+            let mut remaining = count;
+            let mut buffer = vec![0_u8; 64 * 1024];
+            while remaining > 0 {
+                self.require_current().await?;
+                transaction.require_current()?;
+                let wanted = usize::try_from(remaining.min(buffer.len() as u64))
+                    .map_err(private::unavailable)?;
+                let read = input
+                    .read(&mut buffer[..wanted])
+                    .await
+                    .map_err(private::unavailable)?;
+                if read == 0 {
+                    return Err(Error::BindingChanged.into());
+                }
+                output
+                    .write_all(&buffer[..read])
+                    .await
+                    .map_err(private::unavailable)?;
+                remaining -= read as u64;
+            }
+            verify_partition_file(
+                transaction.directory(),
+                &record.stage_name,
+                &file,
+                count,
+                &record.partition.sha256.0,
+            )?;
+            offset = offset.checked_add(count).ok_or(Error::BindingChanged)?;
+            found = true;
+        }
+        if found {
+            output.flush().await.map_err(private::unavailable)?;
+            output.sync_all().await.map_err(private::unavailable)?;
+            self.require_current().await?;
+            transaction.require_current()?;
+            self.transfer_guard
+                .as_ref()
+                .ok_or(Error::BindingChanged)?
+                .verify()?;
+        }
+        Ok((offset, found))
+    }
+
     fn validate_session(&self, session: &Session) -> Result<(), ClientError> {
         validate_retained_session(&self.binding, session)
     }
