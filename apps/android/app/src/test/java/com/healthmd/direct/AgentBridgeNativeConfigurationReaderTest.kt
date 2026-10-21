@@ -172,6 +172,25 @@ class AgentBridgeNativeConfigurationReaderTest {
             catch (_: UnsupportedOperationException) { }
             val progressPath = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256).resolve("progress.json")
             val progressBefore = Files.readAllBytes(progressPath)
+            val manifest = AgentBridgeCodec.decode(result.manifestCanonical) as AgentBridgeArtifactManifest
+            assertThat(AgentBridgeCodec.encode(manifest)).isEqualTo(result.manifestCanonical)
+            assertThat(manifest.jobId).isEqualTo(request.jobId)
+            assertThat(manifest.requestSha256).isEqualTo(result.requestSha256)
+            assertThat(manifest.binding).isEqualTo(AgentBridgeValidation.bindingFor(request.plan))
+            assertThat(manifest.captureStatus).isEqualTo(AgentBridgeArtifactManifestCaptureStatus.COMPLETE)
+            assertThat(manifest.branchStatuses.map { it.selectorId }).containsExactly("steps")
+            assertThat(manifest.branchStatuses.map { it.recordCount }).containsExactly(2)
+            assertThat(manifest.artifacts).hasSize(result.days.size)
+            manifest.artifacts.zip(result.days).forEach { (artifact, day) ->
+                assertThat(artifact.artifactId).isEqualTo(result.publicArtifactIDs[day.day])
+                assertThat(artifact.relativePath).isEqualTo(day.artifact.relativePath)
+                assertThat(artifact.sha256).isEqualTo(day.artifact.sha256)
+                assertThat(artifact.byteCount).isEqualTo(day.artifact.byteCount.toLong())
+                assertThat(artifact.profile).isEqualTo(AgentBridgeArtifactProfile.ANDROID_FROZEN_V4)
+                assertThat(artifact.writeMode).isEqualTo(AgentBridgeWriteMode.OVERWRITE)
+            }
+            val callerCopy = result.manifestCanonical; callerCopy.fill(0)
+            assertThat(result.manifestCanonical).isEqualTo(AgentBridgeCodec.encode(manifest))
             assertThat(result.totalByteCount).isEqualTo(result.days.fold(0uL) { n, day -> n + day.artifact.byteCount })
             try { planner.prepareExport(request, manager, journalRenderer(resolution)); throw AssertionError("New execution must not replay capture") }
             catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
@@ -182,6 +201,7 @@ class AgentBridgeNativeConfigurationReaderTest {
             assertThat(restored.requestSha256).isEqualTo(result.requestSha256)
             assertThat(restored.totalByteCount).isEqualTo(result.totalByteCount)
             assertThat(restored.publicArtifactIDs).isEqualTo(result.publicArtifactIDs)
+            assertThat(restored.manifestCanonical).isEqualTo(result.manifestCanonical)
             assertThat(Files.readAllBytes(progressPath)).isEqualTo(progressBefore)
             assertThat(restored.days.map { it.day }).isEqualTo(result.days.map { it.day })
             restored.days.zip(result.days).forEach { (actual, expected) ->
@@ -222,6 +242,100 @@ class AgentBridgeNativeConfigurationReaderTest {
             Files.delete(directory.resolve("progress.json"))
             val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load current core") })
             try { planner.prepareRetainedExport(request, manager, forbidden); throw AssertionError("Missing identity progress must require fresh approval") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `identity only progress v3 gains manifest without losing original UUIDs`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val ids = planner.withCaptureContext(request) { context ->
+                val resolution = context.begin()
+                val renderer = journalRenderer(resolution)
+                resolution.requestedDays.forEach { renderer.capture(it, manager, context) }
+                context.bindPublicArtifactIDs()
+            }
+            val fingerprint = AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request))
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(fingerprint).resolve("progress.json")
+            val signed = Json.parseToJsonElement(Files.readAllBytes(path).decodeToString()).jsonObject
+            val payload = java.util.Base64.getDecoder().decode(signed.getValue("record").jsonObject.getValue("payload").jsonPrimitive.content)
+            val state = Json.parseToJsonElement(payload.decodeToString()).jsonObject
+            assertThat(state.getValue("version").jsonPrimitive.int).isEqualTo(3)
+            assertThat(state.keys).containsExactly("version", "captures", "artifacts", "engine", "publicArtifactIDs")
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load core") })
+            val prepared = planner.prepareRetainedExport(request, manager, forbidden)
+            assertThat(prepared.publicArtifactIDs).isEqualTo(ids)
+            val manifest = AgentBridgeCodec.decode(prepared.manifestCanonical) as AgentBridgeArtifactManifest
+            assertThat(manifest.artifacts.map { it.artifactId }.toSet()).isEqualTo(ids.values.toSet())
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `native manifest counts absent summary observations`() = runBlocking {
+        assertNativeManifestObservationCount(null, 0)
+    }
+    @Test fun `native manifest counts meaningful zero summary observations`() = runBlocking {
+        assertNativeManifestObservationCount(0L, 2)
+    }
+    private suspend fun assertNativeManifestObservationCount(steps: Long?, expected: Int) {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns steps
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val prepared = planner.prepareExport(request, manager, journalRenderer(resolution))
+            val manifest = AgentBridgeCodec.decode(prepared.manifestCanonical) as AgentBridgeArtifactManifest
+            assertThat(manifest.branchStatuses).hasSize(1)
+            assertThat(manifest.branchStatuses.single().recordCount).isEqualTo(expected)
+            assertThat(manifest.branchStatuses.single().status).isEqualTo(AgentBridgeArtifactManifestBranchStatusesItemStatus.SUCCESS)
+            assertThat(manifest.captureStatus).isEqualTo(AgentBridgeArtifactManifestCaptureStatus.COMPLETE)
+            assertThat(manifest.artifacts).hasSize(2)
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+    @Test fun `missing native manifest never rebuilds on recovery`() = runBlocking { assertNativeManifestRecoveryRejects("missing") }
+    @Test fun `corrupt native manifest never rebuilds on recovery`() = runBlocking { assertNativeManifestRecoveryRejects("corrupt") }
+    private suspend fun assertNativeManifestRecoveryRejects(mode: String) {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val prepared = planner.prepareExport(request, manager, journalRenderer(resolution))
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(prepared.requestSha256).resolve("manifest.json")
+            if (mode == "missing") Files.delete(path) else Files.write(path, "corrupt".toByteArray())
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load core") })
+            try { planner.prepareRetainedExport(request, manager, forbidden); throw AssertionError("Original missing or corrupt manifest cannot be rebuilt") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+    @Test fun `interrupted native manifest publication cannot regenerate after owner restored`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val fingerprint = AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request))
+            val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(fingerprint)
+            var interrupted = false
+            f.peerContext.onCheck = {
+                val version = runCatching {
+                    val signed = Json.parseToJsonElement(Files.readAllBytes(directory.resolve("progress.json")).decodeToString()).jsonObject
+                    val payload = java.util.Base64.getDecoder().decode(signed.getValue("record").jsonObject.getValue("payload").jsonPrimitive.content)
+                    Json.parseToJsonElement(payload.decodeToString()).jsonObject.getValue("version").jsonPrimitive.int
+                }.getOrNull()
+                if (!interrupted && version == 4) {
+                    interrupted = true
+                    assertThat(Files.exists(directory.resolve("manifest.json"))).isFalse()
+                    throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                }
+            }
+            try { planner.prepareExport(request, manager, journalRenderer(resolution)); throw AssertionError("Interrupted manifest cannot return success") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED) }
+            finally { f.peerContext.onCheck = null }
+            assertThat(interrupted).isTrue()
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load core") })
+            try { planner.prepareRetainedExport(request, manager, forbidden); throw AssertionError("Pinned missing manifest cannot regenerate") }
             catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
             coVerify(exactly = 2) { client.aggregate(any()) }
         }

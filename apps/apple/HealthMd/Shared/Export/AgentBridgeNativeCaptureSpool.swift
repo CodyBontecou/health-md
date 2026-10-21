@@ -42,6 +42,8 @@ final class AgentBridgeNativeCaptureSpool {
         // Version3 stores exactly16 UUID bytes per sorted artifact day. Keeping this compact
         // preserves the existing progress/record bounds even at4096 approved days.
         var publicArtifactIDs: Data? = nil
+        var manifestSHA256: String? = nil
+        var manifestByteCount: Int? = nil
     }
     nonisolated struct ArtifactCheckpoint: Sendable { let engine: Data; let payload: Data }
     private static let payloadLimit = 64 * 1024
@@ -101,7 +103,7 @@ final class AgentBridgeNativeCaptureSpool {
             guard try fileSize("lock") == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             try check()
             for name in try Self.entries(directoryFD) {
-                guard name == "lock" || name == "header.json" || name == "progress.json" || Self.dayName(name) || Self.pendingName(name) else {
+                guard name == "lock" || name == "header.json" || name == "progress.json" || name == "manifest.json" || Self.dayName(name) || Self.pendingName(name) else {
                     throw AgentBridgeValidationError.spoolMissingRestartRequired
                 }
                 storedBytes += try fileSize(name)
@@ -232,6 +234,81 @@ final class AgentBridgeNativeCaptureSpool {
         } catch { throw Self.safe(error) }
     }
 
+    /// Preserve exact public metadata from this job's signed inputs, never incoming caller
+    /// metadata. A pinned manifest missing its bytes is ambiguous and cannot be regenerated.
+    func preserveManifest() throws -> Data {
+        do {
+            try check(); try validateStoredProgress()
+            let (previous, state) = try progress()
+            if state.manifestSHA256 != nil { return try readManifest(state) }
+            let bytes = try makeManifest(state)
+            var next = state; next.version = 4
+            next.manifestSHA256 = AgentBridgeV4Codec.sha256(bytes); next.manifestByteCount = bytes.count
+            // Advance the durable frontier before raw publication. Interruption cannot cause
+            // a missing manifest to be silently rebuilt or reinterpreted by a newer writer.
+            try publish("progress.json", record: record(kind: "progress", day: nil, payload: progressBytes(next)), replacing: previous)
+            try publishBytes("manifest.json", bytes: bytes, previousBytes: nil)
+            let retained = try readManifest(progress().1)
+            try check(); return retained
+        } catch { throw Self.safe(error) }
+    }
+    private func makeManifest(_ state: Progress) throws -> Data {
+        let ids = try Self.publicIDs(state)
+        let resolution = try PropertyListDecoder().decode(AgentBridgeRequestSettingsResolution.self, from: reservation.job.nativeResolution)
+        let selected = Set(resolution.selection.map(\.semanticID))
+        guard !selected.isEmpty, selected.count == resolution.selection.count,
+              resolution.requestedDays.map(\.rawValue).sorted() == state.artifacts else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        var counts = Dictionary(uniqueKeysWithValues: selected.map { ($0, Int64(0)) })
+        var artifacts: [AgentBridgeArtifact] = []
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        for day in resolution.requestedDays {
+            let saved = try read("artifact-\(day.rawValue).json")
+            let result = try AgentBridgeNativeArtifactJournal.restore(.init(engine: state.engine, payload: saved.payload),
+                day: day, resolution: resolution, fingerprint: acceptedRequestSHA256)
+            let capturedRecord = try read("day-\(day.rawValue).json")
+            let captured = try JSONDecoder().decode(AgentBridgeCapturedScalarDay.self, from: capturedRecord.payload)
+            guard saved.kind == "artifact", saved.day == day.rawValue,
+                  capturedRecord.kind == "captured", capturedRecord.day == day.rawValue,
+                  captured.version == 1, captured.day == day.rawValue,
+                  captured.calendarTimezone == resolution.settings.calendarTimeZoneIdentifier,
+                  Set(captured.values.keys).isSubset(of: selected), captured.values.values.allSatisfy({ $0.isFinite && $0 >= 0 }),
+                  try encoder.encode(captured) == capturedRecord.payload, let id = ids[day.rawValue] else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            // Summary record units are captured daily observations, including meaningful zero.
+            // These counters never infer the number of underlying HealthKit samples.
+            for selector in captured.values.keys { counts[selector, default: 0] += 1 }
+            artifacts.append(.init(artifactId: try AgentBridgeUUID(id), byteCount: Int64(result.artifact.byteCount),
+                mediaType: .applicationJson, profile: .appleV8, relativePath: try AgentBridgePath(result.artifact.relativePath ?? ""),
+                sha256: try AgentBridgeDigest(result.artifact.sha256), writeMode: .overwrite))
+        }
+        let request = try reservation.job.request()
+        let manifest = AgentBridgeArtifactManifest(artifacts: artifacts, binding: AgentBridgeSemantics.binding(request.plan),
+            branchStatuses: try selected.sorted().map { .init(recordCount: counts[$0, default: 0], selectorId: try AgentBridgeID($0), status: .success) },
+            captureStatus: .complete, jobId: request.jobId, requestSha256: reservation.job.requestSHA256)
+        return try AgentBridgeV4Codec.encode(manifest)
+    }
+    private func readManifest(_ state: Progress) throws -> Data {
+        try check()
+        guard let digest = state.manifestSHA256, let count = state.manifestByteCount,
+              try exists("manifest.json") else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        let bytes = try readProtectedFile("manifest.json", maximumBytes: AgentBridgeV4Codec.maximumBytes)
+        do {
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: bytes)
+            let request = try reservation.job.request()
+            guard bytes.count == count, AgentBridgeV4Codec.sha256(bytes) == digest,
+                  try AgentBridgeV4Codec.encode(manifest) == bytes,
+                  manifest.jobId == request.jobId, manifest.requestSha256 == reservation.job.requestSHA256,
+                  manifest.binding == AgentBridgeSemantics.binding(request.plan),
+                  Set(manifest.artifacts.map { $0.artifactId.rawValue }) == Set(try Self.publicIDs(state).values) else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+        } catch { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        try check(); return bytes
+    }
+
     var acceptedRequestSHA256: String { reservation.job.requestSHA256.rawValue }
 
     func close() {
@@ -265,6 +342,10 @@ final class AgentBridgeNativeCaptureSpool {
             let value = try read("artifact-\(day).json")
             guard value.kind == "artifact", value.day == day, !value.payload.isEmpty else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         }
+        if state.manifestSHA256 != nil {
+            expected.insert("manifest.json")
+            _ = try readManifest(state)
+        }
         let names = Set(try Self.entries(directoryFD).filter { !Self.pendingName($0) })
         guard names == expected else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
     }
@@ -278,19 +359,28 @@ final class AgentBridgeNativeCaptureSpool {
         if let days = try? JSONDecoder().decode([String].self, from: value.payload) {
             state = .init(version: 2, captures: days, artifacts: [], engine: Data())
         } else { state = try JSONDecoder().decode(Progress.self, from: value.payload) }
+        let noManifest = state.manifestSHA256 == nil && state.manifestByteCount == nil
         guard value.kind == "progress", value.day == nil,
-              (state.version == 2 && state.publicArtifactIDs == nil) || (state.version == 3 && state.publicArtifactIDs != nil),
+              (state.version == 2 && state.publicArtifactIDs == nil && noManifest) ||
+              (state.version == 3 && state.publicArtifactIDs != nil && noManifest) ||
+              (state.version == 4 && state.publicArtifactIDs != nil && state.manifestSHA256 != nil && state.manifestByteCount != nil),
               state.engine.count <= 4096, state.artifacts.isEmpty == state.engine.isEmpty,
               try progressBytes(state) == value.payload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         for days in [state.captures, state.artifacts] {
             guard days.count <= 4096, Set(days).count == days.count, days == days.sorted() else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             for day in days { _ = try AgentBridgeDate(day) }
         }
-        if state.version == 3 { _ = try Self.publicIDs(state) }
+        if state.version >= 3 { _ = try Self.publicIDs(state) }
+        if state.version == 4 {
+            guard let hash = state.manifestSHA256, hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil,
+                  let count = state.manifestByteCount, count > 0, count <= AgentBridgeV4Codec.maximumBytes else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+        }
         return (value, state)
     }
     private static func publicIDs(_ state: Progress) throws -> [String: String] {
-        guard state.version == 3, let data = state.publicArtifactIDs,
+        guard (state.version == 3 || state.version == 4), let data = state.publicArtifactIDs,
               !state.artifacts.isEmpty, state.artifacts.count <= 4096,
               state.captures == state.artifacts, data.count == state.artifacts.count * 16 else {
             throw AgentBridgeValidationError.spoolMissingRestartRequired
@@ -344,7 +434,7 @@ final class AgentBridgeNativeCaptureSpool {
         guard try AgentBridgeExportPrivateFiles.identity(fd) == expected else { throw AgentBridgeValidationError.bindingChanged }
         try AgentBridgeExportPrivateFiles.checkPath(directoryFD, name, fd: fd)
         var value = stat()
-        guard fstat(fd, &value) == 0, value.st_size >= 0, value.st_size <= Self.recordLimit else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        guard fstat(fd, &value) == 0, value.st_size >= 0, value.st_size <= (name == "manifest.json" ? AgentBridgeV4Codec.maximumBytes : Self.recordLimit) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         return Int(value.st_size)
     }
     private func read(_ name: String) throws -> Record {
@@ -364,7 +454,10 @@ final class AgentBridgeNativeCaptureSpool {
         try check(); return record
     }
     private func readProtectedFile(_ name: String) throws -> Data {
-        try AgentBridgeExportPrivateFiles.read(directoryFD, name, maximumBytes: Self.recordLimit) { fd in
+        try readProtectedFile(name, maximumBytes: Self.recordLimit)
+    }
+    private func readProtectedFile(_ name: String, maximumBytes: Int) throws -> Data {
+        try AgentBridgeExportPrivateFiles.read(directoryFD, name, maximumBytes: maximumBytes) { fd in
             try fileProtection.requireCompleteProtection(fd)
             try fence(); try pins(includeProtection: false)
         }
@@ -372,10 +465,15 @@ final class AgentBridgeNativeCaptureSpool {
     private func publish(_ name: String, record: Record, replacing previous: Record? = nil) throws {
         let body = try Self.canonical(record)
         let bytes = try Self.canonical(Signed(record: record, mac: Data(HMAC<SHA256>.authenticationCode(for: Self.domain + body, using: key))))
-        guard bytes.count <= Self.recordLimit, storedBytes + bytes.count <= Self.jobLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
+        guard bytes.count <= Self.recordLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
         let previousBytes = try previous.map { value in
             try Self.canonical(Signed(record: value, mac: Data(HMAC<SHA256>.authenticationCode(for: Self.domain + (try Self.canonical(value)), using: key))))
         }
+        try publishBytes(name, bytes: bytes, previousBytes: previousBytes)
+    }
+    private func publishBytes(_ name: String, bytes: Data, previousBytes: Data?) throws {
+        guard !bytes.isEmpty, bytes.count <= AgentBridgeV4Codec.maximumBytes,
+              storedBytes + bytes.count <= Self.jobLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
         try check()
         if let previousBytes {
             guard try readProtectedFile(name) == previousBytes else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
@@ -406,7 +504,7 @@ final class AgentBridgeNativeCaptureSpool {
         }
         // The protected read may invoke a native callback; re-pin the staged file afterwards.
         try AgentBridgeExportPrivateFiles.checkPath(directoryFD, temporary, fd: fd)
-        guard renameatx_np(directoryFD, temporary, directoryFD, name, previous == nil ? UInt32(RENAME_EXCL) : 0) == 0,
+        guard renameatx_np(directoryFD, temporary, directoryFD, name, previousBytes == nil ? UInt32(RENAME_EXCL) : 0) == 0,
               fsync(directoryFD) == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         storedBytes += bytes.count - (previousBytes?.count ?? 0)
         try AgentBridgeExportPrivateFiles.checkPath(directoryFD, name, fd: fd)

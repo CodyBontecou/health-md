@@ -3,13 +3,13 @@ import HealthMdConnectionCore
 import HealthMdCoreRust
 
 /// Every approved day, in its frozen order. Durable day artifacts back these bytes; this value
-/// is neither a transfer manifest nor a receipt, and carries no authority outside its owner.
+/// includes an immutable metadata manifest, not a receipt or authority outside its owner.
 nonisolated struct AgentBridgeNativePreparedExport: Sendable {
     let requestSHA256: String
     let days: [AgentBridgeNativeRenderedDay]
     let totalByteCount: UInt64
-    // Public UUID identities only. Counts, manifest/session binding and transfer remain separate.
     let publicArtifactIDs: [String: String]
+    let manifestCanonical: Data
 }
 
 @MainActor
@@ -65,7 +65,9 @@ private enum AgentBridgeNativeExportProducer {
             let publicIDs = try context.bindPublicArtifactIDs()
             guard Set(publicIDs.keys) == Set(approved.map(\.rawValue)),
                   try context.requestFingerprintForRead() == fingerprint else { throw AgentBridgeNativeRenderFailure.invalidArtifact }
-            return .init(requestSHA256: fingerprint, days: days, totalByteCount: total, publicArtifactIDs: publicIDs)
+            let manifest = try context.preserveManifest()
+            guard try context.requestFingerprintForRead() == fingerprint else { throw AgentBridgeNativeRenderFailure.invalidArtifact }
+            return .init(requestSHA256: fingerprint, days: days, totalByteCount: total, publicArtifactIDs: publicIDs, manifestCanonical: manifest)
         } catch {
             context.invalidate()
             if error is CancellationError || error is AgentBridgeValidationError || error is AgentBridgeNativeRenderFailure { throw error }

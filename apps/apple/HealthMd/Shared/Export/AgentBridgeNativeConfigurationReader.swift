@@ -387,6 +387,13 @@ final class AgentBridgeNativeCaptureContext {
             _ = try configurationForRead(); return result
         } catch { invalidate(); throw error }
     }
+    func preserveManifest() throws -> Data {
+        do {
+            _ = try configurationForRead()
+            let result = try spool.preserveManifest()
+            _ = try configurationForRead(); return result
+        } catch { invalidate(); throw error }
+    }
     /// A fingerprint names the original accepted bytes; it never grants capture permission.
     func requestFingerprintForRead() throws -> String {
         _ = try configurationForRead()

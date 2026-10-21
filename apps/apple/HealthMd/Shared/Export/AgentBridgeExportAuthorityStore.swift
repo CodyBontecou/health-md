@@ -155,6 +155,17 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     private let publication: any AgentBridgeExportPublicationObserving
     private static let domain = Data("HealthMd.AgentBridge.NativeExportAuthorityStore.v1\0".utf8)
     private static let recordLimit = 48 * 1024
+    /// Parse reuse only, never authority or protected-key reuse. Each transaction still reads
+    /// the current protected file and authenticates it with the freshly loaded native key.
+    /// Snapshot fields are owned value types; callers cannot mutate this retained parse.
+    private struct ParsedState {
+        let bytes: Data
+        let body: Data
+        let mac: Data
+        let state: AgentBridgeExportAuthoritySnapshot
+    }
+    private let parsedStateLock = NSLock()
+    private var parsedState: ParsedState?
     private struct SignedState: Codable {
         let version: Int
         let state: AgentBridgeExportAuthoritySnapshot
@@ -497,16 +508,31 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     private func read(key: SymmetricKey) throws -> AgentBridgeExportAuthoritySnapshot {
         do {
             let bytes = try AgentBridgeExportPrivateFiles.read(rootFD, "state.json")
+            parsedStateLock.lock(); let previous = parsedState; parsedStateLock.unlock()
+            if let previous, previous.bytes == bytes {
+                // Exact bytes already passed grammar, model and cross-record validation. Do not
+                // retain a key or skip its current MAC: key replacement/loss still denies.
+                guard HMAC<SHA256>.isValidAuthenticationCode(previous.mac, authenticating: Self.domain + previous.body, using: key) else {
+                    throw AgentBridgeValidationError.bindingChanged
+                }
+                return previous.state
+            }
             // Strict raw UTF8/scalar/depth/node/key bounds, including decoded duplicate keys, BEFORE
             // Foundation decoding. Re-encoding rejects unknown/null/noncanonical private fields.
             let canonical = try AgentBridgeV4Codec.canonicalize(bytes)
             let signed = try JSONDecoder().decode(SignedState.self, from: canonical)
+            let body = try canonicalPrivate(signed.state)
             guard signed.version == (signed.state.captureClaims != nil ? 4 : (signed.state.acceptedJobs != nil ? 3 : (signed.state.nativeCatalog == nil ? 1 : 2))), try canonicalPrivate(signed) == canonical,
-                  HMAC<SHA256>.isValidAuthenticationCode(signed.mac, authenticating: Self.domain + (try canonicalPrivate(signed.state)), using: key) else { throw AgentBridgeValidationError.bindingChanged }
+                  HMAC<SHA256>.isValidAuthenticationCode(signed.mac, authenticating: Self.domain + body, using: key) else { throw AgentBridgeValidationError.bindingChanged }
             try validate(signed.state)
+            let parsed = ParsedState(bytes: bytes, body: body, mac: signed.mac, state: signed.state)
+            parsedStateLock.lock(); parsedState = parsed; parsedStateLock.unlock()
             return signed.state
-        } catch let error as AgentBridgeValidationError { throw error }
-        catch { throw AgentBridgeValidationError.bindingChanged }
+        } catch {
+            parsedStateLock.lock(); parsedState = nil; parsedStateLock.unlock()
+            if let error = error as? AgentBridgeValidationError { throw error }
+            throw AgentBridgeValidationError.bindingChanged
+        }
     }
 
     private func validate(_ state: AgentBridgeExportAuthoritySnapshot) throws {

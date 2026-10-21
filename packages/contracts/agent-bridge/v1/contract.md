@@ -282,6 +282,17 @@ still be current. Current revoked trust/native grants/protection are rechecked; 
 not migrate it. Missing preserved spool returns `spool_missing_restart_required` with a fresh approved
 job required. Local timeouts/disconnects do not mean source cancellation.
 
+For generated daily-summary JSON (`apple-v8` and `android-frozen-v4`), each selected
+branch's `record_count` counts successfully captured daily summary observations for that selector.
+An absent observation contributes zero; an explicit numeric zero contributes one. Across days the
+count is their sum. This unit is an aggregate observation, not an underlying native sample; native
+aggregate APIs need not expose a sample count. Preserve the count from the signed original capture,
+including on resume. Other record/evidence/projection branches retain their own source contract's
+record units. A successful empty summary query has branch status `success` and count zero.
+`capture_status: complete` records successful execution of the reviewed capture branches and retained
+artifacts; it does not assert unrestricted source history. Date/metadata-only daily JSON files remain
+artifacts, so an all-absent value set with those files uses `complete`, not `complete_empty`.
+
 Manifest and commit receipt pin every artifact path/profile/write mode/byte count/digest. Before
 append/merge, host persists a commit plan with destination identity, before/input/after digests and
 `commit_key` (SHA-256 of the schema-defined commit identity fields). Commit and receipt are journaled

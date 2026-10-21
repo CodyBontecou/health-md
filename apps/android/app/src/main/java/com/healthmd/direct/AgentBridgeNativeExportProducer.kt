@@ -4,12 +4,13 @@ import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.direct.protocol.*
 import kotlinx.coroutines.CancellationException
 
-/** All approved days in frozen order, backed by signed day artifacts. Not a transfer manifest,
- * receipt, or authority outside the original native owner. */
+/** All approved days and their preserved metadata manifest. Not a receipt or authority
+ * outside the original native owner. */
 internal class AgentBridgeNativePreparedExport(val requestSha256: String,
-    days: List<AgentBridgeNativeRenderedDay>, val totalByteCount: ULong, publicArtifactIDs: Map<String, String>) {
+    days: List<AgentBridgeNativeRenderedDay>, val totalByteCount: ULong, publicArtifactIDs: Map<String, String>, manifestCanonical: ByteArray) {
     val days: List<AgentBridgeNativeRenderedDay> = java.util.Collections.unmodifiableList(ArrayList(days))
-    // Public UUID identities only; not a manifest, branch count or transfer authority.
+    private val manifestBytes = manifestCanonical.copyOf()
+    val manifestCanonical: ByteArray get() = manifestBytes.copyOf()
     val publicArtifactIDs: Map<String, String> = java.util.Collections.unmodifiableMap(LinkedHashMap(publicArtifactIDs))
 }
 
@@ -50,7 +51,9 @@ private object AgentBridgeNativeExportProducer {
                 context.requestFingerprintForRead() != fingerprint) fail(AgentBridgeNativeRenderFailure.INVALID_ARTIFACT)
             val publicIDs = context.bindPublicArtifactIDs()
             if (publicIDs.keys != approved.toSet() || context.requestFingerprintForRead() != fingerprint) fail(AgentBridgeNativeRenderFailure.INVALID_ARTIFACT)
-            return AgentBridgeNativePreparedExport(fingerprint, days, total, publicIDs)
+            val manifest = context.preserveManifest()
+            if (context.requestFingerprintForRead() != fingerprint) fail(AgentBridgeNativeRenderFailure.INVALID_ARTIFACT)
+            return AgentBridgeNativePreparedExport(fingerprint, days, total, publicIDs, manifest)
         } catch (failure: Throwable) {
             context.invalidate()
             if (failure is CancellationException || failure is AgentBridgeException || failure is AgentBridgeNativeRenderException ||

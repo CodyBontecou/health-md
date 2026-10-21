@@ -229,6 +229,38 @@ final class AgentBridgeExportAuthorityStoreTests: XCTestCase {
         XCTAssertEqual(try rig.bytes(), revoked)
     }
 
+    func testWarmParsedStateStillLoadsAndAuthenticatesTheCurrentNativeKey() throws {
+        let rig = try StoreRig(); defer { rig.cleanup() }
+        try rig.store.storeNativeDelegation(rig.grant(7), expectedGeneration: 0, authorization: IsolatedNativeAuthorization())
+        let originalKey = rig.keys.key
+        _ = try rig.store.snapshot()
+        var loads = 0; rig.keys.onLoad = { loads += 1 }
+        XCTAssertEqual(try rig.store.snapshot().delegations.count, 1)
+        XCTAssertGreaterThan(loads, 0)
+        let originalBytes = try rig.bytes()
+        rig.keys.key = nil
+        XCTAssertThrowsError(try rig.store.snapshot()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
+        rig.keys.key = SymmetricKey(data: Data(repeating: 5, count: 32))
+        XCTAssertThrowsError(try rig.store.snapshot()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged) }
+        rig.keys.key = originalKey
+        XCTAssertEqual(try rig.store.snapshot().delegations.count, 1)
+        XCTAssertEqual(try rig.bytes(), originalBytes)
+    }
+
+    func testWarmParsedStateIsAnOwnedValueAndObservesAnotherHandlesRevocation() throws {
+        let rig = try StoreRig(); defer { rig.cleanup() }
+        let grant = try rig.grant(7)
+        try rig.store.storeNativeDelegation(grant, expectedGeneration: 0, authorization: IsolatedNativeAuthorization())
+        var detached = try rig.store.snapshot()
+        detached.delegations.removeAll(); detached.generation += 1
+        XCTAssertEqual(try rig.store.snapshot().generation, 1)
+        XCTAssertEqual(try rig.store.snapshot().delegations.count, 1)
+        let other = try AgentBridgeExportAuthorityStore(existingDirectory: rig.directory, protectedKeys: rig.keys)
+        try other.revokeNativeDelegation(grant.reference(), expectedGeneration: 1, authorization: IsolatedNativeAuthorization())
+        XCTAssertEqual(try rig.store.snapshot().generation, 2)
+        XCTAssertTrue(try rig.store.snapshot().delegations[0].revoked)
+    }
+
     func testCrashOrphanIsNotStateAndMissingStateNeverRegenerates() throws {
         let rig = try StoreRig(); defer { rig.cleanup() }
         try rig.store.storeNativeDelegation(rig.grant(7), expectedGeneration: 0, authorization: IsolatedNativeAuthorization())
@@ -249,6 +281,7 @@ final class AgentBridgeExportAuthorityStoreTests: XCTestCase {
         for variant in 0..<5 {
             let rig = try StoreRig(); defer { rig.cleanup() }
             try rig.store.storeNativeDelegation(rig.grant(7), expectedGeneration: 0, authorization: IsolatedNativeAuthorization())
+            _ = try rig.store.snapshot() // Warm parse reuse before every corruption variant.
             let original = try rig.bytes(), text = String(decoding: original, as: UTF8.self)
             let damaged: Data
             switch variant {
@@ -370,7 +403,7 @@ nonisolated private final class CASResult: @unchecked Sendable {
     var failures: [AgentBridgeValidationError] { lock.lock(); defer { lock.unlock() }; return errors }
 }
 nonisolated private final class IsolatedKeys: AgentBridgeExportProtectedKeyReading, @unchecked Sendable {
-    let key: SymmetricKey?
+    var key: SymmetricKey?
     init(key: SymmetricKey? = SymmetricKey(data: Data(repeating: 7, count: 32))) { self.key = key }
     var onLoad: (() -> Void)?
     func loadExistingExportAuthorityKey() throws -> SymmetricKey? { onLoad?(); return key }

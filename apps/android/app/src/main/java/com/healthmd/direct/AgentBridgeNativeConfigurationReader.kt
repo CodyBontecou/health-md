@@ -423,6 +423,13 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
             configurationForRead(); return result
         } catch (failure: Throwable) { invalidate(); throw failure }
     }
+    fun preserveManifest(): ByteArray {
+        try {
+            configurationForRead()
+            val result = spool.preserveManifest()
+            configurationForRead(); return result
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
     /** Names the original accepted bytes; a fingerprint is never capture permission. */
     fun requestFingerprintForRead(): String {
         configurationForRead()

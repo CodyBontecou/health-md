@@ -635,6 +635,22 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             for id in result.publicArtifactIDs.values { _ = try AgentBridgeUUID(id) }
             let progressURL = rig.directory.appendingPathComponent("captures").appendingPathComponent(job.requestSHA256.rawValue).appendingPathComponent("progress.json")
             let progressBefore = try Data(contentsOf: progressURL)
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: result.manifestCanonical)
+            XCTAssertEqual(try AgentBridgeV4Codec.encode(manifest), result.manifestCanonical)
+            XCTAssertEqual(manifest.jobId, request.jobId)
+            XCTAssertEqual(manifest.requestSha256.rawValue, result.requestSHA256)
+            XCTAssertEqual(manifest.binding, AgentBridgeSemantics.binding(request.plan))
+            XCTAssertEqual(manifest.captureStatus, .complete)
+            XCTAssertEqual(manifest.branchStatuses.map(\.selectorId.rawValue), ["steps"])
+            XCTAssertEqual(manifest.branchStatuses.map(\.recordCount), [2])
+            XCTAssertEqual(manifest.artifacts.count, result.days.count)
+            for (artifact, day) in zip(manifest.artifacts, result.days) {
+                XCTAssertEqual(artifact.artifactId.rawValue, result.publicArtifactIDs[day.day.rawValue])
+                XCTAssertEqual(artifact.relativePath.rawValue, day.artifact.relativePath)
+                XCTAssertEqual(artifact.sha256.rawValue, day.artifact.sha256)
+                XCTAssertEqual(artifact.byteCount, Int64(day.artifact.byteCount))
+                XCTAssertEqual(artifact.profile, .appleV8); XCTAssertEqual(artifact.writeMode, .overwrite)
+            }
             XCTAssertEqual(result.totalByteCount, result.days.reduce(0) { $0 + $1.artifact.byteCount })
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
             do { _ = try await planner.prepareExport(request, manager: manager); XCTFail("New execution must not replay capture") }
@@ -645,6 +661,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTAssertEqual(restored.requestSHA256, result.requestSHA256)
             XCTAssertEqual(restored.totalByteCount, result.totalByteCount)
             XCTAssertEqual(restored.publicArtifactIDs, result.publicArtifactIDs)
+            XCTAssertEqual(restored.manifestCanonical, result.manifestCanonical)
             XCTAssertEqual(try Data(contentsOf: progressURL), progressBefore)
             XCTAssertEqual(restored.days.map(\.day), result.days.map(\.day))
             for (actual, expected) in zip(restored.days, result.days) {
@@ -682,6 +699,105 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             do {
                 _ = try await planner.prepareRetainedExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
                 XCTFail("Missing identity progress must require a fresh approved job")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
+    func testIdentityOnlyProgressV3GainsManifestWithoutLosingOriginalUUIDs() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let ids = try await planner.withCaptureContext(request) { context in
+                let resolution = try context.begin()
+                for day in resolution.requestedDays {
+                    _ = try await AgentBridgeNativeDayRenderer.capture(day: day, manager: manager, context: context)
+                }
+                return try context.bindPublicArtifactIDs() // Prior version3 producer stopped here.
+            }
+            let fingerprint = AgentBridgeV4Codec.sha256(try AgentBridgeV4Codec.encode(request))
+            let path = rig.directory.appendingPathComponent("captures").appendingPathComponent(fingerprint).appendingPathComponent("progress.json")
+            let signed = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: path)) as? [String: Any])
+            let record = try XCTUnwrap(signed["record"] as? [String: Any])
+            let payload = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(record["payload"] as? String)))
+            let state = try XCTUnwrap(JSONSerialization.jsonObject(with: payload) as? [String: Any])
+            XCTAssertEqual(state["version"] as? Int, 3)
+            XCTAssertEqual(Set(state.keys), ["version", "captures", "artifacts", "engine", "publicArtifactIDs"])
+            let prepared = try await planner.prepareRetainedExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+            XCTAssertEqual(prepared.publicArtifactIDs, ids)
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: prepared.manifestCanonical)
+            XCTAssertEqual(Set(manifest.artifacts.map { $0.artifactId.rawValue }), Set(ids.values))
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
+    func testNativeManifestCountsAbsentSummaryObservations() async throws {
+        try await assertNativeManifestObservationCount(steps: nil, expected: 0)
+    }
+    func testNativeManifestCountsMeaningfulZeroSummaryObservations() async throws {
+        try await assertNativeManifestObservationCount(steps: 0, expected: 2)
+    }
+    private func assertNativeManifestObservationCount(steps: Double?, expected: Int64) async throws {
+        try await withNativeExportPreparation { _, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = steps
+            let prepared = try await planner.prepareExport(request, manager: manager)
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: prepared.manifestCanonical)
+            XCTAssertEqual(manifest.branchStatuses.count, 1)
+            XCTAssertEqual(manifest.branchStatuses.first?.recordCount, expected)
+            XCTAssertEqual(manifest.branchStatuses.first?.status, .success)
+            XCTAssertEqual(manifest.captureStatus, .complete) // Both date/metadata documents still exist.
+            XCTAssertEqual(manifest.artifacts.count, 2)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+    func testMissingNativeManifestNeverRebuildsOnRecovery() async throws {
+        try await assertNativeManifestRecoveryRejects(mode: "missing")
+    }
+    func testCorruptNativeManifestNeverRebuildsOnRecovery() async throws {
+        try await assertNativeManifestRecoveryRejects(mode: "corrupt")
+    }
+    private func assertNativeManifestRecoveryRejects(mode: String) async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let prepared = try await planner.prepareExport(request, manager: manager)
+            let path = rig.directory.appendingPathComponent("captures").appendingPathComponent(prepared.requestSHA256).appendingPathComponent("manifest.json")
+            if mode == "missing" { try FileManager.default.removeItem(at: path) }
+            else {
+                let file = try FileHandle(forWritingTo: path); defer { try? file.close() }
+                try file.truncate(atOffset: 0); try file.write(contentsOf: Data("corrupt".utf8)); try file.synchronize()
+            }
+            do {
+                _ = try await planner.prepareRetainedExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+                XCTFail("A missing or corrupt original manifest cannot be rebuilt")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+    func testInterruptedNativeManifestPublicationCannotRegenerateAfterOwnerRestored() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let fingerprint = AgentBridgeV4Codec.sha256(try AgentBridgeV4Codec.encode(request))
+            let directory = rig.directory.appendingPathComponent("captures").appendingPathComponent(fingerprint)
+            var interrupted = false
+            rig.captureProtection.onRequire = { _ in
+                guard !interrupted,
+                      let bytes = try? Data(contentsOf: directory.appendingPathComponent("progress.json")),
+                      let signed = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+                      let record = signed["record"] as? [String: Any], let encoded = record["payload"] as? String,
+                      let payload = Data(base64Encoded: encoded),
+                      let state = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+                      state["version"] as? Int == 4 else { return }
+                interrupted = true
+                XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("manifest.json").path))
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            defer { rig.captureProtection.onRequire = nil }
+            do { _ = try await planner.prepareExport(request, manager: manager); XCTFail("Interrupted manifest must not return success") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+            XCTAssertTrue(interrupted)
+            rig.captureProtection.onRequire = nil
+            do {
+                _ = try await planner.prepareRetainedExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+                XCTFail("Pinned but missing manifest cannot be regenerated")
             } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
         }
