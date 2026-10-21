@@ -172,7 +172,10 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
          capture_status = excluded.capture_status,
          exported_at = excluded.exported_at,
          received_at = excluded.received_at
-       WHERE excluded.exported_at > daily_records.exported_at OR
+       -- Fractions retain their exact precision and at least three digits.
+       -- Strip the UTC suffix so a shorter equal-prefix fraction sorts first;
+       -- existing millisecond metadata remains comparable without a rewrite.
+       WHERE rtrim(excluded.exported_at, 'Z') > rtrim(daily_records.exported_at, 'Z') OR
          (excluded.exported_at = daily_records.exported_at AND excluded.received_at > daily_records.received_at)`,
     ).bind(...(spec ? [principal.userId, record.date, intent.exportId, record.index,
       record.schemaVersion, record.captureStatus, intent.exportId, principal.userId] :

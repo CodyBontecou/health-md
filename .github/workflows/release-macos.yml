@@ -4,6 +4,11 @@
 #   - workflow_dispatch with a draft GitHub Release's v* tag (canonical submission path)
 #   - publishing a GitHub Release with a v* tag (legacy fallback)
 #
+# Gate: before any build or submission, the exact release SHA (the tag's commit,
+# or the branch head for branch-mode runs) must pass the full Apple CI suite via
+# the reusable apple-ci.yml workflow. Store submissions never run on an
+# unqualified commit.
+#
 # Effects on a tagged release run:
 #   1. Build, sign, notarize Developer ID + App Store builds
 #   2. Upload the App Store pkg to ASC and submit for review (MAC_OS platform)
@@ -30,7 +35,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Existing v* release tag to build from main (for reruns after workflow-only fixes)'
+        description: 'Existing v* tag; dispatch from main after workflow-only fixes (always archives the original tag source)'
         required: false
         default: ''
         type: string
@@ -54,7 +59,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.release.tag_name || github.ref }}
+  group: apple-release-macos-${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
   cancel-in-progress: false
 
 env:
@@ -64,13 +69,71 @@ env:
   ASC_APP_ID: ${{ secrets.HEALTHMD_ASC_APP_ID }}
 
 jobs:
+  resolve-release-sha:
+    if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.type != 'Bot' && github.event.release.author.login != 'github-actions[bot]') }}
+    name: Resolve release SHA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      tag_object: ${{ steps.resolve.outputs.tag_object }}
+      mode: ${{ steps.resolve.outputs.mode }}
+      version: ${{ steps.resolve.outputs.version }}
+      trigger: ${{ steps.resolve.outputs.trigger }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Resolve exact release commit
+        id: resolve
+        env:
+          RELEASE_EVENT_TAG: ${{ github.event.release.tag_name || '' }}
+          RELEASE_INPUT_TAG: ${{ inputs.release_tag || '' }}
+          RELEASE_DRY_RUN: ${{ inputs.dry_run || false }}
+        run: python3 .github/scripts/apple_release_source.py resolve
+
+      # The draft is the source ledger before any store operation. A human
+      # published release remains supported only as the legacy fallback.
+      - name: Verify existing GitHub release record
+        if: ${{ steps.resolve.outputs.mode == 'tag' && inputs.dry_run != true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --json tagName,isDraft > "$RUNNER_TEMP/release-record.json"
+          jq -e --arg tag "$RELEASE_TAG" --arg event "$GITHUB_EVENT_NAME" \
+            '.tagName == $tag and ($event == "release" or .isDraft == true)' \
+            "$RUNNER_TEMP/release-record.json" >/dev/null
+
+  qualify:
+    if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.type != 'Bot' && github.event.release.author.login != 'github-actions[bot]') }}
+    name: Qualify exact Apple release SHA
+    needs: resolve-release-sha
+    uses: ./.github/workflows/apple-ci.yml
+    with:
+      release_sha: ${{ needs.resolve-release-sha.outputs.sha }}
+
   release:
     name: Build & Release
-    if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.login != 'github-actions[bot]') }}
+    needs: [resolve-release-sha, qualify]
+    if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.type != 'Bot' && github.event.release.author.login != 'github-actions[bot]') }}
     # Keep releases available when the optional self-hosted Mac is offline. The
     # Apple CI suite qualifies this same hosted image and its Xcode toolchain.
     runs-on: macos-26
     timeout-minutes: 90
+    env:
+      RELEASE_SHA: ${{ needs.resolve-release-sha.outputs.sha }}
+      RELEASE_TAG: ${{ needs.resolve-release-sha.outputs.tag }}
+      RELEASE_TAG_OBJECT: ${{ needs.resolve-release-sha.outputs.tag_object }}
+      RELEASE_DRY_RUN: ${{ inputs.dry_run || false }}
     defaults:
       run:
         working-directory: apps/apple
@@ -79,51 +142,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          ref: ${{ needs.resolve-release-sha.outputs.sha }}
           fetch-depth: 0
+
+      # Recovery may use newer workflow policy, never newer product source.
+      # Keep the policy outside the clean archive worktree, even for old tags
+      # that do not yet contain this script.
+      - name: Load current workflow release policy
+        run: git show "${GITHUB_SHA}:.github/scripts/apple_release_source.py" > "$RUNNER_TEMP/apple-release-source.py"
+
+      - name: Verify qualified source at checkout
+        run: python3 "$RUNNER_TEMP/apple-release-source.py" verify
 
       - name: Configure Git defaults
         run: git config --global init.defaultBranch main
 
       - name: Determine release metadata
         id: meta
+        env:
+          RELEASE_MODE: ${{ needs.resolve-release-sha.outputs.mode }}
+          RELEASE_VERSION: ${{ needs.resolve-release-sha.outputs.version }}
+          RELEASE_TRIGGER: ${{ needs.resolve-release-sha.outputs.trigger }}
         run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-            if [[ "$TAG" != v* ]]; then
-              echo "::error::Release tag must start with 'v' (for example v1.2.3); got '$TAG'"
-              exit 1
-            fi
-            VERSION="${TAG#v}"
-            MODE="tag"
-            TRIGGER="release"
-          elif [[ -n "${{ github.event.inputs.release_tag || '' }}" ]]; then
-            TAG="${{ github.event.inputs.release_tag }}"
-            if [[ "$TAG" != v* ]]; then
-              echo "::error::Manual release tag must start with 'v' (for example v1.2.3); got '$TAG'"
-              exit 1
-            fi
-            VERSION="${TAG#v}"
-            MODE="tag"
-            TRIGGER="manual-release"
-          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            TAG="${GITHUB_REF_NAME}"
-            VERSION="${TAG#v}"
-            MODE="tag"
-            TRIGGER="tag"
-          else
-            # Branch dispatch (testing only — must be dry run or skip_asc_submit)
-            MODE="branch"
-            TAG=""
-            VERSION=""
-            TRIGGER="manual"
-          fi
           {
-            echo "mode=$MODE"
-            echo "tag=$TAG"
-            echo "version=$VERSION"
-            echo "trigger=$TRIGGER"
+            echo "mode=$RELEASE_MODE"
+            echo "tag=$RELEASE_TAG"
+            echo "version=$RELEASE_VERSION"
+            echo "trigger=$RELEASE_TRIGGER"
           } >> "$GITHUB_OUTPUT"
-          echo "Running in $MODE mode via $TRIGGER (tag=$TAG)"
+          echo "Running in $RELEASE_MODE mode via $RELEASE_TRIGGER (tag=$RELEASE_TAG, source=$RELEASE_SHA)"
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -139,39 +186,6 @@ jobs:
             brew install asc
           fi
           asc --version
-
-      - name: Remove iOS-only Swift packages from macOS release workspace
-        run: |
-          # The macOS target does not link Notelet, but Xcode resolves every
-          # project-level Swift package before even showing build settings.
-          # Remove this iOS-only package reference from the checked-out workspace
-          # so macOS releases do not depend on unnecessary package networking.
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path("HealthMd.xcodeproj/project.pbxproj")
-          ids = {
-              "62D100002F60B00000A10000",  # notelet package
-              "62D100012F60B00000A10000",  # Notelet product
-              "62D100022F60B00000A10000",  # Notelet build file
-          }
-          output = []
-          skip_depth = 0
-          for line in path.read_text().splitlines(keepends=True):
-              if skip_depth > 0:
-                  skip_depth += line.count("{") - line.count("}")
-                  continue
-              stripped = line.lstrip()
-              object_id = stripped.split(" ", 1)[0] if stripped else ""
-              if object_id in ids and " = {" in line:
-                  skip_depth = line.count("{") - line.count("}")
-                  continue
-              if object_id in ids and stripped.endswith(",\n"):
-                  continue
-              output.append(line)
-          path.write_text("".join(output))
-          PY
 
       - name: Resolve version from project
         id: version
@@ -189,12 +203,12 @@ jobs:
           if [[ "${{ steps.meta.outputs.mode }}" == "tag" ]]; then
             EXPECTED="${{ steps.meta.outputs.version }}"
             if [[ "$EXPECTED" != "$ACTUAL" ]]; then
-              echo "::error::Tag v$EXPECTED does not match resolved MARKETING_VERSION $ACTUAL. Bump pbxproj MARKETING_VERSION, commit, then re-tag."
+              echo "::error::Tag v$EXPECTED does not match MARKETING_VERSION $ACTUAL. Commit the intended version and create a new release; never move an existing tag."
               exit 1
             fi
           else
             if [[ "${{ github.event.inputs.dry_run }}" != "true" ]]; then
-              echo "::error::Branch dispatch requires dry_run=true (only GitHub Release publishes upload to ASC)"
+              echo "::error::Untagged branch dispatch requires dry_run=true; uploads require an existing Apple release tag"
               exit 1
             fi
           fi
@@ -258,6 +272,9 @@ jobs:
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
 
+      - name: Verify qualified source before archive
+        run: python3 "$RUNNER_TEMP/apple-release-source.py" verify
+
       - name: Archive (signed with Developer ID)
         run: |
           ARCHIVE_PATH="$RUNNER_TEMP/$APP_NAME.xcarchive"
@@ -271,6 +288,9 @@ jobs:
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime"
           echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
+
+      - name: Verify qualified source after archive
+        run: python3 "$RUNNER_TEMP/apple-release-source.py" verify
 
       - name: Export Developer ID build
         run: |
@@ -454,6 +474,9 @@ jobs:
             echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
             echo "ASC_BYPASS_KEYCHAIN=1"
           } >> "$GITHUB_ENV"
+
+      - name: Verify qualified source before publication
+        run: python3 "$RUNNER_TEMP/apple-release-source.py" verify
 
       - name: Upload pkg to App Store Connect
         id: asc_upload
@@ -647,25 +670,16 @@ jobs:
           ZIP_PATH="${{ steps.zip.outputs.zip_path }}"
           NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
 
-          if gh release view "$TAG" &>/dev/null; then
-            # Release-triggered runs already have a published release. If a legacy
-            # draft release exists, keep it draft; never demote a published release.
-            IS_DRAFT=$(gh release view "$TAG" --json isDraft --jq .isDraft)
-            if [[ "$IS_DRAFT" == "true" ]]; then
-              echo "Updating existing draft $TAG with notes + macOS zip"
-              gh release edit "$TAG" --notes-file "$NOTES_FILE"
-            else
-              echo "Release $TAG is already published; uploading macOS zip without changing notes"
-            fi
-            gh release upload "$TAG" "$ZIP_PATH" --clobber
+          # This record was required before qualification/store operations.
+          # Never create a replacement source ledger after uploading to ASC.
+          IS_DRAFT=$(gh release view "$TAG" --json isDraft --jq .isDraft)
+          if [[ "$IS_DRAFT" == "true" ]]; then
+            echo "Updating existing draft $TAG with notes + macOS zip"
+            gh release edit "$TAG" --notes-file "$NOTES_FILE"
           else
-            echo "Creating draft release $TAG with macOS zip (fallback path)"
-            gh release create "$TAG" \
-              --draft \
-              --title "$TAG" \
-              --notes-file "$NOTES_FILE" \
-              "$ZIP_PATH"
+            echo "Release $TAG is already published; uploading macOS zip without changing notes"
           fi
+          gh release upload "$TAG" "$ZIP_PATH" --clobber
 
       - name: Cleanup keychain
         if: always()
@@ -681,6 +695,8 @@ jobs:
             echo "## Submit macOS ${{ steps.meta.outputs.tag }}"
             echo ""
             echo "- **Version:** ${{ steps.version.outputs.marketing_version }} (build ${{ steps.version.outputs.build_number }})"
+            echo "- **Source SHA:** $RELEASE_SHA"
+            echo "- **Workflow SHA:** $GITHUB_SHA"
             echo "- **Trigger:** ${{ steps.meta.outputs.trigger }}"
             echo "- **Dry run:** ${{ github.event.inputs.dry_run || 'false' }}"
             echo "- **Skip ASC upload:** ${{ github.event.inputs.skip_asc_upload || 'false' }}"

@@ -207,7 +207,7 @@ final class CIQualityGateTests: XCTestCase {
             "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
         )
         XCTAssertTrue(
-            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: macos-26\n    timeout-minutes: 60"),
+            content.contains("ios-ui-shards:\n    name: iOS UI shard ${{ matrix.shard }}\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [0, 1, 2]\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: macos-26\n    timeout-minutes: 60"),
             "The split UI job must allow at least 60 minutes for clean builds"
         )
         XCTAssertEqual(
@@ -220,31 +220,58 @@ final class CIQualityGateTests: XCTestCase {
             3,
             "All Xcode test jobs must consume the single prepared shared-core artifact"
         )
+        let runner = try source("scripts/ios_ui_shards.py")
         XCTAssertTrue(
-            content.contains("-test-timeouts-enabled YES"),
-            "UI tests must fail diagnostically instead of hanging indefinitely"
+            runner.contains("\"-test-timeouts-enabled\", \"YES\"") &&
+                runner.contains("\"-default-test-execution-time-allowance\", \"180\"") &&
+                runner.contains("\"-maximum-test-execution-time-allowance\", \"300\""),
+            "Every UI lane must retain the original diagnostic test timeouts"
         )
         let smokeStep = try XCTUnwrap(
             content.components(separatedBy: "- name: Run UI smoke tests (iOS)").last?
                 .components(separatedBy: "- name: Check warnings (iOS UI)").first
         )
-        XCTAssertFalse(
-            smokeStep.contains("continue-on-error: true"),
-            "Selected PR UI smoke failures must remain blocking"
-        )
-        let smokeInvocations = smokeStep.components(separatedBy: "xcodebuild test").dropFirst()
-        XCTAssertEqual(smokeInvocations.count, 2, "PR smoke must use two deterministic test invocations")
-        for invocation in smokeInvocations {
-            let selectionCount = invocation.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-            XCTAssertGreaterThan(selectionCount, 0, "Each PR smoke invocation must select tests explicitly")
-            XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
+        XCTAssertFalse(smokeStep.contains("continue-on-error: true"), "Selected UI smoke failures must remain blocking")
+        XCTAssertTrue(smokeStep.contains("python3 scripts/ios_ui_shards.py run"))
+        XCTAssertTrue(smokeStep.contains("--shard '${{ matrix.shard }}'"))
+        XCTAssertTrue(runner.contains("\"xcodebuild\", \"test-without-building\""))
+        XCTAssertTrue(runner.contains("selection(index)"), "The real test command must use the lane selection")
+        let inventory = try XCTUnwrap(runner.components(separatedBy: "SHARDS = (").last?
+            .components(separatedBy: "\n)\n").first)
+        let lanes = inventory.components(separatedBy: "\n    (").dropFirst()
+        XCTAssertEqual(lanes.count, 3, "PR smoke must use three deterministic UI lanes")
+        let selectorPattern = try NSRegularExpression(pattern: #""([A-Za-z]+Tests/test[^"\n]+)""#)
+        let selections = lanes.flatMap { lane -> [String] in
+            let matches = selectorPattern.matches(in: lane, range: NSRange(lane.startIndex..., in: lane))
+            let names = matches.compactMap { match -> String? in
+                guard let range = Range(match.range(at: 1), in: lane) else { return nil }
+                return String(lane[range])
+            }
+            XCTAssertGreaterThan(names.count, 0, "Each UI lane must select tests explicitly")
+            XCTAssertLessThanOrEqual(names.count, 10, "Each UI lane must remain bounded")
+            return names
         }
-        let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-        XCTAssertEqual(smokeSelectionCount, 14, "PR smoke must preserve all selected UI regressions")
-        XCTAssertTrue(
-            smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
-            "PR smoke must cover deterministic returning-user release notes"
-        )
+        let expectedSelections: Set<String> = [
+            "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
+            "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
+            "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
+            "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
+            "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
+            "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab",
+            "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
+            "HealthMdUILaunchTests/testAppLaunches",
+            "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
+            "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
+            "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
+            "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+            "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
+            "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
+        ]
+        XCTAssertEqual(selections.count, 14, "PR smoke must preserve every selected UI regression exactly once")
+        XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the exact historical UI inventory")
+        XCTAssertTrue(content.contains("needs: [changes, ios-ui-shards]"))
+        XCTAssertTrue(content.contains("test \"$SHARDS_RESULT\" = success"))
+        XCTAssertTrue(content.contains("python3 apps/apple/scripts/ios_ui_shards.py verify"))
         let makefile = try String(
             contentsOf: projectDir.appendingPathComponent("Makefile"),
             encoding: .utf8
