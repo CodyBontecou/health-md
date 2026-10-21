@@ -46,6 +46,7 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
+                "support.local-reporting-fallback",
             ),
             idsWithState(states, "planned"),
         )
@@ -64,6 +65,7 @@ class ProductCapabilityManifestTest {
             "planned",
             pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
+
         val claimCapability = capabilities.single {
             it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
         }
@@ -148,9 +150,10 @@ class ProductCapabilityManifestTest {
             "direct.cli_agent_push_wake",
             "export.range-summary",
             "setup.share-portable-configuration",
-            "core.shared-rust-profile-engine",
             "destination.google-drive",
             "account.myself_lifetime_claim",
+            "core.shared-rust-profile-engine",
+            "support.local-reporting-fallback",
         )
     }
 }

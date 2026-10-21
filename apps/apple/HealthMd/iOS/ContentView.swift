@@ -2814,6 +2814,7 @@ struct SettingsTabView: View {
     @Binding var showExportProfiles: Bool
     @Binding var showClinicianReport: Bool
     @State private var showMailCompose = false
+    @StateObject private var feedbackReporter = FeedbackReporter()
     @State private var showPaywall = false
     @State private var showMyselfClaim = false
     @State private var showExternalIntegrations = false
@@ -2914,9 +2915,10 @@ struct SettingsTabView: View {
                 }
             }
         }
-        .sheet(isPresented: $showMailCompose) {
-            MailComposeView()
+        .sheet(isPresented: $showMailCompose, onDismiss: feedbackReporter.mailSheetDismissed) {
+            MailComposeView(onCompletion: feedbackReporter.completeMail)
         }
+        .feedbackFailureSheet($feedbackReporter.failure)
         .sheet(isPresented: $showMyselfClaim) {
             MyselfClaimView(app: "health.md")
         }
@@ -3123,8 +3125,8 @@ struct SettingsTabView: View {
                 action: {
                     if FeedbackHelper.canSendMail {
                         showMailCompose = true
-                    } else if let url = FeedbackHelper.mailtoURL() {
-                        UIApplication.shared.open(url)
+                    } else {
+                        feedbackReporter.open(.email)
                     }
                 }
             )
@@ -3137,7 +3139,7 @@ struct SettingsTabView: View {
                 subtitle: "Open an issue on GitHub",
                 isActive: true,
                 accessibilityHint: "Double tap to open GitHub Issues",
-                action: { FeedbackHelper.openGitHubIssue() }
+                action: { feedbackReporter.open(.github) }
             )
         }
     }
