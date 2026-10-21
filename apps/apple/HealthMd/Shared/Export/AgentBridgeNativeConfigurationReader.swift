@@ -229,6 +229,18 @@ final class AgentBridgeNativePlanningSession {
         return result.sorted { $0.issuedAt.rawValue == $1.issuedAt.rawValue ? $0.planId.rawValue < $1.planId.rawValue : $0.issuedAt.rawValue > $1.issuedAt.rawValue }
     }
 
+    /// Native producer pre-read boundary only; does not reserve again or install an SDK route.
+    func captureReadConfiguration(_ reservation: AgentBridgeExportCaptureReservation) throws -> AgentBridgeRequestSettingsResolution {
+        try Task.checkCancellation()
+        let publication = try requireCurrent()
+        let result = try service.captureReadConfiguration(reservation, authenticatedPeer: peer)
+        // Local-only tail after the service's final live expiry check; no delaying SDK callback.
+        guard !wireAbandoned else { throw AgentBridgeValidationError.permissionRequired }
+        guard try lifecycle.currentPublication() == publication else { throw AgentBridgeValidationError.bindingChanged }
+        try Task.checkCancellation()
+        return result
+    }
+
     func reviewNativePlan(planID: AgentBridgeUUID) throws -> AgentBridgePlan {
         let publication = try requireCurrent()
         let result = try service.reviewNativePlan(planID: planID, authenticatedPeer: peer)

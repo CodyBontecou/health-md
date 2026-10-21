@@ -10,6 +10,12 @@ struct AgentBridgeRequestSettingsCatalog {
     let configurationSHA256: String
     fileprivate let metrics: [String: AgentBridgeRequestSettingsMetric]
 
+    /// Live capture may retain its frozen output while availability changes. Only the exact
+    /// selected native mapping may be read; missing or reinterpreted metrics never fall back.
+    func requireAvailable(_ selection: [AgentBridgeRequestSettingsMetric]) throws {
+        guard selection.allSatisfy({ metrics[$0.semanticID] == $0 }) else { throw AgentBridgeValidationError.permissionRequired }
+    }
+
     init(registry: CoreMetricRegistrySnapshot, availableNativeMetricIDs: Set<String>, revision: Int64) throws {
         guard revision > 0 else { throw AgentBridgeValidationError.invalidRequest }
         guard HealthMdCoreRegistryAdapter.shadowDifferences(snapshot: registry).isEmpty else {

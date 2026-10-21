@@ -172,6 +172,39 @@ internal class AgentBridgeExportPlanningService(
         }
     }
 
+    /** Pre-read validation only, not claim/reclaim/resume. Frozen output survives changed current
+     * preferences/planning expiry; native grant/trust/readiness/availability and job expiry remain live. */
+    fun captureReadConfiguration(authenticated: AgentBridgeExportAuthenticatedPeer,
+        reservation: AgentBridgeExportCaptureReservation): AgentBridgeRequestSettingsResolution {
+        val request = reservation.job.request()
+        val plan = request.plan as? AgentBridgeGeneratedPlan ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val expected = peer(authenticated, plan.intent.peer)
+        fun validate(transaction: AgentBridgeExportAuthorityTransaction?): AgentBridgeRequestSettingsResolution {
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            peer(authenticated, expected)
+            require(reservation.job in tx.state.acceptedJobs.orEmpty() && reservation.claim in tx.state.captureClaims.orEmpty() &&
+                reservation.claim.requestSha256 == reservation.job.requestSha256, AgentBridgeErrorCode.BINDING_CHANGED)
+            val snapshot = readConfiguration(null, tx, expected) // No saved/profile preference read.
+            val frozen = json.decodeFromString<AgentBridgeRequestSettingsResolution>(reservation.job.resolutionCanonical)
+            require(frozen.selection.all { snapshot.settings.catalog.metrics[it.semanticId] == it }, AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            requirePresence(snapshot)
+            require(snapshot.entitlement == AgentBridgeDiscoveryEntitlement.SATISFIED, AgentBridgeErrorCode.ENTITLEMENT_REQUIRED)
+            require(snapshot.nativeGrants == AgentBridgeDiscoveryNativeGrants.SATISFIED, AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            peer(authenticated, expected)
+            val instant = now()
+            val ref = plan.authorityReferences.native
+            val parent = tx.grant(expected, ref.authorityId, ref.grantRevision, instant)
+            require(AgentBridgeExportAuthorityStore.reference(parent) == ref, AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            // Exact parent reference retains the scope proven at acceptance, without renewing it.
+            require(AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE in parent.rights, AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val finalInstant = now()
+            require(finalInstant >= Instant.parse(reservation.claim.claimedAt) && finalInstant < Instant.parse(reservation.job.expiresAt) &&
+                finalInstant < Instant.parse(parent.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
+            return frozen
+        }
+        return store.access(fence = { validate(it) }) { validate(it) }
+    }
+
     fun discover(authenticated: AgentBridgeExportAuthenticatedPeer, value: AgentBridgeDiscoveryRequest): AgentBridgeDiscovery {
         val request = AgentBridgeCodec.decode(AgentBridgeCodec.encode(value)) as AgentBridgeDiscoveryRequest
         val peer = peer(authenticated, request.peer)

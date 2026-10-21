@@ -10,14 +10,70 @@ import org.junit.Test
 
 /** Actual production service/store/resolver boundaries; no native Context, key or health reads. */
 class AgentBridgeExportPlanningBoundaryTest {
-    private fun executionRequest(f: AgentBridgeExportPlanningFixture, storeDecision: Boolean = true): AgentBridgeExecuteRequest {
-        val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))
+    private fun executionRequest(f: AgentBridgeExportPlanningFixture, storeDecision: Boolean = true, policy: AgentBridgeSettingsPolicy? = null): AgentBridgeExecuteRequest {
+        val plan = f.service.plan(f.peerContext, f.request(f.enrolled(), f.intent(policy = policy ?: f.intent().settingsPolicy)))
         val approval = if (storeDecision) f.service.authorizeExactApproval(f.peerContext, f.native, plan.planId,
             AgentBridgeValidation.bindingFor(plan)) else AgentBridgeApproval(AgentBridgeExportPlanningFixture.id(81),
                 f.clock.instant().toString(), plan.authorityReferences.native.authorityId, AgentBridgeValidation.bindingFor(plan),
                 listOf(AgentBridgeApprovalRightsItem.EXPORT_EXECUTE), "healthmd.agent_approval", 1)
         return AgentBridgeExecuteRequest(approval, AgentBridgeExportPlanningFixture.id(82), AgentBridgeExportPlanningFixture.id(83),
             plan, AgentBridgeExportPlanningFixture.id(84), "healthmd.agent_execute_request", 1)
+    }
+
+    @Test
+    fun captureReadKeepsFrozenSavedOutputAfterPlanningExpiryWithoutPreferenceReads() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val native = AgentBridgeRequestSettingsResolver.resolve(f.intent(),
+                f.configuration.readConfiguration(f.intent().settingsPolicy).settings, f.clock).exporterSettings()
+            f.configuration.saved = AgentBridgeRequestSettingsSnapshot(7, native)
+            val request = executionRequest(f, policy = AgentBridgeSettingsPolicySavedDeviceSettings(7, "saved_device_settings"))
+            f.service.acceptExecution(f.peerContext, request)
+            val reservation = f.service.claimCapture(f.peerContext, request)
+            val original = kotlinx.serialization.json.Json { encodeDefaults = true }.decodeFromString<AgentBridgeRequestSettingsResolution>(reservation.job.resolutionCanonical)
+            f.clock.now = f.clock.now.plusSeconds(600)
+            f.configuration.saved = null; f.configuration.readPolicies.clear()
+            val frozen = f.service.captureReadConfiguration(f.peerContext, reservation)
+            assertThat(frozen.configurationEquals(original)).isTrue()
+            assertThat(f.configuration.readPolicies).isNotEmpty()
+            assertThat(f.configuration.readPolicies.all { it == null }).isTrue()
+            assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
+            assertThat(ledgerState(f).getValue("captureClaims").jsonArray.size).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun captureReadRejectsUnavailableMetricsAndCurrentNativeAuthorityLoss() {
+        for (mode in listOf("metric", "permission", "entitlement", "trust", "grant", "delayed_key")) AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            val reservation = f.service.claimCapture(f.peerContext, request)
+            when (mode) {
+                "metric" -> f.configuration.catalog = AgentBridgeRequestSettingsCatalog(AgentBridgeExportTestRegistry.load(),
+                    setOf("avg_hr", "min_hr", "max_hr", "resting_hr", "hrv"), 4)
+                "permission" -> f.configuration.grants = AgentBridgeDiscoveryNativeGrants.REQUIRED
+                "entitlement" -> f.configuration.entitlement = AgentBridgeDiscoveryEntitlement.REQUIRED
+                "trust" -> f.peerContext.trusted = false
+                "grant" -> (request.plan as AgentBridgeGeneratedPlan).authorityReferences.native.let { f.store.revoke(f.native, f.peer, it.authorityId, it.grantRevision) }
+                else -> f.keys.onLoad = { f.clock.now = f.clock.now.plusSeconds(604800) }
+            }
+            try { f.service.captureReadConfiguration(f.peerContext, reservation); throw AssertionError("Expected rejection") }
+            catch (_: AgentBridgeException) { }
+        }
+    }
+
+    @Test
+    fun captureReadRejectsFabricatedReservationBeforeMetadataAndRechecksReadCallbacks() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            val reservation = f.service.claimCapture(f.peerContext, request)
+            val fake = reservation.copy(claim = reservation.claim.copy(claimId = AgentBridgeExportPlanningFixture.id(99)))
+            val reads = f.configuration.calls
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { f.service.captureReadConfiguration(f.peerContext, fake) }
+            assertThat(f.configuration.calls).isEqualTo(reads)
+            f.configuration.onRead = { f.configuration.grants = AgentBridgeDiscoveryNativeGrants.REQUIRED }
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { f.service.captureReadConfiguration(f.peerContext, reservation) }
+        }
     }
 
     @Test

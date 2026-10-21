@@ -258,6 +258,18 @@ internal class AgentBridgeNativePlanningSession(
         finally { finished.set(true); cancellation.cancel() }
     }
 
+    /** Original-owner native producer boundary. No SDK reads, claim renewal or installed route. */
+    fun captureReadConfiguration(reservation: AgentBridgeExportCaptureReservation, caller: Job): AgentBridgeRequestSettingsResolution {
+        caller.ensureActive()
+        val publication = requireCurrent()
+        val result = service.captureReadConfiguration(peer, reservation)
+        // Local-only tail after the service's final live expiry check.
+        if (wireAbandoned) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        if (lifecycle.currentPublication() != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+        caller.ensureActive()
+        return result
+    }
+
     /** Native signed-record queue, never host display text. Listing creates no decision. */
     fun nativePlansAwaitingReview(): List<AgentBridgeGeneratedPlan> {
         val publication = requireCurrent()

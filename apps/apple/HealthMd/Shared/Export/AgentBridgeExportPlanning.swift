@@ -234,6 +234,41 @@ final class AgentBridgeExportPlanningService {
         })
     }
 
+    /// Live pre-read check for a newly claimed capture. Not a claim/reclaim or resume API.
+    /// Output/configuration revisions and planning expiry do not rewrite an accepted job; current
+    /// native trust, grant, availability/readiness and the original seven-day lifetime still apply.
+    func captureReadConfiguration(_ reservation: AgentBridgeExportCaptureReservation,
+                                  authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeRequestSettingsResolution {
+        func validate(_ state: AgentBridgeExportAuthoritySnapshot) throws -> AgentBridgeRequestSettingsResolution {
+            try authenticatedPeer.requireCurrent()
+            guard state.acceptedJobs?.contains(reservation.job) == true,
+                  state.captureClaims?.contains(reservation.claim) == true,
+                  reservation.claim.requestSHA256 == reservation.job.requestSHA256 else { throw AgentBridgeValidationError.bindingChanged }
+            let request = try reservation.job.request()
+            try self.requirePeer(request.plan.intent.peer, authenticatedPeer)
+            let config = try self.readConfiguration(state: state, peer: authenticatedPeer, policy: nil)
+            let frozen: AgentBridgeRequestSettingsResolution
+            do { frozen = try PropertyListDecoder().decode(AgentBridgeRequestSettingsResolution.self, from: reservation.job.nativeResolution) }
+            catch { throw AgentBridgeValidationError.bindingChanged }
+            try config.inputs.catalog.requireAvailable(frozen.selection)
+            try self.requireNativeReadiness(config)
+            try authenticatedPeer.requireCurrent()
+            let now = self.clock.now()
+            let parent = try self.currentParent(for: request.plan, state: state, peer: authenticatedPeer, now: now)
+            // The unchanged full parent reference binds the scope already checked at acceptance.
+            guard parent.rights.contains(.exportExecute) else { throw AgentBridgeValidationError.approvalRequired }
+            let instant = try self.utc(self.clock.now())
+            guard reservation.claim.claimedAt.rawValue <= instant.rawValue,
+                  reservation.job.expiresAt.rawValue > instant.rawValue, parent.expiresAt.rawValue > instant.rawValue else { throw AgentBridgeValidationError.planExpired }
+            return frozen
+        }
+        _ = try store.inspectCurrent { try validate($0) }
+        // Current native trust may delay/revoke after the first locked read. Re-open signed state
+        // and metadata, never return configuration selected before that callback.
+        try authenticatedPeer.requireCurrent()
+        return try store.inspectCurrent { try validate($0) }
+    }
+
     /// Separate local-native exact decision. NOT reachable from handle(), JSON or an MCP annotation.
     /// The native authorizer must independently approve this complete issued binding, never a flag.
     func storeNativeDecision(planID: AgentBridgeUUID, binding: AgentBridgeBinding, approvalID: AgentBridgeUUID,

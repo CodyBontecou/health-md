@@ -27,8 +27,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                   nativeGrants: grants, entitlement: entitlement, foregroundAvailable: foregroundAvailable, protectedDataAvailable: protectedDataAvailable)
     }
 
-    private func executionRequest(_ rig: Rig, storeDecision: Bool = true) throws -> AgentBridgeExecute {
-        let plan = try rig.makePlan()
+    private func executionRequest(_ rig: Rig, storeDecision: Bool = true, policy: AgentBridgeSettingsPolicy? = nil) throws -> AgentBridgeExecute {
+        let plan = try rig.makePlan(policy: policy)
         let binding = try AgentBridgeSemantics.binding(plan)
         if storeDecision {
             try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8),
@@ -37,6 +37,58 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let approval = AgentBridgeApproval(approvalId: try id(8), approvedAt: try AgentBridgeUTC("2026-03-09T00:00:00Z"),
             authorityId: plan.authorityReferences.native.authorityId, binding: binding, rights: [.exportExecute])
         return try AgentBridgeExecute(approval: approval, idempotencyKey: id(81), jobId: id(82), plan: plan, requestId: id(83))
+    }
+
+    func testCaptureReadKeepsFrozenSavedOutputAfterPlanningExpiryWithoutPreferenceReads() throws {
+        let rig = try Rig(withSaved: true); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig, policy: .savedDeviceSettings(expectedRevision: 7))
+        _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+        let original = try PropertyListDecoder().decode(AgentBridgeRequestSettingsResolution.self, from: reservation.job.nativeResolution)
+        rig.clock.advance(seconds: 600)
+        rig.reader.catalogRevision += 1; rig.reader.saved = nil
+        rig.reader.defaults.reads = 0; rig.reader.calls = []
+        let frozen = try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer)
+        XCTAssertEqual(frozen.settings.healthSubfolder, original.settings.healthSubfolder)
+        XCTAssertEqual(frozen.selection, original.selection)
+        XCTAssertEqual(frozen.predictedRelativePaths, original.predictedRelativePaths)
+        XCTAssertEqual(rig.reader.defaults.reads, 0)
+        XCTAssertTrue(rig.reader.calls.allSatisfy { $0 == "discovery" })
+        XCTAssertEqual(try rig.store.snapshot().captureClaims, [reservation.claim])
+    }
+
+    func testCaptureReadRejectsUnavailableMetricsAndCurrentNativeAuthorityLoss() throws {
+        for mode in ["metric", "permission", "entitlement", "trust", "grant", "delayed_key"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+            switch mode {
+            case "metric": rig.reader.available.remove("steps")
+            case "permission": rig.reader.grants = .required
+            case "entitlement": rig.reader.entitlement = .required
+            case "trust": rig.session.revoke()
+            case "grant": try rig.store.revokeNativeDelegation(request.plan.authorityReferences.native, expectedGeneration: rig.store.snapshot().generation, authorization: FakeNativeAuthorization())
+            default: rig.keys.onNextLoad { rig.clock.advance(seconds: 604800) }
+            }
+            XCTAssertThrowsError(try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer))
+        }
+    }
+
+    func testCaptureReadRejectsFabricatedReservationBeforeMetadataAndRechecksReadCallbacks() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+        let fake = AgentBridgeExportCaptureReservation(job: reservation.job,
+            claim: .init(version: 1, claimID: try id(99), requestSHA256: reservation.claim.requestSHA256, claimedAt: reservation.claim.claimedAt))
+        rig.reader.calls = []
+        XCTAssertThrowsError(try rig.service.captureReadConfiguration(fake, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        XCTAssertTrue(rig.reader.calls.isEmpty)
+        rig.reader.beforeReturn = { rig.reader.grants = .required }
+        XCTAssertThrowsError(try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer))
     }
 
     func testCaptureReservationRequiresAcceptanceAndCannotBeReclaimedAcrossRestart() throws {
