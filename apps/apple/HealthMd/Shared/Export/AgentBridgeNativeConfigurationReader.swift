@@ -380,6 +380,13 @@ final class AgentBridgeNativeCaptureContext {
             _ = try configurationForRead()
         } catch { invalidate(); throw error }
     }
+    func bindPublicArtifactIDs() throws -> [String: String] {
+        do {
+            let resolution = try configurationForRead()
+            let result = try spool.bindPublicArtifactIDs(resolution.requestedDays)
+            _ = try configurationForRead(); return result
+        } catch { invalidate(); throw error }
+    }
     /// A fingerprint names the original accepted bytes; it never grants capture permission.
     func requestFingerprintForRead() throws -> String {
         _ = try configurationForRead()

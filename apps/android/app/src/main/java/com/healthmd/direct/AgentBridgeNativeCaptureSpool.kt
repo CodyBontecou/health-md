@@ -36,7 +36,10 @@ internal class AgentBridgeNativeCaptureSpool(
         val kind: String, val day: String?, val payload: String)
     @Serializable private data class Signed(val record: Record, val mac: String)
     @Serializable private data class Progress(val version: Int = 2, val captures: List<String>,
-        val artifacts: List<String> = emptyList(), val engine: String = "")
+        val artifacts: List<String> = emptyList(), val engine: String = "", val publicArtifactIDs: String? = null)
+    // Preserve existing v2 bytes. Version3 adds exactly16 UUID bytes per sorted artifact day.
+    @Serializable private data class LegacyProgress(val version: Int, val captures: List<String>,
+        val artifacts: List<String>, val engine: String)
     class ArtifactCheckpoint(val engine: ByteArray, val payload: ByteArray)
 
     private val json = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
@@ -120,6 +123,7 @@ internal class AgentBridgeNativeCaptureSpool(
             guard(); bytes
         } else {
             if (exists(started) || exists(captured)) fail()
+            if (state.publicArtifactIDs != null) fail(AgentBridgeErrorCode.BINDING_CHANGED)
             if (days.size >= 4096) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
             if (storedBytes + 2 * PAYLOAD_LIMIT >= JOB_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
             val next = progressPayload(state.copy(captures = (days + day).sorted()))
@@ -154,6 +158,7 @@ internal class AgentBridgeNativeCaptureSpool(
         val encoded = Base64.getEncoder().encodeToString(frozen)
         val (previous, state) = progress()
         if (state.engine.isNotEmpty() && state.engine != encoded) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        if (state.publicArtifactIDs != null) fail(AgentBridgeErrorCode.BINDING_CHANGED)
         if (state.artifacts.size >= 4096) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
         if (day in state.artifacts || exists("artifact-started-$day.json") || exists("artifact-$day.json")) fail(AgentBridgeErrorCode.BUSY)
         val next = state.copy(artifacts = (state.artifacts + day).sorted(), engine = encoded)
@@ -169,6 +174,28 @@ internal class AgentBridgeNativeCaptureSpool(
         if (captured.kind != "captured" || captured.day != day || captured.payload.isEmpty()) fail()
         if (frozen.isEmpty() || frozen.size > PAYLOAD_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
         publish("artifact-$day.json", record("artifact", day, Base64.getEncoder().encodeToString(frozen)))
+    }
+    /** Signed progress is the one issuance point. Exact recovery never creates another UUID. */
+    @Synchronized fun bindPublicArtifactIDs(approvedDays: List<String>): Map<String, String> = safeCall {
+        val approved = approvedDays.toList()
+        approved.forEach(::validDay)
+        guard()
+        val (previous, state) = progress()
+        if (approved.isEmpty() || approved.distinct().size != approved.size ||
+            approved.sorted() != state.captures || state.captures != state.artifacts) fail()
+        validateStoredProgress()
+        if (state.publicArtifactIDs == null) {
+            val buffer = ByteBuffer.allocate(state.artifacts.size * 16)
+            state.artifacts.forEach { _ ->
+                val id = UUID.randomUUID()
+                buffer.putLong(id.mostSignificantBits); buffer.putLong(id.leastSignificantBits)
+            }
+            val next = state.copy(version = 3, publicArtifactIDs = Base64.getEncoder().encodeToString(buffer.array()))
+            publicIDs(next)
+            publish("progress.json", record("progress", null, progressPayload(next)), previous)
+        }
+        val result = publicIDs(progress().second)
+        guard(); result
     }
     @Synchronized override fun close() {
         if (closed) return
@@ -202,7 +229,8 @@ internal class AgentBridgeNativeCaptureSpool(
         if (names != expected) fail()
     }
     private fun progressPayload(state: Progress): String {
-        val bytes = if (state.engine.isEmpty() && state.artifacts.isEmpty()) json.encodeToString(state.captures).toByteArray()
+        val bytes = if (state.publicArtifactIDs == null && state.engine.isEmpty() && state.artifacts.isEmpty()) json.encodeToString(state.captures).toByteArray()
+            else if (state.publicArtifactIDs == null) AgentBridgeCodec.canonicalize(json.encodeToString(LegacyProgress(state.version, state.captures, state.artifacts, state.engine)).toByteArray())
             else AgentBridgeCodec.canonicalize(json.encodeToString(state).toByteArray())
         return Base64.getEncoder().encodeToString(bytes)
     }
@@ -211,13 +239,30 @@ internal class AgentBridgeNativeCaptureSpool(
         val bytes = Base64.getDecoder().decode(value.payload)
         val state = if (bytes.firstOrNull() == '['.code.toByte()) Progress(captures = json.decodeFromString<List<String>>(bytes.decodeToString()))
             else json.decodeFromString<Progress>(bytes.decodeToString())
-        if (value.kind != "progress" || value.day != null || state.version != 2 ||
+        if (value.kind != "progress" || value.day != null ||
+            !((state.version == 2 && state.publicArtifactIDs == null) || (state.version == 3 && state.publicArtifactIDs != null)) ||
             state.engine.length > 5500 || state.artifacts.isEmpty() != state.engine.isEmpty() || progressPayload(state) != value.payload) fail()
         listOf(state.captures, state.artifacts).forEach { days ->
             if (days.size > 4096 || days.distinct().size != days.size || days != days.sorted()) fail()
             days.forEach(::validDay)
         }
+        if (state.version == 3) publicIDs(state)
         return value to state
+    }
+    private fun publicIDs(state: Progress): Map<String, String> {
+        if (state.version != 3 || state.publicArtifactIDs == null || state.artifacts.isEmpty() ||
+            state.artifacts.size > 4096 || state.captures != state.artifacts) fail()
+        val bytes = Base64.getDecoder().decode(state.publicArtifactIDs)
+        if (bytes.size != state.artifacts.size * 16 || Base64.getEncoder().encodeToString(bytes) != state.publicArtifactIDs) fail()
+        val buffer = ByteBuffer.wrap(bytes)
+        val result = linkedMapOf<String, String>()
+        state.artifacts.forEach { day ->
+            val id = UUID(buffer.long, buffer.long)
+            if (id.version() != 4 || id.variant() != 2) fail()
+            result[day] = id.toString()
+        }
+        if (result.values.toSet().size != state.artifacts.size) fail()
+        return java.util.Collections.unmodifiableMap(result)
     }
     private fun pins() {
         if (closed || identities.isEmpty()) fail()

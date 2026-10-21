@@ -7,8 +7,10 @@ import kotlinx.coroutines.CancellationException
 /** All approved days in frozen order, backed by signed day artifacts. Not a transfer manifest,
  * receipt, or authority outside the original native owner. */
 internal class AgentBridgeNativePreparedExport(val requestSha256: String,
-    days: List<AgentBridgeNativeRenderedDay>, val totalByteCount: ULong) {
+    days: List<AgentBridgeNativeRenderedDay>, val totalByteCount: ULong, publicArtifactIDs: Map<String, String>) {
     val days: List<AgentBridgeNativeRenderedDay> = java.util.Collections.unmodifiableList(ArrayList(days))
+    // Public UUID identities only; not a manifest, branch count or transfer authority.
+    val publicArtifactIDs: Map<String, String> = java.util.Collections.unmodifiableMap(LinkedHashMap(publicArtifactIDs))
 }
 
 internal suspend fun AgentBridgeNativePlanningSession.prepareExport(request: AgentBridgeExecuteRequest,
@@ -46,7 +48,9 @@ private object AgentBridgeNativeExportProducer {
             }
             if (days.size != approved.size || days.map { it.artifact.artifactId }.toSet().size != days.size ||
                 context.requestFingerprintForRead() != fingerprint) fail(AgentBridgeNativeRenderFailure.INVALID_ARTIFACT)
-            return AgentBridgeNativePreparedExport(fingerprint, days, total)
+            val publicIDs = context.bindPublicArtifactIDs()
+            if (publicIDs.keys != approved.toSet() || context.requestFingerprintForRead() != fingerprint) fail(AgentBridgeNativeRenderFailure.INVALID_ARTIFACT)
+            return AgentBridgeNativePreparedExport(fingerprint, days, total, publicIDs)
         } catch (failure: Throwable) {
             context.invalidate()
             if (failure is CancellationException || failure is AgentBridgeException || failure is AgentBridgeNativeRenderException ||

@@ -630,6 +630,11 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTAssertEqual(result.days.map(\.day), resolution.requestedDays)
             XCTAssertEqual(result.days.map { $0.artifact.relativePath }, resolution.predictedRelativePaths)
             XCTAssertEqual(result.days.count, 2)
+            XCTAssertEqual(Set(result.publicArtifactIDs.keys), Set(resolution.requestedDays.map(\.rawValue)))
+            XCTAssertEqual(Set(result.publicArtifactIDs.values).count, 2)
+            for id in result.publicArtifactIDs.values { _ = try AgentBridgeUUID(id) }
+            let progressURL = rig.directory.appendingPathComponent("captures").appendingPathComponent(job.requestSHA256.rawValue).appendingPathComponent("progress.json")
+            let progressBefore = try Data(contentsOf: progressURL)
             XCTAssertEqual(result.totalByteCount, result.days.reduce(0) { $0 + $1.artifact.byteCount })
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
             do { _ = try await planner.prepareExport(request, manager: manager); XCTFail("New execution must not replay capture") }
@@ -639,6 +644,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             let restored = try await planner.prepareRetainedExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
             XCTAssertEqual(restored.requestSHA256, result.requestSHA256)
             XCTAssertEqual(restored.totalByteCount, result.totalByteCount)
+            XCTAssertEqual(restored.publicArtifactIDs, result.publicArtifactIDs)
+            XCTAssertEqual(try Data(contentsOf: progressURL), progressBefore)
             XCTAssertEqual(restored.days.map(\.day), result.days.map(\.day))
             for (actual, expected) in zip(restored.days, result.days) {
                 XCTAssertEqual(actual.artifact, expected.artifact)
@@ -646,6 +653,37 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             }
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
             XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        }
+    }
+
+    func testPublicArtifactIdentityCannotBindBeforeCompleteApprovedSet() async throws {
+        try await withNativeExportPreparation { _, planner, request, store, _ in
+            do {
+                try await planner.withCaptureContext(request) { context in
+                    _ = try context.begin()
+                    XCTAssertThrowsError(try context.bindPublicArtifactIDs()) {
+                        XCTAssertEqual($0 as? AgentBridgeValidationError, .spoolMissingRestartRequired)
+                    }
+                    XCTAssertThrowsError(try context.configurationForRead())
+                }
+                XCTFail("A caught incomplete-set failure must invalidate the owner")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 0)
+        }
+    }
+
+    func testMissingPublicArtifactIdentityProgressCannotRemintOnRecovery() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let prepared = try await planner.prepareExport(request, manager: manager)
+            XCTAssertEqual(prepared.publicArtifactIDs.count, 2)
+            let directory = rig.directory.appendingPathComponent("captures").appendingPathComponent(prepared.requestSHA256)
+            try FileManager.default.removeItem(at: directory.appendingPathComponent("progress.json"))
+            do {
+                _ = try await planner.prepareRetainedExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+                XCTFail("Missing identity progress must require a fresh approved job")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
         }
     }
 

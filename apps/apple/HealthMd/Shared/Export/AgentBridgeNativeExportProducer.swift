@@ -8,6 +8,8 @@ nonisolated struct AgentBridgeNativePreparedExport: Sendable {
     let requestSHA256: String
     let days: [AgentBridgeNativeRenderedDay]
     let totalByteCount: UInt64
+    // Public UUID identities only. Counts, manifest/session binding and transfer remain separate.
+    let publicArtifactIDs: [String: String]
 }
 
 @MainActor
@@ -60,7 +62,10 @@ private enum AgentBridgeNativeExportProducer {
                   try context.requestFingerprintForRead() == fingerprint else {
                 throw AgentBridgeNativeRenderFailure.invalidArtifact
             }
-            return .init(requestSHA256: fingerprint, days: days, totalByteCount: total)
+            let publicIDs = try context.bindPublicArtifactIDs()
+            guard Set(publicIDs.keys) == Set(approved.map(\.rawValue)),
+                  try context.requestFingerprintForRead() == fingerprint else { throw AgentBridgeNativeRenderFailure.invalidArtifact }
+            return .init(requestSHA256: fingerprint, days: days, totalByteCount: total, publicArtifactIDs: publicIDs)
         } catch {
             context.invalidate()
             if error is CancellationError || error is AgentBridgeValidationError || error is AgentBridgeNativeRenderFailure { throw error }

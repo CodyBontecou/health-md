@@ -161,6 +161,17 @@ class AgentBridgeNativeConfigurationReaderTest {
             assertThat(result.days.map { it.day }).isEqualTo(resolution.requestedDays)
             assertThat(result.days.map { it.artifact.relativePath }).isEqualTo(resolution.predictedRelativePaths)
             assertThat(result.days.size).isEqualTo(2)
+            assertThat(result.publicArtifactIDs.keys).isEqualTo(resolution.requestedDays.toSet())
+            assertThat(result.publicArtifactIDs.values.toSet()).hasSize(2)
+            result.publicArtifactIDs.values.forEach { id ->
+                val parsed = java.util.UUID.fromString(id)
+                assertThat(parsed.version()).isEqualTo(4); assertThat(parsed.variant()).isEqualTo(2)
+                assertThat(parsed.toString()).isEqualTo(id)
+            }
+            try { (result.publicArtifactIDs as MutableMap<String, String>).clear(); throw AssertionError("Identity map must be immutable") }
+            catch (_: UnsupportedOperationException) { }
+            val progressPath = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256).resolve("progress.json")
+            val progressBefore = Files.readAllBytes(progressPath)
             assertThat(result.totalByteCount).isEqualTo(result.days.fold(0uL) { n, day -> n + day.artifact.byteCount })
             try { planner.prepareExport(request, manager, journalRenderer(resolution)); throw AssertionError("New execution must not replay capture") }
             catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
@@ -170,6 +181,8 @@ class AgentBridgeNativeConfigurationReaderTest {
             val restored = planner.prepareRetainedExport(request, manager, forbidden)
             assertThat(restored.requestSha256).isEqualTo(result.requestSha256)
             assertThat(restored.totalByteCount).isEqualTo(result.totalByteCount)
+            assertThat(restored.publicArtifactIDs).isEqualTo(result.publicArtifactIDs)
+            assertThat(Files.readAllBytes(progressPath)).isEqualTo(progressBefore)
             assertThat(restored.days.map { it.day }).isEqualTo(result.days.map { it.day })
             restored.days.zip(result.days).forEach { (actual, expected) ->
                 assertThat(actual.artifact.artifactId).isEqualTo(expected.artifact.artifactId)
@@ -179,6 +192,38 @@ class AgentBridgeNativeConfigurationReaderTest {
             }
             coVerify(exactly = 2) { client.aggregate(any()) }
             assertThat(Files.readAllBytes(f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(before)
+        }
+    }
+
+    @Test fun `public artifact identity cannot bind before complete approved set`() = runBlocking {
+        withNativeExportPreparation { _, planner, request, client, _ ->
+            try {
+                planner.withCaptureContext(request) { context ->
+                    context.begin()
+                    try { context.bindPublicArtifactIDs(); throw AssertionError("Incomplete set must not issue identities") }
+                    catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+                    try { context.configurationForRead(); throw AssertionError("Caught failure must close context") }
+                    catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+                }
+                throw AssertionError("A caught incomplete-set failure must invalidate the owner")
+            } catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+            coVerify(exactly = 0) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `missing public artifact identity progress cannot remint on recovery`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val prepared = planner.prepareExport(request, manager, journalRenderer(resolution))
+            assertThat(prepared.publicArtifactIDs).hasSize(2)
+            val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(prepared.requestSha256)
+            Files.delete(directory.resolve("progress.json"))
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load current core") })
+            try { planner.prepareRetainedExport(request, manager, forbidden); throw AssertionError("Missing identity progress must require fresh approval") }
+            catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+            coVerify(exactly = 2) { client.aggregate(any()) }
         }
     }
 

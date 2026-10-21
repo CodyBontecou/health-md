@@ -35,10 +35,13 @@ final class AgentBridgeNativeCaptureSpool {
     nonisolated private struct Signed: Codable { let record: Record; let mac: Data }
     private static let domain = Data("HealthMd.AgentBridge.NativeCaptureSpool.v1\0".utf8)
     nonisolated private struct Progress: Codable {
-        let version: Int
+        var version: Int
         var captures: [String]
         var artifacts: [String]
         var engine: Data
+        // Version3 stores exactly16 UUID bytes per sorted artifact day. Keeping this compact
+        // preserves the existing progress/record bounds even at4096 approved days.
+        var publicArtifactIDs: Data? = nil
     }
     nonisolated struct ArtifactCheckpoint: Sendable { let engine: Data; let payload: Data }
     private static let payloadLimit = 64 * 1024
@@ -133,6 +136,7 @@ final class AgentBridgeNativeCaptureSpool {
                 try check(); return value.payload
             }
             guard try !exists(started), try !exists(captured) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            guard state.publicArtifactIDs == nil else { throw AgentBridgeValidationError.bindingChanged }
             guard days.count < 4096 else { throw AgentBridgeValidationError.queryBudgetExceeded }
             guard storedBytes + 2 * Self.payloadLimit < Self.jobLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
             var nextState = state; nextState.captures = (days + [day.rawValue]).sorted()
@@ -175,6 +179,7 @@ final class AgentBridgeNativeCaptureSpool {
             let (previous, state) = try progress()
             guard !engine.isEmpty, engine.count <= 4096 else { throw AgentBridgeValidationError.queryBudgetExceeded }
             guard state.engine.isEmpty || state.engine == engine else { throw AgentBridgeValidationError.bindingChanged }
+            guard state.publicArtifactIDs == nil else { throw AgentBridgeValidationError.bindingChanged }
             guard state.artifacts.count < 4096 else { throw AgentBridgeValidationError.queryBudgetExceeded }
             guard !state.artifacts.contains(day.rawValue),
                   try !exists("artifact-started-\(day.rawValue).json"), try !exists("artifact-\(day.rawValue).json") else {
@@ -197,6 +202,33 @@ final class AgentBridgeNativeCaptureSpool {
             guard captured.kind == "captured", captured.day == day.rawValue, !captured.payload.isEmpty else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             guard !payload.isEmpty, payload.count <= Self.payloadLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
             try publish("artifact-\(day.rawValue).json", record: record(kind: "artifact", day: day.rawValue, payload: payload))
+        } catch { throw Self.safe(error) }
+    }
+
+    /// Bind only a complete approved set. The signed progress publication is the single
+    /// issuance point; recovery derives the same day/UUID mapping without another random ID.
+    func bindPublicArtifactIDs(_ approvedDays: [AgentBridgeDate]) throws -> [String: String] {
+        do {
+            try check()
+            let approved = approvedDays.map(\.rawValue)
+            let (previous, state) = try progress()
+            guard !approved.isEmpty, Set(approved).count == approved.count,
+                  approved.sorted() == state.captures, state.captures == state.artifacts else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            try validateStoredProgress()
+            if state.publicArtifactIDs == nil {
+                var bytes = Data()
+                for _ in state.artifacts {
+                    var uuid = UUID().uuid
+                    withUnsafeBytes(of: &uuid) { bytes.append(contentsOf: $0) }
+                }
+                var next = state; next.version = 3; next.publicArtifactIDs = bytes
+                _ = try Self.publicIDs(next) // Reject malformed or duplicate generator output before publication.
+                try publish("progress.json", record: record(kind: "progress", day: nil, payload: progressBytes(next)), replacing: previous)
+            }
+            let result = try Self.publicIDs(progress().1)
+            try check(); return result
         } catch { throw Self.safe(error) }
     }
 
@@ -237,7 +269,7 @@ final class AgentBridgeNativeCaptureSpool {
         guard names == expected else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
     }
     private func progressBytes(_ state: Progress) throws -> Data {
-        if state.engine.isEmpty && state.artifacts.isEmpty { return try JSONEncoder().encode(state.captures) }
+        if state.publicArtifactIDs == nil && state.engine.isEmpty && state.artifacts.isEmpty { return try JSONEncoder().encode(state.captures) }
         return try Self.canonical(state)
     }
     private func progress() throws -> (Record, Progress) {
@@ -246,14 +278,37 @@ final class AgentBridgeNativeCaptureSpool {
         if let days = try? JSONDecoder().decode([String].self, from: value.payload) {
             state = .init(version: 2, captures: days, artifacts: [], engine: Data())
         } else { state = try JSONDecoder().decode(Progress.self, from: value.payload) }
-        guard value.kind == "progress", value.day == nil, state.version == 2,
+        guard value.kind == "progress", value.day == nil,
+              (state.version == 2 && state.publicArtifactIDs == nil) || (state.version == 3 && state.publicArtifactIDs != nil),
               state.engine.count <= 4096, state.artifacts.isEmpty == state.engine.isEmpty,
               try progressBytes(state) == value.payload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         for days in [state.captures, state.artifacts] {
             guard days.count <= 4096, Set(days).count == days.count, days == days.sorted() else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             for day in days { _ = try AgentBridgeDate(day) }
         }
+        if state.version == 3 { _ = try Self.publicIDs(state) }
         return (value, state)
+    }
+    private static func publicIDs(_ state: Progress) throws -> [String: String] {
+        guard state.version == 3, let data = state.publicArtifactIDs,
+              !state.artifacts.isEmpty, state.artifacts.count <= 4096,
+              state.captures == state.artifacts, data.count == state.artifacts.count * 16 else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        let bytes = [UInt8](data)
+        var result: [String: String] = [:]
+        for (index, day) in state.artifacts.enumerated() {
+            let offset = index * 16
+            guard bytes[offset + 6] >> 4 == 4, bytes[offset + 8] & 0xc0 == 0x80 else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            let hex = bytes[offset..<offset + 16].map { String(format: "%02x", $0) }
+            let id = [hex[0..<4], hex[4..<6], hex[6..<8], hex[8..<10], hex[10..<16]].map { $0.joined() }.joined(separator: "-")
+            _ = try AgentBridgeUUID(id)
+            result[day] = id
+        }
+        guard Set(result.values).count == state.artifacts.count else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        return result
     }
     private func check() throws {
         try pins()

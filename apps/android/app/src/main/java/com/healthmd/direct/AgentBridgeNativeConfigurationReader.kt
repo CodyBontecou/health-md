@@ -416,6 +416,13 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
             spool.commitArtifact(day, engine, payload); configurationForRead()
         } catch (failure: Throwable) { invalidate(); throw failure }
     }
+    fun bindPublicArtifactIDs(): Map<String, String> {
+        try {
+            val resolution = configurationForRead()
+            val result = spool.bindPublicArtifactIDs(resolution.requestedDays)
+            configurationForRead(); return result
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
     /** Names the original accepted bytes; a fingerprint is never capture permission. */
     fun requestFingerprintForRead(): String {
         configurationForRead()
