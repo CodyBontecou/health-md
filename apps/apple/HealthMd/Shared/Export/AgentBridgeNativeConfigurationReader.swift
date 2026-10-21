@@ -97,6 +97,7 @@ final class AgentBridgeNativePlanningSession {
     private let store: AgentBridgeExportAuthorityStore
     private let responseChannel: DirectSecureChannel?
     private let responseNegotiation: AgentBridgeNegotiation?
+    private let captureProtection: any AgentBridgeNativeCaptureProtecting
     private var wireAbandoned = false
 
     /// The issuer transaction and lifecycle must agree on the exact signed publication, including
@@ -126,11 +127,12 @@ final class AgentBridgeNativePlanningSession {
          store: AgentBridgeExportAuthorityStore, configuration: any AgentBridgeExportPlanningConfigurationReading,
          responseChannel: DirectSecureChannel? = nil,
          responseNegotiation: AgentBridgeNegotiation? = nil,
+         captureProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection(),
          clock: any AgentBridgeExportClock = AgentBridgeExportSystemClock(),
          newPlanID: @escaping () throws -> AgentBridgeUUID = { try AgentBridgeUUID(UUID().uuidString.lowercased()) }) throws {
         try peer.requireCurrent()
         let publication = try lifecycle.currentPublication()
-        self.peer = peer; self.lifecycle = lifecycle; self.store = store; self.responseChannel = responseChannel; self.responseNegotiation = responseNegotiation
+        self.peer = peer; self.lifecycle = lifecycle; self.store = store; self.responseChannel = responseChannel; self.responseNegotiation = responseNegotiation; self.captureProtection = captureProtection
         service = AgentBridgeExportPlanningService(store: store,
             configuration: OwnerBoundConfiguration(peer: peer, lifecycle: lifecycle, base: configuration),
             clock: clock, newPlanID: newPlanID)
@@ -281,7 +283,7 @@ final class AgentBridgeNativePlanningSession {
                     try cancellation.requireActive(); try Task.checkCancellation()
                     return result
                 }
-                let spool = try store.openCaptureSpool(reservation, create: !retained) { _ = try validate() }
+                let spool = try store.openCaptureSpool(reservation, create: !retained, fileProtection: captureProtection) { _ = try validate() }
                 let context = AgentBridgeNativeCaptureContext(spool: spool, read: validate)
                 defer { context.close() }
                 let result = try await operation(context)

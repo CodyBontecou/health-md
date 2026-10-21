@@ -3,6 +3,21 @@ import Darwin
 import Foundation
 import HealthMdConnectionCore
 
+/// OS protection is a native dependency, never a request option. Synthetic SDK tests provide
+/// their own implementation; installed callers retain the strict system implementation.
+@MainActor
+protocol AgentBridgeNativeCaptureProtecting {
+    func applyCompleteProtection(_ fd: Int32) throws
+    func requireCompleteProtection(_ fd: Int32) throws
+}
+
+@MainActor
+struct AgentBridgeSystemNativeCaptureProtection: AgentBridgeNativeCaptureProtecting {
+    nonisolated init() {}
+    func applyCompleteProtection(_ fd: Int32) throws { try AgentBridgeNativeCaptureSpool.protect(fd) }
+    func requireCompleteProtection(_ fd: Int32) throws { try AgentBridgeNativeCaptureSpool.verifyProtection(fd) }
+}
+
 /// Private captured values, engine identity and immutable generated artifacts. This is not a
 /// transfer journal or permission token. The accepted job, protected key and original fence own it.
 @MainActor
@@ -32,6 +47,7 @@ final class AgentBridgeNativeCaptureSpool {
     private static let jobLimit = 64 * 1024 * 1024
     private let reservation: AgentBridgeExportCaptureReservation
     private let key: SymmetricKey
+    private let fileProtection: any AgentBridgeNativeCaptureProtecting
     private let fence: @MainActor () throws -> Void
     private let issuer: URL
     private let captures: URL
@@ -45,8 +61,9 @@ final class AgentBridgeNativeCaptureSpool {
     private var closed = false
 
     init(issuer: URL, reservation: AgentBridgeExportCaptureReservation, key: SymmetricKey, create: Bool,
+         fileProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection(),
          fence: @escaping @MainActor () throws -> Void) throws {
-        self.issuer = issuer; self.reservation = reservation; self.key = key; self.fence = fence
+        self.issuer = issuer; self.reservation = reservation; self.key = key; self.fileProtection = fileProtection; self.fence = fence
         captures = issuer.appendingPathComponent("captures", isDirectory: true)
         directory = captures.appendingPathComponent(reservation.job.requestSHA256.rawValue, isDirectory: true)
         do {
@@ -58,25 +75,25 @@ final class AgentBridgeNativeCaptureSpool {
             issuerFD = try AgentBridgeExportPrivateFiles.openDirectory(issuer, privateLeaf: true)
             identities = [try AgentBridgeExportPrivateFiles.identity(issuerFD)]
             try check()
-            if create { try Self.mkdir(issuerFD, "captures", exclusive: false) }
+            if create { try mkdir(issuerFD, "captures", exclusive: false) }
             capturesFD = try AgentBridgeExportPrivateFiles.openDirectory(captures, privateLeaf: true)
-            try Self.verifyProtection(capturesFD)
+            try fileProtection.requireCompleteProtection(capturesFD)
             identities.append(try AgentBridgeExportPrivateFiles.identity(capturesFD))
             try check()
-            if create { try Self.mkdir(capturesFD, reservation.job.requestSHA256.rawValue, exclusive: true) }
+            if create { try mkdir(capturesFD, reservation.job.requestSHA256.rawValue, exclusive: true) }
             directoryFD = try AgentBridgeExportPrivateFiles.openDirectory(directory, privateLeaf: true)
-            try Self.verifyProtection(directoryFD)
+            try fileProtection.requireCompleteProtection(directoryFD)
             identities.append(try AgentBridgeExportPrivateFiles.identity(directoryFD))
             try check()
             if create {
                 let fd = openat(directoryFD, "lock", O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
                 guard fd >= 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
-                do { try Self.protect(fd); guard fsync(fd) == 0, fsync(directoryFD) == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired } }
+                do { try protectFile(fd); guard fsync(fd) == 0, fsync(directoryFD) == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired } }
                 catch { Darwin.close(fd); throw error }
                 Darwin.close(fd)
             }
             lockFD = try AgentBridgeExportPrivateFiles.openPrivateFile(directoryFD, "lock", flags: O_RDWR)
-            try Self.verifyProtection(lockFD)
+            try fileProtection.requireCompleteProtection(lockFD)
             guard flock(lockFD, LOCK_EX | LOCK_NB) == 0 else { throw AgentBridgeValidationError.busy }
             guard try fileSize("lock") == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             try check()
@@ -238,18 +255,23 @@ final class AgentBridgeNativeCaptureSpool {
         }
         return (value, state)
     }
-    private func check() throws { try pins(); try fence(); try pins() }
-    private func pins() throws {
+    private func check() throws {
+        try pins()
+        try fence()
+        // Final tail contains only local identity checks, never another native SDK callback.
+        try pins(includeProtection: false)
+    }
+    private func pins(includeProtection: Bool = true) throws {
         guard !closed, !identities.isEmpty else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         for (index, url) in [issuer, captures, directory].prefix(identities.count).enumerated() {
             let fd = try AgentBridgeExportPrivateFiles.openDirectory(url, privateLeaf: true)
             defer { Darwin.close(fd) }
             guard try AgentBridgeExportPrivateFiles.identity(fd) == identities[index] else { throw AgentBridgeValidationError.bindingChanged }
-            if index > 0 { try Self.verifyProtection(fd) }
+            if index > 0 && includeProtection { try fileProtection.requireCompleteProtection(fd) }
         }
         if lockFD >= 0 {
             try AgentBridgeExportPrivateFiles.checkPath(directoryFD, "lock", fd: lockFD)
-            try Self.verifyProtection(lockFD)
+            if includeProtection { try fileProtection.requireCompleteProtection(lockFD) }
         }
     }
     private func exists(_ name: String) throws -> Bool {
@@ -261,7 +283,11 @@ final class AgentBridgeNativeCaptureSpool {
     private func fileSize(_ name: String) throws -> Int {
         let fd = try AgentBridgeExportPrivateFiles.openPrivateFile(directoryFD, name, flags: O_RDONLY)
         defer { Darwin.close(fd) }
-        try Self.verifyProtection(fd)
+        let expected = try AgentBridgeExportPrivateFiles.identity(fd)
+        try fileProtection.requireCompleteProtection(fd)
+        try fence(); try pins(includeProtection: false)
+        guard try AgentBridgeExportPrivateFiles.identity(fd) == expected else { throw AgentBridgeValidationError.bindingChanged }
+        try AgentBridgeExportPrivateFiles.checkPath(directoryFD, name, fd: fd)
         var value = stat()
         guard fstat(fd, &value) == 0, value.st_size >= 0, value.st_size <= Self.recordLimit else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         return Int(value.st_size)
@@ -269,7 +295,7 @@ final class AgentBridgeNativeCaptureSpool {
     private func read(_ name: String) throws -> Record {
         try check()
         guard try exists(name), try fileSize(name) > 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
-        let bytes = try AgentBridgeExportPrivateFiles.read(directoryFD, name)
+        let bytes = try readProtectedFile(name)
         let record: Record
         do {
             let canonical = try AgentBridgeV4Codec.canonicalize(bytes)
@@ -282,6 +308,12 @@ final class AgentBridgeNativeCaptureSpool {
         } catch { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         try check(); return record
     }
+    private func readProtectedFile(_ name: String) throws -> Data {
+        try AgentBridgeExportPrivateFiles.read(directoryFD, name, maximumBytes: Self.recordLimit) { fd in
+            try fileProtection.requireCompleteProtection(fd)
+            try fence(); try pins(includeProtection: false)
+        }
+    }
     private func publish(_ name: String, record: Record, replacing previous: Record? = nil) throws {
         let body = try Self.canonical(record)
         let bytes = try Self.canonical(Signed(record: record, mac: Data(HMAC<SHA256>.authenticationCode(for: Self.domain + body, using: key))))
@@ -291,7 +323,7 @@ final class AgentBridgeNativeCaptureSpool {
         }
         try check()
         if let previousBytes {
-            guard try AgentBridgeExportPrivateFiles.read(directoryFD, name) == previousBytes else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            guard try readProtectedFile(name) == previousBytes else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         } else { guard try !exists(name) else { throw AgentBridgeValidationError.busy } }
         let temporary = "pending-" + UUID().uuidString.lowercased()
         let fd = openat(directoryFD, temporary, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
@@ -300,7 +332,7 @@ final class AgentBridgeNativeCaptureSpool {
             if (try? AgentBridgeExportPrivateFiles.checkPath(directoryFD, temporary, fd: fd)) != nil { _ = unlinkat(directoryFD, temporary, 0) }
             Darwin.close(fd)
         }
-        try Self.protect(fd)
+        try protectFile(fd)
         try bytes.withUnsafeBytes { buffer in
             var offset = 0
             while offset < buffer.count {
@@ -315,8 +347,10 @@ final class AgentBridgeNativeCaptureSpool {
         try check()
         try AgentBridgeExportPrivateFiles.checkPath(directoryFD, temporary, fd: fd)
         if let previousBytes {
-            guard try AgentBridgeExportPrivateFiles.read(directoryFD, name) == previousBytes else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            guard try readProtectedFile(name) == previousBytes else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         }
+        // The protected read may invoke a native callback; re-pin the staged file afterwards.
+        try AgentBridgeExportPrivateFiles.checkPath(directoryFD, temporary, fd: fd)
         guard renameatx_np(directoryFD, temporary, directoryFD, name, previous == nil ? UInt32(RENAME_EXCL) : 0) == 0,
               fsync(directoryFD) == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         storedBytes += bytes.count - (previousBytes?.count ?? 0)
@@ -324,16 +358,21 @@ final class AgentBridgeNativeCaptureSpool {
         try check()
     }
     private static func canonical<T: Encodable>(_ value: T) throws -> Data { try AgentBridgeV4Codec.canonicalize(JSONEncoder().encode(value)) }
-    private static func mkdir(_ parent: Int32, _ name: String, exclusive: Bool) throws {
+    private func mkdir(_ parent: Int32, _ name: String, exclusive: Bool) throws {
         if mkdirat(parent, name, 0o700) != 0 {
             guard !exclusive, errno == EEXIST else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         } else {
             let fd = openat(parent, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
             guard fd >= 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             defer { Darwin.close(fd) }
-            try protect(fd)
+            try protectFile(fd)
             guard fsync(fd) == 0, fsync(parent) == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         }
+    }
+    private func protectFile(_ fd: Int32) throws {
+        try check()
+        try fileProtection.applyCompleteProtection(fd)
+        try check()
     }
     static func protect(_ fd: Int32) throws {
         #if os(iOS)
@@ -346,7 +385,7 @@ final class AgentBridgeNativeCaptureSpool {
         #if os(iOS)
         let path = try protectedPath(fd)
         let attributes = try FileManager.default.attributesOfItem(atPath: path)
-        // Foundation returns the protection attribute as NSString, not FileProtectionType.
+        // Accept Foundation's documented NSString bridge and its typed representation; absence denies.
         let value = attributes[.protectionKey]
         let protection = (value as? FileProtectionType)?.rawValue ?? (value as? String)
         guard protection == FileProtectionType.complete.rawValue,

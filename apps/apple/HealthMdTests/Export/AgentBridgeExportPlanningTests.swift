@@ -542,7 +542,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), next)
     }
 
-    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil, responseVersions: [Int] = [1, 3, 4]) throws -> AgentBridgeNativePlanningSession {
+    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil, responseVersions: [Int] = [1, 3, 4], captureProtection: (any AgentBridgeNativeCaptureProtecting)? = nil) throws -> AgentBridgeNativePlanningSession {
         let profiles = existingProfiles ?? ExportProfileStore(userDefaults: rig.reader.defaults)
         Self.retainedNativeConfigurationObjects.append(profiles)
         let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles) {
@@ -551,6 +551,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         return try AgentBridgeNativePlanningSession(peer: rig.peer, lifecycle: lifecycle, store: rig.store,
             configuration: reader, responseChannel: responseChannel,
             responseNegotiation: AgentBridgeNegotiation(localVersions: responseVersions, remoteVersions: [1, 3, 4], deployedBaseVersion: 1),
+            captureProtection: captureProtection ?? rig.captureProtection,
             clock: rig.clock, newPlanID: { try id(6) })
     }
 
@@ -661,6 +662,81 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
         }
+    }
+
+    func testNativeSpoolProtectionCallbackCannotReplaceVerifiedArtifactInode() async throws {
+        try await assertNativeSpoolProtectionReplacement(replaceOnVerification: 1)
+    }
+    func testNativeSpoolActualReadUsesProtectedOriginalDescriptor() async throws {
+        try await assertNativeSpoolProtectionReplacement(replaceOnVerification: 2)
+    }
+    private func assertNativeSpoolProtectionReplacement(replaceOnVerification: Int) async throws {
+        try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { rig, planner, request, store, manager, failure in
+            XCTAssertNil(failure)
+            var replaced = false
+            var verifications = 0
+            defer { rig.captureProtection.onRequire = nil }
+            do {
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin()
+                    rig.captureProtection.onRequire = { fd in
+                        let path = try AgentBridgeNativeCaptureSpool.protectedPath(fd)
+                        guard !replaced, URL(fileURLWithPath: path).lastPathComponent == "artifact-2026-03-08.json" else { return }
+                        verifications += 1
+                        guard verifications == replaceOnVerification else { return }
+                        replaced = true
+                        let target = URL(fileURLWithPath: path)
+                        let bytes = try Data(contentsOf: target)
+                        let backup = target.deletingLastPathComponent().appendingPathComponent("pending-" + UUID().uuidString.lowercased())
+                        try FileManager.default.moveItem(at: target, to: backup)
+                        try bytes.write(to: target, options: .withoutOverwriting)
+                        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
+                        // The replacement has valid signed bytes but its new inode has no
+                        // protection in the explicit synthetic OS dependency.
+                    }
+                    _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager,
+                        context: context, core: BridgeRenderTamperCore(mode: "forbid"))
+                }
+                XCTFail("A replacement inode must not inherit verified protection")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+            XCTAssertTrue(replaced)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+        }) { _, context, _, manager in
+            _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager, context: context)
+        }
+    }
+
+    func testNativeSpoolProtectionLossRejectsBeforeAnySDKReadEvenWhenCaught() async throws {
+        do { try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { _, _, _, store, _, failure in
+            XCTAssertEqual(failure as? AgentBridgeValidationError, .permissionRequired)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 0)
+        }) { rig, context, _, manager in
+            rig.captureProtection.denied = true
+            do {
+                _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager, context: context)
+                XCTFail("Missing protection must deny capture")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+            XCTAssertThrowsError(try context.configurationForRead())
+        } } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+    }
+
+    func testNativeSpoolProtectionLossAfterRenderCannotPublishOrRecapture() async throws {
+        do { try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { rig, planner, request, store, manager, failure in
+            XCTAssertEqual(failure as? AgentBridgeValidationError, .permissionRequired)
+            let directory = rig.directory.appendingPathComponent("captures").appendingPathComponent(AgentBridgeV4Codec.sha256(try AgentBridgeV4Codec.encode(request)))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("artifact-2026-03-08.json").path))
+            rig.captureProtection.denied = false
+            do {
+                try await planner.withRetainedCaptureContext(request) { _ in XCTFail("Ambiguous artifact must reject before callback") }
+                XCTFail("Missing artifact cannot be regenerated")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+        }) { rig, context, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 1
+            var core = BridgeRenderTamperCore(mode: "normal")
+            core.afterRender = { rig.captureProtection.denied = true }
+            _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager, context: context, core: core)
+        } } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
     }
 
     func testBridgeCapturedDayRendersActualFrozenV8WithoutUnselectedMetrics() async throws {
@@ -899,8 +975,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
 
     #if os(iOS)
-    func testNativeSpoolCompleteProtectionOnSyntheticDirectory() throws { try assertNativeSpoolCompleteProtection(directory: true) }
-    func testNativeSpoolCompleteProtectionOnSyntheticFile() throws { try assertNativeSpoolCompleteProtection(directory: false) }
+    func testNativeSpoolSystemProtectionOnSyntheticDirectory() throws { try assertNativeSpoolCompleteProtection(directory: true) }
+    func testNativeSpoolSystemProtectionOnSyntheticFile() throws { try assertNativeSpoolCompleteProtection(directory: false) }
     private func assertNativeSpoolCompleteProtection(directory: Bool) throws {
         let base = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-protection-" + UUID().uuidString).resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: base, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
@@ -911,6 +987,16 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(fd, 0)
         guard fd >= 0 else { return }
         defer { Darwin.close(fd) }
+        #if targetEnvironment(simulator)
+        // Foundation intentionally omits FileManager data-protection attributes in Simulator.
+        // The production provider must deny rather than assert that these files are protected.
+        XCTAssertThrowsError(try AgentBridgeNativeCaptureSpool.protect(fd)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        XCTAssertThrowsError(try AgentBridgeNativeCaptureSpool.verifyProtection(fd)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        #else
         do {
             try AgentBridgeNativeCaptureSpool.protect(fd)
             try AgentBridgeNativeCaptureSpool.verifyProtection(fd)
@@ -931,6 +1017,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTFail("Complete protection unavailable: directory=\(directory), class=\(classification), path=\(pathAvailable), unlocked=\(UIApplication.shared.isProtectedDataAvailable)")
             throw AgentBridgeValidationError.permissionRequired
         }
+        #endif
     }
     #endif
 
@@ -992,7 +1079,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         try await withNativeSDKCapture(metrics: ["steps"]) { rig, context, store, manager in
             let snapshot = try rig.store.snapshot()
             let reservation = AgentBridgeExportCaptureReservation(job: try XCTUnwrap(snapshot.acceptedJobs?.first), claim: try XCTUnwrap(snapshot.captureClaims?.first))
-            XCTAssertThrowsError(try rig.store.openCaptureSpool(reservation, create: false) {}) {
+            XCTAssertThrowsError(try rig.store.openCaptureSpool(reservation, create: false, fileProtection: rig.captureProtection) {}) {
                 XCTAssertEqual($0 as? AgentBridgeValidationError, .busy)
             }
             store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 12
@@ -3433,11 +3520,34 @@ private final class ConfigurationProbe: AgentBridgeExportPlanningConfigurationRe
                          nativeGrants: grants, entitlement: entitlement, foregroundAvailable: true, protectedDataAvailable: true)
     }
 }
+/// Explicit synthetic OS dependency: actual descriptors/inodes, private files, signing and
+/// recovery remain production code. This does not qualify physical data protection.
+@MainActor
+private final class FakeNativeCaptureProtection: AgentBridgeNativeCaptureProtecting {
+    var denied = false
+    var onRequire: ((Int32) throws -> Void)?
+    private var protected: Set<String> = []
+    func applyCompleteProtection(_ fd: Int32) throws {
+        guard !denied else { throw AgentBridgeValidationError.permissionRequired }
+        protected.insert(try identity(fd))
+    }
+    func requireCompleteProtection(_ fd: Int32) throws {
+        guard !denied, protected.contains(try identity(fd)) else { throw AgentBridgeValidationError.permissionRequired }
+        try onRequire?(fd)
+    }
+    private func identity(_ fd: Int32) throws -> String {
+        var info = stat()
+        guard fstat(fd, &info) == 0 else { throw AgentBridgeValidationError.permissionRequired }
+        return "\(info.st_dev):\(info.st_ino)"
+    }
+}
+
 @MainActor
 private final class Rig {
     let parent: URL
     let directory: URL
     let keys = FakeProtectedKeys()
+    let captureProtection = FakeNativeCaptureProtection()
     let publication = PublicationProbe()
     let reader: ConfigurationProbe
     let store: AgentBridgeExportAuthorityStore

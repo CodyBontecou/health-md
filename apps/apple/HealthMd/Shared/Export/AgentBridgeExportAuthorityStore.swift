@@ -176,11 +176,12 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     /// replace the ledger; their own versioned MAC binds this exact accepted job and claim.
     @MainActor
     func openCaptureSpool(_ reservation: AgentBridgeExportCaptureReservation, create: Bool,
+                          fileProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection(),
                           fence: @escaping @MainActor () throws -> Void) throws -> AgentBridgeNativeCaptureSpool {
         try requireCurrentRoot(); try fence(); try requireCurrentRoot()
         let key = try Self.existingKey(keys)
         try requireCurrentRoot(); try fence(); try requireCurrentRoot()
-        return try AgentBridgeNativeCaptureSpool(issuer: directory, reservation: reservation, key: key, create: create) { [self] in
+        return try AgentBridgeNativeCaptureSpool(issuer: directory, reservation: reservation, key: key, create: create, fileProtection: fileProtection) { [self] in
             try requireCurrentRoot(); try fence(); try requireCurrentRoot()
         }
     }
@@ -627,11 +628,17 @@ nonisolated enum AgentBridgeExportPrivateFiles {
               opened.st_mode & S_IFMT == S_IFREG, opened.st_uid == geteuid(), opened.st_nlink == 1,
               opened.st_mode & 0o777 == 0o600 else { throw AgentBridgeValidationError.bindingChanged }
     }
-    static func read(_ root: Int32, _ name: String) throws -> Data {
+    static func read(_ root: Int32, _ name: String, maximumBytes: Int = AgentBridgeV4Codec.maximumBytes,
+                     verifyDescriptor: (Int32) throws -> Void = { _ in }) throws -> Data {
         let fd = try openPrivateFile(root, name, flags: O_RDONLY)
         defer { close(fd) }
+        let expected = try identity(fd)
+        try verifyDescriptor(fd)
+        guard try identity(fd) == expected else { throw AgentBridgeValidationError.bindingChanged }
+        try checkPath(root, name, fd: fd)
         var info = stat()
-        guard fstat(fd, &info) == 0, info.st_size > 0, info.st_size <= AgentBridgeV4Codec.maximumBytes else { throw AgentBridgeValidationError.bindingChanged }
+        guard maximumBytes > 0, maximumBytes <= AgentBridgeV4Codec.maximumBytes,
+              fstat(fd, &info) == 0, info.st_size > 0, info.st_size <= maximumBytes else { throw AgentBridgeValidationError.bindingChanged }
         var data = Data(count: Int(info.st_size))
         try data.withUnsafeMutableBytes { buffer in
             var position = 0
@@ -643,7 +650,7 @@ nonisolated enum AgentBridgeExportPrivateFiles {
             }
         }
         var extra: UInt8 = 0
-        guard Darwin.read(fd, &extra, 1) == 0 else { throw AgentBridgeValidationError.bindingChanged }
+        guard Darwin.read(fd, &extra, 1) == 0, try identity(fd) == expected else { throw AgentBridgeValidationError.bindingChanged }
         try checkPath(root, name, fd: fd)
         return data
     }

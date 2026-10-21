@@ -562,18 +562,21 @@ async fn android_generated_dispatch_pause_resume_receipt_idempotency_and_cancel(
             .await
             .unwrap();
         assert!(matches!(
-            channel.receive_v2().await.unwrap().message,
+            channel.receive_v2().await?.message,
             v2::Message::TransferFinalAcknowledgement(_)
         ));
         channel
             .send_v2(&v2::Envelope::new(v2::Message::CompletionConfirmed(
                 v2::JobPayload { job_id },
             )))
-            .await
-            .unwrap();
+            .await?;
+        Ok::<(), ClientError>(())
     };
-    let (resumed, ()) = tokio::join!(resume, peer);
-    resumed.unwrap();
+    let (resumed, peer_result) = tokio::join!(resume, peer);
+    // A client finalization error closes its socket. Report that original result before the
+    // resulting fake-peer EOF, retaining both protocol assertions and the existing deadlines.
+    resumed.expect("Android generated-file client resume failed");
+    peer_result.expect("Android generated-file peer completion failed");
     assert_eq!(
         std::fs::read(destination.join("daily.md")).unwrap(),
         b"old\nfresh"
