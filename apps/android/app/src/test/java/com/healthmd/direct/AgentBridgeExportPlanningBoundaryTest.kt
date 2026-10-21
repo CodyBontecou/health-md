@@ -21,6 +21,78 @@ class AgentBridgeExportPlanningBoundaryTest {
     }
 
     @Test
+    fun captureReservationRequiresAcceptanceAndCannotBeReclaimedAfterRestart() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { f.service.claimCapture(f.peerContext, request) }
+            val accepted = f.service.acceptExecution(f.peerContext, request)
+            val claim = f.service.claimCapture(f.peerContext, request)
+            assertThat(claim.job).isEqualTo(accepted.job)
+            assertThat(claim.claim.requestSha256).isEqualTo(accepted.job.requestSha256)
+            assertThat(ledgerState(f).getValue("version").jsonPrimitive.int).isEqualTo(4)
+            val bytes = ledgerBytes(f)
+            f.expect(AgentBridgeErrorCode.BUSY) { f.restart().claimCapture(f.peerContext, request) }
+            assertThat(f.restart().acceptExecution(f.peerContext, request).newlyAccepted).isFalse()
+            assertThat(ledgerBytes(f)).isEqualTo(bytes)
+            val another = request.copy(idempotencyKey = AgentBridgeExportPlanningFixture.id(94), jobId = AgentBridgeExportPlanningFixture.id(95), requestId = AgentBridgeExportPlanningFixture.id(96))
+            assertThat(f.service.acceptExecution(f.peerContext, another).newlyAccepted).isTrue()
+            assertThat(ledgerState(f).getValue("version").jsonPrimitive.int).isEqualTo(4)
+            assertThat(ledgerState(f).getValue("captureClaims").jsonArray.size).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun captureReservationRejectsExpiredChangedOrRevokedAuthorityWithoutClaiming() {
+        for (mode in listOf("expired", "configuration", "trust", "grant")) AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            when (mode) {
+                "expired" -> f.clock.now = Instant.parse((request.plan as AgentBridgeGeneratedPlan).expiresAt)
+                "configuration" -> f.configuration.grants = AgentBridgeDiscoveryNativeGrants.REQUIRED
+                "trust" -> f.peerContext.trusted = false
+                else -> (request.plan as AgentBridgeGeneratedPlan).authorityReferences.native.let { f.store.revoke(f.native, f.peer, it.authorityId, it.grantRevision) }
+            }
+            try { f.service.claimCapture(f.peerContext, request); throw AssertionError("Expected rejection") }
+            catch (_: AgentBridgeException) { }
+            assertThat(ledgerState(f).containsKey("captureClaims")).isFalse()
+        }
+    }
+
+    @Test
+    fun captureReservationSerializesIndependentClaimantsWithoutReturningSecondReservation() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+            val start = java.util.concurrent.CountDownLatch(1)
+            try {
+                val futures = (1..2).map { executor.submit<String> {
+                    start.await()
+                    try { f.restart().claimCapture(f.peerContext, request); "claimed" }
+                    catch (e: AgentBridgeException) { assertThat(e.code).isEqualTo(AgentBridgeErrorCode.BUSY); "busy" }
+                } }
+                start.countDown()
+                assertThat(futures.map { it.get(10, java.util.concurrent.TimeUnit.SECONDS) }).containsExactly("claimed", "busy")
+                assertThat(ledgerState(f).getValue("captureClaims").jsonArray.size).isEqualTo(1)
+            } finally { executor.shutdownNow(); assertThat(executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue() }
+        }
+    }
+
+    @Test
+    fun captureReservationExpiryAfterSigningPublishesNoClaim() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            var encodes = 0
+            f.keys.onEncode = { if (++encodes == 2) f.clock.now = Instant.parse((request.plan as AgentBridgeGeneratedPlan).expiresAt) }
+            f.expect(AgentBridgeErrorCode.PLAN_EXPIRED) { f.service.claimCapture(f.peerContext, request) }
+            f.keys.onEncode = null
+            assertThat(encodes).isAtLeast(2)
+            assertThat(ledgerState(f).containsKey("captureClaims")).isFalse()
+        }
+    }
+
+    @Test
     fun durableAcceptanceReplaysAfterPlanExpiryWithoutResolvingChangedSettings() {
         AgentBridgeExportPlanningFixture().use { f ->
             val request = executionRequest(f)

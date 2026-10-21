@@ -135,9 +135,40 @@ internal class AgentBridgeExportPlanningService(
                 val job = AgentBridgeExportAcceptedJob(1, bytes.decodeToString(), AgentBridgeCodec.sha256(bytes),
                     stored.resolutionCanonical, accepted.toString(), accepted.plusSeconds(604800).toString())
                 job.validate()
-                tx.state = tx.state.copy(version = 3, acceptedJobs = jobs + job)
+                tx.state = tx.state.copy(version = if (tx.state.captureClaims == null) 3 else 4, acceptedJobs = jobs + job)
                 AgentBridgeExportJobAcceptance(job, true).also { selected = it }
             }
+        }
+    }
+
+    /** Single durable reservation; not SDK read authority, a preserved spool or capture completion.
+     * A published claim is never released/reissued after an ambiguous return or process restart. */
+    fun claimCapture(authenticated: AgentBridgeExportAuthenticatedPeer,
+        supplied: AgentBridgeExecuteRequest): AgentBridgeExportCaptureReservation {
+        val bytes = AgentBridgeCodec.encode(supplied)
+        val request = AgentBridgeCodec.decode(bytes) as AgentBridgeExecuteRequest
+        val plan = request.plan as? AgentBridgeGeneratedPlan ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val expected = peer(authenticated, plan.intent.peer)
+        var selected: AgentBridgeExportCaptureReservation? = null
+        return store.access(fence = { transaction ->
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val result = selected ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            peer(authenticated, expected)
+            require(result.claim in tx.state.captureClaims.orEmpty(), AgentBridgeErrorCode.BINDING_CHANGED)
+            validateBoundary(authenticated, expected, tx, request.approval, nativeDecision = null)
+            require(now() >= Instant.parse(result.job.acceptedAt) && now() < Instant.parse(result.job.expiresAt) &&
+                now() >= Instant.parse(result.claim.claimedAt), AgentBridgeErrorCode.PLAN_EXPIRED)
+        }) { transaction ->
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val job = tx.state.acceptedJobs?.singleOrNull { it.requestCanonical == bytes.decodeToString() }
+                ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            val claims = tx.state.captureClaims.orEmpty()
+            require(claims.none { it.requestSha256 == job.requestSha256 }, AgentBridgeErrorCode.BUSY)
+            require(claims.size < 16, AgentBridgeErrorCode.BUSY)
+            validateBoundary(authenticated, expected, tx, request.approval, nativeDecision = null)
+            val claim = AgentBridgeExportStoredCaptureClaim(1, UUID.randomUUID().toString(), job.requestSha256, now().toString())
+            tx.state = tx.state.copy(version = 4, captureClaims = claims + claim)
+            AgentBridgeExportCaptureReservation(job, claim).also { selected = it }
         }
     }
 

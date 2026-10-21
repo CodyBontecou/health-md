@@ -185,7 +185,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
             }
             val next = AgentBridgeNativeCatalogPublication((current?.revision ?: 0) + 1, sourceInstallationId, digest)
             next.validate()
-            tx.state = tx.state.copy(version = if (tx.state.acceptedJobs == null) 2 else 3, nativeCatalog = next)
+            tx.state = tx.state.copy(version = if (tx.state.captureClaims != null) 4 else if (tx.state.acceptedJobs != null) 3 else 2, nativeCatalog = next)
             selected = next
             next
         }
@@ -291,7 +291,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
         return file.state
     }
     private fun validate(state: AgentBridgeExportLedger) {
-        demand(state.version == (if (state.acceptedJobs != null) 3 else if (state.nativeCatalog == null) 1 else 2) && state.revision >= 1)
+        demand(state.version == (if (state.captureClaims != null) 4 else if (state.acceptedJobs != null) 3 else if (state.nativeCatalog == null) 1 else 2) && state.revision >= 1)
         state.nativeCatalog?.validate()
         demand(state.grants.size <= MAX_GRANTS && state.plans.size <= MAX_PLANS && state.decisions.size <= MAX_DECISIONS)
         val grants = state.grants.map { it.delegation() }
@@ -341,6 +341,17 @@ internal class AgentBridgeExportAuthorityStore private constructor(
                 "${plan.intent.peer.sourceInstallationId}:${plan.intent.peer.hostInstallationId}:${request.jobId}"
             }
             demand(identities.distinct().size == identities.size)
+        }
+        state.captureClaims?.let { claims ->
+            demand(claims.isNotEmpty() && claims.size <= 16 && claims.map { it.claimId }.distinct().size == claims.size &&
+                claims.map { it.requestSha256 }.distinct().size == claims.size)
+            for (claim in claims) {
+                val job = state.acceptedJobs?.singleOrNull { it.requestSha256 == claim.requestSha256 } ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
+                val plan = job.request().plan as AgentBridgeGeneratedPlan
+                demand(claim.version == 1 && runCatching { UUID.fromString(claim.claimId).let { it.toString() == claim.claimId && it.version() == 4 && it.variant() == 2 } }.getOrDefault(false))
+                val at = Instant.parse(claim.claimedAt)
+                demand(at >= Instant.parse(job.acceptedAt) && at < Instant.parse(job.expiresAt) && at < Instant.parse(plan.expiresAt))
+            }
         }
     }
 
@@ -527,7 +538,9 @@ internal data class AgentBridgeExportLedger(val version: Int, val revision: Long
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val nativeCatalog: AgentBridgeNativeCatalogPublication? = null,
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
-    val acceptedJobs: List<AgentBridgeExportAcceptedJob>? = null)
+    val acceptedJobs: List<AgentBridgeExportAcceptedJob>? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val captureClaims: List<AgentBridgeExportStoredCaptureClaim>? = null)
 @Serializable
 internal data class AgentBridgeExportGrantRecord(val delegationCanonical: String, val revoked: Boolean) {
     fun delegation(): AgentBridgeExportDelegation {
@@ -679,3 +692,10 @@ internal data class AgentBridgeExportAcceptedJob(val version: Int, val requestCa
     }
 }
 internal data class AgentBridgeExportJobAcceptance(val job: AgentBridgeExportAcceptedJob, val newlyAccepted: Boolean)
+
+
+@Serializable
+internal data class AgentBridgeExportStoredCaptureClaim(val version: Int, val claimId: String,
+    val requestSha256: String, val claimedAt: String)
+internal data class AgentBridgeExportCaptureReservation(val job: AgentBridgeExportAcceptedJob,
+    val claim: AgentBridgeExportStoredCaptureClaim)

@@ -208,6 +208,32 @@ final class AgentBridgeExportPlanningService {
         })
     }
 
+    /// Single durable reservation only. The reservation does not authorize SDK reads, supply a
+    /// spool, or prove capture completion. Lost/failed returns never release an already published claim.
+    func claimCapture(_ supplied: AgentBridgeExecute,
+                      authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeExportCaptureReservation {
+        let bytes = try AgentBridgeV4Codec.encode(supplied)
+        let request = try AgentBridgeV4Codec.decode(AgentBridgeExecute.self, from: bytes)
+        try authenticatedPeer.requireCurrent()
+        return try store.claimCapture(requestBytes: bytes, prepare: { state, job in
+            guard try self.currentDecision(in: state, planID: request.plan.planId, peer: authenticatedPeer) == request.approval else {
+                throw AgentBridgeValidationError.approvalRequired
+            }
+            return try .init(version: 1, claimID: AgentBridgeUUID(UUID().uuidString.lowercased()),
+                requestSHA256: job.requestSHA256, claimedAt: self.utc(self.clock.now()))
+        }, requireCurrent: { state, reservation in
+            try authenticatedPeer.requireCurrent()
+            guard request.plan.intent.peer == authenticatedPeer.peer, reservation.job.requestBytes == bytes,
+                  state.captureClaims?.contains(reservation.claim) == true else { throw AgentBridgeValidationError.bindingChanged }
+            guard try self.currentDecision(in: state, planID: request.plan.planId, peer: authenticatedPeer) == request.approval else {
+                throw AgentBridgeValidationError.approvalRequired
+            }
+            let now = try self.utc(self.clock.now())
+            guard reservation.job.acceptedAt.rawValue <= now.rawValue, reservation.job.expiresAt.rawValue > now.rawValue,
+                  reservation.claim.claimedAt.rawValue <= now.rawValue else { throw AgentBridgeValidationError.planExpired }
+        })
+    }
+
     /// Separate local-native exact decision. NOT reachable from handle(), JSON or an MCP annotation.
     /// The native authorizer must independently approve this complete issued binding, never a flag.
     func storeNativeDecision(planID: AgentBridgeUUID, binding: AgentBridgeBinding, approvalID: AgentBridgeUUID,

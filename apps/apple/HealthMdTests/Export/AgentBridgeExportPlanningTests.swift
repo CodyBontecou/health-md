@@ -39,6 +39,79 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         return try AgentBridgeExecute(approval: approval, idempotencyKey: id(81), jobId: id(82), plan: plan, requestId: id(83))
     }
 
+    func testCaptureReservationRequiresAcceptanceAndCannotBeReclaimedAcrossRestart() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        XCTAssertThrowsError(try rig.service.claimCapture(request, authenticatedPeer: rig.peer))
+        let accepted = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let claim = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+        XCTAssertEqual(claim.job, accepted.job)
+        XCTAssertEqual(claim.claim.requestSHA256, accepted.job.requestSHA256)
+        let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        XCTAssertEqual((try JSONSerialization.jsonObject(with: bytes) as? [String: Any])?["version"] as? Int, 4)
+        XCTAssertThrowsError(try rig.restartedService().claimCapture(request, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .busy)
+        }
+        XCTAssertFalse(try rig.restartedService().acceptExecution(request, authenticatedPeer: rig.peer).newlyAccepted)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), bytes)
+    }
+
+    func testCaptureReservationFencesStagingAndNeverReclaimsPublishedButUnreturnedClaim() throws {
+        for published in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            var observed = false
+            if published {
+                rig.publication.onPublished = { state in
+                    if state.captureClaims != nil { observed = true; throw AgentBridgeValidationError.bindingChanged }
+                }
+            } else {
+                rig.publication.onPrepared = { state in
+                    if state.captureClaims != nil { observed = true; rig.clock.advance(seconds: 600) }
+                }
+            }
+            XCTAssertThrowsError(try rig.service.claimCapture(request, authenticatedPeer: rig.peer))
+            XCTAssertTrue(observed)
+            rig.publication.onPrepared = nil; rig.publication.onPublished = nil
+            if published {
+                XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
+                XCTAssertThrowsError(try rig.restartedService().claimCapture(request, authenticatedPeer: rig.peer)) {
+                    XCTAssertEqual($0 as? AgentBridgeValidationError, .busy)
+                }
+            } else { XCTAssertNil(try rig.store.snapshot().captureClaims) }
+        }
+    }
+
+    func testCaptureReservationRejectsExpiredChangedAndRevokedAuthorityWithoutClaiming() throws {
+        for mode in ["expired", "configuration", "trust", "grant"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            switch mode {
+            case "expired": rig.clock.advance(seconds: 600)
+            case "configuration": rig.reader.grants = .required
+            case "trust": rig.session.revoke()
+            default: try rig.store.revokeNativeDelegation(request.plan.authorityReferences.native, expectedGeneration: rig.store.snapshot().generation, authorization: FakeNativeAuthorization())
+            }
+            XCTAssertThrowsError(try rig.service.claimCapture(request, authenticatedPeer: rig.peer))
+            XCTAssertNil(try rig.store.snapshot().captureClaims)
+        }
+    }
+
+    func testCaptureReservationVersionSurvivesLaterAcceptanceAndCatalogPublication() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+        let another = AgentBridgeExecute(approval: request.approval, idempotencyKey: try id(94), jobId: try id(95), plan: request.plan, requestId: try id(96))
+        XCTAssertTrue(try rig.service.acceptExecution(another, authenticatedPeer: rig.peer).newlyAccepted)
+        _ = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { try self.nativeState() }
+        XCTAssertEqual(try rig.store.snapshot().captureClaims, [reservation.claim])
+        let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        XCTAssertEqual((try JSONSerialization.jsonObject(with: bytes) as? [String: Any])?["version"] as? Int, 4)
+    }
+
     func testDurableAcceptanceReplaysExactStoredJobAfterPlanExpiryWithoutResolvingChangedSettings() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try executionRequest(rig)

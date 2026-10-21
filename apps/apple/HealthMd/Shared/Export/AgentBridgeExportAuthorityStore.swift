@@ -93,6 +93,18 @@ nonisolated struct AgentBridgeExportJobAcceptance {
     let newlyAccepted: Bool // Retry may inspect the stored job; it must never start another capture.
 }
 
+/// A permanent single-capture reservation, not proof that capture ran or a spool exists.
+nonisolated struct AgentBridgeExportStoredCaptureClaim: Codable, Equatable {
+    let version: Int
+    let claimID: AgentBridgeUUID
+    let requestSHA256: AgentBridgeDigest
+    let claimedAt: AgentBridgeUTC
+}
+nonisolated struct AgentBridgeExportCaptureReservation {
+    let job: AgentBridgeExportAcceptedJob
+    let claim: AgentBridgeExportStoredCaptureClaim
+}
+
 nonisolated struct AgentBridgeExportAuthoritySnapshot: Codable {
     var generation: Int64
     var delegations: [AgentBridgeExportStoredDelegation]
@@ -100,6 +112,7 @@ nonisolated struct AgentBridgeExportAuthoritySnapshot: Codable {
     var decisions: [AgentBridgeExportStoredDecision]
     var nativeCatalog: AgentBridgeNativeCatalogPublication? = nil
     var acceptedJobs: [AgentBridgeExportAcceptedJob]? = nil
+    var captureClaims: [AgentBridgeExportStoredCaptureClaim]? = nil
 
     func references(peer: AgentBridgePeer, now: AgentBridgeUTC) throws -> [AgentBridgeAuthorityReference] {
         let active = try delegations.filter { !$0.revoked }.map { try $0.description() }
@@ -300,6 +313,31 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         }
     }
 
+    /// Reserve once under the original issuer lock. A claimed-but-interrupted job is never
+    /// reclaimed here; only future immutable spool recovery may continue it without recapture.
+    func claimCapture(requestBytes: Data,
+        prepare: (AgentBridgeExportAuthoritySnapshot, AgentBridgeExportAcceptedJob) throws -> AgentBridgeExportStoredCaptureClaim,
+        requireCurrent: (AgentBridgeExportAuthoritySnapshot, AgentBridgeExportCaptureReservation) throws -> Void) throws -> AgentBridgeExportCaptureReservation {
+        var selected: AgentBridgeExportCaptureReservation?
+        return try transaction(beforeCommit: { state in
+            guard let selected else { throw AgentBridgeValidationError.bindingChanged }
+            try requireCurrent(state, selected)
+        }) { state in
+            guard let job = state.acceptedJobs?.first(where: { $0.requestBytes == requestBytes }) else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            let claims = state.captureClaims ?? []
+            guard !claims.contains(where: { $0.requestSHA256 == job.requestSHA256 }) else { throw AgentBridgeValidationError.busy }
+            guard claims.count < 16 else { throw AgentBridgeValidationError.busy }
+            let claim = try prepare(state, job)
+            guard claim.requestSHA256 == job.requestSHA256 else { throw AgentBridgeValidationError.bindingChanged }
+            state.captureClaims = claims + [claim]
+            let result = AgentBridgeExportCaptureReservation(job: job, claim: claim)
+            selected = result
+            return (result, true)
+        }
+    }
+
     func storeNativeDelegation(_ value: AgentBridgeExportDelegation, expectedGeneration: Int64,
                                authorization: any AgentBridgeExportNativeAuthorizing) throws {
         guard value.issuer == .nativeSource, value.peer.platform == .apple else { throw AgentBridgeValidationError.approvalRequired }
@@ -449,7 +487,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
             // Foundation decoding. Re-encoding rejects unknown/null/noncanonical private fields.
             let canonical = try AgentBridgeV4Codec.canonicalize(bytes)
             let signed = try JSONDecoder().decode(SignedState.self, from: canonical)
-            guard signed.version == (signed.state.acceptedJobs != nil ? 3 : (signed.state.nativeCatalog == nil ? 1 : 2)), try canonicalPrivate(signed) == canonical,
+            guard signed.version == (signed.state.captureClaims != nil ? 4 : (signed.state.acceptedJobs != nil ? 3 : (signed.state.nativeCatalog == nil ? 1 : 2))), try canonicalPrivate(signed) == canonical,
                   HMAC<SHA256>.isValidAuthenticationCode(signed.mac, authenticating: Self.domain + (try canonicalPrivate(signed.state)), using: key) else { throw AgentBridgeValidationError.bindingChanged }
             try validate(signed.state)
             return signed.state
@@ -500,6 +538,15 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                 }
             }
         }
+        if let claims = state.captureClaims {
+            guard !claims.isEmpty, claims.count <= 16, Set(claims.map(\.claimID)).count == claims.count,
+                  Set(claims.map(\.requestSHA256)).count == claims.count else { throw AgentBridgeValidationError.bindingChanged }
+            for claim in claims {
+                guard claim.version == 1, let job = state.acceptedJobs?.first(where: { $0.requestSHA256 == claim.requestSHA256 }),
+                      claim.claimedAt.rawValue >= job.acceptedAt.rawValue, claim.claimedAt.rawValue < job.expiresAt.rawValue,
+                      claim.claimedAt.rawValue < (try job.request().plan.expiresAt).rawValue else { throw AgentBridgeValidationError.bindingChanged }
+            }
+        }
         guard Set(state.decisions.map(\.planID)).count == state.decisions.count else { throw AgentBridgeValidationError.bindingChanged }
     }
 
@@ -511,7 +558,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                        beforePublish: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { _ in }) throws {
         let stateBytes = try canonicalPrivate(state)
         let mac = Data(HMAC<SHA256>.authenticationCode(for: Self.domain + stateBytes, using: key))
-        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: state.acceptedJobs != nil ? 3 : (state.nativeCatalog == nil ? 1 : 2), state: state, mac: mac)),
+        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: state.captureClaims != nil ? 4 : (state.acceptedJobs != nil ? 3 : (state.nativeCatalog == nil ? 1 : 2)), state: state, mac: mac)),
             beforeRename: {
                 try self.publication.prepared(state)
                 // Canonical serialization, HMAC, temp write and fsync have ALREADY completed. This
