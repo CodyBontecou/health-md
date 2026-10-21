@@ -65,12 +65,41 @@ nonisolated struct AgentBridgeExportStoredDecision: Codable {
     let approvalBytes: Data
     func approval() throws -> AgentBridgeApproval { try AgentBridgeV4Codec.decode(AgentBridgeApproval.self, from: approvalBytes) }
 }
+/// Immutable accepted-pending-capture journal entry. No capture/claim/transfer state is implied.
+nonisolated struct AgentBridgeExportAcceptedJob: Codable, Equatable {
+    let version: Int
+    let requestBytes: Data
+    let requestSHA256: AgentBridgeDigest
+    let nativeResolution: Data
+    let acceptedAt: AgentBridgeUTC
+    let expiresAt: AgentBridgeUTC
+    func request() throws -> AgentBridgeExecute { try AgentBridgeV4Codec.decode(AgentBridgeExecute.self, from: requestBytes) }
+    func validate() throws {
+        let value = try request()
+        let formatter = ISO8601DateFormatter()
+        guard version == 1, requestBytes.count <= 48 * 1024, nativeResolution.count <= 48 * 1024,
+              try AgentBridgeV4Codec.encode(value) == requestBytes,
+              AgentBridgeV4Codec.sha256(requestBytes) == requestSHA256.rawValue,
+              let accepted = formatter.date(from: acceptedAt.rawValue), let expires = formatter.date(from: expiresAt.rawValue),
+              expires.timeIntervalSince(accepted) == 604800,
+              acceptedAt.rawValue >= value.plan.issuedAt.rawValue, acceptedAt.rawValue < value.plan.expiresAt.rawValue,
+              value.approval.approvedAt.rawValue <= acceptedAt.rawValue else { throw AgentBridgeValidationError.bindingChanged }
+        // The MainActor service validates native resolution semantics; store validation below
+        // requires byte equality with that issuer-owned plan, without crossing actor isolation.
+    }
+}
+nonisolated struct AgentBridgeExportJobAcceptance {
+    let job: AgentBridgeExportAcceptedJob
+    let newlyAccepted: Bool // Retry may inspect the stored job; it must never start another capture.
+}
+
 nonisolated struct AgentBridgeExportAuthoritySnapshot: Codable {
     var generation: Int64
     var delegations: [AgentBridgeExportStoredDelegation]
     var plans: [AgentBridgeExportIssuedPlan]
     var decisions: [AgentBridgeExportStoredDecision]
     var nativeCatalog: AgentBridgeNativeCatalogPublication? = nil
+    var acceptedJobs: [AgentBridgeExportAcceptedJob]? = nil
 
     func references(peer: AgentBridgePeer, now: AgentBridgeUTC) throws -> [AgentBridgeAuthorityReference] {
         let active = try delegations.filter { !$0.revoked }.map { try $0.description() }
@@ -244,6 +273,33 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         try transaction { state in (try inspect(state), false) }
     }
 
+    /// The same signed transaction serializes the idempotency index and authority checks. Callers
+    /// cannot initialize a missing ledger; publication is fsynced before a new acceptance returns.
+    func acceptExecution(request: AgentBridgeExecute, requestBytes: Data,
+        prepare: (AgentBridgeExportAuthoritySnapshot) throws -> AgentBridgeExportAcceptedJob,
+        requireCurrent: (AgentBridgeExportAuthoritySnapshot, AgentBridgeExportAcceptedJob, Bool) throws -> Void) throws -> AgentBridgeExportJobAcceptance {
+        var selected: AgentBridgeExportAcceptedJob?
+        var isNew = false
+        return try transaction(beforeCommit: { state in
+            guard let selected else { throw AgentBridgeValidationError.bindingChanged }
+            try requireCurrent(state, selected, isNew)
+        }) { state in
+            let jobs = state.acceptedJobs ?? []
+            if let existing = try jobs.first(where: { try $0.request().plan.intent.peer == request.plan.intent.peer && $0.request().jobId == request.jobId }) {
+                guard existing.requestBytes == requestBytes else { throw AgentBridgeValidationError.bindingChanged }
+                selected = existing
+                return (.init(job: existing, newlyAccepted: false), false)
+            }
+            guard jobs.count < 16 else { throw AgentBridgeValidationError.busy }
+            let record = try prepare(state)
+            guard record.requestBytes == requestBytes else { throw AgentBridgeValidationError.bindingChanged }
+            try record.validate()
+            state.acceptedJobs = jobs + [record]
+            selected = record; isNew = true
+            return (.init(job: record, newlyAccepted: true), true)
+        }
+    }
+
     func storeNativeDelegation(_ value: AgentBridgeExportDelegation, expectedGeneration: Int64,
                                authorization: any AgentBridgeExportNativeAuthorizing) throws {
         guard value.issuer == .nativeSource, value.peer.platform == .apple else { throw AgentBridgeValidationError.approvalRequired }
@@ -393,7 +449,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
             // Foundation decoding. Re-encoding rejects unknown/null/noncanonical private fields.
             let canonical = try AgentBridgeV4Codec.canonicalize(bytes)
             let signed = try JSONDecoder().decode(SignedState.self, from: canonical)
-            guard signed.version == (signed.state.nativeCatalog == nil ? 1 : 2), try canonicalPrivate(signed) == canonical,
+            guard signed.version == (signed.state.acceptedJobs != nil ? 3 : (signed.state.nativeCatalog == nil ? 1 : 2)), try canonicalPrivate(signed) == canonical,
                   HMAC<SHA256>.isValidAuthenticationCode(signed.mac, authenticating: Self.domain + (try canonicalPrivate(signed.state)), using: key) else { throw AgentBridgeValidationError.bindingChanged }
             try validate(signed.state)
             return signed.state
@@ -430,6 +486,20 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                   decisions.insert(approval.approvalId).inserted,
                   approval.binding == (try AgentBridgeSemantics.binding(state.issued(id: record.planID, peer: approval.binding.peer).plan())) else { throw AgentBridgeValidationError.bindingChanged }
         }
+        if let jobs = state.acceptedJobs {
+            guard !jobs.isEmpty, jobs.count <= 16 else { throw AgentBridgeValidationError.bindingChanged }
+            var identities = Set<String>()
+            for job in jobs {
+                try job.validate()
+                let request = try job.request(), peer = request.plan.intent.peer
+                let record = try state.issued(id: request.plan.planId, peer: peer)
+                guard try record.plan() == request.plan, record.nativeResolution == job.nativeResolution,
+                      state.decisions.contains(where: { $0.planID == request.plan.planId && (try? $0.approval()) == request.approval }),
+                      identities.insert(peer.sourceInstallationID.rawValue + ":" + peer.hostInstallationID.rawValue + ":" + request.jobId.rawValue).inserted else {
+                    throw AgentBridgeValidationError.bindingChanged
+                }
+            }
+        }
         guard Set(state.decisions.map(\.planID)).count == state.decisions.count else { throw AgentBridgeValidationError.bindingChanged }
     }
 
@@ -441,7 +511,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                        beforePublish: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { _ in }) throws {
         let stateBytes = try canonicalPrivate(state)
         let mac = Data(HMAC<SHA256>.authenticationCode(for: Self.domain + stateBytes, using: key))
-        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: state.nativeCatalog == nil ? 1 : 2, state: state, mac: mac)),
+        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: state.acceptedJobs != nil ? 3 : (state.nativeCatalog == nil ? 1 : 2), state: state, mac: mac)),
             beforeRename: {
                 try self.publication.prepared(state)
                 // Canonical serialization, HMAC, temp write and fsync have ALREADY completed. This

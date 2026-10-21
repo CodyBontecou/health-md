@@ -97,6 +97,50 @@ internal class AgentBridgeExportPlanningService(
             AgentBridgeCodec.sha256(bytes), requireNotNull(resolution))
     }
 
+    /** Durably accept a pending job; replay returns stored metadata, never capture permission.
+     * Capture still needs a separate atomic claim and live read-boundary authority checks. */
+    fun acceptExecution(authenticated: AgentBridgeExportAuthenticatedPeer,
+        supplied: AgentBridgeExecuteRequest): AgentBridgeExportJobAcceptance {
+        val bytes = AgentBridgeCodec.encode(supplied)
+        val request = AgentBridgeCodec.decode(bytes) as AgentBridgeExecuteRequest
+        val plan = request.plan as? AgentBridgeGeneratedPlan ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val expected = peer(authenticated, plan.intent.peer)
+        var selected: AgentBridgeExportJobAcceptance? = null
+        return store.access(fence = { transaction ->
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val result = selected ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            peer(authenticated, expected)
+            if (result.newlyAccepted) {
+                validateBoundary(authenticated, expected, tx, request.approval, nativeDecision = null)
+            } else {
+                // Metadata only: no re-resolution of changed preferences or expired plan approval.
+                val ref = plan.authorityReferences.native
+                tx.grant(expected, ref.authorityId, ref.grantRevision, now())
+            }
+            require(now() >= Instant.parse(result.job.acceptedAt) && now() < Instant.parse(result.job.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
+        }) { transaction ->
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val jobs = tx.state.acceptedJobs.orEmpty()
+            val old = jobs.singleOrNull { it.request().let { r -> (r.plan as AgentBridgeGeneratedPlan).intent.peer == expected && r.jobId == request.jobId } }
+            if (old != null) {
+                require(old.requestCanonical == bytes.decodeToString(), AgentBridgeErrorCode.BINDING_CHANGED)
+                AgentBridgeExportJobAcceptance(old, false).also { selected = it }
+            } else {
+                require(jobs.size < 16, AgentBridgeErrorCode.BUSY)
+                val stored = tx.plan(expected, plan.planId)
+                require(stored.plan() == plan, AgentBridgeErrorCode.BINDING_CHANGED)
+                require(tx.decision(plan.planId) == request.approval, AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                validateBoundary(authenticated, expected, tx, request.approval, nativeDecision = null)
+                val accepted = now()
+                val job = AgentBridgeExportAcceptedJob(1, bytes.decodeToString(), AgentBridgeCodec.sha256(bytes),
+                    stored.resolutionCanonical, accepted.toString(), accepted.plusSeconds(604800).toString())
+                job.validate()
+                tx.state = tx.state.copy(version = 3, acceptedJobs = jobs + job)
+                AgentBridgeExportJobAcceptance(job, true).also { selected = it }
+            }
+        }
+    }
+
     fun discover(authenticated: AgentBridgeExportAuthenticatedPeer, value: AgentBridgeDiscoveryRequest): AgentBridgeDiscovery {
         val request = AgentBridgeCodec.decode(AgentBridgeCodec.encode(value)) as AgentBridgeDiscoveryRequest
         val peer = peer(authenticated, request.peer)

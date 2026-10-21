@@ -59,7 +59,7 @@ internal sealed interface AgentBridgeExportNativeDecision {
  * strict bounded byte parser + canonical typed roundtrip + protected-key MAC on every access.
  * MAC is integrity ONLY: a privileged actor can roll back a valid historical signed snapshot.
  * Inode pins are in-memory/per-operation, NOT a persisted fresh-open identity or OS protection proof.
- * This is source planning state only, NOT an execution/transfer/recovery journal. */
+ * Accepted-pending jobs retain immutable pre-capture inputs only; no capture claim/transfer/resume state. */
 internal class AgentBridgeExportAuthorityStore private constructor(
     private val parent: Path,
     private val owner: UserPrincipal,
@@ -185,7 +185,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
             }
             val next = AgentBridgeNativeCatalogPublication((current?.revision ?: 0) + 1, sourceInstallationId, digest)
             next.validate()
-            tx.state = tx.state.copy(version = 2, nativeCatalog = next)
+            tx.state = tx.state.copy(version = if (tx.state.acceptedJobs == null) 2 else 3, nativeCatalog = next)
             selected = next
             next
         }
@@ -291,7 +291,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
         return file.state
     }
     private fun validate(state: AgentBridgeExportLedger) {
-        demand(state.version == (if (state.nativeCatalog == null) 1 else 2) && state.revision >= 1)
+        demand(state.version == (if (state.acceptedJobs != null) 3 else if (state.nativeCatalog == null) 1 else 2) && state.revision >= 1)
         state.nativeCatalog?.validate()
         demand(state.grants.size <= MAX_GRANTS && state.plans.size <= MAX_PLANS && state.decisions.size <= MAX_DECISIONS)
         val grants = state.grants.map { it.delegation() }
@@ -330,6 +330,18 @@ internal class AgentBridgeExportAuthorityStore private constructor(
             approval
         }
         demand(state.decisions.map { it.planId }.distinct().size == approvals.size && approvals.map { it.approvalId }.distinct().size == approvals.size)
+        state.acceptedJobs?.let { jobs ->
+            demand(jobs.isNotEmpty() && jobs.size <= 16)
+            val identities = jobs.map { job ->
+                job.validate()
+                val request = job.request(); val plan = request.plan as AgentBridgeGeneratedPlan
+                val stored = state.plans.singleOrNull { it.plan() == plan } ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
+                demand(stored.resolutionCanonical == job.resolutionCanonical)
+                demand(state.decisions.any { it.planId == plan.planId && it.approval() == request.approval })
+                "${plan.intent.peer.sourceInstallationId}:${plan.intent.peer.hostInstallationId}:${request.jobId}"
+            }
+            demand(identities.distinct().size == identities.size)
+        }
     }
 
     private fun replace(bytes: ByteArray, beforePublication: () -> Unit) {
@@ -513,7 +525,9 @@ internal data class AgentBridgeExportLedgerFile(val state: AgentBridgeExportLedg
 internal data class AgentBridgeExportLedger(val version: Int, val revision: Long, val grants: List<AgentBridgeExportGrantRecord>,
     val plans: List<AgentBridgeExportIssuedPlanRecord>, val decisions: List<AgentBridgeExportDecisionRecord>,
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
-    val nativeCatalog: AgentBridgeNativeCatalogPublication? = null)
+    val nativeCatalog: AgentBridgeNativeCatalogPublication? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val acceptedJobs: List<AgentBridgeExportAcceptedJob>? = null)
 @Serializable
 internal data class AgentBridgeExportGrantRecord(val delegationCanonical: String, val revoked: Boolean) {
     fun delegation(): AgentBridgeExportDelegation {
@@ -648,3 +662,20 @@ internal object AgentBridgeExportNativeSetupConsent {
     ): T = AgentBridgeExportNativeConsent.withNativeConfirmation(
         AgentBridgeExportNativeDecision.InitializeStore, requireCurrentNativePolicy, clockNanos, operation)
 }
+
+
+@Serializable
+internal data class AgentBridgeExportAcceptedJob(val version: Int, val requestCanonical: String,
+    val requestSha256: String, val resolutionCanonical: String, val acceptedAt: String, val expiresAt: String) {
+    fun request() = AgentBridgeCodec.decode(requestCanonical.toByteArray()) as AgentBridgeExecuteRequest
+    fun validate() {
+        val request = request(); val plan = request.plan as AgentBridgeGeneratedPlan
+        require(version == 1 && requestCanonical.toByteArray().size <= 48 * 1024 && resolutionCanonical.toByteArray().size <= 48 * 1024)
+        require(requestCanonical == AgentBridgeCodec.encode(request).decodeToString() && requestSha256 == AgentBridgeCodec.sha256(requestCanonical.toByteArray()))
+        val accepted = Instant.parse(acceptedAt)
+        require(Instant.parse(expiresAt) == accepted.plusSeconds(604800) && accepted >= Instant.parse(plan.issuedAt) && accepted < Instant.parse(plan.expiresAt))
+        require(Instant.parse(request.approval.approvedAt) <= accepted)
+        Json { encodeDefaults = true; ignoreUnknownKeys = false }.decodeFromString<AgentBridgeRequestSettingsResolution>(resolutionCanonical)
+    }
+}
+internal data class AgentBridgeExportJobAcceptance(val job: AgentBridgeExportAcceptedJob, val newlyAccepted: Boolean)

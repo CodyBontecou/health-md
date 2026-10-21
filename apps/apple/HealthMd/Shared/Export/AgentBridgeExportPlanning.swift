@@ -174,6 +174,40 @@ final class AgentBridgeExportPlanningService {
         return material
     }
 
+    /// Durably accept an immutable pending job. An exact replay returns stored metadata only,
+    /// without renewing approval/expiry or re-reading current output preferences. Capture still
+    /// requires a separate atomic claim and live native read-boundary validation.
+    func acceptExecution(_ supplied: AgentBridgeExecute,
+                         authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeExportJobAcceptance {
+        let bytes = try AgentBridgeV4Codec.encode(supplied)
+        let request = try AgentBridgeV4Codec.decode(AgentBridgeExecute.self, from: bytes)
+        try authenticatedPeer.requireCurrent()
+        return try store.acceptExecution(request: request, requestBytes: bytes, prepare: { state in
+            let record = try state.issued(id: request.plan.planId, peer: authenticatedPeer.peer)
+            guard try record.plan() == request.plan else { throw AgentBridgeValidationError.bindingChanged }
+            guard try self.currentDecision(in: state, planID: request.plan.planId, peer: authenticatedPeer) == request.approval else {
+                throw AgentBridgeValidationError.approvalRequired
+            }
+            let accepted = self.wholeSecond(self.clock.now())
+            return try .init(version: 1, requestBytes: bytes, requestSHA256: AgentBridgeDigest(AgentBridgeV4Codec.digest(request)),
+                nativeResolution: record.nativeResolution, acceptedAt: self.utc(accepted), expiresAt: self.utc(accepted.addingTimeInterval(604800)))
+        }, requireCurrent: { state, job, isNew in
+            try authenticatedPeer.requireCurrent()
+            guard request.plan.intent.peer == authenticatedPeer.peer, job.requestBytes == bytes else { throw AgentBridgeValidationError.bindingChanged }
+            if isNew {
+                guard try self.currentDecision(in: state, planID: request.plan.planId, peer: authenticatedPeer) == request.approval else {
+                    throw AgentBridgeValidationError.approvalRequired
+                }
+            } else {
+                // Metadata retry is not resume/read permission. Do not resolve mutable settings or
+                // require the expired planning approval; current trust and parent revocation still fence it.
+                _ = try self.currentParent(for: request.plan, state: state, peer: authenticatedPeer, now: self.clock.now())
+            }
+            guard job.acceptedAt.rawValue <= (try self.utc(self.clock.now())).rawValue,
+                  job.expiresAt.rawValue > (try self.utc(self.clock.now())).rawValue else { throw AgentBridgeValidationError.planExpired }
+        })
+    }
+
     /// Separate local-native exact decision. NOT reachable from handle(), JSON or an MCP annotation.
     /// The native authorizer must independently approve this complete issued binding, never a flag.
     func storeNativeDecision(planID: AgentBridgeUUID, binding: AgentBridgeBinding, approvalID: AgentBridgeUUID,

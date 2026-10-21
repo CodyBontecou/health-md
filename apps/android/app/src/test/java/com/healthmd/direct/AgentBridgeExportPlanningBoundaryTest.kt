@@ -21,6 +21,95 @@ class AgentBridgeExportPlanningBoundaryTest {
     }
 
     @Test
+    fun durableAcceptanceReplaysAfterPlanExpiryWithoutResolvingChangedSettings() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            val first = f.service.acceptExecution(f.peerContext, request)
+            assertThat(first.newlyAccepted).isTrue()
+            assertThat(first.job.request()).isEqualTo(request)
+            assertThat(first.job.requestSha256).isEqualTo(AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)))
+            val before = ledgerBytes(f)
+            assertThat(ledgerState(f).getValue("version").jsonPrimitive.int).isEqualTo(3)
+            f.clock.now = f.clock.now.plusSeconds(600)
+            f.configuration.active = false
+            val reads = f.configuration.calls
+            val retry = f.restart().acceptExecution(f.peerContext, request)
+            assertThat(retry.newlyAccepted).isFalse()
+            assertThat(retry.job).isEqualTo(first.job)
+            assertThat(f.configuration.calls).isEqualTo(reads)
+            assertThat(ledgerBytes(f)).isEqualTo(before)
+            assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
+        }
+    }
+
+    @Test
+    fun durableAcceptanceRejectsChangedBytesAndUnstoredApproval() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            for (changed in listOf(request.copy(idempotencyKey = AgentBridgeExportPlanningFixture.id(90)),
+                request.copy(requestId = AgentBridgeExportPlanningFixture.id(91)))) {
+                f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { f.service.acceptExecution(f.peerContext, changed) }
+            }
+            assertThat(ledgerState(f).getValue("acceptedJobs").jsonArray.size).isEqualTo(1)
+            // Same key on a distinct job is a distinct contract index, not global key reuse.
+            val distinct = request.copy(jobId = AgentBridgeExportPlanningFixture.id(92), requestId = AgentBridgeExportPlanningFixture.id(93))
+            assertThat(f.service.acceptExecution(f.peerContext, distinct).newlyAccepted).isTrue()
+            assertThat(ledgerState(f).getValue("acceptedJobs").jsonArray.size).isEqualTo(2)
+        }
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f, false)
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.acceptExecution(f.peerContext, request) }
+            assertThat(ledgerState(f).containsKey("acceptedJobs")).isFalse()
+        }
+    }
+
+    @Test
+    fun durableAcceptanceSerializesIndependentHandlesWithoutDuplicatingJobs() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+            val start = java.util.concurrent.CountDownLatch(1)
+            try {
+                val futures = (1..2).map { executor.submit<AgentBridgeExportJobAcceptance> {
+                    start.await(); f.restart().acceptExecution(f.peerContext, request)
+                } }
+                start.countDown()
+                val results = futures.map { it.get(10, java.util.concurrent.TimeUnit.SECONDS) }
+                assertThat(results.count { it.newlyAccepted }).isEqualTo(1)
+                assertThat(results[0].job).isEqualTo(results[1].job)
+                assertThat(ledgerState(f).getValue("acceptedJobs").jsonArray.size).isEqualTo(1)
+            } finally { executor.shutdownNow(); assertThat(executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue() }
+        }
+    }
+
+    @Test
+    fun durableAcceptanceRechecksExpiryDuringSigningAndRejectsRevokedRetry() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            var encodes = 0
+            f.keys.onEncode = { if (++encodes == 2) f.clock.now = Instant.parse((request.plan as AgentBridgeGeneratedPlan).expiresAt) }
+            f.expect(AgentBridgeErrorCode.PLAN_EXPIRED) { f.service.acceptExecution(f.peerContext, request) }
+            f.keys.onEncode = null
+            assertThat(encodes).isAtLeast(2)
+            assertThat(ledgerState(f).containsKey("acceptedJobs")).isFalse()
+        }
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            f.peerContext.trusted = false
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { f.service.acceptExecution(f.peerContext, request) }
+        }
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            val ref = (request.plan as AgentBridgeGeneratedPlan).authorityReferences.native
+            f.store.revoke(f.native, f.peer, ref.authorityId, ref.grantRevision)
+            f.expect(AgentBridgeErrorCode.APPROVAL_REQUIRED) { f.service.acceptExecution(f.peerContext, request) }
+        }
+    }
+
+    @Test
     fun executionPreparationPinsStoredDecisionAndResolutionAcrossRestartWithoutMutation() {
         AgentBridgeExportPlanningFixture().use { f ->
             val request = executionRequest(f)

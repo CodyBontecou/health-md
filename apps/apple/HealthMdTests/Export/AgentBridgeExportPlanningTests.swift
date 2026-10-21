@@ -39,6 +39,81 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         return try AgentBridgeExecute(approval: approval, idempotencyKey: id(81), jobId: id(82), plan: plan, requestId: id(83))
     }
 
+    func testDurableAcceptanceReplaysExactStoredJobAfterPlanExpiryWithoutResolvingChangedSettings() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        let first = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        XCTAssertTrue(first.newlyAccepted)
+        XCTAssertEqual(try first.job.request(), request)
+        XCTAssertEqual(first.job.requestSHA256.rawValue, try AgentBridgeV4Codec.digest(request))
+        let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        XCTAssertEqual(json["version"] as? Int, 3)
+        rig.clock.advance(seconds: 600)
+        rig.reader.catalogRevision += 1; rig.reader.entitlement = .required
+        let reads = rig.reader.calls.count
+        let retry = try rig.restartedService().acceptExecution(request, authenticatedPeer: rig.peer)
+        XCTAssertFalse(retry.newlyAccepted)
+        XCTAssertEqual(retry.job, first.job)
+        XCTAssertEqual(rig.reader.calls.count, reads)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), bytes)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testDurableAcceptanceRejectsChangedIdempotencyBytesAndUnstoredApproval() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        for changed in [AgentBridgeExecute(approval: request.approval, idempotencyKey: try id(90), jobId: request.jobId, plan: request.plan, requestId: request.requestId),
+                        AgentBridgeExecute(approval: request.approval, idempotencyKey: request.idempotencyKey, jobId: request.jobId, plan: request.plan, requestId: try id(91))] {
+            XCTAssertThrowsError(try rig.service.acceptExecution(changed, authenticatedPeer: rig.peer)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+        }
+        XCTAssertEqual(try rig.store.snapshot().acceptedJobs?.count, 1)
+        // The contract scopes a key to (peer, job, key), not globally to the peer.
+        let distinctJob = AgentBridgeExecute(approval: request.approval, idempotencyKey: request.idempotencyKey,
+            jobId: try id(92), plan: request.plan, requestId: try id(93))
+        XCTAssertTrue(try rig.service.acceptExecution(distinctJob, authenticatedPeer: rig.peer).newlyAccepted)
+        XCTAssertEqual(try rig.store.snapshot().acceptedJobs?.count, 2)
+        let unapproved = try Rig(); defer { unapproved.cleanup() }; try unapproved.enroll()
+        XCTAssertThrowsError(try unapproved.service.acceptExecution(executionRequest(unapproved, storeDecision: false), authenticatedPeer: unapproved.peer))
+        XCTAssertNil(try unapproved.store.snapshot().acceptedJobs)
+    }
+
+    func testDurableAcceptanceFencesStagingAndRecoversPublishedButUnreturnedJob() throws {
+        for afterPublication in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            var delayed = false
+            let delay: (AgentBridgeExportAuthoritySnapshot) -> Void = { state in
+                if !delayed, state.acceptedJobs != nil { delayed = true; rig.clock.advance(seconds: 600) }
+            }
+            if afterPublication { rig.publication.onPublished = delay } else { rig.publication.onPrepared = delay }
+            XCTAssertThrowsError(try rig.service.acceptExecution(request, authenticatedPeer: rig.peer))
+            XCTAssertTrue(delayed)
+            rig.publication.onPrepared = nil; rig.publication.onPublished = nil
+            if afterPublication {
+                let recovered = try rig.restartedService().acceptExecution(request, authenticatedPeer: rig.peer)
+                XCTAssertFalse(recovered.newlyAccepted)
+                XCTAssertEqual(try recovered.job.request(), request)
+            } else { XCTAssertNil(try rig.store.snapshot().acceptedJobs) }
+        }
+    }
+
+    func testDurableAcceptanceRetryRejectsRevokedTrustAndExpiredJob() throws {
+        for mode in ["trust", "grant", "expired"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll(expires: "2026-03-20T00:00:00Z")
+            let request = try executionRequest(rig)
+            _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            if mode == "trust" { rig.session.revoke() }
+            else if mode == "grant" {
+                try rig.store.revokeNativeDelegation(request.plan.authorityReferences.native, expectedGeneration: rig.store.snapshot().generation, authorization: FakeNativeAuthorization())
+            } else { rig.clock.advance(seconds: 604800) }
+            XCTAssertThrowsError(try rig.service.acceptExecution(request, authenticatedPeer: rig.peer))
+        }
+    }
+
     func testExecutionPreparationUsesExactStoredDecisionAndResolutionWithoutMutationAcrossRestart() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try executionRequest(rig)
