@@ -534,6 +534,9 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
 
     private fun tapNativeAction(tag: String, label: String) {
         val action = compose.onNodeWithTag(tag).scrollIfPossible()
+        // Focused-field IME/native owner resizing can outlast the semantics scroll update,
+        // just as popup dismissal does. Admit the same full control before measuring/tapping it.
+        awaitNativeControlVisible(action, "native action $tag after scrolling")
         action.assertMinimumTouchTarget().assertInNativeOwner().assertRole(Role.Button)
         assertActionTextFits(tag, label)
         action.performTouchInput { click() }
