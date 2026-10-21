@@ -89,6 +89,27 @@ nonisolated struct AgentBridgeNativeTransferCheckpoint: Codable, Sendable {
     let createdAt: String
     let expiresAt: String
     static let maximumBytes = 128 * 1024
+    var negotiation: DirectTransferNegotiation {
+        .init(protocolVersion: protocolVersion, binaryFrameVersion: binaryFrameVersion,
+            partitionTargetBytes: partitionTargetBytes, maximumInFlightChunks: maximumInFlightChunks)
+    }
+    /// Current peer support, not its newly selected preferred values, determines whether the
+    /// immutable original plan can be resumed. Never rewrite retained limits to fit a reconnect.
+    static func requireSupported(_ value: DirectTransferNegotiation, peer: DirectTransferCapabilities?) throws {
+        try validateNegotiation(value)
+        let local = DirectTransferCapabilities.current
+        guard let peer, local.protocolVersions.contains(value.protocolVersion), local.binaryFrameVersions.contains(value.binaryFrameVersion),
+              peer.protocolVersions.contains(value.protocolVersion),
+              peer.binaryFrameVersions.contains(value.binaryFrameVersion),
+              peer.minimumPartitionBytes > 0, peer.minimumPartitionBytes <= peer.preferredPartitionBytes,
+              peer.preferredPartitionBytes <= peer.maximumPartitionBytes,
+              (peer.minimumPartitionBytes...peer.maximumPartitionBytes).contains(value.partitionTargetBytes),
+              (local.minimumPartitionBytes...local.maximumPartitionBytes).contains(value.partitionTargetBytes),
+              value.maximumInFlightChunks <= peer.maximumInFlightChunks,
+              value.maximumInFlightChunks <= local.maximumInFlightChunks else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+    }
     static func validateNegotiation(_ value: DirectTransferNegotiation) throws {
         guard validLimits(value.protocolVersion, value.binaryFrameVersion, value.partitionTargetBytes, value.maximumInFlightChunks) else {
             throw AgentBridgeValidationError.unsupportedCapability

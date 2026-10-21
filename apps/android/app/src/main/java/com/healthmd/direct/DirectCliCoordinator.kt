@@ -39,6 +39,7 @@ import com.healthmd.direct.protocol.SourceIdentity
 import com.healthmd.direct.protocol.SourceStatus
 import com.healthmd.direct.protocol.StatusRequest
 import com.healthmd.direct.protocol.TransferNegotiation
+import com.healthmd.direct.protocol.TransferCapabilities
 import com.healthmd.direct.protocol.TransferPlanBuilder
 import com.healthmd.direct.protocol.V2Codec
 import com.healthmd.domain.billing.FreemiumPolicy
@@ -186,7 +187,8 @@ class DirectCliCoordinator @Inject constructor(
         override val sourceInstallationId: String, override val hostInstallationId: String,
         private val serving: ServingScope,
         private val bridgeNegotiation: com.healthmd.direct.protocol.AgentBridgeNegotiation,
-        private val transferNegotiation: TransferNegotiation) : AgentBridgeExportNativeSessionOwner {
+        private val transferNegotiation: TransferNegotiation, peerTransferCapabilities: TransferCapabilities) : AgentBridgeExportNativeSessionOwner {
+        private val peerTransferCapabilities = AgentBridgeNativeTransferCheckpoint.detachPeerCapabilities(peerTransferCapabilities)
         @Volatile private var revoked = false
         val catalogLifecycle = AgentBridgeNativeCatalogLifecycle()
         private val catalogRefreshLock = Any()
@@ -218,7 +220,7 @@ class DirectCliCoordinator @Inject constructor(
             nativePlanner?.let { it.requireCurrent(); return it }
             catalogLifecycle.currentPublication() // No issuer open for an unpublished/pending owner.
             val result = AgentBridgeNativePlanningSession(peer(context), catalogLifecycle,
-                AgentBridgeExportAuthorityStore.forNoBackup(context), configuration(), responseChannel = channel, responseNegotiation = bridgeNegotiation, responseTransferNegotiation = transferNegotiation)
+                AgentBridgeExportAuthorityStore.forNoBackup(context), configuration(), responseChannel = channel, responseNegotiation = bridgeNegotiation, responseTransferNegotiation = transferNegotiation, responsePeerTransferCapabilities = peerTransferCapabilities)
             requireCurrent()
             result.requireCurrent()
             nativePlanner = result
@@ -637,7 +639,7 @@ class DirectCliCoordinator @Inject constructor(
             val negotiation = com.healthmd.direct.protocol.AgentBridgeNegotiation.negotiate(
                 com.healthmd.direct.protocol.AgentBridgePlatform.ANDROID,
                 com.healthmd.direct.protocol.ANDROID_NATIVE_APPLICATION_VERSIONS, listener.protocolVersions)
-            val owner = NativeSessionOwner(channel, sourceInstallationId, listener.installationId, serving, negotiation, transferNegotiation)
+            val owner = NativeSessionOwner(channel, sourceInstallationId, listener.installationId, serving, negotiation, transferNegotiation, listener.transfer)
             replaceNativeOwner(owner)
         }
         return transferNegotiation

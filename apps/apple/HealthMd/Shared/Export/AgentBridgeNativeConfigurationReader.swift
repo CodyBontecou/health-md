@@ -98,6 +98,7 @@ final class AgentBridgeNativePlanningSession {
     private let responseChannel: DirectSecureChannel?
     private let responseNegotiation: AgentBridgeNegotiation?
     private let responseTransferNegotiation: DirectTransferNegotiation?
+    private let responsePeerTransferCapabilities: DirectTransferCapabilities?
     private let captureProtection: any AgentBridgeNativeCaptureProtecting
     private var wireAbandoned = false
 
@@ -129,12 +130,13 @@ final class AgentBridgeNativePlanningSession {
          responseChannel: DirectSecureChannel? = nil,
          responseNegotiation: AgentBridgeNegotiation? = nil,
          responseTransferNegotiation: DirectTransferNegotiation? = nil,
+         responsePeerTransferCapabilities: DirectTransferCapabilities? = nil,
          captureProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection(),
          clock: any AgentBridgeExportClock = AgentBridgeExportSystemClock(),
          newPlanID: @escaping () throws -> AgentBridgeUUID = { try AgentBridgeUUID(UUID().uuidString.lowercased()) }) throws {
         try peer.requireCurrent()
         let publication = try lifecycle.currentPublication()
-        self.peer = peer; self.lifecycle = lifecycle; self.store = store; self.responseChannel = responseChannel; self.responseNegotiation = responseNegotiation; self.responseTransferNegotiation = responseTransferNegotiation; self.captureProtection = captureProtection
+        self.peer = peer; self.lifecycle = lifecycle; self.store = store; self.responseChannel = responseChannel; self.responseNegotiation = responseNegotiation; self.responseTransferNegotiation = responseTransferNegotiation; self.responsePeerTransferCapabilities = responsePeerTransferCapabilities; self.captureProtection = captureProtection
         service = AgentBridgeExportPlanningService(store: store,
             configuration: OwnerBoundConfiguration(peer: peer, lifecycle: lifecycle, base: configuration),
             clock: clock, newPlanID: newPlanID)
@@ -288,7 +290,7 @@ final class AgentBridgeNativePlanningSession {
                     return result
                 }
                 let spool = try store.openCaptureSpool(reservation, create: !retained, fileProtection: captureProtection) { _ = try validate() }
-                let context = AgentBridgeNativeCaptureContext(spool: spool, transferNegotiation: responseTransferNegotiation, read: validate)
+                let context = AgentBridgeNativeCaptureContext(spool: spool, transferNegotiation: responseTransferNegotiation, peerTransferCapabilities: responsePeerTransferCapabilities, read: validate)
                 defer { context.close() }
                 let result = try await operation(context)
                 try cancellation.requireActive(); try Task.checkCancellation()
@@ -369,7 +371,8 @@ final class AgentBridgeNativeCaptureContext {
     private var read: (() throws -> AgentBridgeRequestSettingsResolution)?
     private let spool: AgentBridgeNativeCaptureSpool
     private let transferNegotiation: DirectTransferNegotiation?
-    fileprivate init(spool: AgentBridgeNativeCaptureSpool, transferNegotiation: DirectTransferNegotiation?, read: @escaping () throws -> AgentBridgeRequestSettingsResolution) { self.spool = spool; self.transferNegotiation = transferNegotiation; self.read = read }
+    private let peerTransferCapabilities: DirectTransferCapabilities?
+    fileprivate init(spool: AgentBridgeNativeCaptureSpool, transferNegotiation: DirectTransferNegotiation?, peerTransferCapabilities: DirectTransferCapabilities?, read: @escaping () throws -> AgentBridgeRequestSettingsResolution) { self.spool = spool; self.transferNegotiation = transferNegotiation; self.peerTransferCapabilities = peerTransferCapabilities; self.read = read }
     func begin() throws -> AgentBridgeRequestSettingsResolution {
         guard !started, !closed else { close(); throw AgentBridgeValidationError.busy }
         started = true
@@ -432,7 +435,11 @@ final class AgentBridgeNativeCaptureContext {
         do {
             _ = try configurationForRead()
             guard let transferNegotiation else { throw AgentBridgeValidationError.unsupportedCapability }
-            try AgentBridgeNativeTransferCheckpoint.validateNegotiation(transferNegotiation)
+            try AgentBridgeNativeTransferCheckpoint.requireSupported(transferNegotiation, peer: peerTransferCapabilities)
+            if let bytes = try spool.retainedTransferPlan() {
+                let retained = try AgentBridgeNativeTransferCheckpoint.decode(bytes)
+                try AgentBridgeNativeTransferCheckpoint.requireSupported(retained.negotiation, peer: peerTransferCapabilities)
+            }
             _ = try configurationForRead(); return transferNegotiation
         } catch { invalidate(); throw error }
     }
@@ -440,6 +447,7 @@ final class AgentBridgeNativeCaptureContext {
         do {
             let negotiation = try transferNegotiationForRead()
             let result = try spool.preserveTransferPlan(negotiation)
+            try AgentBridgeNativeTransferCheckpoint.requireSupported(AgentBridgeNativeTransferCheckpoint.decode(result).negotiation, peer: peerTransferCapabilities)
             _ = try configurationForRead(); return result
         } catch { invalidate(); throw error }
     }

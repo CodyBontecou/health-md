@@ -311,6 +311,17 @@ final class AgentBridgeNativeCaptureSpool {
         try check(); return bytes
     }
 
+    /// Read-only preflight. Missing unpinned metadata is not created; a pinned missing/corrupt
+    /// record still rejects through the same original-job validation as recovery.
+    func retainedTransferPlan() throws -> Data? {
+        do {
+            try check(); try validateStoredProgress()
+            let state = try progress().1
+            let result = state.transferSHA256 == nil ? nil : try readTransferPlan(state)
+            try check(); return result
+        } catch { throw Self.safe(error) }
+    }
+
     /// Pin compact exact session/partition metadata before raw publication. A pin without its
     /// original bytes is ambiguous and never permits a new session or random partition IDs.
     func preserveTransferPlan(_ negotiation: DirectTransferNegotiation) throws -> Data {

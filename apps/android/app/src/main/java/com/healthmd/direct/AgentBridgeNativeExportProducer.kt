@@ -74,6 +74,7 @@ internal data class AgentBridgeNativeTransferCheckpoint(val version: Int, val re
     val protocolVersion: Int, val binaryFrameVersion: Int, val partitionTargetBytes: Long,
     val maximumInFlightChunks: Int, val createdAt: String, val expiresAt: String) {
     fun canonical(): ByteArray = AgentBridgeCodec.canonicalize(Json.encodeToString(this).toByteArray())
+    fun negotiation() = TransferNegotiation(protocolVersion, binaryFrameVersion, partitionTargetBytes, maximumInFlightChunks)
     fun validate(requestSHA256: String, manifestSHA256: String, createdAt: String, expiresAt: String, artifactIDs: List<String>): List<String> {
         if (version != 1 || requestContract != "healthmd.agent_execute_request/1" || this.requestSHA256 != requestSHA256 ||
             this.manifestSHA256 != manifestSHA256 || this.createdAt != createdAt || this.expiresAt != expiresAt ||
@@ -93,6 +94,22 @@ internal data class AgentBridgeNativeTransferCheckpoint(val version: Int, val re
     }
     companion object {
         const val MAXIMUM_BYTES = 128 * 1024
+        fun detachPeerCapabilities(value: TransferCapabilities?): TransferCapabilities? = value?.copy(
+            protocolVersions = java.util.Collections.unmodifiableList(ArrayList(value.protocolVersions)),
+            binaryFrameVersions = java.util.Collections.unmodifiableList(ArrayList(value.binaryFrameVersions)))
+        /** Check support for the original limits, not equality with a new preferred negotiation. */
+        fun requireSupported(value: TransferNegotiation, peer: TransferCapabilities?) {
+            validateNegotiation(value)
+            val local = TransferCapabilities()
+            if (peer == null || value.protocolVersion !in local.protocolVersions || value.binaryFrameVersion !in local.binaryFrameVersions ||
+                value.protocolVersion !in peer.protocolVersions || value.binaryFrameVersion !in peer.binaryFrameVersions ||
+                peer.minimumPartitionBytes <= 0 || peer.minimumPartitionBytes > peer.preferredPartitionBytes ||
+                peer.preferredPartitionBytes > peer.maximumPartitionBytes ||
+                value.partitionTargetBytes !in peer.minimumPartitionBytes..peer.maximumPartitionBytes ||
+                value.partitionTargetBytes !in local.minimumPartitionBytes..local.maximumPartitionBytes ||
+                value.maximumInFlightChunks > peer.maximumInFlightChunks || value.maximumInFlightChunks > local.maximumInFlightChunks)
+                throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        }
         private fun validLimits(protocol: Int, binary: Int, target: Long, window: Int) =
             protocol == 1 && binary == 1 && target in MINIMUM_PARTITION_BYTES..MAXIMUM_PARTITION_BYTES && window in 1..8
         fun validateNegotiation(value: TransferNegotiation) {

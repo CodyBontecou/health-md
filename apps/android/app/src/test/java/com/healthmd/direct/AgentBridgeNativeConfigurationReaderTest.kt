@@ -85,10 +85,10 @@ class AgentBridgeNativeConfigurationReaderTest {
         readConfiguration(policy, AgentBridgeNativeCatalogPublication(1, AgentBridgeExportPlanningFixture.id(1),
             state.fingerprint(AgentBridgeExportPlanningFixture.id(1))))
 
-    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle, channel: DirectSecureChannel? = null, negotiation: AgentBridgeNegotiation = nativeNegotiation(), transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities())) =
+    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle, channel: DirectSecureChannel? = null, negotiation: AgentBridgeNegotiation = nativeNegotiation(), transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities()), peerTransferCapabilities: TransferCapabilities? = TransferCapabilities()) =
         AgentBridgeNativePlanningSession(f.peerContext, lifecycle, f.store,
             AgentBridgeNativeConfigurationReader(observed, settings, profiles, { lifecycle.currentFacts() },
-                { AgentBridgeExportTestRegistry.load() }), f.clock, responseChannel = channel, responseNegotiation = negotiation, responseTransferNegotiation = transferNegotiation)
+                { AgentBridgeExportTestRegistry.load() }), f.clock, responseChannel = channel, responseNegotiation = negotiation, responseTransferNegotiation = transferNegotiation, responsePeerTransferCapabilities = peerTransferCapabilities)
     @Test fun `native accepted receipt precedes capture and replays original bytes`() = runBlocking {
         AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()
@@ -189,11 +189,11 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
-    private suspend fun withNativeExportPreparation(transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities()), dates: AgentBridgeDates = AgentBridgeDatesExact(AgentBridgeRange("2026-03-08", "2026-03-07"), "exact"), operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager) -> Unit) {
+    private suspend fun withNativeExportPreparation(transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities()), peerTransferCapabilities: TransferCapabilities? = TransferCapabilities(), dates: AgentBridgeDates = AgentBridgeDatesExact(AgentBridgeRange("2026-03-08", "2026-03-07"), "exact"), operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager) -> Unit) {
         AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
-            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true), transferNegotiation = transferNegotiation)
+            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true), transferNegotiation = transferNegotiation, peerTransferCapabilities = peerTransferCapabilities)
             val request = nativeCaptureRequest(f, planner, listOf("steps"), dates)
             val client = mockk<HealthConnectClient>(relaxed = true)
             coEvery { client.permissionController.getGrantedPermissions() } returns setOf(HealthPermission.getReadPermission(StepsRecord::class))
@@ -205,6 +205,80 @@ class AgentBridgeNativeConfigurationReaderTest {
                 assertThat(reads).isEqualTo(preferenceReads); assertThat(writes).isEqualTo(preferenceWrites)
             }
         }
+    }
+
+    private fun transferReconnect(f: AgentBridgeExportPlanningFixture, capabilities: TransferCapabilities): AgentBridgeNativePlanningSession {
+        val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+        return ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true),
+            transferNegotiation = TransferCapabilities().negotiatedWith(capabilities), peerTransferCapabilities = capabilities)
+    }
+
+    @Test fun `retained transfer allows changed preference and detached peer lists`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val original = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val job = f.store.access { it!!.state.acceptedJobs!!.single() }
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256)
+            val progress = Files.readAllBytes(path.resolve("progress.json"))
+            val protocols = mutableListOf(1); val frames = mutableListOf(1)
+            val caps = TransferCapabilities(protocolVersions = protocols, binaryFrameVersions = frames, preferredPartitionBytes = MAXIMUM_PARTITION_BYTES, maximumInFlightChunks = 8)
+            assertThat(TransferCapabilities().negotiatedWith(caps)!!.partitionTargetBytes).isNotEqualTo(original.session.partitionTargetBytes)
+            val reconnect = transferReconnect(f, caps)
+            protocols.clear(); frames.clear() // The owner captured immutable original hello facts.
+            coEvery { client.aggregate(any()) } throws IllegalStateException("Must not query")
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load current core") })
+            val restored = reconnect.prepareRetainedTransferExport(request, manager, forbidden)
+            assertThat(restored.session).isEqualTo(original.session); assertThat(restored.partitions).isEqualTo(original.partitions)
+            assertThat(restored.checkpointCanonical).isEqualTo(original.checkpointCanonical)
+            assertThat(Files.readAllBytes(path.resolve("progress.json"))).isEqualTo(progress)
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `retained transfer rejects unsupported original target or window without mutation`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val original = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val job = f.store.access { it!!.state.acceptedJobs!!.single() }
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256)
+            val progress = Files.readAllBytes(path.resolve("progress.json"))
+            coEvery { client.aggregate(any()) } throws IllegalStateException("Must not query")
+            val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("Must not render") }, pinLoader = { error("Must not load current core") })
+            for (caps in listOf(TransferCapabilities(maximumInFlightChunks = 2), TransferCapabilities(minimumPartitionBytes = MAXIMUM_PARTITION_BYTES, preferredPartitionBytes = MAXIMUM_PARTITION_BYTES))) {
+                val reconnect = transferReconnect(f, caps)
+                try { reconnect.prepareRetainedTransferExport(request, manager, forbidden); throw AssertionError("Original limits must remain supported") }
+                catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) }
+                assertThat(Files.readAllBytes(path.resolve("progress.json"))).isEqualTo(progress)
+                assertThat(Files.readAllBytes(path.resolve("transfer.json"))).isEqualTo(original.checkpointCanonical)
+            }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+            val restored = transferReconnect(f, TransferCapabilities()).prepareRetainedTransferExport(request, manager, forbidden)
+            assertThat(restored.checkpointCanonical).isEqualTo(original.checkpointCanonical)
+        }
+    }
+
+    @Test fun `native transfer requires current peer capabilities before SDK`() = runBlocking {
+        withNativeExportPreparation(peerTransferCapabilities = null) { _, planner, request, client, manager ->
+            try { planner.prepareTransferExport(request, manager); throw AssertionError("A selected value cannot replace peer support") }
+            catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) }
+            coVerify(exactly = 0) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `native transfer support rejects invalid or unnegotiated capabilities`() {
+        val selected = requireNotNull(TransferCapabilities().negotiatedWith(TransferCapabilities()))
+        for (caps in listOf(TransferCapabilities(protocolVersions = listOf(2)), TransferCapabilities(binaryFrameVersions = listOf(2)),
+            TransferCapabilities(preferredPartitionBytes = 1), TransferCapabilities(maximumInFlightChunks = 0))) {
+            try { AgentBridgeNativeTransferCheckpoint.requireSupported(selected, caps); throw AssertionError("Invalid support must reject") }
+            catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) }
+        }
+        try { AgentBridgeNativeTransferCheckpoint.requireSupported(selected.copy(maximumInFlightChunks = 8), TransferCapabilities(maximumInFlightChunks = 8)); throw AssertionError("Local bounds must still hold") }
+        catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) }
+        AgentBridgeNativeTransferCheckpoint.requireSupported(selected.copy(maximumInFlightChunks = 2), TransferCapabilities())
     }
 
     @Test fun `native export producer prepares every approved day and recovers exact set`() = runBlocking {

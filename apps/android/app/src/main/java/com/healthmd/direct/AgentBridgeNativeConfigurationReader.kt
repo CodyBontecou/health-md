@@ -142,7 +142,9 @@ internal class AgentBridgeNativePlanningSession(
     private val responseChannel: DirectSecureChannel? = null,
     private val responseNegotiation: AgentBridgeNegotiation? = null,
     private val responseTransferNegotiation: TransferNegotiation? = null,
+    responsePeerTransferCapabilities: TransferCapabilities? = null,
 ) {
+    private val responsePeerTransferCapabilities = AgentBridgeNativeTransferCheckpoint.detachPeerCapabilities(responsePeerTransferCapabilities)
     private val service: AgentBridgeExportPlanningService
     @Volatile private var wireAbandoned = false
     init {
@@ -310,7 +312,7 @@ internal class AgentBridgeNativePlanningSession(
                 } catch (failure: Throwable) { caller.ensureActive(); throw failure }
             }
             val spool = store.openCaptureSpool(reservation, !retained) { validate(); Unit }
-            val context = AgentBridgeNativeCaptureContext(spool, responseTransferNegotiation, validate)
+            val context = AgentBridgeNativeCaptureContext(spool, responseTransferNegotiation, responsePeerTransferCapabilities, validate)
             return try {
                 val result = operation(context)
                 caller.ensureActive()
@@ -394,7 +396,7 @@ internal class AgentBridgeNativePlanningSession(
 
 
 /** Native-only operation lease. It cannot be decoded as permission or reused after its callback. */
-internal class AgentBridgeNativeCaptureContext internal constructor(private val spool: AgentBridgeNativeCaptureSpool, private val transferNegotiation: TransferNegotiation?, read: () -> AgentBridgeRequestSettingsResolution) {
+internal class AgentBridgeNativeCaptureContext internal constructor(private val spool: AgentBridgeNativeCaptureSpool, private val transferNegotiation: TransferNegotiation?, private val peerTransferCapabilities: TransferCapabilities?, read: () -> AgentBridgeRequestSettingsResolution) {
     private val lock = Any()
     private var started = false
     private var closed = false
@@ -464,13 +466,17 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
         try {
             configurationForRead()
             val value = transferNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
-            AgentBridgeNativeTransferCheckpoint.validateNegotiation(value)
+            AgentBridgeNativeTransferCheckpoint.requireSupported(value, peerTransferCapabilities)
+            spool.retainedTransferPlan()?.let { bytes ->
+                AgentBridgeNativeTransferCheckpoint.requireSupported(AgentBridgeNativeTransferCheckpoint.decode(bytes).negotiation(), peerTransferCapabilities)
+            }
             configurationForRead(); return value
         } catch (failure: Throwable) { invalidate(); throw failure }
     }
     fun preserveTransferPlan(): ByteArray {
         try {
             val result = spool.preserveTransferPlan(transferNegotiationForRead())
+            AgentBridgeNativeTransferCheckpoint.requireSupported(AgentBridgeNativeTransferCheckpoint.decode(result).negotiation(), peerTransferCapabilities)
             configurationForRead(); return result
         } catch (failure: Throwable) { invalidate(); throw failure }
     }

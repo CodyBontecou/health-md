@@ -261,6 +261,13 @@ internal class AgentBridgeNativeCaptureSpool(
         } catch (_: Exception) { fail() }
         guard(); return bytes
     }
+    /** Read-only preflight: never creates missing unpinned metadata or repairs pinned damage. */
+    @Synchronized fun retainedTransferPlan(): ByteArray? = safeCall {
+        guard(); validateStoredProgress()
+        val state = progress().second
+        val result = if (state.transferSHA256 == null) null else readTransferPlan(state)
+        guard(); result
+    }
     /** Compact exact session metadata is pinned before publication; a missing pinned file
      * never permits a fresh session or new random partition IDs. */
     @Synchronized fun preserveTransferPlan(negotiation: TransferNegotiation): ByteArray = safeCall {

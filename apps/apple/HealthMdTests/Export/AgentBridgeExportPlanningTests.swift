@@ -542,7 +542,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), next)
     }
 
-    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil, responseVersions: [Int] = [1, 3, 4], captureProtection: (any AgentBridgeNativeCaptureProtecting)? = nil, transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current)) throws -> AgentBridgeNativePlanningSession {
+    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil, responseVersions: [Int] = [1, 3, 4], captureProtection: (any AgentBridgeNativeCaptureProtecting)? = nil, transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), peerTransferCapabilities: DirectTransferCapabilities? = .current) throws -> AgentBridgeNativePlanningSession {
         let profiles = existingProfiles ?? ExportProfileStore(userDefaults: rig.reader.defaults)
         Self.retainedNativeConfigurationObjects.append(profiles)
         let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles) {
@@ -551,7 +551,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         return try AgentBridgeNativePlanningSession(peer: rig.peer, lifecycle: lifecycle, store: rig.store,
             configuration: reader, responseChannel: responseChannel,
             responseNegotiation: AgentBridgeNegotiation(localVersions: responseVersions, remoteVersions: [1, 3, 4], deployedBaseVersion: 1),
-            responseTransferNegotiation: transferNegotiation, captureProtection: captureProtection ?? rig.captureProtection,
+            responseTransferNegotiation: transferNegotiation, responsePeerTransferCapabilities: peerTransferCapabilities, captureProtection: captureProtection ?? rig.captureProtection,
             clock: rig.clock, newPlanID: { try id(6) })
     }
 
@@ -602,12 +602,12 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         if let originalFailure { throw originalFailure }
     }
 
-    private func withNativeExportPreparation(transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), _ operation: (Rig, AgentBridgeNativePlanningSession, AgentBridgeExecute, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
+    private func withNativeExportPreparation(transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), peerTransferCapabilities: DirectTransferCapabilities? = .current, _ operation: (Rig, AgentBridgeNativePlanningSession, AgentBridgeExecute, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
         _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
         let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
-        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel, transferNegotiation: transferNegotiation)
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel, transferNegotiation: transferNegotiation, peerTransferCapabilities: peerTransferCapabilities)
         let request = try nativeCaptureRequest(rig, planner: planner)
         let store = FakeHealthStore()
         let manager = HealthKitManager(store: store, userDefaults: rig.reader.defaults)
@@ -724,6 +724,79 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 manifestCanonical: AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: reversed))))
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
         }
+    }
+
+    private func transferReconnect(_ rig: Rig, capabilities: DirectTransferCapabilities) throws -> AgentBridgeNativePlanningSession {
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let profiles = try XCTUnwrap(Self.retainedNativeConfigurationObjects.compactMap { $0 as? ExportProfileStore }.last)
+        let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic reconnect")
+        return try nativePlanningSession(rig, lifecycle, profiles: profiles, responseChannel: channel,
+            transferNegotiation: DirectTransferCapabilities.current.negotiated(with: capabilities), peerTransferCapabilities: capabilities)
+    }
+    private func transferPeer(minimum: Int64 = DirectTransferLimits.minimumPartitionBytes,
+        preferred: Int64 = DirectTransferLimits.preferredPartitionBytes,
+        maximum: Int64 = DirectTransferLimits.maximumPartitionBytes, window: Int = 4) -> DirectTransferCapabilities {
+        .init(protocolVersions: [1], binaryFrameVersions: [1], minimumPartitionBytes: minimum,
+            preferredPartitionBytes: preferred, maximumPartitionBytes: maximum, maximumInFlightChunks: window)
+    }
+
+    func testRetainedTransferAllowsChangedPreferredTargetWithoutRewritingOriginal() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            let original = try await planner.prepareTransferExport(request, manager: manager)
+            let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+            let path = rig.directory.appendingPathComponent("captures").appendingPathComponent(job.requestSHA256.rawValue)
+            let progress = try Data(contentsOf: path.appendingPathComponent("progress.json"))
+            let capabilities = transferPeer(preferred: DirectTransferLimits.maximumPartitionBytes, window: 8)
+            XCTAssertNotEqual(DirectTransferCapabilities.current.negotiated(with: capabilities)?.partitionTargetBytes, original.session.partitionTargetBytes)
+            let reconnect = try transferReconnect(rig, capabilities: capabilities)
+            store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "must-not-query", code: 1)
+            let restored = try await reconnect.prepareRetainedTransferExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+            XCTAssertEqual(restored.session, original.session); XCTAssertEqual(restored.partitions, original.partitions)
+            XCTAssertEqual(restored.checkpointCanonical, original.checkpointCanonical)
+            XCTAssertEqual(try Data(contentsOf: path.appendingPathComponent("progress.json")), progress)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
+    func testRetainedTransferRejectsUnsupportedOriginalTargetOrWindowWithoutMutation() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            let original = try await planner.prepareTransferExport(request, manager: manager)
+            let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+            let path = rig.directory.appendingPathComponent("captures").appendingPathComponent(job.requestSHA256.rawValue)
+            let progress = try Data(contentsOf: path.appendingPathComponent("progress.json"))
+            store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "must-not-query", code: 1)
+            for caps in [transferPeer(window: 2), transferPeer(minimum: DirectTransferLimits.maximumPartitionBytes, preferred: DirectTransferLimits.maximumPartitionBytes)] {
+                let reconnect = try transferReconnect(rig, capabilities: caps)
+                do { _ = try await reconnect.prepareRetainedTransferExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid")); XCTFail("Current support must cover original limits") }
+                catch { XCTAssertEqual(error as? AgentBridgeValidationError, .unsupportedCapability) }
+                XCTAssertEqual(try Data(contentsOf: path.appendingPathComponent("progress.json")), progress)
+                XCTAssertEqual(try Data(contentsOf: path.appendingPathComponent("transfer.json")), original.checkpointCanonical)
+            }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+            let supported = try transferReconnect(rig, capabilities: .current)
+            let restored = try await supported.prepareRetainedTransferExport(request, manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
+            XCTAssertEqual(restored.checkpointCanonical, original.checkpointCanonical)
+        }
+    }
+
+    func testNativeTransferRequiresCurrentPeerCapabilitiesBeforeSDK() async throws {
+        try await withNativeExportPreparation(peerTransferCapabilities: nil) { _, planner, request, store, manager in
+            do { _ = try await planner.prepareTransferExport(request, manager: manager); XCTFail("A selected value cannot replace original peer support") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, .unsupportedCapability) }
+            XCTAssertTrue(store.queriedSumIdentifiers.isEmpty)
+        }
+    }
+
+    func testNativeTransferSupportRejectsInvalidOrUnnegotiatedCapabilities() throws {
+        let selected = try XCTUnwrap(DirectTransferCapabilities.current.negotiated(with: .current))
+        for caps in [DirectTransferCapabilities(protocolVersions: [2], binaryFrameVersions: [1], minimumPartitionBytes: 1, preferredPartitionBytes: 1, maximumPartitionBytes: Int64.max, maximumInFlightChunks: 4),
+            DirectTransferCapabilities(protocolVersions: [1], binaryFrameVersions: [2], minimumPartitionBytes: 1, preferredPartitionBytes: 1, maximumPartitionBytes: Int64.max, maximumInFlightChunks: 4),
+            transferPeer(preferred: 1), transferPeer(window: 0)] {
+            XCTAssertThrowsError(try AgentBridgeNativeTransferCheckpoint.requireSupported(selected, peer: caps))
+        }
+        XCTAssertThrowsError(try AgentBridgeNativeTransferCheckpoint.requireSupported(.init(protocolVersion: 1, binaryFrameVersion: 1, partitionTargetBytes: selected.partitionTargetBytes, maximumInFlightChunks: 8), peer: transferPeer(window: 8)))
+        XCTAssertNoThrow(try AgentBridgeNativeTransferCheckpoint.requireSupported(.init(protocolVersion: 1, binaryFrameVersion: 1, partitionTargetBytes: selected.partitionTargetBytes, maximumInFlightChunks: 2), peer: .current))
     }
 
     func testNativeTransferPlanRetainsOriginalSessionPartitionsAndBytes() async throws {
