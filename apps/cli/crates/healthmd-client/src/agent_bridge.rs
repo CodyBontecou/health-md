@@ -315,7 +315,7 @@ impl PlanningSource for BridgeSession<'_> {
 mod execution;
 pub use execution::{HostExecution, ReceivedArtifacts};
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 impl BridgeSession<'_> {
     /// Preserve the real channel/peer while injecting an adversarial synthetic trust await.
     pub(crate) fn with_test_trust(self, trust_fence: &dyn CurrentBridgeTrust) -> BridgeSession<'_> {
