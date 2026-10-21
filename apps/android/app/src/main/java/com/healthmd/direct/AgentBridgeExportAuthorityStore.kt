@@ -245,6 +245,19 @@ internal class AgentBridgeExportAuthorityStore private constructor(
         }
     }
 
+    /** Supplemental native capture storage. No default paths, key creation or missing-ledger
+     * recovery. The original owner fences every operation against this exact signed reservation. */
+    internal fun openCaptureSpool(reservation: AgentBridgeExportCaptureReservation, create: Boolean,
+        fence: () -> Unit): AgentBridgeNativeCaptureSpool = safe {
+        checkParent(); val identity = attributes(root, true).fileKey(); fence(); checkParent()
+        demand(attributes(root, true).fileKey() == identity)
+        val protectedKey = key()
+        fence(); checkParent(); demand(attributes(root, true).fileKey() == identity)
+        AgentBridgeNativeCaptureSpool(root, reservation, protectedKey, create,
+            check = { checkParent(); demand(attributes(root, true).fileKey() == identity); fence(); checkParent(); demand(attributes(root, true).fileKey() == identity) },
+            attributes = { path, directory -> attributes(path, directory).fileKey()!! })
+    }
+
     private fun key(): SecretKey = try {
         val key = keys.loadExisting() ?: fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)
         // Hardware-backed keys may not expose encoded bytes. Ask the provider, never serialize it.
@@ -401,7 +414,8 @@ internal class AgentBridgeExportAuthorityStore private constructor(
     }
     private fun checkInventory() {
         val names = Files.newDirectoryStream(root).use { stream -> stream.map { it.fileName.toString() }.toSet() }
-        demand(names == setOf(LOCK_NAME, LEDGER_NAME))
+        demand(names == setOf(LOCK_NAME, LEDGER_NAME) || names == setOf(LOCK_NAME, LEDGER_NAME, "captures"))
+        if ("captures" in names) attributes(root.resolve("captures"), true)
         attributes(root.resolve(LOCK_NAME), false); attributes(root.resolve(LEDGER_NAME), false)
         demand(Files.size(root.resolve(LOCK_NAME)) == 0L)
     }

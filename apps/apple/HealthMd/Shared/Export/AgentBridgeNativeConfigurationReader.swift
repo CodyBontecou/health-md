@@ -233,6 +233,18 @@ final class AgentBridgeNativePlanningSession {
     /// original negotiated session may accept/claim once; a retry must inspect/resume its job.
     func withCaptureContext<T>(_ request: AgentBridgeExecute,
                                operation: (AgentBridgeNativeCaptureContext) async throws -> T) async throws -> T {
+        try await captureContext(request, retained: false, operation: operation)
+    }
+
+    /// Explicit immutable recovery only. Never falls back from a failed new execution, creates
+    /// a missing spool, renews acceptance or reclaims a day whose SDK read may have begun.
+    func withRetainedCaptureContext<T>(_ request: AgentBridgeExecute,
+                                      operation: (AgentBridgeNativeCaptureContext) async throws -> T) async throws -> T {
+        try await captureContext(request, retained: true, operation: operation)
+    }
+
+    private func captureContext<T>(_ request: AgentBridgeExecute, retained: Bool,
+                                   operation: (AgentBridgeNativeCaptureContext) async throws -> T) async throws -> T {
         guard let negotiation = responseNegotiation, negotiation.baseVersion == 1,
               negotiation.agentBridgeV4, responseChannel != nil else { throw AgentBridgeValidationError.unsupportedCapability }
         let cancellation = AgentBridgeCaptureCancellation()
@@ -240,22 +252,41 @@ final class AgentBridgeNativePlanningSession {
             do {
                 try cancellation.requireActive(); try Task.checkCancellation()
                 let publication = try requireCurrent()
-                let accepted = try service.acceptExecution(request, authenticatedPeer: peer)
-                try cancellation.requireActive(); try Task.checkCancellation()
-                guard accepted.newlyAccepted else { throw AgentBridgeValidationError.busy }
-                let reservation = try service.claimCapture(request, authenticatedPeer: peer)
+                let reservation: AgentBridgeExportCaptureReservation
+                if retained {
+                    let bytes = try AgentBridgeV4Codec.encode(request)
+                    reservation = try store.inspectCurrent { state in
+                        guard let job = try state.acceptedJobs?.first(where: { stored in
+                            let prior = try stored.request()
+                            return prior.jobId == request.jobId && prior.plan.intent.peer == request.plan.intent.peer
+                        }) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                        guard job.requestBytes == bytes else { throw AgentBridgeValidationError.bindingChanged }
+                        guard let claim = state.captureClaims?.first(where: { $0.requestSHA256 == job.requestSHA256 }) else {
+                            throw AgentBridgeValidationError.spoolMissingRestartRequired
+                        }
+                        return .init(job: job, claim: claim)
+                    }
+                    _ = try captureReadConfiguration(reservation)
+                } else {
+                    let accepted = try service.acceptExecution(request, authenticatedPeer: peer)
+                    try cancellation.requireActive(); try Task.checkCancellation()
+                    guard accepted.newlyAccepted else { throw AgentBridgeValidationError.busy }
+                    reservation = try service.claimCapture(request, authenticatedPeer: peer)
+                }
                 try cancellation.requireActive(); try Task.checkCancellation()
                 guard !wireAbandoned, try lifecycle.currentPublication() == publication else { throw AgentBridgeValidationError.bindingChanged }
-                let context = AgentBridgeNativeCaptureContext { [self] in
+                let validate = { [self] in
                     try cancellation.requireActive(); try Task.checkCancellation()
                     let result = try captureReadConfiguration(reservation)
                     try cancellation.requireActive(); try Task.checkCancellation()
                     return result
                 }
+                let spool = try store.openCaptureSpool(reservation, create: !retained) { _ = try validate() }
+                let context = AgentBridgeNativeCaptureContext(spool: spool, read: validate)
                 defer { context.close() }
                 let result = try await operation(context)
                 try cancellation.requireActive(); try Task.checkCancellation()
-                _ = try context.configurationForRead() // Full native fence after suspended capture too.
+                _ = try context.configurationForRead()
                 return result
             } catch {
                 try cancellation.requireActive(); try Task.checkCancellation()
@@ -301,7 +332,8 @@ final class AgentBridgeNativeCaptureContext {
     private var closed = false
     private var claimedDays: Set<String> = []
     private var read: (() throws -> AgentBridgeRequestSettingsResolution)?
-    fileprivate init(read: @escaping () throws -> AgentBridgeRequestSettingsResolution) { self.read = read }
+    private let spool: AgentBridgeNativeCaptureSpool
+    fileprivate init(spool: AgentBridgeNativeCaptureSpool, read: @escaping () throws -> AgentBridgeRequestSettingsResolution) { self.spool = spool; self.read = read }
     func begin() throws -> AgentBridgeRequestSettingsResolution {
         guard !started, !closed else { close(); throw AgentBridgeValidationError.busy }
         started = true
@@ -309,11 +341,21 @@ final class AgentBridgeNativeCaptureContext {
     }
     /// One attempt per approved day inside this single capture operation. This is not a
     /// durable frontier; missing spool after interruption still requires explicit recovery.
-    func claimDay(_ day: AgentBridgeDate) throws -> AgentBridgeRequestSettingsResolution {
-        let resolution = try configurationForRead()
-        guard resolution.requestedDays.contains(day) else { close(); throw AgentBridgeValidationError.invalidRequest }
-        guard claimedDays.insert(day.rawValue).inserted else { close(); throw AgentBridgeValidationError.busy }
-        return resolution
+    func claimDay(_ day: AgentBridgeDate) throws -> AgentBridgeNativeCaptureDayInput {
+        do {
+            let resolution = try configurationForRead()
+            guard resolution.requestedDays.contains(day) else { throw AgentBridgeValidationError.invalidRequest }
+            guard claimedDays.insert(day.rawValue).inserted else { throw AgentBridgeValidationError.busy }
+            return .init(resolution: resolution, retainedPayload: try spool.loadOrBegin(day))
+        } catch { close(); throw error }
+    }
+    func commitDay(_ day: AgentBridgeDate, payload: Data) throws {
+        do {
+            _ = try configurationForRead()
+            guard claimedDays.contains(day.rawValue) else { throw AgentBridgeValidationError.permissionRequired }
+            try spool.commit(day, payload: payload)
+            _ = try configurationForRead()
+        } catch { close(); throw error }
     }
     /// Monotonic denial only: a caught SDK/result failure cannot revive the operation.
     func invalidate() { close() }
@@ -325,7 +367,7 @@ final class AgentBridgeNativeCaptureContext {
             return result
         } catch { close(); throw error }
     }
-    fileprivate func close() { closed = true; read = nil; claimedDays.removeAll() }
+    fileprivate func close() { closed = true; read = nil; claimedDays.removeAll(); spool.close() }
 }
 nonisolated private final class AgentBridgeCaptureCancellation: @unchecked Sendable {
     private let lock = NSLock()
@@ -336,3 +378,5 @@ nonisolated private final class AgentBridgeCaptureCancellation: @unchecked Senda
         if value { throw CancellationError() }
     }
 }
+
+struct AgentBridgeNativeCaptureDayInput { let resolution: AgentBridgeRequestSettingsResolution; let retainedPayload: Data? }

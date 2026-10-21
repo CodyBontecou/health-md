@@ -172,6 +172,19 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     }
     deinit { close(rootFD) }
 
+    /// Original native owner only. Supplemental capture files never contain issuer grants or
+    /// replace the ledger; their own versioned MAC binds this exact accepted job and claim.
+    @MainActor
+    func openCaptureSpool(_ reservation: AgentBridgeExportCaptureReservation, create: Bool,
+                          fence: @escaping @MainActor () throws -> Void) throws -> AgentBridgeNativeCaptureSpool {
+        try requireCurrentRoot(); try fence(); try requireCurrentRoot()
+        let key = try Self.existingKey(keys)
+        try requireCurrentRoot(); try fence(); try requireCurrentRoot()
+        return try AgentBridgeNativeCaptureSpool(issuer: directory, reservation: reservation, key: key, create: create) { [self] in
+            try requireCurrentRoot(); try fence(); try requireCurrentRoot()
+        }
+    }
+
     /// Explicit local-native bootstrap only. Keys must already exist under independent native
     /// protection. The remote service has no access to this method or an authorizing context.
     static func createPrivateStore(at directory: URL, protectedKeys: any AgentBridgeExportProtectedKeyReading = AgentBridgeExportProtectedKey(),
@@ -568,11 +581,11 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     }
 }
 
-nonisolated private struct AgentBridgeExportFileIdentity: Equatable {
+nonisolated struct AgentBridgeExportFileIdentity: Equatable {
     let device: dev_t
     let inode: ino_t
 }
-nonisolated private enum AgentBridgeExportPrivateFiles {
+nonisolated enum AgentBridgeExportPrivateFiles {
     static func identity(_ fd: Int32) throws -> AgentBridgeExportFileIdentity {
         var info = stat()
         guard fstat(fd, &info) == 0 else { throw AgentBridgeValidationError.bindingChanged }

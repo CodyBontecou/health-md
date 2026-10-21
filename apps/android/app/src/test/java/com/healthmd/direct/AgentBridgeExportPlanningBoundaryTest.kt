@@ -21,6 +21,33 @@ class AgentBridgeExportPlanningBoundaryTest {
     }
 
     @Test
+    fun concurrentDistinctDaysPersistAndReopenThroughFreshAuthorityStore() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            val reservation = f.service.claimCapture(f.peerContext, request)
+            val spool = f.store.openCaptureSpool(reservation, true) { }
+            val workers = java.util.concurrent.Executors.newFixedThreadPool(2)
+            val ready = java.util.concurrent.CyclicBarrier(2)
+            val days = listOf("2026-03-07", "2026-03-08")
+            try {
+                val captures = days.map { day -> workers.submit<Unit> {
+                    ready.await(5, java.util.concurrent.TimeUnit.SECONDS)
+                    assertThat(spool.loadOrBegin(day)).isNull()
+                    spool.commit(day, day.toByteArray())
+                } }
+                captures.forEach { it.get(10, java.util.concurrent.TimeUnit.SECONDS) }
+            } finally { workers.shutdownNow(); spool.close() }
+            val restarted = AgentBridgeExportAuthorityStore.inPrivateDirectory(f.parent, f.keys)
+            restarted.openCaptureSpool(reservation, false) { }.use { retained ->
+                days.forEach { day -> assertThat(retained.loadOrBegin(day)).isEqualTo(day.toByteArray()) }
+                f.expect(AgentBridgeErrorCode.BUSY) { retained.commit(days.first(), "replacement".toByteArray()) }
+            }
+            assertThat(f.store.access { it!!.state.captureClaims!!.single() }).isEqualTo(reservation.claim)
+        }
+    }
+
+    @Test
     fun captureReadKeepsFrozenSavedOutputAfterPlanningExpiryWithoutPreferenceReads() {
         AgentBridgeExportPlanningFixture().use { f ->
             val native = AgentBridgeRequestSettingsResolver.resolve(f.intent(),

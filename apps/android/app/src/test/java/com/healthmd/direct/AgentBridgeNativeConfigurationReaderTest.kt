@@ -103,7 +103,7 @@ class AgentBridgeNativeConfigurationReaderTest {
             AgentBridgeExportPlanningFixture.id(83), "healthmd.agent_execute_request", 1)
     }
 
-    private suspend fun withNativeSDKCapture(metrics: List<String>, operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativeCaptureContext, HealthConnectClient, HealthConnectManager) -> Unit) {
+    private suspend fun withNativeSDKCapture(metrics: List<String>, afterCapture: (suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager, Throwable?) -> Unit)? = null, operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativeCaptureContext, HealthConnectClient, HealthConnectManager) -> Unit) {
         AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
@@ -116,13 +116,107 @@ class AgentBridgeNativeConfigurationReaderTest {
             val manager = HealthConnectManager(mockk<Context>(relaxed = true), client)
             val preferenceReads = reads; val preferenceWrites = writes
             try {
-                planner.withCaptureContext(request) { context ->
-                    context.begin()
-                    operation(f, context, client, manager)
-                }
+                var originalFailure: Throwable? = null
+                try {
+                    planner.withCaptureContext(request) { context ->
+                        context.begin()
+                        operation(f, context, client, manager)
+                    }
+                } catch (failure: Throwable) { originalFailure = failure }
+                afterCapture?.invoke(f, planner, request, client, manager, originalFailure)
+                originalFailure?.let { throw it }
             } finally {
                 assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
                 assertThat(reads).isEqualTo(preferenceReads); assertThat(writes).isEqualTo(preferenceWrites)
+            }
+        }
+    }
+
+    @Test fun `retained SDK capture reopens immutable signed zero empty and populated days without SDK`() = runBlocking {
+        for (value in listOf<Long?>(null, 0L, 123L)) withNativeSDKCapture(listOf("steps"), afterCapture = { f, planner, request, client, manager, failure ->
+            assertThat(failure).isNull()
+            val before = f.store.access { it!!.state }
+            coEvery { client.aggregate(any()) } throws IOException("must-not-query")
+            repeat(3) {
+                planner.withRetainedCaptureContext(request) { context ->
+                    context.begin()
+                    assertThat(manager.captureAgentBridgeDay("2026-03-08", context).activity.steps).isEqualTo(value?.toInt())
+                }
+            }
+            coVerify(exactly = 1) { client.aggregate(any()) }
+            assertThat(f.store.access { it!!.state }).isEqualTo(before)
+        }) { _, context, client, manager ->
+            val result = mockk<AggregationResult>()
+            every { result[StepsRecord.COUNT_TOTAL] } returns value
+            coEvery { client.aggregate(any()) } returns result
+            manager.captureAgentBridgeDay("2026-03-08", context)
+        }
+    }
+
+    @Test fun `retained capture reuses completed day and queries only unstarted day`() = runBlocking {
+        withNativeSDKCapture(listOf("steps"), afterCapture = { _, planner, request, client, manager, _ ->
+            planner.withRetainedCaptureContext(request) { context ->
+                context.begin()
+                assertThat(manager.captureAgentBridgeDay("2026-03-08", context).activity.steps).isEqualTo(10)
+                assertThat(manager.captureAgentBridgeDay("2026-03-07", context).activity.steps).isEqualTo(20)
+            }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }) { _, context, client, manager ->
+            val first = mockk<AggregationResult>(); every { first[StepsRecord.COUNT_TOTAL] } returns 10L
+            val second = mockk<AggregationResult>(); every { second[StepsRecord.COUNT_TOTAL] } returns 20L
+            coEvery { client.aggregate(any()) } returnsMany listOf(first, second)
+            manager.captureAgentBridgeDay("2026-03-08", context)
+        }
+    }
+
+    @Test fun `retained capture cannot acquire active original job lock`() = runBlocking {
+        withNativeSDKCapture(listOf("steps")) { f, context, client, manager ->
+            // The direct spool handle exercises the same job lock without changing the owner.
+            val reservation = f.store.access { AgentBridgeExportCaptureReservation(it!!.state.acceptedJobs!!.single(), it.state.captureClaims!!.single()) }
+            f.expect(AgentBridgeErrorCode.BUSY) { f.store.openCaptureSpool(reservation, false) { } }
+            val result = mockk<AggregationResult>(); every { result[StepsRecord.COUNT_TOTAL] } returns 12L
+            coEvery { client.aggregate(any()) } returns result
+            assertThat(manager.captureAgentBridgeDay("2026-03-08", context).activity.steps).isEqualTo(12)
+        }
+    }
+
+    @Test fun `retained SDK capture rejects missing corrupt and ambiguous files before SDK`() = runBlocking {
+        for (mode in listOf("header", "progress", "payload", "both", "corrupt", "extra", "permissions", "symlink", "hardlink", "started")) {
+            withNativeSDKCapture(listOf("steps"), afterCapture = { f, planner, request, client, manager, failure ->
+                assertThat(failure).isNull()
+                val captures = Files.walk(f.parent).use { paths -> paths.filter { it.fileName.toString() == "captures" }.findFirst().get() }
+                val directory = Files.newDirectoryStream(captures).use { it.first() }
+                val payload = directory.resolve("day-2026-03-08.json")
+                when (mode) {
+                    "header" -> Files.delete(directory.resolve("header.json"))
+                    "progress" -> Files.delete(directory.resolve("progress.json"))
+                    "payload", "both" -> {
+                        Files.delete(payload)
+                        if (mode == "both") Files.delete(directory.resolve("started-2026-03-08.json"))
+                    }
+                    "corrupt" -> Files.write(payload, "corrupt".toByteArray())
+                    "extra" -> Files.createFile(directory.resolve("unknown"))
+                    "permissions" -> Files.setPosixFilePermissions(payload, java.nio.file.attribute.PosixFilePermissions.fromString("rw-r--r--"))
+                    "symlink" -> {
+                        val moved = f.parent.resolve("saved-payload"); Files.move(payload, moved)
+                        Files.createSymbolicLink(payload, moved)
+                    }
+                    "hardlink" -> Files.createLink(f.parent.resolve("saved-payload"), payload)
+                }
+                try {
+                    planner.withRetainedCaptureContext(request) { context ->
+                        context.begin(); manager.captureAgentBridgeDay("2026-03-08", context)
+                    }
+                    throw AssertionError("Invalid retained capture returned: $mode")
+                } catch (failure: AgentBridgeException) { assertThat(failure.code).isAnyOf(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED, AgentBridgeErrorCode.BINDING_CHANGED) }
+                coVerify(exactly = if (mode == "started") 0 else 1) { client.aggregate(any()) }
+            }) { _, context, client, manager ->
+                if (mode == "started") context.claimDay("2026-03-08")
+                else {
+                    val result = mockk<AggregationResult>(); every { result[StepsRecord.COUNT_TOTAL] } returns 0L
+                    coEvery { client.aggregate(any()) } returns result
+                    manager.captureAgentBridgeDay("2026-03-08", context)
+                }
             }
         }
     }

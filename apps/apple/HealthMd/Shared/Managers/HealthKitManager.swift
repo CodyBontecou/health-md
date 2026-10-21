@@ -1034,7 +1034,8 @@ final class HealthKitManager: ObservableObject {
     /// providers, archives or unselected types, and never converts SDK failure into empty success.
     /// The enclosing original-session operation must begin its context once and preserve its spool.
     func captureAgentBridgeDay(_ day: AgentBridgeDate, context: AgentBridgeNativeCaptureContext) async throws -> HealthData {
-        let resolution = try context.claimDay(day)
+        let input = try context.claimDay(day)
+        let resolution = input.resolution
         do {
             guard resolution.requestedDays.contains(day),
                   let zoneID = resolution.settings.calendarTimeZoneIdentifier,
@@ -1044,6 +1045,29 @@ final class HealthKitManager: ObservableObject {
             guard parts.count == 3,
                   let start = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])),
                   let end = calendar.date(byAdding: .day, value: 1, to: start) else { throw AgentBridgeValidationError.invalidRequest }
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+            if let retained = input.retainedPayload {
+                let captured: AgentBridgeCapturedScalarDay
+                do { captured = try JSONDecoder().decode(AgentBridgeCapturedScalarDay.self, from: retained) }
+                catch { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                guard captured.version == 1, captured.day == day.rawValue, captured.calendarTimezone == zoneID,
+                      Set(captured.values.keys).isSubset(of: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"]),
+                      Set(captured.values.keys).isSubset(of: Set(resolution.selection.map(\.semanticID))),
+                      captured.values.values.allSatisfy({ $0.isFinite && $0 >= 0 }),
+                      try encoder.encode(captured) == retained else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                var record = HealthData(date: start, timeContext: ExportTimeContext(timeZone: zone))
+                if let steps = captured.values["steps"] {
+                    guard let count = Int(exactly: steps) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                    record.activity.steps = count
+                }
+                record.heart.averageHeartRate = captured.values["heart_rate_avg"]
+                record.heart.heartRateMin = captured.values["heart_rate_min"]
+                record.heart.heartRateMax = captured.values["heart_rate_max"]
+                record.heart.restingHeartRate = captured.values["resting_heart_rate"]
+                record.heart.hrv = captured.values["hrv"]
+                _ = try context.configurationForRead()
+                return record
+            }
             let selected = Set(resolution.selection.map(\.nativeMetricID))
             guard !selected.isEmpty, selected.isSubset(of: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"]) else {
                 throw AgentBridgeValidationError.unsupportedMetric
@@ -1089,6 +1113,16 @@ final class HealthKitManager: ObservableObject {
                 result.heart.hrv = try checked(await read { try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: statisticsPredicate) })
             }
             _ = try context.configurationForRead()
+            let values: [String: Double] = [
+                "steps": result.activity.steps.map(Double.init), "heart_rate_avg": result.heart.averageHeartRate,
+                "heart_rate_min": result.heart.heartRateMin, "heart_rate_max": result.heart.heartRateMax,
+                "resting_heart_rate": result.heart.restingHeartRate, "hrv": result.heart.hrv
+            ].compactMapValues { $0 }
+            let payload: Data
+            do { payload = try encoder.encode(AgentBridgeCapturedScalarDay(version: 1,
+                day: day.rawValue, calendarTimezone: zoneID, values: values)) }
+            catch { throw AgentBridgeNativeCaptureFailure.invalidResult }
+            try context.commitDay(day, payload: payload)
             return result
         } catch { context.invalidate(); throw error }
     }

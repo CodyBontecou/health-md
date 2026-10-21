@@ -263,6 +263,14 @@ internal class AgentBridgeNativePlanningSession(
     /** Own the whole native capture operation. Caller identity is captured once from the actual
      * coroutine; no request, later read or escaped context can replace it with a fresh Job. */
     suspend fun <T> withCaptureContext(request: AgentBridgeExecuteRequest,
+        operation: suspend (AgentBridgeNativeCaptureContext) -> T): T = captureContext(request, false, operation)
+
+    /** Explicit retained-spool recovery only; never a failed-new-request fallback, new acceptance,
+     * missing-spool initialization or permission to repeat an ambiguous started SDK day. */
+    suspend fun <T> withRetainedCaptureContext(request: AgentBridgeExecuteRequest,
+        operation: suspend (AgentBridgeNativeCaptureContext) -> T): T = captureContext(request, true, operation)
+
+    private suspend fun <T> captureContext(request: AgentBridgeExecuteRequest, retained: Boolean,
         operation: suspend (AgentBridgeNativeCaptureContext) -> T): T {
         val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         if (negotiation.baseApplication != 2 || !negotiation.agentExtension || negotiation.appleQueryExtension || responseChannel == null)
@@ -271,22 +279,40 @@ internal class AgentBridgeNativePlanningSession(
         try {
             caller.ensureActive()
             val publication = requireCurrent()
-            val accepted = service.acceptExecution(peer, request)
-            caller.ensureActive()
-            if (!accepted.newlyAccepted) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
-            val reservation = service.claimCapture(peer, request)
+            val reservation = if (retained) {
+                val bytes = AgentBridgeCodec.encode(request).decodeToString()
+                store.access { transaction ->
+                    val expected = (request.plan as? AgentBridgeGeneratedPlan)?.intent?.peer
+                        ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+                    val job = transaction?.state?.acceptedJobs?.singleOrNull {
+                        val prior = it.request()
+                        prior.jobId == request.jobId && (prior.plan as? AgentBridgeGeneratedPlan)?.intent?.peer == expected
+                    } ?: throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+                    if (job.requestCanonical != bytes) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                    val claim = transaction.state.captureClaims?.singleOrNull { it.requestSha256 == job.requestSha256 }
+                        ?: throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+                    AgentBridgeExportCaptureReservation(job, claim)
+                }.also { captureReadConfiguration(it, caller) }
+            } else {
+                val accepted = service.acceptExecution(peer, request)
+                caller.ensureActive()
+                if (!accepted.newlyAccepted) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
+                service.claimCapture(peer, request)
+            }
             caller.ensureActive()
             if (wireAbandoned || lifecycle.currentPublication() != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
-            val context = AgentBridgeNativeCaptureContext {
+            val validate = {
                 try {
                     caller.ensureActive()
                     captureReadConfiguration(reservation, caller).also { caller.ensureActive() }
                 } catch (failure: Throwable) { caller.ensureActive(); throw failure }
             }
+            val spool = store.openCaptureSpool(reservation, !retained) { validate(); Unit }
+            val context = AgentBridgeNativeCaptureContext(spool, validate)
             return try {
                 val result = operation(context)
                 caller.ensureActive()
-                context.configurationForRead() // Native fence after suspended capture, before return.
+                context.configurationForRead()
                 result
             } finally { context.close() }
         } catch (failure: Throwable) { caller.ensureActive(); throw failure }
@@ -338,7 +364,7 @@ internal class AgentBridgeNativePlanningSession(
 
 
 /** Native-only operation lease. It cannot be decoded as permission or reused after its callback. */
-internal class AgentBridgeNativeCaptureContext internal constructor(read: () -> AgentBridgeRequestSettingsResolution) {
+internal class AgentBridgeNativeCaptureContext internal constructor(private val spool: AgentBridgeNativeCaptureSpool, read: () -> AgentBridgeRequestSettingsResolution) {
     private val lock = Any()
     private var started = false
     private var closed = false
@@ -352,14 +378,24 @@ internal class AgentBridgeNativeCaptureContext internal constructor(read: () -> 
         return configurationForRead()
     }
     /** One in-memory attempt per approved day; not a durable frontier or resume journal. */
-    fun claimDay(day: String): AgentBridgeRequestSettingsResolution {
-        val resolution = configurationForRead()
-        if (day !in resolution.requestedDays) { close(); throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST) }
-        synchronized(lock) {
-            if (closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
-            if (!claimedDays.add(day)) { close(); throw AgentBridgeException(AgentBridgeErrorCode.BUSY) }
-        }
-        return resolution
+    fun claimDay(day: String): AgentBridgeNativeCaptureDayInput {
+        try {
+            val resolution = configurationForRead()
+            if (day !in resolution.requestedDays) throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+            synchronized(lock) {
+                if (closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+                if (!claimedDays.add(day)) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
+            }
+            return AgentBridgeNativeCaptureDayInput(resolution, spool.loadOrBegin(day))
+        } catch (failure: Throwable) { close(); throw failure }
+    }
+    fun commitDay(day: String, payload: ByteArray) {
+        try {
+            configurationForRead()
+            synchronized(lock) { if (day !in claimedDays) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+            spool.commit(day, payload)
+            configurationForRead()
+        } catch (failure: Throwable) { close(); throw failure }
     }
     /** Monotonic denial so catching an SDK/result failure cannot revive the operation. */
     internal fun invalidate() { close() }
@@ -374,5 +410,7 @@ internal class AgentBridgeNativeCaptureContext internal constructor(read: () -> 
             result
         } catch (failure: Throwable) { close(); throw failure }
     }
-    internal fun close() { synchronized(lock) { closed = true; read = null; claimedDays.clear() } }
+    internal fun close() { synchronized(lock) { closed = true; read = null; claimedDays.clear(); spool.close() } }
 }
+
+internal class AgentBridgeNativeCaptureDayInput(val resolution: AgentBridgeRequestSettingsResolution, val retainedPayload: ByteArray?)

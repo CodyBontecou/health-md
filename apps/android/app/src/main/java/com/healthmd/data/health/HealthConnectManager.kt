@@ -18,12 +18,15 @@ import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthmd.R
 import com.healthmd.direct.AgentBridgeNativeCaptureContext
+import com.healthmd.direct.AgentBridgeCapturedScalarDay
 import com.healthmd.direct.protocol.AgentBridgeException
 import com.healthmd.direct.protocol.AgentBridgeErrorCode
 import androidx.health.connect.client.permission.HealthPermission
 import com.healthmd.data.isHealthConnectRateLimit
 import com.healthmd.domain.model.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -463,7 +466,8 @@ class HealthConnectManager(
     /** Exact native bridge day, bound to the original operation and this Health Connect client.
      * No live provider/settings lookup, broad category read, archive, or error-to-empty fallback. */
     internal suspend fun captureAgentBridgeDay(day: String, context: AgentBridgeNativeCaptureContext): HealthData {
-        val resolution = context.claimDay(day)
+        val input = context.claimDay(day)
+        val resolution = input.resolution
         try {
             if (day !in resolution.requestedDays) throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
             val date = LocalDate.parse(day)
@@ -471,6 +475,28 @@ class HealthConnectManager(
             val start = date.atStartOfDay(zone).toInstant()
             val end = date.plusDays(1).atStartOfDay(zone).toInstant()
             val range = TimeRangeFilter.between(start, end)
+            val codec = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
+            input.retainedPayload?.let { bytes ->
+                val captured = try { codec.decodeFromString<AgentBridgeCapturedScalarDay>(bytes.decodeToString()) }
+                catch (_: Exception) { throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+                if (captured.version != 1 || captured.day != day || captured.calendarTimezone != resolution.calendarTimezone ||
+                    !setOf("steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "android.hrv_rmssd").containsAll(captured.values.keys) ||
+                    !resolution.selection.map { it.semanticId }.containsAll(captured.values.keys) ||
+                    captured.values.values.any { !it.isFinite() || it < 0 } ||
+                    !codec.encodeToString(captured).toByteArray().contentEquals(bytes)) {
+                    throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+                }
+                val steps = captured.values["steps"]?.let {
+                    if (it > Int.MAX_VALUE || it % 1.0 != 0.0) throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+                    it.toInt()
+                }
+                val record = HealthData(date, activity = ActivityData(steps = steps), heart = HeartData(
+                    averageHeartRate = captured.values["heart_rate_avg"], heartRateMin = captured.values["heart_rate_min"],
+                    heartRateMax = captured.values["heart_rate_max"], restingHeartRate = captured.values["resting_heart_rate"],
+                    hrv = captured.values["android.hrv_rmssd"]))
+                context.configurationForRead()
+                return record
+            }
             val selected = resolution.selection.map { it.nativeMetricId }.toSet()
             if (selected.isEmpty() || !setOf("steps", "avg_hr", "min_hr", "max_hr", "resting_hr", "hrv").containsAll(selected)) {
                 throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_METRIC)
@@ -550,6 +576,12 @@ class HealthConnectManager(
             if (listOfNotNull(result.heart.averageHeartRate, result.heart.heartRateMin, result.heart.heartRateMax,
                     result.heart.restingHeartRate, result.heart.hrv).any { !it.isFinite() || it < 0 }) throw AgentBridgeNativeCaptureFailure()
             context.configurationForRead()
+            val values = linkedMapOf("steps" to result.activity.steps?.toDouble(), "heart_rate_avg" to result.heart.averageHeartRate,
+                "heart_rate_min" to result.heart.heartRateMin, "heart_rate_max" to result.heart.heartRateMax,
+                "resting_heart_rate" to result.heart.restingHeartRate, "android.hrv_rmssd" to result.heart.hrv).mapNotNull { (id, value) -> value?.let { id to it } }.toMap()
+            val payload = try { codec.encodeToString(AgentBridgeCapturedScalarDay(1, day, resolution.calendarTimezone, values)).toByteArray() }
+            catch (_: Exception) { throw AgentBridgeNativeCaptureFailure() }
+            context.commitDay(day, payload)
             return result
         } catch (error: Throwable) { context.invalidate(); throw error }
     }
