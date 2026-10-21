@@ -119,3 +119,59 @@ internal class AgentBridgeNativeConfigurationReader(
 
     private fun fail(code: AgentBridgeErrorCode): Nothing = throw AgentBridgeException(code)
 }
+
+
+/** One accepted native owner, one private planner and original peer. Request callers cannot
+ * substitute peer authority. All calls remain worker-only and fence pending/stopped lifecycle
+ * state before work and before return. This neither advertises nor installs a wire route. */
+internal class AgentBridgeNativePlanningSession(
+    private val peer: AgentBridgeExportAuthenticatedPeer,
+    private val lifecycle: AgentBridgeNativeCatalogLifecycle,
+    store: AgentBridgeExportAuthorityStore,
+    configuration: AgentBridgeExportPlanningConfigurationReader,
+    clock: java.time.Clock = java.time.Clock.systemUTC(),
+) {
+    private val service: AgentBridgeExportPlanningService
+    init {
+        val publication = requireCurrent()
+        // Compare the issuer transaction's exact revision, not only its facts fingerprint.
+        val ownedConfiguration = AgentBridgeExportPlanningConfigurationReader { policy, signedPublication ->
+            requirePublication(signedPublication)
+            val result = configuration.readConfiguration(policy, signedPublication)
+            requirePublication(signedPublication)
+            result
+        }
+        service = AgentBridgeExportPlanningService(store, ownedConfiguration, clock)
+        requireSamePublication(publication)
+    }
+    fun requireCurrent(): AgentBridgeNativeCatalogPublication {
+        if (Looper.myLooper() == Looper.getMainLooper()) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        peer.requireCurrent()
+        return lifecycle.currentPublication()
+    }
+    private fun requirePublication(publication: AgentBridgeNativeCatalogPublication?) {
+        val current = requireCurrent()
+        if (publication == null || current != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+    }
+    private fun requireSamePublication(publication: AgentBridgeNativeCatalogPublication) = requirePublication(publication)
+
+    fun handleEnvelope(bytes: ByteArray, negotiation: AgentBridgeNegotiation): ByteArray {
+        val publication = requireCurrent()
+        val result = service.handleEnvelope(bytes, peer, negotiation)
+        requireSamePublication(publication)
+        return result
+    }
+    fun reviewNativePlan(planId: String): AgentBridgeGeneratedPlan {
+        val publication = requireCurrent()
+        val result = service.reviewNativePlan(peer, planId)
+        requireSamePublication(publication)
+        return result
+    }
+    fun authorizeExactApproval(native: AgentBridgeExportNativeAuthorization, planId: String,
+        binding: AgentBridgeBinding): AgentBridgeApproval {
+        val publication = requireCurrent()
+        val result = service.authorizeExactApproval(peer, native, planId, binding)
+        requireSamePublication(publication)
+        return result
+    }
+}

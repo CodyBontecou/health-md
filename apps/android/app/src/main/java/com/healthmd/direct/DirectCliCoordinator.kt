@@ -191,6 +191,7 @@ class DirectCliCoordinator @Inject constructor(
         private var catalogRefresh: AgentBridgeNativeCatalogRefresh? = null
         fun revoke() {
             revoked = true
+            nativePlanner = null
             val previous = synchronized(catalogRefreshLock) { catalogRefresh.also { catalogRefresh = null } }
             previous?.close()
             catalogLifecycle.stop()
@@ -207,6 +208,19 @@ class DirectCliCoordinator @Inject constructor(
                 }.also { catalogRefresh = it }
             }
             controller.start() // No SDK/store work while holding coordinator/owner subscription locks.
+        }
+        @Volatile private var nativePlanner: AgentBridgeNativePlanningSession? = null
+        @Synchronized fun planner(context: android.content.Context,
+            configuration: () -> AgentBridgeExportPlanningConfigurationReader): AgentBridgeNativePlanningSession {
+            requireCurrent()
+            nativePlanner?.let { it.requireCurrent(); return it }
+            catalogLifecycle.currentPublication() // No issuer open for an unpublished/pending owner.
+            val result = AgentBridgeNativePlanningSession(peer(context), catalogLifecycle,
+                AgentBridgeExportAuthorityStore.forNoBackup(context), configuration())
+            requireCurrent()
+            result.requireCurrent()
+            nativePlanner = result
+            return result
         }
         private var nativePeer: AgentBridgeExportNativeSession? = null
         private var nativeContext: android.content.Context? = null
@@ -326,6 +340,28 @@ class DirectCliCoordinator @Inject constructor(
         if (acceptedNativeOwner !== owner) throw com.healthmd.direct.protocol.AgentBridgeException(
             com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
         return peer to owner.catalogLifecycle
+    }
+
+    /** Native composition only. The owner pins the first real repositories and planner for its
+     * full lifetime, retaining issued discovery evidence without initializing private authority. */
+    internal fun agentBridgeNativePlanningSession(context: android.content.Context,
+        dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+        settings: com.healthmd.data.settings.SettingsRepositoryImpl,
+        profiles: ExportProfileRepository): AgentBridgeNativePlanningSession {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        val owner = acceptedNativeOwner ?: throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        val result = owner.planner(context) {
+            AgentBridgeNativeConfigurationReader(dataStore, settings, profiles, {
+                owner.requireCurrent()
+                owner.catalogLifecycle.currentFacts()
+            })
+        }
+        owner.requireCurrent()
+        if (acceptedNativeOwner !== owner) throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        return result
     }
 
     /** Native controller only. Facts are sampled outside requests; no creating SDK store getter. */

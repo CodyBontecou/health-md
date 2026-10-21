@@ -370,6 +370,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var agentBridgeSession: IPhoneDirectCLIAuthenticatedSession?
     private var agentBridgePeer: AgentBridgeExportAuthenticatedPeer?
     private var agentBridgeCatalogLifecycle: AgentBridgeNativeCatalogLifecycle?
+    private var agentBridgePlanner: AgentBridgeNativePlanningSession?
     private var agentBridgeCatalogRefresh: AgentBridgeNativeCatalogRefresh?
     private let agentBridgeCatalogAdmission = AgentBridgeNativeCatalogAdmission()
     private let agentBridgeCatalogEvents: AgentBridgeNativeCatalogEventRelay
@@ -493,6 +494,25 @@ final class IPhoneDirectCLIService: ObservableObject {
         return (peer, lifecycle)
     }
 
+    /// Native composition only, never ordinary hello/wire dispatch. Reuse the original service so
+    /// issued discovery evidence survives subsequent planning; new arguments cannot retarget it.
+    func agentBridgeNativePlanningSession(profiles: ExportProfileStore) throws -> AgentBridgeNativePlanningSession {
+        let owner = try agentBridgeNativePlanningOwner()
+        if let planner = agentBridgePlanner { try planner.requireCurrent(); return planner }
+        _ = try owner.lifecycle.currentPublication() // Reject before opening existing issuer storage.
+        let reader = AgentBridgeNativeConfigurationReader(defaults: defaults, profiles: profiles) {
+            try owner.peer.requireCurrent()
+            return try owner.lifecycle.currentFacts()
+        }
+        let store = try AgentBridgeExportAuthorityStore(existingDirectory: AgentExportPermissionsStorage.directory(createParent: false))
+        let planner = try AgentBridgeNativePlanningSession(peer: owner.peer, lifecycle: owner.lifecycle, store: store, configuration: reader)
+        let current = try agentBridgeNativePlanningOwner()
+        guard current.lifecycle === owner.lifecycle else { throw AgentBridgeValidationError.permissionRequired }
+        try planner.requireCurrent()
+        agentBridgePlanner = planner
+        return planner
+    }
+
     /// Native controller only: caller supplies freshly sampled non-wire facts. Publication runs on
     /// a cancellable worker and never bootstraps missing private storage or native export authority.
     func publishAgentBridgeNativeCatalog(sample: () async throws -> AgentBridgeNativePlanningFacts) async throws -> AgentBridgeNativeCatalogPublication {
@@ -591,6 +611,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func invalidateAgentBridgeSession() {
+        agentBridgePlanner = nil
         agentBridgeCatalogAdmission.replace(with: nil)
         agentBridgeCatalogRefresh?.stop()
         agentBridgeCatalogRefresh = nil

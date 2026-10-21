@@ -280,6 +280,135 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), next)
     }
 
+    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil) throws -> AgentBridgeNativePlanningSession {
+        let profiles = existingProfiles ?? ExportProfileStore(userDefaults: rig.reader.defaults)
+        Self.retainedNativeConfigurationObjects.append(profiles)
+        let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles) {
+            try lifecycle.currentFacts()
+        }
+        return try AgentBridgeNativePlanningSession(peer: rig.peer, lifecycle: lifecycle, store: rig.store,
+            configuration: reader, clock: rig.clock, newPlanID: { try id(6) })
+    }
+
+    private func nativeDiscoveryBytes(_ rig: Rig) throws -> Data {
+        try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer))))
+    }
+
+    func testOwnerBoundPlannerRetainsDiscoveryThroughPlanReviewAndExactDecision() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let planner = try nativePlanningSession(rig, lifecycle)
+        rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
+        let before = try rig.store.snapshot().generation
+        guard case .discovery(let discovery) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self,
+            from: planner.handle(nativeDiscoveryBytes(rig))).payload else { return XCTFail("Expected owned discovery") }
+        XCTAssertEqual(try rig.store.snapshot().generation, before)
+        let bytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .planRequest(rig.request(discovery: discovery, policy: .explicit(output())))))
+        guard case .plan(let plan) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: planner.handle(bytes)).payload else {
+            return XCTFail("Expected plan using the same session's discovery")
+        }
+        XCTAssertEqual(try planner.reviewNativePlan(planID: plan.planId), plan)
+        XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+        let binding = try AgentBridgeSemantics.binding(plan)
+        try planner.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8),
+            authorization: FakeNativeAuthorization(binding: binding))
+        XCTAssertEqual(try rig.store.snapshot().decisions.count, 1)
+        XCTAssertEqual(rig.reader.defaults.reads, 0); XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testOwnerBoundPlannerRejectsPendingAndStoppedOwnerDespiteSamePeerReplacement() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        XCTAssertThrowsError(try nativePlanningSession(rig, lifecycle, profiles: profiles))
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let planner = try nativePlanningSession(rig, lifecycle, profiles: profiles)
+        try lifecycle.recordNativeEvent()
+        rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
+        XCTAssertThrowsError(try planner.handle(Data("invalid".utf8))) { XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged) }
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        _ = try planner.handle(nativeDiscoveryBytes(rig))
+        lifecycle.stop()
+        let replacement = AgentBridgeNativeCatalogLifecycle(); try replacement.observe(nativeState())
+        _ = try replacement.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        XCTAssertThrowsError(try planner.handle(nativeDiscoveryBytes(rig))) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
+        let fresh = try nativePlanningSession(rig, replacement, profiles: profiles)
+        _ = try fresh.handle(nativeDiscoveryBytes(rig))
+        XCTAssertEqual(rig.reader.defaults.reads, 0); XCTAssertEqual(rig.reader.defaults.writes, 0)
+        XCTAssertEqual(try rig.store.snapshot().delegations.count, 1)
+    }
+
+    func testOwnerBoundPlannerRejectsEventDuringFinalPeerReturnCheck() throws {
+        var finalCheck = 0
+        for inject in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+            _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let planner = try nativePlanningSession(rig, lifecycle)
+            var fired = false
+            if inject {
+                rig.session.observeChecks { count in
+                    if count == finalCheck { fired = true; try! lifecycle.recordNativeEvent() }
+                }
+                XCTAssertThrowsError(try planner.handle(nativeDiscoveryBytes(rig))) {
+                    XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+                }
+                XCTAssertTrue(fired)
+            } else {
+                _ = try planner.handle(nativeDiscoveryBytes(rig))
+                finalCheck = rig.session.checks
+                XCTAssertGreaterThan(finalCheck, 0)
+            }
+            XCTAssertTrue(try rig.store.snapshot().plans.isEmpty)
+        }
+    }
+
+    func testOwnerBoundPlannerRejectsSignedStorePublicationOutsideOwner() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()
+        try lifecycle.observe(facts)
+        let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let planner = try nativePlanningSession(rig, lifecycle)
+        let next = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID,
+            invalidatingObservedChange: true) { facts }
+        XCTAssertEqual(next.factsSHA256, first.factsSHA256)
+        XCTAssertEqual(next.revision, first.revision + 1)
+        guard case .error(let failure) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self,
+            from: planner.handle(nativeDiscoveryBytes(rig))).payload else { return XCTFail("Expected binding_changed for mismatched signed publication") }
+        XCTAssertEqual(failure.code, .bindingChanged)
+    }
+
+    func testOwnerBoundPlannerRejectsCompletedPublicationDuringFinalPeerReturnCheck() throws {
+        var finalCheck = 0
+        for inject in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+            let first = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let planner = try nativePlanningSession(rig, lifecycle)
+            var fired = false
+            if inject {
+                rig.session.observeChecks { count in
+                    if count == finalCheck {
+                        fired = true
+                        try! lifecycle.recordNativeEvent()
+                        _ = try! lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+                    }
+                }
+                XCTAssertThrowsError(try planner.handle(nativeDiscoveryBytes(rig))) {
+                    XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+                }
+                XCTAssertTrue(fired)
+                XCTAssertEqual(try lifecycle.currentPublication().revision, first.revision + 1)
+            } else {
+                _ = try planner.handle(nativeDiscoveryBytes(rig)); finalCheck = rig.session.checks
+                XCTAssertGreaterThan(finalCheck, 0)
+            }
+            XCTAssertTrue(try rig.store.snapshot().plans.isEmpty)
+            XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+        }
+    }
+
     func testNativeAuthorityGrantAndRevokeInvalidateSameOwnerAfterStoreUnlock() throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let lifecycle = AgentBridgeNativeCatalogLifecycle(), facts = try nativeState()

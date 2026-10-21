@@ -84,3 +84,78 @@ final class AgentBridgeNativeConfigurationReader: AgentBridgeExportPlanningConfi
                      protectedDataAvailable: state.protectedDataAvailable)
     }
 }
+
+
+/// One accepted native owner holds this session across discovery/plan/review calls. The peer and
+/// service never escape or come from request JSON. Pending catalog events fence both admission
+/// and return; pairing alone still cannot create a grant, decision, capture or wire capability.
+@MainActor
+final class AgentBridgeNativePlanningSession {
+    private let peer: AgentBridgeExportAuthenticatedPeer
+    private let lifecycle: AgentBridgeNativeCatalogLifecycle
+    private let service: AgentBridgeExportPlanningService
+
+    /// The issuer transaction and lifecycle must agree on the exact signed publication, including
+    /// revision. Equal facts alone cannot identify an event that returned to the same state.
+    private struct OwnerBoundConfiguration: AgentBridgeExportPlanningConfigurationReading {
+        let peer: AgentBridgeExportAuthenticatedPeer
+        let lifecycle: AgentBridgeNativeCatalogLifecycle
+        let base: any AgentBridgeExportPlanningConfigurationReading
+
+        func readConfiguration(for caller: AgentBridgeExportAuthenticatedPeer, policy: AgentBridgeSettingsPolicy?,
+                               catalogPublication: AgentBridgeNativeCatalogPublication?) throws -> AgentBridgeExportPlanningConfiguration {
+            try requirePublication(catalogPublication)
+            let result = try base.readConfiguration(for: peer, policy: policy, catalogPublication: catalogPublication)
+            try requirePublication(catalogPublication)
+            return result
+        }
+
+        private func requirePublication(_ publication: AgentBridgeNativeCatalogPublication?) throws {
+            try peer.requireCurrent()
+            guard let publication, publication == (try lifecycle.currentPublication()) else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+        }
+    }
+
+    init(peer: AgentBridgeExportAuthenticatedPeer, lifecycle: AgentBridgeNativeCatalogLifecycle,
+         store: AgentBridgeExportAuthorityStore, configuration: any AgentBridgeExportPlanningConfigurationReading,
+         clock: any AgentBridgeExportClock = AgentBridgeExportSystemClock(),
+         newPlanID: @escaping () throws -> AgentBridgeUUID = { try AgentBridgeUUID(UUID().uuidString.lowercased()) }) throws {
+        try peer.requireCurrent()
+        let publication = try lifecycle.currentPublication()
+        self.peer = peer; self.lifecycle = lifecycle
+        service = AgentBridgeExportPlanningService(store: store,
+            configuration: OwnerBoundConfiguration(peer: peer, lifecycle: lifecycle, base: configuration),
+            clock: clock, newPlanID: newPlanID)
+        guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
+    }
+
+    @discardableResult
+    func requireCurrent() throws -> AgentBridgeNativeCatalogPublication {
+        try peer.requireCurrent()
+        return try lifecycle.currentPublication()
+    }
+
+    func handle(_ bytes: Data) throws -> Data {
+        let publication = try requireCurrent()
+        let result = try service.handle(bytes, authenticatedPeer: peer)
+        guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
+        return result
+    }
+
+    func reviewNativePlan(planID: AgentBridgeUUID) throws -> AgentBridgePlan {
+        let publication = try requireCurrent()
+        let result = try service.reviewNativePlan(planID: planID, authenticatedPeer: peer)
+        guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
+        return result
+    }
+
+    func storeNativeDecision(planID: AgentBridgeUUID, binding: AgentBridgeBinding, approvalID: AgentBridgeUUID,
+                             authorization: any AgentBridgeExportNativeAuthorizing) throws {
+        let publication = try requireCurrent()
+        try service.storeNativeDecision(planID: planID, binding: binding, approvalID: approvalID,
+                                        authenticatedPeer: peer, authorization: authorization)
+        guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
+    }
+}

@@ -66,6 +66,121 @@ class AgentBridgeNativeConfigurationReaderTest {
         readConfiguration(policy, AgentBridgeNativeCatalogPublication(1, AgentBridgeExportPlanningFixture.id(1),
             state.fingerprint(AgentBridgeExportPlanningFixture.id(1))))
 
+    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle) =
+        AgentBridgeNativePlanningSession(f.peerContext, lifecycle, f.store,
+            AgentBridgeNativeConfigurationReader(observed, settings, profiles, { lifecycle.currentFacts() },
+                { AgentBridgeExportTestRegistry.load() }), f.clock)
+    private fun nativeNegotiation() = AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, listOf(2, 4), listOf(2, 4))
+    private fun ownedDiscoveryBytes(f: AgentBridgeExportPlanningFixture) = AgentBridgeCodec.encodeEnvelope(
+        AgentBridgeMessage("discovery_request", f.discoveryRequest()), nativeNegotiation())
+
+    @Test fun `owned planner retains discovery through plan review and exact approval`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state)
+            lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle); val negotiation = nativeNegotiation()
+            reset()
+            val before = f.store.access { it!!.state.revision }
+            val discovery = AgentBridgeCodec.decodeEnvelope(planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation), negotiation).payload as AgentBridgeDiscovery
+            assertThat(f.store.access { it!!.state.revision }).isEqualTo(before)
+            val bytes = AgentBridgeCodec.encodeEnvelope(AgentBridgeMessage("plan_request", f.request(discovery)), negotiation)
+            val plan = AgentBridgeCodec.decodeEnvelope(planner.handleEnvelope(bytes, negotiation), negotiation).payload as AgentBridgeGeneratedPlan
+            assertThat(planner.reviewNativePlan(plan.planId)).isEqualTo(plan)
+            assertThat(f.store.access { it!!.state.decisions }).isEmpty()
+            assertThat(planner.authorizeExactApproval(f.native, plan.planId, AgentBridgeValidation.bindingFor(plan)).binding)
+                .isEqualTo(AgentBridgeValidation.bindingFor(plan))
+            assertThat(f.store.access { it!!.state.decisions }).hasSize(1)
+            assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
+        }
+    }
+
+    @Test fun `owned planner rejects pending and stopped identity despite same peer replacement`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state)
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { ownedPlanner(f, lifecycle) }
+            lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle); val negotiation = nativeNegotiation()
+            lifecycle.recordNativeEvent(); reset()
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { planner.handleEnvelope(byteArrayOf(0), negotiation) }
+            lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation)
+            lifecycle.stop()
+            val fresh = AgentBridgeNativeCatalogLifecycle(); fresh.observe(state)
+            fresh.publish(f.store, f.peer.sourceInstallationId)
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation) }
+            ownedPlanner(f, fresh).handleEnvelope(ownedDiscoveryBytes(f), negotiation)
+            assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
+            assertThat(f.store.access { it!!.state.grants }).hasSize(1)
+        }
+    }
+
+    @Test fun `owned planner rejects native event in final peer return check`() {
+        var finalCheck = 0
+        for (inject in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state)
+            lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle); val negotiation = nativeNegotiation()
+            var fired = false
+            if (inject) {
+                f.peerContext.onCheck = {
+                    if (f.peerContext.checks == finalCheck) { fired = true; lifecycle.recordNativeEvent() }
+                }
+                f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation) }
+                assertThat(fired).isTrue()
+            } else {
+                planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation)
+                finalCheck = f.peerContext.checks
+                assertThat(finalCheck).isGreaterThan(0)
+            }
+            assertThat(f.store.access { it!!.state.plans }).isEmpty()
+        }
+    }
+
+    @Test fun `owned planner rejects signed store publication outside owner`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state)
+            val first = lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle); val negotiation = nativeNegotiation()
+            val next = f.store.publishNativeCatalog(f.peer.sourceInstallationId, invalidatingObservedChange = true) { state }
+            assertThat(next.factsSha256).isEqualTo(first.factsSha256)
+            assertThat(next.revision).isEqualTo(first.revision + 1)
+            val result = AgentBridgeCodec.decodeEnvelope(planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation), negotiation).payload
+            assertThat(result).isInstanceOf(AgentBridgeError::class.java)
+            assertThat((result as AgentBridgeError).code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED)
+        }
+    }
+
+    @Test fun `owned planner rejects completed publication in final peer return check`() {
+        var finalCheck = 0
+        for (inject in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state)
+            val first = lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val planner = ownedPlanner(f, lifecycle); val negotiation = nativeNegotiation()
+            var fired = false
+            if (inject) {
+                f.peerContext.onCheck = {
+                    if (f.peerContext.checks == finalCheck) {
+                        fired = true; lifecycle.recordNativeEvent()
+                        lifecycle.publish(f.store, f.peer.sourceInstallationId)
+                    }
+                }
+                f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation) }
+                assertThat(fired).isTrue()
+                assertThat(lifecycle.currentPublication().revision).isEqualTo(first.revision + 1)
+            } else {
+                planner.handleEnvelope(ownedDiscoveryBytes(f), negotiation); finalCheck = f.peerContext.checks
+                assertThat(finalCheck).isGreaterThan(0)
+            }
+            assertThat(f.store.access { it!!.state.plans }).isEmpty()
+            assertThat(f.store.access { it!!.state.decisions }).isEmpty()
+        }
+    }
+
     @Test fun `discovery and explicit never read private preferences`() {
         val reader = reader()
         for (policy in listOf(null, AgentBridgeSettingsPolicyExplicit(AgentBridgeExportPlanningFixture.output(), "explicit"))) {
