@@ -32,6 +32,18 @@ impl HostExecution<'_, '_, '_> {
     }
     async fn confirm_source_completion_inner(&mut self) -> Result<ExecutionReceipt, ClientError> {
         let received = self.received.clone().ok_or(Error::BindingChanged)?;
+        let host_expiry = self
+            .store
+            .authorization(
+                &self.binding.request.plan.intent.peer,
+                &self.binding.request.plan.intent.destination.binding_id,
+                Some(&self.binding.request.plan.authority_references.host),
+                self.clock,
+            )
+            .await?
+            .delegation
+            .expires_at;
+
         self.require_current().await?;
         let transaction =
             OutputTransaction::open(self.store, &self.binding, || self.require_current()).await?;
@@ -61,33 +73,15 @@ impl HostExecution<'_, '_, '_> {
             return Err(ClientError::UnexpectedMessage);
         };
         v4::validate_execution_receipt(&receipt)?;
-        let status = match self.binding.manifest.capture_status {
-            v4::ArtifactManifestCaptureStatus::Complete => ExecutionReceiptStatus::Complete,
-            v4::ArtifactManifestCaptureStatus::CompleteEmpty => {
-                ExecutionReceiptStatus::CompleteEmpty
-            }
-            v4::ArtifactManifestCaptureStatus::Partial => ExecutionReceiptStatus::Partial,
-            _ => return Err(Error::BindingChanged.into()),
-        };
-        let expected = ExecutionReceipt {
-            schema: v4::ExecutionReceiptSchema::HealthmdAgentExecutionReceipt,
-            schema_version: 1,
-            job_id: self.binding.request.job_id.clone(),
-            binding: self.binding.accepted.binding.clone(),
-            request_sha256: self.binding.manifest.request_sha256.clone(),
-            manifest_sha256: document_digest(&self.binding.manifest)?,
-            frontier_sha256: received.frontier_sha256.clone(),
-            artifact_count: received.receipts.len() as u64,
-            committed_partition_count: received.committed_partition_count,
-            source_acknowledged: true,
-            status,
-            expires_at: self.binding.accepted.expires_at.clone(),
-        };
+        let expected = expected_receipt(
+            &self.binding,
+            received.committed_partition_count,
+            &received.frontier_sha256,
+        )?;
         if *receipt != expected {
             return Err(Error::BindingChanged.into());
         }
-        let completion = serde_json::json!({"schema":"healthmd.agent_host_completion","schema_version":1,
-            "binding":self.binding,"session_id":received.session_id,"source_confirmation":job,"receipt":receipt});
+        let completion = completion_document(&self.binding, &received.session_id, &expected);
         let completion_bytes = transaction
             .save_completion(&completion, || async {
                 let root = self.require_current().await?;
@@ -95,9 +89,19 @@ impl HostExecution<'_, '_, '_> {
                 Ok(root)
             })
             .await?;
+        self.refresh_completion_guard(&transaction)?;
+        self.pin_completed_transfer(&transaction, &completion_bytes)
+            .await?;
         self.require_current().await?;
         self.require_completion_evidence(&transaction, &received.receipts)?;
         transaction.require_completion(&completion_bytes)?;
+        // No await or file hashing follows the final cancellation/deadline sample.
+        super::transfer::require_resume_lifetime(
+            &self.binding,
+            &host_expiry,
+            self.clock,
+            &self.bridge.cancellation,
+        )?;
         Ok(*receipt)
     }
     fn require_completion_evidence(
@@ -125,4 +129,40 @@ impl HostExecution<'_, '_, '_> {
         }
         Ok(())
     }
+}
+
+pub(super) fn expected_receipt(
+    binding: &NativeBinding,
+    partition_count: u64,
+    frontier: &Digest,
+) -> Result<ExecutionReceipt, ClientError> {
+    let status = match binding.manifest.capture_status {
+        v4::ArtifactManifestCaptureStatus::Complete => ExecutionReceiptStatus::Complete,
+        v4::ArtifactManifestCaptureStatus::CompleteEmpty => ExecutionReceiptStatus::CompleteEmpty,
+        v4::ArtifactManifestCaptureStatus::Partial => ExecutionReceiptStatus::Partial,
+        _ => return Err(Error::BindingChanged.into()),
+    };
+    Ok(ExecutionReceipt {
+        schema: v4::ExecutionReceiptSchema::HealthmdAgentExecutionReceipt,
+        schema_version: 1,
+        job_id: binding.request.job_id.clone(),
+        binding: binding.accepted.binding.clone(),
+        request_sha256: binding.manifest.request_sha256.clone(),
+        manifest_sha256: document_digest(&binding.manifest)?,
+        frontier_sha256: frontier.clone(),
+        artifact_count: binding.manifest.artifacts.len() as u64,
+        committed_partition_count: partition_count,
+        source_acknowledged: true,
+        status,
+        expires_at: binding.accepted.expires_at.clone(),
+    })
+}
+
+pub(super) fn completion_document(
+    binding: &NativeBinding,
+    session: &ControlUuid,
+    receipt: &ExecutionReceipt,
+) -> serde_json::Value {
+    serde_json::json!({"schema":"healthmd.agent_host_completion","schema_version":1,
+        "binding":binding,"session_id":session,"source_confirmation":binding.request.job_id,"receipt":receipt})
 }

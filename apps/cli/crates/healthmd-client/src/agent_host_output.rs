@@ -16,6 +16,9 @@ const MAX_OUTPUT_JOBS: usize = 64;
 #[path = "agent_output_json.rs"]
 mod private_json;
 const MAX_OUTPUT_BYTES: usize = private_json::MAX_BYTES;
+#[path = "agent_completion_evidence.rs"]
+mod completion;
+pub(crate) use completion::CompletionEvidence;
 
 #[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -415,6 +418,13 @@ impl OutputTransaction {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<PathBuf, ClientError>>,
     {
+        let evidence = self.completion_evidence(data, None)?;
+        if let Some(bytes) = evidence.bytes() {
+            fence().await?;
+            self.require_current()?;
+            evidence.verify()?;
+            return Ok(bytes.to_vec());
+        }
         self.save_document(
             "completion",
             b"HealthMd.AgentBridge.HostCompletionJournal.v1\0",
@@ -463,11 +473,6 @@ impl OutputTransaction {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<PathBuf, ClientError>>,
     {
-        #[derive(Serialize)]
-        struct Signed<'a, T> {
-            journal: &'a T,
-            mac: Digest,
-        }
         let name = format!("{prefix}-{}.json", self.journal.binding.request.job_id.0);
         let check_previous = || -> Result<(), ClientError> {
             self.require_current()?;
@@ -486,13 +491,7 @@ impl OutputTransaction {
             self.reserve_stage_entry()?;
         }
         self.reserve_stage_bytes(0)?;
-        let mut signer = Hmac::<Sha256>::new_from_slice(self.key.expose_secret())
-            .map_err(private::unavailable)?;
-        signer.update(domain);
-        signer.update(self.journal.binding.request.job_id.0.as_bytes());
-        signer.update(&private_json::encode(data)?);
-        let mac = Digest(format!("{:x}", signer.finalize().into_bytes()));
-        let bytes = private_json::encode(&Signed { journal: data, mac })?;
+        let bytes = self.signed_document(domain, data)?;
         private::publish(&self.dir, &name, &bytes, previous.is_none(), || async {
             fence().await?;
             check_previous()

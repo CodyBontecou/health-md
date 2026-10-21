@@ -29,6 +29,7 @@ fn journal(binding: &NativeBinding) -> TransferJournal {
         partitions: vec![],
         frontier_sha256: Digest("0".repeat(64)),
         final_ack_may_have_sent: false,
+        completion_sha256: None,
     };
     for (index, item_index, offset, count) in [(0, 0, 0, 3), (1, 0, 3, 3), (2, 1, 0, 6)] {
         journal.partitions.push(PartitionRecord {

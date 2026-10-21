@@ -37,6 +37,8 @@ struct TransferJournal {
     partitions: Vec<PartitionRecord>,
     frontier_sha256: Digest,
     final_ack_may_have_sent: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    completion_sha256: Option<Digest>,
 }
 pub(super) struct ResumedTransfer {
     transaction: OutputTransaction,
@@ -77,6 +79,7 @@ pub(super) struct TransferGuard {
     name: String,
     bytes: Vec<u8>,
     partitions: Vec<PartitionRecord>,
+    completion: crate::agent_host::output::CompletionEvidence,
 }
 impl TransferGuard {
     fn new(
@@ -92,6 +95,21 @@ impl TransferGuard {
         for record in &journal.partitions {
             let _ = transaction.stage_path(&record.stage_name)?;
         }
+        let receipt = super::confirmation::expected_receipt(
+            binding,
+            journal.partitions.len() as u64,
+            &journal.frontier_sha256,
+        )?;
+        let data = super::confirmation::completion_document(
+            binding,
+            &ControlUuid(journal.session.0.session_id.to_string()),
+            &receipt,
+        );
+        let completion =
+            transaction.completion_evidence(&data, journal.completion_sha256.as_ref())?;
+        if completion.is_present() {
+            require_completed_journal(transaction, binding, &journal)?;
+        }
         let guard = Self {
             dir: transaction
                 .directory()
@@ -100,11 +118,13 @@ impl TransferGuard {
             name: format!("transfer-{}.json", journal.job_id.0),
             bytes,
             partitions: journal.partitions,
+            completion,
         };
         guard.verify()?;
         Ok(guard)
     }
     pub(super) fn verify(&self) -> Result<(), ClientError> {
+        self.completion.verify()?;
         if private::read_private(&self.dir, &self.name, 64 * 1024 * 1024)? != self.bytes {
             return Err(Error::BindingChanged.into());
         }
@@ -118,9 +138,47 @@ impl TransferGuard {
                 &record.partition.sha256.0,
             )?;
         }
-        Ok(())
+        self.completion.verify()
     }
 }
+fn require_completed_journal(
+    transaction: &OutputTransaction,
+    binding: &NativeBinding,
+    journal: &TransferJournal,
+) -> Result<(), ClientError> {
+    if !journal.final_ack_may_have_sent {
+        return Err(Error::BindingChanged.into());
+    }
+    let mut receipts = Vec::new();
+    for artifact in &binding.manifest.artifacts {
+        let Artifact::Branch1(item) = artifact else {
+            return Err(Error::BindingChanged.into());
+        };
+        let records = journal
+            .partitions
+            .iter()
+            .filter(|record| record.partition.artifact_id == item.artifact_id)
+            .collect::<Vec<_>>();
+        let bytes = records.iter().try_fold(0_u64, |sum, record| {
+            sum.checked_add(
+                u64::try_from(record.partition.byte_count).map_err(private::unavailable)?,
+            )
+            .ok_or_else(|| ClientError::from(Error::BindingChanged))
+        })?;
+        if records.is_empty() || bytes != item.byte_count {
+            return Err(Error::BindingChanged.into());
+        }
+        receipts.push(
+            transaction
+                .plan(&item.artifact_id)
+                .ok_or(Error::BindingChanged)?
+                .receipt
+                .clone(),
+        );
+    }
+    transaction.require_committed_receipts(&receipts)
+}
+
 fn artifact(binding: &NativeBinding, index: usize) -> Result<&ArtifactBranch1, ClientError> {
     match binding.manifest.artifacts.get(index) {
         Some(Artifact::Branch1(value)) => Ok(value),
@@ -264,7 +322,7 @@ impl<'trust> BridgeSession<'trust> {
     }
 }
 
-fn require_resume_lifetime(
+pub(super) fn require_resume_lifetime(
     binding: &NativeBinding,
     host_expiry: &v4::UtcTimestamp,
     clock: &dyn PlanningClock,
@@ -282,6 +340,65 @@ fn require_resume_lifetime(
 }
 
 impl HostExecution<'_, '_, '_> {
+    pub(super) fn refresh_completion_guard(
+        &mut self,
+        transaction: &OutputTransaction,
+    ) -> Result<(), ClientError> {
+        let (_, checkpoint) = transaction.read_transfer::<TransferJournal>()?;
+        if checkpoint
+            != self
+                .transfer_guard
+                .as_ref()
+                .ok_or(Error::BindingChanged)?
+                .bytes
+        {
+            return Err(Error::BindingChanged.into());
+        }
+        self.transfer_guard = Some(TransferGuard::new(transaction, &self.binding, &checkpoint)?);
+        Ok(())
+    }
+    pub(super) async fn pin_completed_transfer(
+        &mut self,
+        transaction: &OutputTransaction,
+        completion: &[u8],
+    ) -> Result<(), ClientError> {
+        let (mut journal, checkpoint) = transaction.read_transfer::<TransferJournal>()?;
+        if checkpoint
+            != self
+                .transfer_guard
+                .as_ref()
+                .ok_or(Error::BindingChanged)?
+                .bytes
+        {
+            return Err(Error::BindingChanged.into());
+        }
+        require_completed_journal(transaction, &self.binding, &journal)?;
+        let digest = Digest(healthmd_protocol::transfer::sha256_hex(completion));
+        if let Some(previous) = &journal.completion_sha256 {
+            if *previous != digest {
+                return Err(Error::BindingChanged.into());
+            }
+            self.transfer_guard
+                .as_ref()
+                .ok_or(Error::BindingChanged)?
+                .verify()?;
+            return Ok(());
+        }
+        journal.completion_sha256 = Some(digest);
+        let next = transaction
+            .save_transfer(&journal, Some(&checkpoint), || async {
+                let root = self.require_current().await?;
+                self.transfer_guard
+                    .as_ref()
+                    .ok_or(Error::BindingChanged)?
+                    .verify()?;
+                transaction.require_completion(completion)?;
+                Ok(root)
+            })
+            .await?;
+        self.transfer_guard = Some(TransferGuard::new(transaction, &self.binding, &next)?);
+        Ok(())
+    }
     fn verify_retained_admission(&self) -> Result<(), ClientError> {
         self.resumed
             .as_ref()
@@ -361,6 +478,7 @@ impl HostExecution<'_, '_, '_> {
                     partitions: vec![],
                     frontier_sha256: frontier.sha256().clone(),
                     final_ack_may_have_sent: false,
+                    completion_sha256: None,
                 };
                 let checkpoint = transaction
                     .save_transfer(&journal, None, || self.require_current())
