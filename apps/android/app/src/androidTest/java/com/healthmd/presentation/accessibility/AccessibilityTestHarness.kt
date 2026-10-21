@@ -324,7 +324,22 @@ abstract class AccessibilityTestHarness(
         val results = mutableListOf<TextLayoutResult>()
         node.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
         assertTrue("Expected measured text", results.isNotEmpty())
-        val visibleWidth = node.readLayoutOnIdle { it.boundsInRoot.width }
+        var failureGeometry = ""
+        val visibleWidth = node.readLayoutOnIdle { measured ->
+            val width = measured.boundsInRoot.width
+            // Snapshot only on the original horizontal-fit failure, within the same existing
+            // owner-thread read. A later idle/layout pass could hide an IME/scroll transition.
+            if (results.any { result -> (0 until result.lineCount).any { line ->
+                    result.getLineRight(line) - result.getLineLeft(line) > width + 1f
+                } }) {
+                failureGeometry = generateSequence(measured) { it.parent }.mapIndexed { depth, ancestor ->
+                    "ancestor[$depth]: bounds=${ancestor.boundsInRoot}, " +
+                        "position=${ancestor.positionInRoot}, size=${ancestor.size}, " +
+                        "placed=${ancestor.layoutInfo.isPlaced}"
+                }.joinToString("\n", prefix = "\nSame-frame label/ancestor geometry:\n")
+            }
+            width
+        }
         results.forEach { result ->
             assertEquals("Respect the chosen font scale", display.fontScale, result.layoutInput.density.fontScale)
             if (expectedFontSize != null) assertEquals(expectedFontSize, result.layoutInput.style.fontSize)
@@ -333,7 +348,7 @@ abstract class AccessibilityTestHarness(
             // Check actual line widths instead of treating hasVisualOverflow as a fit check.
             repeat(result.lineCount) { line ->
                 val width = result.getLineRight(line) - result.getLineLeft(line)
-                assertTrue("Text clips horizontally: $width in $visibleWidth", width <= visibleWidth + 1f)
+                assertTrue("Text clips horizontally: $width in $visibleWidth$failureGeometry", width <= visibleWidth + 1f)
                 assertFalse("Essential text must not be ellipsized", result.isLineEllipsized(line))
             }
         }
