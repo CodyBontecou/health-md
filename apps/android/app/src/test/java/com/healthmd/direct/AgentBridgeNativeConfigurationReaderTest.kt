@@ -66,13 +66,128 @@ class AgentBridgeNativeConfigurationReaderTest {
         readConfiguration(policy, AgentBridgeNativeCatalogPublication(1, AgentBridgeExportPlanningFixture.id(1),
             state.fingerprint(AgentBridgeExportPlanningFixture.id(1))))
 
-    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle) =
+    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle, channel: DirectSecureChannel? = null) =
         AgentBridgeNativePlanningSession(f.peerContext, lifecycle, f.store,
             AgentBridgeNativeConfigurationReader(observed, settings, profiles, { lifecycle.currentFacts() },
-                { AgentBridgeExportTestRegistry.load() }), f.clock)
+                { AgentBridgeExportTestRegistry.load() }), f.clock, responseChannel = channel)
     private fun nativeNegotiation() = AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, listOf(2, 4), listOf(2, 4))
     private fun ownedDiscoveryBytes(f: AgentBridgeExportPlanningFixture) = AgentBridgeCodec.encodeEnvelope(
         AgentBridgeMessage("discovery_request", f.discoveryRequest()), nativeNegotiation())
+
+    @Test fun `native response uses pinned guarded channel without issuing authority`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            // Transport crypto/framing is covered by real loopback protocol tests; this boundary
+            // records the actual signed planner response and invokes its real owner/issuer fences.
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            var sent: AgentBridgeMessage? = null
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                val fence = thirdArg<() -> Unit>(); fence(); sent = firstArg(); fence()
+            }
+            val planner = ownedPlanner(f, lifecycle, channel)
+            val before = f.store.access { it!!.state.revision }; reset()
+            val caller = Job()
+            planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), caller)
+            caller.complete()
+            assertThat((sent!!.payload as AgentBridgeDiscovery).peer).isEqualTo(f.peer)
+            assertThat(f.store.access { it!!.state.revision }).isEqualTo(before)
+            assertThat(f.store.access { it!!.state.decisions }).isEmpty()
+            assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
+        }
+    }
+
+    @Test fun `native response unsupported negotiation does not touch issuer or channel`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val planner = ownedPlanner(f, lifecycle, channel); val checks = f.peerContext.checks
+            val negotiation = AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, listOf(2), listOf(2))
+            f.expect(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY) { planner.handleAndSend(byteArrayOf(0), negotiation, Job()) }
+            assertThat(f.peerContext.checks).isEqualTo(checks)
+            verify { channel wasNot Called }
+        }
+    }
+
+    @Test fun `native response rejects completed publication change before and after write`() {
+        for (afterWrite in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state)
+            val original = lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            var writes = 0
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                val fence = thirdArg<() -> Unit>()
+                if (afterWrite) { fence(); writes++ }
+                lifecycle.recordNativeEvent(); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+                fence()
+                if (!afterWrite) writes++
+            }
+            val planner = ownedPlanner(f, lifecycle, channel)
+            f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), Job()) }
+            assertThat(lifecycle.currentPublication().revision).isEqualTo(original.revision + 1)
+            assertThat(writes).isEqualTo(if (afterWrite) 1 else 0)
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), Job()) }
+            verify(atLeast = 1) { channel.close() }
+        }
+    }
+
+    @Test fun `native response cancellation in final validator cannot admit write or success`() {
+        for (duringWriteFence in listOf(true, false)) {
+            var checksToCancellation = 0
+            for (cancel in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+                f.enrolled()
+                val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+                val channel = mockk<DirectSecureChannel>(relaxed = true)
+                val caller = Job()
+                var writes = 0
+                every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                    val before = f.peerContext.checks
+                    if (cancel && duringWriteFence) {
+                        val target = before + checksToCancellation
+                        f.peerContext.onCheck = { if (f.peerContext.checks == target) caller.cancel() }
+                    }
+                    thirdArg<() -> Unit>()()
+                    if (!cancel && duringWriteFence) checksToCancellation = f.peerContext.checks - before
+                    writes++
+                }
+                val planner = ownedPlanner(f, lifecycle, channel)
+                val before = f.peerContext.checks
+                if (cancel && !duringWriteFence) {
+                    val target = before + checksToCancellation
+                    f.peerContext.onCheck = { if (f.peerContext.checks == target) caller.cancel() }
+                }
+                try {
+                    planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), caller)
+                    if (cancel) Assert.fail("Canceled final validator cannot admit another write or return success")
+                } catch (failure: CancellationException) {
+                    if (!cancel) throw failure
+                    if (duringWriteFence) assertThat(writes).isEqualTo(0)
+                    verify(atLeast = 1) { channel.close() }
+                }
+                if (!cancel && !duringWriteFence) checksToCancellation = f.peerContext.checks - before
+                if (!cancel) { assertThat(checksToCancellation).isGreaterThan(0); caller.complete() }
+                else assertThat(caller.isCancelled).isTrue()
+            }
+        }
+    }
+
+    @Test fun `native response rechecks live issuer expiry at actual write`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                f.clock.now = f.clock.now.plusSeconds(600)
+                thirdArg<() -> Unit>()()
+                Assert.fail("Expired discovery cannot reach native write")
+            }
+            val planner = ownedPlanner(f, lifecycle, channel)
+            f.expect(AgentBridgeErrorCode.PLAN_EXPIRED) { planner.handleAndSend(ownedDiscoveryBytes(f), nativeNegotiation(), Job()) }
+            verify { channel.close() }
+        }
+    }
 
     @Test fun `owned planner retains discovery through plan review and exact approval`() {
         AgentBridgeExportPlanningFixture().use { f ->

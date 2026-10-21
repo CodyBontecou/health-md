@@ -216,7 +216,7 @@ class DirectCliCoordinator @Inject constructor(
             nativePlanner?.let { it.requireCurrent(); return it }
             catalogLifecycle.currentPublication() // No issuer open for an unpublished/pending owner.
             val result = AgentBridgeNativePlanningSession(peer(context), catalogLifecycle,
-                AgentBridgeExportAuthorityStore.forNoBackup(context), configuration())
+                AgentBridgeExportAuthorityStore.forNoBackup(context), configuration(), responseChannel = channel)
             requireCurrent()
             result.requireCurrent()
             nativePlanner = result

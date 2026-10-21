@@ -18,6 +18,8 @@ import java.io.IOException
 import java.time.DateTimeException
 import java.time.ZoneId
 import java.util.Collections
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -130,8 +132,10 @@ internal class AgentBridgeNativePlanningSession(
     private val store: AgentBridgeExportAuthorityStore,
     configuration: AgentBridgeExportPlanningConfigurationReader,
     clock: java.time.Clock = java.time.Clock.systemUTC(),
+    private val responseChannel: DirectSecureChannel? = null,
 ) {
     private val service: AgentBridgeExportPlanningService
+    @Volatile private var wireAbandoned = false
     init {
         val publication = requireCurrent()
         // Compare the issuer transaction's exact revision, not only its facts fingerprint.
@@ -145,6 +149,7 @@ internal class AgentBridgeNativePlanningSession(
         requireSamePublication(publication)
     }
     fun requireCurrent(): AgentBridgeNativeCatalogPublication {
+        if (wireAbandoned) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
         if (Looper.myLooper() == Looper.getMainLooper()) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
         peer.requireCurrent()
         return lifecycle.currentPublication()
@@ -161,6 +166,39 @@ internal class AgentBridgeNativePlanningSession(
         requireSamePublication(publication)
         return result
     }
+    /** Native composition only. The accepted owner pins its channel at construction. A caller
+     * supplies its live operation Job; pure cancellation checks run after issuer callbacks.
+     * No wire identity or fresh peer can retarget this response. The coordinator also closes its active channel on explicit cancelActive. */
+    fun handleAndSend(bytes: ByteArray, negotiation: AgentBridgeNegotiation, caller: Job) {
+        if (negotiation.baseApplication != 2 || !negotiation.agentExtension || negotiation.appleQueryExtension)
+            throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        try {
+            caller.ensureActive()
+            val publication = requireCurrent()
+            val response = AgentBridgeCodec.decodeEnvelope(handleEnvelope(bytes, negotiation), negotiation)
+            channel.sendAgentBridge(response, negotiation) {
+                caller.ensureActive()
+                requireSamePublication(publication)
+                caller.ensureActive()
+                service.requireCurrentForTransmission(response, peer)
+                // Local lifecycle only after issuer validation, never a fresh SDK callback.
+                if (lifecycle.currentPublication() != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                caller.ensureActive()
+            }
+            caller.ensureActive()
+            requireSamePublication(publication)
+            caller.ensureActive()
+            service.requireCurrentForTransmission(response, peer)
+            if (lifecycle.currentPublication() != publication) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            caller.ensureActive()
+        } catch (failure: Throwable) {
+            wireAbandoned = true
+            channel.close()
+            throw failure
+        }
+    }
+
     /** Native signed-record queue, never host display text. Listing creates no decision. */
     fun nativePlansAwaitingReview(): List<AgentBridgeGeneratedPlan> {
         val publication = requireCurrent()

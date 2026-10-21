@@ -315,6 +315,14 @@ final class AgentBridgeExportPlanningService {
         } // No decision issuance/persistence from an approval_request.
     }
 
+    /// Reuse the full live issuer/configuration/expiry fence at each actual response send boundary.
+    /// Fixed-code errors carry no private authority; every other allowed response is revalidated.
+    func requireCurrentForTransmission(_ envelope: AgentBridgeEnvelope, peer: AgentBridgeExportAuthenticatedPeer) throws {
+        try peer.requireCurrent()
+        if case .error = envelope.payload { try peer.requireCurrent(); return }
+        try validateResponse(envelope.payload, peer: peer)
+    }
+
     private func validateResponse(_ response: AgentBridgeDocument, peer: AgentBridgeExportAuthenticatedPeer) throws {
         try store.inspectCurrent { state in
             switch response {

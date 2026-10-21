@@ -274,6 +274,20 @@ internal class AgentBridgeExportPlanningService(
         return recheckReturn(authenticated, expected, result, nativeDecision, nativePlanReview)
     }
 
+    /** Full live issuer/configuration/expiry fence for each actual response transmission boundary. */
+    fun requireCurrentForTransmission(message: AgentBridgeMessage, authenticated: AgentBridgeExportAuthenticatedPeer) {
+        val expected = authenticated.requireCurrent()
+        if (message.type == "rejected" && message.payload is AgentBridgeError) {
+            peer(authenticated, expected) // Fixed-code rejection conveys no private authority.
+            return
+        }
+        when (message.payload) {
+            is AgentBridgeDiscovery, is AgentBridgeGeneratedPlan, is AgentBridgeApproval ->
+                recheckReturn(authenticated, expected, message.payload, nativeDecision = null)
+            else -> throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        }
+    }
+
     private fun <T : AgentBridgeDocument> recheckReturn(authenticated: AgentBridgeExportAuthenticatedPeer,
         expected: AgentBridgePeer, value: T, nativeDecision: NativeDecisionFence?, nativePlanReview: Boolean = false): T {
         // Trust may delay or revoke a parent AFTER the previous transaction released its lock.

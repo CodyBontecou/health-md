@@ -505,7 +505,11 @@ final class IPhoneDirectCLIService: ObservableObject {
             return try owner.lifecycle.currentFacts()
         }
         let store = try AgentBridgeExportAuthorityStore(existingDirectory: AgentExportPermissionsStorage.directory(createParent: false))
-        let planner = try AgentBridgeNativePlanningSession(peer: owner.peer, lifecycle: owner.lifecycle, store: store, configuration: reader)
+        guard let originalChannel = agentBridgeSession?.channel, channel === originalChannel else {
+            throw AgentBridgeValidationError.permissionRequired
+        }
+        let planner = try AgentBridgeNativePlanningSession(peer: owner.peer, lifecycle: owner.lifecycle, store: store,
+            configuration: reader, responseChannel: originalChannel)
         let current = try agentBridgeNativePlanningOwner()
         guard current.lifecycle === owner.lifecycle else { throw AgentBridgeValidationError.permissionRequired }
         try planner.requireCurrent()

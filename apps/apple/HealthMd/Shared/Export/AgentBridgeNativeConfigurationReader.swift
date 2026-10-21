@@ -95,6 +95,8 @@ final class AgentBridgeNativePlanningSession {
     private let lifecycle: AgentBridgeNativeCatalogLifecycle
     private let service: AgentBridgeExportPlanningService
     private let store: AgentBridgeExportAuthorityStore
+    private let responseChannel: DirectSecureChannel?
+    private var wireAbandoned = false
 
     /// The issuer transaction and lifecycle must agree on the exact signed publication, including
     /// revision. Equal facts alone cannot identify an event that returned to the same state.
@@ -121,11 +123,12 @@ final class AgentBridgeNativePlanningSession {
 
     init(peer: AgentBridgeExportAuthenticatedPeer, lifecycle: AgentBridgeNativeCatalogLifecycle,
          store: AgentBridgeExportAuthorityStore, configuration: any AgentBridgeExportPlanningConfigurationReading,
+         responseChannel: DirectSecureChannel? = nil,
          clock: any AgentBridgeExportClock = AgentBridgeExportSystemClock(),
          newPlanID: @escaping () throws -> AgentBridgeUUID = { try AgentBridgeUUID(UUID().uuidString.lowercased()) }) throws {
         try peer.requireCurrent()
         let publication = try lifecycle.currentPublication()
-        self.peer = peer; self.lifecycle = lifecycle; self.store = store
+        self.peer = peer; self.lifecycle = lifecycle; self.store = store; self.responseChannel = responseChannel
         service = AgentBridgeExportPlanningService(store: store,
             configuration: OwnerBoundConfiguration(peer: peer, lifecycle: lifecycle, base: configuration),
             clock: clock, newPlanID: newPlanID)
@@ -134,6 +137,7 @@ final class AgentBridgeNativePlanningSession {
 
     @discardableResult
     func requireCurrent() throws -> AgentBridgeNativeCatalogPublication {
+        guard !wireAbandoned else { throw AgentBridgeValidationError.permissionRequired }
         try peer.requireCurrent()
         return try lifecycle.currentPublication()
     }
@@ -143,6 +147,39 @@ final class AgentBridgeNativePlanningSession {
         let result = try service.handle(bytes, authenticatedPeer: peer)
         guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
         return result
+    }
+
+    /// Native response composition only; does not advertise or install the extension route.
+    /// The owner supplies its channel ONCE at construction, never from a request/call argument.
+    /// Keep the publication admitted before planning across every bounded native write and return.
+    func handleAndSend(_ bytes: Data, negotiation: AgentBridgeNegotiation) async throws {
+        guard negotiation.baseVersion == 1, negotiation.agentBridgeV4, let responseChannel else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        do {
+            try Task.checkCancellation()
+            let publication = try requireCurrent()
+            let response = try negotiation.decode(handle(bytes))
+            try await responseChannel.sendAgentBridge(response, negotiation: negotiation) { [self] in
+                try Task.checkCancellation()
+                try await MainActor.run {
+                    guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
+                    try service.requireCurrentForTransmission(response, peer: peer)
+                    // Local lifecycle check only after the full issuer fence: no new SDK callback.
+                    guard try lifecycle.currentPublication() == publication else { throw AgentBridgeValidationError.bindingChanged }
+                }
+                try Task.checkCancellation()
+            }
+            try Task.checkCancellation()
+            guard try requireCurrent() == publication else { throw AgentBridgeValidationError.bindingChanged }
+            try service.requireCurrentForTransmission(response, peer: peer)
+            guard try lifecycle.currentPublication() == publication else { throw AgentBridgeValidationError.bindingChanged }
+            try Task.checkCancellation()
+        } catch {
+            wireAbandoned = true
+            responseChannel.cancel()
+            throw error
+        }
     }
 
     /// Native presentation only: signed issuer records for the original peer, excluding decisions
