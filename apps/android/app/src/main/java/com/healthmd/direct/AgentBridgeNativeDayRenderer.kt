@@ -5,6 +5,8 @@ import com.healthmd.domain.exportengine.*
 import com.healthmd.domain.model.HealthData
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.*
@@ -16,33 +18,54 @@ internal class AgentBridgeNativeRenderException(val code: AgentBridgeNativeRende
 /** Post-capture bytes and actual renderer evidence, never permission or a committed receipt. */
 internal class AgentBridgeNativeRenderedDay(val day: String, val artifact: ExportArtifactPlanItem, val pin: ExportEnginePin)
 
-/** Pure frozen-v4 JSON rendering. No SDK, preferences, destination or rollout-policy lookup.
- * Original-owner producer admission and durable binding of the result remain caller obligations. */
+/** Frozen-v4 JSON rendering and original-owner capture/journal composition. Pure render performs
+ * no SDK/destination IO; capture commits exact bytes in its accepted job before returning. */
 internal class AgentBridgeNativeDayRenderer(
     private val core: DailyAggregateRustPlanner? = null,
+    private val pinLoader: (suspend (String) -> ExportEnginePin)? = null,
 ) {
-    /** Real SDK → frozen renderer composition. Durable artifact publication remains required. */
+    /** Pin → real SDK → frozen renderer → immutable signed artifact. Transfer receipts remain separate. */
     suspend fun capture(day: String, manager: com.healthmd.data.health.HealthConnectManager,
         context: AgentBridgeNativeCaptureContext): AgentBridgeNativeRenderedDay {
         try {
             val fingerprint = context.requestFingerprintForRead()
-            val data = manager.captureAgentBridgeDay(day, context)
             val resolution = context.configurationForRead()
-            val result = render(day, data, resolution, fingerprint)
+            context.retainedArtifact(day)?.let { checkpoint ->
+                val result = AgentBridgeNativeArtifactJournal.restore(checkpoint, day, resolution, fingerprint)
+                context.configurationForRead(); return result
+            }
+            val pin = pinLoader?.invoke(resolution.calendarTimezone) ?: withContext(Dispatchers.Default) {
+                val service = com.healthmd.core.HealthMdCoreService()
+                ExportEnginePin.create(ExportEngineMode.rust, AndroidExportProfile.android_frozen_v4,
+                    resolution.calendarTimezone, service.checkReadiness(),
+                    service.getMetricRegistry(com.healthmd.core.CoreMetricRegistryProfile.ANDROID_FROZEN_V4))
+            }
+            validateBridgeRenderPin(pin, resolution)
+            val engine = AgentBridgeNativeArtifactJournal.engine(pin)
+            context.beginArtifact(day, engine)
+            val data = manager.captureAgentBridgeDay(day, context)
+            val result = render(day, data, context.configurationForRead(), fingerprint, pin)
+            if (result.pin != pin) fail(AgentBridgeNativeRenderFailure.INCOMPATIBLE_CORE)
+            context.commitArtifact(day, engine, AgentBridgeNativeArtifactJournal.payload(result))
             context.configurationForRead()
             return result
-        } catch (failure: Throwable) { context.invalidate(); throw failure }
+        } catch (failure: Throwable) {
+            context.invalidate()
+            if (failure is CancellationException || failure is AgentBridgeException || failure is AgentBridgeNativeRenderException ||
+                failure is VirtualMachineError || failure is ThreadDeath) throw failure
+            fail(AgentBridgeNativeRenderFailure.RENDER_FAILED)
+        }
     }
 
     suspend fun render(day: String, data: HealthData, resolution: AgentBridgeRequestSettingsResolution,
-        requestSha256: String): AgentBridgeNativeRenderedDay {
+        requestSha256: String, pinnedEngine: ExportEnginePin? = null): AgentBridgeNativeRenderedDay {
         try {
             currentCoroutineContext().ensureActive()
             val index = resolution.requestedDays.indexOf(day)
             if (resolution.version != 1 || !requestSha256.matches(Regex("[0-9a-f]{64}")) || index < 0 ||
                 resolution.predictedRelativePaths.size != resolution.requestedDays.size || data.date.toString() != day ||
                 LocalDate.parse(day).toString() != day) fail(AgentBridgeNativeRenderFailure.INVALID_INPUT)
-            val settings = resolution.exporterSettings()
+            val settings = resolution.exporterSettings().copy(executionEnginePin = pinnedEngine)
             val selected = resolution.selection.map { it.semanticId }.toSet()
             if (selected.isEmpty() || selected.size != resolution.selection.size ||
                 !setOf("steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "android.hrv_rmssd").containsAll(selected) ||
@@ -65,12 +88,7 @@ internal class AgentBridgeNativeDayRenderer(
             val result = renderer.plan(request)
             currentCoroutineContext().ensureActive()
             val pin = result.pin
-            if (pin.engine != ExportEngineMode.rust || pin.profile != AndroidExportProfile.android_frozen_v4 ||
-                pin.publicSchema != "healthmd.health_data" || pin.publicSchemaVersion != 4u || pin.coreApiVersion != 5u ||
-                pin.semanticInputVersion != 1u || pin.canonicalModelVersion != 1u || pin.renderInputVersion != 1u ||
-                pin.artifactPlanVersion != 1u || pin.registryVersion != 1u || pin.registrySha256 != resolution.registrySha256 ||
-                pin.semanticProfileRevision != 1u || pin.renderProfileRevision != 2u || pin.ianaTimeZone != resolution.calendarTimezone ||
-                pin.coreSourceRevision.isBlank() || pin.coreSourceRevision.length > 256) fail(AgentBridgeNativeRenderFailure.INCOMPATIBLE_CORE)
+            validateBridgeRenderPin(pin, resolution)
             val plan = result.plan
             val item = plan.items.singleOrNull() ?: fail(AgentBridgeNativeRenderFailure.INVALID_ARTIFACT)
             val path = resolution.predictedRelativePaths[index]
@@ -93,3 +111,12 @@ internal class AgentBridgeNativeDayRenderer(
     }
     private fun fail(code: AgentBridgeNativeRenderFailure): Nothing = throw AgentBridgeNativeRenderException(code)
 }
+
+internal fun validateBridgeRenderPin(pin: ExportEnginePin, resolution: AgentBridgeRequestSettingsResolution) {
+            if (pin.engine != ExportEngineMode.rust || pin.profile != AndroidExportProfile.android_frozen_v4 ||
+                pin.publicSchema != "healthmd.health_data" || pin.publicSchemaVersion != 4u || pin.coreApiVersion != 5u ||
+                pin.semanticInputVersion != 1u || pin.canonicalModelVersion != 1u || pin.renderInputVersion != 1u ||
+                pin.artifactPlanVersion != 1u || pin.registryVersion != 1u || pin.registrySha256 != resolution.registrySha256 ||
+                pin.semanticProfileRevision != 1u || pin.renderProfileRevision != 2u || pin.ianaTimeZone != resolution.calendarTimezone ||
+                pin.coreSourceRevision.isBlank() || pin.coreSourceRevision.length > 256) throw AgentBridgeNativeRenderException(AgentBridgeNativeRenderFailure.INCOMPATIBLE_CORE)
+ }

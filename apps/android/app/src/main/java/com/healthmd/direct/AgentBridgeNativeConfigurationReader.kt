@@ -397,6 +397,25 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
             configurationForRead()
         } catch (failure: Throwable) { close(); throw failure }
     }
+    fun retainedArtifact(day: String): AgentBridgeNativeCaptureSpool.ArtifactCheckpoint? {
+        try {
+            if (day !in configurationForRead().requestedDays) throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+            val result = spool.retainedArtifact(day)
+            configurationForRead(); return result
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
+    fun beginArtifact(day: String, engine: ByteArray) {
+        try {
+            if (day !in configurationForRead().requestedDays) throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+            spool.beginArtifact(day, engine); configurationForRead()
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
+    fun commitArtifact(day: String, engine: ByteArray, payload: ByteArray) {
+        try {
+            if (day !in configurationForRead().requestedDays) throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+            spool.commitArtifact(day, engine, payload); configurationForRead()
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
     /** Names the original accepted bytes; a fingerprint is never capture permission. */
     fun requestFingerprintForRead(): String {
         configurationForRead()

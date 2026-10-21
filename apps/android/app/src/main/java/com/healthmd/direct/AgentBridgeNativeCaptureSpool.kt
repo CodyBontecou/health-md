@@ -21,8 +21,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-/** Private captured bytes, not portable output or a permission. Independently versioned MAC
- * records bind the immutable accepted request/resolution, permanent claim and original expiry. */
+/** Private captured values, engine identity and immutable artifacts, never transfer authority.
+ * MAC records bind the exact accepted request/resolution, permanent claim and original expiry. */
 internal class AgentBridgeNativeCaptureSpool(
     private val issuer: Path,
     private val reservation: AgentBridgeExportCaptureReservation,
@@ -35,6 +35,10 @@ internal class AgentBridgeNativeCaptureSpool(
         val resolutionSha256: String, val claimId: String, val expiresAt: String,
         val kind: String, val day: String?, val payload: String)
     @Serializable private data class Signed(val record: Record, val mac: String)
+    @Serializable private data class Progress(val version: Int = 2, val captures: List<String>,
+        val artifacts: List<String> = emptyList(), val engine: String = "")
+    class ArtifactCheckpoint(val engine: ByteArray, val payload: ByteArray)
+
     private val json = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
     private val captures = issuer.resolve("captures")
     private val directory = captures.resolve(reservation.job.requestSha256)
@@ -76,12 +80,12 @@ internal class AgentBridgeNativeCaptureSpool(
             Files.newDirectoryStream(directory).use { stream ->
                 var count = 0
                 for (path in stream) {
-                    if (++count > 8258) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+                    if (++count > 16450) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
                     val name = path.fileName.toString()
                     if (name !in setOf("lock", "header.json", "progress.json") && !DAY_NAME.matches(name) && !PENDING_NAME.matches(name)) fail()
                     attributes(path, false)
                     val size = Files.size(path)
-                    if (size !in 0..(2 * PAYLOAD_LIMIT).toLong()) fail()
+                    if (size !in 0..RECORD_LIMIT.toLong()) fail()
                     storedBytes += size
                     if (storedBytes > JOB_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
                 }
@@ -105,7 +109,8 @@ internal class AgentBridgeNativeCaptureSpool(
         validDay(day)
         guard()
         val started = "started-$day.json"; val captured = "day-$day.json"
-        val (previous, days) = progress()
+        val (previous, state) = progress()
+        val days = state.captures
         if (day in days) {
             if (!exists(captured)) fail()
             if (read(started) != record("started", day)) fail()
@@ -117,7 +122,7 @@ internal class AgentBridgeNativeCaptureSpool(
             if (exists(started) || exists(captured)) fail()
             if (days.size >= 4096) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
             if (storedBytes + 2 * PAYLOAD_LIMIT >= JOB_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
-            val next = Base64.getEncoder().encodeToString(json.encodeToString((days + day).sorted()).toByteArray())
+            val next = progressPayload(state.copy(captures = (days + day).sorted()))
             publish("progress.json", record("progress", null, next), previous)
             publish(started, record("started", day)); null
         }
@@ -127,9 +132,43 @@ internal class AgentBridgeNativeCaptureSpool(
         val frozen = payload.copyOf()
         if (frozen.isEmpty() || frozen.size > PAYLOAD_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
         guard()
-        if (day !in progress().second) fail()
+        if (day !in progress().second.captures) fail()
         if (read("started-$day.json") != record("started", day)) fail()
         publish("day-$day.json", record("captured", day, Base64.getEncoder().encodeToString(frozen)))
+    }
+    @Synchronized fun retainedArtifact(day: String): ArtifactCheckpoint? = safeCall {
+        validDay(day); guard()
+        val state = progress().second
+        if (day !in state.artifacts) null else {
+            if (day !in state.captures || state.engine.isEmpty() || read("artifact-started-$day.json") != record("artifact-started", day)) fail()
+            val value = read("artifact-$day.json")
+            if (value.kind != "artifact" || value.day != day || value.payload.isEmpty()) fail()
+            val result = ArtifactCheckpoint(Base64.getDecoder().decode(state.engine), Base64.getDecoder().decode(value.payload))
+            guard(); result
+        }
+    }
+    @Synchronized fun beginArtifact(day: String, engine: ByteArray) = safeCall {
+        validDay(day); guard()
+        val frozen = engine.copyOf()
+        if (frozen.isEmpty() || frozen.size > 4096) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+        val encoded = Base64.getEncoder().encodeToString(frozen)
+        val (previous, state) = progress()
+        if (state.engine.isNotEmpty() && state.engine != encoded) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        if (state.artifacts.size >= 4096) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+        if (day in state.artifacts || exists("artifact-started-$day.json") || exists("artifact-$day.json")) fail(AgentBridgeErrorCode.BUSY)
+        val next = state.copy(artifacts = (state.artifacts + day).sorted(), engine = encoded)
+        publish("progress.json", record("progress", null, progressPayload(next)), previous)
+        publish("artifact-started-$day.json", record("artifact-started", day))
+    }
+    @Synchronized fun commitArtifact(day: String, engine: ByteArray, payload: ByteArray) = safeCall {
+        validDay(day); guard()
+        val frozen = payload.copyOf(); val state = progress().second
+        if (state.engine != Base64.getEncoder().encodeToString(engine) || day !in state.artifacts || day !in state.captures ||
+            read("artifact-started-$day.json") != record("artifact-started", day)) fail()
+        val captured = read("day-$day.json")
+        if (captured.kind != "captured" || captured.day != day || captured.payload.isEmpty()) fail()
+        if (frozen.isEmpty() || frozen.size > PAYLOAD_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+        publish("artifact-$day.json", record("artifact", day, Base64.getEncoder().encodeToString(frozen)))
     }
     @Synchronized override fun close() {
         if (closed) return
@@ -141,7 +180,8 @@ internal class AgentBridgeNativeCaptureSpool(
         AgentBridgeCodec.sha256(reservation.job.resolutionCanonical.toByteArray()), reservation.claim.claimId,
         reservation.job.expiresAt, kind, day, payload)
     private fun validateStoredProgress() {
-        val (_, days) = progress()
+        val (_, state) = progress()
+        val days = state.captures
         val expected = mutableSetOf("lock", "header.json", "progress.json")
         for (day in days) {
             val started = "started-$day.json"; val captured = "day-$day.json"
@@ -150,19 +190,34 @@ internal class AgentBridgeNativeCaptureSpool(
             val value = read(captured)
             if (value.kind != "captured" || value.day != day || value.payload.isEmpty()) fail()
         }
+        for (day in state.artifacts) {
+            expected += "artifact-started-$day.json"; expected += "artifact-$day.json"
+            if (day !in days || state.engine.isEmpty() || read("artifact-started-$day.json") != record("artifact-started", day)) fail()
+            val value = read("artifact-$day.json")
+            if (value.kind != "artifact" || value.day != day || value.payload.isEmpty()) fail()
+        }
         val names = Files.newDirectoryStream(directory).use { stream ->
             stream.map { it.fileName.toString() }.filter { !PENDING_NAME.matches(it) }.toSet()
         }
         if (names != expected) fail()
     }
-    private fun progress(): Pair<Record, List<String>> {
+    private fun progressPayload(state: Progress): String {
+        val bytes = if (state.engine.isEmpty() && state.artifacts.isEmpty()) json.encodeToString(state.captures).toByteArray()
+            else AgentBridgeCodec.canonicalize(json.encodeToString(state).toByteArray())
+        return Base64.getEncoder().encodeToString(bytes)
+    }
+    private fun progress(): Pair<Record, Progress> {
         val value = read("progress.json")
         val bytes = Base64.getDecoder().decode(value.payload)
-        val days = json.decodeFromString<List<String>>(bytes.decodeToString())
-        if (value.kind != "progress" || value.day != null || days.size > 4096 || days.distinct().size != days.size ||
-            days != days.sorted() || !json.encodeToString(days).toByteArray().contentEquals(bytes)) fail()
-        days.forEach(::validDay)
-        return value to days
+        val state = if (bytes.firstOrNull() == '['.code.toByte()) Progress(captures = json.decodeFromString<List<String>>(bytes.decodeToString()))
+            else json.decodeFromString<Progress>(bytes.decodeToString())
+        if (value.kind != "progress" || value.day != null || state.version != 2 ||
+            state.engine.length > 5500 || state.artifacts.isEmpty() != state.engine.isEmpty() || progressPayload(state) != value.payload) fail()
+        listOf(state.captures, state.artifacts).forEach { days ->
+            if (days.size > 4096 || days.distinct().size != days.size || days != days.sorted()) fail()
+            days.forEach(::validDay)
+        }
+        return value to state
     }
     private fun pins() {
         if (closed || identities.isEmpty()) fail()
@@ -184,7 +239,7 @@ internal class AgentBridgeNativeCaptureSpool(
         val path = directory.resolve(name)
         val identity = attributes(path, false)
         val size = Files.size(path)
-        if (size !in 1..(2 * PAYLOAD_LIMIT).toLong()) fail()
+        if (size !in 1..RECORD_LIMIT.toLong()) fail()
         val bytes = FileChannel.open(path, READ, NOFOLLOW_LINKS).use { input ->
             val output = ByteArray(size.toInt()); val buffer = ByteBuffer.wrap(output)
             while (buffer.hasRemaining()) if (input.read(buffer) <= 0) fail()
@@ -197,7 +252,7 @@ internal class AgentBridgeNativeCaptureSpool(
             val value = json.decodeFromString<Signed>(canonicalBytes.decodeToString())
             if (!MessageDigest.isEqual(canonical(value), canonicalBytes) || value.record != record(value.record.kind, value.record.day, value.record.payload)) fail()
             val payload = Base64.getDecoder().decode(value.record.payload)
-            if (payload.size > PAYLOAD_LIMIT || Base64.getEncoder().encodeToString(payload) != value.record.payload) fail()
+            if (payload.size > (if (value.record.kind == "progress") PROGRESS_LIMIT else PAYLOAD_LIMIT) || Base64.getEncoder().encodeToString(payload) != value.record.payload) fail()
             val expected = mac(canonical(value.record))
             if (!MessageDigest.isEqual(expected.toByteArray(), value.mac.toByteArray())) fail()
             value
@@ -206,7 +261,7 @@ internal class AgentBridgeNativeCaptureSpool(
     }
     private fun publish(name: String, value: Record, previous: Record? = null) {
         val bytes = canonical(Signed(value, mac(canonical(value))))
-        if (bytes.size > 2 * PAYLOAD_LIMIT || storedBytes + bytes.size > JOB_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+        if (bytes.size > RECORD_LIMIT || storedBytes + bytes.size > JOB_LIMIT) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
         val previousBytes = previous?.let { canonical(Signed(it, mac(canonical(it)))) }
         guard()
         if (previousBytes != null) {
@@ -244,7 +299,7 @@ internal class AgentBridgeNativeCaptureSpool(
     private fun currentBytes(name: String): ByteArray {
         val path = directory.resolve(name)
         val identity = attributes(path, false)
-        if (Files.size(path) !in 1..(2 * PAYLOAD_LIMIT).toLong()) fail()
+        if (Files.size(path) !in 1..RECORD_LIMIT.toLong()) fail()
         val bytes = FileChannel.open(path, READ, NOFOLLOW_LINKS).use { input ->
             val output = ByteArray(Files.size(path).toInt()); val buffer = ByteBuffer.wrap(output)
             while (buffer.hasRemaining()) if (input.read(buffer) <= 0) fail()
@@ -278,10 +333,12 @@ internal class AgentBridgeNativeCaptureSpool(
     private fun fail(code: AgentBridgeErrorCode = AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED): Nothing = throw AgentBridgeException(code)
     companion object {
         private const val PAYLOAD_LIMIT = 64 * 1024
+        private const val PROGRESS_LIMIT = 256 * 1024
+        private const val RECORD_LIMIT = 512 * 1024
         private const val JOB_LIMIT = 64L * 1024 * 1024
         private val FILE_PERMISSIONS = PosixFilePermissions.fromString("rw-------")
         private val DIRECTORY_PERMISSIONS = PosixFilePermissions.fromString("rwx------")
-        private val DAY_NAME = Regex("^(started|day)-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$")
+        private val DAY_NAME = Regex("^(artifact-started|artifact|started|day)-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$")
         private val PENDING_NAME = Regex("^pending-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
     }
 }

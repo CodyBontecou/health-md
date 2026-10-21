@@ -9,8 +9,8 @@ nonisolated enum AgentBridgeNativeRenderFailure: String, Error {
     case renderFailed = "native_render_failed"
 }
 
-/// Post-capture evidence only. The caller must bind this and the bytes to the original signed job
-/// before publication. A rendered artifact is neither capture permission nor a committed receipt.
+/// Rendering evidence, never capture permission or a transfer receipt. Pure render callers still
+/// require durable binding; capture commits these bytes in the original signed native spool.
 nonisolated struct AgentBridgeNativeRenderedDay: Sendable {
     let day: AgentBridgeDate
     let artifact: NativeExportArtifact
@@ -18,12 +18,13 @@ nonisolated struct AgentBridgeNativeRenderedDay: Sendable {
     let registrySHA256: String
 }
 
-/// Pure, bounded JSON rendering for the currently reviewed bridge dialect. Uses the actual frozen
-/// v8 core profile, never a v10 native document relabeled as v8. No SDK, preference or destination IO.
+/// Frozen v8 JSON rendering and original-owner capture/journal composition. The pure render
+/// entry point performs no SDK or destination IO; capture persists bytes under its original job.
 @MainActor
 enum AgentBridgeNativeDayRenderer {
     /// Compose the real native SDK adapter and frozen renderer under the original capture owner.
-    /// The result still requires durable artifact-journal publication before any transfer.
+    /// Engine identity and immutable artifact bytes are signed and fsynced before return.
+    /// Transfer manifests and receipts remain separate obligations.
     static func capture(
         day: AgentBridgeDate,
         manager: HealthKitManager,
@@ -32,13 +33,27 @@ enum AgentBridgeNativeDayRenderer {
     ) async throws -> AgentBridgeNativeRenderedDay {
         do {
             let fingerprint = try context.requestFingerprintForRead()
-            let data = try await manager.captureAgentBridgeDay(day, context: context)
             let resolution = try context.configurationForRead()
-            let result = try await render(day: day, data: data, resolution: resolution,
-                requestSHA256: fingerprint, core: core)
+            if let checkpoint = try context.retainedArtifact(day) {
+                let result = try AgentBridgeNativeArtifactJournal.restore(checkpoint, day: day, resolution: resolution, fingerprint: fingerprint)
+                _ = try context.configurationForRead(); return result
+            }
+            let prepared = try await core.loadContext()
+            try validateCore(prepared, resolution: resolution)
+            let engine = try AgentBridgeNativeArtifactJournal.engine(info: prepared.buildInfo, resolution: resolution)
+            try context.beginArtifact(day, engine: engine)
+            let data = try await manager.captureAgentBridgeDay(day, context: context)
+            let result = try await render(day: day, data: data, resolution: context.configurationForRead(),
+                requestSHA256: fingerprint, core: PreparedBridgeCore(context: prepared, core: core))
+            guard result.buildInfo == prepared.buildInfo else { throw AgentBridgeNativeRenderFailure.incompatibleCore }
+            try context.commitArtifact(day, engine: engine, payload: AgentBridgeNativeArtifactJournal.payload(result))
             _ = try context.configurationForRead()
             return result
-        } catch { context.invalidate(); throw error }
+        } catch {
+            context.invalidate()
+            if error is CancellationError || error is AgentBridgeValidationError || error is AgentBridgeNativeRenderFailure { throw error }
+            throw AgentBridgeNativeRenderFailure.renderFailed
+        }
     }
 
     static func render(
@@ -65,19 +80,8 @@ enum AgentBridgeNativeDayRenderer {
             guard path.hasSuffix(".json") else { throw AgentBridgeNativeRenderFailure.invalidInput }
             let context = try await core.loadContext()
             try Task.checkCancellation()
+            try validateCore(context, resolution: resolution)
             let info = context.buildInfo, registry = context.registry
-            guard info.coreApiVersion == 5, info.semanticInputVersion == 1, info.canonicalModelVersion == 1,
-                  info.renderInputVersion == 1, info.artifactPlanVersion == 1, info.renderProfileRevision == 2,
-                  info.registryVersion == 1, registry.registryVersion == 1, registry.profileRevision == 1,
-                  registry.profileId == "apple_health_data_v8", registry.publicProfileId == "apple-v8",
-                  registry.publicSchema == "healthmd.health_data", registry.publicSchemaVersion == 8,
-                  registry.registrySha256 == resolution.registrySHA256, info.registrySha256 == registry.registrySha256,
-                  !info.coreSourceRevision.isEmpty, info.coreSourceRevision.utf8.count <= 256 else { throw AgentBridgeNativeRenderFailure.incompatibleCore }
-            guard resolution.selection.allSatisfy({ selected in registry.metrics.contains {
-                $0.semanticId == selected.semanticID && $0.selectionId == selected.nativeMetricID &&
-                $0.categoryId == selected.nativeCategoryID && $0.sourceSelector == selected.sourceSelector &&
-                $0.sourceAggregation == selected.sourceReducer && $0.unit == selected.canonicalUnit
-            } }) else { throw AgentBridgeNativeRenderFailure.incompatibleCore }
             let sessionID = requestSHA256 + "-" + day.rawValue
             let selected = Set(resolution.selection.map(\.semanticID))
             guard !selected.isEmpty, selected.count == resolution.selection.count,
@@ -135,5 +139,33 @@ enum AgentBridgeNativeDayRenderer {
         } catch is CancellationError { throw CancellationError() }
         catch let failure as AgentBridgeNativeRenderFailure { throw failure }
         catch { throw AgentBridgeNativeRenderFailure.renderFailed }
+    }
+    private static func validateCore(_ context: AppleLooseDailyCoreContext, resolution: AgentBridgeRequestSettingsResolution) throws {
+        let info = context.buildInfo, registry = context.registry
+        guard info.coreApiVersion == 5, info.semanticInputVersion == 1, info.canonicalModelVersion == 1,
+              info.renderInputVersion == 1, info.artifactPlanVersion == 1, info.renderProfileRevision == 2,
+              info.registryVersion == 1, registry.registryVersion == 1, registry.profileRevision == 1,
+              registry.profileId == "apple_health_data_v8", registry.publicProfileId == "apple-v8",
+              registry.publicSchema == "healthmd.health_data", registry.publicSchemaVersion == 8,
+              registry.registrySha256 == resolution.registrySHA256, info.registrySha256 == registry.registrySha256,
+              !info.coreSourceRevision.isEmpty, info.coreSourceRevision.utf8.count <= 256 else { throw AgentBridgeNativeRenderFailure.incompatibleCore }
+        guard resolution.selection.allSatisfy({ selected in registry.metrics.contains {
+            $0.semanticId == selected.semanticID && $0.selectionId == selected.nativeMetricID &&
+            $0.categoryId == selected.nativeCategoryID && $0.sourceSelector == selected.sourceSelector &&
+            $0.sourceAggregation == selected.sourceReducer && $0.unit == selected.canonicalUnit
+        } }) else { throw AgentBridgeNativeRenderFailure.incompatibleCore }
+    }
+
+}
+
+nonisolated private struct PreparedBridgeCore: AppleLooseDailyCoreExecuting {
+    let context: AppleLooseDailyCoreContext
+    let core: any AppleLooseDailyCoreExecuting
+    func loadContext() async throws -> AppleLooseDailyCoreContext { context }
+    func processSemantic(configuration: Data, batches: [Data]) async throws -> Data {
+        try await core.processSemantic(configuration: configuration, batches: batches)
+    }
+    func render(configuration: Data, semanticResult: Data, batches: [Data]) async throws -> CoreArtifactPlan {
+        try await core.render(configuration: configuration, semanticResult: semanticResult, batches: batches)
     }
 }

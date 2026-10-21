@@ -4,6 +4,9 @@ import Foundation
 import HealthMdConnectionCore
 import HealthMdCoreRust
 import XCTest
+#if os(iOS)
+import UIKit
+#endif
 #if canImport(HealthMd)
 import HealthKit
 @testable import HealthMd
@@ -714,6 +717,161 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testRetainedArtifactReusesExactBytesWithoutSDKOrCurrentCoreEmpty() async throws { try await assertRetainedArtifactReusesExactBytes(value: nil) }
+    func testRetainedArtifactReusesExactBytesWithoutSDKOrCurrentCoreZero() async throws { try await assertRetainedArtifactReusesExactBytes(value: 0) }
+    func testRetainedArtifactReusesExactBytesWithoutSDKOrCurrentCorePopulated() async throws { try await assertRetainedArtifactReusesExactBytes(value: 123) }
+
+    private func assertRetainedArtifactReusesExactBytes(value: Double?) async throws {
+        var original: AgentBridgeNativeRenderedDay?
+        try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { rig, planner, request, store, manager, failure in
+            XCTAssertNil(failure)
+            let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "must-not-query", code: 1)
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin()
+                let result = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"),
+                    manager: manager, context: context, core: BridgeRenderTamperCore(mode: "forbid"))
+                let expected = try XCTUnwrap(original)
+                XCTAssertEqual(result.artifact.id, expected.artifact.id)
+                let bytes = try result.artifact.content.materializedData()
+                let expectedBytes = try expected.artifact.content.materializedData()
+                XCTAssertEqual(bytes, expectedBytes)
+                XCTAssertEqual(result.buildInfo, expected.buildInfo)
+            }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+            XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        }) { _, context, store, manager in
+            if let value { store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = value }
+            original = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager, context: context)
+        }
+    }
+
+    func testRetainedArtifactMissingCorruptOrAmbiguousFilesNeverRegenerateMissing() async throws { try await assertRetainedArtifactNeverRegenerates(mode: "missing") }
+    func testRetainedArtifactMissingCorruptOrAmbiguousFilesNeverRegenerateBoth() async throws { try await assertRetainedArtifactNeverRegenerates(mode: "both") }
+    func testRetainedArtifactMissingCorruptOrAmbiguousFilesNeverRegenerateCorrupt() async throws { try await assertRetainedArtifactNeverRegenerates(mode: "corrupt") }
+    func testRetainedArtifactMissingCorruptOrAmbiguousFilesNeverRegenerateEngine() async throws { try await assertRetainedArtifactNeverRegenerates(mode: "engine") }
+    func testRetainedArtifactMissingCorruptOrAmbiguousFilesNeverRegenerateInterrupted() async throws { try await assertRetainedArtifactNeverRegenerates(mode: "interrupted") }
+
+    private func assertRetainedArtifactNeverRegenerates(mode: String) async throws {
+        do { try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { rig, planner, request, store, manager, failure in
+            XCTAssertEqual(failure != nil, mode == "interrupted")
+            let captures = rig.directory.appendingPathComponent("captures")
+            let directory = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: captures, includingPropertiesForKeys: nil).first)
+            let artifact = directory.appendingPathComponent("artifact-2026-03-08.json")
+            switch mode {
+            case "missing", "both":
+                try FileManager.default.removeItem(at: artifact)
+                if mode == "both" { try FileManager.default.removeItem(at: directory.appendingPathComponent("artifact-started-2026-03-08.json")) }
+            case "corrupt": try Data("corrupt".utf8).write(to: artifact)
+            case "engine": try Data("corrupt".utf8).write(to: directory.appendingPathComponent("progress.json"))
+            default: break
+            }
+            do {
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin()
+                    _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager,
+                        context: context, core: BridgeRenderTamperCore(mode: "forbid"))
+                }
+                XCTFail("Missing or ambiguous artifacts must not regenerate")
+            } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+        }) { _, context, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 1
+            _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager, context: context,
+                core: BridgeRenderTamperCore(mode: mode == "interrupted" ? "profile" : "normal"))
+        } } catch { XCTAssertEqual(mode, "interrupted"); XCTAssertEqual(error as? AgentBridgeNativeRenderFailure, .invalidArtifact) }
+    }
+
+    func testArtifactRecoveryCompletesOnlyUnstartedDayAndPreservesBothArtifacts() async throws {
+        try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { _, planner, request, store, manager, failure in
+            XCTAssertNil(failure)
+            var artifacts: [String: String] = [:]
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin()
+                let first = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager,
+                    context: context, core: BridgeRenderTamperCore(mode: "forbid"))
+                let second = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-07"), manager: manager, context: context)
+                artifacts[first.day.rawValue] = first.artifact.sha256; artifacts[second.day.rawValue] = second.artifact.sha256
+                XCTAssertNotEqual(first.artifact.id, second.artifact.id)
+            }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin()
+                for day in ["2026-03-07", "2026-03-08"] {
+                    let result = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate(day), manager: manager,
+                        context: context, core: BridgeRenderTamperCore(mode: "forbid"))
+                    XCTAssertEqual(result.artifact.sha256, artifacts[day])
+                }
+            }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }) { _, context, _, manager in
+            _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager, context: context)
+        }
+    }
+
+    func testArtifactEngineMismatchRejectsUnstartedDayBeforeSDK() async throws {
+        do { try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { _, _, _, store, _, failure in
+            XCTAssertEqual(failure as? AgentBridgeValidationError, .bindingChanged)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+        }) { _, context, _, manager in
+            _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-08"), manager: manager, context: context)
+            _ = try await AgentBridgeNativeDayRenderer.capture(day: AgentBridgeDate("2026-03-07"), manager: manager, context: context,
+                core: BridgeRenderTamperCore(mode: "engine-changed"))
+        } } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+    }
+
+    func testNativeSpoolDescriptorPathMatchesOpenedSyntheticFile() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-descriptor-" + UUID().uuidString).resolvingSymlinksInPath()
+        let fd = open(url.path, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
+        XCTAssertGreaterThanOrEqual(fd, 0)
+        guard fd >= 0 else { return }
+        defer { Darwin.close(fd); try? FileManager.default.removeItem(at: url) }
+        let path = try AgentBridgeNativeCaptureSpool.protectedPath(fd)
+        // Foundation and F_GETPATH can use different aliases for the app container.
+        // The descriptor must still identify the exact synthetic fixture we opened.
+        var fixture = stat(), returned = stat()
+        XCTAssertEqual(lstat(url.path, &fixture), 0)
+        XCTAssertEqual(lstat(path, &returned), 0)
+        XCTAssertEqual(fixture.st_dev, returned.st_dev)
+        XCTAssertEqual(fixture.st_ino, returned.st_ino)
+    }
+
+    #if os(iOS)
+    func testNativeSpoolCompleteProtectionOnSyntheticDirectory() throws { try assertNativeSpoolCompleteProtection(directory: true) }
+    func testNativeSpoolCompleteProtectionOnSyntheticFile() throws { try assertNativeSpoolCompleteProtection(directory: false) }
+    private func assertNativeSpoolCompleteProtection(directory: Bool) throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-protection-" + UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: base) }
+        let target = directory ? base : base.appendingPathComponent("synthetic")
+        let fd = directory ? open(target.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC) :
+            open(target.path, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
+        XCTAssertGreaterThanOrEqual(fd, 0)
+        guard fd >= 0 else { return }
+        defer { Darwin.close(fd) }
+        do {
+            try AgentBridgeNativeCaptureSpool.protect(fd)
+            try AgentBridgeNativeCaptureSpool.verifyProtection(fd)
+        } catch {
+            let attributes = try? FileManager.default.attributesOfItem(atPath: target.path)
+            let raw = attributes?[.protectionKey]
+            let value = (raw as? FileProtectionType)?.rawValue ?? (raw as? String)
+            let classification: String
+            switch value {
+            case FileProtectionType.complete.rawValue: classification = "complete"
+            case FileProtectionType.completeUnlessOpen.rawValue: classification = "unless_open"
+            case FileProtectionType.completeUntilFirstUserAuthentication.rawValue: classification = "until_first_unlock"
+            case FileProtectionType.none.rawValue: classification = "none"
+            case nil: classification = "missing_or_unrecognized_type"
+            default: classification = "other"
+            }
+            let pathAvailable = (try? AgentBridgeNativeCaptureSpool.protectedPath(fd)) != nil
+            XCTFail("Complete protection unavailable: directory=\(directory), class=\(classification), path=\(pathAvailable), unlocked=\(UIApplication.shared.isProtectedDataAvailable)")
+            throw AgentBridgeValidationError.permissionRequired
+        }
+    }
+    #endif
+
     func testFrozenAppleSemanticProfileRequiresExplicitSelection() throws {
         let v8 = try HealthMdCoreService().metricRegistry(profile: .appleHealthDataV8)
         XCTAssertThrowsError(try HealthMdSemanticInputAdapter.sessionConfiguration(sessionID: "ordinary-default",
@@ -728,25 +886,27 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             calendarTimeZoneIdentifier: "UTC", retainPlatformExtensions: false, rollupPeriods: []))
     }
 
-    func testNativeSDKRetainedCaptureReopensSignedBytesWithoutSDKReads() async throws {
-        for value: Double? in [nil, 0, 123] {
-            try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { rig, planner, request, store, manager, failure in
-                XCTAssertNil(failure)
-                let issuerBytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
-                store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "must-not-query", code: 1)
-                for _ in 0..<3 { // Exercises independent directory inventories and lock release/reopen.
-                    try await planner.withRetainedCaptureContext(request) { context in
-                        _ = try context.begin()
-                        let result = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
-                        XCTAssertEqual(result.activity.steps, value.map(Int.init))
-                    }
+    func testNativeSDKRetainedCaptureReopensSignedBytesWithoutSDKReadsEmpty() async throws { try await assertNativeSDKRetainedCaptureReopens(value: nil) }
+    func testNativeSDKRetainedCaptureReopensSignedBytesWithoutSDKReadsZero() async throws { try await assertNativeSDKRetainedCaptureReopens(value: 0) }
+    func testNativeSDKRetainedCaptureReopensSignedBytesWithoutSDKReadsPopulated() async throws { try await assertNativeSDKRetainedCaptureReopens(value: 123) }
+
+    private func assertNativeSDKRetainedCaptureReopens(value: Double?) async throws {
+        try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { rig, planner, request, store, manager, failure in
+            XCTAssertNil(failure)
+            let issuerBytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            store.errorsForSum[HKQuantityTypeIdentifier.stepCount.rawValue] = NSError(domain: "must-not-query", code: 1)
+            for _ in 0..<3 { // Exercises independent directory inventories and lock release/reopen.
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin()
+                    let result = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
+                    XCTAssertEqual(result.activity.steps, value.map(Int.init))
                 }
-                XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
-                XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), issuerBytes)
-            }) { _, context, store, manager in
-                if let value { store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = value }
-                _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
             }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+            XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), issuerBytes)
+        }) { _, context, store, manager in
+            if let value { store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = value }
+            _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
         }
     }
 
@@ -779,45 +939,54 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
-    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDK() async throws {
-        for mode in ["header", "progress", "payload", "both", "corrupt", "extra", "permissions", "symlink", "hardlink", "started"] {
-            try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { rig, planner, request, store, manager, failure in
-                XCTAssertNil(failure)
-                let captures = rig.directory.appendingPathComponent("captures")
-                let directory = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: captures, includingPropertiesForKeys: nil).first)
-                let payload = directory.appendingPathComponent("day-2026-03-08.json")
-                switch mode {
-                case "header": try FileManager.default.removeItem(at: directory.appendingPathComponent("header.json"))
-                case "progress": try FileManager.default.removeItem(at: directory.appendingPathComponent("progress.json"))
-                case "payload", "both":
-                    try FileManager.default.removeItem(at: payload)
-                    if mode == "both" { try FileManager.default.removeItem(at: directory.appendingPathComponent("started-2026-03-08.json")) }
-                case "corrupt": try Data("corrupt".utf8).write(to: payload)
-                case "extra": try Data().write(to: directory.appendingPathComponent("unknown"))
-                case "permissions": try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: payload.path)
-                case "symlink":
-                    let moved = rig.parent.appendingPathComponent("saved-payload")
-                    try FileManager.default.moveItem(at: payload, to: moved)
-                    try FileManager.default.createSymbolicLink(at: payload, withDestinationURL: moved)
-                case "hardlink": try FileManager.default.linkItem(at: payload, to: rig.parent.appendingPathComponent("saved-payload"))
-                default: break // claimDay persisted progress and started marker without a result.
-                }
-                do {
-                    try await planner.withRetainedCaptureContext(request) { context in
-                        _ = try context.begin()
-                        _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
-                        XCTFail("Invalid retained capture must not return")
-                    }
-                    XCTFail("Invalid retained capture must fail: \(mode)")
-                } catch {
-                    XCTAssertNotNil(error as? AgentBridgeValidationError)
-                    if mode == "corrupt" { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
-                }
-                XCTAssertEqual(store.queriedSumIdentifiers.count, mode == "started" ? 0 : 1)
-            }) { _, context, _, manager in
-                if mode == "started" { _ = try context.claimDay(AgentBridgeDate("2026-03-08")) }
-                else { _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context) }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKHeader() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "header") }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKProgress() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "progress") }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKPayload() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "payload") }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKBoth() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "both") }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKCorrupt() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "corrupt") }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKExtra() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "extra") }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKPermissions() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "permissions") }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKSymlink() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "symlink") }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKHardlink() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "hardlink") }
+    func testNativeSDKRetainedCaptureRejectsMissingCorruptAndAmbiguousFilesBeforeSDKStarted() async throws { try await assertNativeSDKRetainedCaptureRejects(mode: "started") }
+
+    private func assertNativeSDKRetainedCaptureRejects(mode: String) async throws {
+        try await withNativeSDKCapture(metrics: ["steps"], afterCapture: { rig, planner, request, store, manager, failure in
+            XCTAssertNil(failure)
+            let captures = rig.directory.appendingPathComponent("captures")
+            let directory = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: captures, includingPropertiesForKeys: nil).first)
+            let payload = directory.appendingPathComponent("day-2026-03-08.json")
+            switch mode {
+            case "header": try FileManager.default.removeItem(at: directory.appendingPathComponent("header.json"))
+            case "progress": try FileManager.default.removeItem(at: directory.appendingPathComponent("progress.json"))
+            case "payload", "both":
+                try FileManager.default.removeItem(at: payload)
+                if mode == "both" { try FileManager.default.removeItem(at: directory.appendingPathComponent("started-2026-03-08.json")) }
+            case "corrupt": try Data("corrupt".utf8).write(to: payload)
+            case "extra": try Data().write(to: directory.appendingPathComponent("unknown"))
+            case "permissions": try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: payload.path)
+            case "symlink":
+                let moved = rig.parent.appendingPathComponent("saved-payload")
+                try FileManager.default.moveItem(at: payload, to: moved)
+                try FileManager.default.createSymbolicLink(at: payload, withDestinationURL: moved)
+            case "hardlink": try FileManager.default.linkItem(at: payload, to: rig.parent.appendingPathComponent("saved-payload"))
+            default: break // claimDay persisted progress and started marker without a result.
             }
+            do {
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin()
+                    _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context)
+                    XCTFail("Invalid retained capture must not return")
+                }
+                XCTFail("Invalid retained capture must fail: \(mode)")
+            } catch {
+                XCTAssertNotNil(error as? AgentBridgeValidationError)
+                if mode == "corrupt" { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+            }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, mode == "started" ? 0 : 1)
+        }) { _, context, _, manager in
+            if mode == "started" { _ = try context.claimDay(AgentBridgeDate("2026-03-08")) }
+            else { _ = try await manager.captureAgentBridgeDay(AgentBridgeDate("2026-03-08"), context: context) }
         }
     }
 
@@ -3318,7 +3487,13 @@ nonisolated private struct BridgeRenderTamperCore: AppleLooseDailyCoreExecuting 
     private var actual: SystemAppleLooseDailyCoreExecutor { .init(profile: .appleHealthDataV8) }
     func loadContext() async throws -> AppleLooseDailyCoreContext {
         if mode == "registry" { return try await SystemAppleLooseDailyCoreExecutor().loadContext() }
-        return try await actual.loadContext()
+        if mode == "forbid" { XCTFail("Retained artifact must not consult current core"); throw AgentBridgeNativeRenderFailure.renderFailed }
+        var result = try await actual.loadContext()
+        if mode == "engine-changed" {
+            var info = result.buildInfo; info.coreSourceRevision += "-other"
+            result = .init(buildInfo: info, registry: result.registry)
+        }
+        return result
     }
     func processSemantic(configuration: Data, batches: [Data]) async throws -> Data {
         try await actual.processSemantic(configuration: configuration, batches: batches)

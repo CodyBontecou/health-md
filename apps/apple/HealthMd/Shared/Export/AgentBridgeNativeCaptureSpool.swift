@@ -3,8 +3,8 @@ import Darwin
 import Foundation
 import HealthMdConnectionCore
 
-/// Independently versioned, native-only captured bytes. It is not a portable file, transfer
-/// journal or permission token. The accepted job, protected key and original native fence own it.
+/// Private captured values, engine identity and immutable generated artifacts. This is not a
+/// transfer journal or permission token. The accepted job, protected key and original fence own it.
 @MainActor
 final class AgentBridgeNativeCaptureSpool {
     nonisolated private struct Record: Codable, Equatable {
@@ -19,7 +19,16 @@ final class AgentBridgeNativeCaptureSpool {
     }
     nonisolated private struct Signed: Codable { let record: Record; let mac: Data }
     private static let domain = Data("HealthMd.AgentBridge.NativeCaptureSpool.v1\0".utf8)
+    nonisolated private struct Progress: Codable {
+        let version: Int
+        var captures: [String]
+        var artifacts: [String]
+        var engine: Data
+    }
+    nonisolated struct ArtifactCheckpoint: Sendable { let engine: Data; let payload: Data }
     private static let payloadLimit = 64 * 1024
+    private static let progressLimit = 256 * 1024
+    private static let recordLimit = 512 * 1024
     private static let jobLimit = 64 * 1024 * 1024
     private let reservation: AgentBridgeExportCaptureReservation
     private let key: SymmetricKey
@@ -97,7 +106,8 @@ final class AgentBridgeNativeCaptureSpool {
         do {
             try check()
             let started = "started-\(day.rawValue).json", captured = "day-\(day.rawValue).json"
-            let (previous, days) = try progress()
+            let (previous, state) = try progress()
+            let days = state.captures
             if days.contains(day.rawValue) {
                 guard try exists(captured) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
                 guard try read(started) == record(kind: "started", day: day.rawValue) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
@@ -108,7 +118,8 @@ final class AgentBridgeNativeCaptureSpool {
             guard try !exists(started), try !exists(captured) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             guard days.count < 4096 else { throw AgentBridgeValidationError.queryBudgetExceeded }
             guard storedBytes + 2 * Self.payloadLimit < Self.jobLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
-            let next = try JSONEncoder().encode((days + [day.rawValue]).sorted())
+            var nextState = state; nextState.captures = (days + [day.rawValue]).sorted()
+            let next = try progressBytes(nextState)
             try publish("progress.json", record: record(kind: "progress", day: nil, payload: next), replacing: previous)
             try publish(started, record: record(kind: "started", day: day.rawValue))
             return nil
@@ -118,11 +129,60 @@ final class AgentBridgeNativeCaptureSpool {
         do {
             guard !payload.isEmpty, payload.count <= Self.payloadLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
             try check()
-            guard try progress().1.contains(day.rawValue) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            guard try progress().1.captures.contains(day.rawValue) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             guard try read("started-\(day.rawValue).json") == record(kind: "started", day: day.rawValue) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             try publish("day-\(day.rawValue).json", record: record(kind: "captured", day: day.rawValue, payload: payload))
         } catch { throw Self.safe(error) }
     }
+    /// Completed bytes are reusable without consulting the current renderer. A recorded start
+    /// without its immutable artifact is ambiguous and never permits regeneration.
+    func retainedArtifact(_ day: AgentBridgeDate) throws -> ArtifactCheckpoint? {
+        do {
+            try check()
+            let state = try progress().1
+            guard state.artifacts.contains(day.rawValue) else { return nil }
+            guard state.captures.contains(day.rawValue), !state.engine.isEmpty,
+                  try read("artifact-started-\(day.rawValue).json") == record(kind: "artifact-started", day: day.rawValue) else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            let value = try read("artifact-\(day.rawValue).json")
+            guard value.kind == "artifact", value.day == day.rawValue, !value.payload.isEmpty else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            try check(); return .init(engine: state.engine, payload: value.payload)
+        } catch { throw Self.safe(error) }
+    }
+    func beginArtifact(_ day: AgentBridgeDate, engine: Data) throws {
+        do {
+            try check()
+            let (previous, state) = try progress()
+            guard !engine.isEmpty, engine.count <= 4096 else { throw AgentBridgeValidationError.queryBudgetExceeded }
+            guard state.engine.isEmpty || state.engine == engine else { throw AgentBridgeValidationError.bindingChanged }
+            guard state.artifacts.count < 4096 else { throw AgentBridgeValidationError.queryBudgetExceeded }
+            guard !state.artifacts.contains(day.rawValue),
+                  try !exists("artifact-started-\(day.rawValue).json"), try !exists("artifact-\(day.rawValue).json") else {
+                throw AgentBridgeValidationError.busy
+            }
+            var next = state; next.artifacts = (state.artifacts + [day.rawValue]).sorted(); next.engine = engine
+            try publish("progress.json", record: record(kind: "progress", day: nil, payload: progressBytes(next)), replacing: previous)
+            try publish("artifact-started-\(day.rawValue).json", record: record(kind: "artifact-started", day: day.rawValue))
+        } catch { throw Self.safe(error) }
+    }
+    func commitArtifact(_ day: AgentBridgeDate, engine: Data, payload: Data) throws {
+        do {
+            try check()
+            let state = try progress().1
+            guard state.engine == engine, state.artifacts.contains(day.rawValue), state.captures.contains(day.rawValue),
+                  try read("artifact-started-\(day.rawValue).json") == record(kind: "artifact-started", day: day.rawValue) else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            let captured = try read("day-\(day.rawValue).json")
+            guard captured.kind == "captured", captured.day == day.rawValue, !captured.payload.isEmpty else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            guard !payload.isEmpty, payload.count <= Self.payloadLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
+            try publish("artifact-\(day.rawValue).json", record: record(kind: "artifact", day: day.rawValue, payload: payload))
+        } catch { throw Self.safe(error) }
+    }
+
     var acceptedRequestSHA256: String { reservation.job.requestSHA256.rawValue }
 
     func close() {
@@ -139,7 +199,8 @@ final class AgentBridgeNativeCaptureSpool {
               kind: kind, day: day, payload: payload)
     }
     private func validateStoredProgress() throws {
-        let (_, days) = try progress()
+        let (_, state) = try progress()
+        let days = state.captures
         var expected: Set<String> = ["lock", "header.json", "progress.json"]
         for day in days {
             let started = "started-\(day).json", captured = "day-\(day).json"
@@ -148,17 +209,34 @@ final class AgentBridgeNativeCaptureSpool {
             let value = try read(captured)
             guard value.kind == "captured", value.day == day, !value.payload.isEmpty else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         }
+        for day in state.artifacts {
+            expected.insert("artifact-started-\(day).json"); expected.insert("artifact-\(day).json")
+            guard days.contains(day), !state.engine.isEmpty,
+                  try read("artifact-started-\(day).json") == record(kind: "artifact-started", day: day) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            let value = try read("artifact-\(day).json")
+            guard value.kind == "artifact", value.day == day, !value.payload.isEmpty else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        }
         let names = Set(try Self.entries(directoryFD).filter { !Self.pendingName($0) })
         guard names == expected else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
     }
-    private func progress() throws -> (Record, [String]) {
+    private func progressBytes(_ state: Progress) throws -> Data {
+        if state.engine.isEmpty && state.artifacts.isEmpty { return try JSONEncoder().encode(state.captures) }
+        return try Self.canonical(state)
+    }
+    private func progress() throws -> (Record, Progress) {
         let value = try read("progress.json")
-        let days = try JSONDecoder().decode([String].self, from: value.payload)
-        guard value.kind == "progress", value.day == nil, days.count <= 4096,
-              Set(days).count == days.count, days == days.sorted(),
-              try JSONEncoder().encode(days) == value.payload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
-        for day in days { _ = try AgentBridgeDate(day) }
-        return (value, days)
+        let state: Progress
+        if let days = try? JSONDecoder().decode([String].self, from: value.payload) {
+            state = .init(version: 2, captures: days, artifacts: [], engine: Data())
+        } else { state = try JSONDecoder().decode(Progress.self, from: value.payload) }
+        guard value.kind == "progress", value.day == nil, state.version == 2,
+              state.engine.count <= 4096, state.artifacts.isEmpty == state.engine.isEmpty,
+              try progressBytes(state) == value.payload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        for days in [state.captures, state.artifacts] {
+            guard days.count <= 4096, Set(days).count == days.count, days == days.sorted() else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            for day in days { _ = try AgentBridgeDate(day) }
+        }
+        return (value, state)
     }
     private func check() throws { try pins(); try fence(); try pins() }
     private func pins() throws {
@@ -185,7 +263,7 @@ final class AgentBridgeNativeCaptureSpool {
         defer { Darwin.close(fd) }
         try Self.verifyProtection(fd)
         var value = stat()
-        guard fstat(fd, &value) == 0, value.st_size >= 0, value.st_size <= 2 * Self.payloadLimit else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        guard fstat(fd, &value) == 0, value.st_size >= 0, value.st_size <= Self.recordLimit else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         return Int(value.st_size)
     }
     private func read(_ name: String) throws -> Record {
@@ -199,7 +277,7 @@ final class AgentBridgeNativeCaptureSpool {
             guard try Self.canonical(value) == canonical,
                   HMAC<SHA256>.isValidAuthenticationCode(value.mac, authenticating: Self.domain + (try Self.canonical(value.record)), using: key),
                   value.record == self.record(kind: value.record.kind, day: value.record.day, payload: value.record.payload),
-                  value.record.payload.count <= Self.payloadLimit else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                  value.record.payload.count <= (value.record.kind == "progress" ? Self.progressLimit : Self.payloadLimit) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             record = value.record
         } catch { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         try check(); return record
@@ -207,7 +285,7 @@ final class AgentBridgeNativeCaptureSpool {
     private func publish(_ name: String, record: Record, replacing previous: Record? = nil) throws {
         let body = try Self.canonical(record)
         let bytes = try Self.canonical(Signed(record: record, mac: Data(HMAC<SHA256>.authenticationCode(for: Self.domain + body, using: key))))
-        guard bytes.count <= 2 * Self.payloadLimit, storedBytes + bytes.count <= Self.jobLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
+        guard bytes.count <= Self.recordLimit, storedBytes + bytes.count <= Self.jobLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
         let previousBytes = try previous.map { value in
             try Self.canonical(Signed(record: value, mac: Data(HMAC<SHA256>.authenticationCode(for: Self.domain + (try Self.canonical(value)), using: key))))
         }
@@ -257,26 +335,27 @@ final class AgentBridgeNativeCaptureSpool {
             guard fsync(fd) == 0, fsync(parent) == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         }
     }
-    private static func protect(_ fd: Int32) throws {
+    static func protect(_ fd: Int32) throws {
         #if os(iOS)
         let path = try protectedPath(fd)
         try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: path)
         try verifyProtection(fd)
         #endif
     }
-    private static func verifyProtection(_ fd: Int32) throws {
+    static func verifyProtection(_ fd: Int32) throws {
         #if os(iOS)
         let path = try protectedPath(fd)
         let attributes = try FileManager.default.attributesOfItem(atPath: path)
         // Foundation returns the protection attribute as NSString, not FileProtectionType.
-        guard attributes[.protectionKey] as? String == FileProtectionType.complete.rawValue,
+        let value = attributes[.protectionKey]
+        let protection = (value as? FileProtectionType)?.rawValue ?? (value as? String)
+        guard protection == FileProtectionType.complete.rawValue,
               try protectedPath(fd) == path else { throw AgentBridgeValidationError.permissionRequired }
         #endif
     }
-    #if os(iOS)
     /// Foundation owns the public protection-class mapping. Pin its pathname to the original
     /// descriptor before and after attribute work; never repair protection while opening a spool.
-    private static func protectedPath(_ fd: Int32) throws -> String {
+    static func protectedPath(_ fd: Int32) throws -> String {
         var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
         guard fcntl(fd, F_GETPATH, &buffer) == 0 else { throw AgentBridgeValidationError.permissionRequired }
         let path = String(cString: buffer)
@@ -286,7 +365,6 @@ final class AgentBridgeNativeCaptureSpool {
               named.st_mode & mode_t(S_IFMT) != mode_t(S_IFLNK) else { throw AgentBridgeValidationError.bindingChanged }
         return path
     }
-    #endif
     private static func entries(_ fd: Int32) throws -> [String] {
         // dup shares the original directory cursor. Each inventory needs a fresh description.
         let inventoryFD = openat(fd, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
@@ -303,13 +381,13 @@ final class AgentBridgeNativeCaptureSpool {
                 pointer.withMemoryRebound(to: CChar.self, capacity: Int(MAXNAMLEN) + 1) { String(cString: $0) }
             }
             if name == "." || name == ".." { continue }
-            guard result.count < 8258 else { throw AgentBridgeValidationError.queryBudgetExceeded }
+            guard result.count < 16450 else { throw AgentBridgeValidationError.queryBudgetExceeded }
             result.append(name)
         }
         guard errno == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         return result
     }
-    private static func dayName(_ name: String) -> Bool { name.range(of: "^(started|day)-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$", options: .regularExpression) != nil }
+    private static func dayName(_ name: String) -> Bool { name.range(of: "^(artifact-started|artifact|started|day)-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$", options: .regularExpression) != nil }
     private static func pendingName(_ name: String) -> Bool { name.range(of: "^pending-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", options: .regularExpression) != nil }
     private static func safe(_ error: Error) -> Error {
         if error is CancellationError || error is AgentBridgeValidationError { return error }

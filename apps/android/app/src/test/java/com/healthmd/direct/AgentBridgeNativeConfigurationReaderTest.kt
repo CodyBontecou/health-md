@@ -194,7 +194,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                         val result = bridgeRenderedPlan(request, resolution, mode)
                         if (mode == "owner") f.peerContext.trusted = false
                         result
-                    })
+                    }, pinLoader = { testPin(ExportEngineMode.rust).copy(registrySha256 = resolution.registrySha256) })
                     try {
                         val result = renderer.capture("2026-03-08", manager, context)
                         assertThat(mode).isEqualTo("normal")
@@ -211,6 +211,128 @@ class AgentBridgeNativeConfigurationReaderTest {
                 assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED)
             }
         }
+    }
+
+    private fun journalRenderer(resolution: AgentBridgeRequestSettingsResolution, mode: String = "normal") =
+        AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { request -> bridgeRenderedPlan(request, resolution, mode) },
+            pinLoader = { testPin(ExportEngineMode.rust).copy(registrySha256 = resolution.registrySha256,
+                coreSourceRevision = if (mode == "engine-changed") "other-source" else testPin(ExportEngineMode.rust).coreSourceRevision) })
+
+    @Test fun `retained artifacts return exact bytes without SDK or current core`() = runBlocking {
+        var original: AgentBridgeNativeRenderedDay? = null
+        withNativeSDKCapture(listOf("steps"), afterCapture = { f, planner, request, client, manager, failure ->
+            assertThat(failure).isNull()
+            val before = f.store.access { it!!.state }
+            coEvery { client.aggregate(any()) } throws AssertionError("Retained artifact must not query SDK")
+            planner.withRetainedCaptureContext(request) { context ->
+                context.begin()
+                val renderer = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { throw AssertionError("Must not render") },
+                    pinLoader = { throw AssertionError("Must not load current core") })
+                val result = renderer.capture("2026-03-08", manager, context)
+                assertThat(result.artifact).isEqualTo(original!!.artifact)
+                assertThat(result.pin).isEqualTo(original!!.pin)
+            }
+            coVerify(exactly = 1) { client.aggregate(any()) }
+            assertThat(f.store.access { it!!.state }).isEqualTo(before)
+        }) { _, context, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 0L
+            coEvery { client.aggregate(any()) } returns values
+            original = journalRenderer(context.configurationForRead()).capture("2026-03-08", manager, context)
+        }
+    }
+
+    @Test fun `missing corrupt and ambiguous artifacts never regenerate`() = runBlocking {
+        for (mode in listOf("missing", "both", "corrupt", "engine", "interrupted")) {
+            try {
+                withNativeSDKCapture(listOf("steps"), afterCapture = { f, planner, request, client, manager, failure ->
+                    assertThat(failure != null).isEqualTo(mode == "interrupted")
+                    val captures = Files.walk(f.parent).use { paths -> paths.filter { it.fileName.toString() == "captures" }.findFirst().get() }
+                    val directory = Files.newDirectoryStream(captures).use { it.first() }
+                    val artifact = directory.resolve("artifact-2026-03-08.json")
+                    when (mode) {
+                        "missing", "both" -> { Files.delete(artifact); if (mode == "both") Files.delete(directory.resolve("artifact-started-2026-03-08.json")) }
+                        "corrupt" -> Files.write(artifact, "corrupt".toByteArray())
+                        "engine" -> Files.write(directory.resolve("progress.json"), "corrupt".toByteArray())
+                    }
+                    try {
+                        planner.withRetainedCaptureContext(request) { context ->
+                            context.begin()
+                            AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { throw AssertionError("Must not render") },
+                                pinLoader = { throw AssertionError("Must not load current core") }).capture("2026-03-08", manager, context)
+                        }
+                        throw AssertionError("Invalid artifact returned")
+                    } catch (error: AgentBridgeException) { assertThat(error.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+                    coVerify(exactly = 1) { client.aggregate(any()) }
+                }) { _, context, client, manager ->
+                    val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 1L
+                    coEvery { client.aggregate(any()) } returns values
+                    journalRenderer(context.configurationForRead(), if (mode == "interrupted") "profile" else "normal").capture("2026-03-08", manager, context)
+                }
+            } catch (error: AgentBridgeNativeRenderException) { assertThat(mode).isEqualTo("interrupted"); assertThat(error.code).isEqualTo(AgentBridgeNativeRenderFailure.INVALID_ARTIFACT) }
+        }
+    }
+
+    @Test fun `artifact recovery completes only unstarted day and preserves both`() = runBlocking {
+        withNativeSDKCapture(listOf("steps"), afterCapture = { _, planner, request, client, manager, failure ->
+            assertThat(failure).isNull()
+            val digests = mutableMapOf<String, String>()
+            planner.withRetainedCaptureContext(request) { context ->
+                context.begin()
+                val renderer = journalRenderer(context.configurationForRead())
+                val first = renderer.capture("2026-03-08", manager, context)
+                val second = renderer.capture("2026-03-07", manager, context)
+                digests[first.day] = first.artifact.sha256; digests[second.day] = second.artifact.sha256
+                assertThat(first.artifact.artifactId).isNotEqualTo(second.artifact.artifactId)
+            }
+            planner.withRetainedCaptureContext(request) { context ->
+                context.begin()
+                val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { throw AssertionError("Must not render") },
+                    pinLoader = { throw AssertionError("Must not load current core") })
+                for (day in listOf("2026-03-07", "2026-03-08")) assertThat(forbidden.capture(day, manager, context).artifact.sha256).isEqualTo(digests[day])
+            }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }) { _, context, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 1L
+            coEvery { client.aggregate(any()) } returns values
+            journalRenderer(context.configurationForRead()).capture("2026-03-08", manager, context)
+        }
+    }
+
+    @Test fun `concurrent artifact days preserve signed frontiers and reopen`() = runBlocking {
+        withNativeSDKCapture(listOf("steps"), afterCapture = { _, planner, request, client, manager, failure ->
+            assertThat(failure).isNull()
+            planner.withRetainedCaptureContext(request) { context ->
+                context.begin()
+                val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { throw AssertionError("Must not render") },
+                    pinLoader = { throw AssertionError("Must not load current core") })
+                for (day in listOf("2026-03-07", "2026-03-08")) assertThat(forbidden.capture(day, manager, context).day).isEqualTo(day)
+            }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }) { _, context, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 1L
+            coEvery { client.aggregate(any()) } coAnswers { yield(); values }
+            val renderer = journalRenderer(context.configurationForRead())
+            coroutineScope {
+                val a = async(Dispatchers.Default) { renderer.capture("2026-03-07", manager, context) }
+                val b = async(Dispatchers.Default) { renderer.capture("2026-03-08", manager, context) }
+                assertThat(a.await().artifact.relativePath).isNotEqualTo(b.await().artifact.relativePath)
+            }
+        }
+    }
+
+    @Test fun `artifact engine mismatch rejects unstarted day before SDK`() = runBlocking {
+        try {
+            withNativeSDKCapture(listOf("steps"), afterCapture = { _, _, _, client, _, failure ->
+                assertThat((failure as AgentBridgeException).code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED)
+                coVerify(exactly = 1) { client.aggregate(any()) }
+            }) { _, context, client, manager ->
+                val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 1L
+                coEvery { client.aggregate(any()) } returns values
+                val resolution = context.configurationForRead()
+                journalRenderer(resolution).capture("2026-03-08", manager, context)
+                journalRenderer(resolution, "engine-changed").capture("2026-03-07", manager, context)
+            }
+        } catch (error: AgentBridgeException) { assertThat(error.code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED) }
     }
 
     /** Separate host JNI qualification. Default JVM runs report this native-dependent case skipped;

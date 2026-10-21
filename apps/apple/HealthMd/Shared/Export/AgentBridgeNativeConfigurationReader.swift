@@ -357,6 +357,27 @@ final class AgentBridgeNativeCaptureContext {
             _ = try configurationForRead()
         } catch { close(); throw error }
     }
+    func retainedArtifact(_ day: AgentBridgeDate) throws -> AgentBridgeNativeCaptureSpool.ArtifactCheckpoint? {
+        do {
+            guard try configurationForRead().requestedDays.contains(day) else { throw AgentBridgeValidationError.invalidRequest }
+            let result = try spool.retainedArtifact(day)
+            _ = try configurationForRead(); return result
+        } catch { invalidate(); throw error }
+    }
+    func beginArtifact(_ day: AgentBridgeDate, engine: Data) throws {
+        do {
+            guard try configurationForRead().requestedDays.contains(day) else { throw AgentBridgeValidationError.invalidRequest }
+            try spool.beginArtifact(day, engine: engine)
+            _ = try configurationForRead()
+        } catch { invalidate(); throw error }
+    }
+    func commitArtifact(_ day: AgentBridgeDate, engine: Data, payload: Data) throws {
+        do {
+            guard try configurationForRead().requestedDays.contains(day) else { throw AgentBridgeValidationError.invalidRequest }
+            try spool.commitArtifact(day, engine: engine, payload: payload)
+            _ = try configurationForRead()
+        } catch { invalidate(); throw error }
+    }
     /// A fingerprint names the original accepted bytes; it never grants capture permission.
     func requestFingerprintForRead() throws -> String {
         _ = try configurationForRead()
