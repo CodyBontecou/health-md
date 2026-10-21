@@ -538,7 +538,7 @@ class AgentBridgeNativeConfigurationReaderTest {
             val manifest=AgentBridgeCodec.decode(original.export.manifestCanonical) as AgentBridgeArtifactManifest
             val hostReceipts=manifest.artifacts.map { nativeHostCommit(it,request,original.export.manifestCanonical,mode=="complete-bad-input") }.toMutableList()
             if(mode=="complete-order")hostReceipts.reverse()
-            if(mode=="complete-missing")hostReceipts.removeLast()
+            if(mode=="complete-missing")hostReceipts.removeAt(hostReceipts.lastIndex)
             var completionDirectory:java.nio.file.Path?=null
 
             if (mode == "resume" || mode == "rewind") planner.withRetainedCaptureContext(request) { context ->
