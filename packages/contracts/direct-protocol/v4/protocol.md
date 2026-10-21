@@ -177,6 +177,21 @@ preserved artifact and commit receipts without new reads. A local timeout or MCP
 waiting only; durable source cancellation requires `cancel_request` scope/authority verification and
 source-acknowledged `execution_receipt: cancelled`.
 
+### Original-owner output confirmation ordering
+
+After the original base transfer is durably received and its exact outputs committed, the host sends
+v4 `commit_receipt` messages in immutable manifest order. The native source validates and durably
+journals every exact receipt before preserving its source completion record. It then sends base
+`completionConfirmed` followed by the exact v4 `execution_receipt`. The host requires both original
+messages and durably records the terminal facts before returning completion. Base final acknowledgement,
+a cached caller DTO or an interrupted confirmation is insufficient. Missing or changed signed journals,
+retained bytes, installed outputs or current authority reject at the final send/return fence; checking
+permission before a later callback cannot establish durable evidence after that callback.
+
+These existing message semantics change no schema, discriminator, base frame or export profile.
+The original-owner native/host helpers have synthetic qualification; immutable host Resume, installed
+orchestration and complete physical CLI/MCP acceptance remain separate implementation gates.
+
 ## Closed configuration planning and approval relay
 
 V4 relays native profile/destination/schedule controls. Host recipe/schedule stores use the same closed

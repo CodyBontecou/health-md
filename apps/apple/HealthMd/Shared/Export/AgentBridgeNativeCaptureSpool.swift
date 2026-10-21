@@ -68,6 +68,11 @@ final class AgentBridgeNativeCaptureSpool {
     private var identities: [AgentBridgeExportFileIdentity] = []
     private var storedBytes = 0
     private var closed = false
+    private struct CompletionFileEvidence { let count: Int; let sha256: String; let identity: AgentBridgeExportFileIdentity }
+    private var collectingCompletionEvidence: [String: CompletionFileEvidence]?
+    private var completionEvidence: [String: CompletionFileEvidence]?
+    private var completionReceipt: AgentBridgeExecutionReceipt?
+
 
     init(issuer: URL, reservation: AgentBridgeExportCaptureReservation, key: SymmetricKey, create: Bool,
          fileProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection(),
@@ -107,7 +112,7 @@ final class AgentBridgeNativeCaptureSpool {
             guard try fileSize("lock") == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             try check()
             for name in try Self.entries(directoryFD) {
-                guard name == "lock" || name == "header.json" || name == "progress.json" || name == "manifest.json" || name == "transfer.json" || Self.dayName(name) || Self.pendingName(name) else {
+                guard name == "lock" || name == "header.json" || name == "progress.json" || name == "manifest.json" || name == "transfer.json" || name == "completion.json" || Self.hostCommitName(name) || Self.dayName(name) || Self.pendingName(name) else {
                     throw AgentBridgeValidationError.spoolMissingRestartRequired
                 }
                 storedBytes += try fileSize(name)
@@ -432,6 +437,122 @@ final class AgentBridgeNativeCaptureSpool {
         try check(); return frontier
     }
 
+    /// Each signed receipt is its own atomic journal entry; the manifest supplies its fixed
+    /// position. A contiguous authenticated set needs no separately updated counter.
+    func recordHostCommit(_ receipt: AgentBridgeCommitReceipt) throws {
+        do {
+            try check(); try validateStoredProgress()
+            let state = try progress().1
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: readManifest(state))
+            let commits = try readHostCommits(state, manifest: manifest)
+            guard let index = manifest.artifacts.firstIndex(where: { $0.artifactId == receipt.artifactId }),
+                  index <= commits.count else { throw AgentBridgeValidationError.bindingChanged }
+            try validateHostCommit(receipt, artifact: manifest.artifacts[index], manifest: manifest)
+            guard try checkedTransferFrontier(state).committedPartitionCount == Int64(manifest.artifacts.count) else { throw AgentBridgeValidationError.bindingChanged }
+            if index < commits.count {
+                try AgentBridgeSemantics.validateCommitReplay(receipt, persisted: commits[index])
+            } else {
+                try publish("host-commit-\(receipt.artifactId.rawValue).json", record: record(kind: "host_commit", day: receipt.artifactId.rawValue,
+                    payload: AgentBridgeV4Codec.encode(receipt)))
+            }
+            try validateStoredProgress(); try check()
+        } catch { throw Self.safe(error) }
+    }
+    /// Persist the exact source-owned acknowledgement before any confirmation send. This is
+    /// recoverable source state, not evidence that the host received the confirmation.
+    func preserveCompletion() throws -> AgentBridgeExecutionReceipt {
+        do {
+            try check(); try validateStoredProgress()
+            let state = try progress().1
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: readManifest(state))
+            guard try readHostCommits(state, manifest: manifest).count == manifest.artifacts.count else { throw AgentBridgeValidationError.bindingChanged }
+            let receipt = try completionCandidate(state, manifest: manifest)
+            let bytes = try AgentBridgeV4Codec.encode(receipt)
+            if try exists("completion.json") {
+                guard try read("completion.json") == record(kind: "completion", day: nil, payload: bytes) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            } else { try publish("completion.json", record: record(kind: "completion", day: nil, payload: bytes)) }
+            // Collect only bytes whose signed records and original plan hashes were validated.
+            // The snapshot is immutable across all subsequent native authority callbacks.
+            collectingCompletionEvidence = [:]
+            defer { collectingCompletionEvidence = nil }
+            guard try read("header.json") == record(kind: "job", day: nil) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            try validateStoredProgress()
+            completionEvidence = collectingCompletionEvidence
+            completionReceipt = receipt
+            try check(); try requirePreservedCompletion(receipt); return receipt
+        } catch { throw Self.safe(error) }
+    }
+    func requireCompletionIfPreserved() throws {
+        if let receipt = completionReceipt { try requirePreservedCompletion(receipt) }
+    }
+    /// Local-only tail: never re-create missing evidence or call native/SDK callbacks here.
+    func requirePreservedCompletion(_ receipt: AgentBridgeExecutionReceipt) throws {
+        do {
+            try pins(includeProtection: false)
+            guard completionReceipt == receipt, let evidence = completionEvidence,
+                  evidence["completion.json"] != nil,
+                  Set(try Self.entries(directoryFD).filter { !Self.pendingName($0) }) == Set(evidence.keys).union(["lock"]) else {
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            for (name, expected) in evidence {
+                let bytes = try AgentBridgeExportPrivateFiles.read(directoryFD, name, maximumBytes: expected.count) { fd in
+                    guard try AgentBridgeExportPrivateFiles.identity(fd) == expected.identity else { throw AgentBridgeValidationError.bindingChanged }
+                }
+                guard bytes.count == expected.count, AgentBridgeV4Codec.sha256(bytes) == expected.sha256 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            }
+            try pins(includeProtection: false)
+        } catch { throw Self.safe(error) }
+    }
+    private static func hostCommitName(_ name: String) -> Bool {
+        name.range(of: "^host-commit-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.json$", options: .regularExpression) != nil
+    }
+    private func validateHostCommit(_ receipt: AgentBridgeCommitReceipt, artifact: AgentBridgeArtifact,
+        manifest: AgentBridgeArtifactManifest) throws {
+        let request = try reservation.job.request()
+        try AgentBridgeSemantics.validate(receipt)
+        guard receipt.status != .conflict, receipt.jobId == request.jobId,
+              receipt.artifactId == artifact.artifactId, receipt.peer == request.plan.intent.peer,
+              receipt.destination == request.plan.intent.destination, receipt.requestSha256 == reservation.job.requestSHA256,
+              receipt.manifestSha256.rawValue == AgentBridgeV4Codec.sha256(try AgentBridgeV4Codec.encode(manifest)),
+              receipt.relativePath == artifact.relativePath, receipt.writeMode.rawValue == artifact.writeMode.rawValue,
+              receipt.inputSha256 == artifact.sha256,
+              receipt.writeMode != .overwrite || receipt.afterSha256 == receipt.inputSha256 else { throw AgentBridgeValidationError.bindingChanged }
+    }
+    private func readHostCommits(_ state: Progress, manifest: AgentBridgeArtifactManifest) throws -> [AgentBridgeCommitReceipt] {
+        var result: [AgentBridgeCommitReceipt] = []; var missing = false
+        for artifact in manifest.artifacts {
+            let name = "host-commit-\(artifact.artifactId.rawValue).json"
+            if try !exists(name) { missing = true; continue }
+            guard !missing else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            let value = try read(name)
+            let receipt = try AgentBridgeV4Codec.decode(AgentBridgeCommitReceipt.self, from: value.payload)
+            guard value.kind == "host_commit", value.day == artifact.artifactId.rawValue,
+                  try AgentBridgeV4Codec.encode(receipt) == value.payload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            try validateHostCommit(receipt, artifact: artifact, manifest: manifest)
+            result.append(receipt)
+        }
+        if !result.isEmpty {
+            guard try checkedTransferFrontier(state).committedPartitionCount == Int64(manifest.artifacts.count) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        }
+        return result
+    }
+    private func completionCandidate(_ state: Progress, manifest: AgentBridgeArtifactManifest) throws -> AgentBridgeExecutionReceipt {
+        let frontier = try checkedTransferFrontier(state)
+        guard frontier.committedPartitionCount == Int64(manifest.artifacts.count) else { throw AgentBridgeValidationError.bindingChanged }
+        let status: AgentBridgeExecutionReceiptStatus
+        switch manifest.captureStatus {
+        case .complete: status = .complete
+        case .completeEmpty: status = .completeEmpty
+        case .partial: status = .partial
+        default: throw AgentBridgeValidationError.bindingChanged
+        }
+        let request = try reservation.job.request()
+        return .init(artifactCount: Int64(manifest.artifacts.count), binding: AgentBridgeSemantics.binding(request.plan),
+            committedPartitionCount: frontier.committedPartitionCount, expiresAt: reservation.job.expiresAt, frontierSha256: frontier.sha256,
+            jobId: request.jobId, manifestSha256: try AgentBridgeDigest(AgentBridgeV4Codec.sha256(AgentBridgeV4Codec.encode(manifest))),
+            requestSha256: reservation.job.requestSHA256, sourceAcknowledged: true, status: status)
+    }
+
     var acceptedRequestSHA256: String { reservation.job.requestSHA256.rawValue }
 
     func close() {
@@ -474,6 +595,16 @@ final class AgentBridgeNativeCaptureSpool {
             _ = try readTransferPlan(state)
         }
         if state.version == 6 { _ = try checkedTransferFrontier(state) }
+        if state.manifestSHA256 != nil {
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: readManifest(state))
+            let commits = try readHostCommits(state, manifest: manifest)
+            for receipt in commits { expected.insert("host-commit-\(receipt.artifactId.rawValue).json") }
+            if try exists("completion.json") {
+                guard commits.count == manifest.artifacts.count,
+                      try read("completion.json") == record(kind: "completion", day: nil, payload: AgentBridgeV4Codec.encode(completionCandidate(state, manifest: manifest))) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                expected.insert("completion.json")
+            }
+        }
         let names = Set(try Self.entries(directoryFD).filter { !Self.pendingName($0) })
         guard names == expected else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
     }
@@ -601,10 +732,17 @@ final class AgentBridgeNativeCaptureSpool {
         try readProtectedFile(name, maximumBytes: Self.recordLimit)
     }
     private func readProtectedFile(_ name: String, maximumBytes: Int) throws -> Data {
-        try AgentBridgeExportPrivateFiles.read(directoryFD, name, maximumBytes: maximumBytes) { fd in
+        var protectedIdentity: AgentBridgeExportFileIdentity?
+        let bytes = try AgentBridgeExportPrivateFiles.read(directoryFD, name, maximumBytes: maximumBytes) { fd in
             try fileProtection.requireCompleteProtection(fd)
+            protectedIdentity = try AgentBridgeExportPrivateFiles.identity(fd)
             try fence(); try pins(includeProtection: false)
         }
+        if collectingCompletionEvidence != nil {
+            guard let identity = protectedIdentity else { throw AgentBridgeValidationError.bindingChanged }
+            collectingCompletionEvidence?[name] = .init(count: bytes.count, sha256: AgentBridgeV4Codec.sha256(bytes), identity: identity)
+        }
+        return bytes
     }
     private func publish(_ name: String, record: Record, replacing previous: Record? = nil) throws {
         let body = try Self.canonical(record)

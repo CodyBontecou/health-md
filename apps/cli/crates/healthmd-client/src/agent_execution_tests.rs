@@ -306,14 +306,32 @@ async fn output_peer(
                 if let OutputCase::Transfer(transfer_case) = case {
                     transfer_tests::send_transfer(&mut channel, &request, platform, transfer_case)
                         .await;
-                    if transfer_case == transfer_tests::TransferCase::Disconnect {
+                    if matches!(
+                        transfer_case,
+                        transfer_tests::TransferCase::Disconnect
+                            | transfer_tests::TransferCase::MissingSourceReceipt
+                    ) {
                         return;
                     }
                     if !matches!(
                         transfer_case,
-                        transfer_tests::TransferCase::Exact | transfer_tests::TransferCase::Large
+                        transfer_tests::TransferCase::Exact
+                            | transfer_tests::TransferCase::Large
+                            | transfer_tests::TransferCase::Confirmed
                     ) {
-                        transfer_tests::no_response(&mut channel, platform).await;
+                        if transfer_case.confirms() {
+                            let received = tokio::time::timeout(
+                                Duration::from_millis(100),
+                                channel.receive_v4(negotiation),
+                            )
+                            .await;
+                            assert!(
+                                !matches!(received, Ok(Ok(_))),
+                                "rejected confirmation must not emit a v4 host commit"
+                            );
+                        } else {
+                            transfer_tests::no_response(&mut channel, platform).await;
+                        }
                     }
                 }
                 let _ = release.await;
@@ -625,8 +643,104 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
                 );
             }
             let expected = owner.manifest().clone();
-            let result = Box::pin(owner.receive_and_commit()).await;
             let issuer = client.layout.root.join("agent-host-v1");
+            let prior_output = if transfer_case
+                == transfer_tests::TransferCase::OutputJournalRollbackDuringConfirmation
+            {
+                Some(
+                    std::fs::read(issuer.join(format!("output-{}.json", retry_request.job_id.0)))
+                        .unwrap(),
+                )
+            } else {
+                None
+            };
+            let result = Box::pin(owner.receive_and_commit()).await;
+            if transfer_case.confirms() {
+                let received = result.unwrap();
+                assert_eq!(received.receipts.len(), 2);
+                if transfer_case == transfer_tests::TransferCase::OutputEditDuringConfirmation {
+                    let path = output.join(&received.receipts[0].relative_path.0);
+                    adversarial_trust.arm(1, move || {
+                        std::fs::write(path, b"independent edit").unwrap();
+                    });
+                }
+                if matches!(
+                    transfer_case,
+                    transfer_tests::TransferCase::OutputJournalDeleteDuringConfirmation
+                        | transfer_tests::TransferCase::OutputJournalCorruptDuringConfirmation
+                ) {
+                    let path = issuer.join(format!("output-{}.json", retry_request.job_id.0));
+                    // After the owner and transaction have loaded valid durable evidence,
+                    // mutate it in the final trust callback of the first actual receipt send.
+                    adversarial_trust.arm(3, move || {
+                        if transfer_case
+                            == transfer_tests::TransferCase::OutputJournalDeleteDuringConfirmation
+                        {
+                            std::fs::remove_file(path).unwrap();
+                        } else {
+                            std::fs::write(path, b"corrupt").unwrap();
+                        }
+                    });
+                }
+                if matches!(
+                    transfer_case,
+                    transfer_tests::TransferCase::CompletionDeleteAtReturn
+                        | transfer_tests::TransferCase::CompletionCorruptAtReturn
+                ) {
+                    let path = issuer.join(format!("completion-{}.json", retry_request.job_id.0));
+                    let trigger = path.clone();
+                    adversarial_trust.arm_when(
+                        move || trigger.exists(),
+                        move || {
+                            if transfer_case
+                                == transfer_tests::TransferCase::CompletionDeleteAtReturn
+                            {
+                                std::fs::remove_file(path).unwrap();
+                            } else {
+                                std::fs::write(path, b"corrupt").unwrap();
+                            }
+                        },
+                    );
+                }
+                if let Some(previous) = prior_output {
+                    let path = issuer.join(format!("output-{}.json", retry_request.job_id.0));
+                    // Restore authentic older signed evidence after the completed journal was loaded.
+                    adversarial_trust.arm(3, move || {
+                        std::fs::write(path, previous).unwrap();
+                    });
+                }
+                let confirmed = Box::pin(owner.confirm_source_completion()).await;
+                let path = issuer.join(format!("completion-{}.json", retry_request.job_id.0));
+                if transfer_case == transfer_tests::TransferCase::Confirmed {
+                    let receipt = confirmed.unwrap();
+                    assert!(receipt.source_acknowledged);
+                    assert_eq!(receipt.status, ExecutionReceiptStatus::Complete);
+                    assert_eq!(receipt.frontier_sha256, received.frontier_sha256);
+                    let saved: serde_json::Value =
+                        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+                    assert_eq!(
+                        saved["journal"]["receipt"],
+                        serde_json::to_value(receipt).unwrap()
+                    );
+                    assert_eq!(
+                        saved["journal"]["source_confirmation"],
+                        serde_json::to_value(&retry_request.job_id).unwrap()
+                    );
+                } else {
+                    assert!(confirmed.is_err());
+                    if transfer_case == transfer_tests::TransferCase::CompletionCorruptAtReturn {
+                        assert_eq!(std::fs::read(&path).unwrap(), b"corrupt");
+                    } else {
+                        assert!(!path.exists());
+                    }
+                }
+                assert!(owner.confirm_source_completion().await.is_err());
+                drop(owner);
+                assert!(bridge.discover().await.is_err());
+                let _ = release.send(());
+                source.await.unwrap();
+                return;
+            }
             if matches!(
                 transfer_case,
                 transfer_tests::TransferCase::Exact | transfer_tests::TransferCase::Large

@@ -8,6 +8,16 @@ use healthmd_protocol::{
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum TransferCase {
     Exact,
+    Confirmed,
+    BadConfirmationJob,
+    BadSourceReceipt,
+    MissingSourceReceipt,
+    OutputEditDuringConfirmation,
+    OutputJournalDeleteDuringConfirmation,
+    OutputJournalCorruptDuringConfirmation,
+    OutputJournalRollbackDuringConfirmation,
+    CompletionDeleteAtReturn,
+    CompletionCorruptAtReturn,
     Large,
     BadDigest,
     PartitionTamper,
@@ -24,6 +34,23 @@ pub(super) enum TransferCase {
     BadFinalize,
     Disconnect,
     Quota,
+}
+impl TransferCase {
+    pub(super) fn confirms(self) -> bool {
+        matches!(
+            self,
+            Self::Confirmed
+                | Self::BadConfirmationJob
+                | Self::BadSourceReceipt
+                | Self::MissingSourceReceipt
+                | Self::OutputEditDuringConfirmation
+                | Self::OutputJournalDeleteDuringConfirmation
+                | Self::OutputJournalCorruptDuringConfirmation
+                | Self::OutputJournalRollbackDuringConfirmation
+                | Self::CompletionDeleteAtReturn
+                | Self::CompletionCorruptAtReturn
+        )
+    }
 }
 pub(super) fn payload(case: TransferCase) -> Vec<u8> {
     if case == TransferCase::Large {
@@ -188,6 +215,13 @@ pub(super) async fn send_transfer(
     }
     let mut previous = None;
     let mut index = 0_u64;
+    let mut frontier = TransferFrontier::new(
+        &request.job_id,
+        &binding.manifest.request_sha256,
+        &document_digest(&binding.manifest).unwrap(),
+        &ControlUuid(session.session_id.to_string()),
+    )
+    .unwrap();
     for item in &binding.manifest.artifacts {
         let Artifact::Branch1(item) = item else {
             unreachable!()
@@ -385,6 +419,17 @@ pub(super) async fn send_transfer(
                 ),
             )
             .await;
+            frontier = frontier
+                .appending(&TransferFrontierPartition {
+                    partition_index: i64::try_from(index).unwrap(),
+                    transfer_id: ControlUuid(partition.transfer_id.to_string()),
+                    artifact_id: item.artifact_id.clone(),
+                    artifact_offset: i64::try_from(partition.artifact_offset).unwrap(),
+                    byte_count: i64::try_from(partition.byte_count).unwrap(),
+                    chunk_count: i64::try_from(partition.chunk_count).unwrap(),
+                    sha256: Digest(partition.sha256.clone()),
+                })
+                .unwrap();
             previous = Some(digest);
             index += 1;
         }
@@ -454,6 +499,100 @@ pub(super) async fn send_transfer(
         }),
     )
     .await;
+    if case.confirms() {
+        if matches!(
+            case,
+            TransferCase::OutputEditDuringConfirmation
+                | TransferCase::OutputJournalDeleteDuringConfirmation
+                | TransferCase::OutputJournalCorruptDuringConfirmation
+                | TransferCase::OutputJournalRollbackDuringConfirmation
+        ) {
+            return;
+        }
+        for item in &binding.manifest.artifacts {
+            let Message::CommitReceipt(receipt) = channel
+                .receive_v4(
+                    v4::negotiate(
+                        &request.plan.intent.peer.platform,
+                        &[1, 2, 3, 4],
+                        &[1, 2, 3, 4],
+                        true,
+                    )
+                    .unwrap(),
+                )
+                .await
+                .unwrap()
+                .message
+            else {
+                panic!("expected exact host commit");
+            };
+            let Artifact::Branch1(item) = item else {
+                unreachable!()
+            };
+            validate_commit_receipt(&receipt, None).unwrap();
+            assert_eq!(receipt.artifact_id, item.artifact_id);
+            assert_eq!(receipt.request_sha256, binding.manifest.request_sha256);
+            assert_eq!(receipt.input_sha256, item.sha256);
+            assert_eq!(receipt.after_sha256, item.sha256);
+            assert_eq!(
+                receipt.manifest_sha256,
+                document_digest(&binding.manifest).unwrap()
+            );
+            assert_eq!(receipt.destination, request.plan.intent.destination);
+        }
+        let confirmed = if case == TransferCase::BadConfirmationJob {
+            Uuid::parse_str(&id(48).0).unwrap()
+        } else {
+            session.job_id
+        };
+        send(
+            channel,
+            platform,
+            DirectMessage::CompletionConfirmed(a::JobIdPayload {
+                job_id: SwiftUuid(confirmed),
+            }),
+            v2::Message::CompletionConfirmed(v2::JobPayload { job_id: confirmed }),
+        )
+        .await;
+        if matches!(
+            case,
+            TransferCase::BadConfirmationJob | TransferCase::MissingSourceReceipt
+        ) {
+            return;
+        }
+        let receipt = ExecutionReceipt {
+            schema: ExecutionReceiptSchema::HealthmdAgentExecutionReceipt,
+            schema_version: 1,
+            job_id: request.job_id.clone(),
+            binding: approval_binding(&request.plan),
+            request_sha256: binding.manifest.request_sha256.clone(),
+            manifest_sha256: document_digest(&binding.manifest).unwrap(),
+            frontier_sha256: if case == TransferCase::BadSourceReceipt {
+                Digest("1".repeat(64))
+            } else {
+                frontier.sha256().clone()
+            },
+            artifact_count: binding.manifest.artifacts.len() as u64,
+            committed_partition_count: index,
+            source_acknowledged: true,
+            status: ExecutionReceiptStatus::Complete,
+            expires_at: binding.accepted.expires_at.clone(),
+        };
+        let negotiation = v4::negotiate(
+            &request.plan.intent.peer.platform,
+            &[1, 2, 3, 4],
+            &[1, 2, 3, 4],
+            true,
+        )
+        .unwrap();
+        channel
+            .send_v4(
+                &Envelope::new(Message::ExecutionReceipt(Box::new(receipt))),
+                negotiation,
+            )
+            .await
+            .unwrap();
+    }
 }
 #[tokio::test]
 async fn authenticated_transfer_receives_segments_and_commits_original_outputs() {
@@ -508,4 +647,24 @@ pub(super) async fn no_response(channel: &mut SecureChannel, platform: PeerPlatf
         !matches!(received, Ok(Ok(()))),
         "rejected transfer must not emit a base acknowledgement"
     );
+}
+
+#[tokio::test]
+async fn authenticated_transfer_requires_exact_native_confirmation_before_terminal_receipt() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for case in [
+            TransferCase::Confirmed,
+            TransferCase::BadConfirmationJob,
+            TransferCase::BadSourceReceipt,
+            TransferCase::MissingSourceReceipt,
+            TransferCase::OutputEditDuringConfirmation,
+            TransferCase::OutputJournalDeleteDuringConfirmation,
+            TransferCase::OutputJournalCorruptDuringConfirmation,
+            TransferCase::OutputJournalRollbackDuringConfirmation,
+            TransferCase::CompletionDeleteAtReturn,
+            TransferCase::CompletionCorruptAtReturn,
+        ] {
+            Box::pin(check_output_case(platform, OutputCase::Transfer(case))).await;
+        }
+    }
 }

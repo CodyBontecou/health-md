@@ -20,6 +20,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 /** Private captured values, engine identity and immutable artifacts, never transfer authority.
  * MAC records bind the exact accepted request/resolution, permanent claim and original expiry. */
@@ -62,6 +63,11 @@ internal class AgentBridgeNativeCaptureSpool(
     private var lockIdentity: Any? = null
     private var storedBytes = 0L
     private var closed = false
+    private data class CompletionFileEvidence(val count: Int, val sha256: String, val identity: Any)
+    private var collectingCompletionEvidence: MutableMap<String, CompletionFileEvidence>? = null
+    private var completionEvidence: Map<String, CompletionFileEvidence>? = null
+    private var completionReceipt: AgentBridgeExecutionReceipt? = null
+
 
     init {
         try {
@@ -96,7 +102,7 @@ internal class AgentBridgeNativeCaptureSpool(
                 for (path in stream) {
                     if (++count > 16450) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
                     val name = path.fileName.toString()
-                    if (name !in setOf("lock", "header.json", "progress.json", "manifest.json", "transfer.json") && !DAY_NAME.matches(name) && !PENDING_NAME.matches(name)) fail()
+                    if (name !in setOf("lock", "header.json", "progress.json", "manifest.json", "transfer.json", "completion.json") && !HOST_COMMIT_NAME.matches(name) && !DAY_NAME.matches(name) && !PENDING_NAME.matches(name)) fail()
                     attributes(path, false)
                     val size = Files.size(path)
                     if (size !in 0..(if (name == "manifest.json") MANIFEST_LIMIT else if (name == "transfer.json") AgentBridgeNativeTransferCheckpoint.MAXIMUM_BYTES else RECORD_LIMIT).toLong()) fail()
@@ -358,6 +364,98 @@ internal class AgentBridgeNativeCaptureSpool(
         }
         guard(); return frontier
     }
+    /** One atomic signed entry per original manifest position; no separately updated counter. */
+    @Synchronized fun recordHostCommit(receipt: AgentBridgeCommitReceipt) = safeCall {
+        guard(); validateStoredProgress()
+        val state = progress().second
+        val manifest = AgentBridgeCodec.decode(readManifest(state)) as? AgentBridgeArtifactManifest ?: fail()
+        val commits = readHostCommits(state, manifest)
+        val index = manifest.artifacts.indexOfFirst { it.artifactId == receipt.artifactId }
+        if (index < 0 || index > commits.size) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        validateHostCommit(receipt, manifest.artifacts[index], manifest)
+        if (checkedTransferFrontier(state).committedPartitionCount != manifest.artifacts.size.toLong()) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        if (index < commits.size) {
+            if (json.encodeToJsonElement(AgentBridgeCommitReceipt.serializer(),receipt).jsonObject.filterKeys { it != "status" } != json.encodeToJsonElement(AgentBridgeCommitReceipt.serializer(),commits[index]).jsonObject.filterKeys { it != "status" }) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        } else publish("host-commit-${receipt.artifactId}.json", record("host_commit", receipt.artifactId, Base64.getEncoder().encodeToString(AgentBridgeCodec.encode(receipt))))
+        validateStoredProgress(); guard()
+    }
+    /** Source-owned durable acknowledgement; the host must still receive its guarded wire send. */
+    @Synchronized fun preserveCompletion(): AgentBridgeExecutionReceipt = safeCall {
+        guard(); validateStoredProgress()
+        val state = progress().second
+        val manifest = AgentBridgeCodec.decode(readManifest(state)) as? AgentBridgeArtifactManifest ?: fail()
+        if (readHostCommits(state, manifest).size != manifest.artifacts.size) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        val receipt = completionCandidate(state, manifest)
+        val value = record("completion", null, Base64.getEncoder().encodeToString(AgentBridgeCodec.encode(receipt)))
+        if (exists("completion.json")) { if (read("completion.json") != value) fail() }
+        else publish("completion.json", value)
+        collectingCompletionEvidence = linkedMapOf()
+        try {
+            if (read("header.json") != record("job", null)) fail()
+            validateStoredProgress()
+            completionEvidence = collectingCompletionEvidence!!.toMap()
+            completionReceipt = receipt
+        } finally { collectingCompletionEvidence = null }
+        guard(); requirePreservedCompletion(receipt); receipt
+    }
+    @Synchronized fun requireCompletionIfPreserved() {
+        completionReceipt?.let { requirePreservedCompletion(it) }
+    }
+    /** Local-only tail after the last authority callback. Missing evidence is never repaired. */
+    @Synchronized fun requirePreservedCompletion(receipt: AgentBridgeExecutionReceipt) = safeCall {
+        pins()
+        val evidence = completionEvidence ?: fail()
+        val names = Files.newDirectoryStream(directory).use { stream -> stream.map { it.fileName.toString() }.filter { !PENDING_NAME.matches(it) }.toSet() }
+        if (completionReceipt != receipt || "completion.json" !in evidence || names != evidence.keys + "lock") fail()
+        for ((name, expected) in evidence) {
+            val bytes = currentBytes(name, expected.count)
+            if (bytes.size != expected.count || AgentBridgeCodec.sha256(bytes) != expected.sha256 || attributes(directory.resolve(name), false) != expected.identity) fail()
+        }
+        pins()
+    }
+    private fun validateHostCommit(receipt: AgentBridgeCommitReceipt, artifact: AgentBridgeArtifact,
+        manifest: AgentBridgeArtifactManifest) {
+        val request = reservation.job.request()
+        val plan=request.plan as? AgentBridgeGeneratedPlan ?: fail()
+        AgentBridgeCodec.encode(receipt)
+        if (receipt.status == AgentBridgeCommitReceiptStatus.CONFLICT || receipt.jobId != request.jobId ||
+            receipt.artifactId != artifact.artifactId || receipt.peer != plan.intent.peer ||
+            receipt.destination != plan.intent.destination || receipt.requestSha256 != acceptedRequestSha256 ||
+            receipt.manifestSha256 != AgentBridgeCodec.sha256(AgentBridgeCodec.encode(manifest)) ||
+            receipt.relativePath != artifact.relativePath || receipt.writeMode.name != artifact.writeMode.name ||
+            receipt.inputSha256 != artifact.sha256 ||
+            (receipt.writeMode == AgentBridgeWriteMode.OVERWRITE && receipt.afterSha256 != receipt.inputSha256)) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+    }
+    private fun readHostCommits(state: Progress, manifest: AgentBridgeArtifactManifest): List<AgentBridgeCommitReceipt> {
+        val result = mutableListOf<AgentBridgeCommitReceipt>(); var missing = false
+        for (artifact in manifest.artifacts) {
+            val name = "host-commit-${artifact.artifactId}.json"
+            if (!exists(name)) { missing = true; continue }
+            if (missing) fail()
+            val value = read(name)
+            val receipt = AgentBridgeCodec.decode(Base64.getDecoder().decode(value.payload)) as? AgentBridgeCommitReceipt ?: fail()
+            if (value.kind != "host_commit" || value.day != artifact.artifactId || Base64.getEncoder().encodeToString(AgentBridgeCodec.encode(receipt)) != value.payload) fail()
+            validateHostCommit(receipt, artifact, manifest); result += receipt
+        }
+        if (result.isNotEmpty() && checkedTransferFrontier(state).committedPartitionCount != manifest.artifacts.size.toLong()) fail()
+        return result
+    }
+    private fun completionCandidate(state: Progress, manifest: AgentBridgeArtifactManifest): AgentBridgeExecutionReceipt {
+        val frontier = checkedTransferFrontier(state)
+        if (frontier.committedPartitionCount != manifest.artifacts.size.toLong()) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        val status = when (manifest.captureStatus) {
+            AgentBridgeArtifactManifestCaptureStatus.COMPLETE -> AgentBridgeExecutionReceiptStatus.COMPLETE
+            AgentBridgeArtifactManifestCaptureStatus.COMPLETE_EMPTY -> AgentBridgeExecutionReceiptStatus.COMPLETE_EMPTY
+            AgentBridgeArtifactManifestCaptureStatus.PARTIAL -> AgentBridgeExecutionReceiptStatus.PARTIAL
+            else -> fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        }
+        val request = reservation.job.request()
+        return AgentBridgeExecutionReceipt(artifactCount = manifest.artifacts.size, binding = AgentBridgeValidation.bindingFor(request.plan),
+            committedPartitionCount = Math.toIntExact(frontier.committedPartitionCount), expiresAt = reservation.job.expiresAt, frontierSha256 = frontier.sha256,
+            jobId = request.jobId, manifestSha256 = AgentBridgeCodec.sha256(AgentBridgeCodec.encode(manifest)), requestSha256 = acceptedRequestSha256,
+            sourceAcknowledged = true, status = status, schema = "healthmd.agent_execution_receipt", schemaVersion = 1)
+    }
+
     @Synchronized override fun close() {
         if (closed) return
         closed = true
@@ -393,6 +491,16 @@ internal class AgentBridgeNativeCaptureSpool(
             readTransferPlan(state)
         }
         if (state.version == 6) checkedTransferFrontier(state)
+        if (state.manifestSHA256 != null) {
+            val manifest = AgentBridgeCodec.decode(readManifest(state)) as? AgentBridgeArtifactManifest ?: fail()
+            val commits = readHostCommits(state, manifest)
+            commits.forEach { expected += "host-commit-${it.artifactId}.json" }
+            if (exists("completion.json")) {
+                if (commits.size != manifest.artifacts.size || read("completion.json") != record("completion", null,
+                    Base64.getEncoder().encodeToString(AgentBridgeCodec.encode(completionCandidate(state, manifest))))) fail()
+                expected += "completion.json"
+            }
+        }
         val names = Files.newDirectoryStream(directory).use { stream ->
             stream.map { it.fileName.toString() }.filter { !PENDING_NAME.matches(it) }.toSet()
         }
@@ -537,6 +645,7 @@ internal class AgentBridgeNativeCaptureSpool(
             output
         }
         if (attributes(path, false) != identity) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        collectingCompletionEvidence?.put(name, CompletionFileEvidence(bytes.size, AgentBridgeCodec.sha256(bytes), identity))
         return bytes
     }
     private fun mkdir(path: Path, exclusive: Boolean) {
@@ -569,6 +678,7 @@ internal class AgentBridgeNativeCaptureSpool(
         private const val JOB_LIMIT = 64L * 1024 * 1024
         private val FILE_PERMISSIONS = PosixFilePermissions.fromString("rw-------")
         private val DIRECTORY_PERMISSIONS = PosixFilePermissions.fromString("rwx------")
+        private val HOST_COMMIT_NAME = Regex("^host-commit-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.json$")
         private val DAY_NAME = Regex("^(artifact-started|artifact|started|day)-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$")
         private val PENDING_NAME = Regex("^pending-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
     }

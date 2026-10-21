@@ -85,9 +85,9 @@ class AgentBridgeNativeConfigurationReaderTest {
         readConfiguration(policy, AgentBridgeNativeCatalogPublication(1, AgentBridgeExportPlanningFixture.id(1),
             state.fingerprint(AgentBridgeExportPlanningFixture.id(1))))
 
-    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle, channel: DirectSecureChannel? = null, negotiation: AgentBridgeNegotiation = nativeNegotiation(), transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities()), peerTransferCapabilities: TransferCapabilities? = TransferCapabilities()) =
+    private fun ownedPlanner(f: AgentBridgeExportPlanningFixture, lifecycle: AgentBridgeNativeCatalogLifecycle, channel: DirectSecureChannel? = null, negotiation: AgentBridgeNegotiation = nativeNegotiation(), transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities()), peerTransferCapabilities: TransferCapabilities? = TransferCapabilities(), beforeNativeRead: () -> Unit = {}) =
         AgentBridgeNativePlanningSession(f.peerContext, lifecycle, f.store,
-            AgentBridgeNativeConfigurationReader(observed, settings, profiles, { lifecycle.currentFacts() },
+            AgentBridgeNativeConfigurationReader(observed, settings, profiles, { beforeNativeRead(); lifecycle.currentFacts() },
                 { AgentBridgeExportTestRegistry.load() }), f.clock, responseChannel = channel, responseNegotiation = negotiation, responseTransferNegotiation = transferNegotiation, responsePeerTransferCapabilities = peerTransferCapabilities)
     @Test fun `native accepted receipt precedes capture and replays original bytes`() = runBlocking {
         AgentBridgeExportPlanningFixture().use { f ->
@@ -509,12 +509,38 @@ class AgentBridgeNativeConfigurationReaderTest {
     @Test fun `native transfer sender rejects host rewind of recorded prefix`() = runBlocking { checkNativeTransferSender("rewind") }
     @Test fun `native transfer sender publication failure prevents next partition and finalize`() = runBlocking { checkNativeTransferSender("publication") }
 
+    @Test fun `native completion persists exact host receipts and source confirmation`() = runBlocking { checkNativeTransferSender("complete") }
+    @Test fun `native completion rejects changed input with valid commit key`() = runBlocking { checkNativeTransferSender("complete-bad-input") }
+    @Test fun `native completion rejects reordered receipts`() = runBlocking { checkNativeTransferSender("complete-order") }
+    @Test fun `native completion rejects missing receipt`() = runBlocking { checkNativeTransferSender("complete-missing") }
+    @Test fun `native completion rejects receipt corruption at final send`() = runBlocking { checkNativeTransferSender("complete-corrupt") }
+    @Test fun `native completion rejects revocation at final send`() = runBlocking { checkNativeTransferSender("complete-revoke") }
+
+    private fun nativeHostCommit(artifact: AgentBridgeArtifact, request: AgentBridgeExecuteRequest, manifest: ByteArray, badInput: Boolean): AgentBridgeCommitReceipt {
+        val plan = request.plan as AgentBridgeGeneratedPlan
+        val input = if (badInput) "1".repeat(64) else artifact.sha256
+        val provisional = AgentBridgeCommitReceipt(afterSha256=input, artifactId=artifact.artifactId, beforeSha256="0".repeat(64), commitKey="0".repeat(64),
+            destination=plan.intent.destination,inputSha256=input,jobId=request.jobId,manifestSha256=AgentBridgeCodec.sha256(manifest),peer=plan.intent.peer,
+            relativePath=artifact.relativePath,requestSha256=AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)),schema="healthmd.agent_commit_receipt",schemaVersion=1,
+            status=AgentBridgeCommitReceiptStatus.COMMITTED,writeMode=artifact.writeMode)
+        val tree=Json.encodeToJsonElement(AgentBridgeCommitReceipt.serializer(),provisional).jsonObject
+        val fields=setOf("job_id","artifact_id","destination","request_sha256","manifest_sha256","relative_path","write_mode","input_sha256","before_sha256","after_sha256")
+        return provisional.copy(commitKey=AgentBridgeCodec.sha256(AgentBridgeCodec.canonicalize(JsonObject(tree.filterKeys { it in fields }).toString().toByteArray())))
+    }
+
     private suspend fun checkNativeTransferSender(mode: String) {
         withNativeExportPreparation { f, planner, request, client, manager ->
             val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
             coEvery { client.aggregate(any()) } returns values
             val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
             val original = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val completion=mode.startsWith("complete")
+            val manifest=AgentBridgeCodec.decode(original.export.manifestCanonical) as AgentBridgeArtifactManifest
+            val hostReceipts=manifest.artifacts.map { nativeHostCommit(it,request,original.export.manifestCanonical,mode=="complete-bad-input") }.toMutableList()
+            if(mode=="complete-order")hostReceipts.reverse()
+            if(mode=="complete-missing")hostReceipts.removeLast()
+            var completionDirectory:java.nio.file.Path?=null
+
             if (mode == "resume" || mode == "rewind") planner.withRetainedCaptureContext(request) { context ->
                 context.begin(); context.preserveTransferFrontier(); context.recordAcknowledgedTransferPartition(0)
             }
@@ -542,10 +568,16 @@ class AgentBridgeNativeConfigurationReaderTest {
             response("transfer_final_acknowledgement", TransferFinalAcknowledgement.serializer(), TransferFinalAcknowledgement(
                 original.session.sessionId, original.session.jobId, true, original.partitions.size.toLong(),
                 original.export.totalByteCount.toLong() + if (mode == "bad-final") 1 else 0, original.partitions.last().sha256))
+            if(completion)hostReceipts.forEach { responses += ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("commit_receipt",it)) }
             every { channel.sendAgentBridge(any(), any(), any()) } answers {
                 thirdArg<() -> Unit>()(); agent += firstArg<AgentBridgeMessage>(); thirdArg<() -> Unit>()()
             }
             every { channel.sendV2ForAgentBridge(any(), any<kotlinx.serialization.SerializationStrategy<Any>>(), any<Any>(), any(), any()) } answers {
+                if(firstArg<String>()=="completion_confirmed") {
+                    if(mode=="complete-revoke")lifecycle.stop()
+                    if(mode=="complete-corrupt")Files.write(requireNotNull(completionDirectory).resolve("host-commit-${manifest.artifacts.first().artifactId}.json"),"corrupt".toByteArray())
+                }
+
                 lastArg<() -> Unit>()()
                 base += V2Codec.decode(V2Codec.encode(firstArg(), secondArg<kotlinx.serialization.SerializationStrategy<Any>>(), thirdArg()))
                 lastArg<() -> Unit>()()
@@ -560,13 +592,15 @@ class AgentBridgeNativeConfigurationReaderTest {
             }
             every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
                 secondArg<() -> Unit>()()
-                val result = responses.removeFirst()
+                val result = responses.pollFirst() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
                 if (mode == "revoke") lifecycle.stop()
                 secondArg<() -> Unit>()(); result
             }
-            val reconnect = ownedPlanner(f, lifecycle, channel)
+            var finalNativeRead: (() -> Unit)? = null
+            val reconnect = ownedPlanner(f, lifecycle, channel, beforeNativeRead = { finalNativeRead?.invoke() })
             val job = f.store.access { it!!.state.acceptedJobs!!.single() }
             val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256)
+            completionDirectory=directory
             coEvery { client.aggregate(any()) } throws IllegalStateException("No SDK on immutable carriage")
             val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("No render") }, pinLoader = { error("No core load") })
             var publicationInterrupted = false
@@ -580,7 +614,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                     publicationInterrupted = true; throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
                 }
             }
-            val fails = mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication")
+            val fails = (completion && mode!="complete") || mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication")
             try {
                 if (mode == "contended") {
                     reconnect.transmitTransfer(request, true) { context ->
@@ -594,7 +628,8 @@ class AgentBridgeNativeConfigurationReaderTest {
                         catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
                         original
                     }
-                } else reconnect.sendTransferExport(request, manager, true, forbidden)
+                } else if(completion)reconnect.sendExecutionExport(request,manager,true,forbidden)
+                else reconnect.sendTransferExport(request, manager, true, forbidden)
                 if (fails) throw AssertionError("Expected acknowledgement/owner rejection")
             } catch (failure: AgentBridgeException) {
                 if (!fails) throw failure
@@ -604,12 +639,38 @@ class AgentBridgeNativeConfigurationReaderTest {
                 verify(atLeast = 1) { channel.close() }
             }
             f.peerContext.onCheck = null
-            assertThat(agent.map { it.type }).containsExactly("artifact_manifest")
-            assertThat(AgentBridgeCodec.encode(agent.single().payload)).isEqualTo(original.export.manifestCanonical)
+            assertThat(agent.map { it.type }).containsExactlyElementsIn(if(completion && !fails)listOf("artifact_manifest","execution_receipt")else listOf("artifact_manifest")).inOrder()
+            assertThat(AgentBridgeCodec.encode(agent.first().payload)).isEqualTo(original.export.manifestCanonical)
             assertThat(V2Codec.decodePayload(base.first(), TransferSession.serializer())).isEqualTo(original.session)
             val files = base.filter { it.type == "artifact_manifest" }.map { V2Codec.decodePayload(it, ArtifactManifest.serializer()) }
             assertThat(files).containsExactlyElementsIn(original.export.baseFiles.map { it.manifest }).inOrder()
-            assertThat(base.none { it.type == "completion_confirmed" }).isTrue()
+            assertThat(base.count { it.type == "completion_confirmed" }).isEqualTo(if(completion && !fails)1 else 0)
+            if(completion && !fails) {
+                val receipt=agent.last().payload as AgentBridgeExecutionReceipt
+                assertThat(receipt.sourceAcknowledged).isTrue();assertThat(receipt.status).isEqualTo(AgentBridgeExecutionReceiptStatus.COMPLETE)
+                val before=Files.readAllBytes(directory.resolve("completion.json"))
+                reconnect.withRetainedCaptureContext(request) { context -> context.begin();hostReceipts.forEach { context.recordHostCommit(it) };assertThat(context.preserveCompletion()).isEqualTo(receipt) }
+                assertThat(Files.readAllBytes(directory.resolve("completion.json"))).isEqualTo(before)
+                var removedAtNativeCallback = false
+                try { reconnect.withRetainedCaptureContext(request) { context ->
+                    context.begin()
+                    val retained = context.preserveCompletion()
+                    finalNativeRead = {
+                        if (!removedAtNativeCallback) {
+                            removedAtNativeCallback = true
+                            Files.delete(directory.resolve("completion.json"))
+                        }
+                    }
+                    try {
+                        context.requirePreservedCompletion(retained)
+                        throw AssertionError("Final native callback must not erase durable evidence")
+                    } catch (_: AgentBridgeException) { }
+                    finally { finalNativeRead = null }
+                }; throw AssertionError("An invalidated capture owner must not return success") }
+                catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+                assertThat(removedAtNativeCallback).isTrue()
+                assertThat(Files.exists(directory.resolve("completion.json"))).isFalse()
+            }
             if (!fails) {
                 assertThat(chunks.size).isEqualTo(if (mode == "already") 0 else original.partitions.size - if (mode == "resume") 1 else 0)
                 chunks.zip(original.export.baseFiles.drop(if (mode == "resume") 1 else 0)).forEach { (chunk, file) -> assertThat(chunk.second).isEqualTo(file.content) }
@@ -624,7 +685,7 @@ class AgentBridgeNativeConfigurationReaderTest {
             }
             val record = Json.parseToJsonElement(Files.readAllBytes(directory.resolve("progress.json")).decodeToString()).jsonObject.getValue("record").jsonObject
             val progress = Json.parseToJsonElement(String(java.util.Base64.getDecoder().decode(record.getValue("payload").jsonPrimitive.content))).jsonObject
-            val count = if (!fails || mode == "bad-final") original.partitions.size else if (mode in listOf("rewind", "publication")) 1 else 0
+            val count = if (!fails || mode == "bad-final" || completion) original.partitions.size else if (mode in listOf("rewind", "publication")) 1 else 0
             var expected = AgentBridgeTransferFrontier.start(request.jobId, original.export.requestSha256,
                 AgentBridgeCodec.sha256(original.export.manifestCanonical), original.session.sessionId)
             original.partitions.take(count).forEachIndexed { index, partition ->

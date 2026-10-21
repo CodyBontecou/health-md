@@ -30,6 +30,8 @@ pub struct HostExecution<'s, 'h, 'trust> {
     clock: &'h dyn PlanningClock,
     binding: NativeBinding,
     transfer_started: bool,
+    received: Option<ReceivedArtifacts>,
+    confirmation_started: bool,
     transfer_guard: Option<transfer::TransferGuard>,
     final_output: Option<(GeneratedDestination, Vec<CommitReceipt>)>,
 }
@@ -139,6 +141,8 @@ impl<'trust> BridgeSession<'trust> {
             clock,
             binding,
             transfer_started: false,
+            received: None,
+            confirmation_started: false,
             transfer_guard: None,
             final_output: None,
         };
@@ -559,3 +563,6 @@ impl Drop for PrivateOutputFile {
 #[path = "agent_transfer.rs"]
 mod transfer;
 pub use transfer::ReceivedArtifacts;
+
+#[path = "agent_confirmation.rs"]
+mod confirmation;

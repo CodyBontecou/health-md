@@ -7,12 +7,12 @@ use healthmd_protocol::{
 use serde::Serialize;
 use tokio::io::{AsyncReadExt as _, AsyncSeekExt as _, AsyncWriteExt as _};
 #[path = "agent_transfer_wire.rs"]
-mod wire;
+pub(super) mod wire;
 use wire::{Incoming, Response, Session};
 
 /// Exact installed receipts and recomputed received prefix. Final native confirmation is
 /// still required before any terminal execution result can be emitted.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ReceivedArtifacts {
     pub receipts: Vec<CommitReceipt>,
     pub session_id: ControlUuid,
@@ -427,12 +427,14 @@ impl HostExecution<'_, '_, '_> {
             .as_ref()
             .ok_or(Error::BindingChanged)?
             .verify()?;
-        Ok(ReceivedArtifacts {
+        let received = ReceivedArtifacts {
             receipts,
             session_id,
             committed_partition_count: finalize.total_partitions,
             frontier_sha256: frontier.sha256().clone(),
-        })
+        };
+        self.received = Some(received.clone());
+        Ok(received)
     }
     fn validate_session(&self, session: &Session) -> Result<(), ClientError> {
         let peer = &self.binding.request.plan.intent.peer;

@@ -11,9 +11,9 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct Session(pub v2::TransferSession);
+pub(in crate::agent_bridge::execution) struct Session(pub v2::TransferSession);
 #[derive(Clone, Debug)]
-pub(super) enum Incoming {
+pub(in crate::agent_bridge::execution) enum Incoming {
     Session(Session),
     Manifest {
         id: ControlUuid,
@@ -31,6 +31,7 @@ pub(super) enum Incoming {
     Chunk(apple::TransferChunk),
     Complete(v2::TransferPartitionComplete),
     Finalize(v2::TransferFinalize),
+    Confirmation(ControlUuid),
 }
 pub(super) enum Response {
     Disposition(v2::TransferDisposition),
@@ -70,7 +71,7 @@ fn mode(value: apple::FileWriteMode) -> v2::FileWriteMode {
 impl HostExecution<'_, '_, '_> {
     // Both deployed closed-envelope adaptations stay explicit at this boundary.
     #[allow(clippy::too_many_lines)]
-    pub(super) async fn receive_base(
+    pub(in crate::agent_bridge::execution) async fn receive_base(
         &mut self,
         transaction: &OutputTransaction,
     ) -> Result<Incoming, ClientError> {
@@ -131,6 +132,9 @@ impl HostExecution<'_, '_, '_> {
                             partition_sha256: value.partition_sha256,
                         })
                     }
+                    DirectMessage::CompletionConfirmed(value) => {
+                        Incoming::Confirmation(ControlUuid(value.job_id.0.to_string()))
+                    }
                     DirectMessage::TransferFinalize(Unlabeled { value }) => {
                         if value.request_fingerprint.version != 1 {
                             return Err(Error::BindingChanged.into());
@@ -175,6 +179,9 @@ impl HostExecution<'_, '_, '_> {
                     },
                     v2::Message::TransferPartitionComplete(value) => Incoming::Complete(value),
                     v2::Message::TransferFinalize(value) => Incoming::Finalize(value),
+                    v2::Message::CompletionConfirmed(value) => {
+                        Incoming::Confirmation(ControlUuid(value.job_id.to_string()))
+                    }
                     _ => return Err(ClientError::UnexpectedMessage),
                 },
             }
@@ -191,7 +198,6 @@ impl HostExecution<'_, '_, '_> {
         response: Response,
     ) -> Result<(), ClientError> {
         let durable_ack = matches!(&response, Response::Partition(_) | Response::Final(_));
-        let transfer_guard = &self.transfer_guard;
         let plaintext = if self.binding.request.plan.intent.peer.platform == v4::PeerPlatform::Apple
         {
             let message = match response {
@@ -269,6 +275,16 @@ impl HostExecution<'_, '_, '_> {
             healthmd_protocol::encoding::canonical_json(&v2::Envelope::new(message))
                 .map_err(private::unavailable)?
         };
+        self.send_transfer_control_bytes(transaction, &plaintext, durable_ack)
+            .await
+    }
+    pub(in crate::agent_bridge::execution) async fn send_transfer_control_bytes(
+        &mut self,
+        transaction: &OutputTransaction,
+        plaintext: &[u8],
+        durable_ack: bool,
+    ) -> Result<(), ClientError> {
+        let transfer_guard = &self.transfer_guard;
         let final_output = &self.final_output;
         let store = self.store;
         let clock = self.clock;
@@ -280,7 +296,7 @@ impl HostExecution<'_, '_, '_> {
         let cancellation = &self.bridge.cancellation;
         self.bridge
             .channel
-            .send_bridge_plaintext_guarded(&plaintext, || async {
+            .send_bridge_plaintext_guarded(plaintext, || async {
                 store
                     .require_output_current(request, Some(expires), clock, || async {
                         if cancellation.is_cancelled() {

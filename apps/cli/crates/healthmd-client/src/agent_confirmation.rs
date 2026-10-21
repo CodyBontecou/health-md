@@ -1,0 +1,128 @@
+//! Original host owner accepts terminal execution only after native confirmation and receipt.
+use super::transfer::wire::Incoming;
+use super::*;
+impl HostExecution<'_, '_, '_> {
+    /// Receive, durably commit and obtain exact native confirmation on this original session.
+    /// # Errors
+    /// Any metadata/authority/output drift, interrupted transport or storage failure rejects.
+    pub async fn receive_confirmed_execution(&mut self) -> Result<ExecutionReceipt, ClientError> {
+        self.receive_and_commit().await?;
+        self.confirm_source_completion().await
+    }
+    /// Send only this owner's durably committed receipts, then require both original base
+    /// confirmation and the exact v4 source receipt. Caller DTOs cannot supply completion facts.
+    /// # Errors
+    /// No received transfer, repeat/interrupted attempt, lost authority, or changed binding rejects.
+    pub async fn confirm_source_completion(&mut self) -> Result<ExecutionReceipt, ClientError> {
+        if self.confirmation_started || self.received.is_none() {
+            return Err(Error::BindingChanged.into());
+        }
+        self.confirmation_started = true;
+        let cancel = self.bridge.cancellation.clone();
+        let timeout = self.bridge.timeout;
+        let result = tokio::select! {
+            biased;
+            ()=cancel.cancelled()=>Err(ClientError::WaitCancelled),
+            result=tokio::time::timeout(timeout,Box::pin(self.confirm_source_completion_inner()))=>result.map_err(|_|ClientError::TimedOut)?,
+        };
+        if result.is_err() {
+            self.bridge.send_interrupted = true;
+        }
+        result
+    }
+    async fn confirm_source_completion_inner(&mut self) -> Result<ExecutionReceipt, ClientError> {
+        let received = self.received.clone().ok_or(Error::BindingChanged)?;
+        self.require_current().await?;
+        let transaction =
+            OutputTransaction::open(self.store, &self.binding, || self.require_current()).await?;
+        self.require_completion_evidence(&transaction, &received.receipts)?;
+        for receipt in &received.receipts {
+            let envelope = Envelope::new(Message::CommitReceipt(Box::new(receipt.clone())));
+            let bytes = v4::canonical_json(&envelope)?;
+            v4::decode_envelope(&bytes, self.bridge.negotiation)?;
+            self.send_transfer_control_bytes(&transaction, &bytes, true)
+                .await?;
+        }
+        let Incoming::Confirmation(job) = self.receive_base(&transaction).await? else {
+            return Err(ClientError::UnexpectedMessage);
+        };
+        if job != self.binding.request.job_id {
+            return Err(Error::BindingChanged.into());
+        }
+        let message = self
+            .bridge
+            .channel
+            .receive_v4(self.bridge.negotiation)
+            .await?
+            .message;
+        self.require_current().await?;
+        transaction.require_current()?;
+        let Message::ExecutionReceipt(receipt) = message else {
+            return Err(ClientError::UnexpectedMessage);
+        };
+        v4::validate_execution_receipt(&receipt)?;
+        let status = match self.binding.manifest.capture_status {
+            v4::ArtifactManifestCaptureStatus::Complete => ExecutionReceiptStatus::Complete,
+            v4::ArtifactManifestCaptureStatus::CompleteEmpty => {
+                ExecutionReceiptStatus::CompleteEmpty
+            }
+            v4::ArtifactManifestCaptureStatus::Partial => ExecutionReceiptStatus::Partial,
+            _ => return Err(Error::BindingChanged.into()),
+        };
+        let expected = ExecutionReceipt {
+            schema: v4::ExecutionReceiptSchema::HealthmdAgentExecutionReceipt,
+            schema_version: 1,
+            job_id: self.binding.request.job_id.clone(),
+            binding: self.binding.accepted.binding.clone(),
+            request_sha256: self.binding.manifest.request_sha256.clone(),
+            manifest_sha256: document_digest(&self.binding.manifest)?,
+            frontier_sha256: received.frontier_sha256.clone(),
+            artifact_count: received.receipts.len() as u64,
+            committed_partition_count: received.committed_partition_count,
+            source_acknowledged: true,
+            status,
+            expires_at: self.binding.accepted.expires_at.clone(),
+        };
+        if *receipt != expected {
+            return Err(Error::BindingChanged.into());
+        }
+        let completion = serde_json::json!({"schema":"healthmd.agent_host_completion","schema_version":1,
+            "binding":self.binding,"session_id":received.session_id,"source_confirmation":job,"receipt":receipt});
+        let completion_bytes = transaction
+            .save_completion(&completion, || async {
+                let root = self.require_current().await?;
+                self.require_completion_evidence(&transaction, &received.receipts)?;
+                Ok(root)
+            })
+            .await?;
+        self.require_current().await?;
+        self.require_completion_evidence(&transaction, &received.receipts)?;
+        transaction.require_completion(&completion_bytes)?;
+        Ok(*receipt)
+    }
+    fn require_completion_evidence(
+        &self,
+        transaction: &OutputTransaction,
+        receipts: &[CommitReceipt],
+    ) -> Result<(), ClientError> {
+        transaction.require_committed_receipts(receipts)?;
+        self.transfer_guard
+            .as_ref()
+            .ok_or(Error::BindingChanged)?
+            .verify()?;
+        let (destination, installed) = self.final_output.as_ref().ok_or(Error::BindingChanged)?;
+        if installed != receipts {
+            return Err(Error::BindingChanged.into());
+        }
+        for receipt in receipts {
+            if destination
+                .output_sha256(&receipt.relative_path.0)?
+                .as_deref()
+                != Some(&receipt.after_sha256.0)
+            {
+                return Err(Error::BindingChanged.into());
+            }
+        }
+        Ok(())
+    }
+}

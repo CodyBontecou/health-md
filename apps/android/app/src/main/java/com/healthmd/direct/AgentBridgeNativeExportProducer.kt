@@ -180,6 +180,13 @@ internal suspend fun AgentBridgeNativePlanningSession.sendTransferExport(request
     transmitTransfer(request, retained) { context -> AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer) }
 }
 
+/** Complete confirmation remains in the original native capture/transfer owner. */
+internal suspend fun AgentBridgeNativePlanningSession.sendExecutionExport(request: AgentBridgeExecuteRequest,
+    manager: HealthConnectManager, retained: Boolean = false,
+    renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()) {
+    transmitTransfer(request, retained, confirmCompletion = true) { context -> AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer) }
+}
+
 internal suspend fun AgentBridgeNativePlanningSession.prepareTransferExport(request: AgentBridgeExecuteRequest,
     manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()
 ): AgentBridgeNativePreparedTransfer = withCaptureContext(request) { context ->

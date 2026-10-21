@@ -542,11 +542,12 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try nextOwner.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID), next)
     }
 
-    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil, responseVersions: [Int] = [1, 3, 4], captureProtection: (any AgentBridgeNativeCaptureProtecting)? = nil, transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), peerTransferCapabilities: DirectTransferCapabilities? = .current) throws -> AgentBridgeNativePlanningSession {
+    private func nativePlanningSession(_ rig: Rig, _ lifecycle: AgentBridgeNativeCatalogLifecycle, profiles existingProfiles: ExportProfileStore? = nil, responseChannel: DirectSecureChannel? = nil, responseVersions: [Int] = [1, 3, 4], captureProtection: (any AgentBridgeNativeCaptureProtecting)? = nil, transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), peerTransferCapabilities: DirectTransferCapabilities? = .current, beforeNativeRead: @escaping @MainActor () throws -> Void = {}) throws -> AgentBridgeNativePlanningSession {
         let profiles = existingProfiles ?? ExportProfileStore(userDefaults: rig.reader.defaults)
         Self.retainedNativeConfigurationObjects.append(profiles)
         let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles) {
-            try lifecycle.currentFacts()
+            try beforeNativeRead()
+            return try lifecycle.currentFacts()
         }
         return try AgentBridgeNativePlanningSession(peer: rig.peer, lifecycle: lifecycle, store: rig.store,
             configuration: reader, responseChannel: responseChannel,
@@ -720,10 +721,39 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     func testNativeTransferSenderRejectsHostRewindOfRecordedPrefix() async throws { try await checkNativeTransferSender("rewind") }
     func testNativeTransferSenderPublicationFailurePreventsNextPartitionAndFinalize() async throws { try await checkNativeTransferSender("publication") }
 
+    func testNativeCompletionRequiresExactHostReceiptsAndPersistsReplay() async throws { try await checkNativeTransferSender("complete") }
+    func testNativeCompletionRejectsChangedInputWithValidCommitKey() async throws { try await checkNativeTransferSender("complete-bad-input") }
+    func testNativeCompletionRejectsReorderedReceipts() async throws { try await checkNativeTransferSender("complete-order") }
+    func testNativeCompletionRejectsMissingReceipt() async throws { try await checkNativeTransferSender("complete-missing") }
+    func testNativeCompletionRejectsReceiptCorruptionAtFinalSend() async throws { try await checkNativeTransferSender("complete-corrupt") }
+    func testNativeCompletionRejectsRevocationAtFinalSend() async throws { try await checkNativeTransferSender("complete-revoke") }
+
+    private func nativeHostCommit(_ artifact: AgentBridgeArtifact, request: AgentBridgeExecute, manifest: Data, badInput: Bool = false) throws -> AgentBridgeCommitReceipt {
+        let input = badInput ? try AgentBridgeDigest(String(repeating: "1", count: 64)) : artifact.sha256
+        let zero = try AgentBridgeDigest(String(repeating: "0", count: 64))
+        let provisional = AgentBridgeCommitReceipt(afterSha256: input, artifactId: artifact.artifactId, beforeSha256: zero, commitKey: zero,
+            destination: request.plan.intent.destination, inputSha256: input, jobId: request.jobId,
+            manifestSha256: try AgentBridgeDigest(AgentBridgeV4Codec.sha256(manifest)), peer: request.plan.intent.peer,
+            relativePath: artifact.relativePath, requestSha256: try AgentBridgeDigest(AgentBridgeV4Codec.sha256(AgentBridgeV4Codec.encode(request))),
+            status: .committed, writeMode: try XCTUnwrap(AgentBridgeCommitReceiptWriteMode(rawValue: artifact.writeMode.rawValue)))
+        return .init(afterSha256: provisional.afterSha256, artifactId: provisional.artifactId, beforeSha256: provisional.beforeSha256,
+            commitKey: try AgentBridgeSemantics.commitKey(provisional), destination: provisional.destination, inputSha256: provisional.inputSha256,
+            jobId: provisional.jobId, manifestSha256: provisional.manifestSha256, peer: provisional.peer, relativePath: provisional.relativePath,
+            requestSha256: provisional.requestSha256, status: provisional.status, writeMode: provisional.writeMode)
+    }
+
     private func checkNativeTransferSender(_ mode: String) async throws {
         try await withNativeExportPreparation { rig, planner, request, store, manager in
             store.querySumResult = { _, _ in 123 }
             let original = try await planner.prepareTransferExport(request, manager: manager)
+            let completion = mode.hasPrefix("complete")
+            let originalManifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: original.export.manifestCanonical)
+            var hostReceipts = try originalManifest.artifacts.map { try self.nativeHostCommit($0, request: request, manifest: original.export.manifestCanonical, badInput: mode == "complete-bad-input") }
+            if mode == "complete-order" { hostReceipts.reverse() }
+            if mode == "complete-missing" { hostReceipts.removeLast() }
+            let originalJob = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+            let completionDirectory = rig.directory.appendingPathComponent("captures/" + originalJob.requestSHA256.rawValue)
+
             if mode == "resume" || mode == "rewind" {
                 try await planner.withRetainedCaptureContext(request) { context in
                     _ = try context.begin(); _ = try context.preserveTransferFrontier()
@@ -749,8 +779,18 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 jobID: original.session.jobID, accepted: true, totalPartitions: original.partitions.count,
                 totalBytes: Int64(original.export.totalByteCount) + (mode == "bad-final" ? 1 : 0),
                 finalPartitionSHA256: original.partitions.last?.sha256)))
-            let inbound = try responses.enumerated().map { try nativeResponsePacket(JSONEncoder().encode($0.element), sequence: UInt64($0.offset), key: key) }
-            let wire = NativePlanningResponsePackets(inbound: inbound, beforeReceive: {
+            var inbound = try responses.enumerated().map { try nativeResponsePacket(JSONEncoder().encode($0.element), sequence: UInt64($0.offset), key: key) }
+            if completion {
+                for (index,receipt) in hostReceipts.enumerated() { inbound.append(try nativeResponsePacket(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .commit(receipt))), sequence: UInt64(responses.count + index), key: key)) }
+            }
+            let wire = NativePlanningResponsePackets(beforeWrite: {
+                if completion { try await MainActor.run {
+                    if FileManager.default.fileExists(atPath: completionDirectory.appendingPathComponent("completion.json").path) {
+                        if mode == "complete-revoke" { rig.session.revoke() }
+                        if mode == "complete-corrupt", let first = originalManifest.artifacts.first { try Data("corrupt".utf8).write(to: completionDirectory.appendingPathComponent("host-commit-\(first.artifactId.rawValue).json")) }
+                    }
+                } }
+            }, inbound: inbound, beforeReceive: {
                 if mode == "revoke" { await MainActor.run { rig.session.revoke() } }
             })
             let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
@@ -758,7 +798,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             let profiles = try XCTUnwrap(Self.retainedNativeConfigurationObjects.compactMap { $0 as? ExportProfileStore }.last)
             let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic sender")
             defer { channel.cancel() }
-            let reconnect = try nativePlanningSession(rig, lifecycle, profiles: profiles, responseChannel: channel)
+            var finalNativeRead: (() throws -> Void)?
+            let reconnect = try nativePlanningSession(rig, lifecycle, profiles: profiles, responseChannel: channel, beforeNativeRead: { try finalNativeRead?() })
             let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
             let directory = rig.directory.appendingPathComponent("captures/" + job.requestSHA256.rawValue)
             store.querySumResult = { _, _ in XCTFail("No SDK on immutable carriage"); return nil }
@@ -774,7 +815,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 }
             }
             defer { rig.captureProtection.onRequire = nil }
-            let fails = mode.hasPrefix("bad-") || ["revoke", "rewind", "publication"].contains(mode)
+            let fails = (completion && mode != "complete") || mode.hasPrefix("bad-") || ["revoke", "rewind", "publication"].contains(mode)
             do {
                 if mode == "contended" {
                     try await reconnect.transmitTransfer(request, retained: true) { context in
@@ -787,18 +828,20 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                         catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
                         return original
                     }
+                } else if completion {
+                    try await reconnect.sendExecutionExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid"))
                 } else {
                     try await reconnect.sendTransferExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid"))
                 }
                 if fails { XCTFail("Expected acknowledgement/owner rejection") }
             } catch {
                 if !fails { throw error }
-                XCTAssertNotNil(error as? AgentBridgeValidationError)
+                if mode != "complete-missing" { XCTAssertNotNil(error as? AgentBridgeValidationError) }
                 let count = wire.packets.count
                 do { try await reconnect.sendTransferExport(request, manager: manager, retained: true); XCTFail("Failed owner cannot revive") }
                 catch { XCTAssertEqual(wire.packets.count, count) }
             }
-            var messages: [DirectMessage] = []; var chunks: [DirectTransferChunk] = []
+            var messages: [DirectMessage] = []; var chunks: [DirectTransferChunk] = []; var terminal: [AgentBridgeExecutionReceipt] = []
             let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
             for (sequence, packet) in wire.packets.enumerated() {
                 guard case .encrypted(let frame) = packet else { return XCTFail("Expected guarded encrypted packet") }
@@ -808,17 +851,50 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     let envelope = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes)
                     guard case .manifest(let manifest) = envelope.payload else { return XCTFail("Expected original v4 manifest first") }
                     XCTAssertEqual(try AgentBridgeV4Codec.encode(manifest), original.export.manifestCanonical)
+                } else if let envelope = try? AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes) {
+                    guard case .receipt(let receipt) = envelope.payload else { return XCTFail("Unexpected v4 control") }; terminal.append(receipt)
                 } else if DirectTransferBinaryFrame.isBinaryFrame(bytes) {
                     chunks.append(try DirectTransferBinaryFrame.decode(bytes).chunk)
                 } else { messages.append(try decoder.decode(DirectMessage.self, from: bytes)) }
             }
             XCTAssertEqual(messages.first, .transferSession(original.session))
             XCTAssertEqual(Array(messages.dropFirst().prefix(original.export.baseFiles.count)), original.export.baseFiles.map { .fileManifest($0.manifest) })
-            XCTAssertFalse(messages.contains { if case .completionConfirmed = $0 { return true }; return false })
+            XCTAssertEqual(messages.filter { if case .completionConfirmed = $0 { return true }; return false }.count, completion && !fails ? 1 : 0)
+            XCTAssertEqual(terminal.count, completion && !fails ? 1 : 0)
+            if completion && !fails {
+                let receipt = try XCTUnwrap(terminal.first); XCTAssertTrue(receipt.sourceAcknowledged); XCTAssertEqual(receipt.status, .complete)
+                let before = try Data(contentsOf: completionDirectory.appendingPathComponent("completion.json"))
+                try await reconnect.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin()
+                    for commit in hostReceipts { try context.recordHostCommit(commit) }
+                    XCTAssertEqual(try context.preserveCompletion(), receipt)
+                }
+                XCTAssertEqual(try Data(contentsOf: completionDirectory.appendingPathComponent("completion.json")), before)
+                var replacedAtNativeCallback = false
+                do { try await reconnect.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin()
+                    let retained = try context.preserveCompletion()
+                    finalNativeRead = {
+                        if !replacedAtNativeCallback {
+                            replacedAtNativeCallback = true
+                            let path = completionDirectory.appendingPathComponent("completion.json")
+                            let replacement = completionDirectory.appendingPathComponent("pending-" + UUID().uuidString.lowercased())
+                            try before.write(to: replacement)
+                            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: replacement.path)
+                            guard Darwin.rename(replacement.path, path.path) == 0 else { throw AgentBridgeValidationError.bindingChanged }
+                        }
+                    }
+                    defer { finalNativeRead = nil }
+                    XCTAssertThrowsError(try context.requirePreservedCompletion(retained))
+                }; XCTFail("An invalidated capture owner must not return success") }
+                catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+                XCTAssertTrue(replacedAtNativeCallback)
+                XCTAssertEqual(try Data(contentsOf: completionDirectory.appendingPathComponent("completion.json")), before)
+            }
             if !fails {
                 XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count - (mode == "resume" ? 1 : 0))
                 for (chunk, file) in zip(chunks, original.export.baseFiles.dropFirst(mode == "resume" ? 1 : 0)) { XCTAssertEqual(chunk.sequence, 1); XCTAssertEqual(chunk.data, file.content); XCTAssertEqual(chunk.sha256, file.manifest.sha256) }
-                XCTAssertEqual(wire.receiveCount, responses.count)
+                XCTAssertEqual(wire.receiveCount, responses.count + (completion ? hostReceipts.count : 0))
             }
             if mode == "revoke" { XCTAssertEqual(messages.count, 2 + original.export.baseFiles.count) }
             if mode == "rewind" { XCTAssertTrue(chunks.isEmpty) }
@@ -832,7 +908,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             let record = try XCTUnwrap(signed["record"] as? [String: Any])
             let payload = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(record["payload"] as? String)))
             let progress = try XCTUnwrap(JSONSerialization.jsonObject(with: payload) as? [String: Any])
-            let count = (!fails || mode == "bad-final") ? original.partitions.count : (["rewind", "publication"].contains(mode) ? 1 : 0)
+            let count = (!fails || mode == "bad-final" || completion) ? original.partitions.count : (["rewind", "publication"].contains(mode) ? 1 : 0)
             var expected = try AgentBridgeTransferFrontier(jobID: request.jobId, requestSHA256: AgentBridgeDigest(original.export.requestSHA256),
                 manifestSHA256: AgentBridgeDigest(AgentBridgeV4Codec.sha256(original.export.manifestCanonical)),
                 sessionID: AgentBridgeUUID(original.session.sessionID.uuidString.lowercased()))

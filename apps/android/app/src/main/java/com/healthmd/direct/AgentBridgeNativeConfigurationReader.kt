@@ -338,7 +338,7 @@ internal class AgentBridgeNativePlanningSession(
 
     /** Keep preparation and byte carriage inside the original capture owner. No prepared value
      * can escape as authority, and base byte acknowledgements never declare v4 completion. */
-    suspend fun transmitTransfer(request: AgentBridgeExecuteRequest, retained: Boolean,
+    suspend fun transmitTransfer(request: AgentBridgeExecuteRequest, retained: Boolean, confirmCompletion: Boolean = false,
         prepare: suspend (AgentBridgeNativeCaptureContext) -> AgentBridgeNativePreparedTransfer) {
         val operation: suspend (AgentBridgeNativeCaptureContext) -> Unit = { context ->
             try {
@@ -352,7 +352,7 @@ internal class AgentBridgeNativePlanningSession(
                 val transfer = AgentBridgeNativePreparedTransfer.make(request, export, supplied.checkpointCanonical)
                 val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
                 val caller = currentCoroutineContext().job
-                withTransportCancellation(caller, channel) { sendTransferBytes(transfer, context) }
+                withTransportCancellation(caller, channel) { sendTransferBytes(transfer, context, confirmCompletion) }
                 context.configurationForRead()
                 Unit
             } catch (failure: Throwable) {
@@ -362,7 +362,7 @@ internal class AgentBridgeNativePlanningSession(
         if (retained) withRetainedCaptureContext(request, operation) else withCaptureContext(request, operation)
     }
 
-    private fun sendTransferBytes(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext) {
+    private fun sendTransferBytes(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext, confirmCompletion: Boolean) {
         val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val validate = { context.configurationForRead(); Unit }
@@ -408,9 +408,30 @@ internal class AgentBridgeNativePlanningSession(
         if (!ack.accepted || ack.sessionId != finalize.sessionId || ack.jobId != finalize.jobId ||
             ack.totalPartitions != finalize.totalPartitions || ack.totalBytes != finalize.totalBytes ||
             ack.finalPartitionSha256 != finalize.finalPartitionSha256) invalid()
-        // Host commit receipts and final source confirmation still own
-        // completion. Never emit completion_confirmed or a complete execution receipt here.
         context.configurationForRead()
+        if (confirmCompletion) confirmTransferCompletion(transfer, context)
+    }
+
+    private fun confirmTransferCompletion(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext) {
+        val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val validate = { context.configurationForRead(); Unit }
+        val manifest = AgentBridgeCodec.decode(transfer.export.manifestCanonical) as? AgentBridgeArtifactManifest
+            ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+        for (artifact in manifest.artifacts) {
+            val message = (channel.receiveAllowingAgentBridge(negotiation, validate) as? ReceivedAgentBridgePayload.Agent)?.message
+                ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            val receipt = message.payload as? AgentBridgeCommitReceipt ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            if (message.type != "commit_receipt" || receipt.artifactId != artifact.artifactId) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            context.recordHostCommit(receipt)
+        }
+        val receipt = context.preserveCompletion()
+        val finalFence = {
+            context.requirePreservedCompletion(receipt)
+        }
+        channel.sendV2ForAgentBridge("completion_confirmed", JobPayload.serializer(), JobPayload(transfer.session.jobId), negotiation, finalFence)
+        channel.sendAgentBridge(AgentBridgeMessage("execution_receipt", receipt), negotiation, finalFence)
+        finalFence()
     }
 
     /** Send durable original acceptance before any capture claim or SDK read. Exact retry replays
@@ -585,6 +606,18 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
             configurationForRead(); return result
         } catch (failure: Throwable) { invalidate(); throw failure }
     }
+    fun recordHostCommit(receipt: AgentBridgeCommitReceipt) {
+        try { configurationForRead(); spool.recordHostCommit(receipt); configurationForRead() }
+        catch (failure: Throwable) { invalidate(); throw failure }
+    }
+    fun requirePreservedCompletion(receipt: AgentBridgeExecutionReceipt) {
+        try { configurationForRead(); spool.requirePreservedCompletion(receipt) }
+        catch (error: Exception) { invalidate(); throw error }
+    }
+    fun preserveCompletion(): AgentBridgeExecutionReceipt {
+        try { configurationForRead(); val result = spool.preserveCompletion(); configurationForRead(); spool.requirePreservedCompletion(result); return result }
+        catch (failure: Throwable) { invalidate(); throw failure }
+    }
     /** Names the original accepted bytes; a fingerprint is never capture permission. */
     fun requestFingerprintForRead(): String {
         configurationForRead()
@@ -600,6 +633,7 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
         return try {
             val result = callback()
             synchronized(lock) { if (closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+            spool.requireCompletionIfPreserved()
             result
         } catch (failure: Throwable) { close(); throw failure }
     }

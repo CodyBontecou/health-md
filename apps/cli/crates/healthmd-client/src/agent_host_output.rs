@@ -225,6 +225,7 @@ pub(crate) struct OutputTransaction {
     key: SecretBox<[u8; 32]>,
     name: String,
     journal: OutputJournal,
+    persisted: Option<Vec<u8>>,
     is_new: bool,
     stage_slots: AtomicUsize,
 }
@@ -255,7 +256,7 @@ impl OutputTransaction {
         binding.validate()?;
         let (entries, jobs, retained_bytes) = scan_output_usage(&dir)?;
         let name = format!("output-{}.json", binding.request.job_id.0);
-        let (journal, is_new) = match dir.symlink_metadata(&name) {
+        let (journal, persisted, is_new) = match dir.symlink_metadata(&name) {
             Ok(_) => {
                 let bytes = private::read_private(&dir, &name, MAX_OUTPUT_BYTES)?;
                 let signed: SignedJournal = private_json::decode(&bytes)?;
@@ -266,7 +267,7 @@ impl OutputTransaction {
                 ) {
                     return Err(ClientError::AgentAuthorityUnavailable);
                 }
-                (signed.journal, false)
+                (signed.journal, Some(bytes), false)
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 let own_attempt = dir
@@ -282,6 +283,7 @@ impl OutputTransaction {
                         binding: binding.clone(),
                         plans: vec![],
                     },
+                    None,
                     true,
                 )
             }
@@ -305,6 +307,7 @@ impl OutputTransaction {
             key,
             name,
             journal,
+            persisted,
             is_new,
             stage_slots: AtomicUsize::new(8191 - usize::min(entries + usize::from(is_new), 8191)),
         })
@@ -322,12 +325,79 @@ impl OutputTransaction {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<PathBuf, ClientError>>,
     {
+        self.save_document(
+            "transfer",
+            b"HealthMd.AgentBridge.HostTransferJournal.v1\0",
+            data,
+            previous,
+            fence,
+        )
+        .await
+    }
+    pub async fn save_completion<T, F, Fut>(
+        &self,
+        data: &T,
+        fence: F,
+    ) -> Result<Vec<u8>, ClientError>
+    where
+        T: Serialize,
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<PathBuf, ClientError>>,
+    {
+        self.save_document(
+            "completion",
+            b"HealthMd.AgentBridge.HostCompletionJournal.v1\0",
+            data,
+            None,
+            fence,
+        )
+        .await
+    }
+    pub fn require_completion(&self, expected: &[u8]) -> Result<(), ClientError> {
+        self.require_current()?;
+        let name = format!("completion-{}.json", self.journal.binding.request.job_id.0);
+        if private::read_private(&self.dir, &name, MAX_OUTPUT_BYTES)? != expected {
+            return Err(Error::BindingChanged.into());
+        }
+        Ok(())
+    }
+    pub fn require_committed_receipts(
+        &self,
+        receipts: &[CommitReceipt],
+    ) -> Result<(), ClientError> {
+        self.require_current()?;
+        if self.persisted.is_none()
+            || self.journal.plans.len() != receipts.len()
+            || self
+                .journal
+                .plans
+                .iter()
+                .zip(receipts)
+                .any(|(plan, receipt)| !plan.committed || plan.receipt != *receipt)
+        {
+            return Err(Error::BindingChanged.into());
+        }
+        Ok(())
+    }
+    async fn save_document<T, F, Fut>(
+        &self,
+        prefix: &str,
+        domain: &[u8],
+        data: &T,
+        previous: Option<&[u8]>,
+        fence: F,
+    ) -> Result<Vec<u8>, ClientError>
+    where
+        T: Serialize,
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<PathBuf, ClientError>>,
+    {
         #[derive(Serialize)]
         struct Signed<'a, T> {
             journal: &'a T,
             mac: Digest,
         }
-        let name = format!("transfer-{}.json", self.journal.binding.request.job_id.0);
+        let name = format!("{prefix}-{}.json", self.journal.binding.request.job_id.0);
         let check_previous = || -> Result<(), ClientError> {
             self.require_current()?;
             match (previous, self.dir.symlink_metadata(&name)) {
@@ -347,7 +417,7 @@ impl OutputTransaction {
         self.reserve_stage_bytes(0)?;
         let mut signer = Hmac::<Sha256>::new_from_slice(self.key.expose_secret())
             .map_err(private::unavailable)?;
-        signer.update(b"HealthMd.AgentBridge.HostTransferJournal.v1\0");
+        signer.update(domain);
         signer.update(self.journal.binding.request.job_id.0.as_bytes());
         signer.update(&private_json::encode(data)?);
         let mac = Digest(format!("{:x}", signer.finalize().into_bytes()));
@@ -387,7 +457,16 @@ impl OutputTransaction {
     }
     pub fn require_current(&self) -> Result<(), ClientError> {
         self.store.directory()?;
-        private::require_named_file(&self.dir, OUTPUT_LOCK, &self.lock)
+        private::require_named_file(&self.dir, OUTPUT_LOCK, &self.lock)?;
+        match (&self.persisted, self.dir.symlink_metadata(&self.name)) {
+            (Some(expected), Ok(_))
+                if private::read_private(&self.dir, &self.name, MAX_OUTPUT_BYTES)? == *expected =>
+            {
+                Ok(())
+            }
+            (None, Err(error)) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            _ => Err(Error::BindingChanged.into()),
+        }
     }
     pub fn stage_path(&self, name: &str) -> Result<PathBuf, ClientError> {
         validate_stage_name(name)?;
@@ -443,8 +522,9 @@ impl OutputTransaction {
             Ok(())
         })
         .await?;
+        self.persisted = Some(bytes);
         self.is_new = false;
-        Ok(())
+        self.require_current()
     }
 }
 fn lock_outputs(dir: &cap_std::fs::Dir) -> Result<File, ClientError> {
@@ -469,9 +549,9 @@ fn require_absent_job(
     include_attempt: bool,
 ) -> Result<(), ClientError> {
     for prefix in if include_attempt {
-        &["output", "attempt", "transfer"][..]
+        &["output", "attempt", "transfer", "completion"][..]
     } else {
-        &["output", "transfer"][..]
+        &["output", "transfer", "completion"][..]
     } {
         match dir.symlink_metadata(format!("{prefix}-{}.json", job.0)) {
             Ok(_) => return Err(Error::BindingChanged.into()),

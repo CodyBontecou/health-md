@@ -315,7 +315,7 @@ final class AgentBridgeNativePlanningSession {
 
     /// The prepared value never escapes as send authority. Keep capture, carriage and every
     /// acknowledgement inside the original owner callback; this is not a completion receipt.
-    func transmitTransfer(_ request: AgentBridgeExecute, retained: Bool,
+    func transmitTransfer(_ request: AgentBridgeExecute, retained: Bool, confirmCompletion: Bool = false,
         prepare: (AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
     ) async throws {
         let operation: (AgentBridgeNativeCaptureContext) async throws -> Void = { [self] context in
@@ -333,7 +333,7 @@ final class AgentBridgeNativePlanningSession {
                     manifestCanonical: supplied.export.manifestCanonical)
                 let transfer = try AgentBridgeNativePreparedTransfer.make(request: request, export: export,
                     checkpointCanonical: supplied.checkpointCanonical)
-                try await sendTransferBytes(transfer, context: context)
+                try await sendTransferBytes(transfer, context: context, confirmCompletion: confirmCompletion)
                 _ = try context.configurationForRead()
             } catch {
                 context.invalidate(); wireAbandoned = true; responseChannel?.cancel(); throw error
@@ -344,7 +344,7 @@ final class AgentBridgeNativePlanningSession {
     }
 
     private func sendTransferBytes(_ transfer: AgentBridgeNativePreparedTransfer,
-        context: AgentBridgeNativeCaptureContext
+        context: AgentBridgeNativeCaptureContext, confirmCompletion: Bool
     ) async throws {
         guard let channel = responseChannel, let negotiation = responseNegotiation else {
             throw AgentBridgeValidationError.unsupportedCapability
@@ -402,9 +402,29 @@ final class AgentBridgeNativePlanningSession {
               ack.sessionID == finalize.sessionID, ack.jobID == finalize.jobID,
               ack.totalPartitions == finalize.totalPartitions, ack.totalBytes == finalize.totalBytes,
               ack.finalPartitionSHA256 == finalize.finalPartitionSHA256 else { throw AgentBridgeValidationError.bindingChanged }
-        // Base byte acknowledgement is not the v4 host commit receipt or final source confirmation.
-        // Do not emit completionConfirmed or a complete execution receipt here.
         _ = try context.configurationForRead()
+        if confirmCompletion { try await confirmTransferCompletion(transfer, context: context) }
+    }
+
+    private func confirmTransferCompletion(_ transfer: AgentBridgeNativePreparedTransfer,
+        context: AgentBridgeNativeCaptureContext) async throws {
+        guard let channel = responseChannel, let negotiation = responseNegotiation else { throw AgentBridgeValidationError.unsupportedCapability }
+        let validate: @Sendable () async throws -> Void = { try await MainActor.run { _ = try context.configurationForRead() } }
+        let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: transfer.export.manifestCanonical)
+        for artifact in manifest.artifacts {
+            guard case .agent(let envelope) = try await channel.receiveAllowingAgentBridge(negotiation: negotiation, authorize: validate),
+                  case .commit(let receipt) = envelope.payload, receipt.artifactId == artifact.artifactId else { throw AgentBridgeValidationError.bindingChanged }
+            try context.recordHostCommit(receipt)
+        }
+        let receipt = try context.preserveCompletion()
+        let finalFence: @Sendable () async throws -> Void = {
+            try await MainActor.run {
+                try context.requirePreservedCompletion(receipt)
+            }
+        }
+        try await channel.sendBaseForAgentBridge(.completionConfirmed(jobID: transfer.session.jobID), negotiation: negotiation, authorize: finalFence)
+        try await channel.sendAgentBridge(AgentBridgeEnvelope(payload: .receipt(receipt)), negotiation: negotiation, authorize: finalFence)
+        try await finalFence()
     }
 
     /// Acceptance is durable before this first execution response; no capture claim or SDK read
@@ -569,6 +589,18 @@ final class AgentBridgeNativeCaptureContext {
             _ = try configurationForRead(); return result
         } catch { invalidate(); throw error }
     }
+    func recordHostCommit(_ receipt: AgentBridgeCommitReceipt) throws {
+        do { _ = try configurationForRead(); try spool.recordHostCommit(receipt); _ = try configurationForRead() }
+        catch { invalidate(); throw error }
+    }
+    func preserveCompletion() throws -> AgentBridgeExecutionReceipt {
+        do { _ = try configurationForRead(); let result = try spool.preserveCompletion(); _ = try configurationForRead(); try spool.requirePreservedCompletion(result); return result }
+        catch { invalidate(); throw error }
+    }
+    func requirePreservedCompletion(_ receipt: AgentBridgeExecutionReceipt) throws {
+        do { _ = try configurationForRead(); try spool.requirePreservedCompletion(receipt) }
+        catch { invalidate(); throw error }
+    }
     /// A fingerprint names the original accepted bytes; it never grants capture permission.
     func requestFingerprintForRead() throws -> String {
         _ = try configurationForRead()
@@ -581,6 +613,7 @@ final class AgentBridgeNativeCaptureContext {
         do {
             let result = try read()
             guard !closed else { throw AgentBridgeValidationError.permissionRequired }
+            try spool.requireCompletionIfPreserved()
             return result
         } catch { close(); throw error }
     }
