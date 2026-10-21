@@ -1586,6 +1586,68 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
     #endif
 
+    func testNativeAcceptedReceiptPrecedesCaptureAndReplaysOriginalBytes() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let wire = NativePlanningResponsePackets(), key = SymmetricKey(data: Data(repeating: 7, count: 32))
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        defer { channel.cancel() }
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner)
+        try await planner.withCaptureContext(request) { context in
+            XCTAssertEqual(wire.packets.count, 1, "Acceptance must reach the channel before SDK admission")
+            _ = try context.begin()
+        }
+        let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+        rig.clock.advance(seconds: 1)
+        do { try await planner.withCaptureContext(request) { _ in XCTFail("Retry must not recapture") }; XCTFail("Expected existing job") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
+        XCTAssertEqual(wire.packets.count, 2)
+        var receipts: [Data] = []
+        for packet in wire.packets {
+            guard case .encrypted(let frame) = packet else { return XCTFail("Expected encrypted receipt") }
+            let bytes = Data(try ManualIPSyncSecurity.open(frame, using: key).dropFirst(16))
+            let envelope = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes)
+            guard case .receipt(let receipt) = envelope.payload else { return XCTFail("Expected accepted receipt") }
+            XCTAssertEqual(receipt, try job.acceptedReceipt())
+            XCTAssertEqual(receipt.requestSha256.rawValue, AgentBridgeV4Codec.sha256(try AgentBridgeV4Codec.encode(request)))
+            XCTAssertEqual(receipt.expiresAt, job.expiresAt)
+            XCTAssertEqual(receipt.artifactCount, 0); XCTAssertEqual(receipt.committedPartitionCount, 0)
+            XCTAssertEqual(receipt.manifestSha256.rawValue, String(repeating: "0", count: 64))
+            XCTAssertEqual(receipt.frontierSha256.rawValue, String(repeating: "0", count: 64))
+            XCTAssertFalse(receipt.sourceAcknowledged); XCTAssertEqual(receipt.status, .accepted)
+            receipts.append(try AgentBridgeV4Codec.encode(receipt))
+        }
+        XCTAssertEqual(receipts[0], receipts[1])
+        XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
+    }
+
+    func testNativeAcceptedReceiptFailureOrRevocationPreventsCaptureClaim() async throws {
+        for revoke in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+            _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let wire = NativePlanningResponsePackets(beforeWrite: {
+                try await MainActor.run {
+                    XCTAssertEqual(try rig.store.snapshot().acceptedJobs?.count, 1)
+                    XCTAssertTrue(try rig.store.snapshot().captureClaims?.isEmpty ?? true)
+                    if revoke { rig.session.revoke() }
+                    else { throw DirectChannelError.connectionClosed }
+                }
+            })
+            let channel = DirectSecureChannel(packetConnection: wire, sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+            defer { channel.cancel() }
+            let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+            let request = try nativeCaptureRequest(rig, planner: planner)
+            do { try await planner.withCaptureContext(request) { _ in XCTFail("No SDK callback before accepted receipt") }; XCTFail("Expected denial") }
+            catch { if revoke { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) } }
+            XCTAssertTrue(wire.packets.isEmpty)
+            XCTAssertEqual(try rig.store.snapshot().acceptedJobs?.count, 1)
+            XCTAssertTrue(try rig.store.snapshot().captureClaims?.isEmpty ?? true)
+        }
+    }
+
     func testNativeCaptureContextOwnsOneClaimAndExpiresEscapedContext() async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())

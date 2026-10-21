@@ -274,6 +274,8 @@ final class AgentBridgeNativePlanningSession {
                 } else {
                     let accepted = try service.acceptExecution(request, authenticatedPeer: peer)
                     try cancellation.requireActive(); try Task.checkCancellation()
+                    try await sendAcceptedExecution(accepted.job, request: request, publication: publication,
+                        cancellation: cancellation)
                     guard accepted.newlyAccepted else { throw AgentBridgeValidationError.busy }
                     reservation = try service.claimCapture(request, authenticatedPeer: peer)
                 }
@@ -297,6 +299,35 @@ final class AgentBridgeNativePlanningSession {
                 throw error
             }
         } onCancel: { cancellation.cancel() }
+    }
+
+    /// Acceptance is durable before this first execution response; no capture claim or SDK read
+    /// may precede successful bounded transmission. A retry replays original bytes, never renews.
+    private func sendAcceptedExecution(_ job: AgentBridgeExportAcceptedJob, request: AgentBridgeExecute,
+        publication: AgentBridgeNativeCatalogPublication, cancellation: AgentBridgeCaptureCancellation
+    ) async throws {
+        guard let responseChannel, let responseNegotiation else { throw AgentBridgeValidationError.unsupportedCapability }
+        do {
+            let response = try AgentBridgeEnvelope(payload: .receipt(job.acceptedReceipt()))
+            let validate: @MainActor @Sendable () throws -> Void = { [self] in
+                try cancellation.requireActive(); try Task.checkCancellation()
+                guard try requireCurrent() == publication,
+                      try service.acceptExecution(request, authenticatedPeer: peer).job == job,
+                      !wireAbandoned, try lifecycle.currentPublication() == publication else {
+                    throw AgentBridgeValidationError.bindingChanged
+                }
+                try cancellation.requireActive(); try Task.checkCancellation()
+            }
+            try validate()
+            try await responseChannel.sendAgentBridge(response, negotiation: responseNegotiation) {
+                try await MainActor.run { try validate() }
+            }
+            try validate()
+        } catch {
+            wireAbandoned = true
+            responseChannel.cancel()
+            throw error
+        }
     }
 
     /// Native producer pre-read boundary only; does not reserve again or install an SDK route.

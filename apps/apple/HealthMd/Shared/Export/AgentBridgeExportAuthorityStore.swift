@@ -74,6 +74,17 @@ nonisolated struct AgentBridgeExportAcceptedJob: Codable, Equatable {
     let acceptedAt: AgentBridgeUTC
     let expiresAt: AgentBridgeUTC
     func request() throws -> AgentBridgeExecute { try AgentBridgeV4Codec.decode(AgentBridgeExecute.self, from: requestBytes) }
+    /// Deterministic pre-capture receipt derived only from the signed original acceptance.
+    /// Zero digests/counts mean no manifest/frontier exists yet, matching the v4 native fixtures.
+    func acceptedReceipt() throws -> AgentBridgeExecutionReceipt {
+        try validate()
+        let request = try request()
+        let absent = try AgentBridgeDigest(String(repeating: "0", count: 64))
+        return .init(artifactCount: 0, binding: AgentBridgeSemantics.binding(request.plan),
+            committedPartitionCount: 0, expiresAt: expiresAt, frontierSha256: absent,
+            jobId: request.jobId, manifestSha256: absent, requestSha256: requestSHA256,
+            sourceAcknowledged: false, status: .accepted)
+    }
     func validate() throws {
         let value = try request()
         let formatter = ISO8601DateFormatter()

@@ -89,6 +89,63 @@ class AgentBridgeNativeConfigurationReaderTest {
         AgentBridgeNativePlanningSession(f.peerContext, lifecycle, f.store,
             AgentBridgeNativeConfigurationReader(observed, settings, profiles, { lifecycle.currentFacts() },
                 { AgentBridgeExportTestRegistry.load() }), f.clock, responseChannel = channel, responseNegotiation = negotiation, responseTransferNegotiation = transferNegotiation)
+    @Test fun `native accepted receipt precedes capture and replays original bytes`() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val receipts = mutableListOf<ByteArray>()
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                val fence = thirdArg<() -> Unit>(); fence()
+                val message = firstArg<AgentBridgeMessage>()
+                assertThat(message.type).isEqualTo("execution_receipt")
+                receipts += AgentBridgeCodec.encode(message.payload)
+                fence()
+            }
+            val planner = ownedPlanner(f, lifecycle, channel)
+            val request = nativeCaptureRequest(f, planner)
+            planner.withCaptureContext(request) { context ->
+                assertThat(receipts.size).isEqualTo(1)
+                context.begin()
+            }
+            val job = f.store.access { it!!.state.acceptedJobs!!.single() }
+            try { planner.withCaptureContext(request) { error("Retry must not recapture") }; throw AssertionError("Expected existing job") }
+            catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
+            assertThat(receipts.size).isEqualTo(2)
+            assertThat(receipts[0]).isEqualTo(receipts[1])
+            val receipt = AgentBridgeCodec.decode(receipts[0]) as AgentBridgeExecutionReceipt
+            assertThat(receipt).isEqualTo(job.acceptedReceipt())
+            assertThat(receipt.requestSha256).isEqualTo(AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)))
+            assertThat(receipt.expiresAt).isEqualTo(job.expiresAt)
+            assertThat(receipt.status).isEqualTo(AgentBridgeExecutionReceiptStatus.ACCEPTED)
+            assertThat(receipt.manifestSha256).isEqualTo("0".repeat(64)); assertThat(receipt.frontierSha256).isEqualTo("0".repeat(64))
+            assertThat(receipt.sourceAcknowledged).isFalse()
+            assertThat(receipt.artifactCount).isEqualTo(0); assertThat(receipt.committedPartitionCount).isEqualTo(0)
+            assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
+        }
+    }
+
+    @Test fun `native accepted receipt failure or revocation prevents capture claim`() = runBlocking {
+        for (revoke in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                assertThat(f.store.access { it!!.state.acceptedJobs!!.size }).isEqualTo(1)
+                assertThat(f.store.access { it!!.state.captureClaims.orEmpty() }).isEmpty()
+                if (revoke) { lifecycle.stop(); thirdArg<() -> Unit>()() }
+                throw java.io.IOException("synthetic interrupted acceptance")
+            }
+            val planner = ownedPlanner(f, lifecycle, channel)
+            val request = nativeCaptureRequest(f, planner)
+            try { planner.withCaptureContext(request) { error("No SDK callback before accepted receipt") }; throw AssertionError("Expected denial") }
+            catch (failure: Exception) { if (revoke) assertThat(failure).isInstanceOf(AgentBridgeException::class.java) }
+            assertThat(f.store.access { it!!.state.acceptedJobs!!.size }).isEqualTo(1)
+            assertThat(f.store.access { it!!.state.captureClaims.orEmpty() }).isEmpty()
+            verify(exactly = 1) { channel.close() }
+        }
+    }
+
     private fun nativeNegotiation() = AgentBridgeNegotiation.negotiate(AgentBridgePlatform.ANDROID, listOf(2, 4), listOf(2, 4))
     private fun ownedDiscoveryBytes(f: AgentBridgeExportPlanningFixture) = AgentBridgeCodec.encodeEnvelope(
         AgentBridgeMessage("discovery_request", f.discoveryRequest()), nativeNegotiation())

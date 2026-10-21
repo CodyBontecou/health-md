@@ -695,6 +695,18 @@ internal object AgentBridgeExportNativeSetupConsent {
 internal data class AgentBridgeExportAcceptedJob(val version: Int, val requestCanonical: String,
     val requestSha256: String, val resolutionCanonical: String, val acceptedAt: String, val expiresAt: String) {
     fun request() = AgentBridgeCodec.decode(requestCanonical.toByteArray()) as AgentBridgeExecuteRequest
+    /** Deterministic pre-capture receipt from signed original acceptance; zero digests/counts
+     * describe the absent manifest/frontier, matching the independent v4 native fixtures. */
+    fun acceptedReceipt(): AgentBridgeExecutionReceipt {
+        validate()
+        val request = request()
+        val plan = request.plan as AgentBridgeGeneratedPlan
+        return AgentBridgeExecutionReceipt(artifactCount = 0, binding = AgentBridgeValidation.bindingFor(plan),
+            committedPartitionCount = 0, expiresAt = expiresAt, frontierSha256 = "0".repeat(64),
+            jobId = request.jobId, manifestSha256 = "0".repeat(64), requestSha256 = requestSha256,
+            schema = "healthmd.agent_execution_receipt", schemaVersion = 1,
+            sourceAcknowledged = false, status = AgentBridgeExecutionReceiptStatus.ACCEPTED)
+    }
     fun validate() {
         val request = request(); val plan = request.plan as AgentBridgeGeneratedPlan
         require(version == 1 && requestCanonical.toByteArray().size <= 48 * 1024 && resolutionCanonical.toByteArray().size <= 48 * 1024)

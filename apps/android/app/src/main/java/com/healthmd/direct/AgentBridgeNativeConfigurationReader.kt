@@ -297,6 +297,7 @@ internal class AgentBridgeNativePlanningSession(
             } else {
                 val accepted = service.acceptExecution(peer, request)
                 caller.ensureActive()
+                sendAcceptedExecution(accepted.job, request, publication, caller)
                 if (!accepted.newlyAccepted) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
                 service.claimCapture(peer, request)
             }
@@ -317,6 +318,34 @@ internal class AgentBridgeNativePlanningSession(
                 result
             } finally { context.close() }
         } catch (failure: Throwable) { caller.ensureActive(); throw failure }
+    }
+
+    /** Send durable original acceptance before any capture claim or SDK read. Exact retry replays
+     * original receipt bytes without renewing the job or granting another capture. */
+    private fun sendAcceptedExecution(job: AgentBridgeExportAcceptedJob, request: AgentBridgeExecuteRequest,
+        publication: AgentBridgeNativeCatalogPublication, caller: Job) {
+        val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        try {
+            withTransportCancellation(caller, channel) {
+                val validate = {
+                    caller.ensureActive()
+                    requireSamePublication(publication)
+                    if (service.acceptExecution(peer, request).job != job || wireAbandoned || lifecycle.currentPublication() != publication)
+                        throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                    caller.ensureActive()
+                }
+                val response = AgentBridgeMessage("execution_receipt", job.acceptedReceipt())
+                validate()
+                channel.sendAgentBridge(response, negotiation, validate)
+                validate()
+            }
+        } catch (failure: Throwable) {
+            wireAbandoned = true
+            runCatching { channel.close() }
+            caller.ensureActive()
+            throw failure
+        }
     }
 
     /** Original-owner native producer boundary. No SDK reads, claim renewal or installed route. */
