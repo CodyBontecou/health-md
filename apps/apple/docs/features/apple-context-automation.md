@@ -26,6 +26,12 @@ all-history API, private API, flag enablement or deployment is involved.
 - Choose an existing Connected Mac profile in Export Profiles and explicitly use
   **Bind context automation to this authenticated Mac**. This is a separate local
   binding, not a change to the frozen export profile or Shared Setup grammar.
+  Open the profile's detail screen, choose the binding control, and confirm.
+  Configuration protection applies both when opening and confirming the prompt.
+  If the authenticated Mac changes while the prompt is open, confirmation fails
+  without replacing the saved binding. Protected data and Shared Setup execution
+  blocks also prevent binding. The card reports a saved binding, not proof of a
+  currently connected or qualified Mac.
 - Refresh accepts an optional saved profile name (empty selects the active saved
   profile) and required ordered inclusive start/end dates. Unknown, ineligible,
   rebind-required or unbound profiles fail without fallback. No profiles means

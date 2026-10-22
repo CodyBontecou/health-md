@@ -2,6 +2,17 @@
 
 Refs https://github.com/CodyBontecou/health-md/issues/173
 
+## Implementation follow-up (2026-10-22)
+
+The original investigation below describes the earlier base, not the current
+candidate. The PR now registers both App Intents, adds the independently
+negotiated authenticated request/receipt path, and exposes an explicit binding
+control in Connected Mac profile details. Its confirmation pins the authenticated
+Mac identity and respects configuration protection. See
+[`apple-context-automation.md`](../features/apple-context-automation.md) for the
+current source contract and remaining physical-device gates. Native synthetic
+coverage does not establish physical Shortcuts or sleep/wake acceptance.
+
 ## Outcome and limits
 
 A mobile automation should explicitly refresh an authenticated computer's encrypted query context for a frozen profile/date scope and retrieve a durable status without producing export files. This is not ordinary file export and must not change existing Shortcut destinations, saved profiles, or local data.

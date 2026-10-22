@@ -64,9 +64,12 @@ final class AppleContextPhoneClient {
 
     /// A separate, explicitly user-confirmed binding. Does not alter export
     /// profiles, Shared Setup, or the ordinary Connected Mac destination.
-    func bind(profileID: UUID) throws {
+    func bind(profileID: UUID, expectedPeerID: UUID) throws {
+        guard protectedDataAvailable() else { throw ClientError.locked }
+        guard !executionBlocked(profileID) else { throw ClientError.profile }
         guard let sync, sync.canUsePhoneContextAutomation,
               let peer = sync.authenticatedContextPeerID else { throw ClientError.unavailable }
+        guard expectedPeerID == peer else { throw ClientError.profile }
         try FileManager.default.createDirectory(at: bindingRoot, withIntermediateDirectories: true)
         try JSONEncoder().encode(peer).write(to: bindingRoot.appendingPathComponent(profileID.uuidString),
                                              options: [.atomic, .completeFileProtection])

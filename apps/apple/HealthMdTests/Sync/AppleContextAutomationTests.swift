@@ -256,6 +256,37 @@ final class AppleContextAutomationTests: XCTestCase {
     }
 
     #if os(iOS)
+    func testExplicitBindingRejectsChangedPeerProtectedDataAndBlockedProfileWithoutReplacingAuthority() throws {
+        let originalPeer = UUID()
+        let sync = service(peerID: originalPeer)
+        let profileID = UUID()
+        let bindings = root.appendingPathComponent("bindings")
+        var locked = false
+        var blocked = false
+        let client = AppleContextPhoneClient(
+            journal: AppleContextJournal(root: root.appendingPathComponent("phone")),
+            bindingRoot: bindings,
+            protectedDataAvailable: { !locked }, executionBlocked: { _ in blocked })
+        client.install(sync)
+        try client.bind(profileID: profileID, expectedPeerID: originalPeer)
+        XCTAssertEqual(client.boundPeer(profileID: profileID), originalPeer)
+        let replacementPeer = UUID()
+        sync.testSetAuthenticatedContextPeer(replacementPeer)
+        sync.remoteCapabilities = .current(platform: .macOS, installationID: replacementPeer)
+        XCTAssertThrowsError(try client.bind(profileID: profileID, expectedPeerID: originalPeer))
+        XCTAssertEqual(client.boundPeer(profileID: profileID), originalPeer)
+        locked = true
+        XCTAssertThrowsError(try client.bind(profileID: profileID, expectedPeerID: replacementPeer))
+        locked = false
+        blocked = true
+        XCTAssertThrowsError(try client.bind(profileID: profileID, expectedPeerID: replacementPeer))
+        XCTAssertEqual(client.boundPeer(profileID: profileID), originalPeer)
+        blocked = false
+        try client.bind(profileID: profileID, expectedPeerID: replacementPeer)
+        let restarted = AppleContextPhoneClient(bindingRoot: bindings)
+        XCTAssertEqual(restarted.boundPeer(profileID: profileID), replacementPeer)
+    }
+
     func testPhoneProductionAdapterFreezesProfileBeforeSendAndRecoversLostAckWithoutQuota() throws {
         let peer = UUID()
         let service = service(peerID: peer)
@@ -270,7 +301,7 @@ final class AppleContextAutomationTests: XCTestCase {
         let journal = AppleContextJournal(root: journalRoot)
         let client = AppleContextPhoneClient(journal: journal, bindingRoot: bindings, protectedDataAvailable: { true }, executionBlocked: { _ in false })
         client.install(service)
-        try client.bind(profileID: profile.id)
+        try client.bind(profileID: profile.id, expectedPeerID: peer)
         var sent: [AppleContextRequest] = []
         service.testMessageSendObserver = { message in
             if case .appleContext(.refresh(let request)) = message {
@@ -318,7 +349,7 @@ final class AppleContextAutomationTests: XCTestCase {
         let day = request().startDate
         XCTAssertThrowsError(try client.refresh(profileName: "missing", startDate: day, endDate: day, profiles: profiles))
         XCTAssertThrowsError(try client.refresh(profileName: "Context", startDate: day, endDate: day, profiles: profiles))
-        try client.bind(profileID: profile.id)
+        try client.bind(profileID: profile.id, expectedPeerID: peer)
         profiles.updateTarget(id: profile.id, target: .localIPhoneFolder)
         XCTAssertThrowsError(try client.refresh(profileName: "Context", startDate: day, endDate: day, profiles: profiles))
         profiles.updateTarget(id: profile.id, target: .connectedMac)
@@ -345,7 +376,7 @@ final class AppleContextAutomationTests: XCTestCase {
         let journal = AppleContextJournal(root: directory)
         let client = AppleContextPhoneClient(journal: journal, bindingRoot: bindings, protectedDataAvailable: { true }, executionBlocked: { _ in false })
         client.install(service)
-        try client.bind(profileID: profile.id)
+        try client.bind(profileID: profile.id, expectedPeerID: peer)
         var sends = 0
         service.testMessageSendObserver = { _ in sends += 1 }
         journal.writeFailurePointForTesting = .afterFinalAtomicWrite
