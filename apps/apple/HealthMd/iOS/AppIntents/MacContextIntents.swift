@@ -233,7 +233,9 @@ struct RefreshMacHealthContextIntent: AppIntent {
     @Parameter(title: "Start Date") var startDate: Date
     @Parameter(title: "End Date") var endDate: Date
     static var parameterSummary: some ParameterSummary {
-        Summary("Refresh Mac context from \(\.$startDate) to \(\.$endDate)")
+        Summary("Refresh Mac context from \(\.$startDate) to \(\.$endDate)") {
+            \.$profile
+        }
     }
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<MacContextRefreshEntity> & ProvidesDialog {

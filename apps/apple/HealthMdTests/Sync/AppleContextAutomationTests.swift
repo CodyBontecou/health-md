@@ -595,6 +595,19 @@ final class AppleContextAutomationTests: XCTestCase {
 
     func testRealShortcutProviderRetainsSevenActionsAndRegistersBothContextIntents() async throws {
         XCTAssertEqual(HealthMdAppShortcuts.appShortcuts.count, 9)
+        // Check the actual extracted Shortcuts editor configuration. Declaring
+        // @Parameter alone does not expose an optional field omitted by Summary.
+        let metadataURL = Bundle.main.bundleURL.appendingPathComponent("Metadata.appintents/extract.actionsdata")
+        let metadata = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: metadataURL)) as? [String: Any])
+        let actions = try XCTUnwrap(metadata["actions"] as? [String: Any])
+        let action = try XCTUnwrap(actions["RefreshMacHealthContextIntent"] as? [String: Any])
+        let configuration = try XCTUnwrap(action["actionConfiguration"] as? [String: Any])
+        let summary = try XCTUnwrap(configuration["actionSummary"] as? [String: Any])
+        let wrapper = try XCTUnwrap(summary["wrapper"] as? [String: Any])
+        let inline = try XCTUnwrap(wrapper["summaryString"] as? [String: Any])
+        let inlineParameters = try XCTUnwrap(inline["parameterIdentifiers"] as? [String])
+        let expandedParameters = try XCTUnwrap(wrapper["otherParameterIdentifiers"] as? [String])
+        XCTAssertEqual(Set(inlineParameters + expandedParameters), ["profile", "startDate", "endDate"])
         _ = RefreshMacHealthContextIntent()
         _ = GetMacContextRefreshStatusIntent()
         // Actual public EntityQuery resolves only persisted IDs, not caller identities.
