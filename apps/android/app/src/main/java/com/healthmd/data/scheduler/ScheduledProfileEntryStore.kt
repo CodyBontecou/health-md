@@ -6,12 +6,15 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.healthmd.domain.model.ExportProfile
+import com.healthmd.data.export.RecoveryDiscardFence
 import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -39,6 +42,7 @@ class ScheduledProfileEntryStore @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val listSerializer = ListSerializer(ScheduledProfileEntry.serializer())
+    private val discardFence by lazy { RecoveryDiscardFence(context.noBackupFilesDir) }
 
     private object Keys {
         val MINUTE_INTENT = stringPreferencesKey("scheduled_profile_refresh_minutes_v2")
@@ -51,7 +55,24 @@ class ScheduledProfileEntryStore @Inject constructor(
         decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]).orEmpty()
     }
 
-    suspend fun getEntries(): List<ScheduledProfileEntry> = entries.first()
+    suspend fun getEntries(): List<ScheduledProfileEntry> {
+        reconcilePendingDiscards()
+        return entries.first()
+    }
+
+    /** Finishes a crash after revocation/unlink but before the pending-state/generation commit. */
+    private suspend fun reconcilePendingDiscards() = withContext(Dispatchers.IO) {
+        discardFence.reconcile()
+        dataStore.edit { prefs ->
+            val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
+            val updated = existing.map { entry ->
+                if (discardFence.isProfileGenerationDiscarded(entry.profileId, entry.recoveryGeneration)) {
+                    entry.copy(pendingExports = emptyList(), recoveryGeneration = Math.addExact(entry.recoveryGeneration, 1L))
+                } else entry
+            }
+            if (updated != existing) prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated)
+        }
+    }
 
     suspend fun entry(profileId: String): ScheduledProfileEntry? =
         getEntries().firstOrNull { it.profileId == profileId }
@@ -76,6 +97,7 @@ class ScheduledProfileEntryStore @Inject constructor(
             val previous = existing.firstOrNull { it.profileId == entry.profileId }
             // UI drafts may have been opened before a worker recorded success. Configuration
             // saves must never move the durable catch-up frontier backwards.
+            val reconfigured = previous?.let { scheduleChanged(it, entry) } == true
             val merged = entry.copy(
                 lastSuccessEpochMillis = latest(
                     previous?.lastSuccessEpochMillis,
@@ -88,7 +110,8 @@ class ScheduledProfileEntryStore @Inject constructor(
                 // A configuration draft may predate a worker's cancellation checkpoint. Preserve
                 // exact residual groups until the worker clears them individually.
                 pendingExports = previous?.pendingExports ?: entry.pendingExports,
-                recoveryGeneration = previous?.recoveryGeneration ?: entry.recoveryGeneration,
+                recoveryGeneration = if (reconfigured) Math.addExact(requireNotNull(previous).recoveryGeneration, 1L)
+                    else previous?.recoveryGeneration ?: entry.recoveryGeneration,
             )
             val updated = existing.filterNot { it.profileId == entry.profileId } + merged
             persist(prefs, updated.sortedBy { it.profileId })
@@ -120,9 +143,16 @@ class ScheduledProfileEntryStore @Inject constructor(
             val index = existing.indexOfFirst { it.profileId == profileId }
             if (index < 0) return@edit
             if (expectedRecoveryGeneration != null &&
-                existing[index].recoveryGeneration != expectedRecoveryGeneration
+                (existing[index].recoveryGeneration != expectedRecoveryGeneration ||
+                    discardFence.isProfileGenerationDiscarded(profileId, expectedRecoveryGeneration))
             ) return@edit
-            val changed = change(existing[index])
+            val requested = change(existing[index])
+            val changed = requested.copy(recoveryGeneration = maxOf(
+                requested.recoveryGeneration,
+                if (expectedRecoveryGeneration == null && scheduleChanged(existing[index], requested)) {
+                    Math.addExact(existing[index].recoveryGeneration, 1L)
+                } else existing[index].recoveryGeneration,
+            ))
             require(changed.profileId == profileId) { "Scheduled profile update cannot change identity." }
             if (
                 changed.isEnabled &&
@@ -137,16 +167,69 @@ class ScheduledProfileEntryStore @Inject constructor(
         return persisted
     }
 
+    /** Pins a new API occurrence before capture; an existing group is never reauthorized. */
+    suspend fun admitAPIExport(
+        profileId: String,
+        expectedRecoveryGeneration: Long,
+        pending: ScheduledProfilePendingExport,
+    ): Boolean = updateForGeneration(profileId, expectedRecoveryGeneration) { current ->
+        require(current.isEnabled && pending.target == com.healthmd.domain.model.ExportTarget.API_ENDPOINT)
+        require(com.healthmd.data.export.APIRecoveryAuthorities.isValid(pending.apiAuthorityJson))
+        val existing = current.pendingExports.firstOrNull { it.id == pending.id }
+        require(existing == null || existing == pending)
+        current.copy(pendingExports = if (existing == null) current.pendingExports + pending else current.pendingExports)
+    }
+
+    /** Persists missing-journal refusal before any external delivery, with the discard fence. */
+    suspend fun markAPIJournalRequired(
+        profileId: String,
+        expectedRecoveryGeneration: Long,
+        pendingId: String,
+        authority: String,
+        operationId: String,
+    ): Boolean {
+        var matched = false
+        val persisted = updateForGeneration(profileId, expectedRecoveryGeneration) { current ->
+            if (!current.isEnabled || current.pendingExports.none {
+                    it.id == pendingId && it.apiAuthorityJson == authority && it.durableOperationId == operationId
+                }) return@updateForGeneration current
+            matched = true
+            current.copy(pendingExports = current.pendingExports.map {
+                if (it.id == pendingId) it.copy(apiJournalRequired = true) else it
+            })
+        }
+        return persisted && matched
+    }
+
     /**
-     * Abandons frozen retry groups without changing configuration, credentials, history, or
-     * completed/refresh frontiers. The atomic generation bump fences late worker checkpoints;
-     * cancelling WorkManager alone does not wait for the worker coroutine to finish.
+     * Persist exact private revocation before unlink and before clearing the DataStore admission.
+     * A crash in between is replayed by getEntries; no worker can recreate the private operation.
+     * Configuration, credentials, history and completed/refresh frontiers remain untouched.
      */
-    suspend fun discardPendingRecovery(profileId: String): Boolean = update(profileId) { current ->
-        current.copy(
-            pendingExports = emptyList(),
-            recoveryGeneration = Math.addExact(current.recoveryGeneration, 1L),
-        )
+    suspend fun discardPendingRecovery(profileId: String): Boolean = try {
+        withContext(Dispatchers.IO) {
+            var discarded = false
+            dataStore.edit { prefs ->
+                val existing = decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]) ?: return@edit
+                val current = existing.firstOrNull { it.profileId == profileId } ?: return@edit
+                val nextGeneration = Math.addExact(current.recoveryGeneration, 1L)
+                val bindings = current.pendingExports.filter {
+                    it.target == com.healthmd.domain.model.ExportTarget.API_ENDPOINT && it.durableOperationId != null
+                }.groupBy { requireNotNull(it.durableOperationId) }.mapValues { (_, pending) ->
+                    pending.map { RecoveryDiscardFence.Binding(it.apiAuthorityJson, it.settingsSnapshotJson) }.distinct().single()
+                }
+                discardFence.discard(bindings.keys, profileId, current.recoveryGeneration, expectedBindings = bindings)
+                persist(prefs, existing.map {
+                    if (it.profileId == profileId) it.copy(pendingExports = emptyList(), recoveryGeneration = nextGeneration) else it
+                })
+                discarded = true
+            }
+            discarded
+        }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        false
     }
 
     suspend fun delete(profileId: String) {
@@ -290,11 +373,14 @@ class ScheduledProfileEntryStore @Inject constructor(
         return finished
     }
 
-    /**
-     * Decodes the persisted list. A missing or blank key is the legitimate fresh-store state and
-     * behaves as an empty list. Only a malformed *present* payload returns null, so write paths
-     * still fail closed instead of overwriting other entries after a corrupt read.
-     */
+    private fun scheduleChanged(first: ScheduledProfileEntry, second: ScheduledProfileEntry): Boolean =
+        first.isEnabled != second.isEnabled || first.anchorEpochDay != second.anchorEpochDay ||
+            first.cadenceUnit != second.cadenceUnit || first.cadenceValue != second.cadenceValue ||
+            first.weekdayIso != second.weekdayIso || first.dateWindow != second.dateWindow ||
+            first.hour != second.hour || first.minute != second.minute || first.lookbackDays != second.lookbackDays ||
+            first.zoneId != second.zoneId || first.todayRefreshEnabled != second.todayRefreshEnabled ||
+            first.todayRefreshIntervalHours != second.todayRefreshIntervalHours
+
     private fun latest(first: Long?, second: Long?): Long? =
         listOfNotNull(first, second).maxOrNull()
 

@@ -685,11 +685,19 @@ class ExportScheduler @Inject constructor(
         currentFallback: ScheduledExportOccurrence?,
     ): Boolean {
         if (stateStore.loadAdmission() != null) return false
+        val authority = if (occurrence.configuration.target == ExportTarget.API_ENDPOINT) {
+            val current = settingsRepository.getExportSettings()
+            check(apiCredentialStore.destinationFingerprint(current.apiEndpointUrl) ==
+                occurrence.configuration.destinationFingerprint) { "Scheduled API authority changed." }
+            requireNotNull(apiCredentialStore.createRecoveryAuthority(current.apiEndpointUrl, null)) {
+                "Scheduled API authority is unavailable."
+            }
+        } else null
         val admission = ScheduledExportAdmission.create(
             occurrence = occurrence,
             catchUpThroughMillis = catchUpThroughMillis,
             expedited = expedited,
-        )
+        ).copy(apiAuthorityJson = authority)
         // Validate the fallback envelope too. Neither validation may occur after durable admission.
         nextOccurrence.toWorkData()
         check(stateStore.prepareAdmission(admission, nextOccurrence)) {

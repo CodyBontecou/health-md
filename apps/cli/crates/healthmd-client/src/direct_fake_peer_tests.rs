@@ -23,6 +23,11 @@ use crate::{
     secure_channel::{SecureChannel, SecurePayload},
 };
 
+#[path = "agent_bridge_fake_peer_tests.rs"]
+mod agent_tests;
+#[path = "direct_generated_fake_tests.rs"]
+mod generated_tests;
+
 #[derive(Default)]
 struct MemoryCredentials(Mutex<HashMap<String, String>>);
 

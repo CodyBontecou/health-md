@@ -69,6 +69,17 @@ impl JsonRpcSession {
             Ok(value) => value,
             Err(_) => return Some(response_error(Value::Null, -32_700, "Parse error")),
         };
+        if matches!(
+            request.pointer("/params/name").and_then(Value::as_str),
+            Some("healthmd_export_plan" | "healthmd_export_approval")
+        ) && !healthmd_operations::agent_rpc_bytes_valid(input.as_bytes())
+        {
+            return Some(response_error(
+                Value::Null,
+                -32_602,
+                "Invalid tool arguments",
+            ));
+        }
         let Some(object) = request.as_object() else {
             return Some(response_error(Value::Null, -32_600, "Invalid request"));
         };

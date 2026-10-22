@@ -111,7 +111,9 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   const skillV5 = await read('docs-src/public/agents/skills/healthmd-cli/v5/SKILL.md');
   const skillV6 = await read('docs-src/public/agents/skills/healthmd-cli/v6/SKILL.md');
   const skillV7 = await read('docs-src/public/agents/skills/healthmd-cli/v7/SKILL.md');
-  const publishedSkill = await read('docs-src/public/agents/skills/healthmd-cli/v8/SKILL.md');
+  const skillV8 = await read('docs-src/public/agents/skills/healthmd-cli/v8/SKILL.md');
+  assert.equal(sha256(skillV8), 'ec4c48f223a69f24ab4a517f2efb164c6d574cd2cfd19c8d24300d03e097a0cc');
+  const publishedSkill = await read('docs-src/public/agents/skills/healthmd-cli/v9/SKILL.md');
   assert.equal(sha256(skillV7), 'c25037d7f43818925769eb2093c319c0465bfa3ed1d2454287cefcd8f8261c48');
   assert.equal(skillV1.length, 15_734);
   assert.equal(sha256(skillV1), '6f36d8e479552745ae282a30a8471bc2ce477e7d1d6d8040f6ba72cd75047792');
@@ -123,11 +125,11 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   assert.match(skillV2.toString('utf8'), /0\.1\.0-alpha\.2.*public preview/s);
   assert.deepEqual(publishedSkill, skillSource);
   const skillManifest = JSON.parse(await read('docs-src/public/agents/skills/healthmd-cli/manifest.json'));
-  assert.equal(skillManifest.latest.version, 8);
-  assert.equal(skillManifest.latest.path, '/agents/skills/healthmd-cli/v8/SKILL.md');
+  assert.equal(skillManifest.latest.version, 9);
+  assert.equal(skillManifest.latest.path, '/agents/skills/healthmd-cli/v9/SKILL.md');
   assert.equal(skillManifest.latest.bytes, publishedSkill.length);
   assert.equal(skillManifest.latest.sha256, sha256(publishedSkill));
-  assert.equal(skillManifest.versions.length, 8);
+  assert.equal(skillManifest.versions.length, 9);
   assert.equal(skillManifest.versions[0].sha256, sha256(skillV1));
   assert.equal(skillManifest.versions[1].sha256, sha256(skillV2));
   assert.equal(skillManifest.versions[2].sha256, sha256(skillV3));
@@ -135,7 +137,8 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   assert.equal(skillManifest.versions[4].sha256, sha256(skillV5));
   assert.equal(skillManifest.versions[5].sha256, sha256(skillV6));
   assert.equal(skillManifest.versions[6].sha256, sha256(skillV7));
-  assert.deepEqual(skillManifest.versions[7], skillManifest.latest);
+  assert.equal(skillManifest.versions[7].sha256, sha256(skillV8));
+  assert.deepEqual(skillManifest.versions[8], skillManifest.latest);
   assert.equal(skillManifest.install_as, 'healthmd-cli/SKILL.md');
   assert.equal(skillManifest.availability, 'public_preview');
   const agentManifest = JSON.parse(await read('docs-src/public/agents/manifest.json'));
@@ -164,9 +167,12 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   const macTools = JSON.parse(await read('docs-src/public/agents/mcp/mac-tools-v1.json'));
   const portableTools = JSON.parse(portableSource);
   assert.equal(macTools.length, 21);
-  assert.equal(portableTools.length, 21);
+  assert.equal(portableTools.length, 23);
   assert.equal(new Set(macTools.map(({ name }) => name)).size, 21);
-  assert.equal(new Set(portableTools.map(({ name }) => name)).size, 21);
+  assert.equal(new Set(portableTools.map(({ name }) => name)).size, 23);
+  for (const name of ["healthmd_export_plan", "healthmd_export_approval"]) {
+    assert.ok(portableTools.some((tool) => tool.name === name));
+  }
 });
 
 test('CLI launch post uses runnable preview commands and honest privacy boundaries', async () => {

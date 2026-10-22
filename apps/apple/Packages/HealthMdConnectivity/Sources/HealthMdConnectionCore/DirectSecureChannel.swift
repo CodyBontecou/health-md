@@ -36,7 +36,12 @@ public protocol DirectPacketTransport: AnyObject, Sendable {
     func cancel()
 }
 
-public final class DirectPacketConnection: DirectPacketTransport, @unchecked Sendable {
+/// New bridge writes require an actual guarded transport. There is no default unguarded fallback.
+public protocol DirectGuardedPacketTransport: DirectPacketTransport {
+    func sendGuarded(_ packet: ManualIPSyncPacket, authorize: @escaping @Sendable () async throws -> Void) async throws
+}
+
+public final class DirectPacketConnection: DirectGuardedPacketTransport, @unchecked Sendable {
     public let connection: NWConnection
     private let queue: DispatchQueue
     private let encoder = JSONEncoder()
@@ -91,6 +96,30 @@ public final class DirectPacketConnection: DirectPacketTransport, @unchecked Sen
         framed.appendManualIPLengthPrefix(payload.count)
         framed.append(payload)
         try await sendBytes(framed)
+    }
+
+    /// Same deployed framing, with bounded native writes and fresh original-owner checks around
+    /// every chunk. An uncertain/partial bridge write closes this socket permanently.
+    public func sendGuarded(_ packet: ManualIPSyncPacket, authorize: @escaping @Sendable () async throws -> Void) async throws {
+        let payload = try encoder.encode(packet)
+        guard !payload.isEmpty, payload.count <= maximumPacketBytes else { throw DirectChannelError.frameTooLarge }
+        var framed = Data()
+        framed.appendManualIPLengthPrefix(payload.count)
+        framed.append(payload)
+        do {
+            var offset = 0
+            while offset < framed.count {
+                try Task.checkCancellation()
+                try await authorize()
+                try Task.checkCancellation()
+                let end = min(offset + 16 * 1_024, framed.count)
+                try await sendBytes(framed.subdata(in: offset..<end))
+                try Task.checkCancellation()
+                try await authorize()
+                try Task.checkCancellation()
+                offset = end
+            }
+        } catch { cancel(); throw error }
     }
 
     public func receive() async throws -> ManualIPSyncPacket {
@@ -176,6 +205,13 @@ public enum DirectSecurePayload: Equatable, Sendable {
     case binaryTransferFrame(Data)
 }
 
+/// Separate negotiated receive surface. Existing receive() and its payload enum stay unchanged.
+public enum AgentBridgeSecurePayload: Equatable, Sendable {
+    case base(DirectMessage)
+    case agent(AgentBridgeEnvelope)
+    case binaryTransferFrame(Data)
+}
+
 /// Pure deterministic message hook; networking, trust, AEAD, and sequence state stay native.
 public protocol DirectMessageCanonicalizing: Sendable {
     func canonicalizeDirectMessage(_ nativeBytes: Data) throws -> Data
@@ -192,6 +228,43 @@ public final class DirectSecureChannel: @unchecked Sendable {
     public let sessionKey: SymmetricKey
     public let peerInstallationID: UUID
     public let peerDisplayName: String
+
+    /// Ordinary construction is deliberately unproven; only the native client's verified
+    /// handshake can mint this non-wire context.
+    public var clientAuthenticatedContext: DirectClientAuthenticatedContext? {
+        authenticationLock.withLock { authenticatedContext }
+    }
+    private let authenticationLock = NSLock()
+    private var authenticatedContext: DirectClientAuthenticatedContext?
+    private var observedTerminal = false
+
+    /// Sampled local state only: an unobserved remote half-close is NOT immediately detectable.
+    /// Once cancel or a channel/transport failure is observed, provenance cannot revive.
+    public var isLocallyTerminal: Bool {
+        if let native = packetConnection as? DirectPacketConnection {
+            switch native.connection.state {
+            case .failed, .cancelled: recordTerminal()
+            default: break
+            }
+        }
+        return authenticationLock.withLock { observedTerminal }
+    }
+
+    private func recordTerminal() {
+        authenticationLock.withLock { observedTerminal = true }
+    }
+
+    // Only a capsule minted in DirectManualIPClient's verification file can enter here.
+    // It already names this exact channel; no rebind/second attachment is possible.
+    func attachClientAuthenticatedContext(_ context: DirectClientAuthenticatedContext) throws {
+        try context.requireCurrent(on: self)
+        try authenticationLock.withLock {
+            guard authenticatedContext == nil else {
+                throw DirectChannelError.authenticationFailed("Native authentication is unavailable.")
+            }
+            authenticatedContext = context
+        }
+    }
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -239,38 +312,152 @@ public final class DirectSecureChannel: @unchecked Sendable {
     }
 
     public func receive() async throws -> DirectSecurePayload {
-        try await receiveGate.perform { [self] in
-            guard case .encrypted(let frame) = try await packetConnection.receive() else {
-                throw DirectChannelError.expectedEncryptedPacket
+        do {
+            return try await receiveGate.perform { [self] in
+                guard case .encrypted(let frame) = try await packetConnection.receive() else {
+                    throw DirectChannelError.expectedEncryptedPacket
+                }
+                let sealedPlaintext = try ManualIPSyncSecurity.open(frame, using: sessionKey)
+                let plaintext = try openSequencedEnvelope(sealedPlaintext)
+                if DirectTransferBinaryFrame.isBinaryFrame(plaintext) {
+                    return .binaryTransferFrame(plaintext)
+                }
+                do {
+                    let canonical = try messageCanonicalizer.canonicalizeDirectMessage(plaintext)
+                    return .message(try decoder.decode(DirectMessage.self, from: canonical))
+                } catch {
+                    throw DirectChannelError.decodeFailed
+                }
             }
-            let sealedPlaintext = try ManualIPSyncSecurity.open(frame, using: sessionKey)
-            let plaintext = try openSequencedEnvelope(sealedPlaintext)
-            if DirectTransferBinaryFrame.isBinaryFrame(plaintext) {
-                return .binaryTransferFrame(plaintext)
-            }
-            do {
-                let canonical = try messageCanonicalizer.canonicalizeDirectMessage(plaintext)
-                return .message(try decoder.decode(DirectMessage.self, from: canonical))
-            } catch {
-                throw DirectChannelError.decodeFailed
-            }
+        } catch {
+            recordTerminal()
+            throw error
         }
     }
 
+    /// Apple base1 plus independently negotiated extension4. Framing, AEAD and sequence domains
+    /// are unchanged. The mandatory native callback is not export or configuration consent.
+    public func sendAgentBridge(_ envelope: AgentBridgeEnvelope, negotiation: AgentBridgeNegotiation,
+                                authorize: @escaping @Sendable () async throws -> Void) async throws {
+        guard negotiation.baseVersion == HealthMdDirectProtocol.currentVersion else { throw AgentBridgeValidationError.unsupportedCapability }
+        let bytes = try negotiation.encode(envelope) // Unsupported peers reject before native IO.
+        try await sendGuardedAgentBridgePayload(bytes, authorize: authorize)
+    }
+
+    /// Unchanged base-v1 grammar for a v4-owned operation. This callback must retain the original
+    /// native owner; transport negotiation alone never grants export or configuration authority.
+    public func sendBaseForAgentBridge(_ message: DirectMessage, negotiation: AgentBridgeNegotiation,
+        authorize: @escaping @Sendable () async throws -> Void) async throws {
+        guard negotiation.baseVersion == HealthMdDirectProtocol.currentVersion, negotiation.agentBridgeV4 else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        let bytes = try messageCanonicalizer.canonicalizeDirectMessage(encoder.encode(message))
+        try await sendGuardedAgentBridgePayload(bytes, authorize: authorize)
+    }
+
+    /// Existing frame-v1 bytes and chunk bounds, sharing the original channel sequence domain.
+    public func sendTransferChunkForAgentBridge(_ chunk: DirectTransferChunk, negotiation: AgentBridgeNegotiation,
+        authorize: @escaping @Sendable () async throws -> Void) async throws {
+        guard negotiation.baseVersion == HealthMdDirectProtocol.currentVersion, negotiation.agentBridgeV4 else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        guard DirectTransferFile.sha256Hex(chunk.data) == chunk.sha256 else { throw DirectTransferError.invalidDigest }
+        try await sendGuardedAgentBridgePayload(DirectTransferBinaryFrame.encode(chunk), authorize: authorize)
+    }
+
+    private func sendGuardedAgentBridgePayload(_ bytes: Data,
+        authorize: @escaping @Sendable () async throws -> Void) async throws {
+        guard let guarded = packetConnection as? any DirectGuardedPacketTransport else { throw AgentBridgeValidationError.unsupportedCapability }
+        do {
+            try await withTaskCancellationHandler {
+                try await sendGate.perform { [self] in
+                    try requireBridgeChannelCurrent()
+                    try Task.checkCancellation()
+                    try await authorize()
+                    try Task.checkCancellation()
+                    try requireBridgeChannelCurrent()
+                    let sequence = try allocateSendSequence()
+                    var payload = Self.envelopeMagic
+                    var bigEndian = sequence.bigEndian
+                    withUnsafeBytes(of: &bigEndian) { payload.append(contentsOf: $0) }
+                    payload.append(bytes)
+                    let encrypted = try ManualIPSyncSecurity.seal(payload, using: sessionKey)
+                    try await guarded.sendGuarded(.encrypted(encrypted)) { [self] in
+                        try requireBridgeChannelCurrent()
+                        try await authorize()
+                        try requireBridgeChannelCurrent()
+                    }
+                    try Task.checkCancellation()
+                    try await authorize()
+                    try Task.checkCancellation()
+                    try requireBridgeChannelCurrent()
+                }
+            } onCancel: { [self] in cancel() }
+        } catch { cancel(); throw error }
+    }
+
+    /// Multiplex only after matching authenticated hellos. A malformed v4 envelope never falls
+    /// through a permissive legacy decoder; duplicate fields/UTF-8 errors reject before dispatch.
+    public func receiveAllowingAgentBridge(negotiation: AgentBridgeNegotiation,
+        authorize: @escaping @Sendable () async throws -> Void) async throws -> AgentBridgeSecurePayload {
+        guard negotiation.baseVersion == HealthMdDirectProtocol.currentVersion, negotiation.agentBridgeV4 else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        do {
+            return try await withTaskCancellationHandler {
+                try await receiveGate.perform { [self] in
+                    try requireBridgeChannelCurrent()
+                    try Task.checkCancellation()
+                    try await authorize()
+                    try Task.checkCancellation()
+                    try requireBridgeChannelCurrent()
+                    guard case .encrypted(let frame) = try await packetConnection.receive() else { throw DirectChannelError.expectedEncryptedPacket }
+                    let plaintext = try openSequencedEnvelope(ManualIPSyncSecurity.open(frame, using: sessionKey))
+                    let result: AgentBridgeSecurePayload
+                    if DirectTransferBinaryFrame.isBinaryFrame(plaintext) { result = .binaryTransferFrame(plaintext) }
+                    else {
+                        let canonical = try AgentBridgeV4Codec.canonicalize(plaintext)
+                        guard let root = try JSONSerialization.jsonObject(with: canonical) as? [String: Any] else { throw DirectChannelError.decodeFailed }
+                        if root["protocol_version"] != nil { result = .agent(try negotiation.decode(canonical)) }
+                        else {
+                            guard root.count == 1 else { throw DirectChannelError.decodeFailed }
+                            result = .base(try decoder.decode(DirectMessage.self, from: messageCanonicalizer.canonicalizeDirectMessage(canonical)))
+                        }
+                    }
+                    try Task.checkCancellation()
+                    try await authorize()
+                    try Task.checkCancellation()
+                    try requireBridgeChannelCurrent()
+                    return result
+                }
+            } onCancel: { [self] in cancel() }
+        } catch { cancel(); throw error }
+    }
+
+    private func requireBridgeChannelCurrent() throws {
+        guard !isLocallyTerminal else { throw AgentBridgeValidationError.permissionRequired }
+    }
+
     public func cancel() {
+        recordTerminal()
         packetConnection.cancel()
     }
 
     private func sendEncrypted(_ plaintext: Data) async throws {
-        try await sendGate.perform { [self] in
-            let sequence = try allocateSendSequence()
+        do {
+            try await sendGate.perform { [self] in
+                let sequence = try allocateSendSequence()
 
-            var envelope = Self.envelopeMagic
-            var bigEndianSequence = sequence.bigEndian
-            withUnsafeBytes(of: &bigEndianSequence) { envelope.append(contentsOf: $0) }
-            envelope.append(plaintext)
-            let sealed = try ManualIPSyncSecurity.seal(envelope, using: sessionKey)
-            try await packetConnection.send(.encrypted(sealed))
+                var envelope = Self.envelopeMagic
+                var bigEndianSequence = sequence.bigEndian
+                withUnsafeBytes(of: &bigEndianSequence) { envelope.append(contentsOf: $0) }
+                envelope.append(plaintext)
+                let sealed = try ManualIPSyncSecurity.seal(envelope, using: sessionKey)
+                try await packetConnection.send(.encrypted(sealed))
+            }
+        } catch {
+            recordTerminal()
+            throw error
         }
     }
 

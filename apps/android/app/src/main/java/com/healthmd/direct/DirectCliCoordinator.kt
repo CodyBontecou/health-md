@@ -39,6 +39,7 @@ import com.healthmd.direct.protocol.SourceIdentity
 import com.healthmd.direct.protocol.SourceStatus
 import com.healthmd.direct.protocol.StatusRequest
 import com.healthmd.direct.protocol.TransferNegotiation
+import com.healthmd.direct.protocol.TransferCapabilities
 import com.healthmd.direct.protocol.TransferPlanBuilder
 import com.healthmd.direct.protocol.V2Codec
 import com.healthmd.domain.billing.FreemiumPolicy
@@ -77,6 +78,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
@@ -87,6 +89,14 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+/** Configuration-only adapter for a future native-authorized/journaled generated-files route.
+ * Not dispatched or advertised by the deployed protocol; resolution never starts source work. */
+internal fun resolveDirectAgentBridgeRequestSettings(
+    intent: com.healthmd.direct.protocol.AgentBridgeGeneratedIntent,
+    inputs: AgentBridgeRequestSettingsInputs,
+    clock: java.time.Clock,
+): AgentBridgeRequestSettingsResolution = AgentBridgeRequestSettingsResolver.resolve(intent, inputs, clock)
 
 internal fun resolveDirectGeneratedFilesEnginePin(
     settings: ExportSettings,
@@ -161,6 +171,279 @@ class DirectCliCoordinator @Inject constructor(
     private val protocolJson = Json { encodeDefaults = true; explicitNulls = false }
     private val sessionMutex = Mutex()
     @Volatile private var activeChannel: DirectSecureChannel? = null
+    @Volatile private var activeServingScope: ServingScope? = null
+    @Volatile private var acceptedNativeOwner: NativeSessionOwner? = null
+    private val nativeCatalogOwners = MutableStateFlow<NativeSessionOwner?>(null)
+    private val nativeOwnerLock = Any()
+    private val nativeProtectionLock = Any()
+    private var nativeProtection: AgentBridgeNativeConfigurationProtection? = null
+    private val nativeEligibilityLock = Any()
+    private var nativeEligibility: AgentBridgeNativeExportEligibility? = null
+
+    private class ServingScope(val epoch: AgentBridgeExportServingEpoch, val operation: kotlinx.coroutines.Job) {
+        @Volatile var revoked = false
+    }
+    private inner class NativeSessionOwner(override val channel: DirectSecureChannel,
+        override val sourceInstallationId: String, override val hostInstallationId: String,
+        private val serving: ServingScope,
+        private val bridgeNegotiation: com.healthmd.direct.protocol.AgentBridgeNegotiation,
+        private val transferNegotiation: TransferNegotiation, peerTransferCapabilities: TransferCapabilities) : AgentBridgeExportNativeSessionOwner {
+        private val peerTransferCapabilities = AgentBridgeNativeTransferCheckpoint.detachPeerCapabilities(peerTransferCapabilities)
+        @Volatile private var revoked = false
+        val catalogLifecycle = AgentBridgeNativeCatalogLifecycle()
+        private val catalogRefreshLock = Any()
+        private var catalogRefresh: AgentBridgeNativeCatalogRefresh? = null
+        fun revoke() {
+            revoked = true
+            nativePlanner = null
+            val previous = synchronized(catalogRefreshLock) { catalogRefresh.also { catalogRefresh = null } }
+            previous?.close()
+            catalogLifecycle.stop()
+        }
+        fun startCatalogRefresh(scope: CoroutineScope, context: android.content.Context,
+            healthConnect: com.healthmd.data.health.HealthConnectManager) {
+            val controller = synchronized(catalogRefreshLock) {
+                requireCurrent()
+                catalogLifecycle.beginSample() // Terminal scheduler cancellation cannot be renewed.
+                if (catalogRefresh != null) return
+                AgentBridgeNativeCatalogRefresh(scope, catalogLifecycle) {
+                    requireCurrent()
+                    refreshAgentBridgeNativeCatalog(context, healthConnect)
+                }.also { catalogRefresh = it }
+            }
+            controller.start() // No SDK/store work while holding coordinator/owner subscription locks.
+        }
+        @Volatile private var nativePlanner: AgentBridgeNativePlanningSession? = null
+        @Synchronized fun planner(context: android.content.Context,
+            configuration: () -> AgentBridgeExportPlanningConfigurationReader): AgentBridgeNativePlanningSession {
+            requireCurrent()
+            nativePlanner?.let { it.requireCurrent(); return it }
+            catalogLifecycle.currentPublication() // No issuer open for an unpublished/pending owner.
+            val result = AgentBridgeNativePlanningSession(peer(context), catalogLifecycle,
+                AgentBridgeExportAuthorityStore.forNoBackup(context), configuration(), responseChannel = channel, responseNegotiation = bridgeNegotiation, responseTransferNegotiation = transferNegotiation, responsePeerTransferCapabilities = peerTransferCapabilities)
+            requireCurrent()
+            result.requireCurrent()
+            nativePlanner = result
+            return result
+        }
+        private var nativePeer: AgentBridgeExportNativeSession? = null
+        private var nativeContext: android.content.Context? = null
+        @Synchronized fun peer(context: android.content.Context): AgentBridgeExportNativeSession {
+            requireCurrent()
+            if (nativePeer == null) {
+                nativePeer = AgentBridgeExportNativeSession.capture(context, this)
+                nativeContext = context
+            }
+            if (nativeContext !== context) throw com.healthmd.direct.protocol.AgentBridgeException(
+                com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            return requireNotNull(nativePeer).also { it.requireCurrent() }.copy()
+        }
+        override fun requireCurrent() {
+            try {
+                check(!revoked && !serving.revoked && serving.operation.isActive &&
+                    activeServingScope === serving && activeChannel === channel && acceptedNativeOwner === this)
+                serving.epoch.requireCurrent(this@DirectCliCoordinator)
+            } catch (_: Exception) {
+                revoke()
+                throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            }
+        }
+        override fun toString() = "AgentBridgeExportNativeSessionOwner(redacted)"
+    }
+
+    /** Lazy identity/liveness adapter only. No lookup for absent/ordinary/pairing-only owners, no
+     * creating legacy-store API, v4 probe/advertisement, service restart or grant issuance. */
+    internal fun agentBridgeExportNativeSession(context: android.content.Context): AgentBridgeExportNativeSession {
+        val owner = acceptedNativeOwner ?: throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        owner.requireCurrent()
+        return owner.peer(context)
+    }
+
+    /** Native foreground owner only; neither registration nor current() reads settings on a wire path. */
+    internal fun observeAgentBridgeNativeConfigurationProtection(scope: CoroutineScope): AutoCloseable {
+        lateinit var observer: AgentBridgeNativeConfigurationProtection
+        observer = AgentBridgeNativeConfigurationProtection(settingsRepository.nativeConfigurationProtection) {
+            synchronized(nativeProtectionLock) {
+                if (nativeProtection === observer) agentBridgeNativeMetadataChanged()
+            }
+        }
+        val previous = synchronized(nativeProtectionLock) {
+            val previous = nativeProtection
+            nativeProtection = observer
+            agentBridgeNativeMetadataChanged()
+            previous
+        }
+        previous?.close() // Do not nest coordinator and producer locks.
+        observer.start(scope)
+        return AutoCloseable {
+            synchronized(nativeProtectionLock) {
+                if (nativeProtection === observer) {
+                    nativeProtection = null
+                    agentBridgeNativeMetadataChanged()
+                }
+            }
+            observer.close()
+        }
+    }
+
+    internal fun agentBridgeNativeConfigurationProtected(): Boolean? {
+        val observer = synchronized(nativeProtectionLock) { nativeProtection } ?: return null
+        val protected = observer.current()
+        return synchronized(nativeProtectionLock) { if (nativeProtection === observer) protected else null }
+    }
+
+    /** Called only after native foreground admission, never by a wire plan/discovery request. */
+    internal fun observeAgentBridgeNativeExportEligibility(scope: CoroutineScope): AutoCloseable {
+        lateinit var observer: AgentBridgeNativeExportEligibility
+        observer = AgentBridgeNativeExportEligibility(settingsRepository.nativeExportEligibility,
+            entitlementRepository.isUnlocked, distributionPolicy.fullAccessIncluded) {
+            synchronized(nativeEligibilityLock) {
+                if (nativeEligibility === observer) agentBridgeNativeMetadataChanged()
+            }
+        }
+        val previous = synchronized(nativeEligibilityLock) {
+            val previous = nativeEligibility
+            nativeEligibility = observer
+            agentBridgeNativeMetadataChanged()
+            previous
+        }
+        // Do not nest coordinator and producer locks; publication calls back into the coordinator.
+        previous?.close()
+        observer.start(scope)
+        return AutoCloseable {
+            synchronized(nativeEligibilityLock) {
+                if (nativeEligibility === observer) {
+                    nativeEligibility = null
+                    agentBridgeNativeMetadataChanged()
+                }
+            }
+            observer.close()
+        }
+    }
+
+    internal fun agentBridgeNativeCanExport(): Boolean {
+        val observer = synchronized(nativeEligibilityLock) { nativeEligibility } ?: return false
+        val eligible = observer.current()
+        return synchronized(nativeEligibilityLock) { nativeEligibility === observer && eligible }
+    }
+
+    /** Native event only: immediate cache invalidation, no SDK/settings/issuer/key access. */
+    internal fun agentBridgeNativeMetadataChanged() {
+        val owner = acceptedNativeOwner ?: return
+        try { owner.catalogLifecycle.recordNativeEvent() }
+        catch (_: Exception) { owner.revoke() }
+    }
+
+    /** Native adapter only. Peer/context/owner fences remain separate from publication and consent. */
+    internal fun agentBridgeNativePlanningOwner(context: android.content.Context): Pair<AgentBridgeExportNativeSession, AgentBridgeNativeCatalogLifecycle> {
+        val owner = acceptedNativeOwner ?: throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        val peer = owner.peer(context)
+        owner.requireCurrent()
+        if (acceptedNativeOwner !== owner) throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        return peer to owner.catalogLifecycle
+    }
+
+    /** Native composition only. The owner pins the first real repositories and planner for its
+     * full lifetime, retaining issued discovery evidence without initializing private authority. */
+    internal fun agentBridgeNativePlanningSession(context: android.content.Context,
+        dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
+        settings: com.healthmd.data.settings.SettingsRepositoryImpl,
+        profiles: ExportProfileRepository): AgentBridgeNativePlanningSession {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        val owner = acceptedNativeOwner ?: throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        val result = owner.planner(context) {
+            AgentBridgeNativeConfigurationReader(dataStore, settings, profiles, {
+                owner.requireCurrent()
+                owner.catalogLifecycle.currentFacts()
+            })
+        }
+        owner.requireCurrent()
+        if (acceptedNativeOwner !== owner) throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        return result
+    }
+
+    /** Native controller only. Facts are sampled outside requests; no creating SDK store getter. */
+    internal suspend fun publishAgentBridgeNativeCatalog(context: android.content.Context,
+        sample: suspend () -> AgentBridgeNativePlanningFacts): AgentBridgeNativeCatalogPublication {
+        val caller = currentCoroutineContext()
+        caller.ensureActive()
+        val original = agentBridgeNativePlanningOwner(context)
+        val originalPeer = original.first.requireCurrent()
+        caller.ensureActive()
+        try {
+            val publication = AgentBridgeNativeCatalogPublisher.refresh(original.second, original.first, sample) {
+                AgentBridgeExportAuthorityStore.forNoBackup(context)
+            }
+            caller.ensureActive()
+            val current = agentBridgeNativePlanningOwner(context)
+            if (current.second !== original.second || current.first.requireCurrent() != originalPeer)
+                throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            caller.ensureActive()
+            if (original.second.currentPublication() != publication)
+                throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.BINDING_CHANGED)
+            caller.ensureActive()
+            return publication
+        } catch (failure: Exception) {
+            runCatching { original.second.observeNativeChange() }
+            caller.ensureActive()
+            throw failure
+        }
+    }
+
+    /** Explicit native controller only: actual SDK metadata plus service-owned memory caches.
+     * No health records, saved output configuration, quota/billing refresh, grant or creating getter. */
+    internal suspend fun refreshAgentBridgeNativeCatalog(context: android.content.Context,
+        healthConnect: com.healthmd.data.health.HealthConnectManager): AgentBridgeNativeCatalogPublication {
+        return publishAgentBridgeNativeCatalog(context) {
+            val original = agentBridgeNativePlanningOwner(context).first.requireCurrent()
+            val protection = agentBridgeNativeConfigurationProtected()
+                ?: throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.BINDING_CHANGED)
+            val metadata = healthConnect.nativePlanningMetadata()
+            currentCoroutineContext().ensureActive()
+            metadata.planningFacts(original.sourceInstallationId, ZoneId.systemDefault().id,
+                if (protection) com.healthmd.direct.protocol.AgentBridgeDiscoveryConfigurationProtection.LOCKED
+                else com.healthmd.direct.protocol.AgentBridgeDiscoveryConfigurationProtection.UNLOCKED_NATIVE,
+                if (agentBridgeNativeCanExport()) com.healthmd.direct.protocol.AgentBridgeDiscoveryEntitlement.SATISFIED
+                else com.healthmd.direct.protocol.AgentBridgeDiscoveryEntitlement.REQUIRED,
+                userStartedServiceActive = true, firstUnlockComplete = true)
+            // True availability follows the pinned native session's foreground/first-unlock checks
+            // before and after this sampler; it cannot be supplied by a request or restart a service.
+        }
+    }
+
+    /** Explicit native controller admission; never called by ordinary hello or wire requests. */
+    internal fun startAgentBridgeNativeCatalogRefresh(scope: CoroutineScope, context: android.content.Context,
+        healthConnect: com.healthmd.data.health.HealthConnectManager) {
+        val owner = acceptedNativeOwner ?: throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        owner.startCatalogRefresh(scope, context, healthConnect)
+    }
+
+    /** Foreground-service composition only. The callback carries owner identity, not a grant.
+     * Its child scope is canceled on owner replacement or exact registration close. */
+    internal fun observeAgentBridgeNativeCatalogAdmission(scope: CoroutineScope, context: android.content.Context,
+        healthConnect: com.healthmd.data.health.HealthConnectManager): AutoCloseable =
+        AgentBridgeNativeCatalogAdmission(scope, nativeCatalogOwners.map { owner ->
+            owner?.let {
+                AgentBridgeNativeCatalogAdmissionOwner(it.catalogLifecycle) { child ->
+                    it.startCatalogRefresh(child, context, healthConnect)
+                }
+            }
+        })
+
+    private fun replaceNativeOwner(owner: NativeSessionOwner?) = synchronized(nativeOwnerLock) {
+        if (acceptedNativeOwner !== owner) {
+            acceptedNativeOwner?.revoke()
+            acceptedNativeOwner = owner
+            nativeCatalogOwners.value = owner
+        }
+    }
 
     suspend fun pair(host: String, port: Int, pairingCode: String) = sessionMutex.withLock {
         require(pairingCode.count { it in '0'..'9' } == 20) {
@@ -220,7 +503,17 @@ class DirectCliCoordinator @Inject constructor(
      * disconnect, forgetting the pairing, and the system foreground-service timeout still cancel
      * the session immediately.
      */
-    suspend fun connectAndServe() = sessionMutex.withLock {
+    // Legacy callers still serve exactly as before, but cannot establish a bridge FGS epoch.
+    suspend fun connectAndServe() = serveSession(null)
+    internal suspend fun connectAndServe(epoch: AgentBridgeExportServingEpoch) = serveSession(epoch)
+
+    private suspend fun serveSession(epoch: AgentBridgeExportServingEpoch?) = sessionMutex.withLock {
+        val serving = epoch?.let { ServingScope(it, currentCoroutineContext().job).apply {
+            // Invalid new-only provenance never changes legacy serving/negotiation behavior.
+            revoked = !runCatching { it.requireCurrent(this@DirectCliCoordinator) }.isSuccess
+        } }
+        activeServingScope = serving
+        try {
         val trust = requireNotNull(trustStore.load()) { "Pair with a CLI before connecting." }
         protocolAuthority.assertCompatible()
         var backoffMillis = RECONNECT_INITIAL_BACKOFF_MILLIS
@@ -255,6 +548,7 @@ class DirectCliCoordinator @Inject constructor(
                         serve(channel, transferNegotiation)
                     } finally {
                         protocolAuthority.endOperation()
+                        replaceNativeOwner(null)
                         activeChannel = null
                     }
                 }
@@ -284,9 +578,16 @@ class DirectCliCoordinator @Inject constructor(
                 }
             }
         }
+        } finally {
+            serving?.revoked = true
+            replaceNativeOwner(null)
+            activeServingScope = null
+        }
     }
 
     fun cancelActive() {
+        activeServingScope?.revoked = true
+        replaceNativeOwner(null)
         runCatching { activeChannel?.close() }
     }
 
@@ -304,6 +605,8 @@ class DirectCliCoordinator @Inject constructor(
     }
 
     fun resetSession() {
+        activeServingScope?.revoked = true
+        replaceNativeOwner(null)
         _state.value = DirectCliConnectionState.Idle
     }
 
@@ -316,7 +619,8 @@ class DirectCliCoordinator @Inject constructor(
     }
 
     private suspend fun negotiate(channel: DirectSecureChannel): TransferNegotiation {
-        channel.sendNegotiationHello(trustStore.installationId())
+        val sourceInstallationId = trustStore.installationId()
+        channel.sendNegotiationHello(sourceInstallationId)
         val listener = channel.receiveNegotiationHello()
         require(listener.platform == "macos_cli") { "The peer is not a Health.md CLI." }
         require(ANDROID_APPLICATION_PROTOCOL_VERSION in listener.protocolVersions) {
@@ -329,6 +633,15 @@ class DirectCliCoordinator @Inject constructor(
             protocolAuthority.negotiateTransfer(listener.transfer),
         ) { "The CLI transfer capabilities are incompatible." }
         channel.sendV2("source_hello", SourceHello.serializer(), sourceHello())
+        // Mint only after the existing encrypted base2 role/identity/transfer admission succeeds,
+        // bound to this exact channel and the original serving coroutine/lease, never UI labels.
+        activeServingScope?.let { serving ->
+            val negotiation = com.healthmd.direct.protocol.AgentBridgeNegotiation.negotiate(
+                com.healthmd.direct.protocol.AgentBridgePlatform.ANDROID,
+                com.healthmd.direct.protocol.ANDROID_NATIVE_APPLICATION_VERSIONS, listener.protocolVersions)
+            val owner = NativeSessionOwner(channel, sourceInstallationId, listener.installationId, serving, negotiation, transferNegotiation, listener.transfer)
+            replaceNativeOwner(owner)
+        }
         return transferNegotiation
     }
 

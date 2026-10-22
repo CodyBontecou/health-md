@@ -725,11 +725,11 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
     #if os(iOS)
     func testDirectProfileGateRejectsBlockedReferenceBeforeProducerWork() throws {
         let store = ExportProfileStore(userDefaults: defaults)
-        let profile = store.add(
+        let profile = try XCTUnwrap(store.add(
             name: "Direct Import",
             settings: nativeSnapshot(filename: "direct-{date}"),
             target: .connectedMac
-        )
+        ))
         defaults.set(
             try SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs([profile.id]),
             forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
@@ -762,11 +762,11 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
 
     func testAppIntentBlockedProfileStopsBeforeDestinationOrExportWork() async throws {
         let store = ExportProfileStore(userDefaults: defaults)
-        let profile = store.add(
+        let profile = try XCTUnwrap(store.add(
             name: "Imported",
             settings: nativeSnapshot(filename: "imported-{date}"),
             target: .localIPhoneFolder
-        )
+        ))
         var events: [String] = []
         let dependencies = ExportIntentRunner.Dependencies(
             refreshPurchaseStatus: { events.append("purchase") },

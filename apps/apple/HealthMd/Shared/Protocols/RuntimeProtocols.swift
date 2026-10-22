@@ -13,6 +13,8 @@ import Foundation
 /// Abstracts keychain integer storage used by PurchaseManager.
 protocol KeychainStoring: Sendable {
     func readInt(key: String) -> Int
+    /// Missing is distinct from unreadable/malformed. Native eligibility must fail closed.
+    func readIntOrThrow(key: String) throws -> Int?
     func writeInt(key: String, value: Int)
     func readString(key: String) -> String?
     func readStringOrThrow(key: String) throws -> String?
@@ -22,10 +24,18 @@ protocol KeychainStoring: Sendable {
     func removeOrThrow(key: String) throws
 }
 
+nonisolated enum StrictKeychainReadError: Error { case unavailable }
+
+extension KeychainStoring {
+    // Existing adapters must explicitly support strict observation; legacy fallback is not evidence.
+    func readIntOrThrow(key: String) throws -> Int? { throw StrictKeychainReadError.unavailable }
+}
+
 // MARK: - UserDefaults
 
 /// Abstracts UserDefaults access used by managers for settings persistence.
 nonisolated protocol UserDefaultsStoring: Sendable {
+    func containsObject(forKey key: String) -> Bool
     func string(forKey key: String) -> String?
     func bool(forKey key: String) -> Bool
     func integer(forKey key: String) -> Int

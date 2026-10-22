@@ -201,6 +201,17 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
         }
     }
 
+    func testNativeProfileConfigurationRevisionNeverChangesPortableSetupBytes() throws {
+        let id = profileID(1)
+        var profile = makeProfile(id: id, name: "Synthetic local revisions", enabledNativeIDs: ["steps"])
+        let baseline = try SharedSetupV2Codec.encode(map(profiles: [profile], activeProfileID: id))
+        for revision in [2, 7, Int(Int32.max)] {
+            profile.configurationRevision = revision
+            XCTAssertEqual(try SharedSetupV2Codec.encode(map(profiles: [profile], activeProfileID: id)), baseline)
+        }
+        XCTAssertFalse(String(decoding: baseline, as: UTF8.self).contains("configurationRevision"))
+    }
+
     func testWHOOPResourcePreferencesNeverBecomePortableSetupAuthority() throws {
         let nativeProfileID = profileID(1)
         var profile = makeProfile(

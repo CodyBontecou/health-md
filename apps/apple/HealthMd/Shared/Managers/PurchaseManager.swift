@@ -1,5 +1,10 @@
-#if os(macOS) && !DEBUG
 import Foundation
+
+extension Notification.Name {
+    nonisolated static let healthMdNativeExportEligibilityDidChange = Notification.Name("HealthMd.nativeExportEligibilityDidChange")
+}
+
+#if os(macOS) && !DEBUG
 import Combine
 
 nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
@@ -37,6 +42,8 @@ final class PurchaseManager: ObservableObject {
     var freeExportsRemaining: Int { 0 }
     var canExportFree: Bool { true }
     var canExport: Bool { true }
+    var nativePlanningCanExport: Bool { true }
+    func refreshNativePlanningExportEligibility() {}
     func canExport(jobID: UUID) -> Bool { true }
     var analyticsQuotaState: PricingAnalyticsQuotaState {
         PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 0)
@@ -66,7 +73,6 @@ final class PurchaseManager: ObservableObject {
 }
 
 #else
-import Foundation
 import Combine
 import StoreKit
 import Security
@@ -197,6 +203,7 @@ final class PurchaseManager: ObservableObject {
                 keychain.writeInt(key: freeExportsUsedKey, value: 0)
                 keychain.writeString(key: durableExportUseIDsKey, value: "")
             }
+            refreshNativePlanningExportEligibility()
         }
     }
     @Published private(set) var isLegacyUser: Bool = false
@@ -279,8 +286,42 @@ final class PurchaseManager: ObservableObject {
         return canExport || durableExportUseIDs.contains(jobID.uuidString.lowercased())
     }
 
+    /// Native observer cache only. Sampling this value never reads quota or Keychain. False also
+    /// represents unknown/unreadable state; it is not an execution or durable-resume permission.
+    @Published private(set) var nativePlanningCanExport = false {
+        didSet {
+            guard nativePlanningCanExport != oldValue else { return }
+            // Post after assignment and before native mutation returns. A deferred Combine observer
+            // can miss a false/true round trip while quota storage is refreshed.
+            nativePlanningNotifications.post(name: .healthMdNativeExportEligibilityDidChange, object: self)
+        }
+    }
+
+    /// Only native startup/entitlement/quota owners call this, never a plan/discovery request.
+    /// Keep the old export API behavior independent; cached readiness must not inherit its fallback.
+    func refreshNativePlanningExportEligibility() {
+        nativePlanningCanExport = false
+        if TestMode.isUITesting {
+            nativePlanningCanExport = TestMode.purchaseUnlocked || TestMode.freeExportsUsed < Self.freeExportLimit
+            return
+        }
+        if isUnlocked { nativePlanningCanExport = true; return }
+        do {
+            let used = try keychain.readIntOrThrow(key: freeExportsUsedKey) ?? 0
+            let raw = try keychain.readStringOrThrow(key: durableExportUseIDsKey) ?? ""
+            let identifiers = raw.isEmpty ? [] : raw.components(separatedBy: ",")
+            guard used >= 0, identifiers.allSatisfy({ UUID(uuidString: $0)?.uuidString.lowercased() == $0 }),
+                  Set(identifiers).count == identifiers.count else { return }
+            nativePlanningCanExport = used < Self.freeExportLimit && identifiers.count < Self.freeExportLimit - used
+        } catch {
+            // Authentication/storage/decoding errors cannot manufacture fresh free quota.
+            nativePlanningCanExport = false
+        }
+    }
+
     // MARK: - Injected Dependencies
 
+    private let nativePlanningNotifications: NotificationCenter
     private let keychain: KeychainStoring
     private let defaults: UserDefaultsStoring
     private let analytics: PricingAnalyticsClient
@@ -290,6 +331,7 @@ final class PurchaseManager: ObservableObject {
     // MARK: - Init
 
     private init() {
+        self.nativePlanningNotifications = .default
         self.keychain = SystemKeychainStore()
         self.defaults = SystemUserDefaults()
         self.analytics = .shared
@@ -302,8 +344,11 @@ final class PurchaseManager: ObservableObject {
         // The Mac app is a free companion/destination. Paid access is enforced
         // only where Apple Health exports originate: the iOS/iPadOS app.
         isUnlocked = true
+        refreshNativePlanningExportEligibility()
         return
         #endif
+
+        refreshNativePlanningExportEligibility()
 
         // In UI test / IAP review capture mode, skip all StoreKit interactions.
         // Test state is configured via configureTestMode() / configureIAPReviewMode().
@@ -329,13 +374,16 @@ final class PurchaseManager: ObservableObject {
         keychain: KeychainStoring,
         defaults: UserDefaultsStoring,
         analytics: PricingAnalyticsClient = .shared,
+        nativePlanningNotifications: NotificationCenter = NotificationCenter(),
         productLoader: @MainActor @escaping ([String]) async throws -> [Product] = { _ in [] }
     ) {
+        self.nativePlanningNotifications = nativePlanningNotifications
         self.keychain = keychain
         self.defaults = defaults
         self.analytics = analytics
         self.productLoader = productLoader
         migrateUserDefaultsToKeychain()
+        refreshNativePlanningExportEligibility()
     }
 
     private static var isIAPReviewCapture: Bool {
@@ -388,6 +436,8 @@ final class PurchaseManager: ObservableObject {
 
     /// Test-only: set free exports used count without real keychain.
     func setFreeExportsUsed(_ count: Int) {
+        nativePlanningCanExport = false
+        defer { refreshNativePlanningExportEligibility() }
         keychain.writeInt(key: freeExportsUsedKey, value: count)
         keychain.writeString(key: durableExportUseIDsKey, value: "")
     }
@@ -514,6 +564,8 @@ final class PurchaseManager: ObservableObject {
     /// Re-evaluates unlock status from StoreKit entitlements and AppTransaction.
     /// Called on init, after purchase, and after restore.
     func refreshStatus(includeHistoricalFallback: Bool = false) async {
+        nativePlanningCanExport = false
+        defer { refreshNativePlanningExportEligibility() }
         #if DEBUG
         // Debug override: set "debugOriginalAppVersion" in UserDefaults to simulate
         // any install version without needing a real App Store receipt.
@@ -1021,6 +1073,8 @@ final class PurchaseManager: ObservableObject {
 
     /// Resets the free-export counter to zero (debug/testing only).
     func resetFreeExports() {
+        nativePlanningCanExport = false
+        defer { refreshNativePlanningExportEligibility() }
         keychain.writeInt(key: freeExportsUsedKey, value: 0)
         keychain.writeString(key: durableExportUseIDsKey, value: "")
         objectWillChange.send()
@@ -1031,6 +1085,8 @@ final class PurchaseManager: ObservableObject {
     /// regardless of how many dates or files were written.
     /// No-op when the user is already unlocked.
     func recordExportUse() {
+        nativePlanningCanExport = false
+        defer { refreshNativePlanningExportEligibility() }
         guard !isUnlocked, freeExportsUsed < Self.freeExportLimit else { return }
         keychain.writeInt(
             key: freeExportsUsedKey,
@@ -1045,6 +1101,8 @@ final class PurchaseManager: ObservableObject {
     /// The complete ID set is one atomic Keychain value and contributes to the
     /// computed quota, so direct and scheduled jobs remain safe to retry.
     func recordExportUse(jobID: UUID) throws {
+        nativePlanningCanExport = false
+        defer { refreshNativePlanningExportEligibility() }
         guard !isUnlocked else { return }
         var identifiers = durableExportUseIDs
         let identifier = jobID.uuidString.lowercased()

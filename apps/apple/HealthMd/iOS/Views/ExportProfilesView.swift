@@ -925,11 +925,11 @@ struct ExportProfileEditorSheet: View {
             let active = coordinator.profileStore.activeProfile
             _folderVaultID = State(initialValue: active?.folderVaultID)
             _apiEndpointID = State(initialValue: active?.apiEndpointID)
-            _draft = State(initialValue: ExportSettingsSnapshot.from(coordinator.liveSettings))
+            _draft = State(initialValue: coordinator.liveSettingsSnapshot)
         }
 
         let state = MetricSelectionState()
-        (profile?.settings ?? ExportSettingsSnapshot.from(coordinator.liveSettings))
+        (profile?.settings ?? coordinator.liveSettingsSnapshot)
             .metricSelection.apply(to: state)
         _metricState = StateObject(wrappedValue: state)
     }

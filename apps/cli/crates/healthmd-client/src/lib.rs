@@ -2,9 +2,16 @@
 
 //! Cross-platform transport, storage, and durable receivers for Health.md.
 
+pub mod agent_bridge;
+pub mod agent_host;
+mod agent_host_key;
+pub mod agent_planning;
+mod agent_private_fs;
+mod agent_validation;
 pub mod credentials;
 pub mod direct;
 pub mod file_receiver;
+pub mod generated_files;
 mod generated_path;
 pub mod handshake;
 pub mod job;
@@ -27,6 +34,16 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum ClientError {
+    #[error("agent issuer authority is unavailable")]
+    AgentAuthorityUnavailable,
+    #[error("agent issuer store is busy")]
+    AgentStoreBusy,
+    #[error("agent issuer store reached its bounded capacity")]
+    AgentStoreFull,
+    #[error(transparent)]
+    Agent(#[from] healthmd_protocol::v4::Error),
+    #[error("agent source rejected the request")]
+    AgentRejected(healthmd_protocol::v4::AgentErrorCode),
     #[error("direct client storage is unavailable: {0}")]
     Storage(String),
     #[error("the direct client installation identity is invalid")]
@@ -55,8 +72,12 @@ pub enum ClientError {
     TimedOut,
     #[error("the local direct mobile waiter was cancelled")]
     WaitCancelled,
-    #[error("the direct iPhone does not support bounded query protocol v3")]
+    #[error("the selected mobile source does not support bounded typed queries")]
     QueryUnsupported,
+    #[error(
+        "the selected mobile source does not advertise the requested export settings or product"
+    )]
+    ExportUnsupported,
     #[error("the direct iPhone query was rejected ({code}): {message}")]
     QueryRejected {
         code: String,
@@ -86,3 +107,12 @@ pub enum ClientError {
     #[error("the native credential mutation may have completed; inspect trust before retrying")]
     CredentialMutationOutcomeUnknown,
 }
+
+#[cfg(all(test, unix))]
+use crate as client_crate;
+#[cfg(all(test, unix))]
+#[path = "../tests/support/agent.rs"]
+mod agent_test_support;
+
+#[cfg(all(test, unix))]
+mod agent_retained_test_support;

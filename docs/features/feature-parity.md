@@ -25,7 +25,7 @@
 | First-run onboarding | ✅ `onboarding.md` | ✅ `onboarding.md` | shared | Different step flows; same outcome (permissions → destination → unlock → ready). Android onboarding offers a Shared Setup entry point. |
 | Health data permissions | ✅ `healthkit-permissions.md` | ✅ `health-connect-permissions.md` | shared | HealthKit type requests vs Health Connect category grants; Android adds a rationale activity (Health Connect policy). |
 | Destination selection | ✅ `vault-folder-selection.md` | ✅ `folder-destination.md` | shared | Obsidian vault/iCloud/Files vs SAF folder picker (Drive/OneDrive/Syncthing/Obsidian Sync). |
-| Share My Setup | ✅ `share-my-setup.md` (needs QA) | ✅ `share-my-setup.md` (needs QA) | shared | Contract `shared-setup/v2` is pre-canonical pending device QA on both; v2 is the one and only profile contract since the 2026-09-05 sunset (ADR-0006: v1 removed, default writers emit v2 exclusively, v1 input rejected as unsupported). Android page added 2026-09-05. |
+| Share My Setup | ✅ `share-my-setup.md` (needs QA) | ✅ `share-my-setup.md` (needs QA) | planned | Capability `setup.share-portable-configuration` stays planned on both; the [v2 contract](../../packages/contracts/shared-setup/v2/contract.md) remains deferred pending physical-device interoperability and accessibility QA (Apple Files/Messages/AirDrop/VoiceOver; Android Sharesheet/OpenDocument/TalkBack). The [QA matrix](../qa/shared-setup-v2.md#cycle-6-amendment-2026-09-05) is still not run. ADR-0006 made v2 the only profile contract/default writer and removed v1 input; that decision and host-side transaction tests do not establish availability. |
 | Metric selection | ✅ `metric-selection.md` | ✅ `metric-selection.md` | shared | 225+ HealthKit definitions / 21 categories vs 106 Health Connect metrics; identities aligned through the shared Rust metric registry. |
 
 ## Export core
@@ -52,7 +52,7 @@
 | Obsidian Bases export | ✅ `obsidian-bases.md` | ✅ `obsidian-bases.md` | shared | |
 | JSON export | ✅ `json-export.md` | ✅ `json-export.md` | platform-distinct | Same `healthmd.health_data` family, independently versioned: Apple v8 (+ typed WHOOP section), Android frozen v4 + analytical v5. Proposed unified v9. |
 | CSV export | ✅ `csv-export.md` | ✅ `csv-export.md` | shared | |
-| NDJSON raw output | — (raw via CLI `--raw-format ndjson`) | ✅ `raw-snapshots.md` | android_only | Raw snapshot artifact format. |
+| NDJSON raw output | — (canonical JSON via CLI `export --raw`; bounded host-side `extract --format jsonl` is a separate projection) | ✅ `raw-snapshots.md` | android_only | Android provider-native Raw API Snapshot artifact; CLI `--raw-format ndjson` selects this Android format, not iPhone raw output. Apple `healthmd.health_data` JSON and JSONL extraction do not become Android snapshot artifacts. |
 | Filename templates | ✅ `filename-templates.md` | ✅ `filename-templates.md` | shared | Same placeholder vocabulary. |
 | Folder organization | ✅ `folder-organization.md` | ✅ `folder-organization.md` | shared | `{year}/{month}`, `{year}/{quarter}`. |
 | Frontmatter customization | ✅ `frontmatter-customization.md` | ✅ `frontmatter-customization.md` | shared | |

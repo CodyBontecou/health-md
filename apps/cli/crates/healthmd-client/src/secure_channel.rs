@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use healthmd_protocol::{
     crypto,
     encoding::canonical_json,
@@ -71,6 +73,76 @@ impl SecureChannel {
             .map_err(|_| ClientError::MalformedPacket)?;
         let plaintext = canonical_json(message).map_err(|_| ClientError::MalformedPacket)?;
         self.send_encrypted(&plaintext).await
+    }
+
+    /// Send a closed typed v4 document only on the separate negotiated bridge path.
+    /// # Errors
+    /// Old peers, malformed DTOs or encrypted transport failures reject before transmission.
+    pub async fn send_v4(
+        &mut self,
+        message: &healthmd_protocol::v4::Envelope,
+        negotiation: healthmd_protocol::v4::Negotiation,
+    ) -> Result<(), ClientError> {
+        let plaintext = healthmd_protocol::v4::canonical_json(message)?;
+        healthmd_protocol::v4::decode_envelope(&plaintext, negotiation)?;
+        self.send_encrypted(&plaintext).await
+    }
+
+    /// A separate bridge-only path; the callback is mandatory and has no default allow.
+    /// Callers must abandon the session on error or cancellation, even after partial writes.
+    pub(crate) async fn send_v4_guarded<F, Fut>(
+        &mut self,
+        message: &healthmd_protocol::v4::Envelope,
+        negotiation: healthmd_protocol::v4::Negotiation,
+        authorize: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut + Send,
+        Fut: Future<Output = Result<(), ClientError>> + Send,
+    {
+        let plaintext = healthmd_protocol::v4::canonical_json(message)?;
+        healthmd_protocol::v4::decode_envelope(&plaintext, negotiation)?;
+        self.send_bridge_plaintext_guarded(&plaintext, authorize)
+            .await
+    }
+
+    /// Bridge-only base response path; callers validate/encode original v1/v2 messages.
+    pub(crate) async fn send_bridge_plaintext_guarded<F, Fut>(
+        &mut self,
+        plaintext: &[u8],
+        authorize: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut + Send,
+        Fut: Future<Output = Result<(), ClientError>> + Send,
+    {
+        let sequence = self.next_send_sequence;
+        self.next_send_sequence = self.next_send_sequence.wrapping_add(1);
+        let mut envelope = Vec::with_capacity(16 + plaintext.len());
+        envelope.extend_from_slice(ENVELOPE_MAGIC);
+        envelope.extend_from_slice(&sequence.to_be_bytes());
+        envelope.extend_from_slice(plaintext);
+        let frame = crypto::seal(&envelope, &self.session_key).map_err(crypto_error)?;
+        self.packet
+            .send_guarded(&SyncPacket::Encrypted(Unlabeled::from(frame)), authorize)
+            .await
+    }
+
+    /// Authenticate/sequence-check bytes, then apply the integrated strict v4 raw codec.
+    /// # Errors
+    /// Duplicate fields, invalid UTF-8, unknown fields/frames or unnegotiated v4 reject.
+    pub async fn receive_v4(
+        &mut self,
+        negotiation: healthmd_protocol::v4::Negotiation,
+    ) -> Result<healthmd_protocol::v4::Envelope, ClientError> {
+        if !negotiation.agent_v4 {
+            return Err(healthmd_protocol::v4::Error::UnsupportedCapability.into());
+        }
+        let plaintext = self.receive_plaintext().await?;
+        Ok(healthmd_protocol::v4::decode_envelope(
+            &plaintext,
+            negotiation,
+        )?)
     }
 
     /// Send an encoded binary transfer frame in the authenticated channel.

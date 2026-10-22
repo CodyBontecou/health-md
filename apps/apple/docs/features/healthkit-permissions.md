@@ -34,7 +34,14 @@ On OS 27 and later, builds made with a supported OS 27 HealthKit SDK also call H
 - `unknown`: the boundary check failed or could not cover the requested scope. Health.md rejects `all_available`; an explicit date range remains available.
 - `api_unavailable`: the runtime predates OS 27, the app was built without the supported HealthKit SDK API, or the query is local to the Mac companion. Health.md rejects `all_available` because it cannot verify full-history authorization, but continues explicit-range bounded exports with that limitation reported.
 
-The boundary is evaluated against a sample's end date, so a readable sample can begin before its reported boundary. Health.md never interprets the pre-boundary period as zero or missing-by-proof.
+- `limited_history`: a verified source assessment reports a per-type date boundary. Earlier data is unknown, not absent; unqualified completeness is rejected.
+- `full_history`: a verified source assessment covers the selected scope without a limited boundary. This still does not prove individual read permissions were granted; privacy-hidden types can be omitted. The current native adapter cannot produce this assessment from HealthKit.
+- `unknown`: an assessment failed or did not cover the requested scope. An explicit range remains available without a full-history claim.
+- `api_unavailable`: this build/runtime cannot perform the required assessment. This is the current native adapter outcome, not proof of denial or no data.
+
+Retained boundary assessments use sample end dates; a sample can begin before its boundary. Pre-boundary data is never represented as zero or absent-by-proof. Android's independently checked Health Connect historical-read grant is a different permission model, not an equivalent Apple boundary API.
+
+Mac readiness reports `limited_history_detection_supported: false` and authorization `unknown`. Legacy OS-number hints/keys remain for compatibility; they are not feature-support or upgrade instructions. Cached Mac data cannot infer the iPhone's current permissions.
 
 Therefore:
 

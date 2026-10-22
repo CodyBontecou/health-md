@@ -52,6 +52,17 @@ final class IPhoneDirectFileExportProducer {
     private let fileManager = FileManager.default
     private var cancelledJobIDs: Set<UUID> = []
 
+    /// Configuration-only adapter for the future authorized/journaled generated-files seam.
+    /// Deliberately not dispatched by the deployed direct protocol or used as read authority.
+    static func resolveAgentBridgeRequestSettings(
+        _ intent: AgentBridgeGeneratedIntent,
+        inputs: AgentBridgeRequestSettingsInputs,
+        clock: Date,
+        calendar: Calendar
+    ) throws -> AgentBridgeRequestSettingsResolution {
+        try AgentBridgeRequestSettingsResolver.resolve(intent, inputs: inputs, clock: clock, calendar: calendar)
+    }
+
     func canCancel(jobID: UUID) -> Bool {
         guard let journal = try? loadJournal(jobID: jobID) else { return false }
         return journal.state != "completed"
@@ -1324,13 +1335,11 @@ final class IPhoneDirectFileExportProducer {
             )
         }
         let store = ExportProfileStore()
-        var profile: ExportProfile?
-        if let id = UUID(uuidString: reference.profileID) {
-            profile = store.profile(id: id)
-        }
-        if profile == nil, let name = reference.name {
-            profile = store.profile(named: name)
-        }
+        let profile = AgentBridgeRequestSettingsProfileLookup.resolve(
+            reference,
+            byID: { store.profile(id: $0) },
+            byName: { store.profile(named: $0) }
+        )
         guard let profile else {
             throw IPhoneDirectFileProducerError.profileNotFound(
                 profileID: reference.profileID,
@@ -1366,14 +1375,11 @@ final class IPhoneDirectFileExportProducer {
     ) throws {
         guard request.settingsPolicy == .profile,
               let reference = request.profileReference else { return }
-        let profile: ExportProfile?
-        if let profileID = UUID(uuidString: reference.profileID) {
-            profile = profileStore.profile(id: profileID)
-        } else if let name = reference.name {
-            profile = profileStore.profile(named: name)
-        } else {
-            profile = nil
-        }
+        let profile = AgentBridgeRequestSettingsProfileLookup.resolve(
+            reference,
+            byID: { profileStore.profile(id: $0) },
+            byName: { profileStore.profile(named: $0) }
+        )
         guard let profile else { return }
         guard !isBlocked(profile.id) else {
             throw IPhoneDirectFileProducerError.profileRequiresRebind
@@ -1446,7 +1452,7 @@ final class IPhoneDirectFileExportProducer {
             }
             guard discovery.supportsUnqualifiedFullHistoryClaim else {
                 throw IPhoneDirectFileProducerError.invalidRequest(
-                    "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
+                    "Apple Health full-history access could not be verified for this scope. Full-history authorization boundaries are unavailable in this build. Choose an explicit date range."
                 )
             }
             var calendar = Calendar(identifier: .gregorian)

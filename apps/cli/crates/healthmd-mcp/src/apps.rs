@@ -30,8 +30,8 @@ pub fn resource_declaration() -> Value {
 pub fn pairing_resource_declaration() -> Value {
     json!({
         "uri": PAIRING_RESOURCE_URI,
-        "name": "Health.md iPhone pairing QR",
-        "description": "Inline rendering for the short-lived local iPhone pairing QR image.",
+        "name": "Health.md mobile pairing QR",
+        "description": "Inline rendering for the short-lived local iPhone/Android pairing QR image.",
         "mimeType": MIME_TYPE,
         "_meta": {
             "ui": {

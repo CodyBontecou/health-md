@@ -20,7 +20,7 @@ applicable shared fixtures before advertising a protocol version.
 
 A mobile device running Health.md is always required to acquire source health data. Local and
 feature-enabled Streamable HTTP typed MCP queries contact a foreground iPhone; complete local MCP can
-also run durable provider-native raw jobs against iPhone or Android. Health.md does not retain a
+also run durable raw and generated-file jobs against iPhone or Android. Health.md does not retain a
 remote query corpus. Windows accepts existing local drive-root and UNC destinations, but rejects
 verbatim/device namespaces, traversal,
 reserved aliases, alternate data streams, symlinks, junctions, reparse points, and root replacement.
@@ -49,12 +49,13 @@ operation registry, typed normalization, canonical receipts, validation, and bou
 `healthmd mcp serve` preserves newline-delimited stdio and the direct Manual IP/Tailscale backend. It
 exposes 21 fixed tools plus negotiated self-contained analysis and local-only pairing UI resources;
 it has no Mac-app, localhost, shell, SQL, arbitrary URL, or arbitrary file-read authority. Two
-local-only tools start a bounded background iPhone pairing listener, return its short-lived QR as MCP
+local-only tools start a bounded first-mobile pairing listener, return its short-lived QR as MCP
 `image/png`, request an inline pairing card on MCP Apps hosts, and poll a health-free session receipt.
 The QR bearer secret is omitted from text/structured results, and the pairing tools and resource
-require local stdio identity. Pairing start is first-device iPhone onboarding only: Android pairing
-remains an explicit shell workflow, and existing mobile trust or an explicit server device pin fails
-closed instead of creating ambiguous routing. Query tools require a foreground query-capable iPhone
+require local stdio identity. Pairing start supports either iPhone or Android through the existing
+shared selector-3 QR and native in-app scan/manual flow. Existing mobile trust or an explicit server
+device pin fails closed instead of creating ambiguous routing. `setup codex` likewise selects from
+all trusted phones and never filters Android out to trigger another pairing. Query tools require a foreground query-capable iPhone
 and v3. The local `healthmd_export_raw` operation instead selects iOS v1 or Android v2 from paired
 trust, starts an immutable durable `all_public_authorized` job, and keeps its validated artifact in
 the private job spool. `healthmd_raw_artifact_read` accepts only an exact completed job UUID and a
@@ -124,7 +125,12 @@ a stale mirror. It has no Clap, JSON-RPC, HTTP, OAuth, credentials, networking, 
 Platform-facing implementation: TCP listener, secure channel, OS credential storage, separate v1
 and v2 durable jobs, the shared bounded/cancellable active-source wake window, product-aware
 disk-backed receivers, raw validation, and safe destination commits. Transport and product
-selection are explicit and never fall back.
+selection are explicit and never fall back. `generated_files` plans one immutable selected source
+and native destination before any wake window, then CLI and MCP execute that same plan through
+Apple v1 or Android v2 `GeneratedFilesV1`. Android's wire destination is an opaque SHA-256 binding
+and basename; its native path remains in the host job. Generated-file start/status/resume use the
+same digest-validated receipt. Replayed append/merge commits reuse their persisted before/after
+plan rather than re-admitting an already installed larger file as a new append input.
 
 ### `healthmd-mcp` (CLI workspace)
 
@@ -156,6 +162,29 @@ adds a health-data store, and each query still requires the paired foreground iP
 Mac-app mode: the loopback HTTP API belongs to the separately bundled Swift helper inside Health.md
 for Mac and is not a backend of this executable. This crate does not contain direct wire or local
 filesystem-security policy.
+
+## Selected-source support and profile policy
+
+The fixed MCP tool catalog is adapter availability, not an installed-phone capability claim.
+`catalog_availability` describes that catalog; `selected_source` reports offline trusted-platform
+support with `null` for unnegotiated capabilities. Doctor/readiness returns the actual negotiated
+products/policies. Android typed queries remain unsupported and fail locally before a wake or
+query request. Read-only surfaces still expose no pairing, job, or destination authority.
+
+Generated-file normalization accepts authoritative hyphenated profile UUIDs and optional display
+names of 1–128 Unicode scalar values, without outer whitespace or controls. Names never replace
+IDs; references require the profile policy. Profiles and saved settings cannot combine with metric,
+category, source, or detail selectors. Omitted policy retains iOS requested-dates behavior and
+Android saved-device behavior; explicit requested-dates policy is not downgraded on Android.
+
+Version decision: this is host normalization/dispatch and additive local receipt/catalog metadata,
+not a daily export schema or wire/crypto revision. Historic Apple v1, Android v2, query v3 and
+pairing-selector fixtures are preserved. Android settings-policy advertisements gate profiles
+before sending additive fields. Apple currently advertises no such profile capability, so the host
+rejects iOS profiles before contact. Enabling them requires separately reviewed protocol-model and
+Apple hello changes, plus authoritative-ID resolution (the current Apple resolver can fall back to
+a display name when an ID is missing). Neither query support nor app version proves profile support.
+No installed-build qualification or release-scope promotion is implied.
 
 ## Compatibility policy
 

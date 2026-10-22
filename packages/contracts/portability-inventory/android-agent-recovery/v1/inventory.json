@@ -1,0 +1,71 @@
+{
+  "schema": "healthmd.shared_setup.android_recovery_coverage",
+  "schema_version": 1,
+  "target_contract": {
+    "schema": "healthmd.shared_setup",
+    "schema_version": 2
+  },
+  "base_inventory": {
+    "path": "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
+    "sha256": "4a539e7e22006bd0f06e63c3dda7a82f41c6fac0d536249573a37eccec8ae789"
+  },
+  "audited_git_base": "363d8693e443672dbbe5ce51dca6cec044dab4c7",
+  "fields": [
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "executionAPIRecovery",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Transient private authority, frozen operation identity and cancellation callbacks cannot travel through Shared Setup."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "executionAPIRecoveryRequired",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Transient before-read recovery enforcement is local execution authority, not portable profile intent."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "apiAuthorityJson",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Installation-bound endpoint/credential/profile proof is private recovery authority, never transferable delegation."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "apiJournalRequired",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Prepared-artifact checkpoint fences recapture after delivery may have started; it is local progress, not schedule intent."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "recoveryGeneration",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Private generation fence invalidates admitted workers after explicit discard and must not reconstitute authority on import."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "apiAuthorityJson",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Installation-bound endpoint/credential/profile proof belongs to one original operation and cannot be exported or rebound."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "apiJournalRequired",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Private prepared-artifact checkpoint requires immutable recovery bytes and is not portable profile or schedule configuration."
+    }
+  ]
+}

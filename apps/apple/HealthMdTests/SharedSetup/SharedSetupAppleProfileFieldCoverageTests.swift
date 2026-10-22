@@ -8,6 +8,11 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
     // native settings explicitly without changing portable authority or fixtures.
     private static let nativeLocalOnlyAdditions: [CoverageLedger.Field] = [
         .init(
+            sourceType: "ExportProfile", field: "configurationRevision", fieldKind: .stored,
+            serializedKey: "configurationRevision", disposition: .localOnly, contractPath: nil,
+            reason: "Native profile revision pins belong to the receiving device; Shared Setup creates fresh local identities and never imports configuration authority."
+        ),
+        .init(
             sourceType: "MetricSelectionSnapshot",
             field: "enabledWHOOPResources",
             fieldKind: .stored,

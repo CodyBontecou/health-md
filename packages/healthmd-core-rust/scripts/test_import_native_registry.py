@@ -22,6 +22,10 @@ SPEC.loader.exec_module(IMPORTER)
 
 class NativeRegistryImportTest(unittest.TestCase):
     def setUp(self) -> None:
+        self.original_capability_index = IMPORTER.CAPABILITY_INDEX_PATH.read_bytes()
+        self.addCleanup(lambda: self.assertEqual(
+            self.original_capability_index, IMPORTER.CAPABILITY_INDEX_PATH.read_bytes()
+        ))
         self.registry = json.loads(IMPORTER.REGISTRY_PATH.read_text())
         self.capabilities = json.loads(IMPORTER.CAPABILITY_MANIFEST.read_text())
         self.apple = IMPORTER.APPLE_BASELINE.read_bytes()
@@ -44,6 +48,7 @@ class NativeRegistryImportTest(unittest.TestCase):
                     REPO=root,
                     REGISTRY_DIR=root,
                     REGISTRY_PATH=registry,
+                    CAPABILITY_INDEX_PATH=root / "capability-index-v1.json",
                     APPLE_BASELINE=apple,
                     ANDROID_BASELINE=android,
                     CAPABILITY_MANIFEST=capabilities,
@@ -51,6 +56,9 @@ class NativeRegistryImportTest(unittest.TestCase):
                 patch.object(sys, "argv", [str(SCRIPT), *(["--check"] if check else [])]),
                 contextlib.redirect_stdout(io.StringIO()),
             ):
+                IMPORTER.CAPABILITY_INDEX_PATH.write_bytes(
+                    IMPORTER.canonical_bytes(IMPORTER.build_capability_index())
+                )
                 IMPORTER.main()
             self.assertEqual(self.apple, apple.read_bytes())
             self.assertEqual(self.android, android.read_bytes())

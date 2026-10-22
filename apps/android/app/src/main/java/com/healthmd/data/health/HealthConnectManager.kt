@@ -17,9 +17,16 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.units.TemperatureDelta
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthmd.R
+import com.healthmd.direct.AgentBridgeNativeCaptureContext
+import com.healthmd.direct.AgentBridgeCapturedScalarDay
+import com.healthmd.direct.protocol.AgentBridgeException
+import com.healthmd.direct.protocol.AgentBridgeErrorCode
+import androidx.health.connect.client.permission.HealthPermission
 import com.healthmd.data.isHealthConnectRateLimit
 import com.healthmd.domain.model.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -40,6 +47,16 @@ import java.time.ZoneOffset
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+
+/** Private native observation, never a wire capability or per-metric authorization guarantee.
+ * Null permission fields mean unknown, including unavailable providers and failed SDK lookups. */
+internal data class HealthConnectNativePlanningMetadata(
+    val providerAvailable: Boolean,
+    val availableNativeMetricIds: Set<String>,
+    val hasAnyForegroundReadPermission: Boolean?,
+    val grantedPermissionsSha256: String?,
+    val failedFeatureChecks: Set<Int>,
+)
 
 @OptIn(ExperimentalPersonalHealthRecordApi::class)
 class HealthConnectManager(
@@ -68,6 +85,38 @@ class HealthConnectManager(
     fun isAvailable(): Boolean {
         val status = HealthConnectClient.getSdkStatus(context)
         return status == HealthConnectClient.SDK_AVAILABLE
+    }
+
+    /** Metadata-only SDK sampler for the native planning owner. Never queries health records,
+     * history/earliest dates, preview, saved export preferences, quota, credentials or providers.
+     * Availability is independent of permission grants; callers must not treat "any" as all types. */
+    internal suspend fun nativePlanningMetadata(): HealthConnectNativePlanningMetadata {
+        fun unavailable() = HealthConnectNativePlanningMetadata(false, emptySet(), null, null, emptySet())
+        if (!isAvailable()) return unavailable() // Before lazy client construction or permission lookup.
+        val features = mutableMapOf<Int, HealthConnectFeatureAvailability>()
+        fun feature(id: Int) = features.getOrPut(id) { featureAvailability(id) }
+        val plan = HealthConnectPermissionPolicy.createWithAvailability(::feature)
+        val unavailableIds = com.healthmd.rawexport.HealthConnectRecordCatalog.records
+            .filter { descriptor -> descriptor.featureGate?.let { feature(it.feature) != HealthConnectFeatureAvailability.AVAILABLE } == true }
+            .flatMap { it.metricIds }.toSet()
+        val availableIds = java.util.Collections.unmodifiableSet(HealthMetrics.allMetrics.map { it.id }.toSet() - unavailableIds)
+        val granted = try { healthConnectClient.permissionController.getGrantedPermissions().toSet() }
+        catch (error: CancellationException) { throw error }
+        catch (_: Exception) { null }
+        if (!isAvailable()) return unavailable() // A provider change during the suspended lookup rejects availability.
+        val digest = granted?.let { permissions ->
+            val hash = java.security.MessageDigest.getInstance("SHA-256")
+            hash.update("HealthMd.NativeHealthConnectPermissions.v1\u0000".toByteArray(Charsets.UTF_8))
+            for (permission in permissions.sorted()) {
+                val bytes = permission.toByteArray(Charsets.UTF_8)
+                hash.update(java.nio.ByteBuffer.allocate(4).putInt(bytes.size).array())
+                hash.update(bytes)
+            }
+            hash.digest().joinToString("") { "%02x".format(it) }
+        }
+        return HealthConnectNativePlanningMetadata(true, availableIds,
+            granted?.any { it in plan.foregroundPermissions }, digest,
+            java.util.Collections.unmodifiableSet(features.filterValues { it == HealthConnectFeatureAvailability.ERROR }.keys.toSet()))
     }
 
     /**
@@ -108,6 +157,8 @@ class HealthConnectManager(
         } else {
             HealthConnectFeatureAvailability.UNAVAILABLE
         }
+    } catch (error: CancellationException) {
+        throw error
     } catch (_: Exception) {
         HealthConnectFeatureAvailability.ERROR
     }
@@ -410,6 +461,129 @@ class HealthConnectManager(
         }
 
         return dates.map { date -> dataByDate[date]?.filtered(selection) ?: HealthData(date) }
+    }
+
+    /** Exact native bridge day, bound to the original operation and this Health Connect client.
+     * No live provider/settings lookup, broad category read, archive, or error-to-empty fallback. */
+    internal suspend fun captureAgentBridgeDay(day: String, context: AgentBridgeNativeCaptureContext): HealthData {
+        val input = context.claimDay(day)
+        val resolution = input.resolution
+        try {
+            if (day !in resolution.requestedDays) throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+            val date = LocalDate.parse(day)
+            val zone = ZoneId.of(resolution.calendarTimezone)
+            val start = date.atStartOfDay(zone).toInstant()
+            val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+            val range = TimeRangeFilter.between(start, end)
+            val codec = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
+            input.retainedPayload?.let { bytes ->
+                val captured = try { codec.decodeFromString<AgentBridgeCapturedScalarDay>(bytes.decodeToString()) }
+                catch (_: Exception) { throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+                if (captured.version != 1 || captured.day != day || captured.calendarTimezone != resolution.calendarTimezone ||
+                    !setOf("steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "android.hrv_rmssd").containsAll(captured.values.keys) ||
+                    !resolution.selection.map { it.semanticId }.containsAll(captured.values.keys) ||
+                    captured.values.values.any { !it.isFinite() || it < 0 } ||
+                    !codec.encodeToString(captured).toByteArray().contentEquals(bytes)) {
+                    throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+                }
+                val steps = captured.values["steps"]?.let {
+                    if (it > Int.MAX_VALUE || it % 1.0 != 0.0) throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+                    it.toInt()
+                }
+                val record = HealthData(date, activity = ActivityData(steps = steps), heart = HeartData(
+                    averageHeartRate = captured.values["heart_rate_avg"], heartRateMin = captured.values["heart_rate_min"],
+                    heartRateMax = captured.values["heart_rate_max"], restingHeartRate = captured.values["resting_heart_rate"],
+                    hrv = captured.values["android.hrv_rmssd"]))
+                context.configurationForRead()
+                return record
+            }
+            val selected = resolution.selection.map { it.nativeMetricId }.toSet()
+            if (selected.isEmpty() || !setOf("steps", "avg_hr", "min_hr", "max_hr", "resting_hr", "hrv").containsAll(selected)) {
+                throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_METRIC)
+            }
+            val required = selected.map { id ->
+                when (id) {
+                    "steps" -> HealthPermission.getReadPermission(StepsRecord::class)
+                    "avg_hr", "min_hr", "max_hr" -> HealthPermission.getReadPermission(HeartRateRecord::class)
+                    "resting_hr" -> HealthPermission.getReadPermission(RestingHeartRateRecord::class)
+                    else -> HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
+                }
+            }.toSet()
+            suspend fun <T> sdk(query: suspend () -> T): T {
+                context.configurationForRead()
+                val value = try { query() }
+                catch (error: Exception) {
+                    context.configurationForRead() // Original cancellation and authority loss win.
+                    if (error is CancellationException) throw error
+                    throw AgentBridgeNativeCaptureFailure()
+                }
+                context.configurationForRead()
+                return value
+            }
+            suspend fun <T> read(query: suspend () -> T): T {
+                val permissions = sdk { healthConnectClient.permissionController.getGrantedPermissions() }
+                if (!permissions.containsAll(required)) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+                return sdk(query)
+            }
+            suspend fun <T : androidx.health.connect.client.records.Record> latest(type: KClass<T>, time: (T) -> Instant): T? {
+                var token: String? = null
+                val seen = mutableSetOf<String>()
+                // Empty intermediate pages are not exhaustion. Bound native work and retain no
+                // source arrays: the first descending record is sufficient for the latest reducer.
+                repeat(64) {
+                    val page = read { healthConnectClient.readRecords(ReadRecordsRequest(type, range, ascendingOrder = false, pageSize = 1, pageToken = token)) }
+                    if (page.records.size > 1) throw AgentBridgeNativeCaptureFailure()
+                    val record = page.records.singleOrNull()
+                    if (record != null) {
+                        if (time(record) < start || time(record) >= end) throw AgentBridgeNativeCaptureFailure()
+                        return record
+                    }
+                    val next = page.pageToken
+                    if (next.isNullOrEmpty()) return null
+                    if (!seen.add(next)) throw AgentBridgeNativeCaptureFailure()
+                    token = next
+                }
+                throw AgentBridgeException(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
+            }
+            var result = HealthData(date)
+            if ("steps" in selected) {
+                val values = read { healthConnectClient.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), range)) }
+                val count = values[StepsRecord.COUNT_TOTAL]
+                if (count != null && count !in 0..Int.MAX_VALUE.toLong()) throw AgentBridgeNativeCaptureFailure()
+                result = result.copy(activity = result.activity.copy(steps = count?.toInt()))
+            }
+            val metrics = buildSet<AggregateMetric<*>> {
+                if ("avg_hr" in selected) add(HeartRateRecord.BPM_AVG)
+                if ("min_hr" in selected) add(HeartRateRecord.BPM_MIN)
+                if ("max_hr" in selected) add(HeartRateRecord.BPM_MAX)
+            }
+            if (metrics.isNotEmpty()) {
+                val values = read { healthConnectClient.aggregate(AggregateRequest(metrics, range)) }
+                result = result.copy(heart = result.heart.copy(
+                    averageHeartRate = if ("avg_hr" in selected) values[HeartRateRecord.BPM_AVG]?.toDouble() else null,
+                    heartRateMin = if ("min_hr" in selected) values[HeartRateRecord.BPM_MIN]?.toDouble() else null,
+                    heartRateMax = if ("max_hr" in selected) values[HeartRateRecord.BPM_MAX]?.toDouble() else null,
+                ))
+            }
+            if ("resting_hr" in selected) {
+                val record = latest(RestingHeartRateRecord::class) { it.time }
+                result = result.copy(heart = result.heart.copy(restingHeartRate = record?.beatsPerMinute?.toDouble()))
+            }
+            if ("hrv" in selected) {
+                val record = latest(HeartRateVariabilityRmssdRecord::class) { it.time }
+                result = result.copy(heart = result.heart.copy(hrv = record?.heartRateVariabilityMillis))
+            }
+            if (listOfNotNull(result.heart.averageHeartRate, result.heart.heartRateMin, result.heart.heartRateMax,
+                    result.heart.restingHeartRate, result.heart.hrv).any { !it.isFinite() || it < 0 }) throw AgentBridgeNativeCaptureFailure()
+            context.configurationForRead()
+            val values = linkedMapOf("steps" to result.activity.steps?.toDouble(), "heart_rate_avg" to result.heart.averageHeartRate,
+                "heart_rate_min" to result.heart.heartRateMin, "heart_rate_max" to result.heart.heartRateMax,
+                "resting_heart_rate" to result.heart.restingHeartRate, "android.hrv_rmssd" to result.heart.hrv).mapNotNull { (id, value) -> value?.let { id to it } }.toMap()
+            val payload = try { codec.encodeToString(AgentBridgeCapturedScalarDay(1, day, resolution.calendarTimezone, values)).toByteArray() }
+            catch (_: Exception) { throw AgentBridgeNativeCaptureFailure() }
+            context.commitDay(day, payload)
+            return result
+        } catch (error: Throwable) { context.invalidate(); throw error }
     }
 
     /**
@@ -3532,3 +3706,6 @@ private fun Exception.isHistoricalOrBackgroundAccessFailure(): Boolean {
         message.contains("historical", ignoreCase = true) ||
         message.contains("background", ignoreCase = true)
 }
+
+/** Fixed internal failure: no SDK exception body or health value can escape through this error. */
+internal class AgentBridgeNativeCaptureFailure : Exception("native_capture_failed")

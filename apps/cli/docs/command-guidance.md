@@ -79,14 +79,18 @@ commands. Add `--json`, or pipe the command, to receive the complete `input_sche
 shapes, bounds, enums, structured example arguments, and shell-safe `argv` arrays. Independent MCP
 inspection follows the same rule through `healthmd mcp schema`.
 
-After resolving the user's actual dates, execute the returned shape:
+After resolving the user's actual dates, use a bounded exact range:
 
 ```bash
 healthmd query healthmd_sleep_sessions \
-  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+  --arguments '{"dates":{"type":"exact","range":{"start_date":"2026-01-01","end_date":"2026-01-07"}},"all_pages":true}'
 ```
 
-The schema's dates are illustrative. Never silently substitute example dates for a user's request.
+These dates are illustrative. Never silently substitute them for a user's request. `all_available`
+remains a valid contract shape, not proof of installed full-history support. The current pinned Apple
+SDK cannot assess that boundary; `api_unavailable`, missing metadata and `unknown` do not prove denial,
+no data or full access. Use explicit ranges with completeness unverified and inspect the selected
+peer's metadata. See [current source history limitations](mobile-compatibility.md#current-source-history-limitations).
 
 ### Destructive-command discovery
 
@@ -149,9 +153,10 @@ empty arguments object reports `dates are required` and embeds that exact operat
 Operational errors provide code-specific recovery, for example:
 
 - multiple paired devices → list devices, then retry with global `--device <UUID>`;
-- unavailable foreground source → keep Health.md open, run `healthmd status`, inspect trust;
+- unavailable source → inspect `healthmd status` and trust; iPhone new work requires the foreground
+  app/protected data, while Android requires its already-active user-started direct service after first unlock;
 - paused durable export → inspect `status --job`, then `resume` the exact job;
-- cancellation pending → keep the source foreground and inspect acknowledgement state;
+- cancellation pending → restore that platform's required source availability and inspect acknowledgement state;
 - invalid native trust → inspect devices before entering explicit reset guidance;
 - unsupported Nearby transport → retry with portable `--transport manual-ip`.
 

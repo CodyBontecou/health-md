@@ -24,6 +24,7 @@ import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.ExportEnginePin
+import com.healthmd.domain.model.APIRecoveryExecution
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -73,6 +74,8 @@ class ExportWorker @AssistedInject constructor(
     private val entitlementRepository: EntitlementRepository,
     private val distributionPolicy: DistributionPolicy,
 ) : CoroutineWorker(appContext, workerParams) {
+
+    private var attemptAPIAuthorityJson: String? = null
 
     override suspend fun doWork(): Result = try {
         if (ScheduledExportOccurrence.fromWorkData(inputData) != null) {
@@ -247,15 +250,16 @@ class ExportWorker @AssistedInject constructor(
 
         // Validate current credential/destination plumbing before restoring frozen output choices.
         val currentFingerprint = if (capturedTarget == ExportTarget.API_ENDPOINT) {
-            apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl)
+            runCatchingCancellable { apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl) }
+                .getOrNull()
         } else null
         val capturedFingerprint = capturedOccurrence.configuration.destinationFingerprint
         if (
             capturedTarget == ExportTarget.API_ENDPOINT &&
             (capturedFingerprint == null || capturedFingerprint != currentFingerprint)
         ) {
-            // A newer schedule points at a different endpoint. Never let this stale worker send to it.
-            return Result.success()
+            // A newer schedule points at a different authority. Never send or silently succeed.
+            return apiAuthorityFailure()
         }
 
         val restoredSettings = try {
@@ -267,7 +271,7 @@ class ExportWorker @AssistedInject constructor(
         // An accepted occurrence keeps its frozen output settings and intended date window even if
         // mutable preferences or cadence/time are edited while WorkManager is starting it. Inject
         // renderer authority only after restoring the snapshot so it cannot inherit another pin.
-        val settings = restoredSettings.copy(
+        var settings = restoredSettings.copy(
             exportTarget = capturedTarget,
             scheduledExportTarget = capturedTarget,
             scheduleLookbackDays = capturedOccurrence.configuration.lookbackDays,
@@ -285,19 +289,18 @@ class ExportWorker @AssistedInject constructor(
             catchUpThroughMillis,
         ).ifEmpty { listOf(capturedOccurrence.intendedLocalDate) }
         val destinationFingerprint = capturedFingerprint ?: currentFingerprint
-        val pendingApiOperationId = if (capturedTarget == ExportTarget.API_ENDPOINT) {
-            ScheduledExportPendingRequests.pendingRequests(settings)
-                .asSequence()
-                .filter { it.exportTarget == ExportTarget.API_ENDPOINT }
-                .filter { it.destinationFingerprint == destinationFingerprint }
-                .filter { it.enginePin == enginePin }
-                .filter {
-                    it.settingsSnapshotJson == null ||
-                        it.settingsSnapshotJson == capturedSnapshotJson
-                }
-                .mapNotNull { it.apiOperationId }
-                .firstOrNull()
+        val currentAPIConfiguration = if (capturedTarget == ExportTarget.API_ENDPOINT) {
+            runCatchingCancellable { apiCredentialStore.requestConfiguration(settings.apiEndpointUrl) }.getOrNull()
         } else null
+        val matchingAPIRequests = ScheduledExportPendingRequests.pendingRequests(settings).filter { request ->
+            request.exportTarget == ExportTarget.API_ENDPOINT &&
+                request.destinationFingerprint == destinationFingerprint && request.enginePin == enginePin &&
+                request.settingsSnapshotJson == capturedSnapshotJson && currentAPIConfiguration != null &&
+                apiCredentialStore.matchesRecoveryAuthority(request.apiAuthorityJson, currentAPIConfiguration, null)
+        }
+        attemptAPIAuthorityJson = matchingAPIRequests.firstOrNull()?.apiAuthorityJson
+            ?: stateStore.loadAdmission()?.apiAuthorityJson
+        val pendingApiOperationId = matchingAPIRequests.firstOrNull()?.apiOperationId
         val durableApiOperationId = if (capturedTarget == ExportTarget.API_ENDPOINT) {
             pendingApiOperationId ?: admissionOperationId
         } else null
@@ -343,6 +346,40 @@ class ExportWorker @AssistedInject constructor(
             pendingFolderOperationId != null,
         )
         if (dates.isEmpty()) return Result.success()
+        if (capturedTarget == ExportTarget.API_ENDPOINT) {
+            val authority = attemptAPIAuthorityJson
+            if (authority == null || currentAPIConfiguration == null ||
+                !apiCredentialStore.matchesRecoveryAuthority(authority, currentAPIConfiguration, null)
+            ) return apiAuthorityFailure()
+            val operation = requireNotNull(durableApiOperationId)
+            settingsRepository.updateExportSettingsAtomically { latest ->
+                ScheduledExportPendingRequests.admitAPIDates(
+                    latest, dates, destinationFingerprint, enginePin, capturedSnapshotJson, authority, operation,
+                )
+            }
+            settings = settings.copy(
+                executionAPIRecoveryRequired = true,
+                executionAPIRecovery = APIRecoveryExecution(
+                    authority, null, operation, capturedSnapshotJson,
+                    requireExistingJournal = matchingAPIRequests.any { it.apiJournalRequired },
+                    onJournalPrepared = {
+                        val marked = settingsRepository.updateExportSettingsAtomically { latest ->
+                            if (!stateStore.matchesAdmission(capturedOccurrence, admissionOperationId, id)) latest
+                            else ScheduledExportPendingRequests.markAPIJournalRequired(latest, dates, authority, operation)
+                        }
+                        dates.all { date -> ScheduledExportPendingRequests.pendingRequests(marked).any {
+                            it.date == date && it.apiAuthorityJson == authority &&
+                                it.apiOperationId == operation && it.apiJournalRequired
+                        } }
+                    },
+                ) {
+                    val latest = settingsRepository.getExportSettings()
+                    stateStore.matchesAdmission(capturedOccurrence, admissionOperationId, id) &&
+                        latest.scheduledExportTarget == capturedTarget &&
+                        APIExportEndpoint.normalizedOrNull(latest.apiEndpointUrl) == currentAPIConfiguration.endpointUrl
+                },
+            )
+        }
         val startDate = dates.first()
         val endDate = dates.last()
 
@@ -426,7 +463,7 @@ class ExportWorker @AssistedInject constructor(
                 settingsSnapshotJson = capturedSnapshotJson,
             )
         val backgroundPermissionResult = if (
-            pendingApiOperationId == null && !canResumeStoredFolder
+            !matchingAPIRequests.any { it.apiJournalRequired } && !canResumeStoredFolder
         ) {
             runCatchingCancellable {
                 healthRepository.hasBackgroundReadPermission()
@@ -528,6 +565,7 @@ class ExportWorker @AssistedInject constructor(
                 )
             }
 
+            if (settings.executionAPIRecovery?.isStillAuthorized?.invoke() == false) return Result.success()
             if (result.wasCancelled) {
                 val remainingDates = cancellationRemainingDates(dates, settings, result)
                 persistCancelledRetryDates(
@@ -598,7 +636,10 @@ class ExportWorker @AssistedInject constructor(
             val allFailuresDetachedForFreshCapture = result.failedDateDetails.all { failure ->
                 failure.date in result.freshCaptureRetryDates
             }
-            if (durableApiOperationId != null &&
+            if (settings.exportMode == ExportMode.RAW_SNAPSHOT && result.isFullSuccess && durableApiOperationId != null) {
+                rawSnapshotExportRunner.discardCompletedDurableOperation(durableApiOperationId)
+            }
+            if (settings.exportMode != ExportMode.RAW_SNAPSHOT && durableApiOperationId != null &&
                 result.retryOperationIds.isEmpty() &&
                 !result.wasCancelled &&
                 allFailuresDetachedForFreshCapture
@@ -675,6 +716,10 @@ class ExportWorker @AssistedInject constructor(
         }
     }
 
+    private fun apiAuthorityFailure(): Result = Result.failure(
+        androidx.work.workDataOf(API_AUTHORITY_ERROR to "api_recovery_authority_required"),
+    )
+
     private fun scheduledDates(
         settings: ExportSettings,
         destinationFingerprint: String?,
@@ -695,6 +740,7 @@ class ExportWorker @AssistedInject constructor(
         resumeExistingApiOperation = resumeExistingApiOperation,
         folderOperationId = folderOperationId,
         resumeExistingFolderOperation = resumeExistingFolderOperation,
+        apiAuthorityJson = attemptAPIAuthorityJson,
     )
 
     private fun cancellationRemainingDates(
@@ -745,6 +791,7 @@ class ExportWorker @AssistedInject constructor(
                 apiOperationIds = result.retryOperationIds,
                 folderOperationIds = result.retryFolderOperationIds,
                 freshCaptureRetryDates = result.freshCaptureRetryDates,
+                apiAuthorityJson = attemptAPIAuthorityJson,
             )
         }
     }
@@ -772,6 +819,7 @@ class ExportWorker @AssistedInject constructor(
                 apiOperationIds = apiOperationIds,
                 folderOperationIds = folderOperationIds,
                 freshCaptureRetryDates = freshCaptureRetryDates,
+                apiAuthorityJson = attemptAPIAuthorityJson,
             )
         }
     }
@@ -794,6 +842,7 @@ class ExportWorker @AssistedInject constructor(
                 destinationFingerprint = destinationFingerprint,
                 enginePin = enginePin,
                 settingsSnapshotJson = settingsSnapshotJson,
+                apiAuthorityJson = attemptAPIAuthorityJson,
                 folderOperationIds = folderOperationId?.let { operationId ->
                     attemptedDates.associateWith { operationId }
                 }.orEmpty(),
@@ -929,6 +978,7 @@ class ExportWorker @AssistedInject constructor(
 
     companion object {
         const val WORK_NAME = "health_export"
+        const val API_AUTHORITY_ERROR = "api_recovery_error"
         const val INPUT_EXPORT_TARGET = ScheduledExportOccurrence.KEY_TARGET
         const val INPUT_DESTINATION_FINGERPRINT = ScheduledExportOccurrence.KEY_DESTINATION_FINGERPRINT
         const val INPUT_SCHEDULE_SIGNATURE = ScheduledExportOccurrence.KEY_SIGNATURE

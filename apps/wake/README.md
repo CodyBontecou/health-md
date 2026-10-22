@@ -8,6 +8,11 @@ send **one visible push** so the owner can tap, unlock, and let the same
 in-flight request continue. The worker never becomes a data path — all health
 data moves only over the authenticated peer-to-peer direct channel.
 
+An additive **Worker-only FCM HTTP-v1 v2 extension** is locally implemented and
+tested. Android P3/B15 remains planned/incomplete: native/CLI integration,
+security review, authorized configuration/deployment, and physical notification
+QA have not been completed. APNs P2 remains the deployed default.
+
 ## Provenance
 
 The wake endpoints were originally specified to extend the
@@ -29,7 +34,23 @@ Full contract: [`docs/architecture/rfc-0005-worker-spec.md`](../../docs/architec
 | `/health` | GET | Liveness: `{"ok":true,"service":"healthmd-wake"}` |
 | `/wake/register` | POST | Phone enrolls (or rotates) wake material; returns `{"wakeId":...}` |
 | `/wake/register` | DELETE | Unpair revoke; idempotent |
-| `/wake/request` | POST | CLI's HMAC-authenticated doorbell ring |
+| `/wake/request` | POST | CLI's unchanged v1 HMAC-authenticated APNs ring |
+| `/wake/v2/register` | POST | Explicit FCM enrollment/rotation with phone-only management proof |
+| `/wake/v2/register` | DELETE | Cryptographically authenticated v2 revocation |
+| `/wake/v2/request` | POST | V2 domain-separated FCM ring; fixed generic visible copy |
+
+The Worker-local v2 contract, proof vectors, private configuration, bounds,
+official sources, and remaining gates are in [`docs/fcm-v2.md`](docs/fcm-v2.md).
+Legacy endpoints do not reinterpret APNs tokens or manage v2 resources.
+Unapproved body fields are rejected; no health arguments or arbitrary provider
+payloads are accepted.
+
+**Legacy security:** initial registration is not account/install authentication.
+V1 rotation/revocation use opaque identifiers, not a cryptographic owner proof;
+`userId` alone is not authentication. The registered verification hash is itself
+a bearer HMAC secret. V2 adds a separate phone-only management hash/proof without
+altering v1 transcripts. See the extension document for the retained legacy
+limitations and self-authenticated v2 bootstrap limitations.
 
 ### HMAC construction (2026-09-03 amendment)
 
@@ -60,6 +81,21 @@ Shared vector: raw key `[7;32]`, nonce `"aa"`, timestamp `2026-09-03T00:00:00Z`
 - Storage: D1 (`healthmd-wake`) — registrations, counters, replay nonces.
   No health payloads, request arguments, or tokens in logs.
 
+## FCM extension staging
+
+New migration `0002_fcm_v2.sql` is forward-only. Existing registrations and legacy
+inserts keep APNs/v1 defaults. The optional private `FCM_SERVICE_ACCOUNT_JSON`
+binding is not provisioned here: absent/malformed FCM configuration contacts no
+provider and leaves APNs functional. OAuth and notification state are
+request-local; provider responses/exceptions and tokens are never logged.
+
+FCM sends only a fixed visible notification, not a data message. It uses a normal
+tap-to-open action, no full-screen intent, hidden service start, silent capture,
+or lifecycle bypass. "Delivered" means provider acceptance, not device display.
+Native channel/action creation, consent/permission/services gating, protected
+credentials, CLI v2 signing, and Play/F-Droid degradation are still later gates.
+Do not deploy this extension or claim Android push availability from this slice.
+
 ## Deploy
 
 Deploy only committed and pushed `origin/main` source from `apps/wake`. The D1 database already
@@ -84,8 +120,9 @@ development-signed build, and back before TestFlight/App Store QA.
 
 ```sh
 npm ci
-npm test        # vitest: pinned HMAC vector, delivery policy, timestamp window,
-                # peer-label sanitization, notification copy allowlist
+npm test        # legacy vectors/HTTP compatibility; mocked FCM/OAuth;
+                # v2 management, replay, rate/dedupe/concurrency, privacy/bounds;
+                # local workerd/D1 with all outbound traffic intercepted
 npm run check
 npm exec -- wrangler deploy --dry-run --outdir .wrangler/dry-run
 ```

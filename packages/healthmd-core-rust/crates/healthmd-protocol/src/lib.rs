@@ -13,6 +13,7 @@ pub mod models;
 pub mod time;
 pub mod transfer;
 pub mod v2;
+pub mod v4;
 pub mod wire;
 
 /// Deployed Apple direct-pairing protocol version.

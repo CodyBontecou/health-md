@@ -254,7 +254,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                             jobID: request.jobID,
                             reason: .healthKitFetchFailed,
-                            message: "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
+                            message: "Apple Health full-history access could not be verified for this scope. Full-history authorization boundaries are unavailable in this build. Choose an explicit date range."
                         )))
                         return
                     }

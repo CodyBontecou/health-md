@@ -12,7 +12,8 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`product-capabilities.json`](product-capabilities.json) | Machine-readable Apple/Android capability and output-profile inventory |
 | [`../healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json`](../healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json) | Rust-owned ordered metric/profile inventory pinned by `manifest.json` |
 | [`validate.py`](validate.py) | Standard-library validation for inventories, hashes, mirrors, metric/profile cross-links, and wire-vector invariants |
-| [`direct-protocol`](direct-protocol) | Normative direct-device protocol specifications and canonical interoperability vectors |
+| [`direct-protocol`](direct-protocol) | Normative direct-device protocol specifications and interoperability vectors; new v4 remains deferred |
+| [`agent-bridge/v1`](agent-bridge/v1/contract.md) | **Deferred B01/B05 foundation:** complete settings/capture, stored native/host bootstrap, zero-health candidate-bound control approvals, immutable execution, source-specific identity and exact projection artifacts; synthetic Python candidates, native conformance not run |
 | [`health-corpus/v1`](health-corpus/v1/contract.md) | Shared all-public-authorized scope, truthful completeness semantics, durable CLI jobs, and bounded local-MCP artifact access over native Apple and Android raw contracts |
 | [`semantic-input/v1`](semantic-input/v1/contract.md) | Internal post-capture semantic envelope, strict schemas, and synthetic cross-language differential corpus |
 | [`render-input/v1`](render-input/v1/contract.md) | Internal profile rendering, artifact-plan, path, merge, API batching, and bounded lossless-stream contract |
@@ -41,6 +42,9 @@ make test-contracts
 
 # Product capability/profile parity only
 make test-product-parity
+
+# New deferred agent-bridge synthetic/negative tests (no native availability claim)
+python3 -m unittest discover -s packages/contracts -p 'test_validate_agent_bridge.py'
 ```
 
 ## Ownership states
