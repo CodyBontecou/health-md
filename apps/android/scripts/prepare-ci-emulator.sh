@@ -52,7 +52,23 @@ for attempt in $(seq 1 30); do
             # do not disable setup packages or force completion settings.
             if [[ "$setup_started" == false ]]; then
                 echo 'Initializing the hosted image SDK setup activity once.'
-                adb_ci shell am start -W -n "$home"
+                if setup_output="$(adb_ci shell am start -W -n "$home" 2>&1)"; then
+                    echo "$setup_output"
+                else
+                    echo "$setup_output" >&2
+                    # Setup can retire itself between HOME resolution and launch.
+                    # Admit only that exact missing-activity transition to the
+                    # known launcher; all other launch failures remain fatal.
+                    if [[ "$setup_output" != *'Error type 3'* || "$setup_output" != *'does not exist.'* ]]; then
+                        exit 1
+                    fi
+                    home_after="$(adb_ci shell cmd package resolve-activity --brief \
+                        -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '\r' | tail -n 1)"
+                    case "$home_after" in
+                        "$launcher/"*) echo 'SDK setup retired; waiting for the known HOME window.' ;;
+                        *) echo "SDK setup launch failed without a known HOME transition: $home_after" >&2; exit 1 ;;
+                    esac
+                fi
                 setup_started=true
             fi
             sleep 1
