@@ -42,6 +42,9 @@ class ProductCapabilityManifestTest {
             setOf(
                 "cloud.opt-in-export-receiver",
                 "cloud.read-only-mcp",
+                "account.optional-native-sign-in",
+                "account.selected-portable-profile-sync",
+                "account.local-revision-approval",
                 "core.shared-rust-profile-engine",
                 "automation.api-recovery-authority",
                 "direct.cli_agent_push_wake",
@@ -179,6 +182,9 @@ class ProductCapabilityManifestTest {
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "cloud.opt-in-export-receiver",
             "cloud.read-only-mcp",
+            "account.optional-native-sign-in",
+            "account.selected-portable-profile-sync",
+            "account.local-revision-approval",
             "source.private-platform-database",
             "automation.api-recovery-authority",
             "direct.cli_agent_push_wake",

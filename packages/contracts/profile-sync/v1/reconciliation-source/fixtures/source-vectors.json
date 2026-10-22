@@ -1,0 +1,129 @@
+{
+  "label": "AS07 SOURCE ONLY independently specified traces; no public/wire/native/durable claim",
+  "source_version": 1,
+  "contexts": {
+    "a": ["https://issuer-a.account-sync.example", "synthetic-a", "sentinel-A", 0],
+    "a1": ["https://issuer-a.account-sync.example", "synthetic-a", "sentinel-A", 1],
+    "b1": ["https://issuer-a.account-sync.example", "synthetic-a", "sentinel-B", 1],
+    "env1": ["https://issuer-a.account-sync.example", "synthetic-b", "sentinel-A", 1],
+    "issuer1": ["https://issuer-b.account-sync.example", "synthetic-a", "sentinel-A", 1]
+  },
+  "content": {
+    "base": {"file": "foreign-unchanged.json", "hash": "315912058e734b1613fb4b4775dbf8bd78944641151e8bd559eaa47e21e38750"},
+    "edit": {"file": "foreign-local-edit.json", "hash": "f7fd115d266015954b16715c068f082d41e1d9a1eeae15b3e34a3416d7c0cc5c"},
+    "remote": {"file": "unicode-exact.json", "hash": "995f8853ac8ca94bab2c3661235302f1887eab69e08d5116b19f68276d13dc1e"},
+    "current": {"file": "registry-current.json", "hash": "dd69558fb78acc68119f3e67f8b4195aab065c59346bec1b0f846f73a621a19e"}
+  },
+  "profiles": {"p1": "psp_11111111111111111111111111111111", "p2": "psp_22222222222222222222222222222222"},
+  "mutations": {
+    "create": {"operation": "create", "key": "psm_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "base": 0, "content": "base"},
+    "edit": {"operation": "update", "key": "psm_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "base": 1, "profile": "p1", "content": "edit"},
+    "same": {"operation": "update", "key": "psm_cccccccccccccccccccccccccccccccc", "base": 1, "profile": "p1", "content": "base"},
+    "keep": {"operation": "create", "key": "psm_dddddddddddddddddddddddddddddddd", "base": 0, "content": "edit"},
+    "second": {"operation": "create", "key": "psm_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "base": 0, "content": "base"},
+    "gone": {"operation": "update", "key": "psm_ffffffffffffffffffffffffffffffff", "base": 2, "profile": "p1", "content": "edit"},
+    "delete": {"operation": "delete", "key": "psm_99999999999999999999999999999999", "base": 1, "profile": "p1"}
+  },
+  "records": {
+    "first": {"profile": "p1", "object": 1, "event": 1, "order": 2, "revision": 1, "content": "base"},
+    "remote_edit": {"profile": "p1", "object": 2, "event": 2, "order": 2, "revision": 2, "content": "remote"},
+    "deleted": {"profile": "p1", "object": 2, "event": 2, "deleted": true},
+    "kept": {"profile": "p2", "object": 1, "event": 3, "order": 2, "revision": 1, "content": "edit"},
+    "second": {"profile": "p2", "object": 1, "event": 2, "order": 2, "revision": 1, "content": "base"}
+  },
+  "traces": [
+    {
+      "id": "selected-publish-lost-ack-exact-retry",
+      "calls": [7, 3],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["select", "publish", "create", "local-one", "queued"], ["next", "create", "pending"], ["next", "create", "pending"], ["ack", "create", "first", "pending_review"], ["ack", "create", "first", "unchanged"]],
+      "final": {"locals": 1, "links": 1, "candidates": 1, "statuses": ["acknowledged"], "history": ["local_preserved", "queued", "pending_review"]}
+    },
+    {
+      "id": "same-key-different-exact-body",
+      "calls": [5, 2],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["select", "publish", "create", "local-one", "queued"], ["changed_bytes", "create", "idempotency_mismatch"], ["next", "create", "pending"]],
+      "final": {"locals": 1, "links": 0, "candidates": 0, "statuses": ["pending"], "history": ["local_preserved", "queued"]}
+    },
+    {
+      "id": "edit-edit-preserve-both-explicit-keep-both",
+      "calls": [10, 7],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["select", "publish", "create", "local-one", "queued"], ["ack", "create", "first", "pending_review"], ["select", "edit", "edit", "local-one", "queued"], ["observe", "remote_edit", "edit_edit_conflict"], ["keep", "keep", "edit", "local-two", "queued"], ["next", "keep", "pending"], ["ack", "keep", "kept", "pending_review"]],
+      "final": {"locals": 2, "links": 2, "candidates": 3, "statuses": ["acknowledged", "conflict", "acknowledged"], "history": ["local_preserved", "queued", "pending_review", "queued", "edit_edit_conflict", "queued", "pending_review"]}
+    },
+    {
+      "id": "edit-delete-never-upsert-retired-id",
+      "calls": [7, 5],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["select", "publish", "create", "local-one", "queued"], ["ack", "create", "first", "pending_review"], ["select", "edit", "edit", "local-one", "queued"], ["observe", "deleted", "edit_delete_conflict"], ["select", "edit", "gone", "local-one", "gone"]],
+      "final": {"locals": 1, "links": 1, "candidates": 2, "statuses": ["acknowledged", "conflict"], "history": ["local_preserved", "queued", "pending_review", "queued", "edit_delete_conflict"]}
+    },
+    {
+      "id": "clean-remote-delete-preserves-user-and-accepted-copy",
+      "calls": [6, 4],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["select", "publish", "create", "local-one", "queued"], ["ack", "create", "first", "pending_review"], ["observe", "deleted", "keep_local_unlink_review"]],
+      "final": {"locals": 1, "links": 1, "candidates": 2, "statuses": ["acknowledged"], "history": ["local_preserved", "queued", "pending_review", "keep_local_unlink_review"]}
+    },
+    {
+      "id": "same-owner-new-generation-quarantine-and-late-ack",
+      "calls": [10, 3],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["select", "publish", "create", "local-one", "queued"], ["switch", "a1", "quarantined"], ["ack", "create", "first", "quarantined"], ["next", null, "requires_action"], ["restart", "unchanged"]],
+      "final": {"locals": 1, "links": 0, "candidates": 0, "statuses": ["quarantined"], "history": ["local_preserved", "queued", "quarantined"]}
+    },
+    {
+      "id": "no-op-state-apply-retains-journal-intent-and-fences-restart",
+      "calls": [9, 2],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["arm", "no_op"], ["select", "publish", "create", "local-one", "verification_pending"], ["verify", "verification_pending"], ["next", null, "verification_pending"], ["restart", "verification_pending"]],
+      "final": {"locals": 1, "links": 0, "candidates": 0, "statuses": [], "history": ["local_preserved"]},
+      "pending": {"outbox": 1, "actual_outbox": 0}
+    },
+    {
+      "id": "partial-apply-retains-exact-proposal-not-rollback-or-success",
+      "calls": [9, 2],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["arm", "partial"], ["select", "publish", "create", "local-one", "verification_pending"], ["verify", "verification_pending"], ["restart", "verification_pending"]],
+      "final": {"locals": 1, "links": 0, "candidates": 0, "statuses": [], "history": ["local_preserved"]},
+      "pending": {"outbox": 1, "actual_outbox": 0}
+    },
+    {
+      "id": "lost-journal-return-verified-by-actual-readback",
+      "calls": [9, 2],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["arm", "lost_response"], ["select", "publish", "create", "local-one", "queued"], ["restart", "unchanged"], ["next", "create", "pending"]],
+      "final": {"locals": 1, "links": 0, "candidates": 0, "statuses": ["pending"], "history": ["local_preserved", "queued"]}
+    },
+    {
+      "id": "commit-then-unreadable-holds-prior-view-until-exact-readback",
+      "calls": [11, 2],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["arm", "unreadable"], ["select", "publish", "create", "local-one", "verification_pending"], ["verify", "verification_pending"], ["readable"], ["verify", "queued"], ["restart", "unchanged"], ["next", "create", "pending"]],
+      "final": {"locals": 1, "links": 0, "candidates": 0, "statuses": ["pending"], "history": ["local_preserved", "queued"]}
+    },
+    {
+      "id": "stale-owner-at-actual-journal-mutation",
+      "calls": [5, 2],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["arm", "stale_owner", "a1"], ["select", "publish", "create", "local-one", "fenced"], ["verify", "fenced"], ["next", null, "fenced"]],
+      "final": {"locals": 1, "links": 0, "candidates": 0, "statuses": [], "history": ["local_preserved"]},
+      "pending": {"outbox": 1, "actual_outbox": 0}
+    },
+    {
+      "id": "identical-names-two-identities-total-order",
+      "calls": [8, 6],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["local", "base", "local-two", "local_preserved"], ["select", "publish", "create", "local-one", "queued"], ["select", "publish", "second", "local-two", "queued"], ["ack", "create", "first", "pending_review"], ["ack", "second", "second", "pending_review"]],
+      "final": {"locals": 2, "links": 2, "candidates": 2, "statuses": ["acknowledged", "acknowledged"], "history": ["local_preserved", "local_preserved", "queued", "queued", "pending_review", "pending_review"]}
+    },
+    {
+      "id": "exact-content-no-op-receipt-keeps-immutable-revision",
+      "calls": [7, 5],
+      "steps": [["local", "base", "local-one", "local_preserved"], ["select", "publish", "create", "local-one", "queued"], ["ack", "create", "first", "pending_review"], ["select", "edit", "same", "local-one", "queued"], ["ack", "same", "first", "pending_review"]],
+      "final": {"locals": 1, "links": 1, "candidates": 1, "statuses": ["acknowledged", "acknowledged"], "history": ["local_preserved", "queued", "pending_review", "queued", "pending_review"]}
+    },
+    {
+      "id": "explicit-adopt-only-stages-relation-no-native-row",
+      "calls": [4, 2],
+      "steps": [["observe", "first", "pending_review"], ["adopt", "p1", "local-new", "pending_review"], ["adopt", "p1", "local-new", "pending_review"], ["adopt", "p1", "local-other", "requires_action"]],
+      "final": {"locals": 0, "links": 1, "candidates": 1, "statuses": [], "history": ["pending_review", "pending_review"]}
+    },
+    {
+      "id": "unknown-tombstone-never-adopt-or-resurrect",
+      "calls": [3, 1],
+      "steps": [["observe", "deleted", "keep_local_unlink_review"], ["adopt", "p1", "local-new", "gone"], ["observe", "remote_edit", "requires_action"]],
+      "final": {"locals": 0, "links": 0, "candidates": 1, "statuses": [], "history": ["keep_local_unlink_review"]}
+    }
+  ]
+}

@@ -17,7 +17,20 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`semantic-input/v1`](semantic-input/v1/contract.md) | Internal post-capture semantic envelope, strict schemas, and synthetic cross-language differential corpus |
 | [`render-input/v1`](render-input/v1/contract.md) | Internal profile rendering, artifact-plan, path, merge, API batching, and bounded lossless-stream contract |
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |
+| [`account-auth/v1`](account-auth/v1/contract.md) | **Deferred, default-unavailable source:** synthetic native configuration-only account authority, closed response/callback/PKCE vectors; no real browser consent or OS registration/custody |
+| [`profile-sync/v1`](profile-sync/v1/contract.md) | **Deferred, inactive source:** independently versioned exact-byte portable content/revision/read/error codecs; no durable service, reconciliation, native apply or execution authority |
 | [`cloud-repair/v1`](cloud-repair/v1/contract.md) | **Staged, not enabled or manifest-registered:** static no-scope app link, encrypted repair draft, review-only approved-device dispatch and synthetic vectors; no upload authorization or verified receipt |
+
+Account-auth and profile-sync manifest registration pins source provenance and fixture integrity only; it is not canonicalization, product availability or named approval. The three account capabilities remain `planned` on both platforms. Full native/core builds, actual registry adapters, OS secure storage/callbacks, physical/accessibility evidence and configuration privacy/retention policy remain separate gates. Frozen Shared Setup v2 and daily/API/direct output bytes are unchanged.
+
+Bounded source checks (native runners require explicit compiler/resource admission):
+
+```bash
+python3 packages/contracts/account-auth/v1/test_source_contract.py
+python3 packages/contracts/profile-sync/v1/test_contract.py
+# Node 24 runtime conformance, not a substitute for Cloud tsc/Vitest:
+node --experimental-transform-types packages/contracts/profile-sync/v1/run-typescript.mjs
+```
 
 ## Typed provider contracts
 

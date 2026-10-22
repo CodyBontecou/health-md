@@ -1,0 +1,2200 @@
+{
+  "schema": "healthmd.account_auth.native_reply_header_vectors",
+  "schema_version": 1,
+  "synthetic_only": true,
+  "status": "reviewed_source_profile_not_native_or_http_qualification",
+  "native_consumers_qualified": false,
+  "grants_authority": false,
+  "policy_sha256": "8ca01a50ebae81ac50dbb8551f15023d611ed83b4076ea16c4ab74213f5b3ef7",
+  "operations": [
+    "code_exchange",
+    "refresh",
+    "revoke"
+  ],
+  "cases": [
+    {
+      "id": "bare-json",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "id": "cloud-utf8-hardening",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json; charset=utf-8"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Content-Security-Policy",
+          "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "id": "ascii-case-required",
+      "pairs": [
+        [
+          "cONTENT-tYPE",
+          "application/json"
+        ],
+        [
+          "cACHE-cONTROL",
+          "no-store"
+        ],
+        [
+          "rEFERRER-pOLICY",
+          "no-referrer"
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "id": "preserve-safe-extra",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Source-Label",
+          "synthetic  unmodified"
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "id": "empty-safe-extra",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Empty",
+          ""
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "id": "name-max-64",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Haaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "x"
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "id": "name-over-65",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Haaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "value-max-1024",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Pad",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "id": "value-over-1025",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Pad",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "count-max-16",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-0",
+          "x"
+        ],
+        [
+          "X-1",
+          "x"
+        ],
+        [
+          "X-2",
+          "x"
+        ],
+        [
+          "X-3",
+          "x"
+        ],
+        [
+          "X-4",
+          "x"
+        ],
+        [
+          "X-5",
+          "x"
+        ],
+        [
+          "X-6",
+          "x"
+        ],
+        [
+          "X-7",
+          "x"
+        ],
+        [
+          "X-8",
+          "x"
+        ],
+        [
+          "X-9",
+          "x"
+        ],
+        [
+          "X-10",
+          "x"
+        ],
+        [
+          "X-11",
+          "x"
+        ],
+        [
+          "X-12",
+          "x"
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "id": "count-over-17",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-0",
+          "x"
+        ],
+        [
+          "X-1",
+          "x"
+        ],
+        [
+          "X-2",
+          "x"
+        ],
+        [
+          "X-3",
+          "x"
+        ],
+        [
+          "X-4",
+          "x"
+        ],
+        [
+          "X-5",
+          "x"
+        ],
+        [
+          "X-6",
+          "x"
+        ],
+        [
+          "X-7",
+          "x"
+        ],
+        [
+          "X-8",
+          "x"
+        ],
+        [
+          "X-9",
+          "x"
+        ],
+        [
+          "X-10",
+          "x"
+        ],
+        [
+          "X-11",
+          "x"
+        ],
+        [
+          "X-12",
+          "x"
+        ],
+        [
+          "X-13",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "aggregate-max-4096",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json; charset=utf-8"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Pad-3",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ],
+        [
+          "X-Pad-4",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ],
+        [
+          "X-Pad-5",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ],
+        [
+          "X-Pad-6",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "id": "aggregate-over-4097",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json; charset=utf-8"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Pad-3",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ],
+        [
+          "X-Pad-4",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ],
+        [
+          "X-Pad-5",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ],
+        [
+          "X-Pad-6",
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "duplicate-identical-raw",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "duplicate-folded-raw",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "cOnTeNt-TyPe",
+          "application/json"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "duplicate-safe-extra",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "a"
+        ],
+        [
+          "x-extra",
+          "b"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "credential-cookie",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Cookie",
+          "synthetic-no-authority"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "credential-upper-cookie",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "COOKIE",
+          "synthetic-no-authority"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "credential-set-cookie",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Set-Cookie",
+          "synthetic-no-authority"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "credential-upper-set-cookie",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "SET-COOKIE",
+          "synthetic-no-authority"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "credential-authorization",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Authorization",
+          "synthetic-no-authority"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "credential-upper-authorization",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "AUTHORIZATION",
+          "synthetic-no-authority"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "credential-proxy-authorization",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Proxy-Authorization",
+          "synthetic-no-authority"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "credential-upper-proxy-authorization",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "PROXY-AUTHORIZATION",
+          "synthetic-no-authority"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "required-missing-0",
+      "pairs": [
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "required-empty-0",
+      "pairs": [
+        [
+          "Content-Type",
+          ""
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "required-surrounding-space-0",
+      "pairs": [
+        [
+          "Content-Type",
+          " application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "required-missing-1",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "required-empty-1",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          ""
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "required-surrounding-space-1",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          " no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "required-missing-2",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "required-empty-2",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          ""
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "required-surrounding-space-2",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          " no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "media-type-unsupported-0",
+      "pairs": [
+        [
+          "Content-Type",
+          "text/html"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "media-type-unsupported-1",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json; charset=UTF-8"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "media-type-unsupported-2",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json;charset=utf-8"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "media-type-unsupported-3",
+      "pairs": [
+        [
+          "Content-Type",
+          "APPLICATION/JSON"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "cache-control-not-exact",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "private, no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "referrer-policy-not-exact",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "same-origin"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0000",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0000after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0001",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0001after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0002",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0002after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0003",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0003after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0004",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0004after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0005",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0005after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0006",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0006after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0007",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0007after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0008",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\bafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0009",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\tafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u000a",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\nafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u000b",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u000bafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u000c",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\fafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u000d",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\rafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u000e",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u000eafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u000f",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u000fafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0010",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0010after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0011",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0011after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0012",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0012after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0013",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0013after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0014",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0014after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0015",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0015after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0016",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0016after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0017",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0017after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0018",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0018after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0019",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0019after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u001a",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u001aafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u001b",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u001bafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u001c",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u001cafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u001d",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u001dafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u001e",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u001eafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u001f",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u001fafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u007f",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u007fafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u0085",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u0085after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u00a0",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u00a0after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u2028",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u2028after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-u2029",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\u2029after"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "unsafe-value-ufeff",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-Extra",
+          "before\ufeffafter"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-unsupported-0",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-unsupported-1",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          " Content-Type",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-unsupported-2",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Content-Type ",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-unsupported-3",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X:Extra",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-unsupported-4",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X_Extra",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-unsupported-5",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X.Extra",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-unsupported-6",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X\nExtra",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-unsupported-7",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X\u0000Extra",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-unsupported-8",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X-\u00e9",
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "input-map",
+      "pairs": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer"
+      },
+      "valid": false
+    },
+    {
+      "id": "input-null",
+      "pairs": null,
+      "valid": false
+    },
+    {
+      "id": "input-string",
+      "pairs": "synthetic",
+      "valid": false
+    },
+    {
+      "id": "pair-map",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        {
+          "name": "X",
+          "value": "x"
+        }
+      ],
+      "valid": false
+    },
+    {
+      "id": "pair-short",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "pair-long",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X",
+          "x",
+          "extra"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "pair-null",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        null
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-boolean",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          true,
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "value-boolean",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X",
+          true
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-number",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          1,
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "value-number",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X",
+          1
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "name-null",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          null,
+          "x"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "id": "value-null",
+      "pairs": [
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "X",
+          null
+        ]
+      ],
+      "valid": false
+    }
+  ]
+}

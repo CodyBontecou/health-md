@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.Role
@@ -16,6 +17,8 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.delay
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
@@ -49,6 +52,25 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun displays() = accessibilityDisplays()
+    }
+
+    @Test
+    fun nativeVisibilityWaitAdmitsTheWholeControlAfterOwnerResize() {
+        val ownerHeight = mutableStateOf(16.dp)
+        setContent {
+            Dialog(onDismissRequest = {}) {
+                LaunchedEffect(Unit) {
+                    delay(1_500)
+                    ownerHeight.value = 64.dp
+                }
+                Box(Modifier.width(120.dp).height(ownerHeight.value)) {
+                    Box(Modifier.requiredSize(96.dp, 48.dp).testTag("native-owner-control"))
+                }
+            }
+        }
+        val control = compose.onNodeWithTag("native-owner-control")
+        awaitNativeControlVisible(control, "control while native owner resizes")
+        control.assertMinimumTouchTarget().assertInNativeOwner()
     }
 
     @Test
@@ -538,8 +560,23 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
 
     /** Native popup dismissal/scroll layout can settle after Compose's semantics update. */
     private fun awaitNativeControlVisible(control: SemanticsNodeInteraction, stage: String) {
+        var previousGeometry: Pair<Rect, Rect>? = null
+        var lastAdmissionFailure: Throwable? = null
         try {
-            compose.waitUntil(timeoutMillis = 5_000) { control.isDisplayed() }
+            compose.waitUntil(timeoutMillis = 5_000) {
+                // Partial display is insufficient while a native popup/owner is resizing.
+                // Keep the same physical admission checks and require a settled frame too.
+                val admission = runCatching {
+                    control.assertMinimumTouchTarget().assertInNativeOwner()
+                    val node = control.fetchSemanticsNode()
+                    node.boundsInRoot to generateSequence(node) { it.parent }.last().boundsInRoot
+                }
+                lastAdmissionFailure = admission.exceptionOrNull()
+                val geometry = admission.getOrNull()
+                val settled = geometry != null && geometry == previousGeometry
+                previousGeometry = geometry
+                settled
+            }
         } catch (failure: Throwable) {
             val geometry = runCatching {
                 val node = control.fetchSemanticsNode()
@@ -548,7 +585,11 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                 }.joinToString("\n")
                 "unclipped=${control.getUnclippedBoundsInRoot()}\n$ancestors"
             }.getOrElse { "Unable to capture geometry: ${it.message}" }
-            throw AssertionError("Native visibility did not settle: $stage on $display\n$geometry", failure)
+            throw AssertionError(
+                "Native visibility did not settle: $stage on $display\n" +
+                    "lastAdmissionFailure=${lastAdmissionFailure?.message}\n$geometry",
+                failure,
+            )
         }
     }
 
