@@ -2,7 +2,7 @@
 
 Health.md uses `HealthStoreProviding` as the unit-test seam for HealthKit reads. Unit tests inject `FakeHealthStore` and populate deterministic data with `HealthKitFixtures.populateAllCategories(...)`; per-query failure dictionaries such as `errorsForCategorySamples`, `errorsForSum`, and medication error hooks simulate HealthKit read failures without touching real HealthKit data.
 
-Focused command:
+Focused command, from `apps/apple`, with the current task's explicit simulator authorization under the root [verification policy](../../../../AGENTS.md#verification-policy):
 
 ```bash
 xcodebuild test \

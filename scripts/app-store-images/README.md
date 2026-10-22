@@ -28,7 +28,7 @@ The key is required only when `--generate` is passed. Dry runs never call the AI
 
 ## Dry run
 
-Dry-run is the default and writes only a plan/manifest:
+Dry-run is the default and makes no AI calls. It creates working directories, may create `app-store-input/brand.example.json`, and writes a plan/manifest. Localized edit plans also create masks and copy-reference images:
 
 ```bash
 npm --prefix scripts/app-store-images run plan
@@ -68,7 +68,7 @@ The preferred Health.md localization workflow uses an OpenAI masked image edit. 
 
 Each locale needs nine 1320×2868 simulator captures under `app-store-output/simulator-captures/<locale>/`, named `01-export-top.png` through `09-mac-destination.png`. Marketing copy lives in `app-store-input/localizations/marketing-<locale>.json`; locale-to-capture mappings live in `app-store-input/localizations/marketing-locales.json`.
 
-Capture one or more app-language folders, then map them into canonical App Store locale folders:
+Simulator capture requires explicit authorization for the current task. Use reviewed synthetic marketing captures, never private health data, account details, or credentials. The Python preparation tools require Pillow and an existing status-strip source; pass `--status-source` if the default Spanish source is unavailable. Capture app-language folders, then map them into canonical App Store locale folders:
 
 ```bash
 cd apps/apple
@@ -106,7 +106,7 @@ npm --prefix scripts/app-store-images run plan:android-localized-set -- --locale
 npm --prefix scripts/app-store-images run generate:android-localized-set -- --locale de-DE
 ```
 
-The eight-edit locale set costs approximately $0.32 at medium quality before manual retries. Outputs and per-slide manifests are written beneath `app-store-output/android-ai-edits/<locale>/`. Validate and import completed paid sets into the authored Play tree with:
+The runner's planning estimate is $0.32 for eight medium-quality edits before manual retries; confirm current provider pricing before generation. Outputs and per-slide manifests are written beneath `app-store-output/android-ai-edits/<locale>/`. Validate and import completed paid sets into the authored Play tree with:
 
 ```bash
 cd apps/android

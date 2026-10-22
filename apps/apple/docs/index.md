@@ -16,7 +16,7 @@
 
 ## More documentation
 
-- [Feature documentation](./features/index.md): full user-facing feature inventory and video planning.
+- [Feature documentation](./features/index.md): workflow guides and optional editorial/video planning.
 - [Privacy and local-first design](./features/privacy-local-first.md): what stays local, what can leave the device, and lossless-data sensitivity.
 - [Experiment runbooks](./experiments/index.md): pricing and product experiment plans, gates, and results logs.
-- [Testing docs](./testing/TODO-INDEX.md): internal testing plans and quality gates.
+- [Testing docs](./testing/README.md): current test sources, testing policies, and quality gates.

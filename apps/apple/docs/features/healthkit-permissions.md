@@ -57,7 +57,7 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 
 ## Tips
 
-- When a run reports missing data, the export result sheet explains exactly which requested health types were not authorized (Export Permission Guidance) and names them, so you can fix the gap in Apple Health settings instead of guessing.
+- When an export reports authorization-not-determined errors, Export Permission Guidance identifies the affected types where possible and offers Request Access. It cannot identify privacy-hidden read denials from successful empty queries.
 
 - Grant only categories you want Health.md to read.
 - Opt into medications and vision prescriptions deliberately.
@@ -80,7 +80,7 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 
 - **Suggested title:** Understand Apple Health Permissions and Empty Results
 - **Hook:** “A missing sample can mean no data, no selection, or a privacy-hidden denial.”
-- **Demo flow:** ordinary authorization, metric selection, medication/vision/document flows, and manifest outcomes.
+- **Demo flow:** ordinary authorization, metric selection, available medication/vision selectors, and manifest outcomes; explain that clinical/document authorization requires a separately qualified clinical build, not the default build.
 
 ## Implementation notes
 

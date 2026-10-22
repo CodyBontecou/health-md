@@ -2,14 +2,14 @@
 
 ## Status
 
-- **Docs status:** needs QA (shipped in Settings on both platforms; contract is pre-canonical pending physical-device interoperability and accessibility QA — see `packages/contracts/shared-setup/v2/contract.md`; v2 has been the one and only profile contract since the 2026-09-05 sunset — `docs/architecture/adr-0006-shared-setup-v2-only-contract.md`)
+- **Docs status:** needs QA (implemented in Settings on both platforms; availability remains planned; contract is pre-canonical pending physical-device interoperability and accessibility QA — see `packages/contracts/shared-setup/v2/contract.md`; v2 has been the one and only profile contract since the 2026-09-05 sunset — `docs/architecture/adr-0006-shared-setup-v2-only-contract.md`)
 - **Video priority:** medium
 - **Primary screen:** Settings → Configuration (Apple); Settings → Share My Setup (Android)
 - **Source files:** `HealthMd/Shared/SharedSetup/`, `HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift`; Android `sharedsetup/` package
 
 ## What it does
 
-Share My Setup packages your export profiles — metric selection, formats, naming/organization choices, and destination *intent* — into one bounded portable file you can hand to your other device (or a friend setting up Health.md). A v2 document can carry **multiple profiles**; the recipient reviews exactly what will change, applies it as a transactional **Add** or **Replace**, and can **Undo** once. The file deliberately contains **no health data, credentials, device pairings, purchases, or runtime state**.
+Share My Setup packages your export profiles — metric selection, formats, naming/organization choices, and destination *intent* — into one bounded portable file you can hand to your other device (or a friend setting up Health.md). A v2 document can carry **multiple profiles**; the recipient reviews exactly what will change, applies it as a transactional **Add** or **Replace**, and can **Undo** once. The file deliberately contains **no health data, credentials, device pairings, purchases, or runtime state**. Profile names, custom Markdown/frontmatter text, and endpoint host/path hints can still reveal personal or routing information; review them before sharing.
 
 ## Who it is for
 
@@ -42,7 +42,7 @@ A bounded (≤ 4 MiB) JSON document, `healthmd.shared_setup` v2, carrying one or
 
 - Apply is a transactional Add or Replace: either every selected profile lands or none does; one-shot Undo restores the exact prior state, including blocked identities.
 - Imported profiles land **blocked** until you rebind their destination locally (concrete folder, verified API endpoint, or confirmed Mac pairing); imported schedules stay off; endpoints arrive without credentials.
-- Files larger than 4 MiB or with an unsupported schema version — including v1 files — are rejected before anything is read.
+- Files larger than 4 MiB or with an unsupported schema version — including v1 files — are rejected during bounded input validation, before review or application.
 - Re-export is canonical: sorted compact JSON with exactly one trailing newline, only allowlisted fields, and foreign typed extensions preserved exactly per profile — imported junk never round-trips.
 
 ## Troubleshooting
@@ -56,7 +56,7 @@ A bounded (≤ 4 MiB) JSON document, `healthmd.shared_setup` v2, carrying one or
 ## Video outline
 
 - **Suggested title:** Move Your Health.md Setup to a New Phone in One File
-- **Hook:** "225 metric checkboxes. One file."
+- **Hook:** "Your export profiles. One file."
 - **Demo flow:** 1. Export on iPhone. 2. Send to Android. 3. Review + Apply + Undo demo.
 - **Key screenshot/recording moments:** preview diff, apply confirmation, undo.
 - **CTA / next video:** Metric selection.
