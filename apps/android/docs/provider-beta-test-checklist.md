@@ -12,7 +12,7 @@ The report is designed for provider verification and support triage. It includes
 - For each supported provider: installed yes/no, OAuth configured yes/no, OAuth token present yes/no, provider availability, and Health Connect permissions where relevant.
 - Last export result category, failed-date counts, and failure reasons.
 
-The report intentionally excludes:
+The report still includes export dates and provider/support metadata; review it before sharing. It intentionally excludes:
 
 - Health measurements.
 - OAuth access tokens and refresh tokens.
@@ -22,7 +22,7 @@ The report intentionally excludes:
 
 ## General tester flow
 
-1. Install the internal/beta build.
+1. Install the designated internal/beta build. Direct-provider OAuth tests require the Google Play channel; F-Droid exposes only Health Connect.
 2. Open **Settings → Health sources**.
 3. Confirm **Health Connect** is still selected by default.
 4. For the provider being tested, complete the setup path:
@@ -95,4 +95,4 @@ When a tester sends a diagnostics report:
 3. Confirm OAuth configured/token-present state for direct providers.
 4. Confirm Health Connect availability/permissions for Health Connect source providers.
 5. Compare last export failure categories with the tester's narrative.
-6. If the report shows permissions/token ready but data is absent, request a redacted sample export for one date and add a fixture test for that provider response shape before changing mapping logic.
+6. If the report shows permissions/token ready but data is absent, with the tester's explicit consent, request a synthetic reproduction or carefully reviewed redacted sample for one date, then add a synthetic fixture test for that provider response shape before changing mapping logic.

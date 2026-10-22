@@ -1,8 +1,10 @@
 # Android distribution channels
 
-Health.md ships one Android product from one source revision with two distribution variants. Both use `com.healthmd.android`, the same version code/name, Health Connect semantics, exporters, schemas, fixtures, automation actions, and Direct CLI protocol.
+Health.md builds one Android product from one source revision with two distribution variants. Both use `com.healthmd.android`, the same version code/name, Health Connect semantics, exporters, schemas, fixtures, automation actions, and Direct CLI protocol.
 
 ## Capability matrix
+
+Owners: `app/src/main/java/com/healthmd/domain/distribution/DistributionPolicy.kt`, `app/build.gradle.kts`, and `release-scope.json`.
 
 | Outcome | Google Play (`play`) | F-Droid (`fdroid`) |
 | --- | --- | --- |
@@ -11,7 +13,7 @@ Health.md ships one Android product from one source revision with two distributi
 | Scheduling, automation, recovery, Direct CLI export | Requires lifetime entitlement | Included |
 | Billing / purchase / restore | Google Play Billing | Absent |
 | Direct Fitbit/Oura/WHOOP/Withings providers and OAuth | Available when configured | Absent; Health Connect only |
-| Wear OS Data Layer and controls | Available | Absent |
+| Wear OS Data Layer and controls | Deferred; not advertised by the current phone release | Absent |
 | User-initiated Play review | Available | Absent |
 | Install attribution and first-party onboarding telemetry | Configuration-gated | Not compiled in; no telemetry identity/state |
 | App source/license links | Available in Settings | Available in Settings |
