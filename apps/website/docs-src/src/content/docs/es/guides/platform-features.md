@@ -83,7 +83,9 @@ Algunos datos deliberadamente **no se tratan como equivalentes** entre plataform
 |---|---|---|---|---|
 | Nivel gratuito | ✓ 10 acciones de exportación manuales o programadas | — | ✓ 10 acciones de exportación manuales | — |
 | Desbloqueo | ✓ compra vitalicia única (individual / familiar) | ◐ mismo desbloqueo de Apple | ✓ compra vitalicia única, con programación incluida | — |
-| Privacidad con procesamiento local | ✓ sin nube de datos de salud de Health.md | ✓ | ✓ | △ previsto |
+| Privacidad con procesamiento local | ✓ sin copia en la nube por defecto | ✓ | ✓ | △ previsto |
 | Informe para el médico (un PDF para las citas) | ✓ | — | ✓ | — |
 
-Health.md no opera una nube de datos de salud. Los datos de salud pueden existir en destinos que elijas, en contexto local cifrado y en un estado de transferencia privada acotado. Cada carpeta, Mac, endpoint de API o destino de la CLI se configura de forma explícita. Los perfiles y las programaciones permanecen en el dispositivo donde se crearon. Consulta los [perfiles de exportación](/es/docs/export-profiles/), la [guía de Android](/es/docs/android/) y la [guía de exportación de iPhone](/es/docs/export/) para el flujo de trabajo de cada plataforma.
+Por defecto, las exportaciones y las consultas directas al dispositivo no crean una copia en los servidores de Health.md. El piloto separado y opcional de Health.md Cloud es para un único propietario y conserva solo las exportaciones de API enviadas intencionalmente. No hay registro público ni sincronización automática de dispositivos. Consulta la [política de privacidad](/privacy-policy.html) sobre conservación, eliminación, cuota y riesgos de pérdida sin copias de seguridad.
+
+Los datos de salud pueden existir en destinos que elijas, en contexto local cifrado y en un estado de transferencia privada acotado. Cada carpeta, Mac, endpoint de API o destino de la CLI se configura de forma explícita. Los perfiles y las programaciones permanecen en el dispositivo donde se crearon. Consulta los [perfiles de exportación](/es/docs/export-profiles/), la [guía de Android](/es/docs/android/) y la [guía de exportación de iPhone](/es/docs/export/) para el flujo de trabajo de cada plataforma.

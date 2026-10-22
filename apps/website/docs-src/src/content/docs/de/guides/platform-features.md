@@ -83,7 +83,9 @@ Einige Daten werden plattformübergreifend bewusst **nicht als gleichwertig beha
 |---|---|---|---|---|
 | Kostenloses Kontingent | ✓ 10 manuelle oder geplante Exportaktionen | — | ✓ 10 manuelle Exportaktionen | — |
 | Freischaltung | ✓ einmaliger Lebenszeitkauf (Einzeln / Familie) | ◐ gleiche Apple-Freischaltung | ✓ einmaliger Lebenszeitkauf, Zeitplanung inklusive | — |
-| Datenschutz mit lokaler Verarbeitung | ✓ keine Health.md-Cloud für Gesundheitsdaten | ✓ | ✓ | △ geplant |
+| Datenschutz mit lokaler Verarbeitung | ✓ standardmäßig keine Cloud-Kopie | ✓ | ✓ | △ geplant |
 | Arztbericht (ein PDF für Termine) | ✓ | — | ✓ | — |
 
-Health.md betreibt keine Cloud für Gesundheitsdaten. Gesundheitsdaten können in Zielen Ihrer Wahl, in verschlüsseltem lokalem Kontext und in begrenztem privaten Übertragungszustand existieren. Jedes Ziel — Ordner, Mac, API-Endpunkt oder CLI — wird explizit konfiguriert. Profile und Zeitpläne bleiben lokal auf dem Gerät, auf dem sie erstellt wurden. Die Workflows der einzelnen Plattformen finden Sie in den [Exportprofilen](/de/docs/export-profiles/), im [Android-Leitfaden](/de/docs/android/) und im [iPhone-Export-Leitfaden](/de/docs/export/).
+Exporte und direkte Geräteabfragen erstellen standardmäßig keine Serverkopie bei Health.md. Der separate, optionale Health.md Cloud-Pilot ist nur für einen Eigentümer vorgesehen und speichert ausschließlich API-Exporte, die bewusst hochgeladen werden. Es gibt keine öffentliche Registrierung und keine automatische Gerätesynchronisierung. Die [Datenschutzerklärung](/privacy-policy.html) beschreibt Aufbewahrung, Löschung, Speicherquote und Verlustrisiken ohne Backup.
+
+Gesundheitsdaten können in Zielen Ihrer Wahl, in verschlüsseltem lokalem Kontext und in begrenztem privaten Übertragungszustand existieren. Jedes Ziel — Ordner, Mac, API-Endpunkt oder CLI — wird explizit konfiguriert. Profile und Zeitpläne bleiben lokal auf dem Gerät, auf dem sie erstellt wurden. Die Workflows der einzelnen Plattformen finden Sie in den [Exportprofilen](/de/docs/export-profiles/), im [Android-Leitfaden](/de/docs/android/) und im [iPhone-Export-Leitfaden](/de/docs/export/).
