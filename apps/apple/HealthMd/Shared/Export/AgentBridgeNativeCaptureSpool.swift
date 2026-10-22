@@ -68,9 +68,11 @@ final class AgentBridgeNativeCaptureSpool {
     private var identities: [AgentBridgeExportFileIdentity] = []
     private var storedBytes = 0
     private var closed = false
-    private struct CompletionFileEvidence { let count: Int; let sha256: String; let identity: AgentBridgeExportFileIdentity }
-    private var collectingCompletionEvidence: [String: CompletionFileEvidence]?
-    private var completionEvidence: [String: CompletionFileEvidence]?
+    private struct ProtectedFileEvidence { let count: Int; let sha256: String; let identity: AgentBridgeExportFileIdentity }
+    private var collectingFileEvidence: [String: ProtectedFileEvidence]?
+    private var resumeEvidence: [String: ProtectedFileEvidence]?
+    private var admittedResume: AgentBridgeResume?
+    private var completionEvidence: [String: ProtectedFileEvidence]?
     private var completionReceipt: AgentBridgeExecutionReceipt?
 
 
@@ -373,6 +375,38 @@ final class AgentBridgeNativeCaptureSpool {
         try check(); return bytes
     }
 
+    /// Read-only Resume admission from the original protected job. Never migrates or repairs
+    /// missing frontier metadata, and never installs a caller-provided prefix.
+    func requireResume(_ resume: AgentBridgeResume) throws {
+        do {
+            try check()
+            collectingFileEvidence = [:]
+            defer { collectingFileEvidence = nil }
+            guard try read("header.json") == record(kind: "job", day: nil) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            try validateStoredProgress()
+            let state = try progress().1
+            let request = try reservation.job.request()
+            let manifest = try readManifest(state)
+            let frontier = try checkedTransferFrontier(state)
+            guard resume.jobId == request.jobId, resume.peer == request.plan.intent.peer,
+                  resume.destination == request.plan.intent.destination,
+                  resume.binding == AgentBridgeSemantics.binding(request.plan),
+                  resume.requestSha256 == reservation.job.requestSHA256,
+                  resume.manifestSha256.rawValue == AgentBridgeV4Codec.sha256(manifest),
+                  resume.committedPartitionCount == frontier.committedPartitionCount,
+                  resume.frontierSha256 == frontier.sha256 else { throw AgentBridgeValidationError.bindingChanged }
+            resumeEvidence = collectingFileEvidence
+            admittedResume = resume
+            try check(); try requirePreservedResume(resume)
+        } catch { throw Self.safe(error) }
+    }
+
+    /// Local-only admission tail after every delaying authority callback.
+    func requirePreservedResume(_ resume: AgentBridgeResume) throws {
+        guard admittedResume == resume, let evidence = resumeEvidence else { throw AgentBridgeValidationError.bindingChanged }
+        try requireProtectedEvidence(evidence)
+    }
+
     /// Initialize only from the exact pinned manifest/session. Legacy v5 had no durable
     /// acknowledged prefix; its explicit migration starts at zero and never remints metadata.
     func preserveTransferFrontier() throws -> AgentBridgeTransferFrontier {
@@ -535,11 +569,11 @@ final class AgentBridgeNativeCaptureSpool {
             } else { try publish("completion.json", record: record(kind: "completion", day: nil, payload: bytes)) }
             // Collect only bytes whose signed records and original plan hashes were validated.
             // The snapshot is immutable across all subsequent native authority callbacks.
-            collectingCompletionEvidence = [:]
-            defer { collectingCompletionEvidence = nil }
+            collectingFileEvidence = [:]
+            defer { collectingFileEvidence = nil }
             guard try read("header.json") == record(kind: "job", day: nil) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             try validateStoredProgress()
-            completionEvidence = collectingCompletionEvidence
+            completionEvidence = collectingFileEvidence
             completionReceipt = receipt
             try check(); try requirePreservedCompletion(receipt); return receipt
         } catch { throw Self.safe(error) }
@@ -549,11 +583,14 @@ final class AgentBridgeNativeCaptureSpool {
     }
     /// Local-only tail: never re-create missing evidence or call native/SDK callbacks here.
     func requirePreservedCompletion(_ receipt: AgentBridgeExecutionReceipt) throws {
+        guard completionReceipt == receipt, let evidence = completionEvidence,
+              evidence["completion.json"] != nil else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        try requireProtectedEvidence(evidence)
+    }
+    private func requireProtectedEvidence(_ evidence: [String: ProtectedFileEvidence]) throws {
         do {
             try pins(includeProtection: false)
-            guard completionReceipt == receipt, let evidence = completionEvidence,
-                  evidence["completion.json"] != nil,
-                  Set(try Self.entries(directoryFD).filter { !Self.pendingName($0) }) == Set(evidence.keys).union(["lock"]) else {
+            guard Set(try Self.entries(directoryFD).filter { !Self.pendingName($0) }) == Set(evidence.keys).union(["lock"]) else {
                 throw AgentBridgeValidationError.spoolMissingRestartRequired
             }
             for (name, expected) in evidence {
@@ -804,9 +841,9 @@ final class AgentBridgeNativeCaptureSpool {
             protectedIdentity = try AgentBridgeExportPrivateFiles.identity(fd)
             try fence(); try pins(includeProtection: false)
         }
-        if collectingCompletionEvidence != nil {
+        if collectingFileEvidence != nil {
             guard let identity = protectedIdentity else { throw AgentBridgeValidationError.bindingChanged }
-            collectingCompletionEvidence?[name] = .init(count: bytes.count, sha256: AgentBridgeV4Codec.sha256(bytes), identity: identity)
+            collectingFileEvidence?[name] = .init(count: bytes.count, sha256: AgentBridgeV4Codec.sha256(bytes), identity: identity)
         }
         return bytes
     }

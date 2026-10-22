@@ -421,6 +421,129 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    private fun resumeRequest(request: AgentBridgeExecuteRequest, transfer: AgentBridgeNativePreparedTransfer,
+        frontier: AgentBridgeTransferFrontier): AgentBridgeResumeRequest {
+        val plan = request.plan as AgentBridgeGeneratedPlan
+        return AgentBridgeResumeRequest(AgentBridgeValidation.bindingFor(request.plan), frontier.committedPartitionCount.toInt(),
+            plan.intent.destination, frontier.sha256, request.jobId, AgentBridgeCodec.sha256(transfer.export.manifestCanonical),
+            plan.intent.peer, transfer.export.requestSha256, "healthmd.agent_resume_request", 1)
+    }
+
+    @Test fun `native Resume rejects final admission callback evidence damage`() = runBlocking {
+        for (filename in listOf("manifest.json", "progress.json")) withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val transfer = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val frontier = planner.withRetainedCaptureContext(request) { context -> context.begin(); context.preserveTransferFrontier() }
+            val resume = resumeRequest(request, transfer, frontier)
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(transfer.export.requestSha256).resolve(filename)
+            var reads = 0; var admissionReads = 0; var target = 0
+            fun reconnect(): AgentBridgeNativePlanningSession {
+                val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+                return ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true), beforeNativeRead = {
+                    reads++
+                    if (reads == target) {
+                        if (filename == "manifest.json") Files.delete(path) else Files.write(path, "corrupt".toByteArray())
+                    }
+                })
+            }
+            reconnect().withResumedCaptureContext(resume) { _, context -> admissionReads = reads; context.begin() }
+            assertThat(admissionReads).isGreaterThan(0)
+            reads = 0; target = admissionReads
+            coEvery { client.aggregate(any()) } throws IllegalStateException("Resume cannot query SDK")
+            var admitted = false
+            try {
+                reconnect().withResumedCaptureContext(resume) { _, context -> admitted = true; context.begin() }
+                throw AssertionError("Expected final admission rejection")
+            } catch (_: AgentBridgeException) { }
+            assertThat(admitted).isFalse()
+            assertThat(reads).isAtLeast(target)
+            if (filename == "manifest.json") assertThat(Files.exists(path)).isFalse()
+            else assertThat(Files.readAllBytes(path)).isEqualTo("corrupt".toByteArray())
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `native Resume reopens original job on fresh owner without SDK or rewrite`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            val transfer = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val frontier = planner.withRetainedCaptureContext(request) { context ->
+                context.begin(); context.preserveTransferFrontier(); context.recordAcknowledgedTransferPartition(0)
+            }
+            val issuer = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+            val directory = issuer.resolve("captures").resolve(transfer.export.requestSha256)
+            val progress = Files.readAllBytes(directory.resolve("progress.json"))
+            val acceptedBeforeReconnect = f.store.access { it!!.state.acceptedJobs }
+            val reconnect = transferReconnect(f, TransferCapabilities())
+            assertThat(f.store.access { it!!.state.acceptedJobs }).isEqualTo(acceptedBeforeReconnect)
+            val stateBytes = Files.readAllBytes(issuer.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+            coEvery { client.aggregate(any()) } throws IllegalStateException("Resume cannot query SDK")
+            reconnect.withResumedCaptureContext(resumeRequest(request, transfer, frontier)) { recovered, context ->
+                assertThat(AgentBridgeCodec.encode(recovered)).isEqualTo(AgentBridgeCodec.encode(request))
+                context.begin()
+                assertThat(context.preserveTransferFrontier().sha256).isEqualTo(frontier.sha256)
+                assertThat(context.preserveManifest()).isEqualTo(transfer.export.manifestCanonical)
+                assertThat(context.preserveTransferPlan()).isEqualTo(transfer.checkpointCanonical)
+            }
+            assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(progress)
+            assertThat(Files.readAllBytes(issuer.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(stateBytes)
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
+    @Test fun `native Resume rejects mismatched and missing original evidence without repair`() = runBlocking {
+        for (mode in listOf("Job", "Peer", "Destination", "Binding", "Request", "Manifest", "Count", "Frontier", "Uninitialized", "MissingManifest")) {
+            withNativeExportPreparation { f, planner, request, client, manager ->
+                val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+                coEvery { client.aggregate(any()) } returns values
+                val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+                val transfer = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+                val frontier = if (mode == "Uninitialized") AgentBridgeTransferFrontier.start(request.jobId, transfer.export.requestSha256,
+                    AgentBridgeCodec.sha256(transfer.export.manifestCanonical), transfer.session.sessionId)
+                    else planner.withRetainedCaptureContext(request) { context -> context.begin(); context.preserveTransferFrontier() }
+                val original = resumeRequest(request, transfer, frontier)
+                val resume = when (mode) {
+                    "Job" -> original.copy(jobId = java.util.UUID.randomUUID().toString())
+                    "Peer" -> {
+                        val changed = original.peer.copy(sourceInstallationId = java.util.UUID.randomUUID().toString())
+                        original.copy(peer = changed, binding = original.binding.copy(peer = changed))
+                    }
+                    "Destination" -> {
+                        val changed = original.destination.copy(revision = 200)
+                        original.copy(destination = changed, binding = original.binding.copy(destination = changed))
+                    }
+                    "Binding" -> original.copy(binding = original.binding.copy(settingsSha256 = "0".repeat(64)))
+                    "Request" -> original.copy(requestSha256 = "0".repeat(64))
+                    "Manifest" -> original.copy(manifestSha256 = "0".repeat(64))
+                    "Count" -> original.copy(committedPartitionCount = 1)
+                    "Frontier" -> original.copy(frontierSha256 = "0".repeat(64))
+                    else -> original
+                }
+                val issuer = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+                val directory = issuer.resolve("captures").resolve(transfer.export.requestSha256)
+                if (mode == "MissingManifest") Files.delete(directory.resolve("manifest.json"))
+                val progress = Files.readAllBytes(directory.resolve("progress.json"))
+                val acceptedBeforeReconnect = f.store.access { it!!.state.acceptedJobs }
+                val reconnect = transferReconnect(f, TransferCapabilities())
+                assertThat(f.store.access { it!!.state.acceptedJobs }).isEqualTo(acceptedBeforeReconnect)
+                val stateBytes = Files.readAllBytes(issuer.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+                coEvery { client.aggregate(any()) } throws IllegalStateException("Rejected Resume cannot query SDK")
+                try {
+                    reconnect.withResumedCaptureContext(resume) { _, _ -> throw AssertionError("Invalid Resume reached native callback") }
+                    throw AssertionError("Expected rejected Resume: $mode")
+                } catch (_: AgentBridgeException) { }
+                assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(progress)
+                assertThat(Files.readAllBytes(issuer.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(stateBytes)
+                if (mode == "MissingManifest") assertThat(Files.exists(directory.resolve("manifest.json"))).isFalse()
+                coVerify(exactly = 2) { client.aggregate(any()) }
+            }
+        }
+    }
+
     @Test fun `native pending ACK reopens exact lost acknowledgement without SDK or duplicate publication`() = runBlocking {
         withNativeExportPreparation { f, planner, request, client, manager ->
             val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L

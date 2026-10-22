@@ -282,6 +282,28 @@ internal class AgentBridgeNativePlanningSession(
     suspend fun <T> withRetainedCaptureContext(request: AgentBridgeExecuteRequest,
         operation: suspend (AgentBridgeNativeCaptureContext) -> T): T = captureContext(request, true, operation)
 
+    /** Select the original Execute only from protected native storage. Resume supplies no new
+     * plan, acceptance or authority; all fields must match the existing signed job and frontier. */
+    suspend fun <T> withResumedCaptureContext(resume: AgentBridgeResumeRequest,
+        operation: suspend (AgentBridgeExecuteRequest, AgentBridgeNativeCaptureContext) -> T): T {
+        currentCoroutineContext().ensureActive(); requireCurrent()
+        val authenticated = peer.requireCurrent()
+        if (resume.peer != authenticated) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+        val request = store.access { transaction ->
+            val job = transaction?.state?.acceptedJobs?.singleOrNull {
+                val original = it.request()
+                original.jobId == resume.jobId && (original.plan as? AgentBridgeGeneratedPlan)?.intent?.peer == authenticated
+            } ?: throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+            job.request()
+        }
+        requireCurrent(); currentCoroutineContext().ensureActive()
+        return withRetainedCaptureContext(request) { context ->
+            context.requireResumeBeforeBegin(resume)
+            currentCoroutineContext().ensureActive()
+            operation(request, context)
+        }
+    }
+
     private suspend fun <T> captureContext(request: AgentBridgeExecuteRequest, retained: Boolean,
         operation: suspend (AgentBridgeNativeCaptureContext) -> T): T {
         if (!wireOperationActive.compareAndSet(false, true)) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
@@ -517,6 +539,17 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
     private var closed = false
     private val claimedDays = mutableSetOf<String>()
     private var read: (() -> AgentBridgeRequestSettingsResolution)? = read
+    fun requireResumeBeforeBegin(resume: AgentBridgeResumeRequest) {
+        try {
+            val callback = synchronized(lock) {
+                if (started || closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+                read ?: throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            }
+            callback(); spool.requireResume(resume); callback()
+            spool.requirePreservedResume(resume)
+            synchronized(lock) { if (closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+        } catch (failure: Throwable) { invalidate(); throw failure }
+    }
     fun begin(): AgentBridgeRequestSettingsResolution {
         synchronized(lock) {
             if (started || closed) { closed = true; read = null; throw AgentBridgeException(AgentBridgeErrorCode.BUSY) }

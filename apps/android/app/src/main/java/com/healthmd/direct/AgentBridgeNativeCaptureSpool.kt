@@ -63,9 +63,11 @@ internal class AgentBridgeNativeCaptureSpool(
     private var lockIdentity: Any? = null
     private var storedBytes = 0L
     private var closed = false
-    private data class CompletionFileEvidence(val count: Int, val sha256: String, val identity: Any)
-    private var collectingCompletionEvidence: MutableMap<String, CompletionFileEvidence>? = null
-    private var completionEvidence: Map<String, CompletionFileEvidence>? = null
+    private data class ProtectedFileEvidence(val count: Int, val sha256: String, val identity: Any)
+    private var collectingFileEvidence: MutableMap<String, ProtectedFileEvidence>? = null
+    private var resumeEvidence: Map<String, ProtectedFileEvidence>? = null
+    private var admittedResume: AgentBridgeResumeRequest? = null
+    private var completionEvidence: Map<String, ProtectedFileEvidence>? = null
     private var completionReceipt: AgentBridgeExecutionReceipt? = null
 
 
@@ -314,6 +316,33 @@ internal class AgentBridgeNativeCaptureSpool(
         } catch (_: Exception) { fail() }
         guard(); return bytes
     }
+    /** Existing-only Resume admission. No migration, metadata repair or incoming prefix installation. */
+    @Synchronized fun requireResume(resume: AgentBridgeResumeRequest) = safeCall {
+        guard()
+        collectingFileEvidence = linkedMapOf()
+        try {
+            if (read("header.json") != record("job", null)) fail()
+            validateStoredProgress()
+            val state = progress().second
+            val request = reservation.job.request()
+            val plan = request.plan as? AgentBridgeGeneratedPlan ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
+            val manifest = readManifest(state)
+            val frontier = checkedTransferFrontier(state)
+            if (resume.jobId != request.jobId || resume.peer != plan.intent.peer || resume.destination != plan.intent.destination ||
+                resume.binding != AgentBridgeValidation.bindingFor(request.plan) || resume.requestSha256 != reservation.job.requestSha256 ||
+                resume.manifestSha256 != AgentBridgeCodec.sha256(manifest) || resume.committedPartitionCount.toLong() != frontier.committedPartitionCount ||
+                resume.frontierSha256 != frontier.sha256) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+            resumeEvidence = collectingFileEvidence!!.toMap()
+            admittedResume = resume
+            guard(); requirePreservedResume(resume)
+        } finally { collectingFileEvidence = null }
+    }
+
+    @Synchronized fun requirePreservedResume(resume: AgentBridgeResumeRequest) = safeCall {
+        if (admittedResume != resume) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        requireProtectedEvidence(resumeEvidence ?: fail())
+    }
+
     /** Explicit v5 migration: seed from original pinned metadata; never remint or infer acks. */
     @Synchronized fun preserveTransferFrontier(): AgentBridgeTransferFrontier = safeCall {
         guard(); validateStoredProgress()
@@ -433,13 +462,13 @@ internal class AgentBridgeNativeCaptureSpool(
         val value = record("completion", null, Base64.getEncoder().encodeToString(AgentBridgeCodec.encode(receipt)))
         if (exists("completion.json")) { if (read("completion.json") != value) fail() }
         else publish("completion.json", value)
-        collectingCompletionEvidence = linkedMapOf()
+        collectingFileEvidence = linkedMapOf()
         try {
             if (read("header.json") != record("job", null)) fail()
             validateStoredProgress()
-            completionEvidence = collectingCompletionEvidence!!.toMap()
+            completionEvidence = collectingFileEvidence!!.toMap()
             completionReceipt = receipt
-        } finally { collectingCompletionEvidence = null }
+        } finally { collectingFileEvidence = null }
         guard(); requirePreservedCompletion(receipt); receipt
     }
     @Synchronized fun requireCompletionIfPreserved() {
@@ -447,10 +476,14 @@ internal class AgentBridgeNativeCaptureSpool(
     }
     /** Local-only tail after the last authority callback. Missing evidence is never repaired. */
     @Synchronized fun requirePreservedCompletion(receipt: AgentBridgeExecutionReceipt) = safeCall {
-        pins()
         val evidence = completionEvidence ?: fail()
+        if (completionReceipt != receipt || "completion.json" !in evidence) fail()
+        requireProtectedEvidence(evidence)
+    }
+    private fun requireProtectedEvidence(evidence: Map<String, ProtectedFileEvidence>) {
+        pins()
         val names = Files.newDirectoryStream(directory).use { stream -> stream.map { it.fileName.toString() }.filter { !PENDING_NAME.matches(it) }.toSet() }
-        if (completionReceipt != receipt || "completion.json" !in evidence || names != evidence.keys + "lock") fail()
+        if (names != evidence.keys + "lock") fail()
         for ((name, expected) in evidence) {
             val bytes = currentBytes(name, expected.count)
             if (bytes.size != expected.count || AgentBridgeCodec.sha256(bytes) != expected.sha256 || attributes(directory.resolve(name), false) != expected.identity) fail()
@@ -693,7 +726,7 @@ internal class AgentBridgeNativeCaptureSpool(
             output
         }
         if (attributes(path, false) != identity) fail(AgentBridgeErrorCode.BINDING_CHANGED)
-        collectingCompletionEvidence?.put(name, CompletionFileEvidence(bytes.size, AgentBridgeCodec.sha256(bytes), identity))
+        collectingFileEvidence?.put(name, ProtectedFileEvidence(bytes.size, AgentBridgeCodec.sha256(bytes), identity))
         return bytes
     }
     private fun mkdir(path: Path, exclusive: Boolean) {
