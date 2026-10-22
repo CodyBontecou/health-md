@@ -364,17 +364,11 @@ struct iPadContentView: View {
 
         hasResolvedAllTimeRangeThisLaunch = true
 
-        guard let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
-            return
-        }
-
-        guard dateRangePreset == .allTime,
-              let range = ExportDateRangePreset.allTime.resolvedRange(
-                currentStartDate: startDate,
-                currentEndDate: endDate,
-                allTimeStartDate: earliestDate,
-                allTimeEndDate: Date()
-              ) else {
+        guard let range = try? await NativeExportDateRangeResolver.resolve(
+            nativeExportDateRangeRequest,
+            using: healthKitManager,
+            currentRequest: { nativeExportDateRangeRequest }
+        ) else {
             return
         }
 
@@ -473,6 +467,7 @@ struct iPadContentView: View {
     }
 
     private func exportData() {
+        guard !isExporting else { return }
         vaultManager.refreshVaultAccess()
         if vaultManager.requiresVaultReselection {
             configurationProtection.performConfigurationChange {
@@ -519,7 +514,7 @@ struct iPadContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
+            guard let dateRange = await effectiveExportDateRange() else { return }
             startDate = dateRange.startDate
             endDate = dateRange.endDate
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
@@ -614,7 +609,33 @@ struct iPadContentView: View {
         }
     }
 
-    private func effectiveExportDateRange() -> (startDate: Date, endDate: Date) {
-        (startDate, endDate)
+    private var nativeExportDateRangeRequest: NativeExportDateRangeResolver.Request {
+        NativeExportDateRangeResolver.Request(
+            selection: ExportDateRangeSelection(
+                preset: dateRangePreset,
+                startDate: startDate,
+                endDate: endDate
+            ),
+            enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+        )
+    }
+
+    private func effectiveExportDateRange() async -> ExportDateRange? {
+        do {
+            return try await NativeExportDateRangeResolver.resolve(
+                nativeExportDateRangeRequest,
+                using: healthKitManager,
+                currentRequest: { nativeExportDateRangeRequest }
+            )
+        } catch is CancellationError {
+            exportStatusMessage = String(localized: "Export cancelled")
+        } catch {
+            exportStatusMessage = error.localizedDescription
+            errorReason = nil
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+        return nil
     }
 }

@@ -123,6 +123,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
+        "authorization.history-window-detection",
         "automation.api-recovery-authority",
         "direct.cli_agent_push_wake",
         "export.range-summary",

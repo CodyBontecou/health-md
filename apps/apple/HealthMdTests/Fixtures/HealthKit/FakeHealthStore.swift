@@ -18,6 +18,10 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var shouldThrowOnAuthStatus: Error?
     var requestedReadTypes: Set<HKObjectType> = []
     var statusReadTypes: Set<HKObjectType> = []
+    var historyAuthorizationBoundariesSupported = true
+    var authorizedHistoryBoundaries: [String: Date] = [:]
+    var errorForAuthorizedHistoryBoundaries: Error?
+    var historyAuthorizationReadTypes: Set<HKObjectType> = []
 
     // Pre-configured statistics results keyed by HKQuantityTypeIdentifier raw value
     var statisticsSums: [String: Double] = [:]
@@ -40,6 +44,8 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     /// Quantity/category/workout fixtures are inferred when no override exists.
     var earliestSampleDates: [String: Date] = [:]
     var errorsForEarliestSampleDates: [String: Error] = [:]
+    var earliestSampleDateQuery: (@MainActor (HKSampleType) async throws -> Date?)?
+    var queriedEarliestSampleTypeIdentifiers: [String] = []
     var earliestActivitySummaryDate: Date?
     var errorForEarliestActivitySummaryDate: Error?
 
@@ -155,6 +161,9 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var supportsVisionPrescriptionAuthorization = true
     var supportsMedicationAuthorization = true
     var supportsScheduledWorkoutPlans = true
+    var supportsHistoryAuthorizationBoundaries: Bool {
+        historyAuthorizationBoundariesSupported
+    }
 
     var canonicalQueryDelayNanoseconds: UInt64 = 0
     var canonicalQueryDelayNanosecondsByIdentifier: [String: UInt64] = [:]
@@ -196,6 +205,14 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         if let error = shouldThrowOnAuth { throw error }
         requestedReadTypes = read
         authRequested = true
+    }
+
+    func earliestAuthorizedSampleDates(for types: Set<HKObjectType>) async throws -> [String: Date] {
+        historyAuthorizationReadTypes = types
+        if let error = errorForAuthorizedHistoryBoundaries { throw error }
+        return authorizedHistoryBoundaries.filter { key, _ in
+            types.contains { $0.identifier == key }
+        }
     }
 
     func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus {
@@ -290,6 +307,10 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
 
     func queryEarliestSampleDate(sampleType: HKSampleType) async throws -> Date? {
         let identifier = sampleType.identifier
+        queriedEarliestSampleTypeIdentifiers.append(identifier)
+        if let earliestSampleDateQuery {
+            return try await earliestSampleDateQuery(sampleType)
+        }
         if let error = errorsForEarliestSampleDates[identifier] { throw error }
         if let date = earliestSampleDates[identifier] { return date }
         if let quantityType = sampleType as? HKQuantityType {

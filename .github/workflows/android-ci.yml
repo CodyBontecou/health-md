@@ -169,6 +169,7 @@ jobs:
         with:
           # The action's default also requests the retired SDK 'tools' package.
           packages: platform-tools
+          log-accepted-android-sdk-licenses: false
 
       - name: Restore pinned Rust toolchain and native build cache
         uses: ./.github/actions/android-native-cache
@@ -294,6 +295,7 @@ jobs:
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         with:
           packages: platform-tools
+          log-accepted-android-sdk-licenses: false
 
       - name: Restore pinned Rust toolchain and native build cache
         uses: ./.github/actions/android-native-cache
@@ -472,6 +474,7 @@ jobs:
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         with:
           packages: platform-tools
+          log-accepted-android-sdk-licenses: false
 
       - name: Restore pinned Rust tools without compiled project outputs
         uses: ./.github/actions/android-native-cache
@@ -629,6 +632,7 @@ jobs:
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         with:
           packages: platform-tools
+          log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
       - name: Enable KVM access
         run: sudo chmod 666 /dev/kvm

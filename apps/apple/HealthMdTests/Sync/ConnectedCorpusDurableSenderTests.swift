@@ -195,6 +195,28 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         )
     }
 
+    func testRecordedPartialResultRetainsProjectedTerminalStateForRecoveryUI() throws {
+        let fixture = try makeFixture(dayCount: 2)
+        var journal = try XCTUnwrap(try fixture.store.load(jobID: fixture.session.jobID))
+        journal.state = .completed
+        journal.completedItemCount = 2
+        journal.completionRecorded = true
+        journal.terminalAcknowledgement = ConnectedCorpusTransferFinalAck(
+            sessionID: fixture.session.sessionID,
+            jobID: fixture.session.jobID,
+            accepted: true,
+            requestFingerprint: fixture.session.requestFingerprint,
+            finalPartitionSHA256: nil,
+            completedDates: [fixture.dates[0]],
+            successCount: 1,
+            totalCount: 2
+        )
+
+        XCTAssertNil(journal.interactiveUIProgressSnapshot)
+        XCTAssertEqual(journal.state, .completed)
+        XCTAssertEqual(journal.progressSnapshot.state, .partialSuccess)
+    }
+
     func testOnlyInteractiveOriginMayDriveExportScreen() {
         XCTAssertTrue(ConnectedCorpusOutboundOrigin.interactiveIPhone.drivesInteractiveExportUI)
         XCTAssertFalse(ConnectedCorpusOutboundOrigin.macInitiated.drivesInteractiveExportUI)

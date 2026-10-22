@@ -165,6 +165,15 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(reencoded["includeGranularData"] as? Bool, false)
     }
 
+    func testLosslessPresetUsesShortTitleWithoutChangingIdentityOrPolicy() {
+        let preset = AppleExportDetailPreset.losslessHealthRecords
+
+        XCTAssertEqual(preset.localizedTitle, String(localized: "Lossless"))
+        XCTAssertEqual(preset.rawValue, "lossless_health_records")
+        XCTAssertEqual(preset.policy, .lossless)
+        XCTAssertEqual(AppleExportDetailPreset(policy: .lossless), preset)
+    }
+
     func testDetailPolicyHistoryTokensCoverAllFourStates() {
         XCTAssertEqual(AppleExportDetailPolicy.summary.historyDetailLevelToken, "summary")
         XCTAssertEqual(

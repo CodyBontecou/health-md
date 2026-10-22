@@ -121,21 +121,26 @@ async function generatedPluginCss() {
   const start = source.indexOf(startMarker);
   const end = source.indexOf(endMarker, start);
   if (start < 0 || end < 0) throw new Error("Could not find plugin visualization insight CSS markers");
+  const whoopNote = source.match(/\.health-md-whoop-note\s*\{[^}]*\}/)?.[0];
+  if (!whoopNote) throw new Error("Could not find plugin WHOOP coverage-note CSS");
   return `/* Generated from health-md-visualizations/styles.css. Do not edit directly. */
-.html-preview {
+.html-preview,
+.health-md-viz-stats {
+  --font-smallest: 12px;
   --background-modifier-border: var(--color-gray-alpha-300);
   --interactive-accent: var(--color-tertiary);
   --text-muted: var(--color-secondary);
   --radius-m: var(--radius-md);
 }
-${source.slice(start, end).trim()}\n`;
+${source.slice(start, end).trim()}
+${whoopNote}\n`;
 }
 
 async function loadPluginMetadata(esbuild, tmpDir) {
   const entry = path.join(tmpDir, "healthmd-viz-metadata-entry.ts");
   const outfile = path.join(tmpDir, "healthmd-viz-metadata.mjs");
   await fs.writeFile(entry, `
-import { VISUALIZATION_CATALOG, VISUALIZATION_CATEGORIES } from ${importPath(path.join(pluginSrc, "insert-wizard.ts"))};
+import { VISUALIZATION_CATALOG, VISUALIZATION_CATEGORIES } from ${importPath(path.join(pluginSrc, "visualization-catalog.ts"))};
 
 export const pluginMetadata = {
   categories: VISUALIZATION_CATEGORIES,
@@ -177,7 +182,7 @@ export const pluginMetadata = {
 await Promise.all([
   assertFile(path.join(pluginRepo, "styles.css")),
   assertFile(path.join(pluginSrc, "canvas-utils.ts")),
-  assertFile(path.join(pluginSrc, "insert-wizard.ts")),
+  assertFile(path.join(pluginSrc, "visualization-catalog.ts")),
   assertFile(path.join(pluginSrc, "parsers", "json-parser.ts")),
   assertFile(path.join(pluginSrc, "parsers", "rollup-parser.ts")),
   assertFile(path.join(pluginSrc, "visualizations", "index.ts")),

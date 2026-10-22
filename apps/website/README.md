@@ -53,10 +53,12 @@ URLs stay canonical. Do not translate commands, schema keys, metric IDs, filenam
 fixtures, code examples, or generated reference artifacts. Localized sample
 fixtures preserve the source values and physical units (human-facing abbreviations may be localized); regional unit conversion is separate product work.
 
-Localized legal pages are published as convenience translations for Spanish, German, French,
-Brazilian Portuguese, Italian, Dutch, Japanese, Korean, and Simplified Chinese. Each translation
-links to the controlling English version. A qualified human must review legal and health terminology
-before enabling any additional legal locale. Localized store badges and documentation social cards
+Legal pages are temporarily published in canonical English only. Previously published convenience
+translations for Spanish, German, French, Brazilian Portuguese, Italian, Dutch, Japanese, Korean,
+and Simplified Chinese predate the optional Health.md Cloud pilot; their source remains as `noindex`
+review drafts but is not shipped in `dist`. Old localized legal URLs temporarily redirect to the
+updated English pages. A qualified human must review each translated legal page before republishing
+it. Localized store badges and documentation social cards
 are required. Landing and first-export
 screenshots are configured in `i18n/locales.mjs`; any English fallback must be declared there. The
 authentic shared onboarding capture at `/docs/assets/docs/iphone-first-export/onboarding-start.webp`
@@ -75,6 +77,21 @@ HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations \
 ```
 
 Update `external-sources.json` deliberately when adopting a new plugin revision, regenerate assets, and commit both changes together. `visualizations:sync` also refreshes the shipped Apple onboarding bundle and its daily/roll-up sample wrappers; drift tests require those resources to remain byte-identical to the website outputs.
+
+### WHOOP gallery coverage
+
+The pinned plugin includes four WHOOP views in the gallery's **WHOOP** category:
+
+- [Recovery × strain](https://healthmd.app/visualizations/whoop/whoop-recovery-strain/theme-colors/)
+- [Sleep achieved vs need](https://healthmd.app/visualizations/whoop/whoop-sleep-need/theme-colors/)
+- [Sleep assessment trends](https://healthmd.app/visualizations/whoop/whoop-sleep-trends/theme-colors/)
+- [Workout strain & zones](https://healthmd.app/visualizations/whoop/whoop-workout-strain/theme-colors/)
+
+`visualizations:sync` layers deterministic synthetic WHOOP records onto the plugin's daily-v8 sample data using the reviewed `packages/contracts/proposals/provider-sections-v1/fixtures/whoop-complete.providers.json` shape. No WHOOP values are derived from or merged into Apple summaries. The samples demonstrate separate naps and workouts, negative nap adjustments, missing fields, and partial capture. They omit the current body-profile singleton rather than inventing a historical body series.
+
+Full WHOOP events and sleep-need components require Apple v8 daily JSON or structured CSV. Markdown/Bases provide limited single-record projections. Provider sidecars, Android native Raw API Snapshots, and roll-ups are not inputs to these charts. The gallery explains connection requirements rather than implying HealthKit permissions or Android format support. Copyable examples and caveats are in the translated `visualizations-roadmap.md` guide.
+
+After adopting a catalog revision, regenerate routes with `npm run visualizations:seo:source`; the production build also regenerates them in `dist`.
 
 ## Apple reference documentation
 

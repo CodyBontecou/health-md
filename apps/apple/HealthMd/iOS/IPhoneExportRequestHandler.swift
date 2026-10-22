@@ -242,6 +242,22 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         )))
                         return
                     }
+                    guard discovery.historyAuthorization.state != .limitedHistory else {
+                        syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                            jobID: request.jobID,
+                            reason: .healthKitFetchFailed,
+                            message: "Apple Health access is limited by date. Choose an explicit authorized range or grant full history access before requesting all available history."
+                        )))
+                        return
+                    }
+                    guard discovery.supportsUnqualifiedFullHistoryClaim else {
+                        syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                            jobID: request.jobID,
+                            reason: .healthKitFetchFailed,
+                            message: "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
+                        )))
+                        return
+                    }
                     if let earliestDate = discovery.earliestDate {
                         earliestCandidates.append(earliestDate)
                     }

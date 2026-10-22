@@ -8,6 +8,8 @@ import UIKit
 private enum IPhoneDirectQueryError: Error {
     case invalidRequest
     case queryUnavailable
+    case limitedHistoryAuthorization
+    case historyAuthorizationUnverified
     case requestInProgress
     case protectedDataUnavailable
     case healthKitNotAuthorized
@@ -20,6 +22,8 @@ private enum IPhoneDirectQueryError: Error {
         switch self {
         case .invalidRequest: "invalid_query_request"
         case .queryUnavailable: "query_unavailable"
+        case .limitedHistoryAuthorization: "limited_history_authorization"
+        case .historyAuthorizationUnverified: "history_authorization_unverified"
         case .requestInProgress: "request_in_progress"
         case .protectedDataUnavailable: "protected_data_unavailable"
         case .healthKitNotAuthorized: "healthkit_authorization_required"
@@ -34,6 +38,8 @@ private enum IPhoneDirectQueryError: Error {
         switch self {
         case .invalidRequest: "The direct query request is invalid or unsupported."
         case .queryUnavailable: "The iPhone could not complete the direct query."
+        case .limitedHistoryAuthorization: "Apple Health access is limited by date. Choose an explicit authorized range or grant full history access before requesting all available history."
+        case .historyAuthorizationUnverified: "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
         case .requestInProgress: "Another direct iPhone operation is already active."
         case .protectedDataUnavailable: "Unlock iPhone before starting a direct query."
         case .healthKitNotAuthorized: "Authorize the selected Health access before starting a direct query."
@@ -493,6 +499,12 @@ final class IPhoneDirectQueryCoordinator {
                 timeZone: timeZone
             )
             guard discovery.isComplete else { throw IPhoneDirectQueryError.queryUnavailable }
+            guard discovery.historyAuthorization.state != .limitedHistory else {
+                throw IPhoneDirectQueryError.limitedHistoryAuthorization
+            }
+            guard discovery.supportsUnqualifiedFullHistoryClaim else {
+                throw IPhoneDirectQueryError.historyAuthorizationUnverified
+            }
             let end = calendar.startOfDay(for: Date())
             let start = discovery.earliestDate.map(calendar.startOfDay(for:)) ?? end
             return try sourceDateRange(from: start, to: end, calendar: calendar)

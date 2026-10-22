@@ -12,7 +12,7 @@ const outputRoot = outputFlagIndex >= 0
   : root;
 const sitemapPath = path.join(outputRoot, "sitemap.xml");
 const siteOrigin = "https://healthmd.app";
-const lastmod = "2026-07-16";
+const lastmod = "2026-10-02";
 
 const categoryLabels = {
   all: "All data",
@@ -23,6 +23,7 @@ const categoryLabels = {
   vitals: "Vitals & metabolism",
   body: "Body composition",
   sleep: "Sleep",
+  whoop: "WHOOP",
   mental: "Mood & mind",
   medications: "Medications",
   mobility: "Mobility",
@@ -43,6 +44,7 @@ const dataFilterSlugs = {
   vitals: "vitals-metabolism",
   body: "body-composition",
   sleep: "sleep-analysis",
+  whoop: "whoop",
   mental: "mindfulness-mood",
   medications: "medication-adherence",
   mobility: "mobility-gait",
@@ -120,7 +122,8 @@ function pageTitle(viz) {
 function pageDescription(viz, dataFilter, colorScheme) {
   const themeDescription = colorScheme === "theme" ? "current theme" : `the ${colorSchemeLabels[colorScheme] || colorScheme} theme`;
   const exportDescription = `Works with Health.md ${viz.exportSources.map((id) => exportSourceLabels[id]).join(", ")} exports.`;
-  return `${viz.description} ${exportDescription} Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact ${categoryLabels[dataFilter] || dataFilter} preview with ${themeDescription}.`;
+  const permissions = viz.category === "whoop" ? "WHOOP connection requirements" : "required Apple Health permissions";
+  return `${viz.description} ${exportDescription} Copy the Obsidian health-viz block, inspect ${permissions}, and share this exact ${categoryLabels[dataFilter] || dataFilter} preview with ${themeDescription}.`;
 }
 
 function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
@@ -160,7 +163,8 @@ function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
     .replace(/<span class="eyebrow" data-current-category>[\s\S]*?<\/span>/, `<span class="eyebrow" data-current-category>${escapeHtml(categoryLabels[viz.category] || viz.category)}</span>`)
     .replace(/<h1 data-current-title>[\s\S]*?<\/h1>/, `<h1 data-current-title>${escapeHtml(viz.label)}</h1>`)
     .replace(/<p data-current-description>[\s\S]*?<\/p>/, `<p data-current-description>${escapeHtml(viz.description)}</p>`)
-    .replace(/<span data-code-label>[\s\S]*?<\/span>/, `<span data-code-label>${escapeHtml(viz.id)}</span>`);
+    .replace(/<span data-code-label>[\s\S]*?<\/span>/, `<span data-code-label>${escapeHtml(viz.id)}</span>`)
+    .replace("data-whoop-preview-note hidden", viz.category === "whoop" ? "data-whoop-preview-note" : "data-whoop-preview-note hidden");
 
   html = html.replace(/\n  <script type="application\/ld\+json" data-viz-schema>[\s\S]*?<\/script>/, "");
   html = html.replace("\n</head>", `\n  <script type="application/ld+json" data-viz-schema>${JSON.stringify(jsonLd)}</script>\n</head>`);
