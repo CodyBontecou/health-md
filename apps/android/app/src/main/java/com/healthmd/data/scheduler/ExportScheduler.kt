@@ -579,8 +579,10 @@ class ExportScheduler @Inject constructor(
     ): ScheduledExportConfiguration {
         val target = settings.scheduledExportTarget
         val fingerprint = destinationFingerprint(settings, target)
+        val context = com.healthmd.domain.model.AndroidCaptureContext(zoneId, settingsRepository.getSleepDayAttribution())
+            .also { it.requireShippedProfile() }
         val enginePin = enginePinPlanner.forScheduledExport(settings, target, zoneId)
-        val settingsSnapshot = AndroidExportSettingsSnapshot.capture(settings, enginePin, zoneId)
+        val settingsSnapshot = AndroidExportSettingsSnapshot.capture(settings, enginePin, zoneId, context)
         return ScheduledExportConfiguration.from(
             settings = settings,
             destinationFingerprint = fingerprint,
@@ -610,7 +612,11 @@ class ExportScheduler @Inject constructor(
             if (persistedSnapshot.scheduledExportTarget != target) return null
             // Validate destination plumbing before comparing only non-secret frozen output choices.
             if (runCatching { persistedSnapshot.restoreOnto(settings) }.isFailure) return null
-            AndroidExportSettingsSnapshot.capture(settings, persisted.enginePin, zone)
+            // Retain the v1 identity during recovery. Only an already-v2 acceptance compares
+            // its frozen context against today's setting to detect an explicit configuration edit.
+            val context = if (persistedSnapshot.sleepCaptureContext == null) null else
+                com.healthmd.domain.model.AndroidCaptureContext(zone, settingsRepository.getSleepDayAttribution())
+            AndroidExportSettingsSnapshot.capture(settings, persisted.enginePin, zone, context)
                 .takeIf { it == persistedSnapshot }
                 ?: return null
         }

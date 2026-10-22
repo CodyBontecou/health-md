@@ -79652,6 +79652,124 @@
     "More unlock options" : {
 
     },
+    "Morning ends" : {
+      "comment" : "Sleep attribution picker and selected accessibility description. Morning ends remains unavailable for shipped profiles.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ende am Morgen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fin por la mañana"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fin au matin"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fine al mattino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朝の終了日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아침 종료일"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einde in de ochtend"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fim pela manhã"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "早晨结束日"
+          }
+        }
+      }
+    },
+    "Morning ends is unavailable for current export profiles. Choose Night begins for a new export." : {
+      "comment" : "Sleep attribution picker and selected accessibility description. Morning ends remains unavailable for shipped profiles.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Ende am Morgen“ ist für aktuelle Exportprofile nicht verfügbar. Wähle für einen neuen Export „Beginn der Nacht“."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fin por la mañana no está disponible para los perfiles de exportación actuales. Elige Inicio de la noche para una nueva exportación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fin au matin n’est pas disponible pour les profils d’exportation actuels. Choisissez Début de la nuit pour une nouvelle exportation."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fine al mattino non è disponibile per i profili di esportazione attuali. Scegli Inizio della notte per una nuova esportazione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朝の終了日は現在のエクスポートプロファイルでは利用できません。新しいエクスポートには夜の開始日を選択してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "현재 내보내기 프로필에서는 아침 종료일을 사용할 수 없습니다. 새로 내보내려면 밤 시작일을 선택하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einde in de ochtend is niet beschikbaar voor de huidige exportprofielen. Kies Begin van de nacht voor een nieuwe export."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fim pela manhã não está disponível para os perfis de exportação atuais. Escolha Início da noite para uma nova exportação."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前导出配置不支持早晨结束日。请为新的导出选择夜间开始日。"
+          }
+        }
+      }
+    },
     "Move Time" : {
       "comment" : "macOS Health metric picker UI",
       "localizations" : {
@@ -80864,6 +80982,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "盗汗"
+          }
+        }
+      }
+    },
+    "Night begins" : {
+      "comment" : "Sleep attribution picker and selected accessibility description. Morning ends remains unavailable for shipped profiles.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beginn der Nacht"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicio de la noche"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Début de la nuit"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inizio della notte"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "夜の開始日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "밤 시작일"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begin van de nacht"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Início da noite"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "夜间开始日"
           }
         }
       }
@@ -104991,6 +105168,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "sleep_total_hours, active_calories"
+          }
+        }
+      }
+    },
+    "Sleep uses the daily note's noon-to-noon window. This is the default and matches previous exports." : {
+      "comment" : "Sleep attribution picker and selected accessibility description. Morning ends remains unavailable for shipped profiles.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Schlafdaten verwenden das Zeitfenster der Tagesnotiz von Mittag bis Mittag. Dies ist die Standardeinstellung und entspricht bisherigen Exporten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El sueño usa el intervalo de mediodía a mediodía de la nota diaria. Es la opción predeterminada y coincide con las exportaciones anteriores."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le sommeil utilise la plage de midi à midi de la note quotidienne. Ce réglage par défaut correspond aux exportations précédentes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il sonno usa l’intervallo da mezzogiorno a mezzogiorno della nota giornaliera. È l’impostazione predefinita e corrisponde alle esportazioni precedenti."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "睡眠には日次ノートの正午から翌日の正午までの時間枠が使用されます。これが既定の設定で、これまでのエクスポートと同じです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수면에는 일일 노트의 정오부터 다음 날 정오까지의 시간 범위가 사용됩니다. 기본 설정이며 이전 내보내기와 동일합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slaap gebruikt het venster van middag tot middag van de dagelijkse notitie. Dit is de standaardinstelling en komt overeen met eerdere exports."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O sono usa o intervalo de meio-dia a meio-dia da nota diária. Essa é a opção padrão e corresponde às exportações anteriores."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "睡眠使用每日笔记从中午到次日中午的时间范围。这是默认设置，与以往的导出一致。"
           }
         }
       }

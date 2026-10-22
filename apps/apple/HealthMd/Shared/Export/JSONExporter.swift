@@ -1,5 +1,19 @@
 import Foundation
 
+nonisolated enum AppleWakeDateJSONError: Error, LocalizedError, Equatable {
+    case incompatibleCaptureAuthority
+    case incompatibleSessionOwner
+
+    var errorDescription: String? {
+        switch self {
+        case .incompatibleCaptureAuthority:
+            return "wake-date JSON capture authority is incompatible"
+        case .incompatibleSessionOwner:
+            return "wake-date JSON session owner is incompatible"
+        }
+    }
+}
+
 // MARK: - JSON Export
 
 extension HealthData {
@@ -37,32 +51,40 @@ extension HealthData {
 
     func toJSONThrowing(
         customization: FormatCustomization? = nil,
-        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> String {
         let config = customization ?? FormatCustomization()
         return try toJSONThrowing(
             snapshot: exportSnapshot(customization: config),
             config: config,
-            outputFormatting: outputFormatting
+            outputFormatting: outputFormatting,
+            captureContext: captureContext
         )
     }
 
+    /// Explicit successor preparation is independent of the production profile
+    /// gate. Omitted context retains historical Night begins bytes; a captured
+    /// Morning day may never silently become an Apple-v8 document.
     func toJSONDataThrowing(
         customization: FormatCustomization? = nil,
-        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> Data {
         let config = customization ?? FormatCustomization()
         return try toJSONDataThrowing(
             snapshot: exportSnapshot(customization: config),
             config: config,
-            outputFormatting: outputFormatting
+            outputFormatting: outputFormatting,
+            captureContext: captureContext
         )
     }
 
     func writeJSONThrowing(
         to stream: OutputStream,
         customization: FormatCustomization? = nil,
-        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> Int {
         let sink = OutputStreamExportByteSink(
             stream: stream,
@@ -71,7 +93,8 @@ extension HealthData {
         try writeJSONThrowing(
             to: sink,
             customization: customization,
-            outputFormatting: outputFormatting
+            outputFormatting: outputFormatting,
+            captureContext: captureContext
         )
         let descriptor = try sink.finish()
         guard let count = Int(exactly: descriptor.byteCount), count > 0 else {
@@ -83,26 +106,30 @@ extension HealthData {
     func writeJSONThrowing(
         to sink: ExportByteSink,
         customization: FormatCustomization? = nil,
-        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws {
         let config = customization ?? FormatCustomization()
         try writeJSONThrowing(
             to: sink,
             snapshot: exportSnapshot(customization: config),
             config: config,
-            outputFormatting: outputFormatting
+            outputFormatting: outputFormatting,
+            captureContext: captureContext
         )
     }
 
     func toJSONThrowing(
         snapshot: ExportDataSnapshot,
         config: FormatCustomization,
-        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> String {
         let data = try toJSONDataThrowing(
             snapshot: snapshot,
             config: config,
-            outputFormatting: outputFormatting
+            outputFormatting: outputFormatting,
+            captureContext: captureContext
         )
         guard let value = String(data: data, encoding: .utf8) else {
             throw CocoaError(.fileWriteInapplicableStringEncoding)
@@ -113,14 +140,16 @@ extension HealthData {
     func toJSONDataThrowing(
         snapshot: ExportDataSnapshot,
         config: FormatCustomization,
-        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> Data {
         let sink = MemoryExportByteSink(mediaType: "application/json")
         try writeJSONThrowing(
             to: sink,
             snapshot: snapshot,
             config: config,
-            outputFormatting: outputFormatting
+            outputFormatting: outputFormatting,
+            captureContext: captureContext
         )
         _ = try sink.finish()
         return sink.data
@@ -130,12 +159,14 @@ extension HealthData {
         to sink: ExportByteSink,
         snapshot: ExportDataSnapshot,
         config: FormatCustomization,
-        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws {
         let object = try canonicalJSONObject(
             snapshot: snapshot,
             config: config,
-            includeHealthKitRecordArchive: false
+            includeHealthKitRecordArchive: false,
+            captureContext: captureContext
         )
         try HealthKitRecordArchiveSerializer.writeDailyJSONObject(
             object,
@@ -149,16 +180,79 @@ extension HealthData {
     func bufferedJSONDataForParityTesting(
         snapshot: ExportDataSnapshot,
         config: FormatCustomization,
-        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> Data {
         try JSONSerialization.data(
             withJSONObject: materializedFoundationJSON(try canonicalJSONObject(
                 snapshot: snapshot,
                 config: config,
-                includeHealthKitRecordArchive: true
+                includeHealthKitRecordArchive: true,
+                captureContext: captureContext
             )),
             options: outputFormatting
         )
+    }
+
+    /// Native writer validation, not fresh/durable production acceptance. A
+    /// draft context stays draft; no preference or timezone fallback is read.
+    private func wakeDateJSONContext(
+        snapshot: ExportDataSnapshot,
+        captureContext: AppleSleepCaptureContext?
+    ) throws -> AppleSleepCaptureContext? {
+        let attribution = snapshot.timeContext.sleepDayAttribution ?? .nightBegins
+        guard let context = captureContext else {
+            guard attribution == .nightBegins else {
+                throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+            }
+            return nil
+        }
+        // Foundation normalizes UTC to GMT in capture contexts. Normalize a
+        // valid source identifier as well; equal offsets at one instant are not
+        // enough to admit a different calendar clock (especially across DST).
+        guard let sourceZone = TimeZone(identifier: snapshot.timeContext.calendarTimeZoneIdentifier),
+              sourceZone.identifier == context.calendarTimeZoneIdentifier,
+              context.sleepDayAttribution == attribution else {
+            throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+        }
+        if attribution == .nightBegins {
+            guard context.exportProfileID == nil || context.exportProfileID == "apple-v8" else {
+                throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+            }
+            return nil
+        }
+        guard context.exportProfileID == "apple-v11" else {
+            throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+        }
+        guard snapshot.workouts.allSatisfy({
+            $0.startTime.timeIntervalSince1970.isFinite && $0.endTime.timeIntervalSince1970.isFinite
+                && $0.endTime >= $0.startTime && $0.duration.isFinite && $0.duration >= 0
+                && CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: $0.startTime) != nil
+                && CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: $0.endTime) != nil
+        }) else { throw AppleWakeDateJSONError.incompatibleCaptureAuthority }
+        let bounds = snapshot.sleep.sourceSessionBounds
+        let sourceStart = bounds == nil ? snapshot.sleep.bedtime : bounds?.start
+        let sourceEnd = bounds == nil ? snapshot.sleep.wakeTime : bounds?.end
+        guard snapshot.sleep.bedtime == nil || snapshot.sleep.bedtime == sourceStart,
+              snapshot.sleep.wakeTime == nil || snapshot.sleep.wakeTime == sourceEnd else {
+            throw AppleWakeDateJSONError.incompatibleSessionOwner
+        }
+        if let start = sourceStart, let end = sourceEnd {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = context.timeZone
+            guard start.timeIntervalSince1970.isFinite, end.timeIntervalSince1970.isFinite,
+                  start < end, calendar.isDate(end, inSameDayAs: snapshot.date) else {
+                throw AppleWakeDateJSONError.incompatibleSessionOwner
+            }
+            guard CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: start) != nil,
+                  CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: end) != nil else {
+                throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+            }
+        } else if snapshot.sleep.hasData || !snapshot.sleep.stages.isEmpty ||
+                    sourceStart != nil || sourceEnd != nil {
+            throw AppleWakeDateJSONError.incompatibleSessionOwner
+        }
+        return context
     }
 
     private func materializedFoundationJSON(_ value: Any) throws -> Any {
@@ -177,8 +271,10 @@ extension HealthData {
     private func canonicalJSONObject(
         snapshot: ExportDataSnapshot,
         config: FormatCustomization,
-        includeHealthKitRecordArchive: Bool
+        includeHealthKitRecordArchive: Bool,
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> [String: Any] {
+        let wakeDateContext = try wakeDateJSONContext(snapshot: snapshot, captureContext: captureContext)
         let canonicalDisplayConverter = UnitConverter(preference: .metric)
         let imperialDisplayConverter = UnitConverter(preference: .imperial)
         let metricUnits = Dictionary(uniqueKeysWithValues: snapshot.frontmatterMetrics.keys.compactMap { key -> (String, String)? in
@@ -203,6 +299,33 @@ extension HealthData {
                 snapshot.healthKitRecordCaptureStatus
             )
         ]
+
+        if let context = wakeDateContext {
+            json["schema_version"] = 11
+            json["schema_profile"] = "apple-v11"
+            json["date"] = HealthKitDailyOwnershipMetadata.ownerDate(
+                for: snapshot.date, calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier
+            )
+            json["time_context"] = [
+                "calendar_timezone": context.calendarTimeZoneIdentifier,
+                "timestamp_timezone": ExportTimeContext.timestampTimeZoneIdentifier,
+                "sleep_day_attribution": "morning_ends",
+                "sleep_owner_day_rule": "session_end_date",
+                "sleep_interval_clipping": "none",
+            ]
+        }
+
+        let preservesReferencePrecision = wakeDateContext != nil
+        let sourceTimestamp: @Sendable (Date) throws -> String = { [preservesReferencePrecision] date in
+            guard preservesReferencePrecision else { return CanonicalRFC3339UTC.string(from: date) }
+            guard let value = CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: date) else {
+                throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+            }
+            return value
+        }
+        func sleepTimestamp(_ date: Date) throws -> String {
+            try wakeDateContext == nil ? snapshot.formatUTCTimestamp(date) : sourceTimestamp(date)
+        }
 
         func attachMetadata(_ metadata: [String: String], to dict: inout [String: Any]) {
             if !metadata.isEmpty {
@@ -240,19 +363,20 @@ extension HealthData {
             return dict
         }
 
-        func encodedTimeSample(_ sample: TimeSample, isoFormatter: ISO8601DateFormatter) -> [String: Any] {
+        func encodedTimeSample(_ sample: TimeSample, isoFormatter: ISO8601DateFormatter) throws -> [String: Any] {
             var dict: [String: Any] = [
-                "timestamp": isoFormatter.string(from: sample.timestamp),
+                "timestamp": wakeDateContext == nil ? isoFormatter.string(from: sample.timestamp)
+                    : try sourceTimestamp(sample.timestamp),
                 "value": sample.value
             ]
             attachMetadata(sample.metadata, to: &dict)
             return dict
         }
 
-        func encodedBloodPressureSample(_ sample: BloodPressureSample) -> [String: Any] {
+        func encodedBloodPressureSample(_ sample: BloodPressureSample) throws -> [String: Any] {
             var dict: [String: Any] = [
-                "timestamp": CanonicalRFC3339UTC.string(from: sample.startDate),
-                "endDate": CanonicalRFC3339UTC.string(from: sample.endDate),
+                "timestamp": try sourceTimestamp(sample.startDate),
+                "endDate": try sourceTimestamp(sample.endDate),
                 "systolic": sample.systolic,
                 "diastolic": sample.diastolic,
                 "unit": "mmHg"
@@ -342,7 +466,7 @@ extension HealthData {
         }
 
         // Sleep
-        if snapshot.sleep.hasData {
+        if snapshot.sleep.hasData || (wakeDateContext != nil && !snapshot.sleep.stages.isEmpty) {
             var sleepDict: [String: Any] = [:]
             if snapshot.sleep.totalDurationSeconds > 0 {
                 sleepDict["totalDuration"] = snapshot.sleep.totalDurationSeconds
@@ -350,11 +474,11 @@ extension HealthData {
             }
             if let bedtime = snapshot.sleep.bedtime {
                 sleepDict["bedtime"] = snapshot.formatCalendarTime(bedtime)
-                sleepDict["bedtimeISO"] = snapshot.formatUTCTimestamp(bedtime)
+                sleepDict["bedtimeISO"] = try sleepTimestamp(bedtime)
             }
             if let wake = snapshot.sleep.wakeTime {
                 sleepDict["wakeTime"] = snapshot.formatCalendarTime(wake)
-                sleepDict["wakeTimeISO"] = snapshot.formatUTCTimestamp(wake)
+                sleepDict["wakeTimeISO"] = try sleepTimestamp(wake)
             }
             if snapshot.sleep.deepSleepSeconds > 0 {
                 sleepDict["deepSleep"] = snapshot.sleep.deepSleepSeconds
@@ -377,12 +501,11 @@ extension HealthData {
                 sleepDict["inBedTimeFormatted"] = formatDuration(snapshot.sleep.inBedSeconds)
             }
             if !snapshot.sleep.stages.isEmpty {
-                let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 sleepDict["sleepStages"] = FoundationJSONLazyArray(snapshot.sleep.stages) { stage -> [String: Any] in
                     var dict: [String: Any] = [
                         "stage": stage.stage,
-                        "startDate": isoFormatter.string(from: stage.startDate),
-                        "endDate": isoFormatter.string(from: stage.endDate),
+                        "startDate": try sleepTimestamp(stage.startDate),
+                        "endDate": try sleepTimestamp(stage.endDate),
                         "durationSeconds": stage.endDate.timeIntervalSince(stage.startDate)
                     ]
                     attachMetadata(stage.metadata, to: &dict)
@@ -441,10 +564,10 @@ extension HealthData {
                     activityDict["vo2MaxSourceUUID"] = sourceUUID.uuidString
                 }
                 if let startDate = snapshot.activity.vo2MaxSourceStartDate {
-                    activityDict["vo2MaxSourceStartDate"] = CanonicalRFC3339UTC.string(from: startDate)
+                    activityDict["vo2MaxSourceStartDate"] = try sourceTimestamp(startDate)
                 }
                 if let endDate = snapshot.activity.vo2MaxSourceEndDate {
-                    activityDict["vo2MaxSourceEndDate"] = CanonicalRFC3339UTC.string(from: endDate)
+                    activityDict["vo2MaxSourceEndDate"] = try sourceTimestamp(endDate)
                 }
                 if let carriedForward = snapshot.activity.vo2MaxCarriedForward {
                     activityDict["vo2MaxCarriedForward"] = carriedForward
@@ -469,7 +592,8 @@ extension HealthData {
         }
 
         // Heart
-        if snapshot.heart.hasData || snapshot.hasCategoryData(.heart) {
+        if snapshot.heart.hasData || snapshot.hasCategoryData(.heart)
+            || (wakeDateContext != nil && (!snapshot.heart.heartRateSamples.isEmpty || !snapshot.heart.hrvSamples.isEmpty)) {
             var heartDict: [String: Any] = [:]
             if let hr = snapshot.heart.restingHeartRate {
                 heartDict["restingHeartRate"] = hr
@@ -494,20 +618,22 @@ extension HealthData {
             if !snapshot.heart.heartRateSamples.isEmpty {
                 let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 heartDict["heartRateSamples"] = FoundationJSONLazyArray(snapshot.heart.heartRateSamples) { sample -> [String: Any] in
-                    encodedTimeSample(sample, isoFormatter: isoFormatter)
+                    try encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.heart.hrvSamples.isEmpty {
                 let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
                 heartDict["hrvSamples"] = FoundationJSONLazyArray(snapshot.heart.hrvSamples) { sample -> [String: Any] in
-                    encodedTimeSample(sample, isoFormatter: isoFormatter)
+                    try encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             json["heart"] = heartDict
         }
 
         // Vitals (daily aggregates)
-        if snapshot.vitals.hasData || snapshot.hasCategoryData(.vitals) || snapshot.hasCategoryData(.respiratory) {
+        if snapshot.vitals.hasData || snapshot.hasCategoryData(.vitals) || snapshot.hasCategoryData(.respiratory)
+            || (wakeDateContext != nil && (!snapshot.vitals.bloodOxygenSamples.isEmpty
+                || !snapshot.vitals.bloodGlucoseSamples.isEmpty || !snapshot.vitals.respiratoryRateSamples.isEmpty)) {
             var vitalsDict: [String: Any] = [:]
 
             // Respiratory Rate
@@ -597,22 +723,22 @@ extension HealthData {
             let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
             if !snapshot.vitals.bloodOxygenSamples.isEmpty {
                 vitalsDict["bloodOxygenSamples"] = FoundationJSONLazyArray(snapshot.vitals.bloodOxygenSamples) { sample -> [String: Any] in
-                    encodedTimeSample(sample, isoFormatter: isoFormatter)
+                    try encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.vitals.bloodGlucoseSamples.isEmpty {
                 vitalsDict["bloodGlucoseSamples"] = FoundationJSONLazyArray(snapshot.vitals.bloodGlucoseSamples) { sample -> [String: Any] in
-                    encodedTimeSample(sample, isoFormatter: isoFormatter)
+                    try encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.vitals.respiratoryRateSamples.isEmpty {
                 vitalsDict["respiratoryRateSamples"] = FoundationJSONLazyArray(snapshot.vitals.respiratoryRateSamples) { sample -> [String: Any] in
-                    encodedTimeSample(sample, isoFormatter: isoFormatter)
+                    try encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.vitals.bloodPressureSamples.isEmpty {
                 vitalsDict["bloodPressureSamples"] = FoundationJSONLazyArray(snapshot.vitals.bloodPressureSamples) { sample -> [String: Any] in
-                    encodedBloodPressureSample(sample)
+                    try encodedBloodPressureSample(sample)
                 }
             }
             json["vitals"] = vitalsDict
@@ -722,8 +848,8 @@ extension HealthData {
                 let entriesArray = FoundationJSONLazyArray(snapshot.mindfulness.stateOfMindEntries) { entry -> [String: Any] in
                     var entryDict: [String: Any] = [
                         "id": entry.id.uuidString,
-                        "timestamp": CanonicalRFC3339UTC.string(from: entry.timestamp),
-                        "endDate": CanonicalRFC3339UTC.string(from: entry.endDate),
+                        "timestamp": try sourceTimestamp(entry.timestamp),
+                        "endDate": try sourceTimestamp(entry.endDate),
                         "displayTime": snapshot.formatCalendarTime(entry.timestamp),
                         "kind": entry.kind.rawValue,
                         "valence": entry.valence,
@@ -799,14 +925,21 @@ extension HealthData {
         // Workouts
         if !snapshot.workouts.isEmpty {
             let workoutISOFormatter = ExportDateFormatting.utcISO8601Formatter()
+            func workoutTimestamp(_ date: Date) throws -> String {
+                try wakeDateContext == nil ? workoutISOFormatter.string(from: date) : sourceTimestamp(date)
+            }
+            func workoutNumber(_ value: Double) -> Any {
+                if wakeDateContext == nil { return Int(value.rounded()) }
+                return value
+            }
             let workoutsArray = FoundationJSONLazyArray(snapshot.workouts) { workout in
                 var workoutDict: [String: Any] = [
                     "id": (workout.sourceUUID ?? workout.id).uuidString,
                     "type": workout.workoutTypeName,
                     "sport": workout.workoutSportName,
                     "startTime": snapshot.formatCalendarTime(workout.startTime),
-                    "startTimeISO": CanonicalRFC3339UTC.string(from: workout.startTime),
-                    "endTimeISO": CanonicalRFC3339UTC.string(from: workout.endTime),
+                    "startTimeISO": try sourceTimestamp(workout.startTime),
+                    "endTimeISO": try sourceTimestamp(workout.endTime),
                     "duration": workout.duration,
                     "elapsedDuration": workout.endTime.timeIntervalSince(workout.startTime),
                     "durationFormatted": formatDurationShort(workout.duration)
@@ -848,34 +981,34 @@ extension HealthData {
                     workoutDict["calories"] = calories
                 }
                 if let avgHR = workout.avgHeartRate {
-                    workoutDict["avgHeartRate"] = Int(avgHR.rounded())
+                    workoutDict["avgHeartRate"] = workoutNumber(avgHR)
                 }
                 if let maxHR = workout.maxHeartRate {
-                    workoutDict["maxHeartRate"] = Int(maxHR.rounded())
+                    workoutDict["maxHeartRate"] = workoutNumber(maxHR)
                 }
                 if let minHR = workout.minHeartRate {
-                    workoutDict["minHeartRate"] = Int(minHR.rounded())
+                    workoutDict["minHeartRate"] = workoutNumber(minHR)
                 }
                 if let cadence = workout.avgRunningCadence {
-                    workoutDict["avgRunningCadence"] = Int(cadence.rounded())
+                    workoutDict["avgRunningCadence"] = workoutNumber(cadence)
                 }
                 if let stride = workout.avgStrideLength {
                     workoutDict["avgStrideLength"] = stride
                 }
                 if let gct = workout.avgGroundContactTime {
-                    workoutDict["avgGroundContactTime"] = Int(gct.rounded())
+                    workoutDict["avgGroundContactTime"] = workoutNumber(gct)
                 }
                 if let vertOsc = workout.avgVerticalOscillation {
                     workoutDict["avgVerticalOscillation"] = vertOsc
                 }
                 if let cyclingCadence = workout.avgCyclingCadence {
-                    workoutDict["avgCyclingCadence"] = Int(cyclingCadence.rounded())
+                    workoutDict["avgCyclingCadence"] = workoutNumber(cyclingCadence)
                 }
                 if let avgPow = workout.avgPower {
-                    workoutDict["avgPower"] = Int(avgPow.rounded())
+                    workoutDict["avgPower"] = workoutNumber(avgPow)
                 }
                 if let maxPow = workout.maxPower {
-                    workoutDict["maxPower"] = Int(maxPow.rounded())
+                    workoutDict["maxPower"] = workoutNumber(maxPow)
                 }
                 if let elevation = workout.elevationGainMeters {
                     workoutDict["elevationGainMeters"] = elevation
@@ -887,8 +1020,8 @@ extension HealthData {
                     workoutDict["laps"] = FoundationJSONLazyArray(Array(workout.laps.enumerated())) { (i, lap) -> [String: Any] in
                         var dict: [String: Any] = [
                             "index": i + 1,
-                            "startTimeISO": workoutISOFormatter.string(from: lap.startDate),
-                            "endTimeISO": workoutISOFormatter.string(from: lap.endDate),
+                            "startTimeISO": try workoutTimestamp(lap.startDate),
+                            "endTimeISO": try workoutTimestamp(lap.endDate),
                             "duration": lap.duration,
                         ]
                         if let d = lap.distanceMeters {
@@ -910,8 +1043,8 @@ extension HealthData {
                     workoutDict["splits"] = FoundationJSONLazyArray(workout.splits) { split -> [String: Any] in
                         var dict: [String: Any] = [
                             "index": split.index,
-                            "startTimeISO": workoutISOFormatter.string(from: split.startDate),
-                            "endTimeISO": workoutISOFormatter.string(from: split.startDate.addingTimeInterval(split.duration)),
+                            "startTimeISO": try workoutTimestamp(split.startDate),
+                            "endTimeISO": try workoutTimestamp(split.startDate.addingTimeInterval(split.duration)),
                             "duration": split.duration,
                             "distance": split.distanceMeters,
                         ]
@@ -923,7 +1056,7 @@ extension HealthData {
                             dict["paceFormatted"] = pace
                         }
                         if let hr = split.avgHeartRate {
-                            dict["avgHeartRate"] = Int(hr.rounded())
+                            dict["avgHeartRate"] = workoutNumber(hr)
                         }
                         return dict
                     }
@@ -931,7 +1064,7 @@ extension HealthData {
                 if !workout.route.isEmpty {
                     workoutDict["route"] = FoundationJSONLazyArray(workout.route) { p -> [String: Any] in
                         var dict: [String: Any] = [
-                            "timestamp": ExportDateFormatting.utcTimestamp(p.timestamp),
+                            "timestamp": wakeDateContext == nil ? ExportDateFormatting.utcTimestamp(p.timestamp) : try sourceTimestamp(p.timestamp),
                             "latitude": p.latitude,
                             "longitude": p.longitude,
                         ]
@@ -947,7 +1080,7 @@ extension HealthData {
                     func encodeSamples(_ samples: [TimeSeriesSample]) -> FoundationJSONLazyArray {
                         FoundationJSONLazyArray(samples) { sample in
                             var dict: [String: Any] = [
-                                "timestamp": iso.string(from: sample.timestamp),
+                                "timestamp": wakeDateContext == nil ? iso.string(from: sample.timestamp) : try sourceTimestamp(sample.timestamp),
                                 "value": sample.value
                             ]
                             if !sample.metadata.isEmpty { dict["metadata"] = sample.metadata }

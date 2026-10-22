@@ -53,6 +53,8 @@ class ExportOrchestrator(
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
     ): ExportResult {
         val totalDays = dates.size
+        // Recovery commits immutable journal bytes without consulting today's capture preferences.
+        // Only a new capture needs to resolve and validate the device context below.
         if (durableFolderOperationId != null) {
             val snapshotJson = durableSettingsSnapshotJson
                 ?: return folderFailure(dates, durableFolderOperationId)
@@ -103,6 +105,25 @@ class ExportOrchestrator(
             }
         }
 
+        val captureContext = try {
+            resolveOperationCaptureContext(settings)
+        } catch (_: CancellationException) {
+            return cancelledResult()
+        } catch (error: Exception) {
+            val safeDetails = if (error is SleepAttributionUnavailableException) error.message else null
+            return finalizeResult(
+                ExportResult(
+                    successCount = 0,
+                    totalCount = totalDays,
+                    failedDateDetails = dates.map {
+                        FailedDateDetail(it, ExportFailureReason.UNKNOWN, safeDetails)
+                    },
+                ),
+            )
+        }
+
+        val operationSettings = settings.withCaptureAuthority(captureContext)
+
         // Manual interactive runs select route-consent candidates across the complete date scope
         // before canonical chunk capture. The repository is a no-op for every noninteractive path.
         if (coroutineContext.allowsInteractiveRouteConsent() &&
@@ -114,6 +135,7 @@ class ExportOrchestrator(
                     dates = dates,
                     dataTypes = effectiveSelection,
                     includeGranularData = settings.shouldFetchGranularData(),
+                    zoneId = captureContext.zoneId,
                 )
             } catch (_: CancellationException) {
                 return cancelledResult()
@@ -143,6 +165,8 @@ class ExportOrchestrator(
                     dates = chunk,
                     dataTypes = effectiveSelection,
                     includeGranularData = settings.shouldFetchGranularData(),
+                    zoneId = captureContext.zoneId,
+                    sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
                 ).associateBy { it.date }
             } catch (e: CancellationException) {
                 return cancelledResult()
@@ -212,75 +236,23 @@ class ExportOrchestrator(
 
                 onProgress?.invoke(processedDays + index + 1, totalDays, date.toString())
                 val healthData = healthDataByDate[date] ?: HealthData(date)
-                var filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
+                val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection, captureContext)
 
-                if (!filteredData.hasAnyData) {
-                    val fallbackData = try {
-                        healthRepository.fetchHealthData(date)
-                    } catch (e: CancellationException) {
-                        return cancelledResult()
-                    } catch (e: SecurityException) {
-                        val reason = classifySecurityException(e)
-                        if (reason == ExportFailureReason.RATE_LIMITED) {
-                            markRemainingRateLimited(
-                                dates = dates,
-                                startIndex = processedDays + index,
-                                totalDays = totalDays,
-                                error = e,
-                                failedDateDetails = failedDateDetails,
-                                onProgress = onProgress,
-                            )
-                            return finalizeResult(
-                                ExportResult(
-                                    successCount = successCount,
-                                    totalCount = totalDays,
-                                    failedDateDetails = failedDateDetails,
-                                ),
-                            )
-                        }
-                        failedDateDetails.add(FailedDateDetail(date, reason, e.message))
-                        continue
-                    } catch (e: Exception) {
-                        val reason = if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
-                            ExportFailureReason.RATE_LIMITED
-                        } else {
-                            classifyException(e)
-                        }
-                        if (reason == ExportFailureReason.RATE_LIMITED) {
-                            markRemainingRateLimited(
-                                dates = dates,
-                                startIndex = processedDays + index,
-                                totalDays = totalDays,
-                                error = e,
-                                failedDateDetails = failedDateDetails,
-                                onProgress = onProgress,
-                            )
-                            return finalizeResult(
-                                ExportResult(
-                                    successCount = successCount,
-                                    totalCount = totalDays,
-                                    failedDateDetails = failedDateDetails,
-                                ),
-                            )
-                        }
-                        failedDateDetails.add(FailedDateDetail(date, reason, e.message))
-                        continue
-                    }
-                    filteredData = fallbackData.filtered(effectiveSelection).filtered(settings.metricSelection)
-                }
-
+                // A second provider-native read cannot add evidence to the same
+                // selected range contract. Treat an empty result as empty rather
+                // than changing capture semantics during the operation.
                 if (!filteredData.hasAnyData) {
                     failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.NO_HEALTH_DATA))
                     continue
                 }
 
                 val success = if (durableFolderOperationId == null) {
-                    exportRepository.exportHealthData(filteredData, settings)
+                    exportRepository.exportHealthData(filteredData, operationSettings)
                 } else {
                     exportRepository.stageDurableScheduledFolderDay(
                         operationId = durableFolderOperationId,
                         data = filteredData,
-                        settings = settings,
+                        settings = operationSettings,
                     )
                 }
                 if (success) {
@@ -303,122 +275,6 @@ class ExportOrchestrator(
         )
     }
 
-    private suspend fun exportDatesOneByOne(
-        dates: List<LocalDate>,
-        settings: ExportSettings,
-        onProgress: ((current: Int, total: Int, dateString: String) -> Unit)?,
-    ): ExportResult {
-        val totalDays = dates.size
-        var successCount = 0
-        val successfulDates = linkedSetOf<LocalDate>()
-        val failedDateDetails = mutableListOf<FailedDateDetail>()
-
-        fun cancelledResult() = ExportResult(
-            successCount = successCount,
-            totalCount = totalDays,
-            failedDateDetails = failedDateDetails,
-            wasCancelled = true,
-            remainingDates = dates.filterNotTo(linkedSetOf()) { it in successfulDates },
-        )
-
-        for ((index, date) in dates.withIndex()) {
-            // Check for cancellation
-            try {
-                coroutineContext.ensureActive()
-            } catch (_: CancellationException) {
-                return cancelledResult()
-            }
-
-            onProgress?.invoke(index + 1, totalDays, date.toString())
-
-            // Check for Before First Unlock (BFU) state — i.e. the phone was rebooted
-            // and the user has never entered their PIN this session. In BFU, Health
-            // Connect's credential-encrypted storage is not mounted and reads silently
-            // return empty data. Surface DEVICE_LOCKED so the worker can retry later.
-            // NOTE: A locked *screen* (AFU) does NOT block Health Connect — CE keys
-            // remain in memory after the first unlock, so night-time exports work fine.
-            if (healthRepository.isBeforeFirstUnlock()) {
-                failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.DEVICE_LOCKED))
-                continue
-            }
-
-            try {
-                val effectiveSelection = settings.effectiveDataTypeSelection()
-                val healthData = healthRepository.fetchHealthData(date)
-                val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
-
-                if (!filteredData.hasAnyData) {
-                    failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.NO_HEALTH_DATA))
-                    continue
-                }
-
-                val success = exportRepository.exportHealthData(filteredData, settings)
-
-                if (success) {
-                    successCount++
-                    successfulDates += date
-                } else {
-                    failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.FILE_WRITE_ERROR))
-                }
-            } catch (e: CancellationException) {
-                return cancelledResult()
-            } catch (e: SecurityException) {
-                // Health Connect throws SecurityException when the device is locked or when
-                // Health Connect permissions are missing/incomplete, or background workers
-                // lack the dedicated background read permission.
-                val reason = classifySecurityException(e)
-                if (reason == ExportFailureReason.RATE_LIMITED) {
-                    markRemainingRateLimited(
-                        dates = dates,
-                        startIndex = index,
-                        totalDays = totalDays,
-                        error = e,
-                        failedDateDetails = failedDateDetails,
-                        onProgress = onProgress,
-                    )
-                    return ExportResult(
-                        successCount = successCount,
-                        totalCount = totalDays,
-                        failedDateDetails = failedDateDetails,
-                    )
-                }
-                failedDateDetails.add(
-                    FailedDateDetail(date, reason, e.message)
-                )
-            } catch (e: Exception) {
-                val reason = if (e.isHealthConnectRateLimit() || e.isLikelyHealthConnectRateLimit()) {
-                    ExportFailureReason.RATE_LIMITED
-                } else {
-                    classifyException(e)
-                }
-                if (reason == ExportFailureReason.RATE_LIMITED) {
-                    markRemainingRateLimited(
-                        dates = dates,
-                        startIndex = index,
-                        totalDays = totalDays,
-                        error = e,
-                        failedDateDetails = failedDateDetails,
-                        onProgress = onProgress,
-                    )
-                    return ExportResult(
-                        successCount = successCount,
-                        totalCount = totalDays,
-                        failedDateDetails = failedDateDetails,
-                    )
-                }
-                failedDateDetails.add(
-                    FailedDateDetail(date, reason, e.message)
-                )
-            }
-        }
-
-        return ExportResult(
-            successCount = successCount,
-            totalCount = totalDays,
-            failedDateDetails = failedDateDetails,
-        )
-    }
-
     suspend fun previewDates(
         dates: List<LocalDate>,
         settings: ExportSettings,
@@ -429,6 +285,14 @@ class ExportOrchestrator(
         val previewCandidates = normalizedDates.take(MAX_PREVIEW_FETCH_ATTEMPTS)
         val days = mutableListOf<ExportPreviewDay>()
         var attemptedDateCount = 0
+        val captureContext = try {
+            resolveOperationCaptureContext(settings)
+        } catch (_: SleepAttributionUnavailableException) {
+            return ExportPreview(requestedDateCount = normalizedDates.size, previewedDateCount = 0,
+                isTruncated = false, days = previewCandidates.map { ExportPreviewDay(it, failureReason = ExportFailureReason.UNKNOWN) })
+        }
+
+        val operationSettings = settings.withCaptureAuthority(captureContext)
 
         // Match iOS: show the most recent days with data, rendering at most five while
         // checking a wider window so an empty today does not make the preview look empty.
@@ -447,13 +311,15 @@ class ExportOrchestrator(
                         dates = listOf(date),
                         dataTypes = effectiveSelection,
                         includeGranularData = settings.shouldFetchGranularData(),
+                        zoneId = captureContext.zoneId,
+                        sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
                     ).firstOrNull() ?: HealthData(date)
-                    val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
+                    val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection, captureContext)
 
                     if (!filteredData.hasAnyData) {
                         ExportPreviewDay(date = date, failureReason = ExportFailureReason.NO_HEALTH_DATA)
                     } else {
-                        exportRepository.previewHealthData(filteredData, settings)
+                        exportRepository.previewHealthData(filteredData, operationSettings)
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -483,6 +349,18 @@ class ExportOrchestrator(
             days = days,
         )
     }
+
+    private fun ExportSettings.withCaptureAuthority(context: AndroidCaptureContext): ExportSettings = copy(
+        executionSleepCaptureContext = context,
+        executionSleepCaptureAuthorityIsFrozen = true,
+    )
+
+    private suspend fun resolveOperationCaptureContext(settings: ExportSettings): AndroidCaptureContext =
+        if (settings.executionSleepCaptureAuthorityIsFrozen || settings.executionSleepCaptureContext != null) {
+            AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
+        } else {
+            healthRepository.resolveCaptureContext().also { it.requireShippedProfile() }
+        }
 
     private fun folderFailure(
         dates: List<LocalDate>,

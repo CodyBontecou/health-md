@@ -71,7 +71,7 @@ enum ExportIntentRunner {
         /// Phase 4: profile-scoped runs build request settings from the
         /// profile's frozen snapshot instead of live settings.
         var makeSettingsForProfile: (ExportProfile) -> AdvancedExportSettings = { profile in
-            AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+            profile.settings.makeAdvancedExportSettings(userDefaults: .standard, forNewConfiguration: true)
         }
         /// Phase 4: adopt a profile's destinations (persisted vault keys +
         /// API endpoint) before a run; call with nil to adopt the active
@@ -130,7 +130,7 @@ enum ExportIntentRunner {
                     settings
                 },
                 makeSettingsForProfile: { profile in
-                    AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+                    profile.settings.makeAdvancedExportSettings(userDefaults: .standard, forNewConfiguration: true)
                 },
                 adoptProfileDestinations: { profile in
                     ExportIntentRunner.adoptDestinationsForIntentRun(profile)
@@ -222,6 +222,17 @@ enum ExportIntentRunner {
         profileName: String? = nil,
         dependencies: Dependencies
     ) async -> Outcome {
+        let context = AppleSleepCaptureContext.resolve(timeZone: dependencies.calendar.timeZone,
+                                                       attribution: HealthKitManager.shared.sleepDayAttribution)
+        do { try context.requireShippedProfile() }
+        catch { return .failure(reason: error.localizedDescription) }
+        return await AppleSleepCaptureContext.pinned.withValue(context) {
+            await runWithCaptureContext(dates: dates, source: source, profileName: profileName, dependencies: dependencies)
+        }
+    }
+
+    private static func runWithCaptureContext(dates: [Date], source: ExportSource,
+                                             profileName: String?, dependencies: Dependencies) async -> Outcome {
         guard !dates.isEmpty else {
             return .failure(reason: "No dates to export")
         }
@@ -417,6 +428,7 @@ enum ExportIntentRunner {
             dates: dates,
             source: .shortcut,
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
+            sleepCaptureContext: AppleSleepCaptureContext.pinned.wrappedValue,
             calendar: dependencies.calendar
         )
 

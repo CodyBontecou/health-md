@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -12,6 +13,11 @@ if (!configuredPluginRepo) {
   throw new Error("Set HEALTHMD_OBSIDIAN_PLUGIN_REPO to a checkout of CodyBontecou/health-md-visualizations.");
 }
 const pluginRepo = path.resolve(configuredPluginRepo);
+const externalSources = JSON.parse(await fs.readFile(path.join(websiteRoot, "external-sources.json"), "utf8"));
+const sourceRevision = externalSources.obsidian_plugin.revision;
+const actualRevision = execFileSync("git", ["rev-parse", "HEAD"], { cwd: pluginRepo, encoding: "utf8" }).trim();
+if (actualRevision !== sourceRevision) throw new Error("Plugin checkout must match the pinned external revision.");
+execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "styles.css"], { cwd: pluginRepo, stdio: "pipe" });
 const pluginSrc = path.join(pluginRepo, "src");
 const bundleOutfile = path.join(websiteRoot, "assets", "healthmd-plugin-visualizations.js");
 const appleBundleOutfile = path.join(
@@ -102,7 +108,7 @@ async function normalizeSourceMap(mapfile) {
     if (normalized.endsWith("/healthmd-viz-entry.ts")) return "healthmd-generated-entry.ts";
     const srcMarker = "/src/";
     if (normalized.includes(srcMarker)) {
-      return `${sourceRepository}/blob/main/src/${normalized.split(srcMarker).slice(1).join("/src/")}`;
+      return `${sourceRepository}/blob/${sourceRevision}/src/${normalized.split(srcMarker).slice(1).join("/src/")}`;
     }
     return normalized;
   });
@@ -135,7 +141,7 @@ async function loadPluginMetadata(esbuild, tmpDir) {
   const entry = path.join(tmpDir, "healthmd-viz-metadata-entry.ts");
   const outfile = path.join(tmpDir, "healthmd-viz-metadata.mjs");
   await fs.writeFile(entry, `
-import { VISUALIZATION_CATALOG, VISUALIZATION_CATEGORIES } from ${importPath(path.join(pluginSrc, "insert-wizard.ts"))};
+import { VISUALIZATION_CATALOG, VISUALIZATION_CATEGORIES } from ${importPath(path.join(pluginSrc, "visualization-catalog.ts"))};
 
 export const pluginMetadata = {
   categories: VISUALIZATION_CATEGORIES,
@@ -177,7 +183,7 @@ export const pluginMetadata = {
 await Promise.all([
   assertFile(path.join(pluginRepo, "styles.css")),
   assertFile(path.join(pluginSrc, "canvas-utils.ts")),
-  assertFile(path.join(pluginSrc, "insert-wizard.ts")),
+  assertFile(path.join(pluginSrc, "visualization-catalog.ts")),
   assertFile(path.join(pluginSrc, "parsers", "json-parser.ts")),
   assertFile(path.join(pluginSrc, "parsers", "rollup-parser.ts")),
   assertFile(path.join(pluginSrc, "visualizations", "index.ts")),
@@ -203,6 +209,7 @@ try {
     schema: "healthmd.visualization_catalog",
     schemaVersion: 1,
     sourceRepository,
+    sourceRevision,
     categories: metadata.categories,
     visualizations: metadata.catalog,
     rollupOnlyIds: metadata.rollupOnlyIds,
@@ -227,6 +234,7 @@ declare global {
 window.HealthMdPluginVisualizations = {
   source: ${JSON.stringify(sourceLabel)},
   sourceRepo: ${JSON.stringify(sourceRepository)},
+  sourceRevision: ${JSON.stringify(sourceRevision)},
   generatedBy: "website/scripts/build-plugin-visualizations.mjs",
   colorSchemes: COLOR_SCHEMES,
   resolveTheme,

@@ -573,8 +573,46 @@ struct ExportTabView: View {
 
                 dataDetailInlineRow
                     .configurationChangesProtected()
+
+                rowDivider()
+
+                sleepDayAttributionInlineRow
+                    .configurationChangesProtected()
             }
         }
+    }
+
+    /// Issue #104: chooses which daily note owns a midnight-spanning sleep
+    /// session. Stored on the capturing device and applied to every capture
+    /// path (manual, scheduled, connected, direct, and App Intents).
+    private var sleepDayAttributionInlineRow: some View {
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            inlineIcon("moon.zzz", isActive: healthKitManager.sleepDayAttribution == .morningEnds)
+
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                Picker("Sleep Day Attribution", selection: Binding(
+                    get: { healthKitManager.sleepDayAttribution },
+                    set: { mode in
+                        if mode.isAvailableForShippedProfiles { healthKitManager.setSleepDayAttribution(mode) }
+                    }
+                )) {
+                    ForEach(SleepDayAttribution.allCases, id: \.rawValue) { mode in
+                        Text(mode.localizedDisplayName).tag(mode)
+                            .disabled(!mode.isAvailableForShippedProfiles)
+                    }
+                }
+                .pickerStyle(.menu)
+                .font(.body.weight(.semibold))
+                .accessibilityIdentifier(AccessibilityID.Export.sleepDayAttributionPicker)
+                .accessibilityHint(healthKitManager.sleepDayAttribution.localizedDescription)
+
+                Text(healthKitManager.sleepDayAttribution.localizedDescription)
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.vertical, Spacing.s3)
     }
 
     private var dataDetailInlineRow: some View {

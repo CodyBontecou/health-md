@@ -246,6 +246,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             source: .scheduled,
             scheduledFireDate: date(year: 2026, month: 8, day: 10, hour: 8),
             exportTarget: .apiEndpoint,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
             profileID: profileID,
             profileName: "Daily",
             apiDestinationIdentity: ScheduledAPIEndpointIdentity(
@@ -735,6 +736,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             settingsSnapshot: ExportSettingsSnapshot.from(
                 AdvancedExportSettings(userDefaults: defaults)
             ),
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
             profileID: profileID,
             profileName: "Daily",
             apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil)
@@ -1205,6 +1207,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             scheduledKind: .completedDay,
             createdAt: date(year: 2026, month: 8, day: 10, hour: 9),
             exportTarget: .apiEndpoint,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
             profileID: profileID,
             profileName: "Daily",
             apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil),
@@ -1266,6 +1269,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                 scheduledKind: .completedDay,
                 createdAt: date(year: 2026, month: 8, day: 10, hour: 8, minute: 30),
                 exportTarget: .apiEndpoint,
+                sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
                 profileID: profileID,
                 profileName: profileID == firstProfileID ? "First" : "Second",
                 apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil),
@@ -1538,7 +1542,9 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         func request(_ profileID: UUID) -> PendingExportRequest {
             PendingExportRequest(dates: [date(year: 2026, month: 8, day: 9)], source: .scheduled,
                 scheduledFireDate: date(year: 2026, month: 8, day: 10, hour: 8),
-                exportTarget: .localIPhoneFolder, profileID: profileID)
+                exportTarget: .localIPhoneFolder,
+                sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
+                profileID: profileID, calendar: calendar)
         }
         let running = request(first)
         let waiting = request(second)
@@ -1627,7 +1633,9 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         let fire = date(year: 2026, month: 8, day: 9, hour: 22)
         let request = PendingExportRequest(dates: [fire], source: .scheduled,
             scheduledFireDate: fire, scheduledKind: .todayRefresh,
-            exportTarget: .apiEndpoint, profileID: profileID,
+            exportTarget: .apiEndpoint,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: ownerCalendar.timeZone, sleepDayAttribution: .nightBegins),
+            profileID: profileID,
             apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil),
             calendar: ownerCalendar)
         try harness.pendingStore.upsert(request)

@@ -118,6 +118,120 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(manager.freeExportsRemaining, 7)
     }
 
+    func testOwnedDirectCompletionRetriesQuotaFailureAndRejectsReplacement() throws {
+        let manager = makeManager()
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let original = Data("transferring".utf8)
+        var current = AppleExportJournalCheckpoint()
+        try current.publish(original, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        let execution = current
+        let completionIdentity = try XCTUnwrap(execution.completionIdentity)
+        keychain.nextWriteStringError = POSIXError(.EIO)
+        XCTAssertThrowsError(try execution.withCheckpointOwnership {
+            try manager.recordExportUse(jobID: completionIdentity)
+            try current.publish(Data("completed".utf8), to: destination,
+                freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        })
+        XCTAssertEqual(manager.freeExportsUsed, 0)
+        XCTAssertEqual(try Data(contentsOf: destination), original)
+        // Simulate quota persistence followed by interruption before checkpoint publication.
+        XCTAssertThrowsError(try execution.withCheckpointOwnership {
+            try manager.recordExportUse(jobID: completionIdentity)
+            throw POSIXError(.EINTR)
+        })
+        XCTAssertEqual(manager.freeExportsUsed, 1)
+        let reopened = makeManager()
+        try execution.withCheckpointOwnership {
+            try reopened.recordExportUse(jobID: completionIdentity)
+            try current.publish(Data("completed".utf8), to: destination,
+                freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        }
+        XCTAssertEqual(reopened.freeExportsUsed, 1)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        let replacementBytes = original
+        try replacement.publish(replacementBytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        var callbackCalled = false
+        XCTAssertThrowsError(try execution.withCheckpointOwnership {
+            callbackCalled = true
+            try reopened.recordExportUse(jobID: UUID())
+        })
+        XCTAssertFalse(callbackCalled)
+        XCTAssertEqual(reopened.freeExportsUsed, 1)
+        XCTAssertEqual(try Data(contentsOf: destination), replacementBytes)
+        let replacementIdentity = try XCTUnwrap(replacement.completionIdentity)
+        XCTAssertNotEqual(replacementIdentity, completionIdentity)
+        try replacement.withCheckpointOwnership {
+            try reopened.recordExportUse(jobID: replacementIdentity)
+        }
+        let restarted = makeManager()
+        try replacement.withCheckpointOwnership {
+            try restarted.recordExportUse(jobID: replacementIdentity)
+        }
+        XCTAssertEqual(restarted.freeExportsUsed, 2)
+    }
+
+    func testLegacyDirectRecoveryReusesPreviouslyChargedQuotaReceipt() throws {
+        struct HistoricalJob: Codable { let jobID: UUID }
+        let manager = makeManager()
+        let jobID = UUID()
+        try manager.recordExportUse(jobID: jobID)
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let destination = root.appendingPathComponent("journal.json")
+        let bytes = try JSONEncoder().encode(HistoricalJob(jobID: jobID))
+        try bytes.write(to: destination)
+        let recovered = try XCTUnwrap(AppleExportJournalRecovery.loadOwned(at: destination,
+            lockURL: root.appendingPathComponent(".publication.lock"), durabilityRoot: root,
+            legacyCompletionIdentity: { $0.jobID },
+            isSupported: { (saved: HistoricalJob) in saved.jobID == jobID }))
+        let identity = try XCTUnwrap(recovered.checkpoint.completionIdentity)
+        XCTAssertEqual(identity, jobID)
+        let restarted = makeManager()
+        try recovered.checkpoint.withCheckpointOwnership {
+            try restarted.recordExportUse(jobID: identity)
+        }
+        XCTAssertEqual(restarted.freeExportsUsed, 1)
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
+    func testSameGenerationCancellationBlocksDirectCompletionQuota() throws {
+        let manager = makeManager()
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let destination = root.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        var execution = AppleExportJournalCheckpoint()
+        try execution.publish(Data("transferring".utf8), to: destination,
+            freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var cancelled = execution
+        let cancelledBytes = Data("cancelled".utf8)
+        try cancelled.publish(cancelledBytes, to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        XCTAssertEqual(execution.generation, cancelled.generation)
+        var completionCalled = false
+        XCTAssertThrowsError(try execution.withCheckpointOwnership {
+            completionCalled = true
+            try manager.recordExportUse(jobID: UUID())
+        }) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+        }
+        XCTAssertFalse(completionCalled)
+        XCTAssertEqual(manager.freeExportsUsed, 0)
+        XCTAssertEqual(try Data(contentsOf: destination), cancelledBytes)
+    }
+
     func testRecordedDurableJobCanResumeAfterQuotaIsExhausted() throws {
         let manager = makeManager()
         let recordedJobID = UUID()

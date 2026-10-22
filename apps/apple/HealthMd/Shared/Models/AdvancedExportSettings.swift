@@ -473,6 +473,11 @@ class AdvancedExportSettings: ObservableObject {
     /// persisted; local exports continue using the device's current time zone.
     var exportTimeZoneOverride: TimeZone? = nil
 
+    /// Operation-only authority; never persisted as a device preference or
+    /// imported from portable setup. Frozen-but-missing is explicitly unavailable.
+    var executionSleepCaptureContext: AppleSleepCaptureContext? = nil
+    var executionSleepCaptureContextIsFrozen = false
+
     /// Request-scoped durable renderer provenance. It is never written to UserDefaults; queued,
     /// connected, and direct operations restore it only from their immutable settings snapshot.
     var executionAppleExportEnginePin: AppleExportEnginePin? = nil
@@ -611,6 +616,8 @@ class AdvancedExportSettings: ObservableObject {
         generateRangeSummary = snapshot.generateRangeSummary
         executionAppleExportEnginePin = snapshot.appleExportEnginePin
         executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
+        executionSleepCaptureContext = snapshot.sleepCaptureContext
+        executionSleepCaptureContextIsFrozen = true
         exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
 
         subscribeToMetricSelection()
@@ -646,6 +653,9 @@ class AdvancedExportSettings: ObservableObject {
         generateRangeSummary = snapshot.generateRangeSummary
         executionAppleExportEnginePin = snapshot.appleExportEnginePin
         executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
+        // Loading an editable profile is new configuration, not durable recovery.
+        executionSleepCaptureContext = nil
+        executionSleepCaptureContextIsFrozen = false
         exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
     }
 

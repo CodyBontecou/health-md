@@ -283,7 +283,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         )
         let operation = try unwrapPlanned(try await planner.planRange(
             healthData: [ExportFixtures.partialDay],
-            dailyOutputOwnerDates: [],
+            dailyOutputOwnerDates: ["2026-03-15"],
             settingsSnapshot: snapshot,
             surface: .localVaultRangeWithoutSideEffects
         ))

@@ -1109,7 +1109,7 @@
 				MARKETING_VERSION = 3.4.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphonesimulator;
+				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -2034,7 +2034,7 @@
 				MARKETING_VERSION = 3.4.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.obsidianhealth;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphonesimulator;
+				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;

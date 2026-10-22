@@ -387,7 +387,7 @@ class ExportProfilesViewModel @Inject constructor(
      * target and endpoint. Capture also freezes the currently planned engine authority, matching
      * every other profile creation path; a null frozen pin remains reserved for explicit legacy.
      */
-    private fun encodeDraftSnapshot(draft: ExportProfileEditorDraft): String {
+    private suspend fun encodeDraftSnapshot(draft: ExportProfileEditorDraft): String {
         val scoped = draft.settings.copy(
             exportTarget = draft.target,
             scheduledExportTarget = draft.target,

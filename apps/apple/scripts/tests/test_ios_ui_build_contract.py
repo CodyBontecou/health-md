@@ -194,6 +194,17 @@ class ArtifactQualificationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source SHA"):
             qualify(self.derived, "branch-name")
 
+    def test_owned_product_root_can_contain_double_underscores(self) -> None:
+        derived = self.derived / "owned__ui__artifacts"
+        derived.mkdir()
+        (derived / BUILD_MARKER).touch()
+        manifest, _ = make_products(derived)
+        original = manifest.read_bytes()
+        selected, receipt = qualify(derived, SOURCE_SHA)
+        self.assertEqual(selected, manifest)
+        self.assertEqual(receipt["source_sha"], SOURCE_SHA)
+        self.assertEqual(manifest.read_bytes(), original)
+
     def test_literal_double_underscores_in_build_root_are_not_placeholders(self) -> None:
         derived = self.derived.parent / "fresh__derived__data"
         derived.mkdir()

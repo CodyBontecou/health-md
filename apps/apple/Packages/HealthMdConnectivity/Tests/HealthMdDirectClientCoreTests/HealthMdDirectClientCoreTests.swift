@@ -324,7 +324,18 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
                 timeout: 10
             )
         }
-        try await Task.sleep(nanoseconds: 400_000_000)
+        // Cancellation must target the accepted active listener, not elapsed startup time.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(5))
+        var accepted = false
+        while clock.now < deadline {
+            if let record = try? await controller.jobRecord(jobID: request.jobID), record.state == .accepted {
+                accepted = true
+                break
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertTrue(accepted, "The authenticated export must be accepted before cancellation")
         try await controller.cancel(
             jobID: request.jobID,
             deviceID: clientID,

@@ -5,6 +5,63 @@ import XCTest
 
 @MainActor
 final class HealthMdRenderInputAdapterTests: XCTestCase {
+    func testWakeDateNativeStagesReachEveryFormatWithoutLosingMetadataOrClocks() throws {
+        let service = HealthMdCoreService()
+        let registry = try service.metricRegistry(profile: .appleHealthDataV11, expectedRegistryVersion: 2)
+        let context = AppleSleepCaptureContext(timeZone: TimeZone(secondsFromGMT: 0)!, sleepDayAttribution: .morningEnds)
+        let formatter = ExportDateFormatting.utcISO8601Formatter()
+        let owner = try XCTUnwrap(formatter.date(from: "2026-07-25T00:00:00Z"))
+        let start = owner.addingTimeInterval(-3600.25)
+        let end = owner.addingTimeInterval(0.75)
+        let data = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: TimeZone(identifier: context.calendarTimeZoneIdentifier)!, sleepDayAttribution: .morningEnds),
+            sleep: SleepData(totalDuration: 3601, coreSleep: 3601, sessionStart: start, sessionEnd: end,
+                stages: [SleepStageSample(stage: "core", startDate: start, endDate: end,
+                    metadata: ["note": "synthetic \"quoted\" | source"])]))
+        let selection = MetricSelectionState()
+        selection.enabledMetrics = ["sleep_core", "sleep_total"]
+        let customization = FormatCustomization()
+        customization.markdownTemplate.style = .custom
+        customization.markdownTemplate.customTemplate = "# My summary\n"
+        let config = try HealthMdSemanticInputAdapter.sessionConfiguration(sessionID: "apple-stage-detail",
+            selection: selection, registry: registry, customization: customization,
+            calendarTimeZoneIdentifier: "GMT", retainPlatformExtensions: false, rollupPeriods: [], captureContext: context)
+        let batch = try HealthMdSemanticInputAdapter.batch(sessionID: "apple-stage-detail", batchIndex: 0,
+            finalBatch: true, healthData: [data], registry: registry, customization: customization,
+            calendarTimeZoneIdentifier: "GMT", captureContext: context)
+        let semantic = try service.semanticSession(configuration: config).process(batch: batch.data)
+        let encoded = try HealthMdRenderInputAdapter.encode(semanticResult: semantic, registry: registry,
+            calendarTimeZoneIdentifier: "GMT", options: .init(requestID: "apple-stage-detail",
+                formats: ["json", "csv", "markdown", "obsidian_bases"], customTemplate: "# My summary\n"),
+            presentationByOwnerDate: ["2026-07-25": data], presentationCustomization: customization, captureContext: context)
+        let session = try service.renderSession(configuration: encoded.configuration, semanticResult: semantic)
+        for bytes in encoded.batches { _ = try session.process(batch: bytes) }
+        let plan = try session.finish()
+        let texts = plan.items.map { String(decoding: $0.content, as: UTF8.self) }
+        let csv = try XCTUnwrap(texts.first { $0.contains(",Sleep Detail,Sleep Stage,") })
+        XCTAssertTrue(csv.contains("2026-07-24T22:59:59.750000000Z"))
+        XCTAssertTrue(csv.contains("2026-07-25T00:00:00.750000000Z"))
+        XCTAssertTrue(csv.contains("note"))
+        let markdown = try XCTUnwrap(texts.first { $0.contains("Sleep Stage Details") })
+        XCTAssertEqual(markdown.components(separatedBy: "Sleep Stage Details").count - 1, 1)
+        XCTAssertTrue(markdown.contains("| core |"))
+        let bases = try XCTUnwrap(texts.first { $0.contains("sleep_stage_details") })
+        XCTAssertTrue(bases.contains("synthetic"))
+        XCTAssertTrue(bases.contains("3601"))
+        let json = try XCTUnwrap(plan.items.first { $0.relativePath.hasSuffix(".json") })
+        XCTAssertEqual(json.content, try data.toJSONDataThrowing(customization: customization, captureContext: context))
+        for invalidStages in [
+            [SleepStageSample(stage: "deep", startDate: start, endDate: end)],
+            Array(repeating: data.sleep.stages[0], count: 1500),
+        ] {
+            var invalid = data
+            invalid.sleep.stages = invalidStages
+            XCTAssertThrowsError(try HealthMdRenderInputAdapter.encode(semanticResult: semantic, registry: registry,
+                calendarTimeZoneIdentifier: "GMT", options: .init(requestID: "apple-stage-detail",
+                    formats: ["json", "csv", "markdown", "obsidian_bases"]),
+                presentationByOwnerDate: ["2026-07-25": invalid], presentationCustomization: customization, captureContext: context))
+        }
+    }
+
     func testCapturedDayRendersAllFormatsThroughPackagedRustPlan() throws {
         let service = HealthMdCoreService()
         let registry = try HealthMdCoreRegistryAdapter.appleSnapshot(service: service)

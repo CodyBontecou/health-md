@@ -1,5 +1,6 @@
 package com.healthmd.domain.exportengine
 
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.BulletStyle
 import com.healthmd.domain.model.CompatibilitySchemaProfile
@@ -76,6 +77,8 @@ data class AndroidExportSettingsSnapshot(
     val folderOrganization: FolderOrganization,
     val enginePin: ExportEnginePin? = null,
     val ianaTimeZone: String,
+    /** Snapshot-v2 capture authority; missing v1/draft authority is never synthesized on decode. */
+    val sleepCaptureContext: AndroidCaptureContext? = null,
 ) {
     /**
      * Applies only frozen output choices. Current folder grants, endpoint URL/credentials, schedule
@@ -119,17 +122,22 @@ data class AndroidExportSettingsSnapshot(
             folderOrganization = frozen.folderOrganization,
             executionEnginePin = null,
             executionEngineAuthorityIsFrozen = true,
+            executionSleepCaptureContext = frozen.sleepCaptureContext,
+            executionSleepCaptureAuthorityIsFrozen = true,
         )
     }
 
     companion object {
+        // Preserve v1 encoding for legacy callers/journal identity comparisons.
         const val CURRENT_VERSION: Int = 1
+        const val CAPTURE_AUTHORITY_VERSION: Int = 2
 
         /** Captures and size-validates every non-secret output setting before provider reads begin. */
         fun capture(
             settings: ExportSettings,
             pin: ExportEnginePin?,
             zone: ZoneId,
+            captureContext: AndroidCaptureContext? = settings.executionSleepCaptureContext,
         ): AndroidExportSettingsSnapshot {
             val canonicalZone = runCatching { ZoneId.of(zone.id).id }.getOrElse {
                 throw AndroidExportSettingsSnapshotException(
@@ -138,6 +146,8 @@ data class AndroidExportSettingsSnapshot(
             }
             val operationProfile = settings.expectedScheduledExportProfile()
             val snapshot = AndroidExportSettingsSnapshot(
+                version = if (captureContext == null) CURRENT_VERSION else CAPTURE_AUTHORITY_VERSION,
+                sleepCaptureContext = captureContext,
                 exportMode = settings.exportMode,
                 exportProfile = operationProfile,
                 rawSnapshot = settings.rawSnapshot.normalized().copy(),
@@ -397,7 +407,17 @@ object AndroidExportSettingsSnapshotCodec {
         )
 
     fun isStructurallyValid(snapshot: AndroidExportSettingsSnapshot): Boolean = runCatching {
-        if (snapshot.version != AndroidExportSettingsSnapshot.CURRENT_VERSION) return false
+        when (snapshot.version) {
+            AndroidExportSettingsSnapshot.CURRENT_VERSION -> if (snapshot.sleepCaptureContext != null) return false
+            AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION -> {
+                val context = snapshot.sleepCaptureContext ?: return false
+                if (context.zoneId.id != snapshot.ianaTimeZone) return false
+                // Current snapshot export profiles are immutable v4/v5. They cannot carry wake-date authority.
+                if (context.sleepDayAttribution != com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS) return false
+                if (context.exportProfileID != null && context.exportProfileID != snapshot.exportProfile.publicProfileId) return false
+            }
+            else -> return false
+        }
         if (snapshot.ianaTimeZone.length > MAX_TIME_ZONE_CHARACTERS) return false
         if (ZoneId.of(snapshot.ianaTimeZone).id != snapshot.ianaTimeZone) return false
         if (snapshot.rawSnapshot.pageSize !in RawSnapshotSettings.MIN_PAGE_SIZE..RawSnapshotSettings.MAX_PAGE_SIZE) {

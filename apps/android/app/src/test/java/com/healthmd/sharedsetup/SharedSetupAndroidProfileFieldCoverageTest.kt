@@ -274,6 +274,8 @@ class SharedSetupAndroidProfileFieldCoverageTest {
             FieldKey("DataTypeSelection", "hasAnySelected"),
             FieldKey("ExportSettings", "executionEngineAuthorityIsFrozen"),
             FieldKey("ExportSettings", "executionEnginePin"),
+            FieldKey("ExportSettings", "executionSleepCaptureAuthorityIsFrozen"),
+            FieldKey("ExportSettings", "executionSleepCaptureContext"),
             FieldKey("ExportSettings", "selectedExportFormats"),
             FieldKey("FormatCustomization", "unitConverter"),
             FieldKey("IndividualTrackingSettings", "rawTrackedMetricIds"),

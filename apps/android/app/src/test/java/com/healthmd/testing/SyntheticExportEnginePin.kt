@@ -16,6 +16,8 @@ internal fun syntheticExportEnginePin(
     publicSchemaVersion = when (profile) {
         AndroidExportProfile.android_frozen_v4 -> 4u
         AndroidExportProfile.android_analytical_v5 -> 5u
+        AndroidExportProfile.android_sleep_v6 ->
+            error("Historical migration fixtures cannot manufacture a successor pin")
     },
     coreApiVersion = 4u,
     semanticInputVersion = 1u,

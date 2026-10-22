@@ -30,7 +30,11 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            ["core.shared-rust-profile-engine", "setup.share-portable-configuration"]
+            [
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+                "settings.sleep-attribution",
+            ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
         XCTAssertEqual(
@@ -47,6 +51,9 @@ final class ProductCapabilityManifestTests: XCTestCase {
             "shared"
         )
 
+        let sleepAttributionCapability = inventory.capabilities.first { $0.id == "settings.sleep-attribution" }
+        XCTAssertEqual(sleepAttributionCapability?.classification, "planned")
+        XCTAssertEqual(sleepAttributionCapability?.profiles, [])
         XCTAssertEqual(
             inventory.capabilities.first { $0.id == "direct.full_public_authorized_corpus" }?.classification,
             "shared"
@@ -143,7 +150,12 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "core.shared-rust-profile-engine", "setup.share-portable-configuration"])
+            .union([
+                "source.private-platform-database",
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+                "settings.sleep-attribution",
+            ])
     }
 
     private enum ManifestError: Error {
@@ -171,6 +183,7 @@ private struct CapabilityInventory: Decodable {
     struct Capability: Decodable {
         let id: String
         let classification: String
+        let profiles: [String]
         let platforms: Platforms
     }
 
