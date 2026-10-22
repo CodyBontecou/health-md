@@ -261,13 +261,14 @@ final class CIQualityGateTests: XCTestCase {
             "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
             "HealthMdUILaunchTests/testAppLaunches",
             "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
+            "ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport",
             "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
             "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
             "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
             "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
             "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
         ]
-        XCTAssertEqual(selections.count, 14, "PR smoke must preserve every selected UI regression exactly once")
+        XCTAssertEqual(selections.count, 15, "PR smoke must preserve every selected UI regression exactly once")
         XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the exact historical UI inventory")
         XCTAssertTrue(content.contains("needs: [changes, ios-ui-shards]"))
         XCTAssertTrue(content.contains("test \"$SHARDS_RESULT\" = success"))

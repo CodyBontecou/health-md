@@ -31,7 +31,7 @@ class UiCoverageTests(unittest.TestCase):
     def test_exact_existing_inventory_is_disjoint_and_complete(self):
         actual = [name for lane in shards.SHARDS for name in lane]
         self.assertEqual(set(actual), set(EXPECTED_TESTS))
-        self.assertEqual(len(actual), 14)
+        self.assertEqual(len(actual), 15)
         self.assertEqual(len(actual), len(set(actual)))
         self.assertEqual(len(shards.SHARDS), 3)
         self.assertTrue(all(shards.SHARDS))
@@ -96,9 +96,9 @@ class UiAggregateTests(unittest.TestCase):
         path.write_text(json.dumps(value))
         return path
 
-    def test_all_exact_head_shards_verify_fourteen_passes(self):
+    def test_all_exact_head_shards_verify_fifteen_passes(self):
         result = shards.verify_shards(self.root, "12", "1", SHA)
-        self.assertEqual(result["passed"], 14)
+        self.assertEqual(result["passed"], 15)
         self.assertEqual(result["cases"], sorted(EXPECTED_TESTS))
 
     def test_wrong_head_run_attempt_and_shard_are_rejected(self):
