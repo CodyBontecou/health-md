@@ -5,10 +5,7 @@ lead: "The CSV export is the bridge: one file per day, ready for Sheets."
 date: "2026-09-26T12:00:00.000Z"
 updated: "2026-09-26T12:00:00.000Z"
 category: "Workflow guide"
-draft: false
-verified: "2026-09-26"
-verified_by: "Edison (agent)"
-verified_method: mixed
+draft: true
 tags:
   - healthmd
   - apple-health
