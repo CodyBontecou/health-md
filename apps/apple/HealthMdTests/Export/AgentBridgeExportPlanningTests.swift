@@ -621,6 +621,89 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         if let failure { throw failure }
     }
 
+    func testNativePendingAcknowledgementReconcilesExactLostAckWithoutSDK() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let transfer = try await planner.prepareTransferExport(request, manager: manager)
+            let partition = transfer.partitions[0]
+            let ack = try DirectTransferPartitionAcknowledgement(sessionID: transfer.session.sessionID, jobID: transfer.session.jobID,
+                partitionIndex: partition.index, transferID: partition.transferID, partitionSHA256: partition.sha256, accepted: true)
+            let directory = rig.directory.appendingPathComponent("captures/" + transfer.export.requestSHA256)
+            let progress = directory.appendingPathComponent("progress.json")
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin(); _ = try context.preserveTransferFrontier()
+                try context.preserveAwaitingPartitionAcknowledgement(0)
+                XCTAssertEqual(try context.preserveTransferFrontier().committedPartitionCount, 0)
+            }
+            let pending = try Data(contentsOf: directory.appendingPathComponent("partition-awaiting-ack.json"))
+            store.querySumResult = { _, _ in XCTFail("No SDK while reconciling original ACK"); return nil }
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin()
+                XCTAssertEqual(try context.reconcilePartitionAcknowledgement(ack).committedPartitionCount, 1)
+            }
+            let committed = try Data(contentsOf: progress)
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin()
+                XCTAssertEqual(try context.reconcilePartitionAcknowledgement(ack).committedPartitionCount, 1)
+            }
+            XCTAssertEqual(try Data(contentsOf: progress), committed)
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("partition-awaiting-ack.json")), pending)
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("transfer.json")), transfer.checkpointCanonical)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
+    func testNativePendingAcknowledgementRejectsUnprepared() async throws { try await checkNativePendingAcknowledgementDamage("unprepared") }
+    func testNativePendingAcknowledgementRejectsDeleted() async throws { try await checkNativePendingAcknowledgementDamage("deleted") }
+    func testNativePendingAcknowledgementRejectsCorrupt() async throws { try await checkNativePendingAcknowledgementDamage("corrupt") }
+    func testNativePendingAcknowledgementRejectsSession() async throws { try await checkNativePendingAcknowledgementDamage("session") }
+    func testNativePendingAcknowledgementRejectsJob() async throws { try await checkNativePendingAcknowledgementDamage("job") }
+    func testNativePendingAcknowledgementRejectsTransfer() async throws { try await checkNativePendingAcknowledgementDamage("transfer") }
+    func testNativePendingAcknowledgementRejectsHash() async throws { try await checkNativePendingAcknowledgementDamage("hash") }
+    func testNativePendingAcknowledgementRejectsAhead() async throws { try await checkNativePendingAcknowledgementDamage("ahead") }
+    func testNativePendingAcknowledgementRejectsRejected() async throws { try await checkNativePendingAcknowledgementDamage("rejected") }
+    func testNativePendingAcknowledgementRejectsOlder() async throws { try await checkNativePendingAcknowledgementDamage("older") }
+    private func checkNativePendingAcknowledgementDamage(_ mode: String) async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+            let transfer = try await planner.prepareTransferExport(request, manager: manager)
+            func ack(_ index: Int) throws -> DirectTransferPartitionAcknowledgement {
+                let partition = transfer.partitions[index]
+                return try .init(sessionID: mode == "session" ? UUID() : transfer.session.sessionID,
+                    jobID: mode == "job" ? UUID() : transfer.session.jobID,
+                    partitionIndex: mode == "ahead" ? 1 : partition.index,
+                    transferID: mode == "transfer" ? UUID() : partition.transferID,
+                    partitionSHA256: mode == "hash" ? String(repeating: "0", count: 64) : partition.sha256,
+                    accepted: mode != "rejected")
+            }
+            let directory = rig.directory.appendingPathComponent("captures/" + transfer.export.requestSHA256)
+            let pending = directory.appendingPathComponent("partition-awaiting-ack.json")
+            try await planner.withRetainedCaptureContext(request) { context in
+                _ = try context.begin(); _ = try context.preserveTransferFrontier()
+                if mode != "unprepared" { try context.preserveAwaitingPartitionAcknowledgement(0) }
+                if mode == "older" {
+                    _ = try context.reconcilePartitionAcknowledgement(ack(0))
+                    try context.preserveAwaitingPartitionAcknowledgement(1)
+                    _ = try context.reconcilePartitionAcknowledgement(ack(1))
+                }
+            }
+            if mode == "deleted" { try FileManager.default.removeItem(at: pending) }
+            if mode == "corrupt" { try Data("corrupt".utf8).write(to: pending) }
+            let original = try? Data(contentsOf: pending)
+            let progress = try Data(contentsOf: directory.appendingPathComponent("progress.json"))
+            store.querySumResult = { _, _ in XCTFail("No SDK for rejected ACK"); return nil }
+            do {
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin(); _ = try context.reconcilePartitionAcknowledgement(ack(0))
+                }
+                XCTFail("Invalid pending ACK returned: " + mode)
+            } catch { XCTAssertNotNil(error as? AgentBridgeValidationError) }
+            XCTAssertEqual(try? Data(contentsOf: pending), original)
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), progress)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
     func testNativeTransferFrontierMigratesV5AndRecoversExactPrefixWithoutSDKOrRewrite() async throws {
         try await withNativeExportPreparation { rig, planner, request, store, manager in
             store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
@@ -701,6 +784,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testNativeTransferSenderHandlesNeededThenAlreadyCommittedWithHistoricalPendingMarker() async throws { try await checkNativeTransferSender("mixed") }
     func testNativeTransferSenderCarriesOriginalBytesWithoutCompletionClaim() async throws {
         try await checkNativeTransferSender("needed")
     }
@@ -763,7 +847,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             let key = SymmetricKey(data: Data(repeating: 19, count: 32))
             var responses: [DirectMessage] = []
             for partition in original.partitions {
-                let already = mode == "already" || (mode == "resume" && partition.index == 0)
+                let already = mode == "already" || (mode == "resume" && partition.index == 0) || (mode == "mixed" && partition.index > 0)
                 responses.append(.transferDisposition(try .init(sessionID: original.session.sessionID,
                     jobID: mode == "bad-disposition" ? UUID() : original.session.jobID, partitionIndex: partition.index,
                     partitionSHA256: partition.sha256, disposition: already ? .alreadyCommitted : .needed)))
@@ -857,6 +941,12 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     chunks.append(try DirectTransferBinaryFrame.decode(bytes).chunk)
                 } else { messages.append(try decoder.decode(DirectMessage.self, from: bytes)) }
             }
+            if mode == "mixed" {
+                try await reconnect.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin()
+                    XCTAssertEqual(try context.preserveTransferFrontier().committedPartitionCount, Int64(original.partitions.count))
+                }
+            }
             XCTAssertEqual(messages.first, .transferSession(original.session))
             XCTAssertEqual(Array(messages.dropFirst().prefix(original.export.baseFiles.count)), original.export.baseFiles.map { .fileManifest($0.manifest) })
             XCTAssertEqual(messages.filter { if case .completionConfirmed = $0 { return true }; return false }.count, completion && !fails ? 1 : 0)
@@ -892,7 +982,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 XCTAssertEqual(try Data(contentsOf: completionDirectory.appendingPathComponent("completion.json")), before)
             }
             if !fails {
-                XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count - (mode == "resume" ? 1 : 0))
+                XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count - (["resume", "mixed"].contains(mode) ? 1 : 0))
                 for (chunk, file) in zip(chunks, original.export.baseFiles.dropFirst(mode == "resume" ? 1 : 0)) { XCTAssertEqual(chunk.sequence, 1); XCTAssertEqual(chunk.data, file.content); XCTAssertEqual(chunk.sha256, file.manifest.sha256) }
                 XCTAssertEqual(wire.receiveCount, responses.count + (completion ? hostReceipts.count : 0))
             }

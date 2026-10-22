@@ -392,13 +392,16 @@ internal class AgentBridgeNativePlanningSession(
                 channel.sendTransferChunkForAgentBridge(partition.transferId, 1, file.content, negotiation, validate)
                 val chunk = receive("transfer_chunk_acknowledgement", TransferChunkAcknowledgement.serializer())
                 if (!chunk.accepted || chunk.transferId != partition.transferId || chunk.sequence != 1 || chunk.sha256 != partition.sha256) invalid()
+                context.preserveAwaitingPartitionAcknowledgement(partition.index)
                 send("transfer_partition_complete", TransferPartitionComplete.serializer(), TransferPartitionComplete(
                     transfer.session.sessionId, transfer.session.jobId, partition.index, partition.transferId, partition.sha256))
                 val ack = receive("transfer_partition_acknowledgement", TransferPartitionAcknowledgement.serializer())
                 if (!ack.accepted || ack.sessionId != transfer.session.sessionId || ack.jobId != transfer.session.jobId ||
                     ack.partitionIndex != partition.index || ack.transferId != partition.transferId || ack.partitionSha256 != partition.sha256) invalid()
+                frontier = context.reconcilePartitionAcknowledgement(ack)
+            } else {
+                frontier = context.recordAcknowledgedTransferPartition(partition.index)
             }
-            frontier = context.recordAcknowledgedTransferPartition(partition.index)
         }
         if (frontier.committedPartitionCount != transfer.partitions.size.toLong()) invalid()
         val finalize = TransferFinalize(transfer.session.sessionId, transfer.session.jobId, transfer.session.requestFingerprint,
@@ -598,6 +601,14 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
             val result = spool.preserveTransferFrontier()
             configurationForRead(); return result
         } catch (failure: Throwable) { invalidate(); throw failure }
+    }
+    fun preserveAwaitingPartitionAcknowledgement(index: Long) {
+        try { configurationForRead(); spool.preserveAwaitingPartitionAcknowledgement(index); configurationForRead() }
+        catch (failure: Throwable) { invalidate(); throw failure }
+    }
+    fun reconcilePartitionAcknowledgement(ack: TransferPartitionAcknowledgement): AgentBridgeTransferFrontier {
+        try { configurationForRead(); val result = spool.reconcilePartitionAcknowledgement(ack); configurationForRead(); return result }
+        catch (failure: Throwable) { invalidate(); throw failure }
     }
     fun recordAcknowledgedTransferPartition(index: Long): AgentBridgeTransferFrontier {
         try {

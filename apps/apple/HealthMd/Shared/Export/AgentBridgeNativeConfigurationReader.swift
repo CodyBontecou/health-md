@@ -383,6 +383,7 @@ final class AgentBridgeNativePlanningSession {
                       ack.transferID == partition.transferID, ack.sequence == 1, ack.sha256 == partition.sha256 else {
                     throw AgentBridgeValidationError.bindingChanged
                 }
+                try context.preserveAwaitingPartitionAcknowledgement(Int64(partition.index))
                 try await send(.transferPartitionComplete(DirectTransferPartitionComplete(sessionID: transfer.session.sessionID,
                     jobID: transfer.session.jobID, partitionIndex: partition.index, transferID: partition.transferID,
                     partitionSHA256: partition.sha256)))
@@ -390,8 +391,10 @@ final class AgentBridgeNativePlanningSession {
                       ack.sessionID == transfer.session.sessionID, ack.jobID == transfer.session.jobID,
                       ack.partitionIndex == partition.index, ack.transferID == partition.transferID,
                       ack.partitionSHA256 == partition.sha256 else { throw AgentBridgeValidationError.bindingChanged }
+                frontier = try context.reconcilePartitionAcknowledgement(ack)
+            } else {
+                frontier = try context.recordAcknowledgedTransferPartition(Int64(partition.index))
             }
-            frontier = try context.recordAcknowledgedTransferPartition(Int64(partition.index))
         }
         guard frontier.committedPartitionCount == Int64(transfer.partitions.count) else { throw AgentBridgeValidationError.bindingChanged }
         let finalize = try DirectTransferFinalize(sessionID: transfer.session.sessionID, jobID: transfer.session.jobID,
@@ -581,6 +584,14 @@ final class AgentBridgeNativeCaptureContext {
             let result = try spool.preserveTransferFrontier()
             _ = try configurationForRead(); return result
         } catch { invalidate(); throw error }
+    }
+    func preserveAwaitingPartitionAcknowledgement(_ index: Int64) throws {
+        do { _ = try configurationForRead(); try spool.preserveAwaitingPartitionAcknowledgement(index); _ = try configurationForRead() }
+        catch { invalidate(); throw error }
+    }
+    func reconcilePartitionAcknowledgement(_ ack: DirectTransferPartitionAcknowledgement) throws -> AgentBridgeTransferFrontier {
+        do { _ = try configurationForRead(); let result = try spool.reconcilePartitionAcknowledgement(ack); _ = try configurationForRead(); return result }
+        catch { invalidate(); throw error }
     }
     func recordAcknowledgedTransferPartition(_ index: Int64) throws -> AgentBridgeTransferFrontier {
         do {

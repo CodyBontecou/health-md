@@ -112,7 +112,7 @@ final class AgentBridgeNativeCaptureSpool {
             guard try fileSize("lock") == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             try check()
             for name in try Self.entries(directoryFD) {
-                guard name == "lock" || name == "header.json" || name == "progress.json" || name == "manifest.json" || name == "transfer.json" || name == "completion.json" || Self.hostCommitName(name) || Self.dayName(name) || Self.pendingName(name) else {
+                guard name == "lock" || name == "header.json" || name == "progress.json" || name == "manifest.json" || name == "transfer.json" || name == "partition-awaiting-ack.json" || name == "completion.json" || Self.hostCommitName(name) || Self.dayName(name) || Self.pendingName(name) else {
                     throw AgentBridgeValidationError.spoolMissingRestartRequired
                 }
                 storedBytes += try fileSize(name)
@@ -390,6 +390,68 @@ final class AgentBridgeNativeCaptureSpool {
         } catch { throw Self.safe(error) }
     }
 
+    /// Persist only after the exact chunk acknowledgement, before PartitionComplete.
+    /// The record authorizes no reads and advances no frontier; recovery may verify one lost ACK.
+    func preserveAwaitingPartitionAcknowledgement(_ index: Int64) throws {
+        do {
+            try check(); try validateStoredProgress()
+            let state = try progress().1
+            let frontier = try checkedTransferFrontier(state)
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: readManifest(state))
+            guard index == frontier.committedPartitionCount, index >= 0, index < Int64(manifest.artifacts.count) else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            let previous = try exists("partition-awaiting-ack.json") ? read("partition-awaiting-ack.json") : nil
+            let value = try record(kind: "partition_awaiting_ack", day: nil, payload: Self.canonical(index))
+            if previous != value { try publish("partition-awaiting-ack.json", record: value, replacing: previous) }
+            guard try awaitingPartitionAcknowledgement(state) == index else { throw AgentBridgeValidationError.bindingChanged }
+            try check()
+        } catch { throw Self.safe(error) }
+    }
+
+    /// Reconcile only the exact original pending ACK, or the exact last committed ACK.
+    /// Incoming counts/frontiers never install native progress.
+    func reconcilePartitionAcknowledgement(_ ack: DirectTransferPartitionAcknowledgement) throws -> AgentBridgeTransferFrontier {
+        do {
+            try check(); try validateStoredProgress()
+            let state = try progress().1
+            let frontier = try checkedTransferFrontier(state)
+            let bytes = try readManifest(state)
+            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: bytes)
+            let checkpoint = try AgentBridgeNativeTransferCheckpoint.decode(readTransferPlan(state))
+            let ids = try checkpoint.validate(requestSHA256: acceptedRequestSHA256, manifestSHA256: AgentBridgeV4Codec.sha256(bytes),
+                createdAt: reservation.job.acceptedAt.rawValue, expiresAt: reservation.job.expiresAt.rawValue,
+                artifactIDs: manifest.artifacts.map { $0.artifactId.rawValue })
+            let index = Int64(ack.partitionIndex)
+            guard ack.accepted, ack.sessionID.uuidString.lowercased() == checkpoint.sessionID,
+                  ack.jobID == UUID(uuidString: manifest.jobId.rawValue), index >= 0, index < Int64(manifest.artifacts.count),
+                  (index == frontier.committedPartitionCount || index == frontier.committedPartitionCount - 1),
+                  ack.transferID == ids[Int(index)], ack.partitionSHA256 == manifest.artifacts[Int(index)].sha256.rawValue else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            if index == frontier.committedPartitionCount {
+                guard try awaitingPartitionAcknowledgement(state) == index else { throw AgentBridgeValidationError.bindingChanged }
+            }
+            return try recordAcknowledgedTransferPartition(index)
+        } catch { throw Self.safe(error) }
+    }
+
+    private func awaitingPartitionAcknowledgement(_ state: Progress) throws -> Int64? {
+        guard try exists("partition-awaiting-ack.json") else { return nil }
+        let record = try read("partition-awaiting-ack.json")
+        let index = try JSONDecoder().decode(Int64.self, from: record.payload)
+        // Later alreadyCommitted dispositions can advance beyond the last chunked partition.
+        // Historical evidence never satisfies the exact-next eligibility check above.
+        let frontier = try checkedTransferFrontier(state)
+        let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: readManifest(state))
+        guard record.kind == "partition_awaiting_ack", record.day == nil, record.payload == (try Self.canonical(index)),
+              index >= 0, index < Int64(manifest.artifacts.count),
+              index <= frontier.committedPartitionCount else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        try check(); return index
+    }
+
     /// Called only after the original owner validated a partition acknowledgement or an exact
     /// alreadyCommitted disposition. Publication must finish before the next send/finalize.
     func recordAcknowledgedTransferPartition(_ index: Int64) throws -> AgentBridgeTransferFrontier {
@@ -595,6 +657,10 @@ final class AgentBridgeNativeCaptureSpool {
             _ = try readTransferPlan(state)
         }
         if state.version == 6 { _ = try checkedTransferFrontier(state) }
+        if try exists("partition-awaiting-ack.json") {
+            _ = try awaitingPartitionAcknowledgement(state)
+            expected.insert("partition-awaiting-ack.json")
+        }
         if state.manifestSHA256 != nil {
             let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: readManifest(state))
             let commits = try readHostCommits(state, manifest: manifest)

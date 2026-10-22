@@ -102,7 +102,7 @@ internal class AgentBridgeNativeCaptureSpool(
                 for (path in stream) {
                     if (++count > 16450) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
                     val name = path.fileName.toString()
-                    if (name !in setOf("lock", "header.json", "progress.json", "manifest.json", "transfer.json", "completion.json") && !HOST_COMMIT_NAME.matches(name) && !DAY_NAME.matches(name) && !PENDING_NAME.matches(name)) fail()
+                    if (name !in setOf("lock", "header.json", "progress.json", "manifest.json", "transfer.json", "partition-awaiting-ack.json", "completion.json") && !HOST_COMMIT_NAME.matches(name) && !DAY_NAME.matches(name) && !PENDING_NAME.matches(name)) fail()
                     attributes(path, false)
                     val size = Files.size(path)
                     if (size !in 0..(if (name == "manifest.json") MANIFEST_LIMIT else if (name == "transfer.json") AgentBridgeNativeTransferCheckpoint.MAXIMUM_BYTES else RECORD_LIMIT).toLong()) fail()
@@ -327,6 +327,50 @@ internal class AgentBridgeNativeCaptureSpool(
             guard(); result
         }
     }
+    /** Persist only after the exact chunk ACK and before PartitionComplete. No frontier/read authority. */
+    @Synchronized fun preserveAwaitingPartitionAcknowledgement(index: Long) = safeCall {
+        guard(); validateStoredProgress()
+        val state = progress().second
+        val frontier = checkedTransferFrontier(state)
+        val manifest = AgentBridgeCodec.decode(readManifest(state)) as? AgentBridgeArtifactManifest ?: fail()
+        if (index != frontier.committedPartitionCount || index < 0 || index >= manifest.artifacts.size) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        val previous = if (exists("partition-awaiting-ack.json")) read("partition-awaiting-ack.json") else null
+        val value = record("partition_awaiting_ack", null, Base64.getEncoder().encodeToString(index.toString().toByteArray()))
+        if (previous != value) publish("partition-awaiting-ack.json", value, previous)
+        if (awaitingPartitionAcknowledgement(state) != index) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        guard()
+    }
+    /** Exact original pending ACK, or exact last committed ACK only. No incoming frontier installation. */
+    @Synchronized fun reconcilePartitionAcknowledgement(ack: com.healthmd.direct.protocol.TransferPartitionAcknowledgement): AgentBridgeTransferFrontier = safeCall {
+        guard(); validateStoredProgress()
+        val state = progress().second
+        val frontier = checkedTransferFrontier(state)
+        val bytes = readManifest(state)
+        val manifest = AgentBridgeCodec.decode(bytes) as? AgentBridgeArtifactManifest ?: fail()
+        val checkpoint = AgentBridgeNativeTransferCheckpoint.decode(readTransferPlan(state))
+        val ids = checkpoint.validate(acceptedRequestSha256, AgentBridgeCodec.sha256(bytes), reservation.job.acceptedAt,
+            reservation.job.expiresAt, manifest.artifacts.map { it.artifactId })
+        val index = ack.partitionIndex
+        if (!ack.accepted || ack.sessionId != checkpoint.sessionID || ack.jobId != manifest.jobId || index < 0 || index >= manifest.artifacts.size ||
+            (index != frontier.committedPartitionCount && index != frontier.committedPartitionCount - 1) ||
+            ack.transferId != ids[index.toInt()] || ack.partitionSha256 != manifest.artifacts[index.toInt()].sha256) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        if (index == frontier.committedPartitionCount && awaitingPartitionAcknowledgement(state) != index) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        recordAcknowledgedTransferPartition(index)
+    }
+    private fun awaitingPartitionAcknowledgement(state: Progress): Long? {
+        if (!exists("partition-awaiting-ack.json")) return null
+        val record = read("partition-awaiting-ack.json")
+        val bytes = Base64.getDecoder().decode(record.payload)
+        val index = bytes.decodeToString().toLongOrNull() ?: fail()
+        // Later alreadyCommitted dispositions may leave older signed evidence; it cannot
+        // satisfy the exact-next eligibility check in reconciliation.
+        val frontier = checkedTransferFrontier(state)
+        val manifest = AgentBridgeCodec.decode(readManifest(state)) as? AgentBridgeArtifactManifest ?: fail()
+        if (record.kind != "partition_awaiting_ack" || record.day != null || !bytes.contentEquals(index.toString().toByteArray()) ||
+            index < 0 || index >= manifest.artifacts.size ||
+            index > frontier.committedPartitionCount) fail()
+        guard(); return index
+    }
     /** Original owner must first validate the matching ack/disposition. Durable publication
      * precedes the next open/finalize; earlier exact dispositions never rewind the prefix. */
     @Synchronized fun recordAcknowledgedTransferPartition(index: Long): AgentBridgeTransferFrontier = safeCall {
@@ -491,6 +535,10 @@ internal class AgentBridgeNativeCaptureSpool(
             readTransferPlan(state)
         }
         if (state.version == 6) checkedTransferFrontier(state)
+        if (exists("partition-awaiting-ack.json")) {
+            awaitingPartitionAcknowledgement(state)
+            expected += "partition-awaiting-ack.json"
+        }
         if (state.manifestSHA256 != null) {
             val manifest = AgentBridgeCodec.decode(readManifest(state)) as? AgentBridgeArtifactManifest ?: fail()
             val commits = readHostCommits(state, manifest)
