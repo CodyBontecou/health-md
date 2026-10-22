@@ -1,0 +1,359 @@
+use core::fmt;
+use std::borrow::Cow;
+use std::fmt::Write;
+use std::mem;
+use std::str::FromStr;
+
+use parser::node::{Call, Macro, MacroArg, Ws};
+use parser::{Expr, Span, WithSpan};
+use proc_macro2::TokenStream;
+use quote::quote_spanned;
+
+use crate::generator::node::AstLevel;
+use crate::generator::{Generator, LocalMeta, RenderFor, is_copyable};
+use crate::heritage::Context;
+use crate::integration::Buffer;
+use crate::{CompileError, HashMap, SizeHint, field_new, quote_into};
+
+/// Helper to generate the code for macro invocations
+pub(crate) struct MacroInvocation<'a, 'b> {
+    pub callsite_ctx: &'b Context<'a>,
+    pub callsite_span: Span,
+    pub callsite_ws: Ws,
+    pub call_args: &'b [WithSpan<Box<Expr<'a>>>],
+    pub call: Option<&'a WithSpan<Call<'a>>>,
+    pub macro_def: &'a Macro<'a>,
+    pub macro_ctx: &'b Context<'a>,
+}
+
+impl<'a, 'b> MacroInvocation<'a, 'b> {
+    // FIXME: add missing spans
+    pub(crate) fn write<'h>(
+        &self,
+        buf: &'b mut Buffer,
+        generator: &mut Generator<'a, 'h>,
+        render_for: RenderFor,
+    ) -> Result<SizeHint, CompileError> {
+        if generator
+            .seen_callers
+            .iter()
+            .any(|(s, _)| std::ptr::eq(*s, self.macro_def))
+        {
+            let mut message = "Found recursion in macro calls:".to_owned();
+            for (m, f) in &generator.seen_callers {
+                if let Some(f) = f {
+                    write!(message, "{f}").unwrap();
+                } else {
+                    write!(message, "\n`{}`", m.name.escape_debug()).unwrap();
+                }
+            }
+            return Err(self
+                .callsite_ctx
+                .generate_error(message, self.callsite_span));
+        } else {
+            generator.seen_callers.push((
+                self.macro_def,
+                self.callsite_ctx.file_info_of(self.callsite_span),
+            ));
+        }
+
+        generator.push_locals(|this| {
+            if let Some(call) = self.call {
+                this.locals.insert(
+                    "caller".into(),
+                    LocalMeta::caller(call, self.callsite_ctx.clone()),
+                );
+            }
+
+            self.ensure_arg_count()?;
+
+            this.flush_ws(self.callsite_ws); // Cannot handle_ws() here: whitespace from macro definition comes first
+            let mut content = Buffer::new();
+            let mut size_hint = this.write_buf_writable(self.callsite_ctx, &mut content)?;
+
+            this.prepare_ws(self.macro_def.ws1);
+
+            self.write_preamble(&mut content, this)?;
+
+            size_hint += this.handle(
+                self.macro_ctx,
+                &self.macro_def.nodes,
+                &mut content,
+                AstLevel::Nested,
+                render_for,
+            )?;
+
+            this.flush_ws(self.macro_def.ws2);
+            size_hint += this.write_buf_writable(self.callsite_ctx, &mut content)?;
+            let content = content.into_token_stream();
+            quote_into!(buf, self.callsite_ctx.span_for_node(self.callsite_span), {{ #content }});
+
+            this.prepare_ws(self.callsite_ws);
+            this.seen_callers.pop();
+            Ok(size_hint)
+        })
+    }
+
+    fn handle_macro_arg<'h>(
+        &self,
+        expr: &WithSpan<Box<Expr<'a>>>,
+        arg: &MacroArg<'a>,
+        buf: &mut Buffer,
+        generator: &mut Generator<'a, 'h>,
+    ) -> Result<(), CompileError> {
+        let mut ty_buf = Buffer::new();
+        let span = self.callsite_ctx.span_for_node(arg.name.span());
+        if let Some(ref ty) = arg.ty {
+            ty_buf.write_token(syn::Token![:], span);
+            // To prevent moving the value/variable, we take a reference of it.
+            ty_buf.write_token(syn::Token![&], span);
+            generator.visit_ty_generic(self.callsite_ctx, &mut ty_buf, ty, span);
+        }
+
+        match &***expr {
+            // If `expr` is already a form of variable then
+            // don't reintroduce a new variable. This is
+            // to avoid moving non-copyable values.
+            &Expr::Var(name) if name != "self" => {
+                let var = generator.locals.resolve_or_self(name);
+                if arg.ty.is_none() {
+                    generator
+                        .locals
+                        .insert(Cow::Borrowed(*arg.name), LocalMeta::var_with_ref(var));
+                } else {
+                    let id = field_new(&arg.name, span);
+                    let var = TokenStream::from_str(&var).expect("invalid variable name");
+                    buf.write_tokens(quote_spanned! { span => let #id #ty_buf = &#var; });
+                    generator
+                        .locals
+                        .insert_with_default(Cow::Borrowed(*arg.name));
+                }
+            }
+            Expr::AssociatedItem(obj, associated_item) => {
+                let mut associated_item_buf = Buffer::new();
+                generator.visit_associated_item(
+                    self.callsite_ctx,
+                    &mut associated_item_buf,
+                    obj,
+                    associated_item,
+                )?;
+
+                // FIXME: Too many steps to get a string. Also, `visit_associated_item` returns
+                // stuff like `x.y`, how is this supposed to match a variable? O.o
+                let associated_item = associated_item_buf.into_token_stream().to_string();
+                let var = generator
+                    .locals
+                    .resolve(&associated_item)
+                    .unwrap_or(associated_item);
+                if arg.ty.is_none() {
+                    generator
+                        .locals
+                        .insert(Cow::Borrowed(*arg.name), LocalMeta::var_with_ref(var));
+                } else {
+                    let id = field_new(&arg.name, span);
+                    let var = TokenStream::from_str(&var).expect("invalid variable name");
+                    buf.write_tokens(quote_spanned! { span => let #id #ty_buf = &#var; });
+                    generator
+                        .locals
+                        .insert_with_default(Cow::Borrowed(*arg.name));
+                }
+            }
+            // Everything else still needs to become variables,
+            // to avoid having the same logic be executed
+            // multiple times, e.g. in the case of macro
+            // parameters being used multiple times.
+            _ => {
+                let mut value = Buffer::new();
+                value.write_tokens(generator.visit_expr_root(self.callsite_ctx, expr)?);
+                let id = field_new(&arg.name, span);
+                buf.write_tokens(if !is_copyable(expr) || arg.ty.is_some() {
+                    quote_spanned! { span => let #id #ty_buf = &(#value); }
+                } else {
+                    quote_spanned! { span => let #id #ty_buf = #value; }
+                });
+
+                generator
+                    .locals
+                    .insert_with_default(Cow::Borrowed(*arg.name));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn write_preamble<'h>(
+        &self,
+        buf: &'b mut Buffer,
+        generator: &mut Generator<'a, 'h>,
+    ) -> Result<(), CompileError> {
+        let mut named_arguments = HashMap::default();
+        if let Some(Expr::NamedArgument(_, _)) = self.call_args.last().map(|expr| &***expr) {
+            // First we check that all named arguments actually exist in the called item.
+            for arg in self.call_args.iter().rev() {
+                let &Expr::NamedArgument(arg_name, _) = &***arg else {
+                    break;
+                };
+                let Some(index) = self
+                    .macro_def
+                    .args
+                    .iter()
+                    .position(|arg| arg.name == arg_name)
+                else {
+                    return Err(self.callsite_ctx.generate_error(
+                        format_args!(
+                            "no argument named `{}` in macro `{}`",
+                            arg_name.escape_debug(),
+                            self.macro_def.name.escape_debug(),
+                        ),
+                        self.callsite_span,
+                    ));
+                };
+                named_arguments.insert(&**arg_name, (index, arg));
+            }
+        }
+        let mut used_args = vec![None; self.macro_def.args.len()];
+
+        for (index, call_arg) in self.call_args.iter().enumerate() {
+            // No need to check if named arguments are before unnamed arguments since it's
+            // already checked in `askama_parser`.
+            let (index, expr) = match &***call_arg {
+                Expr::NamedArgument(arg_name, _) => {
+                    // We already looked for invalid named args when generating `named_arguments`.
+                    let Some((index, expr)) = named_arguments.get(&**arg_name) else {
+                        unreachable!()
+                    };
+                    (*index, *expr)
+                }
+                _ => (index, call_arg),
+            };
+            used_args[index] = Some(expr);
+        }
+
+        for (index, used_arg) in used_args.into_iter().enumerate() {
+            let arg = &self.macro_def.args[index];
+            let expr = match &used_arg {
+                Some(expr) => expr,
+                None => {
+                    if let Some(default_value) = &arg.default {
+                        default_value
+                    } else {
+                        return Err(self.callsite_ctx.generate_error(
+                            format_args!("missing `{}` argument", arg.name.escape_debug()),
+                            self.callsite_span,
+                        ));
+                    }
+                }
+            };
+            self.handle_macro_arg(expr, arg, buf, generator)?;
+        }
+
+        Ok(())
+    }
+
+    fn ensure_arg_count(&self) -> Result<(), CompileError> {
+        if self.call_args.len() > self.macro_def.args.len() {
+            return Err(self.callsite_ctx.generate_error(
+                format_args!(
+                    "macro `{}` expected {} argument{}, found {}",
+                    self.macro_def.name.escape_debug(),
+                    self.macro_def.args.len(),
+                    if self.macro_def.args.len() > 1 {
+                        "s"
+                    } else {
+                        ""
+                    },
+                    self.call_args.len(),
+                ),
+                self.callsite_span,
+            ));
+        }
+
+        // First we list of arguments position, then we remove every argument with a value.
+        let mut args: Vec<_> = self
+            .macro_def
+            .args
+            .iter()
+            .map(|arg| Some(arg.name))
+            .collect();
+        for (pos, arg) in self.call_args.iter().enumerate() {
+            let pos = match ***arg {
+                Expr::NamedArgument(name, ..) => {
+                    self.macro_def.args.iter().position(|arg| arg.name == name)
+                }
+                _ => Some(pos),
+            };
+            if let Some(pos) = pos
+                && mem::take(&mut args[pos]).is_none()
+            {
+                // This argument was already passed, so error.
+                return Err(self.callsite_ctx.generate_error(
+                    format_args!(
+                        "argument `{}` was passed more than once when calling macro `{}`",
+                        self.macro_def.args[pos].name.escape_debug(),
+                        self.macro_def.name.escape_debug(),
+                    ),
+                    arg.span(),
+                ));
+            }
+        }
+
+        // Now we can check off arguments with a default value, too.
+        for (pos, arg) in self.macro_def.args.iter().enumerate() {
+            if arg.default.is_some() {
+                args[pos] = None;
+            }
+        }
+
+        // Now that we have a needed information, we can print an error message (if needed).
+        struct FmtMissing<'a, I> {
+            count: usize,
+            missing: I,
+            name: WithSpan<&'a str>,
+        }
+
+        impl<'a, I: Iterator<Item = WithSpan<&'a str>> + Clone> fmt::Display for FmtMissing<'a, I> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                let mut iter = self.missing.clone();
+                if self.count == 1 {
+                    let a = iter.next().unwrap();
+                    write!(
+                        f,
+                        "missing argument when calling macro `{}`: `{}`",
+                        self.name.escape_debug(),
+                        a.escape_debug(),
+                    )
+                } else {
+                    write!(
+                        f,
+                        "missing arguments when calling macro `{}`: ",
+                        self.name.escape_debug(),
+                    )?;
+                    for (idx, a) in iter.enumerate() {
+                        if idx == self.count - 1 {
+                            write!(f, " and ")?;
+                        } else if idx > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "`{}`", a.escape_debug())?;
+                    }
+                    Ok(())
+                }
+            }
+        }
+
+        let missing = args.iter().filter_map(|o| *o);
+        let count = missing.clone().count();
+        if count == 0 {
+            return Ok(());
+        }
+
+        let fmt_missing = FmtMissing {
+            count,
+            missing,
+            name: self.macro_def.name,
+        };
+        Err(self
+            .callsite_ctx
+            .generate_error(fmt_missing, self.callsite_span))
+    }
+}
