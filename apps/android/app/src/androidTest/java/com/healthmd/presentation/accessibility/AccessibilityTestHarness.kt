@@ -1,15 +1,18 @@
 package com.healthmd.presentation.accessibility
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.Build
 import android.os.Looper
 import android.os.PowerManager
 import android.view.WindowManager
-import android.view.inspector.WindowInspector
+import android.view.accessibility.AccessibilityWindowInfo
 import android.view.inputmethod.InputMethodManager
+import android.view.inspector.WindowInspector
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -111,6 +114,31 @@ abstract class AccessibilityTestHarness(
                 }
             }
         }
+        // Compose can be idle before the native activity owns input focus.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.activity.window.decorView.hasWindowFocus()
+        }
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val service = automation.serviceInfo
+        service.flags = service.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        automation.serviceInfo = service
+    }
+
+    protected fun waitForNativeKeyboardHidden() {
+        // A dialog has a separate native owner; the activity's insets are not an
+        // authoritative IME probe. Inspect only public window types/bounds, never
+        // keyboard text or suggestions, and retain a bounded wait before Back.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            InstrumentationRegistry.getInstrumentation().uiAutomation.windows.none { window ->
+                if (window.type != AccessibilityWindowInfo.TYPE_INPUT_METHOD) false
+                else {
+                    val bounds = Rect()
+                    window.getBoundsInScreen(bounds)
+                    !bounds.isEmpty
+                }
+            }
+        }
+        compose.waitForIdle()
     }
 
     protected fun configuration(base: Configuration) = Configuration(base).apply {
@@ -244,6 +272,19 @@ abstract class AccessibilityTestHarness(
         }
         val surface = Regex("mHasSurface=(true|false)").find(selectedWindow.orEmpty())
             ?.groupValues?.get(1) ?: "unavailable"
+        // Window tags can omit the package, so a title-based "other" category
+        // does not establish another process. Expose only the OS type token and
+        // own/other UID equality; never retain the raw title, package or UID.
+        val focusedType = Regex(
+            "^\\s*mAttrs=.*?\\bty=([A-Z0-9_]{1,40})(?:\\s|\\})", RegexOption.MULTILINE,
+        ).find(selectedWindow.orEmpty())?.groupValues?.get(1) ?: "unavailable"
+        val focusedUid = Regex("^\\s*mOwnerUid=(\\d{1,10})\\b", RegexOption.MULTILINE)
+            .find(selectedWindow.orEmpty())?.groupValues?.get(1)?.toIntOrNull()
+        val focusedProcessOwner = when (focusedUid) {
+            null -> "unavailable"
+            android.os.Process.myUid() -> "own"
+            else -> "other"
+        }
         val display = Regex("^\\s*FocusedDisplayId:\\s*(-?\\d+)", RegexOption.MULTILINE)
             .find(input)?.groupValues?.get(1)
         val lines = input.lineSequence().toList()
@@ -268,7 +309,8 @@ abstract class AccessibilityTestHarness(
         }
         "nativePolicy=window(currentFocus=${focusOwnerCategory(currentFocus, packageName)}, " +
             "focusedApp=${focusOwnerCategory(focusedApp, packageName)}, focusedSurface=$surface); " +
-            "input(focusedDisplay=${display ?: "unavailable"}, focusedWindow=$focusedWindow)$hostedIdentity"
+            "input(focusedDisplay=${display ?: "unavailable"}, focusedWindow=$focusedWindow); " +
+            "focusedWindow(type=$focusedType, processOwner=$focusedProcessOwner)$hostedIdentity"
     }.getOrElse { "nativePolicy unavailable: ${it.javaClass.simpleName}" }
 
     private fun focusOwnerCategory(record: String?, packageName: String): String = when {

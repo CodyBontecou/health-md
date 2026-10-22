@@ -26,7 +26,7 @@ The dormant Wear implementation may still be compiled in development, but no Wea
 4. `.github/workflows/android-release.yml` requalifies the exact tag, builds/signs `app-play-release.aab`, retains SHA/AAB-bound intent evidence, and uploads it with reviewed listing copy to Internal Testing.
 5. `.github/workflows/android-promote-production.yml` runs from the same exact tag, promotes only that version code to production, submits it for review, and verifies the Play lifecycle.
 
-Both mutation workflows use the tag-restricted `google-play` GitHub environment. Credentials are materialized only on the runner and removed unconditionally. Local Play mutation is unsupported.
+Both mutation workflows use the tag-restricted `google-play` GitHub environment and short-lived Workload Identity tokens without credential files. Release signing uses `google-play-qa`; temporary signing files are removed unconditionally. Local Play mutation is unsupported.
 
 ## References
 

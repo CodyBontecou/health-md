@@ -147,6 +147,21 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
                     )
                     self.assertEqual(["platform-tools"], packages.group(1).split())
 
+    def test_instrumentation_unlocks_the_synthetic_emulator_and_retains_failure_reports(self) -> None:
+        workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()
+        instrumentation = workflow.index("./scripts/run-ci-instrumentation.sh")
+        runner = (ROOT / "apps/android/scripts/run-ci-instrumentation.sh").read_text()
+        self.assertIn(":app:connectedPlayDebugAndroidTest", runner)
+        for command in ("shell input keyevent KEYCODE_WAKEUP", "shell wm dismiss-keyguard"):
+            self.assertLess(workflow.index(command), instrumentation)
+        diagnostics = workflow.split("- name: Retain instrumentation reports and per-test results", 1)[1].split("\n  instrumentation:", 1)[0]
+        for required in (
+            "if: ${{ always() }}", "if-no-files-found: warn", "retention-days: 7",
+            "apps/android/healthmd-core/build/outputs/androidTest-results/",
+            "apps/android/app/build/outputs/androidTest-results/",
+        ):
+            self.assertIn(required, diagnostics)
+
     def test_instrumentation_declares_a_ready_software_ime_before_accessibility_tests(self) -> None:
         workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()
         setting = "settings put secure show_ime_with_hard_keyboard 1"
