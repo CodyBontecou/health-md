@@ -154,6 +154,8 @@ class SchedulingManager: ObservableObject {
     /// profiles firing at the same minute never deduplicate each other
     /// (decision 6), while a duplicate trigger for the same profile does.
     @MainActor private var inFlightProfileOccurrenceKeys: Set<String> = []
+    /// Drive journals stay unacknowledged when durable quota accounting fails.
+    @MainActor private var scheduledQuotaAccountingFailures: Set<UUID> = []
     @MainActor private var scheduledExportDependenciesConfigured = false
     @MainActor private var scheduledExportDependencyWaiters: [CheckedContinuation<Void, Never>] = []
 
@@ -165,6 +167,7 @@ class SchedulingManager: ObservableObject {
     private let scheduledEntryStore: ScheduledExportEntryStore
     private let scheduledProfileStore: ExportProfileStore
     private let scheduledDestinationStore: ProfileDestinationStore
+    private let scheduledGoogleDriveDestinationStore: GoogleDriveDestinationStore
     /// Serializes local-folder profile runs: adopting a profile's vault writes
     /// shared persisted destination state that `VaultManager()` resolves, so
     /// folder-target runs must not overlap. Non-folder targets run
@@ -282,6 +285,7 @@ class SchedulingManager: ObservableObject {
         scheduledEntryStore: ScheduledExportEntryStore = ScheduledExportEntryStore(),
         scheduledProfileStore: ExportProfileStore = ExportProfileStore(),
         scheduledDestinationStore: ProfileDestinationStore = ProfileDestinationStore(),
+        scheduledGoogleDriveDestinationStore: GoogleDriveDestinationStore? = nil,
         scheduledProfileDestinationAdopter: (@MainActor (ExportProfile?) -> Void)? = nil,
         isSharedSetupV2ProfileBlocked: (@MainActor (UUID) -> Bool)? = nil,
         scheduledAPIDestinationResolver: (@MainActor (ExportProfile?) -> APIExportDestinationSnapshot?)? = nil
@@ -301,6 +305,7 @@ class SchedulingManager: ObservableObject {
         self.scheduledEntryStore = scheduledEntryStore
         self.scheduledProfileStore = scheduledProfileStore
         self.scheduledDestinationStore = scheduledDestinationStore
+        self.scheduledGoogleDriveDestinationStore = scheduledGoogleDriveDestinationStore ?? GoogleDriveDestinationStore()
         self.scheduledProfileDestinationAdopter = scheduledProfileDestinationAdopter
             ?? { profile in Self.defaultAdoptProfileDestinations(profile) }
         self.isSharedSetupV2ProfileBlocked = isSharedSetupV2ProfileBlocked
@@ -720,7 +725,7 @@ class SchedulingManager: ObservableObject {
                 timestamp: now(),
                 operationID: request.id
             )
-        case .noVault, .destinationChanged, .paywall, .failure, .profileNotFound,
+        case .noVault, .destinationChanged, .foregroundRequired, .paywall, .failure, .profileNotFound,
              .profileRequiresRebind:
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
@@ -814,6 +819,7 @@ class SchedulingManager: ObservableObject {
                     originalCalendarTimeZoneIdentifier: request.originalCalendarTimeZoneIdentifier,
                     quotaJobID: request.id,
                     notificationOperationID: notificationOperationID,
+                    googleDriveDestinationSnapshot: request.googleDriveDestinationSnapshot,
                     request: request
                 )
             }
@@ -1215,11 +1221,18 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: range.end,
                 targetLabel: targetLabel,
                 exportTarget: target,
+                idempotencyKey: target == .googleDrive ? request.id : nil,
                 appleExportEnginePin: request.settingsSnapshot?.appleExportEnginePin,
                 profileName: request.profileName
             )
         }
 
+        if target == .googleDrive, didCompleteRequest,
+           !scheduledQuotaAccountingFailures.contains(request.id) {
+            Task {
+                await GoogleDriveExportService.shared?.acknowledgeCompletedOperation(request.id)
+            }
+        }
         notificationExportResult = completion == .discarded
             ? NotificationExportResult(status: .cancelled, timestamp: now(), operationID: request.id)
             : makeNotificationExportResult(from: result, operationID: request.id)
@@ -1325,6 +1338,8 @@ class SchedulingManager: ObservableObject {
             return scheduledSyncService?.macDestinationStatus?.destinationDisplayName
                 ?? scheduledSyncService?.connectedPeerName
                 ?? ExportTargetSelection.connectedMac.title
+        case .googleDrive:
+            return ExportTargetSelection.googleDrive.title
         }
     }
 
@@ -1427,6 +1442,13 @@ class SchedulingManager: ObservableObject {
                 calendarTimeZone: calendarTimeZone,
                 surface: .apiEndpoint
             )
+        case .googleDrive:
+            return await ExportSettingsSnapshot.forNewAppleOperation(
+                settings,
+                healthSubfolder: VaultManager().healthSubfolder,
+                calendarTimeZone: calendarTimeZone,
+                surface: .localVaultRangeWithoutSideEffects
+            )
         case .connectedMac:
             let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
                 && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
@@ -1448,6 +1470,7 @@ class SchedulingManager: ObservableObject {
         originalCalendarTimeZoneIdentifier: String? = nil,
         quotaJobID: UUID?,
         notificationOperationID: UUID? = nil,
+        googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot? = nil,
         expectedRequest: PendingExportRequest? = nil
     ) async -> ExportOrchestrator.ExportResult {
         let pending = expectedRequest ?? loadPendingScheduledExportRequest(id: quotaJobID)
@@ -1507,6 +1530,14 @@ class SchedulingManager: ObservableObject {
                     notificationOperationID: notificationOperationID,
                     destination: resolvedAPIDestination
                 )
+            case .googleDrive:
+                result = await performBackgroundGoogleDriveExport(
+                    dates: dates,
+                    settingsSnapshot: settingsSnapshot,
+                    destinationSnapshot: googleDriveDestinationSnapshot,
+                    operationID: quotaJobID ?? UUID(),
+                    notificationOperationID: notificationOperationID
+                )
             case .connectedMac:
                 result = await performBackgroundConnectedMacExport(
                     dates: dates,
@@ -1528,12 +1559,60 @@ class SchedulingManager: ObservableObject {
         for result: ExportOrchestrator.ExportResult,
         jobID: UUID?
     ) {
-        guard result.successCount > 0 else { return }
+        guard result.successCount > 0 else {
+            if let jobID { scheduledQuotaAccountingFailures.remove(jobID) }
+            return
+        }
         do {
             try scheduledExportQuotaRecorder(jobID)
+            if let jobID { scheduledQuotaAccountingFailures.remove(jobID) }
         } catch {
+            if let jobID { scheduledQuotaAccountingFailures.insert(jobID) }
             logger.error("Could not record scheduled export quota use: \(error.localizedDescription)")
         }
+    }
+
+    @MainActor
+    private func performBackgroundGoogleDriveExport(
+        dates: [Date],
+        settingsSnapshot: ExportSettingsSnapshot?,
+        destinationSnapshot: GoogleDriveDestinationSnapshot?,
+        operationID: UUID,
+        notificationOperationID: UUID?
+    ) async -> ExportOrchestrator.ExportResult {
+        guard let service = GoogleDriveExportService.shared else {
+            return scheduledFailureResult(
+                dates: dates,
+                reason: .unknown,
+                message: GoogleDriveErrorID.configurationMissing.rawValue
+            )
+        }
+        guard let destinationSnapshot else {
+            return scheduledFailureResult(
+                dates: dates,
+                reason: .unknown,
+                message: GoogleDriveErrorID.folderUnavailable.rawValue
+            )
+        }
+        let snapshot = settingsSnapshot ?? ExportSettingsSnapshot.from(AdvancedExportSettings())
+        return await service.export(
+            operationID: operationID,
+            profileID: nil,
+            destinationSnapshot: destinationSnapshot,
+            dates: dates,
+            healthKitManager: .shared,
+            settingsSnapshot: snapshot,
+            externalIntegrations: ConnectedAppsFeature.isEnabled ? scheduledExternalIntegrations : nil,
+            onProgress: { [weak self] processed, total, _ in
+                self?.updateNotificationExportActivity(
+                    operationID: notificationOperationID,
+                    phase: .capturing,
+                    processedDays: processed,
+                    totalDays: total,
+                    message: "Preparing Apple Health data for Google Drive…"
+                )
+            }
+        )
     }
 
     @MainActor
@@ -2378,6 +2457,7 @@ class SchedulingManager: ObservableObject {
                     dateRangeStart: startDate, dateRangeEnd: endDate,
                     targetLabel: targetLabel,
                     exportTarget: target,
+                    idempotencyKey: target == .googleDrive ? pendingRequest?.id : nil,
                     appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
                 )
             }
@@ -2828,6 +2908,7 @@ class SchedulingManager: ObservableObject {
             Task { @MainActor in
                 await self.sendExportNotification(success: false, daysExported: 0, failureReason: .backgroundTaskExpired)
                 ExportHistoryManager.shared.recordFailure(
+                    id: target == .googleDrive ? (pendingRequest?.id ?? UUID()) : UUID(),
                     source: .scheduled,
                     dateRangeStart: range.start,
                     dateRangeEnd: range.end,
@@ -2909,6 +2990,7 @@ class SchedulingManager: ObservableObject {
         originalCalendarTimeZoneIdentifier: String?,
         quotaJobID: UUID?,
         notificationOperationID: UUID? = nil,
+        googleDriveDestinationSnapshot suppliedDriveSnapshot: GoogleDriveDestinationSnapshot? = nil,
         request: PendingExportRequest
     ) async -> ExportOrchestrator.ExportResult {
         guard !Task.isCancelled, canStartProfileRequest(request) else {
@@ -2942,6 +3024,9 @@ class SchedulingManager: ObservableObject {
         defer {
             scheduledProfileDestinationAdopter(scheduledProfileStore.activeProfile)
         }
+        // Durable work must use its queued authority, never a profile's later rebind.
+        // Missing snapshots fail closed in the Drive runner instead of selecting a new folder.
+        let driveSnapshot = suppliedDriveSnapshot
         return await runScheduledExport(
             dates: dates,
             target: target,
@@ -2950,6 +3035,7 @@ class SchedulingManager: ObservableObject {
             originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
             quotaJobID: quotaJobID,
             notificationOperationID: notificationOperationID,
+            googleDriveDestinationSnapshot: driveSnapshot,
             expectedRequest: request
         )
     }
@@ -2995,6 +3081,9 @@ class SchedulingManager: ObservableObject {
             return
         }
 
+        let driveSnapshot = scheduledGoogleDriveDestinationStore
+            .destination(id: profile.googleDriveDestinationID)
+            .map(GoogleDriveDestinationSnapshot.init(destination:))
         // A queued evaluator result may outlive another trigger's successful
         // run. Recheck the occurrence after acquiring its in-flight identity.
         let lastSuccess = due.kind == .completedDay ? entry.lastExportDate : entry.lastTodayRefreshDate
@@ -3005,6 +3094,7 @@ class SchedulingManager: ObservableObject {
             profileName: profile.name,
             target: profile.target,
             settings: profile.settings,
+            googleDriveDestinationSnapshot: driveSnapshot,
             recoveryGeneration: entry.recoveryGeneration,
             enabledAt: entry.enabledAt,
             apiDestinationIdentity: profile.target == .apiEndpoint ? apiIdentity(for: profile) : nil
@@ -3042,7 +3132,8 @@ class SchedulingManager: ObservableObject {
                 originalRequestedDates: pendingRequest.originalRequestedDates,
                 originalCalendarTimeZoneIdentifier: pendingRequest.originalCalendarTimeZoneIdentifier,
                 quotaJobID: pendingRequest.id,
-                notificationOperationID: pendingRequest.id, request: pendingRequest
+                notificationOperationID: pendingRequest.id,
+                googleDriveDestinationSnapshot: pendingRequest.googleDriveDestinationSnapshot, request: pendingRequest
             )
         }
 
@@ -3075,6 +3166,7 @@ class SchedulingManager: ObservableObject {
                     dateRangeEnd: rangeEnd,
                     targetLabel: scheduledTargetLabel(for: target, profile: profile),
                     exportTarget: target,
+                    idempotencyKey: target == .googleDrive ? pendingRequest.id : nil,
                     appleExportEnginePin: settings.appleExportEnginePin,
                     profileName: pendingRequest.profileName ?? profile.name
                 )
@@ -3087,9 +3179,15 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: rangeEnd,
                 targetLabel: scheduledTargetLabel(for: target, profile: profile),
                 exportTarget: target,
+                idempotencyKey: target == .googleDrive ? pendingRequest.id : nil,
                 appleExportEnginePin: settings.appleExportEnginePin,
                 profileName: pendingRequest.profileName ?? profile.name
             )
+        }
+        if target == .googleDrive,
+           result.didCompleteAllRequestedDates,
+           !scheduledQuotaAccountingFailures.contains(pendingRequest.id) {
+            await GoogleDriveExportService.shared?.acknowledgeCompletedOperation(pendingRequest.id)
         }
     }
 
@@ -3248,6 +3346,9 @@ class SchedulingManager: ObservableObject {
                 logger.error("Cannot arm profile fallback: entry \(entry.profileID.uuidString) references a missing profile")
                 return nil
             }
+            let driveSnapshot = scheduledGoogleDriveDestinationStore
+                .destination(id: profile.googleDriveDestinationID)
+                .map(GoogleDriveDestinationSnapshot.init(destination:))
             guard !isSharedSetupV2ProfileBlocked(profile.id) else {
                 logger.info("Cannot arm fallback for blocked imported profile")
                 return nil
@@ -3257,6 +3358,7 @@ class SchedulingManager: ObservableObject {
                 profileName: profile.name,
                 target: profile.target,
                 settings: profile.settings,
+                googleDriveDestinationSnapshot: driveSnapshot,
                 recoveryGeneration: entry.recoveryGeneration,
                 enabledAt: entry.enabledAt,
                 apiDestinationIdentity: profile.target == .apiEndpoint ? apiIdentity(for: profile) : nil
@@ -3459,6 +3561,7 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: dateRangeEnd,
                 targetLabel: targetLabel,
                 exportTarget: target,
+                idempotencyKey: target == .googleDrive ? pendingRequest?.id : nil,
                 appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
             )
         } else if result.totalCount > 0 {
@@ -3482,9 +3585,17 @@ class SchedulingManager: ObservableObject {
                     dateRangeEnd: dateRangeEnd,
                     targetLabel: targetLabel,
                     exportTarget: target,
+                    idempotencyKey: target == .googleDrive ? pendingRequest?.id : nil,
                     appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
                 )
             }
+        }
+
+        if target == .googleDrive,
+           didCompleteRequest,
+           let operationID = pendingRequest?.id,
+           !scheduledQuotaAccountingFailures.contains(operationID) {
+            await GoogleDriveExportService.shared?.acknowledgeCompletedOperation(operationID)
         }
     }
 

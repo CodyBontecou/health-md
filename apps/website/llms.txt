@@ -14,6 +14,7 @@ This is a curated discovery aid for language-model clients. `llms.txt` is an eme
 - [Install the Health.md CLI](https://healthmd.app/docs/cli/installation/): Homebrew, signed Mac helpers, release installers, Cargo, upgrades, and verification.
 - [CLI command reference](https://healthmd.app/docs/cli-reference/): commands, global options, date selection, output behavior, and exit status.
 - [Typed query cookbook](https://healthmd.app/docs/agent-queries/): metric, sleep, workout, coverage, comparison, and evidence workflows.
+- [Google Drive export — planned](https://healthmd.app/docs/guides/google-drive-export/): direct-vs-file-provider boundaries, consent, sensitive-data transfer, schedules, conflicts, retention, and recovery.
 
 ## Contracts and machine-readable artifacts
 

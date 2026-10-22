@@ -114,7 +114,7 @@ Each profile requires:
 {"kind":"device_folder|connected_mac|api_endpoint|cloud","api_endpoint":null}
 ```
 
-`api_endpoint` may be non-null only when `kind` is `api_endpoint`; a null endpoint is valid unconfigured API intent. Apple writers currently originate `device_folder`, `connected_mac`, or `api_endpoint`. Android writers currently originate `device_folder` or `api_endpoint`. `cloud` is a typed preservation/future intent only and MUST NOT be inferred from iCloud/File Provider state, a filesystem path, or an Android SAF URI.
+`api_endpoint` may be non-null only when `kind` is `api_endpoint`; a null endpoint is valid unconfigured API intent. Apple writers originate `device_folder`, `connected_mac`, or `api_endpoint`; Android writers originate `device_folder` or `api_endpoint`. Drive-capable builds on either platform additionally project a native Google Drive profile to `cloud`, with `api_endpoint: null`. This carries only inert cloud intent, not a provider/account/folder binding or permission. Imported cloud remains blocked until its separately qualified local execution/rebind support is available. `cloud` MUST NOT be inferred from iCloud/File Provider state, a filesystem path, or an Android SAF URI.
 
 All imported destination kinds are inert and pending. Import does not resolve, inspect, open, create, pair, authenticate, or bind a destination. A recipient must separately choose a local folder, enter endpoint credentials, select a cloud account, or pair a Mac. Existing local credentials and bindings are never inherited.
 
@@ -252,6 +252,21 @@ The frozen local persistence keys are implementation interoperability constraint
 | Apple | `exportProfiles.list` | `exportProfiles.activeProfileID` | `scheduledExportEntries.list` | `sharedSetup.apple.v2.profileState` | `sharedSetup.apple.v2.blockedProfileIDs` | `sharedSetup.apple.v2.undo` |
 | Android | `export_profiles` | `export_profiles_active_id` | `scheduled_profile_entries` | `shared_setup_v2_profile_state` | `shared_setup_v2_blocked_profile_ids` | `shared_setup_v2_undo` |
 
+### Drive-capable local profile persistence
+
+The keys above remain the legacy profile representation; their names and historical payloads are not rewritten to make older binaries understand Google Drive. Drive-capable native profile stores may migrate lazily to an independently versioned, local-only profile envelope:
+
+| Platform | Profile envelope | Active profile |
+| --- | --- | --- |
+| Apple | `exportProfiles.v2.envelope` | `exportProfiles.v2.activeProfileID` |
+| Android | `export_profiles_v2` | `export_profiles_active_id_v2` |
+
+When the envelope is present it is authoritative, including when it is empty, corrupt, or from an unsupported future version. A corrupt or opaque record MUST NOT cause fallback to a legacy profile/destination. Native stores retain opaque records; Shared Setup transactions fail before mutation when they cannot prove complete preservation.
+
+Add/Replace reads and writes the same authoritative representation as the native profile store. With an existing envelope, it updates that envelope and its active ID while leaving both legacy values unchanged. Legacy-only transactions may retain the legacy representation. Transaction readback, compare-and-set where applicable, rollback, and Undo cover the raw values **and absence** of both profile key pairs in addition to schedules, sidecar, blocked IDs, and the prior Undo value. Undo of a legacy-only state removes any envelope introduced later, so a newer envelope cannot mask the restored state. Local Undo encoding versions independently; historical local Undo snapshots remain supported safely. These extra local persistence values never enter the portable v2 grammar or its public fixtures.
+
+Destination records, Google authority, protected credentials, managed-object mappings, operation journals, and remote files remain outside apply/rollback/Undo. No migration or Undo may read, relink, rewrite, or delete them.
+
 ## Atomic apply, rollback, and one-shot Undo
 
 Apply and Undo operations are serialized. The candidate covers profiles, active identity, scheduled-profile rows, sidecar rows, the blocked-ID set, and exactly one local Undo value. Before the first write, the implementation completely encodes the candidate and an Undo snapshot of the exact prior values/absence for those stores. The sidecar is bounded to 4 MiB and the complete Undo payload to 8 MiB.
@@ -288,3 +303,5 @@ The byte-frozen [field-coverage baseline](field-coverage-baseline-v1.json) recor
 The baseline pins each complete row and the inventory metadata by SHA-256 of UTF-8 JSON with sorted object keys, no whitespace separators, and unescaped non-ASCII text. It separately pins the exact public schema and existing fixture bytes. [`validate.py`](../../validate.py) checks the baseline's own immutable byte hash, rejects removals or changes to approved rows, and allows only the new prohibited entries described above. Native field-coverage suites remain responsible for matching actual stored/encoded fields and proving mapper exclusion.
 
 Do not regenerate this baseline or update its hash to silence a failure. Later reviewed additions must remain append-only and be frozen in a separately versioned additive baseline successor at approval; retain and validate the historical baseline and every previously approved row. This audit amendment changes no public v2 schema, platform extension, export schema, direct-protocol version, capability classification, default writer, or outstanding physical-device/accessibility QA gate.
+
+Drive destination authority is also excluded in the independently versioned native audits [Apple revision 2](apple-profile-field-coverage-v2.json) and [Android revision 2](android-profile-field-coverage-v2.json). These audits retain every earlier classification and do not change the public v2 grammar.

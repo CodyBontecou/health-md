@@ -81,6 +81,7 @@ fun ExportTargetSelector(
     selectedTarget: ExportTarget,
     folderSubtitle: String,
     apiSubtitle: String,
+    driveSubtitle: String,
     onTargetSelected: (ExportTarget) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -104,6 +105,12 @@ fun ExportTargetSelector(
             subtitle = apiSubtitle,
             selected = selectedTarget == ExportTarget.API_ENDPOINT,
             onClick = { onTargetSelected(ExportTarget.API_ENDPOINT) },
+        )
+        ExportTargetRow(
+            title = stringResource(R.string.google_drive_title),
+            subtitle = driveSubtitle,
+            selected = selectedTarget == ExportTarget.GOOGLE_DRIVE,
+            onClick = { onTargetSelected(ExportTarget.GOOGLE_DRIVE) },
         )
     }
 }

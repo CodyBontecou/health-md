@@ -317,7 +317,7 @@ class ScheduledProfileExportWorkerCancellationTest {
 
     @Test
     fun `raw profiles use the raw range runner for both targets and keep history mode`() = runTest {
-        for (target in ExportTarget.entries) {
+        for (target in listOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT)) {
             val harness = rawHarness(target = target) { ExportResult(1, 1, target = target, exportMode = ExportMode.RAW_SNAPSHOT) }
 
             assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.success())
@@ -327,7 +327,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             assertThat(harness.history.captured.exportMode).isEqualTo(ExportMode.RAW_SNAPSHOT)
             assertThat(harness.history.captured.target).isEqualTo(target)
             coVerify(exactly = 1) {
-                harness.rawRunner.exportRange(any(), any(), harness.runSettings, target, null, false)
+                harness.rawRunner.exportRange(any(), any(), harness.runSettings, target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false)
             }
             coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { harness.exportRepository.exportHealthData(any(), any()) }
@@ -341,7 +341,7 @@ class ScheduledProfileExportWorkerCancellationTest {
     @Test
     fun `delayed raw cadence and Today Refresh do not capture intervening days`() = runTest {
         val today = LocalDate.now(ZoneId.of("UTC"))
-        for (target in ExportTarget.entries) {
+        for (target in listOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT)) {
             val harness = rawHarness(
                 target = target,
                 todayRefresh = true,
@@ -366,7 +366,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val today = LocalDate.now(ZoneId.of("UTC"))
         val first = today.minusDays(10)
         val second = today.minusDays(7)
-        for (target in ExportTarget.entries) {
+        for (target in listOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT)) {
             val pending = ScheduledProfilePendingExport(
                 id = "separated-raw-retry",
                 ownerEpochDays = listOf(first.toEpochDay(), second.toEpochDay()),
@@ -548,7 +548,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val rawStart = slot<LocalDate>()
         val rawEnd = slot<LocalDate>()
         val rawRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
-        coEvery { rawRunner.exportRange(capture(rawStart), capture(rawEnd), settings, target, null, false) } coAnswers {
+        coEvery { rawRunner.exportRange(capture(rawStart), capture(rawEnd), settings, target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false) } coAnswers {
             rawRanges += rawStart.captured to rawEnd.captured
             result(rawStart.captured.datesUntil(rawEnd.captured.plusDays(1)).toList())
         }
@@ -723,6 +723,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 snapshotFactory = snapshotFactory,
                 folderAdoption = folderAdoption,
                 profileScheduler = Lazy { profileScheduler },
+                googleDriveExportOrchestrator = mockk(relaxed = true),
                 entitlementRepository = FakeBillingRepository(),
                 distributionPolicy = DistributionPolicy.play(),
             )

@@ -80,7 +80,7 @@ class ExportHistoryMigrationTest {
                 databaseName,
             )
                 .allowMainThreadQueries()
-                .addMigrations(DatabaseModule.MIGRATION_5_6)
+                .addMigrations(DatabaseModule.MIGRATION_5_6, DatabaseModule.MIGRATION_6_7)
                 .build()
             try {
                 val migrated = room.openHelper.writableDatabase

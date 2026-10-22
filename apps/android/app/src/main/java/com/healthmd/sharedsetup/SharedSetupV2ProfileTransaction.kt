@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.healthmd.data.settings.ExportProfilePersistence
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileDateWindow
 import com.healthmd.data.scheduler.ScheduledProfileEntry
@@ -46,6 +48,7 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -153,11 +156,49 @@ private data class SharedSetupV2LogicalProfileState(
 @Serializable
 private data class SharedSetupV2UndoPayload(
     val version: Int = SHARED_SETUP_V2_UNDO_VERSION,
-    val previous: SharedSetupV2LogicalProfileState,
+    val previous: SharedSetupV2LogicalProfileState? = null,
+    val raw: RawProfileState? = null,
 )
+
+/** Exact local bytes and key absence, including downgrade keys and lazy migration state. */
+@Serializable
+private data class RawProfileState(
+    val legacyProfiles: String?,
+    val legacyActive: String?,
+    val envelope: String?,
+    val envelopeActive: String?,
+    val schedules: String?,
+    val sidecar: String?,
+    val blocked: Set<String>?,
+) {
+    fun write(prefs: MutablePreferences) {
+        fun put(key: Preferences.Key<String>, value: String?) {
+            if (value == null) prefs.remove(key) else prefs[key] = value
+        }
+        put(ExportProfilePersistence.legacyProfilesKey, legacyProfiles)
+        put(ExportProfilePersistence.legacyActiveKey, legacyActive)
+        put(ExportProfilePersistence.profilesKey, envelope)
+        put(ExportProfilePersistence.activeKey, envelopeActive)
+        put(SharedSetupV2ProfilePersistence.scheduledProfileEntriesKey, schedules)
+        put(SharedSetupV2ProfilePersistence.profileStateKey, sidecar)
+        if (blocked == null) prefs.remove(SharedSetupV2ProfilePersistence.blockedProfileIdsKey)
+        else prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey] = blocked
+    }
+
+    companion object {
+        fun read(prefs: Preferences) = RawProfileState(
+            prefs[ExportProfilePersistence.legacyProfilesKey], prefs[ExportProfilePersistence.legacyActiveKey],
+            prefs[ExportProfilePersistence.profilesKey], prefs[ExportProfilePersistence.activeKey],
+            prefs[SharedSetupV2ProfilePersistence.scheduledProfileEntriesKey],
+            prefs[SharedSetupV2ProfilePersistence.profileStateKey],
+            prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey],
+        )
+    }
+}
 
 private data class StoredSnapshot(
     val logical: SharedSetupV2LogicalProfileState,
+    val raw: RawProfileState,
     val undoRaw: String?,
 )
 
@@ -174,8 +215,8 @@ private data class EncodedLogicalProfileState(
  * Existing profile/schedule repositories deliberately keep their shipped public APIs.
  */
 internal object SharedSetupV2ProfilePersistence {
-    val profilesKey = stringPreferencesKey("export_profiles")
-    val activeProfileIdKey = stringPreferencesKey("export_profiles_active_id")
+    val profilesKey = ExportProfilePersistence.legacyProfilesKey
+    val activeProfileIdKey = ExportProfilePersistence.legacyActiveKey
     val scheduledProfileEntriesKey = stringPreferencesKey("scheduled_profile_entries")
     val profileStateKey = stringPreferencesKey("shared_setup_v2_profile_state")
     val blockedProfileIdsKey = stringSetPreferencesKey("shared_setup_v2_blocked_profile_ids")
@@ -304,12 +345,14 @@ class SharedSetupV2ProfileTransaction private constructor(
         selectedBundleIds: List<String>,
         mode: SharedSetupV2ProfileImportMode,
     ): Result<SharedSetupV2ProfileApplyResult> = mutex.withLock {
+        kotlin.coroutines.coroutineContext.ensureActive()
         withContext(NonCancellable) {
             runCatching { applyLocked(plan, selectedBundleIds, mode) }
         }
     }
 
     suspend fun undo(): Result<Unit> = mutex.withLock {
+        kotlin.coroutines.coroutineContext.ensureActive()
         withContext(NonCancellable) {
             runCatching { undoLocked() }
         }
@@ -318,6 +361,19 @@ class SharedSetupV2ProfileTransaction private constructor(
     suspend fun storedProfileState(): Result<SharedSetupV2StoredProfileState?> = runCatching {
         val snapshot = readStoredSnapshot()
         snapshot.logical.profileState
+    }
+
+    /** Read sidecar and blocked IDs from one strictly validated authoritative snapshot. */
+    suspend fun pendingDestinationsByProfileId(): Result<Map<String, SharedSetupV2Destination>> = runCatching {
+        val state = readStoredSnapshot().logical
+        val rows = state.profileState?.profiles.orEmpty()
+        val codec = SharedSetupV2Codec(registry)
+        if (rows.any { codec.validatePreservedProfile(it.sourceProfile) != null }) {
+            fail(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE)
+        }
+        rows
+            .filter { it.profileId in state.blockedProfileIds }
+            .associate { it.profileId to it.sourceProfile.destination }
     }
 
     suspend fun blockedProfileIds(): Set<String> =
@@ -424,44 +480,41 @@ class SharedSetupV2ProfileTransaction private constructor(
         validateLogicalState(candidate)
 
         // Encode every candidate component and the complete previous-state Undo before mutation.
-        val encodedBefore = encodeLogicalState(existing)
         val encodedCandidate = encodeLogicalState(candidate)
-        val undoRaw = encodeUndo(existing)
+        val usesEnvelope = before.raw.envelope != null
+        val authoritativeRaw = before.raw.envelope ?: before.raw.legacyProfiles
+        val profilesRaw = if (mode == SharedSetupV2ProfileImportMode.ADD && authoritativeRaw != null) {
+            ExportProfilePersistence.appendRecords(authoritativeRaw,
+                ExportProfilePersistence.encode(importedProfiles, false))
+        } else ExportProfilePersistence.encode(candidate.profiles, usesEnvelope)
+        val candidateRaw = before.raw.copy(
+            legacyProfiles = if (usesEnvelope) before.raw.legacyProfiles else profilesRaw,
+            legacyActive = if (usesEnvelope) before.raw.legacyActive else candidate.activeProfileId,
+            envelope = if (usesEnvelope) profilesRaw else null,
+            envelopeActive = if (usesEnvelope) candidate.activeProfileId else before.raw.envelopeActive,
+            schedules = if (mode == SharedSetupV2ProfileImportMode.ADD) {
+                if (importedSchedules.isEmpty()) before.raw.schedules
+                else before.raw.schedules?.let { raw ->
+                    ExportProfilePersistence.appendRecords(raw, SharedSetupV2ProfilePersistence.json.encodeToString(
+                        SharedSetupV2ProfilePersistence.scheduleListSerializer, importedSchedules))
+                } ?: encodedCandidate.scheduledProfileEntries
+            } else encodedCandidate.scheduledProfileEntries,
+            sidecar = encodedCandidate.profileState,
+            blocked = encodedCandidate.blockedProfileIds.takeIf { it.isNotEmpty() },
+        )
+        val undoRaw = encodeUndo(before.raw)
         before.undoRaw?.let { priorUndo ->
             if (priorUndo.encodeToByteArray().size > SHARED_SETUP_V2_UNDO_MAX_BYTES) {
                 fail(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE)
             }
         }
 
-        var committed = false
-        dataStore.edit { preferences ->
-            val current = decodeLogicalState(preferences)
-            if (current != existing || preferences[SharedSetupV2ProfilePersistence.undoKey] != before.undoRaw) {
-                return@edit
-            }
-            writeLogicalState(preferences, encodedCandidate)
-            preferences[SharedSetupV2ProfilePersistence.undoKey] = undoRaw
-            committed = true
-        }
-        if (!committed) fail(SharedSetupV2ProfileTransactionFailure.COMMIT_VERIFICATION_FAILED)
-
-        val verified = runCatching { readStoredSnapshot() }
-            .getOrNull()
-            ?.let { it.logical == candidate && it.undoRaw == undoRaw }
-            ?: false
-        if (!verified) {
-            val restored = rollbackApply(
-                expectedCandidate = candidate,
-                expectedUndoRaw = undoRaw,
-                previous = encodedBefore,
-                previousLogical = existing,
-                previousUndoRaw = before.undoRaw,
-            )
-            if (!restored) {
-                fail(SharedSetupV2ProfileTransactionFailure.ROLLBACK_NOT_VERIFIED)
-            }
-            fail(SharedSetupV2ProfileTransactionFailure.COMMIT_VERIFICATION_FAILED)
-        }
+        commitVerified(
+            before = before,
+            candidate = candidateRaw,
+            undo = undoRaw,
+            failure = SharedSetupV2ProfileTransactionFailure.COMMIT_VERIFICATION_FAILED,
+        )
 
         return SharedSetupV2ProfileApplyResult(
             mode = mode,
@@ -475,62 +528,64 @@ class SharedSetupV2ProfileTransaction private constructor(
         val before = readStoredSnapshot()
         val undoRaw = before.undoRaw ?: fail(SharedSetupV2ProfileTransactionFailure.NO_UNDO)
         val undo = decodeUndo(undoRaw)
-        val restoredLogical = undo.previous
-        validateLogicalState(restoredLogical)
-        val encodedRestored = encodeLogicalState(restoredLogical)
-        val encodedBefore = encodeLogicalState(before.logical)
-
-        var restored = false
-        dataStore.edit { preferences ->
-            if (preferences[SharedSetupV2ProfilePersistence.undoKey] != undoRaw) return@edit
-            writeLogicalState(preferences, encodedRestored)
-            // Verification happens while the one-shot snapshot remains available.
-            preferences[SharedSetupV2ProfilePersistence.undoKey] = undoRaw
-            restored = true
-        }
-        if (!restored || !matchesStored(restoredLogical, undoRaw)) {
-            val rollbackVerified = rollbackUndoRestore(
-                expectedRestored = restoredLogical,
-                undoRaw = undoRaw,
-                previous = encodedBefore,
-                previousLogical = before.logical,
-            )
-            if (!rollbackVerified) {
-                fail(SharedSetupV2ProfileTransactionFailure.ROLLBACK_NOT_VERIFIED)
-            }
-            fail(SharedSetupV2ProfileTransactionFailure.UNDO_VERIFICATION_FAILED)
-        }
-
-        var removed = false
-        dataStore.edit { preferences ->
-            if (
-                preferences[SharedSetupV2ProfilePersistence.undoKey] != undoRaw ||
-                decodeLogicalState(preferences) != restoredLogical
-            ) {
-                return@edit
-            }
-            preferences.remove(SharedSetupV2ProfilePersistence.undoKey)
-            removed = true
-        }
-        val removalVerified = removed && runCatching { readStoredSnapshot() }
-            .getOrNull()
-            ?.let { it.logical == restoredLogical && it.undoRaw == null }
-            ?: false
-        if (!removalVerified) {
-            // Keep failed Undo retryable when the logical restore is present but snapshot removal
-            // cannot be attested.
-            runCatching {
-                dataStore.edit { preferences ->
-                    if (
-                        preferences[SharedSetupV2ProfilePersistence.undoKey] == null &&
-                        decodeLogicalState(preferences) == restoredLogical
-                    ) {
-                        preferences[SharedSetupV2ProfilePersistence.undoKey] = undoRaw
-                    }
+        val restored = when (undo.version) {
+            1 -> {
+                // Old local Undo had logical state only. Restore its documented representation,
+                // removing a later lazy envelope so it cannot mask the restored legacy state.
+                val logical = undo.previous ?: fail(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE)
+                if (logical.profiles.any { it.target == ExportTarget.GOOGLE_DRIVE || it.destinationId != null }) {
+                    // This format predates Drive and cannot safely express its authority.
+                    fail(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE)
                 }
+                val encoded = encodeLogicalState(logical)
+                RawProfileState(encoded.profiles, encoded.activeProfileId, null, null,
+                    encoded.scheduledProfileEntries, encoded.profileState,
+                    encoded.blockedProfileIds.takeIf { it.isNotEmpty() })
             }
-            fail(SharedSetupV2ProfileTransactionFailure.UNDO_VERIFICATION_FAILED)
+            SHARED_SETUP_V2_UNDO_VERSION -> undo.raw
+                ?: fail(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE)
+            else -> fail(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE)
         }
+        // Do not write even a restorable raw snapshot unless its authority can be proven.
+        decodeLogicalState(mutablePreferencesOf().also(restored::write))
+        commitVerified(before, restored, null, SharedSetupV2ProfileTransactionFailure.UNDO_VERIFICATION_FAILED)
+    }
+
+    /** One atomic edit, byte/absence-exact readback, and raw CAS recovery on any failure. */
+    private suspend fun commitVerified(
+        before: StoredSnapshot,
+        candidate: RawProfileState,
+        undo: String?,
+        failure: SharedSetupV2ProfileTransactionFailure,
+    ) {
+        val writeResult = runCatching {
+            var wrote = false
+            dataStore.edit { prefs ->
+                if (RawProfileState.read(prefs) != before.raw ||
+                    prefs[SharedSetupV2ProfilePersistence.undoKey] != before.undoRaw) return@edit
+                // A strict authority check is repeated in the edit, before any mutation.
+                decodeLogicalState(prefs)
+                candidate.write(prefs)
+                if (undo == null) prefs.remove(SharedSetupV2ProfilePersistence.undoKey)
+                else prefs[SharedSetupV2ProfilePersistence.undoKey] = undo
+                wrote = true
+            }
+            wrote
+        }
+        if (writeResult.getOrDefault(false) && matchesStored(candidate, undo)) return
+        if (matchesStored(before.raw, before.undoRaw)) fail(failure, writeResult.exceptionOrNull())
+        val recovered = runCatching {
+            dataStore.edit { prefs ->
+                if (RawProfileState.read(prefs) != candidate ||
+                    prefs[SharedSetupV2ProfilePersistence.undoKey] != undo) return@edit
+                before.raw.write(prefs)
+                if (before.undoRaw == null) prefs.remove(SharedSetupV2ProfilePersistence.undoKey)
+                else prefs[SharedSetupV2ProfilePersistence.undoKey] = before.undoRaw
+            }
+            matchesStored(before.raw, before.undoRaw)
+        }.getOrDefault(false)
+        if (!recovered) fail(SharedSetupV2ProfileTransactionFailure.ROLLBACK_NOT_VERIFIED)
+        fail(failure, writeResult.exceptionOrNull())
     }
 
     private fun validatePlan(plan: SharedSetupV2ImportPlan): SharedSetupV2ImportPlan {
@@ -800,6 +855,7 @@ class SharedSetupV2ProfileTransaction private constructor(
         val preferences = dataStore.data.first()
         StoredSnapshot(
             logical = decodeLogicalState(preferences),
+            raw = RawProfileState.read(preferences),
             undoRaw = preferences[SharedSetupV2ProfilePersistence.undoKey],
         )
     } catch (error: SharedSetupV2ProfileTransactionException) {
@@ -809,19 +865,12 @@ class SharedSetupV2ProfileTransaction private constructor(
     }
 
     private fun decodeLogicalState(preferences: Preferences): SharedSetupV2LogicalProfileState = try {
-        val profilesRaw = preferences[SharedSetupV2ProfilePersistence.profilesKey]
+        val profiles = ExportProfilePersistence.requireTransactionProfiles(preferences)
         val schedulesRaw = preferences[SharedSetupV2ProfilePersistence.scheduledProfileEntriesKey]
         val state = SharedSetupV2LogicalProfileState(
-            profiles = if (profilesRaw.isNullOrBlank()) {
-                emptyList()
-            } else {
-                SharedSetupV2ProfilePersistence.json.decodeFromString(
-                    SharedSetupV2ProfilePersistence.profileListSerializer,
-                    profilesRaw,
-                )
-            },
-            activeProfileId = preferences[SharedSetupV2ProfilePersistence.activeProfileIdKey],
-            scheduledProfileEntries = if (schedulesRaw.isNullOrBlank()) {
+            profiles = profiles,
+            activeProfileId = ExportProfilePersistence.activeId(preferences),
+            scheduledProfileEntries = if (schedulesRaw == null) {
                 emptyList()
             } else {
                 SharedSetupV2ProfilePersistence.json.decodeFromString(
@@ -895,10 +944,10 @@ class SharedSetupV2ProfileTransaction private constructor(
         fail(reason, error)
     }
 
-    private fun encodeUndo(previous: SharedSetupV2LogicalProfileState): String = try {
+    private fun encodeUndo(previous: RawProfileState): String = try {
         SharedSetupV2ProfilePersistence.json.encodeToString(
             SharedSetupV2UndoPayload.serializer(),
-            SharedSetupV2UndoPayload(previous = previous),
+            SharedSetupV2UndoPayload(raw = previous),
         ).also { encoded ->
             if (encoded.encodeToByteArray().size > SHARED_SETUP_V2_UNDO_MAX_BYTES) {
                 fail(SharedSetupV2ProfileTransactionFailure.UNDO_LIMIT_EXCEEDED)
@@ -917,83 +966,20 @@ class SharedSetupV2ProfileTransaction private constructor(
         return runCatching {
             SharedSetupV2ProfilePersistence.json.decodeFromString(SharedSetupV2UndoPayload.serializer(), raw)
         }.getOrElse { fail(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE, it) }.also {
-            if (it.version != SHARED_SETUP_V2_UNDO_VERSION) {
+            if (it.version !in setOf(1, SHARED_SETUP_V2_UNDO_VERSION) ||
+                (it.version == 1 && (it.previous == null || it.raw != null)) ||
+                (it.version == SHARED_SETUP_V2_UNDO_VERSION && (it.raw == null || it.previous != null))) {
                 fail(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE)
             }
         }
     }
 
-    private fun writeLogicalState(
-        preferences: MutablePreferences,
-        state: EncodedLogicalProfileState,
-    ) {
-        preferences[SharedSetupV2ProfilePersistence.profilesKey] = state.profiles
-        state.activeProfileId?.let {
-            preferences[SharedSetupV2ProfilePersistence.activeProfileIdKey] = it
-        } ?: preferences.remove(SharedSetupV2ProfilePersistence.activeProfileIdKey)
-        preferences[SharedSetupV2ProfilePersistence.scheduledProfileEntriesKey] =
-            state.scheduledProfileEntries
-        state.profileState?.let {
-            preferences[SharedSetupV2ProfilePersistence.profileStateKey] = it
-        } ?: preferences.remove(SharedSetupV2ProfilePersistence.profileStateKey)
-        if (state.blockedProfileIds.isEmpty()) {
-            preferences.remove(SharedSetupV2ProfilePersistence.blockedProfileIdsKey)
-        } else {
-            preferences[SharedSetupV2ProfilePersistence.blockedProfileIdsKey] = state.blockedProfileIds
-        }
-    }
-
-    private suspend fun rollbackApply(
-        expectedCandidate: SharedSetupV2LogicalProfileState,
-        expectedUndoRaw: String,
-        previous: EncodedLogicalProfileState,
-        previousLogical: SharedSetupV2LogicalProfileState,
-        previousUndoRaw: String?,
-    ): Boolean = runCatching {
-        var restored = false
-        dataStore.edit { preferences ->
-            if (
-                decodeLogicalState(preferences) != expectedCandidate ||
-                preferences[SharedSetupV2ProfilePersistence.undoKey] != expectedUndoRaw
-            ) {
-                return@edit
-            }
-            writeLogicalState(preferences, previous)
-            previousUndoRaw?.let {
-                preferences[SharedSetupV2ProfilePersistence.undoKey] = it
-            } ?: preferences.remove(SharedSetupV2ProfilePersistence.undoKey)
-            restored = true
-        }
-        restored && matchesStored(previousLogical, previousUndoRaw)
-    }.getOrDefault(false)
-
-    private suspend fun rollbackUndoRestore(
-        expectedRestored: SharedSetupV2LogicalProfileState,
-        undoRaw: String,
-        previous: EncodedLogicalProfileState,
-        previousLogical: SharedSetupV2LogicalProfileState,
-    ): Boolean = runCatching {
-        var rolledBack = false
-        dataStore.edit { preferences ->
-            if (
-                decodeLogicalState(preferences) != expectedRestored ||
-                preferences[SharedSetupV2ProfilePersistence.undoKey] != undoRaw
-            ) {
-                return@edit
-            }
-            writeLogicalState(preferences, previous)
-            preferences[SharedSetupV2ProfilePersistence.undoKey] = undoRaw
-            rolledBack = true
-        }
-        rolledBack && matchesStored(previousLogical, undoRaw)
-    }.getOrDefault(false)
-
     private suspend fun matchesStored(
-        expected: SharedSetupV2LogicalProfileState,
+        expected: RawProfileState,
         expectedUndoRaw: String?,
     ): Boolean = runCatching { readStoredSnapshot() }
         .getOrNull()
-        ?.let { it.logical == expected && it.undoRaw == expectedUndoRaw }
+        ?.let { it.raw == expected && it.undoRaw == expectedUndoRaw }
         ?: false
 
     private fun fail(
@@ -1036,6 +1022,6 @@ class SharedSetupV2ProfileTransaction private constructor(
 }
 
 const val SHARED_SETUP_V2_PROFILE_STATE_VERSION: Int = 1
-const val SHARED_SETUP_V2_UNDO_VERSION: Int = 1
+const val SHARED_SETUP_V2_UNDO_VERSION: Int = 2
 const val SHARED_SETUP_V2_PROFILE_STATE_MAX_BYTES: Int = 4 * 1024 * 1024
 const val SHARED_SETUP_V2_UNDO_MAX_BYTES: Int = 8 * 1024 * 1024

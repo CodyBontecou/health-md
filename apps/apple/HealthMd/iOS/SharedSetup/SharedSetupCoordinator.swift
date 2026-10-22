@@ -506,6 +506,7 @@ struct SharedSetupV2ExportContext {
     let destinations: SharedSetupV2DestinationSnapshots
     let scheduledEntries: [ScheduledExportEntry]
     let preservedAndroidExtensions: [UUID: SharedSetupV2.AndroidExtension]
+    let pendingDestinationIntents: [UUID: SharedSetupV2.Destination]
 
     init(
         profiles: [ExportProfile],
@@ -513,7 +514,8 @@ struct SharedSetupV2ExportContext {
         destinationVaults: [SavedVaultDestination],
         destinationAPIEndpoints: [SavedAPIEndpoint],
         scheduledEntries: [ScheduledExportEntry],
-        preservedAndroidExtensions: [UUID: SharedSetupV2.AndroidExtension]
+        preservedAndroidExtensions: [UUID: SharedSetupV2.AndroidExtension],
+        pendingDestinationIntents: [UUID: SharedSetupV2.Destination] = [:]
     ) {
         self.profiles = Array(profiles)
         self.activeProfileID = activeProfileID
@@ -524,6 +526,27 @@ struct SharedSetupV2ExportContext {
         self.scheduledEntries = Array(scheduledEntries)
         self.preservedAndroidExtensions = Dictionary(
             uniqueKeysWithValues: preservedAndroidExtensions.map { ($0.key, $0.value) }
+        )
+        self.pendingDestinationIntents = pendingDestinationIntents
+    }
+
+    @MainActor
+    static func production(
+        exportProfiles: ExportProfileCoordinator,
+        service: SharedSetupV2TransactionAdapter
+    ) throws -> Self {
+        // Reject corrupt retention before even flushing debounced profile edits.
+        _ = try service.preservationSnapshot()
+        exportProfiles.flushEdits()
+        let preservation = try service.preservationSnapshot()
+        return Self(
+            profiles: exportProfiles.profileStore.profiles,
+            activeProfileID: exportProfiles.profileStore.activeProfileID,
+            destinationVaults: exportProfiles.destinationStore.vaults,
+            destinationAPIEndpoints: exportProfiles.destinationStore.apiEndpoints,
+            scheduledEntries: exportProfiles.scheduledEntryStore.entries,
+            preservedAndroidExtensions: preservation.androidExtensions,
+            pendingDestinationIntents: preservation.pendingDestinations
         )
     }
 }
@@ -605,7 +628,7 @@ final class SharedSetupCoordinator: ObservableObject {
     /// Production resolver for the v2 export context the default writer
     /// needs. Absent — or returning nil — keeps the default Share/Save path
     /// honestly unavailable; Health.md never falls back to another writer.
-    private let v2ExportContextResolver: (@MainActor () -> SharedSetupV2ExportContext?)?
+    private let v2ExportContextResolver: (@MainActor () throws -> SharedSetupV2ExportContext?)?
     private var v2ConnectedMacStateCancellable: AnyCancellable?
     private var importTask: Task<Void, Never>?
     private var importRequestID = 0
@@ -620,7 +643,7 @@ final class SharedSetupCoordinator: ObservableObject {
             UIAccessibility.post(notification: .announcement, argument: $0)
         },
         v2Adapter: SharedSetupV2CoordinatorAdapter? = nil,
-        v2ExportContext: (@MainActor () -> SharedSetupV2ExportContext?)? = nil
+        v2ExportContext: (@MainActor () throws -> SharedSetupV2ExportContext?)? = nil
     ) {
         // Default argument expressions are evaluated in a nonisolated context (SE-0411),
         // so MainActor-isolated defaults are resolved inside the initializer body instead.
@@ -998,7 +1021,7 @@ final class SharedSetupCoordinator: ObservableObject {
     /// canonical `schema_version: 2` bytes exclusively. A missing resolver
     /// or owner fails closed; there is no other writer to fall back to.
     func exportData(appVersion: String, calendar: Calendar = .current) throws -> Data {
-        guard let context = v2ExportContextResolver?() else {
+        guard let context = try v2ExportContextResolver?() else {
             throw SharedSetupV2CoordinatorError.v2ExportContextUnavailable
         }
         return try exportV2Data(
@@ -1036,13 +1059,14 @@ final class SharedSetupCoordinator: ObservableObject {
             registry: registry,
             appVersion: appVersion,
             preservedAndroidExtensions: preservedExtensions,
+            pendingDestinationIntents: context.pendingDestinationIntents,
             calendar: calendar
         )
         return try SharedSetupV2Codec.encode(document)
     }
 
     func makeShareArtifact(appVersion: String, calendar: Calendar = .current) throws -> URL {
-        guard let context = v2ExportContextResolver?() else {
+        guard let context = try v2ExportContextResolver?() else {
             throw SharedSetupV2CoordinatorError.v2ExportContextUnavailable
         }
         return try makeValidatedShareArtifact(

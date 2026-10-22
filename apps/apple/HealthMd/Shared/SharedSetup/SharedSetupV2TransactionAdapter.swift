@@ -47,8 +47,8 @@ struct SharedSetupV2ImportedProfileReview: Equatable, Identifiable, Sendable {
 /// its own:
 ///
 /// - `SharedSetupV2ProfileTransaction` performs the durable, verified
-///   Add/Replace apply and the one-shot exact Undo across the five-key
-///   aggregate (profiles, active identity, schedules, sidecar, blocked IDs).
+///   Add/Replace apply and the one-shot exact Undo across both profile key pairs
+///   and schedules, sidecar, and blocked IDs.
 /// - `SharedSetupV2ExecutionGate` owns the fail-closed blocked-profile set
 ///   and the only verified path that can clear one blocked identity.
 ///
@@ -98,11 +98,8 @@ final class SharedSetupV2TransactionAdapter {
 
     var canUndo: Bool { transaction.canUndo }
 
-    /// Read-only preserved Android platform extensions keyed by native
-    /// profile ID — the v2 sidecar retention surface the production v2
-    /// writer re-exports from.
-    var preservedAndroidExtensionsByProfileID: [UUID: SharedSetupV2.AndroidExtension] {
-        transaction.preservedAndroidExtensionsByProfileID
+    func preservationSnapshot() throws -> SharedSetupV2ProfileTransaction.PreservationSnapshot {
+        try transaction.preservationSnapshot()
     }
 
     @discardableResult

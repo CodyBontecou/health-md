@@ -2,9 +2,9 @@ package com.healthmd.data.settings
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.APIExportEndpoint
@@ -18,10 +18,9 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.Json
 import timber.log.Timber
 
 /**
@@ -37,23 +36,19 @@ class ExportProfileRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     @ApplicationContext private val context: Context,
 ) {
-    private val json = Json { ignoreUnknownKeys = true }
-    private val listSerializer = ListSerializer(ExportProfile.serializer())
-
-    private object Keys {
-        val PROFILES = stringPreferencesKey("export_profiles")
-        val ACTIVE_PROFILE_ID = stringPreferencesKey("export_profiles_active_id")
-    }
-
     val profiles: Flow<List<ExportProfile>> = dataStore.data.map { prefs ->
-        decodeProfiles(prefs[Keys.PROFILES]).orEmpty()
+        ExportProfilePersistence.decode(prefs).profiles
     }
 
     val activeProfileId: Flow<String?> = dataStore.data.map { prefs ->
-        prefs[Keys.ACTIVE_PROFILE_ID]?.takeIf { id ->
-            decodeProfiles(prefs[Keys.PROFILES])?.any { it.id == id } == true
+        ExportProfilePersistence.activeId(prefs)?.takeIf { id ->
+            ExportProfilePersistence.decode(prefs).profiles.any { it.id == id }
         }
     }
+
+    val hasOpaqueProfileState: Flow<Boolean> = dataStore.data
+        .map { ExportProfilePersistence.decode(it).blocksDefaultMigration }
+        .distinctUntilChanged()
 
     suspend fun getProfiles(): List<ExportProfile> = profiles.first()
 
@@ -85,9 +80,10 @@ class ExportProfileRepository @Inject constructor(
         val prefs = dataStore.data.first()
         val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
         if (blocked.isEmpty()) return SharedSetupV2ProfileExecutionAccess.Allowed
-        val profiles = decodeProfiles(prefs[Keys.PROFILES])
-            ?: return SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
-        val effectiveActive = profiles.firstOrNull { it.id == prefs[Keys.ACTIVE_PROFILE_ID] }
+        val decoded = ExportProfilePersistence.decode(prefs)
+        if (decoded.corruptRoot) return SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+        val profiles = decoded.profiles
+        val effectiveActive = profiles.firstOrNull { it.id == ExportProfilePersistence.activeId(prefs) }
             ?: profiles.firstOrNull()
             ?: return SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
         return if (effectiveActive.id in blocked) {
@@ -105,6 +101,7 @@ class ExportProfileRepository @Inject constructor(
         apiEndpointUrl: String? = null,
         folderUri: String? = null,
         folderDisplayName: String? = null,
+        destinationId: String? = null,
         derivedFromProfileId: String? = null,
     ): ExportProfile {
         require(ExportProfileRules.isValidName(name)) { "Profile name must not be blank." }
@@ -112,7 +109,9 @@ class ExportProfileRepository @Inject constructor(
         val now = System.currentTimeMillis()
         var added: ExportProfile? = null
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
             require(existing.size < ExportProfileRules.MAX_PROFILES) { "Profile limit reached." }
             if (derivedFromProfileId != null && existing.none { it.id == derivedFromProfileId }) {
                 return@edit
@@ -140,10 +139,10 @@ class ExportProfileRepository @Inject constructor(
                 apiEndpointUrl = apiEndpointUrl?.takeIf { it.isNotBlank() },
                 folderUri = folderUri?.takeIf { it.isNotBlank() },
                 folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
+                destinationId = destinationId?.takeIf { it.isNotBlank() },
                 createdAtEpochMillis = now,
                 updatedAtEpochMillis = now,
             )
-            val encodedProfiles = json.encodeToString(listSerializer, existing + profile)
             val encodedDerivedSidecar = derivedSidecar?.let { state ->
                 val sourceRow = state.profiles.single {
                     it.profileId == derivedFromProfileId
@@ -154,14 +153,14 @@ class ExportProfileRepository @Inject constructor(
                     ),
                 )
             }
-            prefs[Keys.PROFILES] = encodedProfiles
+            ExportProfilePersistence.writeNative(prefs, decoded, existing + profile)
             if (encodedDerivedSidecar != null) {
                 prefs[SharedSetupV2ProfilePersistence.profileStateKey] = encodedDerivedSidecar
                 prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey] = blocked + profile.id
             }
-            val activeId = prefs[Keys.ACTIVE_PROFILE_ID]
+            val activeId = ExportProfilePersistence.activeId(prefs)
             if (activeId == null || existing.none { it.id == activeId }) {
-                prefs[Keys.ACTIVE_PROFILE_ID] = profile.id
+                prefs[ExportProfilePersistence.activeKey] = profile.id
             }
             added = profile
         }
@@ -176,7 +175,9 @@ class ExportProfileRepository @Inject constructor(
     ): Boolean {
         var applied = false
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val concreteFolderUri = folderUri
@@ -186,10 +187,7 @@ class ExportProfileRepository @Inject constructor(
                     folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )
-                prefs[Keys.PROFILES] = json.encodeToString(
-                    listSerializer,
-                    existing.toMutableList().apply { set(index, updated) },
-                )
+                ExportProfilePersistence.writeNative(prefs, decoded, existing.toMutableList().apply { set(index, updated) })
                 // Only the explicit SAF picker binding path may clear device-folder intent.
                 // Connected-Mac/cloud imports project to DEVICE_FOLDER for display but remain
                 // blocked because their exact source destination is retained in the sidecar.
@@ -218,7 +216,9 @@ class ExportProfileRepository @Inject constructor(
     ): Boolean {
         var applied = false
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val updated = existing[index].copy(
@@ -227,10 +227,7 @@ class ExportProfileRepository @Inject constructor(
                     apiEndpointUrl = apiEndpointUrl ?: existing[index].apiEndpointUrl,
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )
-                prefs[Keys.PROFILES] = json.encodeToString(
-                    listSerializer,
-                    existing.toMutableList().apply { set(index, updated) },
-                )
+                ExportProfilePersistence.writeNative(prefs, decoded, existing.toMutableList().apply { set(index, updated) })
                 applied = true
             }
         }
@@ -251,11 +248,14 @@ class ExportProfileRepository @Inject constructor(
         apiEndpointUrl: String?,
         folderUri: String?,
         folderDisplayName: String?,
+        destinationId: String? = null,
     ): String? {
         if (!ExportProfileRules.isValidName(rawName)) return null
         var storedName: String? = null
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
@@ -265,26 +265,52 @@ class ExportProfileRepository @Inject constructor(
                     target = target,
                     apiEndpointUrl = when (target) {
                         ExportTarget.API_ENDPOINT -> apiEndpointUrl?.takeIf { it.isNotBlank() }
-                        ExportTarget.DEVICE_FOLDER -> null
+                        ExportTarget.DEVICE_FOLDER, ExportTarget.GOOGLE_DRIVE -> null
                     },
                     folderUri = when (target) {
                         ExportTarget.DEVICE_FOLDER -> folderUri?.takeIf { it.isNotBlank() }
-                        ExportTarget.API_ENDPOINT -> null
+                        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE -> null
                     },
                     folderDisplayName = when (target) {
                         ExportTarget.DEVICE_FOLDER -> folderDisplayName?.takeIf { it.isNotBlank() }
-                        ExportTarget.API_ENDPOINT -> null
+                        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE -> null
+                    },
+                    destinationId = when (target) {
+                        ExportTarget.GOOGLE_DRIVE -> destinationId?.takeIf { it.isNotBlank() }
+                        ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT -> null
                     },
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )
-                prefs[Keys.PROFILES] = json.encodeToString(
-                    listSerializer,
-                    existing.toMutableList().apply { set(index, updated) },
-                )
+                ExportProfilePersistence.writeNative(prefs, decoded, existing.toMutableList().apply { set(index, updated) })
                 storedName = updated.name
             }
         }
         return storedName
+    }
+
+    /** Clears a local Drive binding without changing profile output settings or target identity. */
+    suspend fun clearGoogleDriveDestination(destinationId: String): List<String> {
+        var affected = emptyList<String>()
+        dataStore.edit { prefs ->
+            if (prefs[ConfigurationProtectionPersistence.enabledKey] == true) return@edit
+            affected = detachGoogleDriveDestination(prefs, destinationId)
+        }
+        return affected
+    }
+
+    /** Called only within the admitted shared DataStore disconnect edit; never nests an edit. */
+    internal fun detachGoogleDriveDestination(prefs: MutablePreferences, destinationId: String): List<String> {
+        val decoded = ExportProfilePersistence.decode(prefs)
+        check(!decoded.corruptRoot) { "Export profiles are unavailable." }
+        val affected = mutableListOf<String>()
+        val updated = decoded.profiles.map { profile ->
+            if (profile.target == ExportTarget.GOOGLE_DRIVE && profile.destinationId == destinationId) {
+                affected += profile.id
+                profile.copy(destinationId = null, updatedAtEpochMillis = System.currentTimeMillis())
+            } else profile
+        }
+        if (affected.isNotEmpty()) ExportProfilePersistence.writeNative(prefs, decoded, updated)
+        return affected
     }
 
     /** Rename with trim + unique suffixing. Returns the stored name, or null when rejected. */
@@ -292,7 +318,9 @@ class ExportProfileRepository @Inject constructor(
         if (!ExportProfileRules.isValidName(rawName)) return null
         var renamed: String? = null
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
@@ -301,10 +329,7 @@ class ExportProfileRepository @Inject constructor(
                     name = unique,
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )
-                prefs[Keys.PROFILES] = json.encodeToString(
-                    listSerializer,
-                    existing.toMutableList().apply { set(index, updated) },
-                )
+                ExportProfilePersistence.writeNative(prefs, decoded, existing.toMutableList().apply { set(index, updated) })
                 renamed = unique
             }
         }
@@ -319,7 +344,9 @@ class ExportProfileRepository @Inject constructor(
     suspend fun delete(id: String): Boolean {
         var deleted = false
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
             if (ExportProfileRules.canDelete(existing) && existing.any { it.id == id }) {
                 val sidecarRaw = prefs[SharedSetupV2ProfilePersistence.profileStateKey]
                 val sidecar = try {
@@ -335,9 +362,9 @@ class ExportProfileRepository @Inject constructor(
                 val encodedSidecar = SharedSetupV2ProfilePersistence.encodeProfileState(
                     updatedSidecar?.takeIf { it.profiles.isNotEmpty() },
                 )
-                prefs[Keys.PROFILES] = json.encodeToString(listSerializer, updated)
-                if (prefs[Keys.ACTIVE_PROFILE_ID] == id) {
-                    updated.firstOrNull()?.let { first -> prefs[Keys.ACTIVE_PROFILE_ID] = first.id }
+                ExportProfilePersistence.writeNative(prefs, decoded, updated)
+                if (prefs[ExportProfilePersistence.activeKey] == id) {
+                    updated.firstOrNull()?.let { first -> prefs[ExportProfilePersistence.activeKey] = first.id }
                 }
                 if (encodedSidecar == null) {
                     prefs.remove(SharedSetupV2ProfilePersistence.profileStateKey)
@@ -355,10 +382,13 @@ class ExportProfileRepository @Inject constructor(
     suspend fun activate(id: String): Boolean {
         var activated = false
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
             val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
             if (existing.any { it.id == id } && id !in blocked) {
-                prefs[Keys.ACTIVE_PROFILE_ID] = id
+                ExportProfilePersistence.writeNative(prefs, decoded, existing)
+                prefs[ExportProfilePersistence.activeKey] = id
                 activated = true
             }
         }
@@ -397,7 +427,9 @@ class ExportProfileRepository @Inject constructor(
         dataStore.edit { prefs ->
             val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
             if (id !in blocked) return@edit
-            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
             val index = existing.indexOfFirst { it.id == id }
             if (index < 0) return@edit
             val profile = existing[index]
@@ -437,10 +469,7 @@ class ExportProfileRepository @Inject constructor(
                 settingsSnapshotJson = encodedSnapshot,
                 updatedAtEpochMillis = System.currentTimeMillis(),
             )
-            prefs[Keys.PROFILES] = json.encodeToString(
-                listSerializer,
-                existing.toMutableList().apply { set(index, updated) },
-            )
+            ExportProfilePersistence.writeNative(prefs, decoded, existing.toMutableList().apply { set(index, updated) })
             bound = true
         }
         return bound
@@ -456,7 +485,7 @@ class ExportProfileRepository @Inject constructor(
         dataStore.edit { prefs ->
             val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
             if (id !in blocked) return@edit
-            val profile = decodeProfiles(prefs[Keys.PROFILES])
+            val profile = ExportProfilePersistence.decode(prefs).takeUnless { it.corruptRoot }?.profiles
                 ?.singleOrNull { it.id == id }
                 ?: return@edit
             val endpoint = profile.apiEndpointUrl
@@ -500,7 +529,7 @@ class ExportProfileRepository @Inject constructor(
         dataStore.edit { prefs ->
             val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
             if (id !in blocked) return@edit
-            val profile = decodeProfiles(prefs[Keys.PROFILES])
+            val profile = ExportProfilePersistence.decode(prefs).takeUnless { it.corruptRoot }?.profiles
                 ?.singleOrNull { it.id == id }
                 ?: return@edit
             val sourceKind = SharedSetupV2ProfilePersistence.sourceDestinationKind(
@@ -530,7 +559,9 @@ class ExportProfileRepository @Inject constructor(
     ): ExportProfile? {
         var migrated: ExportProfile? = null
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
             val profile = ExportProfileRules.migrateDefault(
                 existing = existing,
                 snapshotJson = settingsSnapshotJson,
@@ -539,8 +570,9 @@ class ExportProfileRepository @Inject constructor(
                 newId = { UUID.randomUUID().toString() },
                 apiEndpointUrl = apiEndpointUrl,
             ) ?: return@edit
-            prefs[Keys.PROFILES] = json.encodeToString(listSerializer, listOf(profile))
-            prefs[Keys.ACTIVE_PROFILE_ID] = profile.id
+            if (decoded.blocksDefaultMigration) return@edit
+            ExportProfilePersistence.writeNative(prefs, decoded, listOf(profile))
+            prefs[ExportProfilePersistence.activeKey] = profile.id
             migrated = profile
         }
         return migrated
@@ -555,11 +587,5 @@ class ExportProfileRepository @Inject constructor(
         }
     }
 
-    private fun decodeProfiles(raw: String?): List<ExportProfile>? {
-        if (raw.isNullOrBlank()) return emptyList()
-        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrElse { error ->
-            Timber.e(error, "Export profiles failed to decode; blocking profile writes")
-            null
-        }
-    }
+    suspend fun hasOpaqueProfiles(): Boolean = ExportProfilePersistence.decode(dataStore.data.first()).blocksDefaultMigration
 }

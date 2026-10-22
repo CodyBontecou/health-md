@@ -452,6 +452,9 @@ class ScheduledExportRecoveryManagerTest {
                 settings: ExportSettings,
                 target: ExportTarget,
                 expectedDestinationFingerprint: String?,
+                googleDriveDestinationId: String?,
+                googleDriveProfileId: String?,
+                googleDriveOperationId: String?,
                 allowInteractiveRouteConsent: Boolean,
             ) = ExportResult(
                 successCount = 1,
@@ -503,6 +506,10 @@ class ScheduledExportRecoveryManagerTest {
         exportHistoryRepository = historyRepository,
         rawSnapshotService = rawSnapshotService,
         apiCredentialStore = apiCredentialStore,
+        googleDriveExportOrchestrator = mockk(relaxed = true),
+        googleDriveDestinationRunner = mockk(relaxed = true),
+        googleDriveSelectionStore = mockk(relaxed = true),
+        googleDriveDestinationStore = mockk(relaxed = true),
         entitlementRepository = FakeBillingRepository(),
         distributionPolicy = DistributionPolicy.play(),
     )

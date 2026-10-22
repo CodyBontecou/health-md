@@ -112,6 +112,7 @@ class ExportProfilesViewModelTest {
             snapshotFactory,
             settingsRepository,
             profileCoordinator,
+            mockk(relaxed = true),
         )
     }
 
@@ -597,7 +598,7 @@ class ExportProfilesViewModelTest {
         val harness = harness()
         coEvery { harness.repository.profileById("p2") } returns profile("p2", name = "Weekly")
         coEvery {
-            harness.repository.add(any(), any(), any(), any(), any(), any(), any())
+            harness.repository.add(any(), any(), any(), any(), any(), any(), any(), any())
         } answers {
             profile(id = "p-copy", name = "Weekly 2")
         }

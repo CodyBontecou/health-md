@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "f8cd4ab96ba9e19f768478362c50e0a829bf8097ccf80a75abac4057734eefce",
+      "sha256": "94af40a86cefc606b3df1602be9a03dc234748634e6ab33e8c4ee0581467b45a",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -388,7 +388,11 @@
         "packages/contracts/shared-setup/v2/shared-setup.schema.json",
         "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
         "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
-        "packages/contracts/shared-setup/v2/field-coverage-baseline-v1.json"
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage-v2.json",
+        "packages/contracts/shared-setup/v2/field-coverage-baseline-v1.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v3.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage-v3.json"
       ],
       "implementations": [
         "packages/contracts/validate.py",
@@ -412,6 +416,7 @@
       "consumers": [
         "packages/contracts/validate.py",
         "packages/contracts/test_validate_shared_setup.py",
+        "packages/contracts/test_drive_profile_field_audits.py",
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CodecMapperTests.swift",
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupAppleProfileFieldCoverageTests.swift",
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2ProfileTransactionTests.swift",

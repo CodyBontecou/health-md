@@ -135,9 +135,31 @@ final class ScheduledExportCoordinator {
         let profileName: String
         let target: ExportTargetSelection
         let settings: ExportSettingsSnapshot
+        let googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot?
+
         var recoveryGeneration: Int = 0
         var enabledAt: Date? = nil
         var apiDestinationIdentity: ScheduledAPIEndpointIdentity? = nil
+
+        init(
+            profileID: UUID,
+            profileName: String,
+            target: ExportTargetSelection,
+            settings: ExportSettingsSnapshot,
+            googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot? = nil,
+            recoveryGeneration: Int = 0,
+            enabledAt: Date? = nil,
+            apiDestinationIdentity: ScheduledAPIEndpointIdentity? = nil
+        ) {
+            self.profileID = profileID
+            self.profileName = profileName
+            self.target = target
+            self.settings = settings
+            self.googleDriveDestinationSnapshot = googleDriveDestinationSnapshot
+            self.recoveryGeneration = recoveryGeneration
+            self.enabledAt = enabledAt
+            self.apiDestinationIdentity = apiDestinationIdentity
+        }
     }
 
     private func isRetained(_ request: PendingExportRequest) throws -> Bool {
@@ -197,6 +219,7 @@ final class ScheduledExportCoordinator {
             settingsSnapshot: frozenSettings,
             profileID: profile?.profileID,
             profileName: profile?.profileName,
+            googleDriveDestinationSnapshot: profile?.googleDriveDestinationSnapshot,
             recoveryGeneration: profile?.recoveryGeneration ?? 0,
             scheduleEnabledAt: profile?.enabledAt ?? schedule.enabledAt,
             apiDestinationIdentity: profile?.apiDestinationIdentity ?? apiDestinationIdentity,

@@ -26,6 +26,14 @@
 				<string>healthmd</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.codybontecou.obsidianhealth.google-drive</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_DRIVE_REDIRECT_SCHEME)</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleDocumentTypes</key>
 	<array>
@@ -70,6 +78,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CONNECTED_APPS_WHOOP_ENABLED</key>
 	<string>$(CONNECTED_APPS_WHOOP_ENABLED)</string>
+	<key>GOOGLE_DRIVE_IOS_CLIENT_ID</key>
+	<string>$(GOOGLE_DRIVE_IOS_CLIENT_ID)</string>
+	<key>GOOGLE_DRIVE_REDIRECT_URI</key>
+	<string>$(GOOGLE_DRIVE_REDIRECT_URI)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

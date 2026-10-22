@@ -174,6 +174,20 @@ class SharedSetupV2Codec(
         return null
     }
 
+    /** Local sidecars retain only admitted closed DTOs, not a second trusted input grammar. */
+    internal fun validatePreservedProfile(profile: SharedSetupV2Profile): String? {
+        if (!profile.name.isNonEmptyBounded(256) || profile.name != profile.name.trim()) {
+            return "Invalid preserved profile name."
+        }
+        val encoded = json.encodeToJsonElement(SharedSetupV2Profile.serializer(), profile)
+        validateGenericBounds(encoded)?.let { return it }
+        scanSecurity(encoded)?.let { return it }
+        return validateProfile(
+            profile,
+            if (profile.platformExtensions.android != null) "android" else "apple",
+        )
+    }
+
     private fun validateProfile(profile: SharedSetupV2Profile, writerPlatform: String): String? {
         val export = profile.export
         if (

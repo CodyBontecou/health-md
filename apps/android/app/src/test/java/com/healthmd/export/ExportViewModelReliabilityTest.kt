@@ -9,6 +9,8 @@ import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.HealthData
 import com.healthmd.presentation.export.ExportViewModel
 import com.healthmd.sharedsetup.SharedSetupV2ProfileExecutionAccess
+import io.mockk.every
+import kotlinx.coroutines.flow.flowOf
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
@@ -176,6 +178,7 @@ class ExportViewModelReliabilityTest {
         val historyRepository = FakeExportHistoryRepository()
         val fileExportManager: FileExportManager = mockk(relaxed = true)
         val exportProfileRepository = mockk<ExportProfileRepository> {
+            every { hasOpaqueProfileState } returns flowOf(false)
             coEvery { activeSharedSetupV2ExecutionAccess() } returns
                 SharedSetupV2ProfileExecutionAccess.Allowed
         }
@@ -194,6 +197,11 @@ class ExportViewModelReliabilityTest {
             reviewPrompter = FakeReviewPrompter(),
             exportHistoryRepository = historyRepository,
             fileExportManager = fileExportManager,
+            googleDriveExportOrchestrator = mockk(relaxed = true),
+            googleDriveSelectionStore = mockk(relaxed = true) {
+                every { destinationId } returns flowOf(null)
+            },
+            googleDriveDestinationStore = mockk(relaxed = true),
         )
     }
 }

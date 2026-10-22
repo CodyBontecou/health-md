@@ -5,6 +5,7 @@ export const defaultLocale = 'en';
 // canonical English artifacts; localized fallback routes stay noindex and point
 // to the English canonical URL.
 export const canonicalEnglishDocSlugs = Object.freeze([
+  'docs/guides/google-drive-export',
   'docs/release-status',
   'docs/cli/installation',
   'docs/cli-reference',

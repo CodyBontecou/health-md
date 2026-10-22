@@ -10,6 +10,7 @@ import java.security.MessageDigest
 enum class ExportTarget {
     DEVICE_FOLDER,
     API_ENDPOINT,
+    GOOGLE_DRIVE,
 }
 
 /** Validation and privacy-safe display helpers for user-configured API destinations. */
@@ -58,6 +59,7 @@ object ExportTargetReadiness {
         target: ExportTarget,
         hasExportFolder: Boolean,
         apiEndpointConfigured: Boolean,
+        googleDriveReady: Boolean = false,
         exportMode: ExportMode = ExportMode.COMPATIBILITY,
         rawProviderSupported: Boolean = true,
         rawSelectionReady: Boolean = true,
@@ -67,6 +69,7 @@ object ExportTargetReadiness {
         return when (target) {
             ExportTarget.DEVICE_FOLDER -> hasExportFolder
             ExportTarget.API_ENDPOINT -> apiEndpointConfigured
+            ExportTarget.GOOGLE_DRIVE -> googleDriveReady
         }
     }
 }

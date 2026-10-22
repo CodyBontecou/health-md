@@ -30,6 +30,7 @@ struct ExportYesterdayHealthDataIntent: AppIntent {
         )
 
         let outcome = await ExportIntentRunner.run(dates: [yesterday], profileName: profile)
+        try ExportIntentRunner.requireNoForegroundTransition(outcome)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }
 }

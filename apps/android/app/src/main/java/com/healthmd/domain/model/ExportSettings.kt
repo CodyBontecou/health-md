@@ -80,6 +80,8 @@ data class PendingScheduledExportRequest(
     val apiOperationId: String? = null,
     /** Durable exact-artifact journal for a scheduled device-folder commit. */
     val folderOperationId: String? = null,
+    /** Durable private Drive journal. Credentials and remote authority are excluded. */
+    val driveOperationId: String? = null,
     val firstFailedAtMillis: Long = 0L,
     val lastAttemptAtMillis: Long = firstFailedAtMillis,
     val lastFailureReason: ExportFailureReason? = null,
@@ -101,11 +103,17 @@ data class PendingScheduledExportRequest(
         require(folderOperationId == null || exportTarget == ExportTarget.DEVICE_FOLDER) {
             "Only folder retries may reference a durable folder operation."
         }
+        require(driveOperationId == null || exportTarget == ExportTarget.GOOGLE_DRIVE) {
+            "Only Drive retries may reference a durable Drive operation."
+        }
         require(folderOperationId == null || folderOperationId.matches(Regex("[A-Za-z0-9._-]{1,128}"))) {
             "Scheduled folder operation identity is invalid."
         }
-        require(apiOperationId == null || folderOperationId == null) {
-            "A scheduled retry cannot reference API and folder operations together."
+        require(driveOperationId == null || driveOperationId.matches(Regex("[A-Za-z0-9._-]{1,128}"))) {
+            "Scheduled Drive operation identity is invalid."
+        }
+        require(listOfNotNull(apiOperationId, folderOperationId, driveOperationId).size <= 1) {
+            "A scheduled retry cannot reference multiple destination operations."
         }
     }
 }
