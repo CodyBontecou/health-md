@@ -271,5 +271,7 @@ Reproduction remains code-derived: no device/backend scenario was run. Native
 UI/persistence migration, atomic fault injection, bounded transport/redirect/auth
 mock tests, cross-language fixture consumers, cancellation, schedule success markers,
 relaunch recovery, and actual iPhone/Android plus receiver QA are outstanding.
-Passing the reference suite alone does not complete issue 170. Keep the PR draft
-and issue open; do not enable this feature on the strength of proposal tests.
+Passing the reference suite alone does not complete issue 170. This proposal may
+merge after contract/reference review and passing CI; keep issue 170 open and native
+adoption gated until the implementation and device acceptance above are complete.
+Do not enable this feature on the strength of proposal tests.
