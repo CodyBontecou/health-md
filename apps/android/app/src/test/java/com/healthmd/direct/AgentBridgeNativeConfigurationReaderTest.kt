@@ -2162,6 +2162,34 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    @Test fun `production catalog reuse retains live return fence and publication identity`() {
+        var facts = state; var samples = 0; var revokeAtReturn = false
+        val reader = AgentBridgeNativeConfigurationReader(observed, settings, profiles, {
+            samples++
+            if (revokeAtReturn && samples % 2 == 0) facts = facts.copy(nativeGrants = AgentBridgeDiscoveryNativeGrants.REQUIRED)
+            facts
+        }, compiledCatalog = AgentBridgeNativeCompiledCatalog { AgentBridgeExportTestRegistry.load() })
+        fun publication(revision: Int) = AgentBridgeNativeCatalogPublication(revision, AgentBridgeExportPlanningFixture.id(1),
+            facts.fingerprint(AgentBridgeExportPlanningFixture.id(1)))
+        val first = publication(1)
+        reset()
+        val initial = reader.readConfiguration(null, first)
+        reader.readConfiguration(null, first)
+        assertThat(samples).isEqualTo(4)
+        revokeAtReturn = true
+        try { reader.readConfiguration(null, first); throw AssertionError("Cached mapping cannot bypass final native fact revocation") }
+        catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED) }
+        revokeAtReturn = false
+        val next = publication(2)
+        val current = reader.readConfiguration(null, next)
+        assertThat(current.nativeGrants).isEqualTo(AgentBridgeDiscoveryNativeGrants.REQUIRED)
+        assertThat(current.settings.catalog.revision).isEqualTo(2)
+        assertThat(current.settings.catalog.configurationSha256).isNotEqualTo(initial.settings.catalog.configurationSha256)
+        try { reader.readConfiguration(null, first); throw AssertionError("Stale publication must reject") }
+        catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED) }
+        assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
+    }
+
     @Test fun `discovery and explicit never read private preferences`() {
         val reader = reader()
         for (policy in listOf(null, AgentBridgeSettingsPolicyExplicit(AgentBridgeExportPlanningFixture.output(), "explicit"))) {

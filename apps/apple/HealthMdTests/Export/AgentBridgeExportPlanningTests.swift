@@ -289,6 +289,36 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testNativeCatalogReuseRetainsLiveReturnFenceAndPublicationIdentity() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)
+        Self.retainedNativeConfigurationObjects.append(profiles)
+        var facts = try nativeState(), samples = 0, revokeAtReturn = false
+        let revoked = try nativeState(grants: .required)
+        let reader = AgentBridgeNativeConfigurationReader(defaults: rig.reader.defaults, profiles: profiles) {
+            samples += 1
+            if revokeAtReturn && samples.isMultiple(of: 2) { facts = revoked }
+            return facts
+        }
+        let first = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
+        let initial = try reader.readConfiguration(for: rig.peer, policy: nil, catalogPublication: first)
+        _ = try reader.readConfiguration(for: rig.peer, policy: nil, catalogPublication: first)
+        XCTAssertEqual(samples, 4, "A reused catalog still samples native facts before and after every read")
+        revokeAtReturn = true
+        XCTAssertThrowsError(try reader.readConfiguration(for: rig.peer, policy: nil, catalogPublication: first)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        revokeAtReturn = false
+        let next = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { facts }
+        let current = try reader.readConfiguration(for: rig.peer, policy: nil, catalogPublication: next)
+        XCTAssertEqual(current.nativeGrants, .required)
+        XCTAssertEqual(current.inputs.catalog.revision, next.revision)
+        XCTAssertNotEqual(current.inputs.catalog.configurationSHA256, initial.inputs.catalog.configurationSHA256)
+        XCTAssertThrowsError(try reader.readConfiguration(for: rig.peer, policy: nil, catalogPublication: first))
+        XCTAssertEqual(rig.reader.defaults.reads, 0); XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
     func testNativeConfigurationDiscoveryAndExplicitNeverReadPrivatePreferences() throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let profiles = ExportProfileStore(userDefaults: rig.reader.defaults)

@@ -36,6 +36,9 @@ final class AgentBridgeNativeConfigurationReader: AgentBridgeExportPlanningConfi
     private let defaults: UserDefaults
     private let profiles: ExportProfileStore
     private let nativeState: () throws -> AgentBridgeNativePlanningFacts
+    // Only compiled metric mappings are reusable. Current native facts and selected settings
+    // remain live, and every publication revision has its own derived configuration identity.
+    private var catalogCache: (publication: AgentBridgeNativeCatalogPublication, catalog: AgentBridgeRequestSettingsCatalog)?
 
     init(defaults: UserDefaults, profiles: ExportProfileStore,
          nativeState: @escaping () throws -> AgentBridgeNativePlanningFacts) {
@@ -54,9 +57,14 @@ final class AgentBridgeNativeConfigurationReader: AgentBridgeExportPlanningConfi
               publication.factsSHA256 == (try state.fingerprint(sourceInstallationID: peer.peer.sourceInstallationID)) else {
             throw AgentBridgeValidationError.bindingChanged
         }
-        let catalog = try AgentBridgeRequestSettingsCatalog(
-            registry: HealthMdCoreRegistryAdapter.appleSnapshot(),
-            availableNativeMetricIDs: state.availableNativeMetricIDs, revision: publication.revision)
+        let catalog: AgentBridgeRequestSettingsCatalog
+        if let cached = catalogCache, cached.publication == publication {
+            catalog = cached.catalog
+        } else {
+            catalog = try AgentBridgeRequestSettingsCatalog(registry: HealthMdCoreRegistryAdapter.appleSnapshot(),
+                availableNativeMetricIDs: state.availableNativeMetricIDs, revision: publication.revision)
+            catalogCache = (publication, catalog)
+        }
         var saved: AgentBridgeRequestSettingsSnapshot?
         var selectedProfiles: [AgentBridgeRequestSettingsProfile] = []
         switch policy {

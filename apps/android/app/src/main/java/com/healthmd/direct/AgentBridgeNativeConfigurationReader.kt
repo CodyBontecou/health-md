@@ -61,6 +61,22 @@ internal fun HealthConnectNativePlanningMetadata.planningFacts(deviceSettingsObj
             else -> AgentBridgeDiscoveryNativeGrants.REQUIRED
         }, entitlement, userStartedServiceActive, firstUnlockComplete, grantedPermissionsSha256)
 
+/** Owns only immutable derived mappings. The default factory is the compiled Rust profile;
+ * a hermetic factory can exercise the same cache without loading a host-native library. */
+internal class AgentBridgeNativeCompiledCatalog(
+    private val registry: () -> CoreMetricRegistrySnapshot = {
+        HealthMdCoreRegistryAdapter.snapshot(CoreMetricRegistryProfile.ANDROID_FROZEN_V4)
+    },
+) {
+    private val lock = Any()
+    private var cached: Pair<AgentBridgeNativeCatalogPublication, AgentBridgeRequestSettingsCatalog>? = null
+    fun read(availableNativeMetricIds: Set<String>, publication: AgentBridgeNativeCatalogPublication): AgentBridgeRequestSettingsCatalog = synchronized(lock) {
+        cached?.takeIf { it.first == publication }?.second ?: AgentBridgeRequestSettingsCatalog(
+            registry(), availableNativeMetricIds, publication.revision,
+        ).also { cached = publication to it }
+    }
+}
+
 /** Actual native stores plus compiled catalog. The synchronous issuer transaction may call this
  * only from a worker: the single preferences read must never block the Android main looper.
  * Discovery/explicit requests do not collect private preferences. Selected settings/profile and
@@ -70,9 +86,8 @@ internal class AgentBridgeNativeConfigurationReader(
     private val settings: SettingsRepositoryImpl,
     private val profiles: ExportProfileRepository,
     private val nativeState: () -> AgentBridgeNativePlanningFacts,
-    private val registry: () -> CoreMetricRegistrySnapshot = {
-        HealthMdCoreRegistryAdapter.snapshot(CoreMetricRegistryProfile.ANDROID_FROZEN_V4)
-    },
+    private val registry: (() -> CoreMetricRegistrySnapshot)? = null,
+    private val compiledCatalog: AgentBridgeNativeCompiledCatalog = AgentBridgeNativeCompiledCatalog(),
 ) : AgentBridgeExportPlanningConfigurationReader {
     override fun readConfiguration(policy: AgentBridgeSettingsPolicy?, catalogPublication: AgentBridgeNativeCatalogPublication?): AgentBridgeExportPlanningConfiguration {
         if (Looper.myLooper() == Looper.getMainLooper()) fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)
@@ -86,7 +101,9 @@ internal class AgentBridgeNativeConfigurationReader(
     private fun readSelectedConfiguration(policy: AgentBridgeSettingsPolicy?, publication: AgentBridgeNativeCatalogPublication): AgentBridgeExportPlanningConfiguration {
         val state = detachedState()
         if (state.fingerprint(publication.sourceInstallationId) != publication.factsSha256) fail(AgentBridgeErrorCode.BINDING_CHANGED)
-        val catalog = AgentBridgeRequestSettingsCatalog(registry(), state.availableNativeMetricIds, publication.revision)
+        // Injected registry overrides remain dynamic; only the compiled production source is cached.
+        val catalog = registry?.let { AgentBridgeRequestSettingsCatalog(it(), state.availableNativeMetricIds, publication.revision) }
+            ?: compiledCatalog.read(state.availableNativeMetricIds, publication)
         var saved: AgentBridgeRequestSettingsSnapshot? = null
         var selectedProfiles: List<AgentBridgeRequestSettingsProfile> = emptyList()
         if (policy is AgentBridgeSettingsPolicySavedDeviceSettings || policy is AgentBridgeSettingsPolicyProfile) {
