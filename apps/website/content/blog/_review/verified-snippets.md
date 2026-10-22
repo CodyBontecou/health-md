@@ -57,9 +57,14 @@ Source: built `apple-health-export` landing page HTML (exact line).
 an authorized platform API, Health.md builds the selected output on-device,
 and writes into a folder the user chose."
 
-Verified: 2026-09-26
-Source: `content/blog/local-first-health-data-architecture.md`
-("The simplest workflow has no Health.md health-data server").
+Verified: 2026-10-22
+Source: `apps/apple/HealthMd/Shared/Managers/VaultManager.swift`, native export
+plans, and the separately selected `APIEndpointExportRunner.swift`; Android
+folder export remains a separate destination from `RawSnapshotApiClient.kt`.
+Physical #182 synthetic local-folder export on producer source now merged in
+main `4da74b120e2858c29ee4a77aac0bb46810668974` also exercised this Apple path.
+This fact excludes intentionally selected API/cloud destinations and does not
+claim that a file provider or paired computer has no network or storage copy.
 
 ## Provider destinations follow provider rules
 
