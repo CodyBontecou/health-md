@@ -1,6 +1,6 @@
 # Google Play Billing Integration Guide
 
-This document walks through Google Play Billing for the `play` Android variant. The `fdroid` variant does not compile Billing and receives included full access through the channel-neutral entitlement boundary.
+This document covers Google Play Billing for the `play` Android variant. The `fdroid` variant does not compile Billing and receives included full access through the channel-neutral entitlement boundary. Console/account changes, device installation and purchase testing require explicit authorization; these instructions are not evidence that a live transaction or restoration was qualified.
 
 ## Architecture Overview
 
@@ -56,7 +56,7 @@ The Play repository and `BillingClient` are Hilt singletons with process lifetim
    - **Product type**: In-app product (one-time purchase)
    - **Title**: "Health MD Premium"
    - **Description**: "Unlimited exports and scheduled backups"
-   - **Price**: $9.99 USD
+   - **Price**: configure the approved price in Play Console; the app displays Play's returned localized price.
 
 **Important**: The product ID in the code MUST exactly match the product ID in Google Play Console.
 
@@ -109,7 +109,7 @@ The paywall is wired up in `HealthMdNavigation.kt`:
 ```kotlin
 composable(SubRoutes.PAYWALL) {
     val paywallViewModel: PaywallViewModel = hiltViewModel()
-    val isPurchased by paywallViewModel.isPurchased.collectAsStateWithLifecycle()
+    val isPurchased by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
 
     // Auto-dismiss on successful purchase
@@ -169,9 +169,9 @@ Launch billing UI (user completes payment)
     ↓
 onPurchasesUpdated callback fires
     ↓
-Acknowledge purchase (required!)
+Accept matching PURCHASED product and cache entitlement
     ↓
-Update isPurchased StateFlow
+Asynchronously acknowledge unacknowledged purchase (required!)
     ↓
 PaywallScreen auto-dismisses
     ↓
@@ -180,7 +180,7 @@ Feature unlocked
 
 ## Important: Acknowledge Purchases
 
-The code automatically acknowledges purchases after they're verified. This is **required** by Google:
+The code accepts matching products in the `PURCHASED` state, caches entitlement, and asynchronously acknowledges unacknowledged purchases. This is not server-side signature verification. Acknowledgment remains **required** by Google:
 
 ```kotlin
 private fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
@@ -205,7 +205,6 @@ private fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Pur
 1. **Signature Verification**: For production, consider verifying purchase signatures server-side
 2. **Fraud Detection**: Monitor unusual purchase patterns in Play Console
 3. **Network Security**: Uses HTTPS to Google's servers (handled by BillingClient)
-4. **Token Expiry**: Purchase tokens expire after 1 year
 
 ## Troubleshooting
 
@@ -235,15 +234,14 @@ D/BillingRepository: Purchases queried
 
 Watch logs in Logcat: `adb logcat | grep BillingRepository`
 
-## Next Steps
+## Qualification checklist
 
-1. ✅ Create product in Play Console
-2. ✅ Add test accounts for testing
-3. ✅ Test purchase flow in app
-4. ✅ Identify all premium features
-5. ✅ Update ExportScreen and other screens to show paywall
-6. ✅ Test restoration with test account
-7. ✅ Submit to Play Store
+These are tasks, not completion receipts. Use the canonical [Play release guide](PLAY_STORE_SETUP.md) for publication; this integration guide does not authorize a release.
+
+- Confirm the configured product and approved localized price.
+- Prepare authorized sandbox accounts and device testing.
+- Verify purchase, acknowledgment retries, restoration and premium-feature gating.
+- Retain exact-build qualification evidence before the canonical release workflow.
 
 ## References
 
