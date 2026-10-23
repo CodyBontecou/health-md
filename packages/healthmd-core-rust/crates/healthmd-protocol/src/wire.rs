@@ -211,6 +211,12 @@ pub struct PeerCapabilities {
     pub query: Option<DirectQueryCapabilities>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wake: Option<WakeCapabilities>,
+    #[serde(
+        rename = "exportHistoryObservationVersions",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub export_history_observation_versions: Option<Vec<i32>>,
 }
 
 impl PeerCapabilities {
@@ -229,6 +235,7 @@ impl PeerCapabilities {
             transfer: TransferCapabilities::default(),
             query: None,
             wake: Some(WakeCapabilities { supported: true }),
+            export_history_observation_versions: None,
         }
     }
 

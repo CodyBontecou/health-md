@@ -109,6 +109,7 @@ public actor DirectRawReceiver {
         guard request.jobID == accepted.jobID,
               request.jobID == session.jobID,
               session.peerBinding == accepted.peerBinding,
+              accepted.historyObservation.map({ $0.matches(request: request, accepted: accepted, session: session) }) ?? true,
               accepted.resolvedDateIdentifiers.count <= 100_000,
               accepted.resolvedDateIdentifiers == accepted.resolvedDateIdentifiers.sorted(),
               Set(accepted.resolvedDateIdentifiers).count == accepted.resolvedDateIdentifiers.count,
@@ -126,6 +127,7 @@ public actor DirectRawReceiver {
             guard persisted.request == request else { throw DirectRawReceiverError.requestChanged }
             guard persisted.session == session,
                   persisted.accepted.peerBinding == accepted.peerBinding,
+                  persisted.accepted.historyObservation == accepted.historyObservation,
                   persisted.accepted.resolvedDateIdentifiers == accepted.resolvedDateIdentifiers,
                   persisted.accepted.sourceDeviceName == accepted.sourceDeviceName,
                   persisted.accepted.resolvedCanonicalSelection == accepted.resolvedCanonicalSelection else {

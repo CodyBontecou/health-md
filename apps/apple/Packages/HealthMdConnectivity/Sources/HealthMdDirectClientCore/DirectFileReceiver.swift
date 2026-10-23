@@ -155,6 +155,7 @@ public actor DirectFileReceiver {
               request.jobID == accepted.jobID,
               request.jobID == session.jobID,
               session.peerBinding == accepted.peerBinding,
+              accepted.historyObservation.map({ $0.matches(request: request, accepted: accepted, session: session) }) ?? true,
               try DirectRequestFingerprint.make(for: request) == session.requestFingerprint else {
             throw DirectFileReceiverError.sessionChanged
         }
@@ -173,6 +174,7 @@ public actor DirectFileReceiver {
             }
             guard persisted.session == session,
                   persisted.accepted.peerBinding == accepted.peerBinding,
+                  persisted.accepted.historyObservation == accepted.historyObservation,
                   persisted.accepted.resolvedDateIdentifiers == accepted.resolvedDateIdentifiers else {
                 throw DirectFileReceiverError.sessionChanged
             }

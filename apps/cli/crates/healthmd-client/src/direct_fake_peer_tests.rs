@@ -177,6 +177,7 @@ fn mobile_capabilities(
     query: Option<DirectQueryCapabilities>,
 ) -> PeerCapabilities {
     PeerCapabilities {
+        export_history_observation_versions: None,
         protocol_versions: versions,
         platform,
         installation_id: trust.installation_id,

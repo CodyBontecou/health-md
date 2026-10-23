@@ -137,6 +137,7 @@ impl RawReceiver {
                 || persisted.request != request
                 || persisted.session != session
                 || persisted.accepted.peer_binding != accepted.peer_binding
+                || persisted.accepted.history_observation != accepted.history_observation
                 || persisted.accepted.resolved_date_identifiers
                     != accepted.resolved_date_identifiers
                 || persisted.accepted.source_device_name != accepted.source_device_name
@@ -666,6 +667,10 @@ fn validate_prepare(
         || request.job_id != accepted.job_id
         || request.job_id != session.job_id
         || session.peer_binding != accepted.peer_binding
+        || accepted
+            .history_observation
+            .as_ref()
+            .is_some_and(|observation| !observation.matches(request, accepted, session))
         || dates.is_empty()
         || dates.len() > MAXIMUM_DATES_PER_JOB
         || dates.windows(2).any(|pair| pair[0] >= pair[1])
@@ -2061,6 +2066,7 @@ mod tests {
             destination_installation_id: SwiftUuid(Uuid::new_v4()),
         };
         let accepted = ExportAccepted {
+            history_observation: None,
             job_id,
             accepted_at: created_at,
             peer_binding: binding.clone(),
@@ -2316,6 +2322,7 @@ mod tests {
             destination_installation_id: SwiftUuid(Uuid::new_v4()),
         };
         let accepted = ExportAccepted {
+            history_observation: None,
             job_id,
             accepted_at: created_at,
             peer_binding: binding.clone(),

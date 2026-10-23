@@ -158,6 +158,8 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
     public let transfer: DirectTransferCapabilities
     public let query: DirectQueryCapabilities?
     public let wake: DirectWakeCapabilities?
+    /// Independently versioned export-admission evidence. Nil means legacy/unverified.
+    public let exportHistoryObservationVersions: [Int]?
 
     public init(
         protocolVersions: [Int] = [HealthMdDirectProtocol.currentVersion],
@@ -168,7 +170,8 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
         supportsCanonicalExtraction: Bool = true,
         transfer: DirectTransferCapabilities = .current,
         query: DirectQueryCapabilities? = nil,
-        wake: DirectWakeCapabilities? = nil
+        wake: DirectWakeCapabilities? = nil,
+        exportHistoryObservationVersions: [Int]? = nil
     ) {
         self.protocolVersions = Array(Set(protocolVersions)).sorted()
         self.platform = platform
@@ -179,6 +182,7 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
         self.transfer = transfer
         self.query = query
         self.wake = wake
+        self.exportHistoryObservationVersions = exportHistoryObservationVersions.map { Array(Set($0)).sorted() }
     }
 
     public func negotiatedProtocolVersion(with peer: Self) -> Int? {
@@ -419,6 +423,8 @@ public struct DirectExportAccepted: Codable, Equatable, Sendable {
     public let sourceTimeZoneIdentifier: String
     /// Categories and `all_metrics` are resolved by iPhone into explicit metric IDs.
     public let resolvedCanonicalSelection: DirectCanonicalSelection?
+    /// Frozen job-admission observation, capability-gated independently from capture status.
+    public let historyObservation: ExportHistoryObservation?
 
     public init(
         jobID: UUID,
@@ -427,7 +433,8 @@ public struct DirectExportAccepted: Codable, Equatable, Sendable {
         resolvedDateIdentifiers: [String] = [],
         sourceDeviceName: String = "iPhone",
         sourceTimeZoneIdentifier: String = TimeZone.current.identifier,
-        resolvedCanonicalSelection: DirectCanonicalSelection? = nil
+        resolvedCanonicalSelection: DirectCanonicalSelection? = nil,
+        historyObservation: ExportHistoryObservation? = nil
     ) {
         self.jobID = jobID
         self.acceptedAt = acceptedAt
@@ -436,6 +443,7 @@ public struct DirectExportAccepted: Codable, Equatable, Sendable {
         self.sourceDeviceName = sourceDeviceName
         self.sourceTimeZoneIdentifier = sourceTimeZoneIdentifier
         self.resolvedCanonicalSelection = resolvedCanonicalSelection
+        self.historyObservation = historyObservation
     }
 }
 

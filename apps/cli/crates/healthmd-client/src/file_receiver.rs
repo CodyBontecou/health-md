@@ -411,6 +411,10 @@ impl FileReceiver {
             || request.job_id != accepted.job_id
             || request.job_id != session.job_id
             || session.peer_binding != accepted.peer_binding
+            || accepted
+                .history_observation
+                .as_ref()
+                .is_some_and(|observation| !observation.matches(&request, &accepted, &session))
             || accepted_dates.is_empty()
             || accepted_dates.len() > MAXIMUM_DATES_PER_JOB
             || accepted_dates.windows(2).any(|pair| pair[0] >= pair[1])
@@ -435,6 +439,7 @@ impl FileReceiver {
                 || persisted.session != session
                 || persisted.destination_identity != identity
                 || persisted.accepted.peer_binding != accepted.peer_binding
+                || persisted.accepted.history_observation != accepted.history_observation
                 || persisted.accepted.resolved_date_identifiers
                     != accepted.resolved_date_identifiers
                 || persisted.accepted.source_device_name != accepted.source_device_name
@@ -2227,6 +2232,7 @@ mod tests {
             destination_installation_id: SwiftUuid(Uuid::new_v4()),
         };
         let accepted = ExportAccepted {
+            history_observation: None,
             job_id,
             accepted_at: now,
             peer_binding: binding.clone(),
