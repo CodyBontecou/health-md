@@ -102,7 +102,9 @@ nonisolated final class KeychainHealthContextEncryptionKeyProvider: HealthContex
         }
     }
 
-    /// Background automation must report locked rather than starting an authentication prompt.
+    /// Request noninteractive authentication where supported. Legacy file-based
+    /// Keychain ACL authorization may still require the owner; callers must keep
+    /// Security services off the receiver/UI thread.
     private var authenticationQuery: [String: Any] {
         var query = baseQuery
         if !allowsAuthenticationUI {

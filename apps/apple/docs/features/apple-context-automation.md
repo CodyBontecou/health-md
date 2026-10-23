@@ -34,6 +34,9 @@ all-history API, private API, flag enablement or deployment is involved.
   requests noninteractive Keychain authentication. Locked/unavailable key access
   must not admit acquisition or claim completion; status retries the same request
   after the owner restores access. Peer authority is checked again after waiting.
+  Existing legacy macOS Keychain items may still need the owner to approve the
+  updated app in the system dialog. While that authorization is outstanding, the
+  saved request is pending and no acquisition or completion is acknowledged.
 - Choose an existing Connected Mac profile in Export Profiles and explicitly use
   **Bind context automation to this authenticated Mac**. This is a separate local
   binding, not a change to the frozen export profile or Shared Setup grammar.
