@@ -349,6 +349,53 @@ jobs:
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
             Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
+      - name: Build unsigned physical-device QA candidate
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/device-qa build/logs
+          # Debug inherits the project's iphoneos SDK; Debug-iOS is simulator-only.
+          xcodebuild -showBuildSettings -json \
+            -project HealthMd.xcodeproj -scheme HealthMd \
+            -configuration Debug -destination 'generic/platform=iOS' \
+            -derivedDataPath build/device-qa-derived CODE_SIGNING_ALLOWED=NO \
+            > build/device-qa-settings.json
+          python3 -c 'import json; rows=json.load(open("build/device-qa-settings.json")); settings=next(row["buildSettings"] for row in rows if row.get("target")=="HealthMd"); assert settings["PLATFORM_NAME"]=="iphoneos"; assert "iPhoneOS27.0.sdk" in settings["SDKROOT"]; print(json.dumps({key:settings[key] for key in ("SDKROOT","PLATFORM_NAME","CONFIGURATION","PRODUCT_BUNDLE_IDENTIFIER")},sort_keys=True))' \
+            > build/device-qa/build-settings.json
+          xcodebuild build \
+            -project HealthMd.xcodeproj -scheme HealthMd \
+            -configuration Debug -destination 'generic/platform=iOS' \
+            -derivedDataPath build/device-qa-derived \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee build/logs/build-device-qa.log
+          app=build/device-qa-derived/Build/Products/Debug-iphoneos/HealthMd.app
+          test -f "$app/HealthMd"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
+          xcrun lipo -verify_arch arm64 "$app/HealthMd"
+          {
+            echo "SOURCE_SHA=$(git rev-parse HEAD)"
+            echo "SOURCE_TREE=$(git rev-parse HEAD^{tree})"
+            echo "PURPOSE=unsigned-device-QA-only"
+            xcodebuild -version
+            xcrun --sdk iphoneos --show-sdk-version
+            xcrun vtool -show-build "$app/HealthMd"
+          } > build/device-qa/provenance.txt
+          cp build/logs/history-sdk27-receipt.txt build/device-qa/
+          tar -czf build/device-qa/HealthMd-unsigned.app.tar.gz \
+            -C build/device-qa-derived/Build/Products/Debug-iphoneos HealthMd.app
+          (cd build/device-qa && shasum -a 256 HealthMd-unsigned.app.tar.gz > SHA256SUMS)
+
+      - name: Upload unsigned physical-device QA candidate
+        if: ${{ success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-device-candidate
+          path: apps/apple/build/device-qa/
+          if-no-files-found: error
+          retention-days: 3
+
       - name: Test iOS simulator selection policy
         run: python3 scripts/tests/test_select_ios_simulator.py
 
