@@ -16,7 +16,7 @@ The Play build has a provider catalog and export-provider abstraction so additio
 | Withings | Withings public API | Play only; OAuth adapter uses public PKCE with `WITHINGS_CLIENT_ID` or `WITHINGS_TOKEN_BROKER_URL` |
 | Oura | Oura Cloud API | Play only; OAuth adapter uses public PKCE with `OURA_CLIENT_ID` or `OURA_TOKEN_BROKER_URL` |
 | Polar Flow | Polar AccessLink | Play catalog only; AccessLink transaction cache still required |
-| WHOOP | WHOOP API | Play only; OAuth adapter uses public PKCE with `WHOOP_CLIENT_ID` or `WHOOP_TOKEN_BROKER_URL` |
+| WHOOP | WHOOP API v2 | Play only; configure `WHOOP_CLIENT_ID` and a confidential-client `WHOOP_TOKEN_BROKER_URL`; no client secret in the APK |
 
 Google Fit is intentionally excluded because Google Fit APIs are legacy/deprecated and Health Connect is the preferred Android path.
 
@@ -30,7 +30,7 @@ Google Fit is intentionally excluded because Google Fit APIs are legacy/deprecat
 - OAuth client secrets are intentionally not exposed through `BuildConfig`; mobile builds use public PKCE client IDs or a provider-specific token broker URL.
 - Compatibility exports still let `FitbitCloudDataProvider`, `WithingsCloudDataProvider`, `OuraCloudDataProvider`, and `WhoopCloudDataProvider` map cloud responses into normalized `HealthData`.
 - Raw API Snapshots use separate provider-native page methods on those same adapters and the same protected OAuth client. Each exact successful page is exported as `provider_payload`; normalized `HealthData` is never used as raw.
-- Fitbit/Withings endpoint plans explicitly do not paginate; Oura/WHOOP next tokens are capped and cycle-detected, and WHOOP recovery fan-out IDs come from captured cycle pages. Summary endpoints declare `serverAggregation=true`.
+- Fitbit/Withings endpoint plans explicitly do not paginate; Oura/WHOOP next tokens are capped and cycle-detected. WHOOP v2 recovery is an independent paginated collection using the same fixed time window and `limit=25` as cycles, sleep, and workouts. Summary endpoints declare `serverAggregation=true`.
 - `PolarCloudDataProvider` is raw `unsupported` until an AccessLink transaction cache/native adapter exists. Direct Samsung, Huawei, and Garmin are also raw `unsupported`; no provider falls back to Health Connect.
 - Samsung, Huawei, and Garmin direct providers are explicit unavailable adapters until their SDK/HMS/partner prerequisites are satisfied.
 - Health Connect metadata now annotates known provider package names with `data_origin_provider` when exported granular/workout metadata includes a data origin.
@@ -44,6 +44,8 @@ The in-app diagnostics and JVM test harness verify the pieces that do not requir
 - `OAuthAuthorizationManagerTest` uses MockWebServer to validate PKCE authorization URL generation, callback token exchange, Basic/request-body client auth, refresh-token handling, and unknown-state rejection.
 - `CloudProviderFixtureMappingTest` serves fixture API responses for Fitbit, Withings, Oura, and WHOOP through MockWebServer and asserts they map into `HealthData` correctly.
 - The same fixture suite includes a partial-failure check so one cloud endpoint error does not wipe otherwise readable sections for the day.
+- `WhoopCloudDataProviderTest` verifies v2 pagination, current-day-only compatibility body profiles, UUID identity, native sport names, DST-safe bounds/duration, partial-page preservation, and cancellation. `CloudNativeRawSnapshotTest` verifies independent recovery selection, bounded paging, safe metadata and exact bytes.
+- WHOOP OAuth requests only `offline read:cycles read:recovery read:sleep read:workout read:body_measurement`, matching iOS without `read:profile`. State is exactly eight characters; refresh sends `scope=offline` and rejects a missing rotated refresh token before replacing stored credentials.
 - `HealthProviderCatalogTest` guards the provider catalog and keeps Google Fit package/scopes out of the supported-provider surface.
 - Settings → Health diagnostics can share a redacted provider report for beta testers without exposing health measurements or token values.
 - `OAuthCredentialSafetyTest` guards against adding provider client-secret fields to the Android APK.
@@ -52,7 +54,7 @@ The in-app diagnostics and JVM test harness verify the pieces that do not requir
 Run Play provider tests with:
 
 ```bash
-./gradlew :app:testPlayDebugUnitTest --tests com.healthmd.data.health.oauth.OAuthAuthorizationManagerTest --tests com.healthmd.data.health.oauth.OAuthCredentialSafetyTest --tests com.healthmd.data.health.HealthProviderDiagnosticsReportTest --tests com.healthmd.data.health.providers.cloud.CloudProviderFixtureMappingTest --tests com.healthmd.data.health.providers.HealthProviderCatalogTest
+./gradlew :app:testPlayDebugUnitTest --tests com.healthmd.data.health.oauth.OAuthAuthorizationManagerTest --tests com.healthmd.data.health.oauth.OAuthCredentialSafetyTest --tests com.healthmd.data.health.HealthProviderDiagnosticsReportTest --tests com.healthmd.data.health.providers.cloud.CloudProviderFixtureMappingTest --tests com.healthmd.data.health.providers.cloud.WhoopCloudDataProviderTest --tests com.healthmd.data.health.providers.cloud.CloudNativeRawSnapshotTest --tests com.healthmd.data.health.providers.HealthProviderCatalogTest
 ```
 
 Run the F-Droid catalog/absence contract with `./gradlew :app:testFdroidDebugUnitTest --tests com.healthmd.distribution.FdroidDistributionPolicyTest`.
@@ -67,3 +69,6 @@ Before enabling live cloud/direct reads in the Play build:
 4. Add provider-specific fixture tests for API response mapping.
 5. Confirm privacy policy / Play Data Safety coverage for cloud token exchange and outbound API calls.
 6. For Polar and Garmin, add the required transaction/backend sync layers before presenting them as fully live import sources.
+7. WHOOP requires a server-held client secret. Its Android token broker must accept form-encoded authorization/refresh requests and return provider token JSON; the iOS broker's gated JSON API is not a drop-in Android endpoint. Register Android's `healthmd://oauth2redirect` separately from iOS's `healthmd://oauth/callback`. No broker deployment or live-account validation is implied by the v2 adapter migration.
+
+See [the cloud raw provider ledger](export-contract/cloud-raw-provider-ledger.md#whoop-v2-migration-boundary) for the provider API migration and unchanged public-schema boundaries.

@@ -25,10 +25,10 @@ Use `auto` to follow the unit system in the export. Use `metric` for kilometers,
 ## Current visualization coverage
 
 <div class="reference-stats">
-<div><strong>43</strong><span>plugin renderers today</span></div>
+<div><strong>62</strong><span>plugin renderers today</span></div>
 <div><strong>18</strong><span>export data categories</span></div>
 <div><strong>220+</strong><span>canonical export keys</span></div>
-<div><strong>1</strong><span>generic metric layer still needed</span></div>
+<div><strong>4</strong><span>WHOOP-specific views</span></div>
 </div>
 
 ## Platform support by exporter
@@ -161,6 +161,40 @@ Each item links to its matching public variation in the [Health.md visualization
 - [Workout trends](/visualizations/workout-analytics/workout-trends/theme-colors/), `workout-trends`
 - [Workout intervals](/visualizations/workout-analytics/workout-intervals/theme-colors/), `workout-intervals`
 - [Workout map](/visualizations/workout-analytics/workout-map/theme-colors/), `workout-map`
+
+### WHOOP: separate provider data
+
+On Apple builds with WHOOP enabled, connect it in Settings → Connected Apps and include Connected Apps in the export. These charts read Apple `healthmd.health_data` v8 daily files containing `providers.whoop` (`healthmd.provider.whoop_daily` v1). They do not merge WHOOP into Apple or Health Connect summaries; WHOOP HRV is RMSSD, not Apple SDNN.
+
+- [Recovery × strain](/visualizations/whoop/whoop-recovery-strain/theme-colors/), `whoop-recovery-strain`: recovery (0–100%) versus cycle strain (0–21), joined by the same cycle ID in full records. This is an association, not a training recommendation.
+- [Sleep achieved vs need](/visualizations/whoop/whoop-sleep-need/theme-colors/), `whoop-sleep-need`: separate sleep sessions and naps, with baseline, debt, recent-strain need, and a signed nap adjustment. The net-need marker requires all four reported components; negative nap adjustments stay subtractive.
+- [Sleep assessment trends](/visualizations/whoop/whoop-sleep-trends/theme-colors/), `whoop-sleep-trends`: WHOOP-reported performance, consistency, and efficiency percentages, not locally calculated scores.
+- [Workout strain & zones](/visualizations/whoop/whoop-workout-strain/theme-colors/), `whoop-workout-strain`: individual workout strain and WHOOP zones 0–5. Zone shares use total reported zone time, not elapsed duration or Apple-derived zones; recording coverage and elapsed time remain separate context.
+
+Use JSON or structured CSV for full records and sleep-need components. Markdown/Bases offer only unambiguous single-record scalar projections, without nap identity or workout-zone detail. These charts do not read provider-native sidecars, Android Raw API Snapshots, or roll-ups. Missing or unscored values are not zero; partial captures remain visible. Date filters use the owning export day, not event timestamps. Gallery previews use synthetic data, not a real person's records.
+
+```health-viz
+type: whoop-recovery-strain
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-need
+sleep: main
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-trends
+sleep: all
+last: 30
+```
+
+```health-viz
+type: whoop-workout-strain
+limit: 12
+last: 30
+```
 
 ## Foundation roadmap
 
