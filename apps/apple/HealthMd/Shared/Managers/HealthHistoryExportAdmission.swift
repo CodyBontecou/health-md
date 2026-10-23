@@ -7,8 +7,8 @@ import HealthMdConnectionCore
 final class HealthHistoryExportAdmission {
     private let worker: HealthHistoryAssessmentWorker
 
-    init(worker: HealthHistoryAssessmentWorker = HealthHistoryAssessmentWorker()) {
-        self.worker = worker
+    init(worker: HealthHistoryAssessmentWorker? = nil) {
+        self.worker = worker ?? HealthHistoryAssessmentWorker()
     }
 
     func observe(scope: HealthHistoryScope, operationID: UUID, requestBindingSHA256: String,
