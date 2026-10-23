@@ -99,4 +99,43 @@ final class HealthHistoryLocalExportRequestTests: XCTestCase {
         let other = HealthHistoryAssessment(id: UUID(), assessedAt: Date(), scope: otherScope, types: [])
         XCTAssertThrowsError(try request.observation(from: other))
     }
+    func testLocalAdmissionRetainsBusyPhysicalOwnerAndRejectsCancelledEvidence() async throws {
+        let first = try request()
+        let second = try request(operationID: UUID())
+        let worker = HealthHistoryAssessmentWorker(logicalDeadline: 1)
+        let admission = HealthHistoryExportAdmission(worker: worker)
+        let fallback = HealthHistoryAssessment(id: UUID(), assessedAt: Date(), scope: first.scope,
+            types: [.init(id: "HKQuantityTypeIdentifierStepCount", directMetricIDs: ["steps"],
+                dependencyMetricIDs: [], dependencyReasons: [], access: .unassessed(reason: "assessment_not_completed"))],
+            evidenceSource: "assessment_not_completed")
+        var continuation: CheckedContinuation<HealthHistoryAssessment, Never>?
+        let firstTask = Task { @MainActor in
+            try await admission.observe(request: first, notCompleted: fallback) {
+                await withCheckedContinuation { continuation = $0 }
+            }
+        }
+        for _ in 0..<100 where continuation == nil { await Task.yield() }
+        guard let physical = continuation else {
+            firstTask.cancel()
+            XCTFail("First physical assessment must start")
+            return
+        }
+        let busy = try await admission.observe(request: second, notCompleted: fallback) {
+            XCTFail("A busy physical owner must not start another metadata operation")
+            return fallback
+        }
+        XCTAssertEqual(busy.operationID, second.operationID.uuidString.lowercased())
+        XCTAssertEqual(busy.evidenceMethod, "assessment_not_completed")
+        firstTask.cancel()
+        do {
+            _ = try await firstTask.value
+            XCTFail("Cancelled admission must not return evidence for capture")
+        } catch is CancellationError {} catch { XCTFail("Unexpected error: \(error)") }
+        XCTAssertTrue(worker.hasUnresolvedPhysicalOperation)
+        physical.resume(returning: HealthHistoryAssessment(id: UUID(), assessedAt: Date(),
+            scope: first.scope, types: []))
+        for _ in 0..<100 where worker.hasUnresolvedPhysicalOperation { await Task.yield() }
+        XCTAssertFalse(worker.hasUnresolvedPhysicalOperation)
+    }
+
 }
