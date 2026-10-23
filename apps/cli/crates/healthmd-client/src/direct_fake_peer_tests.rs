@@ -116,7 +116,10 @@ async fn connect_fake_mobile(
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    let stream = stream.unwrap_or_else(|| panic!("fake peer could not connect: {last_error:?}"));
+    let stream = stream.unwrap_or_else(|| {
+        let phase = if saved.is_some() { "trusted reconnect" } else { "pairing" };
+        panic!("fake peer could not connect during {phase} (protocol {protocol_version}): {last_error:?}");
+    });
     let mut packet = PacketConnection::new(stream);
     packet
         .send(&SyncPacket::PairingRequest(Unlabeled::from(
@@ -847,20 +850,24 @@ async fn wake_window_retries_an_inactive_android_peer_until_it_is_active() {
     drop(probe);
     let cancellation = tokio_util::sync::CancellationToken::new();
     let mut progress = Vec::new();
-    let wait = client.wait_for_active_source(
-        Some(trust.installation_id.0),
-        port,
-        WakeWindow::from_seconds(3),
-        false,
-        &cancellation,
-        |update| progress.push(update),
-    );
+    let wait = async {
+        client
+            .wait_for_active_source(
+                Some(trust.installation_id.0),
+                port,
+                WakeWindow::from_seconds(3),
+                false,
+                &cancellation,
+                |update| progress.push(update),
+            )
+            .await
+            .expect("Android wake-window readiness failed before the synthetic peer completed");
+    };
     let peer = async {
         respond_with_android_status(port, &trust, false).await;
         respond_with_android_status(port, &trust, true).await;
     };
-    let (result, ()) = tokio::join!(wait, peer);
-    result.unwrap();
+    tokio::join!(wait, peer);
     assert_eq!(progress.len(), 1);
     assert!(progress[0].message.contains("Android"));
 }

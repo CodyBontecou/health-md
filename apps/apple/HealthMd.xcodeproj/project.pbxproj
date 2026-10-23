@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A17100000000000000000001 /* WatchExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17100000000000000000011 /* WatchExportView.swift */; };
+		A17100000000000000000002 /* WatchExportCaptureProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17100000000000000000012 /* WatchExportCaptureProvider.swift */; };
+		A17100000000000000000003 /* WatchExportContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17100000000000000000013 /* WatchExportContract.swift */; };
+		A17100000000000000000004 /* WatchExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17100000000000000000014 /* WatchExportService.swift */; };
+		A17100000000000000000005 /* WatchExportKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17100000000000000000015 /* WatchExportKeychain.swift */; };
+		A17100000000000000000006 /* WatchExportHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17100000000000000000016 /* WatchExportHTTP.swift */; };
 		05BFC2FFD11E21648879ABE2 /* healthmd in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = EA90FDA2F7F779C70341E2FA /* healthmd */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A90000000000000000000004 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000002 /* main.swift */; };
 		A90000000000000000000005 /* HealthMdMCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000003 /* HealthMdMCPServer.swift */; };
@@ -155,6 +161,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A17100000000000000000011 /* WatchExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchExportView.swift; sourceTree = "<group>"; };
+		A17100000000000000000012 /* WatchExportCaptureProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchExportCaptureProvider.swift; sourceTree = "<group>"; };
+		A17100000000000000000013 /* WatchExportContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportContract.swift; sourceTree = SOURCE_ROOT; };
+		A17100000000000000000014 /* WatchExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportService.swift; sourceTree = SOURCE_ROOT; };
+		A17100000000000000000015 /* WatchExportKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportKeychain.swift; sourceTree = SOURCE_ROOT; };
+		A17100000000000000000016 /* WatchExportHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportHTTP.swift; sourceTree = SOURCE_ROOT; };
 		A90000000000000000000001 /* healthmd-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "healthmd-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90000000000000000000002 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "mcp-main.swift"; path = "Sources/healthmd-mcp/main.swift"; sourceTree = "<group>"; };
 		A90000000000000000000003 /* HealthMdMCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPServer.swift; sourceTree = "<group>"; };
@@ -419,6 +431,12 @@
 			children = (
 				74CD8B25767E323E53B1E898 /* HealthMdWatchApp.swift */,
 				711A8CDB89953F166353BE5B /* WatchDashboardView.swift */,
+				A17100000000000000000011 /* WatchExportView.swift */,
+				A17100000000000000000012 /* WatchExportCaptureProvider.swift */,
+				A17100000000000000000013 /* WatchExportContract.swift */,
+				A17100000000000000000014 /* WatchExportService.swift */,
+				A17100000000000000000015 /* WatchExportKeychain.swift */,
+				A17100000000000000000016 /* WatchExportHTTP.swift */,
 				A1C0A5E72F62100100A5E771 /* Assets.xcassets */,
 				26E2FC207AE97863065685C9 /* Info.plist */,
 				396931E850C42BA63FAFB47F /* HealthMdWatch.entitlements */,
@@ -900,6 +918,12 @@
 				55A0643059CF9F13F62D71E1 /* HealthMdWatchApp.swift in Sources */,
 				761414846D67334FF89CBD1C /* WatchDashboardView.swift in Sources */,
 				879D39734DDB734FC62C0104 /* WatchHealthSnapshotStore.swift in Sources */,
+				A17100000000000000000001 /* WatchExportView.swift in Sources */,
+				A17100000000000000000002 /* WatchExportCaptureProvider.swift in Sources */,
+				A17100000000000000000003 /* WatchExportContract.swift in Sources */,
+				A17100000000000000000004 /* WatchExportService.swift in Sources */,
+				A17100000000000000000005 /* WatchExportKeychain.swift in Sources */,
+				A17100000000000000000006 /* WatchExportHTTP.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

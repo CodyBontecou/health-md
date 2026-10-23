@@ -26,7 +26,12 @@ CORPUS_ID = "direct.full_public_authorized_corpus"
 RUNNER = """import Foundation
 import XCTest
 
-let suite = XCTestSuite(forTestCaseClass: ProductCapabilityManifestTests.self)
+// Mutation counts belong to the inventory-accounting method. Other real methods
+// in this class run in the native suite and must not change these negative counts.
+let discovered = XCTestSuite(forTestCaseClass: ProductCapabilityManifestTests.self)
+let selected = discovered.tests.filter { $0.name.hasSuffix(" testAppleAccountsForEveryProductCapability]") }
+let suite = XCTestSuite(name: "ProductCapabilityManifestAccounting")
+selected.forEach { suite.addTest($0) }
 suite.run()
 guard let run = suite.testRun, run.executionCount == 1 else {
     fputs("Expected exactly one real ProductCapabilityManifestTests case\\n", stderr)
