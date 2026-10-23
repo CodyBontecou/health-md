@@ -116,7 +116,7 @@ nonisolated struct HealthContextHistoryProvenance: Codable, Equatable, Sendable 
               !metricIDs.isEmpty, metricIDs == Array(Set(metricIDs)).sorted(),
               Set(metricIDs).isSubset(of: Set(observation.metricIDs)),
               observation.rangeSemantics == "owner_dates",
-              observation.timeZoneIdentifier == day.calendarTimeZone,
+              TimeZone(identifier: observation.timeZoneIdentifier) == timeZone,
               let first = CanonicalRFC3339UTC.date(from: observation.requestedStart),
               let last = CanonicalRFC3339UTC.date(from: observation.requestedEnd),
               day.intervalStart >= calendar.startOfDay(for: first),

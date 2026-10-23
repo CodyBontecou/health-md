@@ -5,6 +5,26 @@ import XCTest
 
 #if os(macOS)
 final class EncryptedHealthContextHistoryTests: XCTestCase {
+    func testFoundationNormalizedUTCProvenancePreservesScope() throws {
+        let original = day(metrics: ["steps"])
+        let projected = HealthMdCompactContextDay(ownerDate: original.ownerDate,
+            intervalStart: original.intervalStart, intervalEnd: original.intervalEnd,
+            calendarTimeZone: TimeZone(identifier: "UTC")!.identifier,
+            source: original.source, status: original.status, metrics: original.metrics)
+        try HealthContextHistoryProvenance(metricIDs: ["steps"],
+            observation: observation(metrics: ["steps"])).validate(for: projected)
+        var foreignCalendar = Calendar(identifier: .gregorian)
+        foreignCalendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let foreignStart = foreignCalendar.date(from: DateComponents(year: 2026, month: 4, day: 17))!
+        let foreignEnd = foreignCalendar.date(byAdding: .day, value: 1, to: foreignStart)!
+        let foreignZone = HealthMdCompactContextDay(ownerDate: original.ownerDate,
+            intervalStart: foreignStart, intervalEnd: foreignEnd,
+            calendarTimeZone: "America/New_York", source: original.source,
+            status: original.status, metrics: original.metrics)
+        XCTAssertThrowsError(try HealthContextHistoryProvenance(metricIDs: ["steps"],
+            observation: observation(metrics: ["steps"])).validate(for: foreignZone))
+    }
+
     func testScopedRefreshKeepsOnlyMatchingGenerationAndMetricProvenance() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("pr183-context-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
