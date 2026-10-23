@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Privacy Policy — Health.md</title>
-  <meta name="description" content="How Health.md keeps health data on user-controlled devices and destinations while using limited, health-free first-party analytics.">
+  <meta name="description" content="Health.md is local-first by default. An optional single-owner cloud pilot retains only intentionally uploaded exports; analytics remains health-free.">
   <link rel="canonical" href="https://healthmd.app/privacy-policy.html">
   <link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html">
   <link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html">
@@ -14,7 +14,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="Privacy Policy — Health.md">
-  <meta property="og:description" content="Health data stays on user-controlled devices and destinations. Limited first-party analytics never includes health records or exports.">
+  <meta property="og:description" content="Health.md is local-first. An optional single-owner cloud pilot retains only exports intentionally sent to it; website analytics remains health-free.">
   <meta property="og:url" content="https://healthmd.app/privacy-policy.html">
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
@@ -47,14 +47,14 @@
       <div class="legal-hero-inner">
         <p class="legal-eyebrow">Legal · Privacy</p>
         <h1 id="privacy-title">Privacy,<br>in plain language.</h1>
-        <p class="legal-updated">Last updated: August 6, 2026</p>
-        <p class="legal-lede">Health.md moves sensitive health data without building a Health.md health-data cloud. Your device reads the records you authorize, and you choose where each export or direct response goes.</p>
+        <p class="legal-updated">Last updated: October 4, 2026</p>
+        <p class="legal-lede">Health.md is local-first. Your device reads the records you authorize; you choose where exports or direct responses go. A separate, optional single-owner cloud pilot stores exports intentionally sent to it.</p>
 
         <div class="legal-promise" role="list" aria-label="Privacy principles">
           <div role="listitem">
             <span>01</span>
-            <strong>No Health.md health-data cloud</strong>
-            <p>We do not keep a server copy of your health records, exports, or direct query results.</p>
+            <strong>Optional cloud storage</strong>
+            <p>No cloud copy is created by default. The owner-operated cloud pilot retains only API exports sent to it; direct device queries are not automatically stored there.</p>
           </div>
           <div role="listitem">
             <span>02</span>
@@ -100,7 +100,7 @@
           <p>This policy describes the Health.md consumer apps for iPhone, iPad, Mac, and Android; bundled Mac CLI and MCP helpers and portable tools where made available; healthmd.app and its documentation; and the first-party services that support those products. Health.md is operated by Cody Bontecou under the isolated.tech name, referred to here as “Health.md,” “we,” or “us.”</p>
           <p>It does not replace the privacy terms of Apple, Google, a health provider, a file or sync provider, an API operator, an AI tool, or another destination you choose. Once you direct data to one of those services, that service's terms and your configuration govern its copy.</p>
           <div class="policy-note">
-            <p><strong>The simple version:</strong> Health.md does not collect or store health data on Health.md servers. Health data is processed on your devices and sent only to destinations or clients you choose.</p>
+            <p><strong>The simple version:</strong> Health.md is local-first, but an optional, unbacked single-owner Health.md Cloud pilot stores API exports the owner chooses to upload. No public signup or automatic device sync exists. Direct queries remain on the paired device unless you choose to share results elsewhere.</p>
             <p>We do automatically collect limited first-party product analytics and campaign data. Those systems are pseudonymous, contain no health records or exports, and are not used for advertising.</p>
           </div>
         </section>
@@ -126,10 +126,10 @@
             <li><strong>Cloud-backed folders:</strong> iCloud Drive, Dropbox, Google Drive, OneDrive, Syncthing, Working Copy, or another provider if the folder you choose syncs there.</li>
             <li><strong>Paired computers:</strong> an approved Mac or standalone CLI over an authenticated encrypted direct connection.</li>
             <li><strong>Local tools and agents:</strong> a CLI or MCP client that you configure. Results then follow that tool's storage, transcript, and model-provider settings.</li>
-            <li><strong>Your API endpoint:</strong> a user-configured API endpoint that receives the export you select. Protected endpoint mode requires HTTPS.</li>
+            <li><strong>Your API endpoint:</strong> a user-configured API endpoint, including the opt-in Health.md Cloud pilot, that receives the export you select. Protected endpoint mode requires HTTPS.</li>
             <li><strong>Connected health providers:</strong> read-only provider requests initiated after you authorize the connection.</li>
           </ul>
-          <p>Health.md does not retain a health-data server copy for later queries. The iPhone remains the source for direct Apple Health queries. Direct transfer can leave durable job state and output on the paired computer, but that state is not a Health.md-hosted health corpus.</p>
+          <p>Without an opt-in cloud export, Health.md does not retain a server copy of your health data for later queries. The cloud pilot retains the original API-export JSON envelopes it accepts, including historical revisions and any embedded source data. A separately authenticated read-only MCP endpoint may return retained fields to an agent you explicitly authorize; that provider may retain or use the results under its own policies. The iPhone remains the source for direct Apple Health queries. Direct transfer can also leave job state or output on your paired computer; it does not automatically sync to this cloud pilot.</p>
         </section>
 
         <section id="medical-records">
@@ -152,7 +152,7 @@
               <li>Medical vital signs</li>
             </ul>
           </details>
-          <p>Each category is optional and read-only. It is used only to answer a direct request or include authorized records in an export you initiate or schedule. JSON and provider-native exports can preserve FHIR resource data and source metadata; Markdown and CSV summaries may report category counts. Health.md does not keep a server copy. You can deny or revoke one category without disabling other authorized exports.</p>
+          <p>Each category is optional and read-only. It is used only to answer a direct request or include authorized records in an export you initiate or schedule. JSON and provider-native exports can preserve FHIR resource data and source metadata; Markdown and CSV summaries may report category counts. A copy is kept only if you direct an export containing that category to a retained destination such as the opt-in Health.md Cloud pilot. You can deny or revoke one category without disabling other authorized exports; previously uploaded copies require separate deletion.</p>
         </section>
 
         <section id="product-analytics">
@@ -194,7 +194,7 @@
           <p>healthmd.app uses Cloudflare Web Analytics after a small analytics-gate request. It helps us understand aggregate traffic, performance, and popular pages. For this site, the client-side analytics does not set cookies and is not connected to health records, exported files, purchase state, direct pairing, or in-app settings.</p>
           <p>Cloudflare, our website host, and security infrastructure process ordinary web request information needed to deliver and protect the site, such as IP address, requested URL, browser information, and time, under their terms and retention controls.</p>
           <p>Some landing, documentation, or visualization pages request assets from services such as <code>img.logo.dev</code>, Google Fonts, jsDelivr, or map-tile providers. Those services receive the ordinary request information your browser sends. Following links to the App Store, Google Play, GitHub, Obsidian, support, or another website takes you to that service's privacy practices.</p>
-          <p>Website and campaign analytics are separate from app health-data processing. Visiting the site does not give Health.md access to Apple Health or Health Connect.</p>
+          <p>Website and campaign analytics are separate from app health-data processing. The isolated cloud account hostname uses no website analytics or third-party scripts. Visiting the site does not give Health.md access to Apple Health or Health Connect.</p>
         </section>
 
         <section id="retention">
@@ -202,8 +202,8 @@
           <ul>
             <li><strong>Source health data</strong> remains in HealthKit, Health Connect, or the connected provider unless you direct an export or query.</li>
             <li><strong>App settings and history</strong> are stored on your device using platform storage. Provider credentials use protected platform credential storage where supported.</li>
-            <li><strong>Exported files and API deliveries</strong> remain with the destination you chose until deleted under that destination's controls.</li>
-            <li><strong>Paired Mac, CLI, and MCP data</strong> remains in the local output, job state, credential store, transcript, or other computer storage created by your workflow.</li>
+            <li><strong>Exported files and API deliveries</strong> remain with the destination you chose until deleted under that destination's controls. The optional Health.md Cloud pilot retains every accepted revision without an age cutoff, subject to its account storage quota. The pilot runs on an unbacked VM: disk, key or VM loss can permanently destroy exports. Account deletion disables access immediately and a background job then erases stored ciphertext and metadata; completion is not instantaneous.</li>
+            <li><strong>Paired Mac and direct CLI/MCP data</strong> remains in local output, job state, credential store, transcript, or other computer storage created by your workflow. Separately authorized cloud MCP calls read retained API exports and may put returned values into the agent provider's systems.</li>
             <li><strong>Product analytics and campaign rows</strong> are retained for no more than 13 months; campaign ingest-rate counters are deleted after 24 hours.</li>
             <li><strong>Scheduling, purchase, support, and ordinary network records</strong> are retained only as needed to provide, secure, document, or comply with requirements for those services, subject to the applicable platform and provider terms.</li>
           </ul>
@@ -220,9 +220,10 @@
             <li>StoreKit, the App Store, Google Play, and Google Play Billing</li>
             <li>Google Play Install Referrer for sanitized Android campaign attribution</li>
             <li>Apple Push Notification service for scheduled-export wakeups</li>
-            <li>Cloudflare for first-party analytics, campaign services, D1 storage, abuse throttling, website delivery, and website analytics</li>
+            <li>Cloudflare for first-party analytics, campaign services, D1 storage, abuse throttling, website delivery, optional cloud dashboard/MCP HTTPS ingress, and website analytics</li>
             <li>Optional provider APIs, OAuth services, API endpoints, sync services, AI/model providers, and local clients that you configure</li>
           </ul>
+          <p>The optional, unbacked single-owner Health.md Cloud export pilot runs on EXE.dev VM infrastructure. It is not the default app destination.</p>
           <p>These providers may process data in countries where they operate. Their handling is governed by their terms and applicable law. We do not sell health data or personal information, and we do not share it for cross-context behavioral advertising.</p>
         </section>
 
@@ -232,7 +233,7 @@
           <ul>
             <li>Health access is controlled by HealthKit and Health Connect permissions and device protections.</li>
             <li>Direct Mac and CLI pairing uses authenticated encrypted sessions, bounded frames, integrity checks, and explicit approval.</li>
-            <li>Protected API Endpoint mode requires HTTPS; the endpoint operator controls what happens after delivery.</li>
+            <li>Protected API Endpoint mode requires HTTPS; the endpoint operator controls what happens after delivery. The opt-in Cloud pilot encrypts stored exports and requires separate account, ingest, and revocable read credentials. It has no off-host backup or account recovery, and is not an independently audited or generally available service.</li>
             <li>Analytics and campaign ingest reject unknown or oversized fields and intentionally cannot represent health payloads.</li>
             <li>Local files inherit the access, encryption, backup, and sync controls of the device, folder, vault, or provider where you place them.</li>
           </ul>

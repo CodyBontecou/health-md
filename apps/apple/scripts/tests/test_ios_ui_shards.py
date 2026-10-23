@@ -31,7 +31,7 @@ class UiCoverageTests(unittest.TestCase):
     def test_exact_existing_inventory_is_disjoint_and_complete(self):
         actual = [name for lane in shards.SHARDS for name in lane]
         self.assertEqual(set(n for lane in shards.SHARDS[:3] for n in lane), set(EXPECTED_TESTS))
-        self.assertEqual(len(actual), 21)
+        self.assertEqual(len(actual), 22)
         self.assertEqual(len(actual), len(set((shards.device_family(i), n) for i, lane in enumerate(shards.SHARDS) for n in lane)))
         self.assertEqual(len(shards.SHARDS), 4)
         self.assertTrue(all(shards.SHARDS))
@@ -106,9 +106,9 @@ class UiAggregateTests(unittest.TestCase):
         path.write_text(json.dumps(value))
         return path
 
-    def test_all_exact_head_device_lanes_verify_twenty_one_passes(self):
+    def test_all_exact_head_device_lanes_verify_twenty_two_passes(self):
         result = shards.verify_shards(self.root, "12", "1", SHA)
-        self.assertEqual(result["passed"], 21)
+        self.assertEqual(result["passed"], 22)
         self.assertEqual(result["cases"], sorted([{"device_family": shards.device_family(i), "case": n} for i, lane in enumerate(shards.SHARDS) for n in lane], key=lambda x: (x["device_family"], x["case"])))
 
     def test_wrong_head_run_attempt_and_shard_are_rejected(self):

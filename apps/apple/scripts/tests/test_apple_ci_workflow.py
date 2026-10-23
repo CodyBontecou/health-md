@@ -85,7 +85,7 @@ class WorkflowRoutingTests(unittest.TestCase):
         import sys
         sys.path.insert(0, str(REPO / "apps/apple/scripts"))
         from ios_ui_shards import SHARDS
-        self.assertEqual(21, sum(map(len, SHARDS)))
+        self.assertEqual(22, sum(map(len, SHARDS)))
         workers = jobs()["ios-ui-shards"]
         self.assertIn("shard: [0, 1, 2, 3]", workers)
         self.assertIn("fail-fast: false", workers)

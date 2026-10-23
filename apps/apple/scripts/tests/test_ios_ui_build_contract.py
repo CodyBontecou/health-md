@@ -43,6 +43,7 @@ EXPECTED_TESTS = [
     "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
     "HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
     "HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport",
+    "ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport",
 ]
 
 
@@ -491,7 +492,7 @@ class WorkflowExecutionTests(unittest.TestCase):
 
     def test_every_phone_and_tablet_case_has_an_implemented_test_method(self) -> None:
         from ios_ui_shards import SHARDS
-        self.assertEqual(sum(map(len, SHARDS)), 21)
+        self.assertEqual(sum(map(len, SHARDS)), 22)
         for lane in SHARDS:
             for selection in lane:
                 suite, method = selection.split("/")

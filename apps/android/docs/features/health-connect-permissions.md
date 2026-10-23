@@ -13,7 +13,7 @@ Health.md asks Health Connect for read access to the health record types it can 
 
 ## Who it is for
 
-- Every user: without read permission, exports come back empty.
+- Users exporting from Health Connect: read permission is required for the record types they want to export.
 - Users with older devices or the sideloaded Health Connect APK, where newer record types may be unavailable.
 - Anyone reviewing Health.md's privacy claims from the Health Connect privacy-policy screen.
 
@@ -52,7 +52,7 @@ With sleep granted and nothing else, a daily export contains sleep metrics and r
 |---|---|---|
 | Exports report "no data" | Permission not granted, or no app writes that type to Health Connect | Re-check granted types in Health Connect settings |
 | A newer metric (e.g. skin temperature) is missing | Provider does not expose that record type | Nothing to fix on Health.md's side; the type is not requested from providers that cannot grant it |
-| History export stops at an older date | History read permission missing or unavailable | Grant it from the Export-tab notice, or export that range in shorter windows |
+| History export stops at an older date | History read permission missing or unavailable | Grant it from the Export-tab notice when available; shorter batches do not bypass Health Connect's history-access limit |
 | "Health Connect needs setup" | Provider not initialized | Open Health Connect once, accept its terms, then return |
 
 ## Video outline

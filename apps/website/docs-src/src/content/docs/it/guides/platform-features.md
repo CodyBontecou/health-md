@@ -83,7 +83,9 @@ Alcuni dati non vengono volutamente **trattati come equivalenti** tra piattaform
 |---|---|---|---|---|
 | Livello gratuito | ✓ 10 azioni di esportazione manuali o pianificate | — | ✓ 10 azioni di esportazione manuali | — |
 | Sblocco | ✓ acquisto a vita una tantum (individuale / famiglia) | ◐ stesso sblocco Apple | ✓ acquisto a vita una tantum, pianificazione inclusa | — |
-| Privacy con elaborazione locale | ✓ nessun cloud di dati sanitari di Health.md | ✓ | ✓ | △ previsto |
+| Privacy con elaborazione locale | ✓ nessuna copia nel cloud per impostazione predefinita | ✓ | ✓ | △ previsto |
 | Referto per il clinico (un PDF per gli appuntamenti) | ✓ | — | ✓ | — |
 
-Health.md non gestisce alcun cloud di dati sanitari. I dati sanitari possono esistere nelle destinazioni che scegli, in contesto locale cifrato e in uno stato di trasferimento privato limitato. Ogni cartella, Mac, endpoint API o destinazione CLI viene configurata esplicitamente. I profili e le pianificazioni restano locali al dispositivo in cui sono stati creati. Per il flusso di lavoro di ciascuna piattaforma, vedi i [profili di esportazione](/it/docs/export-profiles/), la [guida Android](/it/docs/android/) e la [guida all'esportazione su iPhone](/it/docs/export/).
+Per impostazione predefinita, le esportazioni e le query dirette al dispositivo non creano una copia sui server di Health.md. Il progetto pilota Health.md Cloud, separato e facoltativo, è riservato a un solo proprietario e conserva solo le esportazioni API inviate intenzionalmente. Nessuna registrazione pubblica né sincronizzazione automatica dei dispositivi è disponibile. L’[informativa sulla privacy](/privacy-policy.html) descrive conservazione, eliminazione, quota e rischi di perdita senza backup.
+
+I dati sanitari possono esistere nelle destinazioni che scegli, in contesto locale cifrato e in uno stato di trasferimento privato limitato. Ogni cartella, Mac, endpoint API o destinazione CLI viene configurata esplicitamente. I profili e le pianificazioni restano locali al dispositivo in cui sono stati creati. Per il flusso di lavoro di ciascuna piattaforma, vedi i [profili di esportazione](/it/docs/export-profiles/), la [guida Android](/it/docs/android/) e la [guida all'esportazione su iPhone](/it/docs/export/).

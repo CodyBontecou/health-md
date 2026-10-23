@@ -1,6 +1,6 @@
 # Local export performance instrumentation
 
-See the [2026-07-30 export performance audit](./export-performance-audit-2026-07-30.md) for current bottlenecks and the [Physical export performance lab](./physical-export-lab.md) for supervised iPhone/Mac profiling across direct CLI, local, API Endpoint, and connected-Mac targets.
+See the [2026-07-30 export performance audit](./export-performance-audit-2026-07-30.md) for dated bottleneck findings and rejected experiments, and the [Physical export performance lab](./physical-export-lab.md) for supervised iPhone/Mac profiling across direct CLI, local, API Endpoint, and connected-Mac targets. Physical runs require explicit authorization under the root [verification policy](../../../../AGENTS.md#verification-policy); the measurements below are historical receipts, not current benchmarks.
 
 Health.md includes compile-time-gated export measurements for local development. The recorder and phase call sites use `#if DEBUG`; the shared query executor compiles directly to its supplied HealthKit operation outside Debug. Release/App Store builds do not contain the recorder, logger category, or measurement strings.
 
@@ -95,7 +95,7 @@ strings /path/to/HealthMd | grep -E \
   'ExportPerformance|queries_total|healthkit_query|ExportPerformanceQuerySession'
 ```
 
-A correct Release binary produces no matches. The physical lab's stronger fixed-string gate builds an unsigned Release simulator app and checks all Debug control/telemetry markers:
+A correct Release binary produces no matches. The physical lab's stronger fixed-string gate builds unsigned Release iOS-device and macOS apps without installing or launching them, then checks all Debug control/telemetry markers:
 
 ```bash
 make check-export-lab-release

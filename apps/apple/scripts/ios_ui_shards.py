@@ -13,7 +13,7 @@ import sys
 
 from validate_ios_ui_xctestrun import qualify
 
-# Preserve fourteen existing phone cases plus three history phone and four tablet cases.
+# Preserve fifteen existing phone cases plus three history phone and four tablet cases.
 # Keep stateful XCTest classes together within each device family.
 SHARDS = (
     (
@@ -30,6 +30,7 @@ SHARDS = (
         "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
     ),
     (
+        "ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport",
         "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
         "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
         "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",

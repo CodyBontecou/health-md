@@ -297,6 +297,19 @@ abstract class AccessibilityTestHarness(
         }
         val surface = Regex("mHasSurface=(true|false)").find(selectedWindow.orEmpty())
             ?.groupValues?.get(1) ?: "unavailable"
+        // Window tags can omit the package, so a title-based "other" category
+        // does not establish another process. Expose only the OS type token and
+        // own/other UID equality; never retain the raw title, package or UID.
+        val focusedType = Regex(
+            "^\\s*mAttrs=.*?\\bty=([A-Z0-9_]{1,40})(?:\\s|\\})", RegexOption.MULTILINE,
+        ).find(selectedWindow.orEmpty())?.groupValues?.get(1) ?: "unavailable"
+        val focusedUid = Regex("^\\s*mOwnerUid=(\\d{1,10})\\b", RegexOption.MULTILINE)
+            .find(selectedWindow.orEmpty())?.groupValues?.get(1)?.toIntOrNull()
+        val focusedProcessOwner = when (focusedUid) {
+            null -> "unavailable"
+            android.os.Process.myUid() -> "own"
+            else -> "other"
+        }
         val display = Regex("^\\s*FocusedDisplayId:\\s*(-?\\d+)", RegexOption.MULTILINE)
             .find(input)?.groupValues?.get(1)
         val lines = input.lineSequence().toList()
@@ -321,7 +334,8 @@ abstract class AccessibilityTestHarness(
         }
         "nativePolicy=window(currentFocus=${focusOwnerCategory(currentFocus, packageName)}, " +
             "focusedApp=${focusOwnerCategory(focusedApp, packageName)}, focusedSurface=$surface); " +
-            "input(focusedDisplay=${display ?: "unavailable"}, focusedWindow=$focusedWindow)$hostedIdentity"
+            "input(focusedDisplay=${display ?: "unavailable"}, focusedWindow=$focusedWindow); " +
+            "focusedWindow(type=$focusedType, processOwner=$focusedProcessOwner)$hostedIdentity"
     }.getOrElse { "nativePolicy unavailable: ${it.javaClass.simpleName}" }
 
     private fun focusOwnerCategory(record: String?, packageName: String): String = when {

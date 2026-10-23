@@ -261,6 +261,7 @@ final class CIQualityGateTests: XCTestCase {
             "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
             "HealthMdUILaunchTests/testAppLaunches",
             "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
+            "ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport",
             "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
             "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
             "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
@@ -273,7 +274,7 @@ final class CIQualityGateTests: XCTestCase {
             "HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
             "HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot",
         ]
-        XCTAssertEqual(selections.count, 21, "PR smoke must preserve seventeen phone and four tablet executions")
+        XCTAssertEqual(selections.count, 22, "PR smoke must preserve eighteen phone and four tablet executions")
         XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the exact historical UI inventory")
         XCTAssertTrue(content.contains("needs: [changes, prepare-ui-artifacts, ios-ui-shards]"))
         XCTAssertTrue(content.contains("test \"$SHARDS_RESULT\" = success"))

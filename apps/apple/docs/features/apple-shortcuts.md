@@ -9,7 +9,7 @@
 
 ## What it does
 
-Health.md exposes App Intents to Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, toggle scheduled exports, and ask an authenticated connected Mac to refresh its encrypted query context. Ordinary Export Shortcuts write to the selected iPhone folder. **Refresh Mac Health Context** is a separate request-scoped action: it writes no export files and cannot target an arbitrary Mac or path.
+Health.md's seven ordinary App Intents integrate with Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, and toggle scheduled exports. Ordinary Export Shortcuts write to the selected iPhone folder. The #173 draft now adds two separately gated Mac encrypted-context intents in source; they remain unreleased and unqualified. See the [additive context-automation implementation contract](apple-context-automation.md).
 
 Shortcuts are useful for personal automations like:
 
@@ -21,7 +21,7 @@ Shortcuts are useful for personal automations like:
 
 ## Available actions
 
-The first seven actions below are the released public set. **Refresh Mac Health Context** and **Get Mac Context Refresh Status** are implemented in current development source but require compatible iPhone and Mac builds; treat them as unavailable until an exact Apple release note names them.
+The seven ordinary actions below are retained unchanged. The draft source additionally registers **Refresh Mac Health Context** and **Get Mac Context Refresh Status** with authenticated phone-initiated requests and durable receipts, but they are not released or device-qualified. Do not infer customer availability; qualification and an exact Apple release note are still required.
 
 | Shortcut action | What it does | Parameters | Returns |
 |---|---|---|---|
@@ -32,8 +32,6 @@ The first seven actions below are the released public set. **Refresh Mac Health 
 | **Get Health Summary** | Reads headline metrics without writing files. | Date | Structured `Health Summary` entity |
 | **Get Last Export Status** | Returns the most recent recorded export result. A locked-device request remains pending until retried, so it is not the current status while pending. | None | Structured `Last Export Status` entity or nil |
 | **Set Scheduled Export** | Turns Health.md scheduled exports on or off. | Enabled boolean | Boolean + dialog |
-| **Refresh Mac Health Context** | Sends a profile-scoped request to the authenticated connected Mac, which creates a durable encrypted-context job and asks the foreground iPhone to capture the scope. No export files are written and no export quota is consumed. | Profile (active by default), number of days (1–3650), optional All Available History | Pending/failed dialog with durable job ID |
-| **Get Mac Context Refresh Status** | Reads the latest durable pending/completed/failed receipt returned by the connected Mac. | None | Status, message, and job ID |
 
 ## Siri phrases
 
@@ -56,7 +54,7 @@ All actions are available in the Shortcuts app even if they do not have multiple
 - At least one export format selected.
 - Free export quota remaining or Full Access unlocked when an export runs.
 - Turning the scheduled export on or off does not require Full Access; a scheduled request that exports at least one date uses the same free-export allowance as manual and Shortcut exports.
-- **Refresh Mac Health Context** requires Health.md to be open and authenticated on both iPhone and Mac, current peers that advertise phone-initiated context refresh, and an active or named export profile. It is quota-exempt because it only refreshes disposable encrypted Mac context.
+- Mac-context intents in the draft require separate explicit profile binding and authenticated Manual IP sessions; they remain unreleased. Computer-side MCP refresh is a separate, Mac-initiated operation.
 
 ## Setup: daily morning export
 
@@ -132,6 +130,12 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 - updates schedule bookkeeping when yesterday is part of the run;
 - does not send ordinary Shortcut exports to API Endpoint or Connected Mac, even if those destinations are selected for manual or scheduled exports.
 
+## Draft Mac context implementation (not released)
+
+[Issue #173](https://github.com/CodyBontecou/health-md/issues/173) now has additive source for **Refresh Mac Health Context** with an explicit saved profile/date scope and **Get Mac Context Refresh Status** with a recoverable durable request entity. The [implementation contract](apple-context-automation.md) documents authentication, narrow source/detail support, durability and remaining qualification gates. This source change does not establish a released automation contract.
+
+An automation cannot be promised to wake a sleeping Mac, bypass protected HealthKit data, or run without the supported app/session availability conditions. Physical-iPhone personal-automation QA after wake remains required. See the [source investigation and remaining work](../investigations/issue-173-mac-context-shortcuts.md).
+
 **Refresh Mac Health Context** is intentionally different. It freezes the selected profile's metric/detail scope into an authenticated request, uses an explicit date window (30 days by default) or a deliberate All Available History request, and persists the Mac job ID plus pending/completed/failed status on iPhone. Current source checks catalog/query completion and uses the oldest currently readable sample; it does **not** assess OS 27 history authorization or prove full-history access. A successful empty query also cannot prove there is no older data. Apple's OS 27 boundary API identifies limited access, but omitted entries cannot distinguish full access from denied access (or limited access without a known boundary). Prefer an explicit date window when the requested scope matters; it pins dates but cannot bypass HealthKit authorization. Type-scoped assessment, a visible warning, and truthful consumer coverage remain pending under [issue 172](https://github.com/CodyBontecou/health-md/issues/172); see the [investigation](../testing/history-authorization-investigation.md). A disconnect may leave the durable job pending; it never redirects output or silently changes the scope.
 
 ## Locked-device behavior
@@ -192,5 +196,5 @@ When an export Shortcut encounters locked HealthKit data, Health.md preserves th
 - `GetHealthSummaryForDateIntent` returns a `HealthSummary` AppEntity with typed properties.
 - `GetLastExportStatusIntent` returns a `LastExportStatus` AppEntity from `ExportHistoryManager.shared.history.first`; pending locked-device requests are stored separately until retried.
 - `SetScheduledExportEnabledIntent` can enable or disable scheduling without an entitlement check; each successful scheduled run is accounted against the shared free-export quota.
-- `RefreshMacContextIntent` resolves the active/named profile, freezes metric/detail/date scope, and sends only `IPhoneContextRefreshRequest` over the authenticated Apple sync channel. The Mac converts it into the same durable `.contextStore` job used by local MCP refresh.
-- `GetMacContextRefreshStatusIntent` reads the latest persisted `IPhoneContextRefreshStatus`; pending is not reported as success.
+- Mac-initiated context acquisition already uses `MacIPhoneExportRequestCoordinator` with `.contextStore` and a canonical selection. `supportsRequestScopedContextAcquisition` is not evidence of a phone-initiated refresh action.
+- `RefreshMacContextIntent`, `IPhoneContextRefreshRequest`, `GetMacContextRefreshStatusIntent`, and `IPhoneContextRefreshStatus` do not exist in this revision. Adding only registrations would not provide the missing authenticated request/receipt path.

@@ -39,6 +39,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var statisticsMostRecent: [String: Double] = [:]
     var querySumResult: ((HKQuantityTypeIdentifier, NSPredicate?) -> Double?)?
     var querySumSuspension: (@Sendable () async -> Void)?
+    var querySumAsyncResult: ((HKQuantityTypeIdentifier, NSPredicate?) async throws -> Double?)?
 
     // Pre-configured category sample results
     var categorySampleResults: [String: [CategorySampleValue]] = [:]
@@ -221,6 +222,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         queriedSumIdentifiers.append(identifier.rawValue)
         if let error = errorsForSum[identifier.rawValue] { throw error }
         await querySumSuspension?()
+        if let querySumAsyncResult { return try await querySumAsyncResult(identifier, predicate) }
         if let querySumResult { return querySumResult(identifier, predicate) }
         return statisticsSums[identifier.rawValue]
     }

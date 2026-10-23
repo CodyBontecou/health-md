@@ -4,6 +4,17 @@ import Darwin
 import Foundation
 import HealthMdCoreRust
 
+/// Constructible only by the durable corpus receiver after validating its
+/// encrypted-context terminal journal; never by ordinary file execution.
+struct MacEncryptedContextCommitEvidence {
+    let result: MacExportResultPayload
+    let manifest: ConnectedCorpusExportManifest
+    fileprivate init(result: MacExportResultPayload, manifest: ConnectedCorpusExportManifest) {
+        self.result = result
+        self.manifest = manifest
+    }
+}
+
 enum MacCorpusFinalizeOutcome {
     case files(result: MacExportResultPayload, acknowledgement: ConnectedCorpusTransferFinalAck)
     case strictRaw(spool: CanonicalRawResultSpool, acknowledgement: ConnectedCorpusTransferFinalAck)
@@ -280,6 +291,7 @@ final class MacCorpusExportSessionManager {
     var failNextPostRenameRangePlanSyncForTesting = false
     var failNextPostRenameTerminalSyncForTesting = false
     var beforeProtectedCleanupForTesting: (() throws -> Void)?
+    var afterEncryptedContextApplyForTesting: (() async -> Void)?
     #endif
 
     init(
@@ -757,6 +769,9 @@ final class MacCorpusExportSessionManager {
                     replacingMetricIDs: selectedMetrics,
                     sourceIDs: selectedSources
                 )
+                #if DEBUG
+                await afterEncryptedContextApplyForTesting?()
+                #endif
                 try ensurePartitionExecutionIsActive(session)
             }
 
@@ -4171,6 +4186,20 @@ final class MacCorpusExportSessionManager {
             offset += readCount
         }
         return data
+    }
+
+    func encryptedContextCommitEvidence(for finalize: ConnectedCorpusTransferFinalize) throws -> MacEncryptedContextCommitEvidence? {
+        guard let session = try restoreSession(sessionID: finalize.sessionID),
+              session.journal.state == .completed,
+              session.journal.exportManifest.mode == .encryptedContext,
+              session.journal.session.jobID == finalize.jobID,
+              session.journal.session.requestFingerprint == finalize.requestFingerprint,
+              let acknowledgement = session.journal.terminalAcknowledgement,
+              acknowledgement.accepted,
+              acknowledgement.finalPartitionSHA256 == finalize.finalPartitionSHA256,
+              let result = session.journal.terminalResult, result.jobID == finalize.jobID,
+              result.totalFilesWritten == 0 else { return nil }
+        return MacEncryptedContextCommitEvidence(result: result, manifest: session.journal.exportManifest)
     }
 
     private func restoreSession(sessionID: UUID) throws -> Session? {

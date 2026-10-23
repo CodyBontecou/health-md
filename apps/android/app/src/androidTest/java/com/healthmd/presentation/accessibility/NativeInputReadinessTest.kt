@@ -139,6 +139,9 @@ class NativeInputReadinessTest : AccessibilityTestHarness(AccessibilityDisplayCa
             assertTrue("Classify the input dispatcher owner", failure.message.orEmpty().contains(
                 "input(focusedDisplay=$displayId, focusedWindow=own)",
             ))
+            assertTrue("Read the actual native type and process owner without relying on the title", Regex(
+                "focusedWindow\\(type=[A-Z0-9_]{1,40}, processOwner=own\\)",
+            ).containsMatchIn(failure.message.orEmpty()))
             assertFalse("Diagnostics omit fixture text", failure.message.orEmpty().contains("Synthetic focus owner"))
         } finally {
             compose.runOnUiThread { dialog.dismiss() }
