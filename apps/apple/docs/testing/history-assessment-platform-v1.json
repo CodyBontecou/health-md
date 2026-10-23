@@ -6,7 +6,7 @@
   "platforms": {
     "apple": {
       "state": "planned",
-      "target": "Qualify the implemented SDK27 adapter, native warning/execution reassessment, and immutable query-metadata producer on the exact native/UI and physical-device matrix before marking the capability available. Specialized eligibility and authenticated consumer acceptance remain required.",
+      "target": "Qualify the SDK27 adapter, native warning/execution reassessment, immutable portable query metadata and negotiated generation-bound Mac context observations on exact native/UI and physical-device matrices. Complete local/API/scheduled receipt propagation and output qualification before enabling advertisement or marking the capability available.",
       "evidence": [
         "apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift",
         "apps/apple/HealthMd/Shared/Protocols/SystemHealthStoreAdapter.swift",
@@ -15,7 +15,12 @@
         "apps/apple/HealthMd/iOS/ContentView.swift",
         "apps/apple/HealthMd/Shared/Query/HealthHistoryQueryCapture.swift",
         "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
-        "packages/contracts/query-history/v1/README.md"
+        "packages/contracts/query-history/v1/README.md",
+        "apps/apple/HealthMd/Shared/Sync/ConnectedCorpusTransfer.swift",
+        "apps/apple/HealthMd/iOS/IPhoneExportRequestHandler.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextStore.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextQueryExecutor.swift",
+        "packages/contracts/export-history/v1/README.md"
       ],
       "produces_contract": "implemented_unqualified"
     },

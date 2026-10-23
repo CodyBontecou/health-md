@@ -1,4 +1,5 @@
 import Foundation
+import HealthMdConnectionCore
 
 /// Wire-only models for a resumable, partitioned connected export. Runtime
 /// routing and persistence are intentionally owned by later integration work.
@@ -100,15 +101,21 @@ struct ConnectedCorpusTransferCapabilities: Codable, Equatable, Sendable {
 
     let protocolVersions: [Int]
     let partitionTargetBounds: ConnectedCorpusPartitionTargetBounds
+    /// Independently negotiated admission evidence for encrypted-context jobs.
+    /// Missing/unknown versions never imply support. Advertisement stays disabled
+    /// until producer, generation storage, query output and device qualification pass.
+    let contextHistoryObservationVersion: Int?
 
     static let current = ConnectedCorpusTransferCapabilities(
         protocolVersions: [1, 2, rangePlanProtocolVersion, currentProtocolVersion],
         partitionTargetBounds: .default
     )
 
-    init(protocolVersions: [Int], partitionTargetBounds: ConnectedCorpusPartitionTargetBounds = .default) {
+    init(protocolVersions: [Int], partitionTargetBounds: ConnectedCorpusPartitionTargetBounds = .default,
+         contextHistoryObservationVersion: Int? = nil) {
         self.protocolVersions = Array(Set(protocolVersions)).sorted()
         self.partitionTargetBounds = partitionTargetBounds
+        self.contextHistoryObservationVersion = contextHistoryObservationVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -118,9 +125,11 @@ struct ConnectedCorpusTransferCapabilities: Codable, Equatable, Sendable {
             partitionTargetBounds: try container.decode(
                 ConnectedCorpusPartitionTargetBounds.self,
                 forKey: .partitionTargetBounds
-            )
+            ),
+            contextHistoryObservationVersion: try container.decodeIfPresent(Int.self, forKey: .contextHistoryObservationVersion)
         )
-        guard !protocolVersions.isEmpty, protocolVersions.allSatisfy({ $0 > 0 }) else {
+        guard !protocolVersions.isEmpty, protocolVersions.allSatisfy({ $0 > 0 }),
+              contextHistoryObservationVersion.map({ $0 > 0 }) ?? true else {
             throw ConnectedCorpusTransferModelError.invalidProtocolVersions
         }
         guard partitionTargetBounds.isValid else {
@@ -132,6 +141,13 @@ struct ConnectedCorpusTransferCapabilities: Codable, Equatable, Sendable {
 struct ConnectedCorpusTransferNegotiation: Codable, Equatable, Sendable {
     let protocolVersion: Int
     let partitionTargetBytes: Int64
+    let contextHistoryObservationVersion: Int?
+
+    init(protocolVersion: Int, partitionTargetBytes: Int64, contextHistoryObservationVersion: Int? = nil) {
+        self.protocolVersion = protocolVersion
+        self.partitionTargetBytes = partitionTargetBytes
+        self.contextHistoryObservationVersion = contextHistoryObservationVersion
+    }
 }
 
 /// Stable source/destination identities bound into durable protocol-v2 corpus
@@ -188,7 +204,10 @@ enum ConnectedCorpusTransferNegotiator {
         )
         return ConnectedCorpusTransferNegotiation(
             protocolVersion: protocolVersion,
-            partitionTargetBytes: min(max(sharedPreference, lowerBound), upperBound)
+            partitionTargetBytes: min(max(sharedPreference, lowerBound), upperBound),
+            contextHistoryObservationVersion: protocolVersion >= 2
+                && local.contextHistoryObservationVersion == 1
+                && remote.contextHistoryObservationVersion == 1 ? 1 : nil
         )
     }
 
@@ -555,6 +574,8 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
     /// Logical source scope used for non-destructive encrypted-context merges.
     let selectedSourceIDs: [String]?
     let requestedTarget: ExportTargetSnapshot?
+    /// Frozen independent observation; never a current permission or capture-completeness claim.
+    var historyObservation: ExportHistoryObservation?
 
     init(
         mode: ConnectedCorpusExportMode,
@@ -573,7 +594,8 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         rawProfile: IPhoneExportRequest.RawProfile? = nil,
         canonicalSelection: CanonicalHealthDataSelection? = nil,
         selectedSourceIDs: [String]? = nil,
-        requestedTarget: ExportTargetSnapshot?
+        requestedTarget: ExportTargetSnapshot?,
+        historyObservation: ExportHistoryObservation? = nil
     ) {
         self.mode = mode
         self.createdAt = createdAt
@@ -594,6 +616,7 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         self.canonicalSelection = canonicalSelection
         self.selectedSourceIDs = selectedSourceIDs.map { Array(Set($0)).sorted() }
         self.requestedTarget = requestedTarget
+        self.historyObservation = historyObservation
     }
 
     var effectiveOriginalRequestedDates: [Date] {
@@ -610,7 +633,64 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         appleExportEnginePin ?? settingsSnapshot.appleExportEnginePin
     }
 
+    /// The original fingerprint of the unobserved immutable manifest is the
+    /// observation's request binding. The session fingerprint then binds the
+    /// complete observed manifest, avoiding any circular digest or changed legacy bytes.
+    func historyRequestBinding() throws -> String {
+        var original = self
+        original.historyObservation = nil
+        return try ConnectedCorpusRequestFingerprint.make(for: original).sha256
+    }
+
+    func validateHistory(session: ConnectedCorpusTransferSession) throws {
+        guard let observation = historyObservation else { return }
+        guard session.protocolVersion >= 2, let binding = session.peerBinding,
+              observation.operationID == session.jobID.uuidString.lowercased(),
+              observation.sourceInstallationID == binding.sourceInstallationID.uuidString.lowercased(),
+              observation.destinationInstallationID == binding.destinationInstallationID.uuidString.lowercased(),
+              session.requestFingerprint == (try ConnectedCorpusRequestFingerprint.make(for: self)) else {
+            throw ConnectedCorpusTransferModelError.invalidJournal
+        }
+    }
+
+    private func validateHistoryScope() throws {
+        guard let observation = historyObservation else { return }
+        guard mode == .encryptedContext,
+              let identifier = effectiveOriginalCalendarTimeZoneIdentifier,
+              let zone = TimeZone(identifier: identifier),
+              let first = effectiveOriginalRequestedDates.first,
+              let last = effectiveOriginalRequestedDates.last,
+              let observedStart = CanonicalRFC3339UTC.date(from: observation.requestedStart),
+              let observedEnd = CanonicalRFC3339UTC.date(from: observation.requestedEnd),
+              observation.rangeSemantics == "owner_dates",
+              observation.timeZoneIdentifier == identifier,
+              sourceTimeZoneIdentifier == identifier,
+              settingsSnapshot.calendarTimeZoneIdentifier == identifier,
+              observation.metricIDs == settingsSnapshot.metricSelection.enabledMetricIDs.sorted(),
+              observation.metricIDs == canonicalSelection?.metricIDs.sorted(),
+              observation.requestBindingSHA256 == (try historyRequestBinding()),
+              selectedSourceIDs?.contains("apple_health") == true else {
+            throw ConnectedCorpusTransferModelError.invalidJournal
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = zone
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard calendar.startOfDay(for: observedStart) == calendar.startOfDay(for: first),
+              calendar.startOfDay(for: observedEnd) == calendar.startOfDay(for: last),
+              requestedDates == effectiveOriginalRequestedDates,
+              transferDates == requestedDates,
+              requestedDates.allSatisfy({ $0 == calendar.startOfDay(for: $0) }),
+              requestedDateIdentifiers == requestedDates.map({ formatter.string(from: $0) }) else {
+            throw ConnectedCorpusTransferModelError.invalidJournal
+        }
+    }
+
     func validate() throws {
+        try validateHistoryScope()
         guard sourceTimeZoneIdentifier.map({ TimeZone(identifier: $0) != nil }) ?? true,
               !requestedDates.isEmpty,
               requestedDates == requestedDates.sorted(),

@@ -322,8 +322,7 @@ actor EncryptedHealthContextStore {
     private static func historyContent(for metricID: String, in day: HealthMdCompactContextDay) -> HistoryMetricContent {
         let metrics = day.metrics.filter { $0.metricID == metricID }
         let workouts = metricID == "workouts" ? day.workouts : []
-        let sleepIDs: Set<String> = ["sleep_total", "sleep_bedtime", "sleep_wake", "sleep_deep",
-                                     "sleep_rem", "sleep_core", "sleep_awake", "sleep_in_bed"]
+        let sleepIDs = HealthMdSleepSessionQuery.sleepMetricIDs
         let sleep = sleepIDs.contains(metricID) ? day.sleepSessions : []
         let references = Set(metrics.flatMap(\.evidenceIDs) + workouts.flatMap(\.evidenceIDs) + sleep.flatMap(\.evidenceIDs))
         let evidence = day.evidence.filter {
@@ -467,31 +466,24 @@ actor EncryptedHealthContextStore {
 
     /// Loads exactly one day from an immutable manifest snapshot. The caller can advance the index
     /// within a dense day, so no fixed per-day result limit is necessary.
-    func loadDay(
-        from snapshot: HealthContextStoreSnapshot,
-        at index: Int
-    ) throws -> HealthMdCompactContextDay {
-        guard snapshot.entries.indices.contains(index) else {
-            throw EncryptedHealthContextStoreError.corruptManifest
-        }
-        let key = try encryptionKey(createIfMissing: false)
-        let snapshotEntry = snapshot.entries[index]
-        return try loadDay(
-            entry: ManifestEntry(
-                ownerDate: snapshotEntry.ownerDate,
-                generation: snapshotEntry.generation,
-                dayDigest: snapshotEntry.dayDigest
-            ),
-            key: key
-        )
+    func loadDay(from snapshot: HealthContextStoreSnapshot, at index: Int) throws -> HealthMdCompactContextDay {
+        try loadContext(from: snapshot, at: index).day
     }
 
     func historyProvenance(from snapshot: HealthContextStoreSnapshot, at index: Int) throws -> [HealthContextHistoryProvenance] {
+        try loadContext(from: snapshot, at: index).historyProvenance
+    }
+
+    /// One authenticated immutable blob supplies both values, so actor reentrancy
+    /// cannot pair data from one generation with another generation's evidence.
+    func loadContext(from snapshot: HealthContextStoreSnapshot, at index: Int) throws
+        -> (day: HealthMdCompactContextDay, historyProvenance: [HealthContextHistoryProvenance]) {
         guard snapshot.entries.indices.contains(index) else { throw EncryptedHealthContextStoreError.corruptManifest }
         let value = snapshot.entries[index]
         let key = try encryptionKey(createIfMissing: false)
-        return try loadBlob(entry: ManifestEntry(ownerDate: value.ownerDate, generation: value.generation,
-                                                dayDigest: value.dayDigest), key: key).historyProvenance ?? []
+        let blob = try loadBlob(entry: ManifestEntry(ownerDate: value.ownerDate, generation: value.generation,
+                                                   dayDigest: value.dayDigest), key: key)
+        return (blob.day, blob.historyProvenance ?? [])
     }
 
     private func historyProvenance(ownerDate: String) throws -> [HealthContextHistoryProvenance] {

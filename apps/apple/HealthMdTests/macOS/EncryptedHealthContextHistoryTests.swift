@@ -123,13 +123,71 @@ final class EncryptedHealthContextHistoryTests: XCTestCase {
         XCTAssertThrowsError(try wrongDate.validate(for: foreignDay))
     }
 
-    private func observation(metrics: [String], requestedStart: String = "2026-04-17T00:00:00.000000000Z") throws -> ExportHistoryObservation {
+    func testQueryDisclosureFollowsMatchingGenerationRequestAndSourceScope() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("pr183-context-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let key = InMemoryHealthContextEncryptionKeyProvider(keyData: Data(repeating: 0x66, count: 32))
+        let store = EncryptedHealthContextStore(rootURL: root, keyProvider: key)
+        let first = try observation(metrics: ["heart_rate", "steps"], limitedMetrics: ["steps"])
+        try await store.mergeScoped([day(metrics: ["heart_rate", "steps"], attributed: true)],
+            replacingMetricIDs: ["heart_rate", "steps"], sourceIDs: ["apple_health"], historyObservation: first)
+        let executor = EncryptedHealthContextQueryExecutor(store: store,
+            evidenceScope: HealthMdEvidenceScope(allowedMetricIDs: ["heart_rate", "steps"]))
+        @Sendable func query(_ metricID: String, sources: HealthMdSourceSelection = .allAvailable) async throws -> HealthMdQueryResponse {
+            try await executor.execute(HealthMdQueryRequest(metrics: .explicit([metricID]), sources: sources,
+                dates: .exact(.init(startDate: "2026-04-17", endDate: "2026-04-17")),
+                operation: .coverage,
+                page: .init(maxItems: 10, maxBytes: 100_000)), detailLevel: .summary)
+        }
+        async let steps = query("steps")
+        async let heart = query("heart_rate")
+        let (stepResult, heartResult) = try await (steps, heart)
+        XCTAssertTrue(stepResult.limitations.contains { $0.code == "history_sample_end_limited" })
+        XCTAssertFalse(heartResult.limitations.contains { $0.code == "history_sample_end_limited" })
+        XCTAssertTrue(heartResult.limitations.contains { $0.code == "history_access_unverified" })
+        let provider = try await query("steps", sources: .explicit(sourceIDs: [], providerIDs: ["whoop"]))
+        XCTAssertFalse(provider.limitations.contains { $0.code.hasPrefix("history_") })
+        let second = try observation(metrics: ["steps"])
+        try await store.mergeScoped([day(metrics: ["steps"], value: 2, attributed: true)],
+            replacingMetricIDs: ["steps"], sourceIDs: ["apple_health"], historyObservation: second)
+        let refreshed = try await query("steps")
+        XCTAssertFalse(refreshed.limitations.contains { $0.code == "history_sample_end_limited" })
+        XCTAssertTrue(refreshed.limitations.contains { $0.code == "history_admission_observation" })
+        let encoded = String(decoding: try HealthMdQueryCanonicalSerializer.data(for: refreshed), as: UTF8.self)
+        XCTAssertFalse(encoded.contains(first.observationID), "Unrelated original observation objects must not leak")
+        try await store.upsert(day(metrics: ["steps"], attributed: true))
+        let legacy = try await query("steps")
+        XCTAssertFalse(legacy.limitations.contains { $0.code == "history_admission_observation" })
+        XCTAssertTrue(legacy.limitations.contains { $0.code == "history_access_unverified" })
+    }
+
+    func testWorkoutOperationIncludesItsSeparatelyAuthorizedImplicitHistoryScope() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("pr183-context-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = EncryptedHealthContextStore(rootURL: root,
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider(keyData: Data(repeating: 0x67, count: 32)))
+        let observed = try observation(metrics: ["heart_rate", "workouts"], limitedMetrics: ["workouts"])
+        try await store.mergeScoped([day(metrics: ["heart_rate"], attributed: true)],
+            replacingMetricIDs: ["heart_rate", "workouts"], sourceIDs: ["apple_health"], historyObservation: observed)
+        let executor = EncryptedHealthContextQueryExecutor(store: store,
+            evidenceScope: HealthMdEvidenceScope(allowedMetricIDs: ["heart_rate"], allowsWorkouts: true))
+        let response = try await executor.execute(HealthMdQueryRequest(metrics: .explicit(["heart_rate"]),
+            dates: .exact(.init(startDate: "2026-04-17", endDate: "2026-04-17")), operation: .workoutListing), detailLevel: .summary)
+        XCTAssertTrue(response.items.isEmpty)
+        XCTAssertTrue(response.limitations.contains { $0.code == "history_sample_end_limited" },
+                      "Workout access is granted independently of the explicit metric list")
+    }
+
+    private func observation(metrics: [String], requestedStart: String = "2026-04-17T00:00:00.000000000Z",
+                             limitedMetrics: Set<String> = []) throws -> ExportHistoryObservation {
         try ExportHistoryObservation(observationID: UUID(), operationID: UUID(),
             observedAt: "2026-04-18T00:00:00.000000000Z", requestBindingSHA256: String(repeating: "a", count: 64),
             timeZoneIdentifier: "UTC", metricIDs: metrics.sorted(), requestedStart: requestedStart,
             requestedEnd: "2026-04-17T23:59:59.000000000Z", allAvailable: false, rangeSemantics: "owner_dates",
             evidenceMethod: "healthkit_earliest_authorized_sample_date", types: metrics.sorted().map {
-                ExportHistoryTypeObservation(typeID: "synthetic.\($0)", directMetricIDs: [$0], outcome: "unknown")
+                ExportHistoryTypeObservation(typeID: "synthetic.\($0)", directMetricIDs: [$0],
+                    outcome: limitedMetrics.contains($0) ? "limited" : "unknown",
+                    sampleEndBoundary: limitedMetrics.contains($0) ? "2026-04-17T12:00:00.000000000Z" : nil)
             })
     }
 

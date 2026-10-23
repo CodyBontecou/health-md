@@ -177,9 +177,12 @@ final class MacCorpusExportSessionManager {
     }
 
     private struct Journal: Codable {
-        static let currentVersion = 5
+        static let currentVersion = 6
+        static func version(for manifest: ConnectedCorpusExportManifest) -> Int {
+            manifest.historyObservation == nil ? 5 : currentVersion
+        }
 
-        var version = currentVersion
+        var version = 5
         let session: ConnectedCorpusTransferSession
         let exportManifest: ConnectedCorpusExportManifest
         var state: ConnectedCorpusTransferJournalState
@@ -381,7 +384,8 @@ final class MacCorpusExportSessionManager {
         _ open: ConnectedCorpusTransferOpen,
         vaultManager: VaultManager,
         localInstallationID: UUID? = nil,
-        remoteInstallationID: UUID? = nil
+        remoteInstallationID: UUID? = nil,
+        contextHistoryObservationVersion: Int? = nil
     ) -> ConnectedCorpusTransferDisposition {
         cleanupExpiredSessions(vaultManager: vaultManager)
         let rejected: (String) -> ConnectedCorpusTransferDisposition = { message in
@@ -402,6 +406,10 @@ final class MacCorpusExportSessionManager {
         do {
             try open.partition.validate()
             try exportManifest.validate()
+            try exportManifest.validateHistory(session: open.session)
+            guard exportManifest.historyObservation == nil || contextHistoryObservationVersion == 1 else {
+                return rejected("Context history observations were not negotiated.")
+            }
             guard try ConnectedCorpusRequestFingerprint.make(for: exportManifest)
                     == open.session.requestFingerprint else {
                 return rejected("Corpus request fingerprint does not match its immutable manifest.")
@@ -499,6 +507,7 @@ final class MacCorpusExportSessionManager {
                     sessionID: open.session.sessionID
                 )
                 var journal = Journal(
+                    version: Journal.version(for: exportManifest),
                     session: open.session,
                     exportManifest: exportManifest,
                     state: .open,
@@ -767,7 +776,8 @@ final class MacCorpusExportSessionManager {
                 try await queryContextStore.mergeScoped(
                     projectedContextDays,
                     replacingMetricIDs: selectedMetrics,
-                    sourceIDs: selectedSources
+                    sourceIDs: selectedSources,
+                    historyObservation: session.journal.exportManifest.historyObservation
                 )
                 #if DEBUG
                 await afterEncryptedContextApplyForTesting?()
@@ -4211,7 +4221,8 @@ final class MacCorpusExportSessionManager {
         protectedSessionBindings[directory.standardizedFileURL.path] = actualBinding
         var journal = try JSONDecoder().decode(Journal.self, from: protectedJournal.data)
         let storedVersion = journal.version
-        guard (2...Journal.currentVersion).contains(storedVersion) else {
+        guard (2...Journal.currentVersion).contains(storedVersion),
+              (storedVersion == 6) == (journal.exportManifest.historyObservation != nil) else {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
         let usesRangePlan = try journalUsesReceivedRangePlan(journal)
@@ -4262,7 +4273,7 @@ final class MacCorpusExportSessionManager {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
         }
-        journal.version = Journal.currentVersion
+        journal.version = Journal.version(for: journal.exportManifest)
         try validateRestoredJournal(journal, sessionID: sessionID)
         if journal.state == .open
             || (journal.state == .finalizing && journal.receivedRangePlan == nil) {
@@ -4293,7 +4304,7 @@ final class MacCorpusExportSessionManager {
             }
         }
         let session = try Session(directoryURL: directory, journal: journal)
-        if storedVersion < Journal.currentVersion {
+        if storedVersion != journal.version {
             try persist(session)
         }
         return session
@@ -4301,12 +4312,13 @@ final class MacCorpusExportSessionManager {
 
     private func validateRestoredJournal(_ journal: Journal, sessionID: UUID) throws {
         try journal.exportManifest.validate()
+        try journal.exportManifest.validateHistory(session: journal.session)
         let canonicalExpiry = journal.session.createdAt.addingTimeInterval(
             ConnectedCorpusOutboundStore.retentionInterval
         )
         guard journal.session.createdAt.timeIntervalSinceReferenceDate.isFinite,
               journal.session.createdAt <= Date().addingTimeInterval(5 * 60),
-              journal.version == Journal.currentVersion,
+              journal.version == Journal.version(for: journal.exportManifest),
               journal.session.sessionID == sessionID,
               ConnectedCorpusTransferCapabilities.current.protocolVersions.contains(
                   journal.session.protocolVersion

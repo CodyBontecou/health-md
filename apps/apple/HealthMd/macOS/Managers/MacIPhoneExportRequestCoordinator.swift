@@ -905,7 +905,10 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         cleanupExpiredJobs()
         guard var record = records[open.session.jobID], !record.state.isTerminal,
               open.partition.jobID == open.session.jobID,
-              let manifest = open.exportManifest else { return false }
+              let manifest = open.exportManifest,
+              record.corpusSessionID.map({ $0 == open.session.sessionID }) ?? true,
+              record.corpusRequestFingerprint.map({ $0 == open.session.requestFingerprint }) ?? true,
+              manifest.historyObservation.map({ $0.allAvailable == (record.request.dateSelection == .allAvailable) }) ?? true else { return false }
         let matches: Bool
         if record.request.dateSelection == .allAvailable {
             matches = record.resolvedDateIdentifiers == manifest.requestedDateIdentifiers

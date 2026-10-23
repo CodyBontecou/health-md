@@ -24,7 +24,7 @@ Implementation and physical qualification are required before advertising produc
 
 For direct jobs, `request_binding_sha256` is exactly the existing version-pinned `DirectTransferSession.requestFingerprint` / Rust `TransferSession.request_fingerprint`, computed from the original `DirectExportRequest` by the negotiated direct protocol authority. Do not recompute it using the typed-query canonicalizer or change its bytes. The authenticated receiver must compare the observation operation UUID, request fingerprint, installation pair, timezone, and metric/range scope to its accepted immutable job. Resolved settings and resolved owner dates remain frozen by that job's existing accepted/session/journal authority; this digest does not independently certify them.
 
-Connected corpus adoption must similarly use its existing version-pinned session request fingerprint and frozen manifest/settings/date authority. Local artifact adoption must define and test its exact operation request canonicalization before emitting this contract. The observation model alone does not establish a binding: an unbound file, unknown transport, or receiver without matching request authority must be presented as unverified. No producer may advertise support until that transport's binding, persistence and output qualification are implemented.
+Observed encrypted-context corpus jobs use the two-stage binding described below, with the existing version-pinned fingerprint algorithm and frozen manifest/settings/date authority. Local artifact adoption must define and test its exact operation request canonicalization before emitting this contract. The observation model alone does not establish a binding: an unbound file, unknown transport, or receiver without matching request authority must be presented as unverified. No producer may advertise support until that transport's binding, persistence and output qualification are implemented.
 
 ## Synthetic conformance fixture
 
@@ -35,6 +35,51 @@ Connected corpus adoption must similarly use its existing version-pinned session
 The optional hello field `exportHistoryObservationVersions` lists independently supported observation versions. Missing/null/empty has no support. A producer may attach `DirectExportAccepted.historyObservation` only after both endpoints select version 1. The accepted observation is persisted verbatim with the existing journal before capture; its request binding is the existing session fingerprint's `sha256` member (the fingerprint version remains separately pinned by the session/protocol authority). No request, packet, frame, pairing transcript, or raw-day manifest bytes change. Historical fixture objects with absent fields must remain byte-identical.
 
 Receivers require an authoritative non-nil `resolvedCanonicalSelection` whenever an observation is present, and validate operation, fingerprint, peer pair, calendar, resolved metrics and original requested range before capture/transfer admission. They must not infer a metric scope from legacy defaults or skip comparison when it is missing. Legacy jobs without observations remain compatible. They reject a changed/removed observation on resume. A new client resuming an older job leaves it unassessed; a producer must never backfill evidence onto existing captured bytes. Resuming an observed job requires a peer that supports that observation version; lack of support pauses/rejects that resume rather than stripping the observation. Unknown versions are rejected rather than interpreted as v1. `synthetic-direct-job.json` records a Swift-generated request/accepted/session/capability vector with its deployed unchanged request fingerprint. Live advertisement remains disabled until producer, output and physical qualification are complete.
+
+## Connected encrypted-context binding
+
+`ConnectedCorpusTransferCapabilities.contextHistoryObservationVersion: 1` is
+independent of corpus item/partition protocol versions. Both endpoints must select
+1 and durable installation binding before a new encrypted-context job attaches
+`ConnectedCorpusExportManifest.historyObservation`. Missing or unknown versions
+have no support. Live advertisement remains disabled pending complete qualification.
+Legacy manifests omit the field and retain their existing encoded bytes.
+
+The observation's `request_binding_sha256` is the existing v1 corpus fingerprint
+of the immutable manifest **with `historyObservation` absent**. The session's
+request fingerprint is then computed by the unchanged v1 algorithm over the
+**complete observed manifest**. This avoids a circular digest and binds the exact
+observation, job and authenticated installation pair without changing the
+fingerprint algorithm, partition envelope, daily documents or older fixtures.
+The source and receiver compare selected metrics, logical All Time, original
+owner dates and source/frozen-settings calendar against the operation authority.
+Observed context jobs have an exact requested/original/transfer date plan; no
+rollup expansion or injected extra capture day is permitted. Captured settings
+come from the frozen manifest, and resumed observations are never reassessed.
+
+Private source checkpoints use observed journal version 3 versus legacy 2;
+private Mac receiver checkpoints use observed version 6 versus legacy 5.
+Version/presence mismatches fail without converting observed work into a legacy
+job. Older unobserved journal migrations remain unobserved. The Mac request
+record pins the first accepted corpus session and fingerprint. Resuming observed
+source work requires bilateral version 1 and the same installation pair.
+
+Encrypted context keeps observation associations with selected metric scopes
+inside the exact immutable authenticated day generation: observed day blobs use
+version 2, legacy blobs remain version 1, and the encrypted manifest stays version
+1. Scoped refreshes trim replaced associations; legacy replacements clear rather
+than backfill evidence. Retained associations must still match their metric rows
+and referenced evidence after the actual merge, including off-scope legacy row
+replacements. Data and provenance load atomically from the same generation.
+
+Mac queries expose fixed, bounded `history_*` limitations for matching
+request/grant-selected Apple scopes. They distinguish limited, unknown,
+API-unavailable, failed and unassessed acquisition evidence, without exposing
+original observation objects or unrelated metrics. Provider-only queries do not
+acquire Apple limitations. These limitations describe historical acquisition,
+not current permission or full-history certification; capture completion retains
+its existing meaning. Exact type/boundary objects remain in the authenticated
+private acquisition evidence rather than being relabelled as a new query capture.
 
 ## Raw and extraction output attachment
 
