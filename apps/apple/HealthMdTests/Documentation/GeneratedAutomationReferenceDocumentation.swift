@@ -26,6 +26,9 @@ enum GeneratedAutomationReferenceDocumentation {
         "raw-result-complete.json",
         "raw-result-partial.json",
         "peer-capabilities.json",
+        "apple-context-refresh.json",
+        "apple-context-status.json",
+        "apple-context-receipt.json",
         "iphone-export-request-write-files.json",
         "iphone-export-request-strict-raw.json",
         "iphone-export-progress.json",
@@ -357,6 +360,9 @@ enum GeneratedAutomationReferenceDocumentation {
         generated["raw-result-complete.json"] = try jsonData(completeRawResult.controlAPIJSONObject())
         generated["raw-result-partial.json"] = try jsonData(partialRawResult.controlAPIJSONObject())
         generated["peer-capabilities.json"] = try encodeConnected(peerCapabilities)
+        generated["apple-context-refresh.json"] = try encodeWire(SyncMessage.appleContext(.refresh(appleContextRequest)))
+        generated["apple-context-status.json"] = try encodeWire(SyncMessage.appleContext(.status(appleContextRequest)))
+        generated["apple-context-receipt.json"] = try encodeWire(SyncMessage.appleContext(.receipt(.init(request: appleContextRequest, revision: 1, state: .pending))))
         generated["iphone-export-request-write-files.json"] = try encodeConnected(writeFilesRequest)
         generated["iphone-export-request-strict-raw.json"] = try encodeConnected(strictRawRequest)
         generated["iphone-export-progress.json"] = try encodeConnected(progress)
@@ -535,6 +541,14 @@ enum GeneratedAutomationReferenceDocumentation {
         )
     }
 
+    private static var appleContextRequest: AppleContextRequest {
+        AppleContextRequest(id: jobID, phoneInstallationID: installationID,
+            macInstallationID: UUID(uuidString: "A1700000-0000-4000-8000-000000000004")!,
+            profileID: UUID(uuidString: "A1700000-0000-4000-8000-000000000005")!,
+            ownerDates: ["2026-03-15"], timeZoneIdentifier: "UTC",
+            startDate: dayStart, endDate: dayStart, selection: .init(metricIDs: ["steps"]))
+    }
+
     private static var peerCapabilities: SyncPeerCapabilities {
         SyncPeerCapabilities(
             protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
@@ -550,6 +564,7 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsIPhoneExportRequests: true,
             supportsAllAvailableHistoryExportRequests: true,
             supportsRequestScopedContextAcquisition: true,
+            supportsPhoneContextAutomation: true,
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,
             supportsStrictRawStreaming: true,
@@ -1096,6 +1111,7 @@ enum GeneratedAutomationReferenceDocumentation {
                 acknowledgedAt: createdAt,
                 message: "Synthetic corpus cancellation acknowledged."
             )),
+            .appleContext(.refresh(appleContextRequest)),
             .iphoneExportCancel(jobID: jobID),
             .iphoneExportRejected(IPhoneExportFailure(
                 jobID: jobID,

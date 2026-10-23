@@ -6,10 +6,38 @@ editUrl: false
 
 This inventory is generated from production API/control serialization and every current `SyncMessage` Codable case. Paths ending in `[]` describe array elements.
 
-- Generated JSON artifacts inventoried: 30
-- Sync messages inventoried: 38
+- Generated JSON artifacts inventoried: 33
+- Sync messages inventoried: 39
 
 ## SyncMessage wire inventory
+
+### `appleContext`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.appleContext` | object |
+| `$.appleContext._0` | object |
+| `$.appleContext._0.refresh` | object |
+| `$.appleContext._0.refresh._0` | object |
+| `$.appleContext._0.refresh._0.endDate` | integer |
+| `$.appleContext._0.refresh._0.id` | string |
+| `$.appleContext._0.refresh._0.macInstallationID` | string |
+| `$.appleContext._0.refresh._0.ownerDates` | array |
+| `$.appleContext._0.refresh._0.ownerDates[]` | string |
+| `$.appleContext._0.refresh._0.phoneInstallationID` | string |
+| `$.appleContext._0.refresh._0.profileID` | string |
+| `$.appleContext._0.refresh._0.selection` | object |
+| `$.appleContext._0.refresh._0.selection.detail_level` | string |
+| `$.appleContext._0.refresh._0.selection.field_pointers` | array |
+| `$.appleContext._0.refresh._0.selection.metric_ids` | array |
+| `$.appleContext._0.refresh._0.selection.metric_ids[]` | string |
+| `$.appleContext._0.refresh._0.selection.object_paths` | array |
+| `$.appleContext._0.refresh._0.selection.source_ids` | array |
+| `$.appleContext._0.refresh._0.selection.source_ids[]` | string |
+| `$.appleContext._0.refresh._0.startDate` | integer |
+| `$.appleContext._0.refresh._0.timeZoneIdentifier` | string |
+| `$.appleContext._0.refresh._0.version` | integer |
 
 ### `connectedCorpusStatus`
 
@@ -330,6 +358,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsManualIPSync` | boolean |
 | `$.hello._0.supportsPartitionedConnectedExports` | boolean |
 | `$.hello._0.supportsPerDateExportCompletion` | boolean |
+| `$.hello._0.supportsPhoneContextAutomation` | boolean |
 | `$.hello._0.supportsRangeV9Summaries` | boolean |
 | `$.hello._0.supportsRequestScopedContextAcquisition` | boolean |
 | `$.hello._0.supportsRollupSummaries` | boolean |
@@ -1101,6 +1130,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsManualIPSync` | boolean |
 | `$.macStatus._0.capabilities.supportsPartitionedConnectedExports` | boolean |
 | `$.macStatus._0.capabilities.supportsPerDateExportCompletion` | boolean |
+| `$.macStatus._0.capabilities.supportsPhoneContextAutomation` | boolean |
 | `$.macStatus._0.capabilities.supportsRangeV9Summaries` | boolean |
 | `$.macStatus._0.capabilities.supportsRequestScopedContextAcquisition` | boolean |
 | `$.macStatus._0.capabilities.supportsRollupSummaries` | boolean |
@@ -1673,6 +1703,93 @@ This inventory is generated from production API/control serialization and every 
 | `$.schema_version` | integer |
 | `$.source` | string |
 
+### `apple-context-receipt.json`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.appleContext` | object |
+| `$.appleContext._0` | object |
+| `$.appleContext._0.receipt` | object |
+| `$.appleContext._0.receipt._0` | object |
+| `$.appleContext._0.receipt._0.request` | object |
+| `$.appleContext._0.receipt._0.request.endDate` | integer |
+| `$.appleContext._0.receipt._0.request.id` | string |
+| `$.appleContext._0.receipt._0.request.macInstallationID` | string |
+| `$.appleContext._0.receipt._0.request.ownerDates` | array |
+| `$.appleContext._0.receipt._0.request.ownerDates[]` | string |
+| `$.appleContext._0.receipt._0.request.phoneInstallationID` | string |
+| `$.appleContext._0.receipt._0.request.profileID` | string |
+| `$.appleContext._0.receipt._0.request.selection` | object |
+| `$.appleContext._0.receipt._0.request.selection.detail_level` | string |
+| `$.appleContext._0.receipt._0.request.selection.field_pointers` | array |
+| `$.appleContext._0.receipt._0.request.selection.metric_ids` | array |
+| `$.appleContext._0.receipt._0.request.selection.metric_ids[]` | string |
+| `$.appleContext._0.receipt._0.request.selection.object_paths` | array |
+| `$.appleContext._0.receipt._0.request.selection.source_ids` | array |
+| `$.appleContext._0.receipt._0.request.selection.source_ids[]` | string |
+| `$.appleContext._0.receipt._0.request.startDate` | integer |
+| `$.appleContext._0.receipt._0.request.timeZoneIdentifier` | string |
+| `$.appleContext._0.receipt._0.request.version` | integer |
+| `$.appleContext._0.receipt._0.revision` | integer |
+| `$.appleContext._0.receipt._0.state` | string |
+
+### `apple-context-refresh.json`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.appleContext` | object |
+| `$.appleContext._0` | object |
+| `$.appleContext._0.refresh` | object |
+| `$.appleContext._0.refresh._0` | object |
+| `$.appleContext._0.refresh._0.endDate` | integer |
+| `$.appleContext._0.refresh._0.id` | string |
+| `$.appleContext._0.refresh._0.macInstallationID` | string |
+| `$.appleContext._0.refresh._0.ownerDates` | array |
+| `$.appleContext._0.refresh._0.ownerDates[]` | string |
+| `$.appleContext._0.refresh._0.phoneInstallationID` | string |
+| `$.appleContext._0.refresh._0.profileID` | string |
+| `$.appleContext._0.refresh._0.selection` | object |
+| `$.appleContext._0.refresh._0.selection.detail_level` | string |
+| `$.appleContext._0.refresh._0.selection.field_pointers` | array |
+| `$.appleContext._0.refresh._0.selection.metric_ids` | array |
+| `$.appleContext._0.refresh._0.selection.metric_ids[]` | string |
+| `$.appleContext._0.refresh._0.selection.object_paths` | array |
+| `$.appleContext._0.refresh._0.selection.source_ids` | array |
+| `$.appleContext._0.refresh._0.selection.source_ids[]` | string |
+| `$.appleContext._0.refresh._0.startDate` | integer |
+| `$.appleContext._0.refresh._0.timeZoneIdentifier` | string |
+| `$.appleContext._0.refresh._0.version` | integer |
+
+### `apple-context-status.json`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.appleContext` | object |
+| `$.appleContext._0` | object |
+| `$.appleContext._0.status` | object |
+| `$.appleContext._0.status._0` | object |
+| `$.appleContext._0.status._0.endDate` | integer |
+| `$.appleContext._0.status._0.id` | string |
+| `$.appleContext._0.status._0.macInstallationID` | string |
+| `$.appleContext._0.status._0.ownerDates` | array |
+| `$.appleContext._0.status._0.ownerDates[]` | string |
+| `$.appleContext._0.status._0.phoneInstallationID` | string |
+| `$.appleContext._0.status._0.profileID` | string |
+| `$.appleContext._0.status._0.selection` | object |
+| `$.appleContext._0.status._0.selection.detail_level` | string |
+| `$.appleContext._0.status._0.selection.field_pointers` | array |
+| `$.appleContext._0.status._0.selection.metric_ids` | array |
+| `$.appleContext._0.status._0.selection.metric_ids[]` | string |
+| `$.appleContext._0.status._0.selection.object_paths` | array |
+| `$.appleContext._0.status._0.selection.source_ids` | array |
+| `$.appleContext._0.status._0.selection.source_ids[]` | string |
+| `$.appleContext._0.status._0.startDate` | integer |
+| `$.appleContext._0.status._0.timeZoneIdentifier` | string |
+| `$.appleContext._0.status._0.version` | integer |
+
 ### `control-export-response-cancelled.json`
 
 | JSON path | Observed type or types |
@@ -2147,6 +2264,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsManualIPSync` | boolean |
 | `$.supportsPartitionedConnectedExports` | boolean |
 | `$.supportsPerDateExportCompletion` | boolean |
+| `$.supportsPhoneContextAutomation` | boolean |
 | `$.supportsRangeV9Summaries` | boolean |
 | `$.supportsRequestScopedContextAcquisition` | boolean |
 | `$.supportsRollupSummaries` | boolean |

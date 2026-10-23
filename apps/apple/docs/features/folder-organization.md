@@ -9,7 +9,7 @@
 
 ## What it does
 
-Folder Organization controls where Health.md writes exported files inside the selected vault or folder. Health.md first uses the selected folder, then the optional Health.md subfolder, then the optional date-based folder structure. When enabled, `_healthmd_data_dictionary.json` stays at that shared export root; **Write Data Dictionary** can suppress it without changing the daily-note paths.
+Folder Organization controls where Health.md writes exported files inside the selected vault or folder. Health.md first uses the selected folder, then the optional Health.md subfolder, then the optional file-type folder, then the optional date-based folder structure. When enabled, `_healthmd_data_dictionary.json` stays at that shared export root; **Write Data Dictionary** can suppress it without changing the daily-note paths.
 
 This keeps large backfills and scheduled exports organized by year, month, week, quarter, or any supported placeholder pattern.
 
@@ -86,7 +86,7 @@ Assume:
 | Files are under `Health/Health` | Vault folder or subfolder chosen twice | Select the vault root or clear/adjust the Health.md subfolder. |
 | Folder placeholder appears literally | Placeholder misspelled or wrong case | Use supported placeholders exactly. |
 | Export failed to create folders | Folder access or bookmark issue | Re-select the vault/folder in Health.md. |
-| Scheduled exports go to unexpected folders | Scheduled exports reuse current export settings | Check Export tab folder settings before relying on Schedule. |
+| Scheduled exports go to unexpected folders | The scheduled profile or pending recovery has different saved settings | Check the scheduled profile's destination and folder settings; pending recovery retains frozen settings. |
 | Daily notes are in a different place | Daily Note Injection has separate folder/filename settings | Configure Daily Note Injection separately. |
 
 ## Video outline
@@ -106,6 +106,6 @@ Assume:
 
 - `VaultManager` builds paths as `vaultURL / healthSubfolder / formatFolderPath(for:)`.
 - `AdvancedExportSettings.defaultFolderStructure` is empty for a flat folder.
-- `formatFolderPath(for:)` returns `nil` when the folder structure is empty.
+- `formatFolderPath(for:format:)` returns `nil` when the date structure is empty and no file-type folder applies.
 - The same placeholder expansion method powers both filenames and folder paths.
 - Directories are created with intermediate directories before files are written.

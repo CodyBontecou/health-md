@@ -42,8 +42,8 @@ To abandon obsolete recovery without recreating the profile, open **Schedule →
 
 ## Prerequisites
 
-- Lifetime unlock (free plan: manual exports only)
-- Health Connect **background access** — grant it when prompted; scheduled reads need it
+- Google Play: lifetime unlock (free plan: manual exports only). F-Droid includes scheduling.
+- For schedules reading Health Connect, grant **background access** when prompted. Cloud-only provider schedules do not require that permission.
 - Notifications enabled to see results; exports still run with notifications off
 
 ## Setup

@@ -2,7 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { publishedLocales } from '../i18n/locales.mjs';
+import { defaultLocale, publishedLocales } from '../i18n/locales.mjs';
 import { routePath } from '../i18n/routes.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -16,7 +16,7 @@ function redirectLine(source) {
 }
 
 function legalRedirectLines() {
-  return publishedLocales('legal').flatMap(({ code }) =>
+  const published = publishedLocales('legal').flatMap(({ code }) =>
     ['privacy', 'terms'].flatMap((routeId) => {
       const destination = routePath(routeId, code);
       const cleanPath = destination.replace(/\.html$/, '');
@@ -26,6 +26,17 @@ function legalRedirectLines() {
       ];
     }),
   );
+  // Previously published translations now contradict the opt-in cloud pilot.
+  // Do not serve stale legal copy while it awaits qualified translation review.
+  const fallback = publishedLocales('landing').filter(({ surfaces }) => !surfaces.legal)
+    .flatMap(({ code }) => ['privacy', 'terms'].flatMap((routeId) => {
+      const localized = routePath(routeId, code);
+      const cleanPath = localized.replace(/\.html$/, '');
+      const canonical = routePath(routeId, defaultLocale);
+      return [localized, cleanPath, `${cleanPath}/`].map((source) =>
+        `    { "source": ${JSON.stringify(source)}, "destination": ${JSON.stringify(canonical)}, "permanent": false },`);
+    }));
+  return [...published, ...fallback];
 }
 
 export function renderVercelConfig(template) {

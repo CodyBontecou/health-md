@@ -27,6 +27,22 @@ private enum WorkoutGranularCustomizations {
         c.unitPreference = .imperial
         return c
     }()
+
+    // Immutable retained fixtures, matching the ObservableObject deinit workaround above.
+    static let presentationVariants: [FormatCustomization] = MarkdownTemplateStyle.allCases.flatMap { style in
+        let templates = style == .custom
+            ? [MarkdownTemplateConfig.defaultTemplate, "## Workouts\n{{workouts_metrics}}"]
+            : [MarkdownTemplateConfig.defaultTemplate]
+        return templates.flatMap { text in
+            [true, false].map { visible in
+                let c = FormatCustomization()
+                c.markdownTemplate.style = style
+                c.markdownTemplate.customTemplate = text
+                c.markdownTemplate.includeWorkoutDetailsAndMetadata = visible
+                return c
+            }
+        }
+    }
 }
 
 private enum WorkoutGranularFixtures {
@@ -102,6 +118,63 @@ private enum WorkoutGranularFixtures {
 // MARK: - Markdown
 
 final class WorkoutGranularMarkdownTests: XCTestCase {
+
+    func testMarkdown_workoutTablePreferencePreservesSummariesForEveryTemplateStyle() {
+        var sparse = HealthData(date: WorkoutGranularFixtures.referenceDate)
+        sparse.workouts = [WorkoutData(
+            workoutType: .walking,
+            startTime: WorkoutGranularFixtures.referenceDate,
+            duration: 600,
+            calories: nil,
+            distance: nil
+        )]
+        var multiple = WorkoutGranularFixtures.richRunWithGranular
+        multiple.workouts += sparse.workouts
+
+        for config in WorkoutGranularCustomizations.presentationVariants {
+            let visible = config.markdownTemplate.includeWorkoutDetailsAndMetadata
+            for data in [WorkoutGranularFixtures.richRunWithGranular,
+                         WorkoutGranularFixtures.minimalRun, sparse, multiple] {
+                let md = data.toMarkdown(includeMetadata: false, customization: config)
+                XCTAssertEqual(md.contains("#### Details"), visible, md)
+                XCTAssertEqual(md.contains("| Field | Value |"), visible, md)
+                XCTAssertEqual(md.contains("#### Metadata"), visible && !data.workouts[0].metadata.isEmpty, md)
+                XCTAssertEqual(md.contains("| Key | Value |"), visible && !data.workouts[0].metadata.isEmpty, md)
+                XCTAssertEqual(md.contains("| Device | Apple Watch Ultra |"), visible && !data.workouts[0].metadata.isEmpty, md)
+                for (index, workout) in data.workouts.enumerated() {
+                    XCTAssertTrue(md.contains("### \(index + 1). \(workout.workoutTypeName)"), md)
+                }
+                for label in ["Time", "Duration"] {
+                    XCTAssertTrue(md.contains("**\(label):**"), md)
+                }
+                if data.workouts[0].distance != nil {
+                    XCTAssertTrue(md.contains("**Distance:**"), md)
+                    XCTAssertTrue(md.contains("**Calories:**"), md)
+                    XCTAssertTrue(md.contains("**Avg Heart Rate:**"), md)
+                }
+                if !data.workouts[0].metadata.isEmpty {
+                    XCTAssertTrue(md.contains("**Max Heart Rate:** 175 bpm"), md)
+                    XCTAssertTrue(md.contains("**Min Heart Rate:** 95 bpm"), md)
+                    // The preference targets only Details/Metadata, not laps/splits.
+                    XCTAssertTrue(md.contains("**Laps:**"), md)
+                    XCTAssertTrue(md.contains("**Splits:**"), md)
+                }
+            }
+        }
+    }
+
+    func testMarkdown_workoutPresentationDoesNotAlterStructuredExportsOrFrontmatter() {
+        let data = WorkoutGranularFixtures.richRunWithGranular
+        let shown = WorkoutGranularCustomizations.presentationVariants[0]
+        let hidden = WorkoutGranularCustomizations.presentationVariants[1]
+        XCTAssertEqual(data.toJSON(customization: shown), data.toJSON(customization: hidden))
+        XCTAssertEqual(data.toCSV(customization: shown), data.toCSV(customization: hidden))
+        XCTAssertEqual(data.toObsidianBases(customization: shown), data.toObsidianBases(customization: hidden))
+        XCTAssertEqual(
+            MarkdownMerger.splitFrontmatter(from: data.toMarkdown(customization: shown))?.frontmatter,
+            MarkdownMerger.splitFrontmatter(from: data.toMarkdown(customization: hidden))?.frontmatter
+        )
+    }
 
     func testMarkdown_emitsHealthKitActivityIdentity() {
         let md = WorkoutGranularFixtures.richRunWithGranular.toMarkdown(

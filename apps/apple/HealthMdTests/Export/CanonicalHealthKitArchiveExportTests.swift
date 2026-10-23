@@ -8,6 +8,29 @@ final class CanonicalHealthKitArchiveExportTests: XCTestCase {
         return customization
     }()
 
+    // Immutable retained fixture, matching the other exporter tests' lifecycle policy.
+    private static let hiddenWorkoutTables: FormatCustomization = {
+        let customization = FormatCustomization()
+        customization.unitPreference = .metric
+        customization.markdownTemplate.includeWorkoutDetailsAndMetadata = false
+        return customization
+    }()
+
+    func testWorkoutTableSuppressionRetainsCanonicalSourceArchive() throws {
+        let data = ExportFixtures.losslessDay
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        XCTAssertFalse(archive.records.isEmpty)
+        let visibleJSON = try data.toJSONThrowing(customization: Self.customization)
+        let hiddenJSON = try data.toJSONThrowing(customization: Self.hiddenWorkoutTables)
+        XCTAssertEqual(hiddenJSON, visibleJSON)
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(hiddenJSON.utf8)) as? [String: Any])
+        XCTAssertNotNil(root["healthkit_record_archive"])
+        XCTAssertEqual(
+            try data.toCSVThrowing(customization: Self.hiddenWorkoutTables),
+            try data.toCSVThrowing(customization: Self.customization)
+        )
+    }
+
     func testStreamingCanonicalArchiveMatchesBufferedBytes() throws {
         let archive = try XCTUnwrap(ExportFixtures.losslessDay.healthKitRecordArchive)
         let expected = try HealthKitRecordArchiveSerializer.data(for: archive)
