@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.healthmd.BuildConfig
 import com.healthmd.R
 import com.healthmd.diagnostics.*
@@ -223,7 +225,7 @@ fun DiagnosticsScreen(onBack: () -> Unit) {
 private fun DiagnosticToggle(label: String, value: Boolean, enabled: Boolean, tag: String = label, onChange: (Boolean) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(vertical = Spacing.sm).testTag(tag)) {
         Text(label, style = GeistType.label14, color = AppColors.textPrimary)
-        Switch(checked = value, onCheckedChange = onChange, enabled = enabled, modifier = Modifier.testTag("$tag.switch"))
+        Switch(checked = value, onCheckedChange = onChange, enabled = enabled, modifier = Modifier.testTag("$tag.switch").semantics { contentDescription = label })
     }
 }
 
