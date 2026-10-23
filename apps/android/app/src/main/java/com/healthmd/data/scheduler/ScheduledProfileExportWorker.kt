@@ -104,8 +104,11 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         val identity = mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString()), DiagnosticField.TRIGGER to DiagnosticValue.Text("background_task"))
         Diagnostics.record(DiagnosticEventID.ATTEMPT_STARTED, identity)
         return try {
-            if (!inputData.getString(INPUT_PROFILE_ID).isNullOrBlank()) setForeground(getForegroundInfo())
-            val result = doWorkManaged()
+            val result = if (!inputData.getString(INPUT_PROFILE_ID).isNullOrBlank()) {
+                withScheduledExportForeground(getForegroundInfo()) { doWorkManaged() }
+            } else {
+                doWorkManaged()
+            }
             Diagnostics.record(DiagnosticEventID.WORKER_RESULT, identity + (DiagnosticField.REASON to DiagnosticValue.Text(result.diagnosticOutcome())))
             result
         } finally {

@@ -14,7 +14,21 @@ final class IPhoneExportRequestHandler: ObservableObject {
         let settings: AdvancedExportSettings
     }
 
+    private let automationClient: AppleContextPhoneClient
+    init(automationClient: AppleContextPhoneClient? = nil) {
+        self.automationClient = automationClient ?? .shared
+    }
+    #if DEBUG
+    // Native production checkpoints; do not replace authorization, scope building
+    // or lease checks. Tests may suspend/throw to avoid a live transport/capture.
+    var contextAuthorizationCompletedForTesting: (() async -> Void)?
+    var contextManifestForTesting: ((ConnectedCorpusExportManifest) async throws -> Void)?
+    var contextCaptureLeasePassedForTesting: (() throws -> Void)?
+    var contextCaptureCompletedForTesting: (() throws -> Void)?
+    #endif
+
     private var activeRequestID: UUID?
+    private var automationIngressInFlight: Set<UUID> = []
     private var pendingRequests: [UUID: PendingRequest] = [:]
     private var streamAbortMessages: [UUID: String] = [:]
     private var cancelledRequestIDs: Set<UUID> = []
@@ -27,6 +41,21 @@ final class IPhoneExportRequestHandler: ObservableObject {
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
     ) async {
+        guard automationClient.allowsAcquisition(request, sync: syncService) else { return }
+        let isAutomation = automationClient.owns(request.jobID)
+        if isAutomation {
+            // Admission before authorization awaits: reconnect/replay cannot
+            // start a second capture while the first is awaiting HealthKit.
+            guard automationIngressInFlight.insert(request.jobID).inserted else { return }
+        }
+        defer { if isAutomation { automationIngressInFlight.remove(request.jobID) } }
+        // Resolve frozen automation zone before the first authorization await.
+        let automationTimeZone = automationClient.timeZone(for: request)
+        let automationPeerCapabilities = isAutomation ? syncService.remoteCapabilities : nil
+        let captureLease: () -> Bool = { [self] in
+            !isAutomation || (automationClient.allowsAcquisition(request, sync: syncService)
+                && syncService.remoteCapabilities == automationPeerCapabilities)
+        }
         externalIntegrations?.beginExportAction()
         defer { externalIntegrations?.endExportAction() }
         defer {
@@ -141,6 +170,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 for: request,
                 savedSettings: AdvancedExportSettings()
             )
+        if let automationTimeZone { settings.exportTimeZoneOverride = automationTimeZone }
         let healthSubfolder = VaultManager.savedHealthSubfolder()
         let sourceTimeZone = settings.exportTimeZoneOverride ?? .current
         var sourceCalendar = Calendar(identifier: .gregorian)
@@ -189,6 +219,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
             }
         }
 
+        #if DEBUG
+        if request.responseMode == .contextStore { await contextAuthorizationCompletedForTesting?() }
+        #endif
         let dates: [Date]
         switch request.dateSelection {
         case .explicitRange:
@@ -315,6 +348,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             }
         }
 
+        guard captureLease() else { return }
         activeRequestID = request.jobID
         pendingRequests[request.jobID] = PendingRequest(request: request, settings: settings)
         syncService.isSyncing = true
@@ -384,7 +418,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     externalRecordFetcher: externalRecordFetcher,
                     syncService: syncService,
                     dateFormatter: dateFormatter,
-                    negotiation: negotiation
+                    negotiation: negotiation,
+                    captureLease: captureLease
                 )
                 return
             }
@@ -792,7 +827,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
         syncService: SyncService,
         dateFormatter: DateFormatter,
-        negotiation: ConnectedCorpusTransferNegotiation
+        negotiation: ConnectedCorpusTransferNegotiation,
+        captureLease: @escaping () -> Bool
     ) async throws {
         let mode: ConnectedCorpusExportMode
         switch request.responseMode {
@@ -861,7 +897,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 requestedDates = dates
                 settingsSnapshot = ExportSettingsSnapshot.from(
                     settings,
-                    healthSubfolder: healthSubfolder
+                    healthSubfolder: healthSubfolder,
+                    calendarTimeZoneIdentifier: automationClient.timeZone(for: request)?.identifier
                 )
                 requestedTarget = nil
             }
@@ -883,6 +920,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 selectedSourceIDs: request.canonicalSelection?.sourceIDs,
                 requestedTarget: requestedTarget
             )
+        }
+        if mode == .encryptedContext {
+            #if DEBUG
+            try await contextManifestForTesting?(exportManifest)
+            #endif
+            guard captureLease() else { throw CancellationError() }
+            #if DEBUG
+            try contextCaptureLeasePassedForTesting?()
+            #endif
         }
         defer {
             activeCorpusTransferID = nil
@@ -975,6 +1021,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 )
 
             case .encryptedContext:
+                guard captureLease() else { throw CancellationError() }
                 let allowedProviderIDs = Set(
                     request.canonicalSelection?.sourceIDs.filter { $0 != "apple_health" } ?? []
                 )
@@ -1012,6 +1059,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     },
                     fetchExternalDailyRecords: scopedExternalFetcher
                 )
+                guard captureLease() else { throw CancellationError() }
+                #if DEBUG
+                try contextCaptureCompletedForTesting?()
+                #endif
                 return try await ConnectedCorpusSpoolItem.encodeHealthDay(
                     ConnectedCorpusHealthDayPayload(
                         sourceDate: date,

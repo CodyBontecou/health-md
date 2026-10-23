@@ -85,13 +85,19 @@ dump_ui() {
 }
 
 wait_for_ui() {
-  local name=$1 expected=$2
+  local name=$1 expected=$2 app_visible
   for _ in 1 2 3 4 5 6 7 8 9 10; do
-    if dump_ui "$name" && grep -Fq "$expected" "$tmp/$name.xml"; then return 0; fi
-    # The charging overlay can race repeated cold starts on a freshly wiped headless Wear image.
-    # Dismiss it and relaunch rather than treating a system surface as an app failure.
-    "$adb_bin" shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
-    start_app
+    app_visible=false
+    if dump_ui "$name"; then
+      if grep -Fq "$expected" "$tmp/$name.xml"; then return 0; fi
+      grep -Fq "package=\"$package\"" "$tmp/$name.xml" && app_visible=true
+    fi
+    if [[ "$app_visible" != true ]]; then
+      # A charging overlay needs dismissal/relaunch. Poll app-owned frames in place
+      # so a delayed layout/state transition is not reset by another cold start.
+      "$adb_bin" shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
+      start_app
+    fi
     sleep 1
   done
   echo "Last $name UI dump did not contain: $expected" >&2
@@ -263,7 +269,10 @@ sleep 1
 # application locale command avoids rebooting the emulator and is reset before inventory checks.
 "$adb_bin" shell cmd locale set-app-locales "$package" --user 0 --locales ar >/dev/null
 start_app
-wait_for_ui rtl 'الصحة' || fail 'Arabic RTL dashboard did not become visible'
+# The static localized header is not proof that the cached metric is visible.
+# Require the metric, then check both labels from the same ready frame.
+wait_for_ui rtl 'الخطوات' || fail 'Arabic RTL cached metric did not become visible'
+assert_ui rtl 'الصحة'
 assert_ui rtl 'الخطوات'
 layout_direction="$($adb_bin shell dumpsys window | grep -m1 -Eo 'layoutDirection=[0-9]+' | cut -d= -f2 || true)"
 # UI Automator's bounds remain the primary clipping evidence; framework layoutDirection output is

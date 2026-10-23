@@ -47,6 +47,75 @@ class SourceScanningTests(unittest.TestCase):
         )
 
 
+class FeedbackFallbackCoverageTests(unittest.TestCase):
+    keys = [
+        "Copy Report",
+        "Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data.",
+        "Feedback Could Not Be Sent",
+        "Feedback report",
+        "Health.md could not open the GitHub issue template. No issue was submitted. You can write and copy a report here to submit later or from another device.",
+        "Health.md could not open your email app. You can write and copy a report here to send later or from another device.",
+        "Mail could not queue your feedback. No delivery was confirmed. You can write and copy a report here. Text entered in Mail is not available to Health.md; re-enter it below if needed.",
+        "Report copied",
+    ]
+
+    def test_shared_feedback_reporter_is_scanned_by_the_governing_gate(self) -> None:
+        path = validator.APPLE_ROOT / "HealthMd/Shared/Utilities/FeedbackReporter.swift"
+        self.assertIn(path, validator.source_files())
+        scanned = validator.scan_source_text(path.read_text(), scan_computed_returns=False)
+        literals = {validator.decode_swift_literal(raw) for raw, _, _ in scanned}
+        self.assertTrue(set(self.keys).issubset(literals))
+
+    def test_recovery_controls_and_accessibility_have_reviewed_translations(self) -> None:
+        catalog = validator.json.loads(validator.CATALOG_PATH.read_text())["strings"]
+        manifest = validator.json.loads(validator.MANIFEST_PATH.read_text())
+        for key in self.keys:
+            with self.subTest(key=key):
+                self.assertIn(key, manifest["keys"])
+                self.assertIn(key, catalog)
+                for locale in manifest["locales"]:
+                    unit = catalog[key]["localizations"][locale]["stringUnit"]
+                    self.assertEqual(unit["state"], "translated")
+                    self.assertTrue(unit["value"].strip())
+                    self.assertNotEqual(unit["value"], key)
+
+
+class WorkoutToggleCoverageTests(unittest.TestCase):
+    keys = [
+        "Workout Details and Metadata",
+        "Show these two workout tables in Markdown exports and daily notes. Turn off to keep readable workout summaries without the tables. Structured data and source capture are unchanged.",
+        "Include workout Details and Metadata tables",
+        "Enabled",
+        "Disabled",
+    ]
+
+    def test_workout_presentation_is_scanned_without_expanding_to_other_ios_rows(self) -> None:
+        path = validator.APPLE_ROOT / "HealthMd/iOS/Components/FormatA11yComponents.swift"
+        self.assertIn(path, validator.source_files())
+        catalog = validator.json.loads(validator.CATALOG_PATH.read_text())["strings"]
+        scanned, errors, _ = validator.scanned_catalog_keys(catalog)
+        self.assertEqual(errors, [])
+        for key in self.keys:
+            self.assertTrue(any("FormatA11yComponents.swift:" in location for location in scanned[key]))
+        self.assertNotIn("Custom Template", {
+            key for key, locations in scanned.items()
+            if any("FormatA11yComponents.swift:" in location for location in locations)
+        })
+
+    def test_workout_explanation_and_accessibility_have_reviewed_translations(self) -> None:
+        catalog = validator.json.loads(validator.CATALOG_PATH.read_text())["strings"]
+        manifest = validator.json.loads(validator.MANIFEST_PATH.read_text())
+        for key in self.keys:
+            with self.subTest(key=key):
+                self.assertIn(key, manifest["keys"])
+                self.assertIn(key, catalog)
+                for locale in manifest["locales"]:
+                    unit = catalog[key]["localizations"][locale]["stringUnit"]
+                    self.assertEqual(unit["state"], "translated")
+                    self.assertTrue(unit["value"].strip())
+                    self.assertNotEqual(unit["value"], key)
+
+
 class PartialFailureSummaryTests(unittest.TestCase):
     def test_raw_summary_is_rejected_in_mac_visible_warning_ui(self) -> None:
         preview = validator.APPLE_ROOT / "HealthMd/Shared/Views/ExportPreviewView.swift"
