@@ -43,6 +43,18 @@ class SelectIOSSimulatorTests(unittest.TestCase):
             ("iPhone 16", "CURRENT", (26, 5, 0)),
         )
 
+    def test_excludes_newer_minor_beta_but_accepts_matching_release_patch(self) -> None:
+        payload = self.payload(
+            ("com.apple.CoreSimulator.SimRuntime.iOS-27-0-1", [
+                {"name": "iPhone 17 Pro", "udid": "CURRENT", "isAvailable": True}]),
+            ("com.apple.CoreSimulator.SimRuntime.iOS-27-1", [
+                {"name": "iPhone Duo", "udid": "BETA", "isAvailable": True}]),
+        )
+        self.assertEqual(select_device(payload, "27.0")[1], "CURRENT")
+        with self.assertRaisesRegex(ValueError, "no available iPhone simulator"):
+            select_device(self.payload(("com.apple.CoreSimulator.SimRuntime.iOS-27-1", [
+                {"name": "iPhone Duo", "udid": "BETA", "isAvailable": True}])), "27.0")
+
     def test_prefers_newer_phone_model_within_selected_runtime(self) -> None:
         payload = self.payload(
             (
@@ -220,6 +232,16 @@ class SelectIOSSimulatorTests(unittest.TestCase):
         self.assertEqual(calls[-1], ["simctl", "create", "iPad HealthMd CI", "CURRENT-IPAD-TYPE",
                                     "com.apple.CoreSimulator.SimRuntime.iOS-26-5"])
         self.assertEqual(len(calls), 4)
+
+    def test_ci_excludes_newer_minor_beta_when_creating_ipad(self) -> None:
+        responses = self.ci_responses()
+        runtime_key = ("simctl", "list", "runtimes", "available", "-j")
+        payload = json.loads(responses[runtime_key])
+        payload["runtimes"][-1]["identifier"] = "com.apple.CoreSimulator.SimRuntime.iOS-26-7"
+        responses[runtime_key] = json.dumps(payload)
+        result, calls = self.run_wrapper(responses, ["--device-family", "iPad", "--create-missing"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls[-1][-1], "com.apple.CoreSimulator.SimRuntime.iOS-26-5")
 
     def test_ci_reuses_current_ipad_without_creation(self) -> None:
         responses = self.ci_responses()
