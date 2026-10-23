@@ -903,19 +903,14 @@ async fn wake_window_expiry_is_bounded_when_the_peer_is_unreachable() {
     let temporary = TempDir::new().unwrap();
     let client = test_client(&temporary);
     let trust = pair_fake_ios(&client).await;
-    // Reserve an unlistening socket for the whole test. Dropping a listener
-    // lets a parallel fake peer claim its ephemeral port, so this scenario is
-    // no longer guaranteed to exercise an unreachable source.
-    let probe = tokio::net::TcpSocket::new_v4().unwrap();
-    probe
-        .bind((std::net::Ipv4Addr::LOCALHOST, 0).into())
-        .unwrap();
-    let port = probe.local_addr().unwrap().port();
+    // Let the client reserve its own ephemeral listener atomically. A separate
+    // probe either races another test when dropped or prevents this bind on
+    // platforms that do not permit the two sockets to share the port.
     let started = std::time::Instant::now();
     let result = client
         .wait_for_active_source(
             Some(trust.installation_id.0),
-            port,
+            0,
             WakeWindow::from_seconds(1),
             false,
             &tokio_util::sync::CancellationToken::new(),
