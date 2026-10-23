@@ -257,3 +257,97 @@ extension ExportHistoryObservation {
         }
     }
 }
+
+/// Operation-scoped file evidence. Generated hashes describe this operation's
+/// contribution; committed hashes describe the complete file after append/merge.
+public struct ExportHistoryFileReceipt: Codable, Equatable, Sendable {
+    public let schema: String
+    public let schemaVersion: Int
+    public let historyObservation: ExportHistoryObservation
+    public let artifacts: [ExportHistoryFileArtifact]
+
+    public enum ValidationError: Error { case invalidReceipt }
+    enum CodingKeys: String, CodingKey {
+        case schema, artifacts
+        case schemaVersion = "schema_version"
+        case historyObservation = "history_observation"
+    }
+
+    public init(historyObservation: ExportHistoryObservation, artifacts: [ExportHistoryFileArtifact]) throws {
+        self.schema = "healthmd.export_history_file_receipt"
+        self.schemaVersion = 1
+        self.historyObservation = historyObservation
+        self.artifacts = artifacts.sorted { $0.relativePath.utf8.lexicographicallyPrecedes($1.relativePath.utf8) }
+        try validate()
+    }
+
+    public init(from decoder: Decoder) throws {
+        try rejectUnknownObservationKeys(decoder, allowed: Set(CodingKeys.allCases.map(\.rawValue)))
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schema = try c.decode(String.self, forKey: .schema)
+        schemaVersion = try c.decode(Int.self, forKey: .schemaVersion)
+        historyObservation = try c.decode(ExportHistoryObservation.self, forKey: .historyObservation)
+        artifacts = try c.decode([ExportHistoryFileArtifact].self, forKey: .artifacts)
+        try validate()
+    }
+
+    private func encodedByteCount() throws -> Int {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(self).count
+    }
+
+    private func validate() throws {
+        guard schema == "healthmd.export_history_file_receipt", schemaVersion == 1,
+              artifacts.count <= 100_000,
+              zip(artifacts, artifacts.dropFirst()).allSatisfy({ $0.relativePath.utf8.lexicographicallyPrecedes($1.relativePath.utf8) }),
+              try encodedByteCount() <= 64 * 1_024 * 1_024 else {
+            throw ValidationError.invalidReceipt
+        }
+    }
+}
+
+extension ExportHistoryFileReceipt.CodingKeys: CaseIterable {}
+
+public struct ExportHistoryFileArtifact: Codable, Equatable, Sendable {
+    public let relativePath: String
+    public let writeMode: DirectExportFileWriteMode
+    public let generatedByteCount: Int64
+    public let generatedSHA256: String
+    public let committedSHA256: String
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case relativePath = "relative_path"
+        case writeMode = "write_mode"
+        case generatedByteCount = "generated_byte_count"
+        case generatedSHA256 = "generated_sha256"
+        case committedSHA256 = "committed_sha256"
+    }
+
+    public init(relativePath: String, writeMode: DirectExportFileWriteMode, generatedByteCount: Int64,
+                generatedSHA256: String, committedSHA256: String) throws {
+        guard !relativePath.isEmpty, relativePath.utf8.count <= 4_096,
+              !relativePath.hasPrefix("/"), !relativePath.contains("\\"), !relativePath.contains(":"),
+              !relativePath.unicodeScalars.contains(where: { $0.value < 0x20 || (0x7f...0x9f).contains($0.value) }),
+              relativePath.split(separator: "/", omittingEmptySubsequences: false).allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }),
+              generatedByteCount >= 0, generatedSHA256.isHealthMdSHA256, committedSHA256.isHealthMdSHA256,
+              writeMode != .overwrite || generatedSHA256 == committedSHA256 else {
+            throw ExportHistoryFileReceipt.ValidationError.invalidReceipt
+        }
+        self.relativePath = relativePath
+        self.writeMode = writeMode
+        self.generatedByteCount = generatedByteCount
+        self.generatedSHA256 = generatedSHA256
+        self.committedSHA256 = committedSHA256
+    }
+
+    public init(from decoder: Decoder) throws {
+        try rejectUnknownObservationKeys(decoder, allowed: Set(CodingKeys.allCases.map(\.rawValue)))
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(relativePath: c.decode(String.self, forKey: .relativePath),
+            writeMode: c.decode(DirectExportFileWriteMode.self, forKey: .writeMode),
+            generatedByteCount: c.decode(Int64.self, forKey: .generatedByteCount),
+            generatedSHA256: c.decode(String.self, forKey: .generatedSHA256),
+            committedSHA256: c.decode(String.self, forKey: .committedSHA256))
+    }
+}

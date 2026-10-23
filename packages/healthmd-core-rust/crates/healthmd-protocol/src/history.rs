@@ -296,12 +296,183 @@ fn valid_instant(value: &str) -> bool {
         && &value[17..19] < "60"
 }
 
+/// Independently versioned sidecar binding frozen admission evidence to generated
+/// contributions and complete post-merge artifacts. It certifies no current permission.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(transparent)]
+pub struct ExportHistoryFileReceipt(Box<FileReceiptFields>);
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct FileReceiptFields {
+    schema: String,
+    schema_version: i32,
+    history_observation: ExportHistoryObservation,
+    artifacts: Vec<ExportHistoryFileArtifact>,
+}
+
+/// A generated contribution and the complete file resulting from its commit.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExportHistoryFileArtifact {
+    pub relative_path: String,
+    pub write_mode: crate::models::FileWriteMode,
+    pub generated_byte_count: i64,
+    pub generated_sha256: String,
+    pub committed_sha256: String,
+}
+
+impl ExportHistoryFileReceipt {
+    /// Build a sidecar in deterministic UTF-8 path order.
+    ///
+    /// # Errors
+    /// Returns a health-free validation error for invalid paths, digests, duplicate
+    /// artifacts or metadata exceeding the 64 MiB durable bound.
+    pub fn new(
+        history_observation: ExportHistoryObservation,
+        mut artifacts: Vec<ExportHistoryFileArtifact>,
+    ) -> Result<Self, &'static str> {
+        artifacts.sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
+        let value = Self(Box::new(FileReceiptFields {
+            schema: "healthmd.export_history_file_receipt".into(),
+            schema_version: 1,
+            history_observation,
+            artifacts,
+        }));
+        if value.is_valid() {
+            Ok(value)
+        } else {
+            Err("invalid history file receipt")
+        }
+    }
+
+    #[must_use]
+    pub fn history_observation(&self) -> &ExportHistoryObservation {
+        &self.0.history_observation
+    }
+
+    #[must_use]
+    pub fn artifacts(&self) -> &[ExportHistoryFileArtifact] {
+        &self.0.artifacts
+    }
+
+    fn is_valid(&self) -> bool {
+        self.0.schema == "healthmd.export_history_file_receipt"
+            && self.0.schema_version == 1
+            && self.0.artifacts.len() <= 100_000
+            && self
+                .0
+                .artifacts
+                .windows(2)
+                .all(|w| w[0].relative_path < w[1].relative_path)
+            && self.0.artifacts.iter().all(|a| {
+                let path = &a.relative_path;
+                !path.is_empty()
+                    && path.len() <= 4_096
+                    && !path.starts_with('/')
+                    && !path.contains(['\\', ':'])
+                    && !path
+                        .chars()
+                        .any(|c| u32::from(c) < 0x20 || (0x7f..=0x9f).contains(&u32::from(c)))
+                    && path
+                        .split('/')
+                        .all(|s| !s.is_empty() && s != "." && s != "..")
+                    && a.generated_byte_count >= 0
+                    && crate::transfer::is_sha256(&a.generated_sha256)
+                    && crate::transfer::is_sha256(&a.committed_sha256)
+                    && (a.write_mode != crate::models::FileWriteMode::Overwrite
+                        || a.generated_sha256 == a.committed_sha256)
+            })
+            && serde_json::to_vec(self).is_ok_and(|bytes| bytes.len() <= 64 * 1_024 * 1_024)
+    }
+}
+
+impl<'de> Deserialize<'de> for ExportHistoryFileReceipt {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = Self(Box::new(FileReceiptFields::deserialize(deserializer)?));
+        if value.is_valid() {
+            Ok(value)
+        } else {
+            Err(D::Error::custom("invalid history file receipt"))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::{Value, json};
 
     const FIXTURE: &str = include_str!("../tests/fixtures/export-history-v1.json");
+
+    #[test]
+    fn slash_heavy_file_receipt_uses_unescaped_metadata_bound() {
+        let observation: ExportHistoryObservation = serde_json::from_str(FIXTURE).unwrap();
+        let prefix = "a/".repeat(1_900);
+        let artifacts: Vec<_> = (0..18_000)
+            .map(|n| ExportHistoryFileArtifact {
+                relative_path: format!("{prefix}{n:06}.md"),
+                write_mode: crate::models::FileWriteMode::Overwrite,
+                generated_byte_count: 0,
+                generated_sha256: "a".repeat(64),
+                committed_sha256: "a".repeat(64),
+            })
+            .collect();
+        assert!(
+            ExportHistoryFileReceipt::new(observation.clone(), artifacts[..16_000].to_vec())
+                .is_ok()
+        );
+        assert!(ExportHistoryFileReceipt::new(observation, artifacts).is_err());
+    }
+
+    #[test]
+    fn swift_file_receipt_preserves_generated_and_post_merge_hashes() {
+        let fixture: Value = serde_json::from_str(include_str!(
+            "../tests/fixtures/export-history-file-receipt-v1.json"
+        ))
+        .unwrap();
+        let receipt: ExportHistoryFileReceipt = serde_json::from_value(fixture.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&receipt).unwrap(), fixture);
+        assert_ne!(
+            receipt.artifacts()[0].generated_sha256,
+            receipt.artifacts()[0].committed_sha256
+        );
+        let rebuilt = ExportHistoryFileReceipt::new(
+            receipt.history_observation().clone(),
+            receipt.artifacts().to_vec(),
+        )
+        .unwrap();
+        assert_eq!(rebuilt, receipt);
+        assert!(
+            ExportHistoryFileReceipt::new(
+                receipt.history_observation().clone(),
+                vec![receipt.artifacts()[0].clone(); 2]
+            )
+            .is_err()
+        );
+        for (key, value) in [
+            ("relative_path", json!("../other.md")),
+            ("relative_path", json!("C:/other.md")),
+            ("generated_sha256", json!("B".repeat(64))),
+            ("committed_sha256", json!("invalid")),
+            ("generated_byte_count", json!(-1)),
+            ("write_mode", json!("unknown")),
+            ("write_mode", json!("overwrite")),
+            ("unexpected", json!(true)),
+        ] {
+            let mut changed = fixture.clone();
+            changed["artifacts"][0][key] = value;
+            assert!(serde_json::from_value::<ExportHistoryFileReceipt>(changed).is_err());
+        }
+        for (key, value) in [("schema_version", json!(2)), ("full_history", json!(true))] {
+            let mut changed = fixture.clone();
+            changed[key] = value;
+            assert!(serde_json::from_value::<ExportHistoryFileReceipt>(changed).is_err());
+        }
+        let mut changed = fixture.clone();
+        changed["artifacts"] = json!([fixture["artifacts"][0], fixture["artifacts"][0]]);
+        assert!(serde_json::from_value::<ExportHistoryFileReceipt>(changed).is_err());
+    }
 
     #[test]
     fn swift_observation_round_trips_without_relabeling() {

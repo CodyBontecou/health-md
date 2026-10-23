@@ -18,6 +18,18 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`render-input/v1`](render-input/v1/contract.md) | Internal profile rendering, artifact-plan, path, merge, API batching, and bounded lossless-stream contract |
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |
 
+## History evidence (staged)
+
+| Path | Purpose |
+|---|---|
+| [`query-history/v1`](query-history/v1/README.md) | Typed-query selected-type history evidence, separately versioned from capture coverage |
+| [`export-history/v1`](export-history/v1/README.md) | Frozen job admission observations and an operation-scoped generated/committed artifact sidecar model |
+
+These contracts and their synthetic fixture mirrors are inventoried as deferred.
+Production export observation advertisement remains disabled; file emission and
+complete consumer/physical qualification are still required. Their grammar and
+passing model tests do not certify current permission or full history.
+
 ## Scheduling proposals
 
 | Path | Purpose |

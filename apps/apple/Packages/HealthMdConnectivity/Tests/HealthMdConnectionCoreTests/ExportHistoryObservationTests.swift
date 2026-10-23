@@ -41,6 +41,69 @@ final class ExportHistoryObservationTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(ExportHistoryObservation.self, from: data), value)
     }
 
+    func testFileReceiptFixtureAndMalformedAttachments() throws {
+        let artifact = try ExportHistoryFileArtifact(relativePath: "Health/daily.md", writeMode: .append,
+            generatedByteCount: 3, generatedSHA256: String(repeating: "b", count: 64),
+            committedSHA256: String(repeating: "c", count: 64))
+        let value = try ExportHistoryFileReceipt(historyObservation: observation(), artifacts: [artifact])
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        let data = try encoder.encode(value)
+        var root = URL(fileURLWithPath: #filePath)
+        for _ in 0..<7 { root.deleteLastPathComponent() }
+        let fixture = root.appendingPathComponent("packages/contracts/export-history/v1/synthetic-file-receipt.json")
+        let mirror = root.appendingPathComponent("packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/export-history-file-receipt-v1.json")
+        if ProcessInfo.processInfo.environment["HEALTHMD_UPDATE_EXPORT_HISTORY_FIXTURE"] == "1" {
+            try data.write(to: fixture, options: .atomic)
+            try data.write(to: mirror, options: .atomic)
+        }
+        XCTAssertEqual(try Data(contentsOf: fixture), data)
+        XCTAssertEqual(try Data(contentsOf: mirror), data)
+        XCTAssertEqual(try JSONDecoder().decode(ExportHistoryFileReceipt.self, from: data), value)
+        let original = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        func rejects(_ edit: (inout [String: Any]) -> Void) throws {
+            var object = original
+            edit(&object)
+            XCTAssertThrowsError(try JSONDecoder().decode(ExportHistoryFileReceipt.self,
+                from: JSONSerialization.data(withJSONObject: object)))
+        }
+        try rejects { $0["schema_version"] = 2 }
+        try rejects { $0["full_history"] = true }
+        try rejects { $0["artifacts"] = [original["artifacts"] as! [Any], original["artifacts"] as! [Any]] }
+        for (key, invalid) in [("relative_path", "../other.md"), ("relative_path", "C:/other.md"),
+            ("generated_sha256", String(repeating: "B", count: 64)), ("committed_sha256", "invalid"),
+            ("write_mode", "unknown"), ("write_mode", "overwrite")] {
+            try rejects {
+                var artifacts = $0["artifacts"] as! [[String: Any]]
+                artifacts[0][key] = invalid
+                $0["artifacts"] = artifacts
+            }
+        }
+        try rejects {
+            var artifacts = $0["artifacts"] as! [[String: Any]]
+            artifacts[0]["generated_byte_count"] = -1
+            $0["artifacts"] = artifacts
+        }
+        try rejects {
+            let artifact = ($0["artifacts"] as! [[String: Any]])[0]
+            $0["artifacts"] = [artifact, artifact]
+        }
+    }
+
+    func testSlashHeavyFileReceiptUsesUnescapedMetadataBound() throws {
+        let prefix = String(repeating: "a/", count: 1_900)
+        let artifacts = try (0..<18_000).map { n in
+            try ExportHistoryFileArtifact(relativePath: prefix + String(format: "%06d.md", n),
+                writeMode: .overwrite, generatedByteCount: 0,
+                generatedSHA256: String(repeating: "a", count: 64), committedSHA256: String(repeating: "a", count: 64))
+        }
+        let receipt = try ExportHistoryFileReceipt(historyObservation: observation(), artifacts: Array(artifacts.prefix(16_000)))
+        // The legacy default encoder escapes every path slash and would reject
+        // this valid receipt. The unescaped cross-language representation fits.
+        XCTAssertGreaterThan(try JSONEncoder().encode(receipt).count, 64 * 1_024 * 1_024)
+        XCTAssertThrowsError(try ExportHistoryFileReceipt(historyObservation: observation(), artifacts: artifacts))
+    }
+
     func testObservationIsBoundToImmutableDirectJobAndScope() throws {
         let original = try observation()
         let request = DirectExportRequest(jobID: UUID(uuidString: original.operationID)!,
