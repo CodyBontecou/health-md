@@ -47,7 +47,7 @@ python3 -m venv .venv
 .venv/bin/fdroid readmeta
 .venv/bin/fdroid lint com.healthmd.android
 .venv/bin/fdroid build --server --verbose com.healthmd.android:30
-.venv/bin/fdroid scanner --json unsigned/com.healthmd.android_30.apk \
+.venv/bin/fdroid scanner --json --exit-code unsigned/com.healthmd.android_30.apk \
   > unsigned/com.healthmd.android_30.scanner.json
 sha256sum unsigned/com.healthmd.android_30.apk \
   > unsigned/com.healthmd.android_30.apk.sha256
@@ -60,7 +60,7 @@ The canonical acceptance evidence is two clean `fdroid build --server` logs from
 - Output package: `com.healthmd.android`
 - Version: derived from the tagged `app/build.gradle.kts`
 - Minimum SDK: 28
-- Target SDK: 35
+- Target SDK: derived from the checked-out tag's `app/build.gradle.kts`; do not substitute current HEAD values when qualifying the initial recipe
 - Upstream output: `app-fdroid-release-unsigned.apk`
 - Signing: absent upstream; fdroidserver supplies the published signature
 - Forbidden Play dependency/manifest/DEX findings: zero

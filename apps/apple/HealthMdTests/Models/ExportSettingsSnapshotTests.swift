@@ -73,6 +73,65 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(snapshot.metricSelection.enabledCategoryIDs, [HealthMetricCategory.activity.rawValue, HealthMetricCategory.sleep.rawValue])
     }
 
+    func testWorkoutTablePreferenceDefaultsOnForLegacySnapshotsAndPreservesCanonicalEncoding() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let encoded = try JSONEncoder().encode(snapshot)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        let format = try XCTUnwrap(object["formatCustomization"] as? [String: Any])
+        let template = try XCTUnwrap(format["markdownTemplate"] as? [String: Any])
+        XCTAssertNil(template["includeWorkoutDetailsAndMetadata"], "Default-on must not change existing durable fingerprints")
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: encoded)
+        XCTAssertTrue(decoded.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata)
+        XCTAssertEqual(decoded.formatCustomization.markdownTemplate, snapshot.formatCustomization.markdownTemplate)
+    }
+
+    func testWorkoutTablePreferenceFrozenSnapshotRoundTripAndMacReconstruction() throws {
+        let settings = makeConfiguredSettings()
+        settings.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata = false
+        let snapshot = ExportSettingsSnapshot.from(settings)
+        // Changing the live profile cannot mutate the job's frozen presentation.
+        settings.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata = true
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: JSONEncoder().encode(snapshot))
+        let profile = ExportProfile(name: "Workout summaries", settings: decoded, target: .localIPhoneFolder)
+        let decodedProfile = try JSONDecoder().decode(ExportProfile.self, from: JSONEncoder().encode(profile))
+        XCTAssertEqual(decodedProfile, profile)
+        let reconstructed = decodedProfile.settings.makeAdvancedExportSettings()
+        Self.retainedSettings.append(reconstructed)
+        XCTAssertFalse(decoded.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata)
+        XCTAssertFalse(reconstructed.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata)
+        XCTAssertTrue(settings.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata)
+        XCTAssertEqual(reconstructed.detailPolicy, settings.detailPolicy, "Presentation must not disable source archives")
+        XCTAssertEqual(reconstructed.metricSelection.enabledMetrics, settings.metricSelection.enabledMetrics)
+        XCTAssertEqual(decoded, snapshot)
+    }
+
+    func testWorkoutTablePreferencePersistsBothStatesAcrossSettingsReload() throws {
+        let suiteName = "ExportSettingsSnapshotTests.workout-presentation.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        for visible in [false, true] {
+            settings.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata = visible
+            let deadline = Date(timeIntervalSinceNow: 2)
+            var didPersist = false
+            repeat {
+                RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.01))
+                if let bytes = defaults.data(forKey: "advancedExportSettings.formatCustomization"),
+                   let stored = try? JSONDecoder().decode(FormatCustomizationSnapshot.self, from: bytes),
+                   stored.markdownTemplate.includeWorkoutDetailsAndMetadata == visible {
+                    didPersist = true
+                    break
+                }
+            } while Date() < deadline
+            XCTAssertTrue(didPersist, "Expected post-toggle presentation value to persist")
+            let reloaded = AdvancedExportSettings(userDefaults: defaults)
+            Self.retainedSettings.append(reloaded)
+            XCTAssertEqual(reloaded.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata, visible)
+        }
+    }
+
     func testSnapshot_roundTripsThroughJSON() throws {
         let snapshot = ExportSettingsSnapshot.from(
             makeConfiguredSettings(),

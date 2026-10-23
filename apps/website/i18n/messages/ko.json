@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | 건강 데이터를 더 유용하게",
-      "meta.description": "Apple Health와 Health Connect의 데이터를 원하는 파일, 스크립트, 에이전트로 연결하는 로컬 우선 브리지입니다. 선택형 Health.md 클라우드는 사용자가 직접 보낸 내보내기만 보관합니다.",
+      "meta.description": "Apple Health와 Health Connect를 파일, 스크립트, 에이전트로 연결하는 로컬 우선 브리지입니다. 선택형 Health.md Cloud 파일럿은 단일 소유자 전용이며 의도적으로 업로드한 내보내기만 보관합니다. 공개 가입은 없습니다.",
       "meta.ogTitle": "건강 데이터를 더 유용하게",
       "meta.twitterDescription": "Apple Health와 Health Connect를 이미 사용하는 도구에 연결하는 개인정보 보호 중심의 로컬 브리지입니다.",
       "schema.description": "Health.md는 Apple Health와 Android Health Connect를 로컬 파일, 자동화, CLI 워크플로 및 로컬 에이전트에 연결하는 개인정보 보호 중심의 브리지입니다.",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Google Play에서 Health.md 다운로드",
       "fdroidAlt": "F-Droid에서 Health.md 다운로드",
       "fdroidBadgeKicker": "오픈 소스 빌드",
-      "trust": "기본적으로 로컬에서 처리합니다.<br>선택형 클라우드는 직접 보낸 내보내기만 보관합니다.",
+      "trust": "기본적으로 로컬에서 처리합니다.<br>선택형 Health.md Cloud 파일럿은 단일 소유자 전용이며 의도적으로 업로드한 내보내기만 보관합니다. 공개 가입은 없습니다.",
       "exportsTitle": "건강 데이터를<br>일반 파일로.",
       "exportsLede": "측정 항목을 선택해 Markdown, JSON, CSV 또는 Obsidian Bases로 내보내세요.",
       "exportPhoneLabel": "흰색 iPhone 17 Pro에 표시된 Apple Health 요약",
@@ -76,7 +76,7 @@
       "savesWhereDetail": "폴더, Obsidian 보관함 또는 API를 선택하세요.",
       "unlockNote": "예약된 내보내기가 실행될 때 iPhone의 잠금이 해제되어 있어야 합니다.",
       "agentTitle": "건강 데이터에<br>바로 질문하세요.",
-      "agentLede": "Health.md를 Codex, Claude 또는 터미널에 연결하세요. Health.md 클라우드를 거치지 않고 측정 항목, 수면, 운동 및 데이터 범위를 구체적으로 질문할 수 있습니다.",
+      "agentLede": "Health.md를 Codex, Claude 또는 터미널에 연결해 페어링된 기기의 측정 항목, 수면, 운동 및 데이터 범위를 구체적으로 조회하세요. 별도의 클라우드 파일럿은 의도적으로 업로드한 내보내기만 조회할 수 있습니다.",
       "connectAgent": "에이전트 연결",
       "exploreCli": "CLI &amp; MCP 살펴보기",
       "agentInterfaceLabel": "에이전트 인터페이스 선택",

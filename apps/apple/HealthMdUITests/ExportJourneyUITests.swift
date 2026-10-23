@@ -580,6 +580,37 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(endPicker.waitForExistence(timeout: 3), "End Date picker should appear after tapping Custom")
     }
 
+    /// Covers the reachable inline selector, not a claimed reproduction of
+    /// the reported native calendar completion flow (see investigation #168).
+    func testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launch()
+        let custom = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
+        scrollDatePresetIntoView(custom, in: app)
+        XCTAssertTrue(custom.isEnabled)
+        custom.tap()
+        let start = app.descendants(matching: .any)[UITestLaunchHelper.Export.customStartDatePicker]
+        let end = app.descendants(matching: .any)[UITestLaunchHelper.Export.customEndDatePicker]
+        XCTAssertTrue(start.waitForExistence(timeout: 3))
+        XCTAssertTrue(end.waitForExistence(timeout: 3))
+        XCTAssertEqual(custom.value as? String, "Selected")
+
+        tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync").tap()
+        tabButton(in: app, identifier: UITestLaunchHelper.Tab.export, label: "Export").tap()
+        scrollDatePresetIntoView(custom, in: app)
+        XCTAssertTrue(custom.isEnabled, "Selected Custom must not become a disabled preset on reentry")
+        XCTAssertEqual(custom.value as? String, "Selected")
+        custom.tap() // Deliberately do not select Today first.
+        XCTAssertTrue(start.waitForExistence(timeout: 3))
+        XCTAssertTrue(end.waitForExistence(timeout: 3))
+        XCTAssertTrue(start.isEnabled)
+        XCTAssertTrue(end.isEnabled)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Custom selector after export reentry"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     // MARK: - Tab Navigation
 
     func testTabNavigation_switchesBetweenTabs() throws {

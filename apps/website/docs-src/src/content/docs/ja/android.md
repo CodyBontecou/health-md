@@ -5,7 +5,7 @@ description: Health.md for Androidをセットアップし、Health Connectの�
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Health Connectからプライベートなファイルへ</p>
-  <p>Health.md for Androidは、デバイス上でHealth Connectを読み取り、Markdown、Obsidian Bases、JSON、またはCSVを選択したフォルダに書き込みます。Health.mdアカウント、ヘルスデータ用クラウド、サブスクリプションは不要です。</p>
+  <p>Health.md for Androidは、デバイス上でHealth Connectを読み取り、Markdown、Obsidian Bases、JSON、またはCSVを選択したフォルダに書き込みます。このフォルダへのエクスポートには、Health.mdアカウント、ヘルスデータ用クラウド、サブスクリプションは不要です。</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Google Playで入手</a>
     <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">F-Droidで入手</a>
@@ -139,12 +139,14 @@ Health.md for Androidはローカルファーストです。
 
 - Health ConnectのレコードはAndroidデバイス上で読み取られます。
 - エクスポートは選択したフォルダに直接書き込まれます。
-- Health.mdはヘルスデータ用クラウドサービスを運営していません。
+- 標準では、フォルダへのエクスポートとデバイスへの直接クエリはHealth.mdのサーバーにコピーを作成しません。
 - 設定とエクスポート履歴はデバイス上に保持されます。
 - 課金はGoogle Playによって処理されます。
 - プロバイダが管理するフォルダは、そのプロバイダ自身の規約に従って同期されます。
 
 最も厳格なローカル構成にするには、ローカルデバイスのフォルダへ手動でエクスポートし、スケジュールエクスポートとプロバイダ経由の同期を無効にします。
+
+別途提供される任意のHealth.md Cloudパイロットは単一所有者向けで、意図的にアップロードしたAPIエクスポートのみを保存します。一般公開の登録はありません。デバイスの自動同期もありません。このフォルダのワークフローはパイロットにアップロードしません。保存期間、削除、容量制限、バックアップがないことによる消失リスクは[プライバシーポリシー](/privacy-policy.html)を参照してください。
 
 ## 関連ドキュメント
 
@@ -156,4 +158,4 @@ Health.md for Androidはローカルファーストです。
   <a href="/ja/docs/visualizations-roadmap/"><span>Obsidian</span>エクスポートしたJSONとMarkdownをHealth.mdの可視化に使用する方法。</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">最終更新日：2026-08-31</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">最終更新日：2026-10-04</p>

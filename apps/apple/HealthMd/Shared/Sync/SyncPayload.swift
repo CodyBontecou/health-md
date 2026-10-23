@@ -23,6 +23,9 @@ enum SyncMessage: Codable {
     /// Both directions: protocol/capability announcement for v2 sync.
     case hello(SyncPeerCapabilities)
 
+    /// Separately negotiated Apple Sync context-automation extension v1.
+    case appleContext(AppleContextMessage)
+
     /// macOS → iOS: current destination-folder/readiness status.
     case macStatus(MacDestinationStatus)
 
@@ -135,6 +138,7 @@ extension SyncMessage {
         case .healthData: return "healthData"
         case .syncProgress: return "syncProgress"
         case .hello: return "hello"
+        case .appleContext: return "appleContext"
         case .macStatus: return "macStatus"
         case .macExportRequest: return "macExportRequest"
         case .macExportStreamStart: return "macExportStreamStart"
@@ -236,6 +240,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer requires and preserves an explicit request-scoped
     /// selection for encrypted query-context acquisition.
     let supportsRequestScopedContextAcquisition: Bool
+    /// Phone-initiated context refresh/status; absent on legacy peers means false.
+    let supportsPhoneContextAutomation: Bool
     /// Whether this peer understands additive chunked Mac export job streaming.
     let supportsChunkedMacExportJobs: Bool
     /// Whether this peer supports the versioned, size-bounded binary transfer
@@ -300,6 +306,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsIPhoneExportRequests
         case supportsAllAvailableHistoryExportRequests
         case supportsRequestScopedContextAcquisition
+        case supportsPhoneContextAutomation
         case supportsChunkedMacExportJobs
         case supportsSizeBoundedConnectedTransfers
         case supportsStrictRawStreaming
@@ -336,6 +343,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsIPhoneExportRequests: Bool = false,
         supportsAllAvailableHistoryExportRequests: Bool = false,
         supportsRequestScopedContextAcquisition: Bool = false,
+        supportsPhoneContextAutomation: Bool = false,
         supportsChunkedMacExportJobs: Bool = false,
         supportsSizeBoundedConnectedTransfers: Bool = false,
         supportsStrictRawStreaming: Bool = false,
@@ -370,6 +378,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
         self.supportsAllAvailableHistoryExportRequests = supportsAllAvailableHistoryExportRequests
         self.supportsRequestScopedContextAcquisition = supportsRequestScopedContextAcquisition
+        self.supportsPhoneContextAutomation = supportsPhoneContextAutomation
         self.supportsChunkedMacExportJobs = supportsChunkedMacExportJobs
         self.supportsSizeBoundedConnectedTransfers = supportsSizeBoundedConnectedTransfers
         self.supportsStrictRawStreaming = supportsStrictRawStreaming
@@ -421,6 +430,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             Bool.self,
             forKey: .supportsRequestScopedContextAcquisition
         ) ?? false
+        supportsPhoneContextAutomation = try container.decodeIfPresent(Bool.self, forKey: .supportsPhoneContextAutomation) ?? false
         supportsChunkedMacExportJobs = try container.decodeIfPresent(Bool.self, forKey: .supportsChunkedMacExportJobs) ?? false
         supportsSizeBoundedConnectedTransfers = try container.decodeIfPresent(
             Bool.self,
@@ -613,6 +623,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsIPhoneExportRequests: true,
             supportsAllAvailableHistoryExportRequests: true,
             supportsRequestScopedContextAcquisition: true,
+            supportsPhoneContextAutomation: true,
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,
             supportsStrictRawStreaming: true,

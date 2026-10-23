@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | Move Your Health Forward",
-      "meta.description": "A local-first bridge from Apple Health and Health Connect to files, scripts, and agents you choose. An opt-in Health.md Cloud pilot retains exports only when you send them.",
+      "meta.description": "A local-first bridge from Apple Health and Health Connect to files, scripts, and agents. The optional single-owner Health.md Cloud pilot retains only intentionally uploaded exports; no public signup.",
       "meta.ogTitle": "Move Your Health Forward",
       "meta.twitterDescription": "A private, local bridge from Apple Health and Health Connect to the tools you already use.",
       "schema.description": "Health.md is a private bridge from Apple Health and Android Health Connect to local files, automation, CLI workflows, and local agents.",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Get Health.md on Google Play",
       "fdroidAlt": "Get Health.md on F-Droid",
       "fdroidBadgeKicker": "OPEN-SOURCE BUILD",
-      "trust": "Local-first by default.<br>You choose whether to send exports to the optional Health.md Cloud pilot.",
+      "trust": "Local-first by default.<br>The optional single-owner Health.md Cloud pilot retains only intentionally uploaded exports; no public signup.",
       "exportsTitle": "Your health data,<br>as ordinary files.",
       "exportsLede": "Pick your metrics. Export them as Markdown, JSON, CSV, or Obsidian Bases.",
       "exportPhoneLabel": "Apple Health Summary displayed in a white iPhone 17 Pro",
@@ -76,7 +76,7 @@
       "savesWhereDetail": "Choose a folder, Obsidian vault, or API.",
       "unlockNote": "Your iPhone must be unlocked when a scheduled export runs.",
       "agentTitle": "Your health data,<br>ready for questions.",
-      "agentLede": "Connect Health.md to Codex, Claude, or your terminal. Ask exact questions about metrics, sleep, workouts, and coverage directly from a paired device, or opt in to querying retained cloud exports.",
+      "agentLede": "Connect Health.md to Codex, Claude, or your terminal for exact questions about metrics, sleep, workouts, and coverage from a paired device. The separate single-owner cloud pilot can query only exports intentionally uploaded to it.",
       "connectAgent": "Connect an agent",
       "exploreCli": "Explore CLI &amp; MCP",
       "agentInterfaceLabel": "Choose an agent interface",

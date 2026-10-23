@@ -83,7 +83,9 @@ Alguns dados deliberadamente **não são tratados como equivalentes** entre as p
 |---|---|---|---|---|
 | Nível gratuito | ✓ 10 ações de exportação manuais ou agendadas | — | ✓ 10 ações de exportação manuais | — |
 | Desbloqueio | ✓ compra única vitalícia (individual / família) | ◐ mesmo desbloqueio da Apple | ✓ compra única vitalícia, com agendamento incluído | — |
-| Privacidade com processamento local | ✓ sem nuvem de dados de saúde do Health.md | ✓ | ✓ | △ previsto |
+| Privacidade com processamento local | ✓ sem cópia na nuvem por padrão | ✓ | ✓ | △ previsto |
 | Relatório para o profissional de saúde (um PDF para consultas) | ✓ | — | ✓ | — |
 
-O Health.md não opera uma nuvem de dados de saúde. Os dados de saúde podem existir em destinos que você escolher, em contexto local criptografado e em estado de transferência privada limitado. Cada pasta, Mac, endpoint de API ou destino da CLI é configurado explicitamente. Perfis e agendamentos permanecem locais ao dispositivo onde foram criados. Veja os [perfis de exportação](/pt-br/docs/export-profiles/), o [guia do Android](/pt-br/docs/android/) e o [guia de exportação do iPhone](/pt-br/docs/export/) para o fluxo de trabalho de cada plataforma.
+Por padrão, exportações e consultas diretas ao dispositivo não criam uma cópia nos servidores do Health.md. O piloto separado e opcional do Health.md Cloud é restrito a um único proprietário e guarda apenas exportações de API enviadas intencionalmente. Não há cadastro público nem sincronização automática de dispositivos. A [política de privacidade](/privacy-policy.html) descreve retenção, exclusão, cota e riscos de perda sem backup.
+
+Os dados de saúde podem existir em destinos que você escolher, em contexto local criptografado e em estado de transferência privada limitado. Cada pasta, Mac, endpoint de API ou destino da CLI é configurado explicitamente. Perfis e agendamentos permanecem locais ao dispositivo onde foram criados. Veja os [perfis de exportação](/pt-br/docs/export-profiles/), o [guia do Android](/pt-br/docs/android/) e o [guia de exportação do iPhone](/pt-br/docs/export/) para o fluxo de trabalho de cada plataforma.

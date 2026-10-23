@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | La tua salute, un passo avanti",
-      "meta.description": "Un ponte locale tra Apple Health e Health Connect e i file, gli script e gli agenti che scegli. Il cloud facoltativo di Health.md conserva solo le esportazioni che decidi di inviare.",
+      "meta.description": "Un ponte locale da Apple Health e Health Connect a file, script e agenti. Il progetto pilota Health.md Cloud facoltativo è riservato a un solo proprietario e conserva solo esportazioni inviate intenzionalmente; nessuna registrazione pubblica.",
       "meta.ogTitle": "La tua salute, un passo avanti",
       "meta.twitterDescription": "Un ponte privato e locale tra Apple Health e Health Connect e gli strumenti che usi già.",
       "schema.description": "Health.md è un ponte privato tra Apple Health e Android Health Connect e file locali, automazioni, flussi di lavoro CLI e agenti locali.",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Scarica Health.md da Google Play",
       "fdroidAlt": "Scarica Health.md da F-Droid",
       "fdroidBadgeKicker": "VERSIONE OPEN SOURCE",
-      "trust": "Locale per impostazione predefinita.<br>Il cloud facoltativo conserva solo le esportazioni che decidi di inviare.",
+      "trust": "Locale per impostazione predefinita.<br>Il progetto pilota Health.md Cloud facoltativo è riservato a un solo proprietario e conserva solo esportazioni inviate intenzionalmente; nessuna registrazione pubblica.",
       "exportsTitle": "I tuoi dati sanitari,<br>in file comuni.",
       "exportsLede": "Scegli le metriche. Esportale in Markdown, JSON, CSV o Obsidian Bases.",
       "exportPhoneLabel": "Riepilogo di Apple Health visualizzato su un iPhone 17 Pro bianco",
@@ -76,7 +76,7 @@
       "savesWhereDetail": "Scegli una cartella, un vault Obsidian o un’API.",
       "unlockNote": "L’iPhone deve essere sbloccato quando viene eseguita un’esportazione programmata.",
       "agentTitle": "I tuoi dati sanitari,<br>pronti per le domande.",
-      "agentLede": "Collega Health.md a Codex, Claude o al tuo terminale. Fai domande precise su metriche, sonno, allenamenti e copertura senza far passare i dati attraverso un cloud Health.md.",
+      "agentLede": "Collega Health.md a Codex, Claude o al tuo terminale per interrogare metriche, sonno, allenamenti e copertura da un dispositivo abbinato. Il progetto pilota cloud separato può interrogare solo esportazioni inviate intenzionalmente.",
       "connectAgent": "Collega un agente",
       "exploreCli": "Scopri CLI &amp; MCP",
       "agentInterfaceLabel": "Scegli l’interfaccia di un agente",

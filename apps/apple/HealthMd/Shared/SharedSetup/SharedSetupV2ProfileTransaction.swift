@@ -1097,6 +1097,9 @@ private extension MarkdownTemplateConfig {
         includeSummary: Bool,
         bulletStyle: BulletStyle
     ) {
+        // Shared Setup v2 carries only the reviewed portable fields below.
+        // Initialize local-only presentation preferences from their native defaults.
+        self.init()
         self.style = style
         self.customTemplate = customTemplate
         self.sectionHeaderLevel = sectionHeaderLevel

@@ -25,7 +25,9 @@ Plain tokens are sent as `Bearer <token>`. Values beginning with `Bearer ` or `B
 
 For the **single-owner, unbacked Health.md Cloud pilot** only, the optional destination is `https://api.healthmd.app/api/v1/exports` with a separate write-only `hmd_ing_…` token from the owner's account dashboard. This is a public HTTPS upload route, not the dashboard (`account.healthmd.app`), the read-only MCP (`mcp.healthmd.app`), or the earlier tailnet-only `:18788` address (which remains available for saved destinations). It accepts compatibility JSON v1/v2 and retains accepted revisions without an off-host backup; the VM or encryption key could be lost permanently. The app does not default or silently migrate existing API targets to this pilot. Enter the endpoint only when the public ingest service is confirmed live, and never put the token in the URL.
 
-## Payload shape (abridged)
+## Historical v7 payload illustration (abridged)
+
+This illustration is not the current v8 fixture; use the generated automation examples for current ingestion.
 
 Complete v1 and provider-sidecar v2 envelopes are under [`docs/reference/generated/automation/`](../reference/generated/automation/).
 
@@ -111,7 +113,7 @@ Pending API recovery also retains local identity evidence for its original endpo
 
 ## Practical limits
 
-Health.md captures one day at a time and builds only the current HTTP batch. Dense routes, ECGs, WorkoutKit data, or attachments can still make an individual day large and require substantial memory while that day is captured and encoded.
+The default legacy pipeline captures one day at a time and builds the current HTTP batch. Gated nonlegacy preparation may retain multiple prepared batches before upload. Dense routes, ECGs, WorkoutKit data, or attachments can still make an individual day large and require substantial memory while that day is captured and encoded.
 
 For large historical ranges, Health.md automatically splits selected dates into bounded, sequential batches instead of sending one oversized request. A batch is limited by both 7 calendar days and an 8 MiB encoded-body target by default. Health.md measures the exact JSON bytes that it then uploads. An indivisible single day may exceed the byte target and is sent alone so a record is never silently split or dropped.
 
