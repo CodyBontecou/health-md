@@ -14,6 +14,7 @@ struct iPadSettingsView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var metricProgressWidth: CGFloat = 100
     @State private var showMailCompose = false
+    @State private var showDiagnostics = false
     @StateObject private var feedbackReporter = FeedbackReporter()
     @State private var showPaywall = false
     @State private var debugResult = ""
@@ -223,6 +224,12 @@ struct iPadSettingsView: View {
                 VStack(alignment: .leading, spacing: Spacing.s3) {
                     iPadBrandLabel("Feedback")
 
+                    Button("Diagnostics", systemImage: "doc.text.magnifyingglass") { showDiagnostics = true }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.textPrimary)
+                        .accessibilityIdentifier("diagnostics.entry")
+                    Divider().background(Color.borderSubtle)
+
                     Button {
                         if FeedbackHelper.canSendMail {
                             showMailCompose = true
@@ -302,6 +309,7 @@ struct iPadSettingsView: View {
         }
         .navigationTitle("Settings")
         .iPadHiddenSystemNavigationTitle()
+        .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
         .sheet(isPresented: $showMailCompose, onDismiss: feedbackReporter.mailSheetDismissed) {
             MailComposeView(onCompletion: feedbackReporter.completeMail)
         }

@@ -2694,6 +2694,7 @@ struct SettingsTabView: View {
     @State private var showPaywall = false
     @State private var showMyselfClaim = false
     @State private var showExternalIntegrations = false
+    @State private var showDiagnostics = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
     @State private var debugResult: String = ""
@@ -2803,6 +2804,7 @@ struct SettingsTabView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
         .sheet(isPresented: $showExternalIntegrations) {
             ExternalIntegrationsView(manager: externalIntegrationManager)
                 .presentationDetents([.large])
@@ -3005,6 +3007,17 @@ struct SettingsTabView: View {
                         feedbackReporter.open(.email)
                     }
                 }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "doc.text.magnifyingglass",
+                title: "Diagnostics",
+                subtitle: "Inspect local technical events and choose what to share",
+                isActive: true,
+                accessibilityHint: "Double tap to open Diagnostics",
+                action: { showDiagnostics = true }
             )
 
             SettingsRowDivider()

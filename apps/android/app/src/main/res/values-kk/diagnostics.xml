@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Диагностика</string>
+    <string name="diagnostics_entry">Жергілікті техникалық оқиғаларды қарап, нені бөлісу керегін таңдаңыз</string>
+    <string name="diagnostics_recording">Жергілікті жазу</string>
+    <string name="diagnostics_privacy">Диагностика сақтағанға немесе бөліскенге дейін осы құрылғыда қалады. Операциялық оқиғаларға денсаулық мәндері, денсаулық жазбаларының ID-лері, сұралған денсаулық деректерінің күндері, жолдар, қосылу нүктелері және тіркелгі деректері кірмейді. Олар анонимді емес.</string>
+    <string name="diagnostics_enabled">Операциялық оқиғаларды жазу</string>
+    <string name="diagnostics_retention">Егжей-тегжей деңгейі мәліметтерді өзгертеді, денсаулық мазмұнын жинауға рұқсат бермейді. Сақтау: ең көбі 7 күн / 20 MiB. Автоматты жүктеп жіберу жоқ.</string>
+    <string name="diagnostics_start_private">Жеке контексті 15 минут жазу</string>
+    <string name="diagnostics_stop_private">Жеке жазуды тоқтату</string>
+    <string name="diagnostics_private_description">V1 жеке контексті қолжетімді болса, қосылған құрылғылардың аттарын жазады. Денсаулық мазмұнын, тіркелгі деректерін немесе кез келген қате мәтінін жинамайды. Жеке бөліктердің мерзімі 24 сағатпен шектеледі және қолданбаға келесі кіргенде аяқталады.</string>
+    <string name="diagnostics_private_until">Жеке жазудың аяқталуы: %1$s</string>
+    <string name="diagnostics_clear">Барлық диагностиканы өшіру</string>
+    <string name="diagnostics_clear_question">Жергілікті оқиғаларды, дайын бумаларды және тіркеме көшірмелерін жою керек пе? Бұл жеке жазуды тоқтатады. Экспортталған файлдар мен бөлісілген көшірмелер өзгермейді.</string>
+    <string name="diagnostics_select">Оқиғаларды таңдау</string>
+    <string name="diagnostics_hour">Соңғы сағат</string>
+    <string name="diagnostics_day">Соңғы 24 сағат</string>
+    <string name="diagnostics_week">Соңғы 7 күн</string>
+    <string name="diagnostics_operation">Операция UUID-і (міндетті емес)</string>
+    <string name="diagnostics_include_private">Жазылған жеке контексті қосу</string>
+    <string name="diagnostics_search">Оқиға ID-лері немесе өрістер бойынша іздеу</string>
+    <string name="diagnostics_refresh">Оқиғаларды жаңарту</string>
+    <string name="diagnostics_summary">Оқиғалар: %1$d · Сеанста жоғалғаны: %2$d · Жарамсыз: %3$d · Қысқартылған: %4$s</string>
+    <string name="diagnostics_view_limit">Сәйкес келетін соңғы 100 оқиға көрсетіледі. Бумаға таңдалған күй көшірмесінің ең көбі 10 000 оқиғасы кіреді; кез келген қысқарту көрсетіледі.</string>
+    <string name="diagnostics_attachments">Қосымша тіркемелер</string>
+    <string name="diagnostics_attachment_description">Денсаулық экспорттарын немесе скриншоттарды қоса, бар файлдарды қосыңыз. Бастапқы байттар өзгеріссіз көшіріледі және құпия ақпарат ТАЗАРТЫЛМАЙДЫ. Бастапқы файл аттары қосылады. Денсаулық деректері жаңадан оқылмайды. Шектеу: 50 файл / 100 MiB.</string>
+    <string name="diagnostics_choose">Файлдарды таңдау…</string>
+    <string name="diagnostics_remove">%1$s жою</string>
+    <string name="diagnostics_prepare">Буманы дайындау</string>
+    <string name="diagnostics_review">Дайындау және тексеру</string>
+    <string name="diagnostics_frozen">Бекітілген күй көшірмесі. Оқиғалар: %1$d. Денсаулық мазмұны: %2$s. ZIP шифрланбаған.</string>
+    <string name="diagnostics_reviewed">Бөліскім келетін файлдарды тексердім</string>
+    <string name="diagnostics_share">Тексерілген ZIP-ті бөлісу</string>
+    <string name="diagnostics_save">Тексерілген ZIP-ті сақтау</string>
+    <string name="diagnostics_share_question">Осы диагностикалық буманы бөлісу керек пе?</string>
+    <string name="diagnostics_share_warning">ZIP шифрланбаған. Жеке контекст пен тіркемелер денсаулық деректерін немесе құпияларды ашуы мүмкін. GitHub немесе Discord-тағы ашық жазбалар барлығына қолжетімді болуы мүмкін. Мақсатты қызмет өз көшірмелерін басқарады; Health.md оларды қайтарып ала алмайды.</string>
+    <string name="diagnostics_share_confirm">Осы буманы бөлісу</string>
+    <string name="diagnostics_bundle_retention">Жергілікті бумалардың мерзімі 24 сағатпен шектеледі және қолданбаға келесі кіргенде аяқталады; тек соңғы 3 бума сақталады. Сақталған немесе бөлісілген көшірмелердің өз сақтау мерзімі бар.</string>
+    <string name="diagnostics_preview_truncated">\n\n[Алдын ала қарау 128 KiB көлеміне дейін қысқартылған. Толық бастапқы файл ZIP ішінде қалады.]</string>
+    <string name="diagnostics_failure">Диагностика операциясы орындалмады. Файлдарға қатынауды және жергілікті жадты тексеріп, қайта дайындап тексеріңіз.</string>
+    <string name="diagnostics_invalid_operation">Операция ID-і UUID болуы керек.</string>
+</resources>

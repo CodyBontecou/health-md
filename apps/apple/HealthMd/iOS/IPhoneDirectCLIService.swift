@@ -793,6 +793,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             return
         }
         let isCodePairing = pairingCode?.isEmpty == false
+        DiagnosticRecorder.shared.record(.connectionChanged, fields: [.state: .text(isCodePairing ? "pairing" : "connecting"), .transport: .text(transport == .manualIP ? "manual_ip" : "nearby")])
         let savedServerBeforePairing = isCodePairing ? client.savedServer() : nil
         var provisionalChannel: DirectSecureChannel?
         var pairingTrustWasWritten = false
@@ -861,6 +862,10 @@ final class IPhoneDirectCLIService: ObservableObject {
             provisionalChannel = nil
             isConnected = true
             connectedCLIName = connected.peerDisplayName
+            var diagnosticFields = DiagnosticRecorder.shared.peerFields(connected.peerDisplayName)
+            diagnosticFields[.state] = .text("connected")
+            diagnosticFields[.transport] = .text(transport == .manualIP ? "manual_ip" : "nearby")
+            DiagnosticRecorder.shared.record(.connectionChanged, fields: diagnosticFields)
             needsPairingCode = false
             lastError = nil
             beginSession(
@@ -869,6 +874,7 @@ final class IPhoneDirectCLIService: ObservableObject {
                 previousServer: savedServerBeforePairing
             )
         } catch {
+            DiagnosticRecorder.shared.record(.transportError, fields: DiagnosticRecorder.errorFields(error))
             provisionalChannel?.cancel()
             var trustRestoreFailed = false
             if isCodePairing {
@@ -1060,6 +1066,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             remoteCapabilities = capabilities
             protocolAuthority.beginBootstrap()
             try commitProvisionalPairingTrustIfNeeded(for: sessionID)
+            DiagnosticRecorder.shared.record(.capabilitiesReceived, fields: [.ready: .boolean(isConnected && appIsActive)])
             // RFC-0005 P2: only a CLI that advertised wake support reads the enrollment, and
             // only a phone with valid material sends it — the deterministic handshake keeps
             // older CLIs (no wake advertisement) byte-compatible and fail-closed.
@@ -1284,6 +1291,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func disconnect(clearError: Bool) {
+        if channel != nil { DiagnosticRecorder.shared.record(.connectionChanged, fields: [.state: .text("disconnected")]) }
         let pairingTrustWasRestored = rollbackProvisionalPairingTrustIfNeeded()
         restorePairingConfigurationIfNeeded()
         stopReconnectLoop()
