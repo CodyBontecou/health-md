@@ -88,7 +88,10 @@ pub fn export_tool_result(
             "response": value
         })
     });
-    let additional = if !is_error && value["schema"] == "healthmd.raw_export_receipt" {
+    let additional = if !is_error
+        && (value["schema"] == "healthmd.raw_export_receipt"
+            || value.get("files_written").and_then(Value::as_u64).is_some())
+    {
         let message = match value.get("history_observation") {
             None => {
                 "History: legacy/unassessed. Completed capture and empty results do not prove full history."
@@ -141,35 +144,45 @@ mod history_disclosure_tests {
     use super::*;
 
     #[test]
-    fn raw_export_disclosure_preserves_receipt_and_never_endorses_supplied_evidence() {
-        for (observation, expected) in [
-            (None, "legacy/unassessed"),
-            (Some(Value::Null), "invalid or unsupported"),
-            (
-                Some(json!({"schema":"healthmd.export_history_observation","schema_version":99})),
-                "invalid or unsupported",
-            ),
-            (
-                Some(json!({"schema":"healthmd.export_history_observation","schema_version":1})),
-                "unverified by this presenter",
-            ),
-        ] {
-            let mut receipt = json!({"schema":"healthmd.raw_export_receipt","schema_version":1,"status":"success"});
-            if let Some(observation) = observation {
-                receipt["history_observation"] = observation;
+    fn export_disclosure_preserves_receipt_and_never_endorses_supplied_evidence() {
+        for file_mode in [false, true] {
+            for (observation, expected) in [
+                (None, "legacy/unassessed"),
+                (Some(Value::Null), "invalid or unsupported"),
+                (
+                    Some(
+                        json!({"schema":"healthmd.export_history_observation","schema_version":99}),
+                    ),
+                    "invalid or unsupported",
+                ),
+                (
+                    Some(
+                        json!({"schema":"healthmd.export_history_observation","schema_version":1}),
+                    ),
+                    "unverified by this presenter",
+                ),
+            ] {
+                let mut receipt = json!({"schema":"healthmd.raw_export_receipt","schema_version":1,"status":"success"});
+                if file_mode {
+                    receipt = json!({"job_id":Uuid::new_v4(),"status":"success","message":"Files committed","files_written":1});
+                }
+                if let Some(observation) = observation {
+                    receipt["history_observation"] = observation;
+                }
+                let result =
+                    export_tool_result("healthmd_export_raw", receipt.clone(), false, true);
+                assert_eq!(
+                    serde_json::from_str::<Value>(result["content"][0]["text"].as_str().unwrap())
+                        .unwrap(),
+                    receipt
+                );
+                assert!(
+                    result["content"][1]["text"]
+                        .as_str()
+                        .unwrap()
+                        .contains(expected)
+                );
             }
-            let result = export_tool_result("healthmd_export_raw", receipt.clone(), false, true);
-            assert_eq!(
-                serde_json::from_str::<Value>(result["content"][0]["text"].as_str().unwrap())
-                    .unwrap(),
-                receipt
-            );
-            assert!(
-                result["content"][1]["text"]
-                    .as_str()
-                    .unwrap()
-                    .contains(expected)
-            );
         }
         let failed = export_tool_result(
             "healthmd_export_raw",

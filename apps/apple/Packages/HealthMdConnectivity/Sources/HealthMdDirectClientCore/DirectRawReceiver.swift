@@ -342,7 +342,8 @@ public actor DirectRawReceiver {
             sha256: artifact.sha256,
             dateRangeStart: artifact.dateRangeStart,
             dateRangeEnd: artifact.dateRangeEnd,
-            totalDays: artifact.totalDays
+            totalDays: artifact.totalDays,
+            historyObservationSHA256: try directHistoryObservationDigest(journal.accepted.historyObservation)
         )
         try await jobStore.save(record)
         return artifact
@@ -374,9 +375,15 @@ public actor DirectRawReceiver {
               inspected.sha256 == artifact.sha256 else {
             throw DirectRawReceiverError.invalidFinalization
         }
+        let journal = try loadJournal(jobID: jobID)
+        guard journal.request == record.request,
+              journal.request.jobID == jobID,
+              artifact.historyObservationSHA256 == (try directHistoryObservationDigest(journal.accepted.historyObservation)) else {
+            throw DirectRawReceiverError.invalidFinalization
+        }
         return DirectRawReceiveArtifact(
             fileURL: fileURL,
-            status: record.state == .completed ? responseStatus(for: try loadJournal(jobID: jobID)) : record.state.rawValue,
+            status: record.state == .completed ? responseStatus(for: journal) : record.state.rawValue,
             sha256: artifact.sha256,
             byteCount: artifact.byteCount,
             dateRangeStart: artifact.dateRangeStart,

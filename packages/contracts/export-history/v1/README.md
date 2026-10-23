@@ -46,10 +46,26 @@ keeps it in the companion receipt, rather than inventing a health-data row. Abse
 omits these fields and remains unverified. These attachments do not alter capture status,
 daily documents, the raw-result schema version, or the extraction protocol version.
 
-Portable raw finalization pins the canonical observation digest alongside the saved artifact
-hash in private job metadata. Offline artifact, extraction, and JSONL recovery require the
+Rust and Swift raw/file finalization pin the observation digest alongside the saved artifact
+hash in private job metadata. Offline artifact, extraction, JSONL and generated-file receipt recovery require the
 same immutable job request and pinned observation. An internally valid replacement journal
 cannot relabel already finalized bytes. Legacy records omit the pin and remain unobserved.
 The MCP raw receipt preserves validated backend observations, while the generic presenter
 makes no independent endorsement and discloses admission-time scope and permission-change
 limitations. Android raw metadata does not acquire an Apple observation.
+
+## Generated-file receipt attachment
+
+An observed direct generated-file job includes the same optional `history_observation`
+in its operation receipt, outside daily documents. Fresh, resumed and offline receipt
+paths preserve that frozen object; capture status and generated-file bytes retain their
+existing meanings. Legacy receipts omit the field. Rust and Swift receivers require
+receipt evidence to equal the validated journal and finalized private artifact pin, and
+require the journal request/job to match the immutable job record. Replacing an internally
+valid observation or rebinding a different request cannot relabel finalized files.
+
+The portable MCP file receipt forwards this object and uses the same conservative
+admission-time disclosure as raw exports. A generic presenter does not independently
+endorse supplied evidence. This receipt attachment does not establish a destination
+sidecar contract: per-artifact sidecars and their binding to actual committed file hashes
+still require implementation and qualification before production advertisement.

@@ -821,7 +821,7 @@ fn export_success(payload: &FileReceiptPayload) -> Value {
         .iter()
         .take(MAXIMUM_RECEIPT_PATHS)
         .collect();
-    json!({
+    let mut receipt = json!({
         "job_id": payload.job_id,
         "status": payload.status,
         "message": "Health.md generated and verified the requested files from the iPhone.",
@@ -836,7 +836,9 @@ fn export_success(payload: &FileReceiptPayload) -> Value {
         "failed_date_identifiers": failed_dates,
         "failed_date_identifier_count": payload.failed_date_identifiers.len(),
         "failed_date_identifiers_truncated": payload.failed_date_identifiers.len() > MAXIMUM_RECEIPT_PATHS
-    })
+    });
+    attach_history_observation(&mut receipt, payload.history_observation.as_ref());
+    receipt
 }
 
 /// The byte-compatible iPhone request projection, separate from transport and
@@ -1209,6 +1211,33 @@ fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {
 mod tests {
     use super::*;
     use healthmd_client::direct::WakeEnrollment;
+
+    #[test]
+    fn file_receipt_preserves_optional_frozen_history() {
+        let mut value = json!({"job_id":Uuid::new_v4(), "status":"success",
+            "destination_path":"/synthetic/vault", "files_written":1,"total_bytes":5,
+            "relative_paths":["daily.md"],"success_count":1,"total_count":1,"failed_date_identifiers":[]});
+        let legacy: FileReceiptPayload = serde_json::from_value(value.clone()).unwrap();
+        assert!(export_success(&legacy).get("history_observation").is_none());
+        value["history_observation"] = json!({
+            "schema":"healthmd.export_history_observation", "schema_version":1,
+            "observation_id":Uuid::new_v4(), "operation_id":value["job_id"],
+            "observed_at":"2026-10-23T12:00:00.000000000Z",
+            "request_binding_sha256":"a".repeat(64), "source_id":"apple.healthkit",
+            "time_zone_identifier":"UTC", "metric_ids":["steps"],
+            "requested_start":"2026-01-01T00:00:00.000000000Z",
+            "requested_end":"2026-01-01T00:00:00.000000000Z",
+            "all_available":false, "range_semantics":"owner_dates",
+            "evidence_method":"healthkit_earliest_authorized_sample_date",
+            "types":[{"type_id":"HKQuantityTypeIdentifierStepCount", "direct_metric_ids":["steps"],
+                "dependency_metric_ids":[], "dependency_reasons":[], "outcome":"unknown"}]
+        });
+        let observed: FileReceiptPayload = serde_json::from_value(value.clone()).unwrap();
+        let receipt = export_success(&observed);
+        assert_eq!(receipt["history_observation"], value["history_observation"]);
+        assert_eq!(receipt["files_written"], 1);
+        assert_eq!(receipt["status"], "success");
+    }
 
     #[test]
     fn explicit_mcp_wake_override_is_bounded_and_can_disable_waiting() {

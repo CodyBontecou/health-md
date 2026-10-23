@@ -133,6 +133,9 @@ pub struct FileReceiptPayload {
     pub total_count: i64,
     #[serde(rename = "failed_date_identifiers")]
     pub failed_date_identifiers: Vec<String>,
+    /// Frozen admission evidence; capture completion never certifies full history.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history_observation: Option<healthmd_protocol::history::ExportHistoryObservation>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -873,7 +876,7 @@ impl FileReceiver {
                 .cloned()
                 .unwrap_or_default(),
             total_days: record.total_days.unwrap_or_default(),
-            history_observation_sha256: None,
+            history_observation_sha256: history_observation_digest(&journal.accepted)?,
         });
         self.jobs.save(&record)?;
         self.journal = Some(journal);
@@ -907,12 +910,13 @@ impl FileReceiver {
         let record = self.jobs.load(job_id)?;
         let artifact = record
             .response_artifact
+            .as_ref()
             .ok_or_else(|| invalid("file receipt is missing"))?;
         let path = self
             .layout
             .response_spools_dir()
             .join(job_id.to_string().to_lowercase())
-            .join(artifact.relative_path);
+            .join(&artifact.relative_path);
         let (bytes, digest) = inspect_file(&path)?;
         if bytes != artifact.byte_count || digest != artifact.sha256 {
             return Err(invalid("file receipt digest changed"));
@@ -923,6 +927,17 @@ impl FileReceiver {
             "file receipt exceeds the durable metadata limit",
         )?)
         .map_err(|_| invalid("file receipt is malformed"))?;
+        let journal = load_journal(&self.session_directory(job_id)?.join("file-journal.json"))?;
+        if journal.request != record.request
+            || journal.request.job_id.0 != job_id
+            || artifact.history_observation_sha256 != history_observation_digest(&journal.accepted)?
+            || payload.job_id != journal.request.job_id
+            || payload.history_observation != journal.accepted.history_observation
+        {
+            return Err(invalid(
+                "saved file observation does not match the immutable job receipt",
+            ));
+        }
         Ok(FileExportReceipt {
             payload,
             response_path: path,
@@ -1760,6 +1775,7 @@ fn make_receipt(
         success_count: outcome.success_count,
         total_count: outcome.total_count,
         failed_date_identifiers: outcome.failed_date_identifiers.clone(),
+        history_observation: journal.accepted.history_observation.clone(),
     };
     let directory = layout
         .response_spools_dir()
@@ -1906,6 +1922,18 @@ fn load_journal(path: &Path) -> Result<FileJournal, ClientError> {
         ));
     }
     Ok(journal)
+}
+
+fn history_observation_digest(accepted: &ExportAccepted) -> Result<Option<String>, ClientError> {
+    accepted
+        .history_observation
+        .as_ref()
+        .map(|observation| {
+            canonical_json(observation)
+                .map(|bytes| sha256_hex(&bytes))
+                .map_err(|_| invalid("history observation digest failed"))
+        })
+        .transpose()
 }
 
 fn save_journal(layout: &StorageLayout, journal: &FileJournal) -> Result<(), ClientError> {
@@ -2221,8 +2249,17 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::too_many_lines)]
     fn append_commit_is_digest_bound_and_idempotent() {
+        check_append_commit(false);
+    }
+
+    #[test]
+    fn observed_file_receipt_survives_restart_and_rejects_rebound_evidence() {
+        check_append_commit(true);
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn check_append_commit(observed: bool) {
         let temporary = TempDir::new().unwrap();
         let destination = temporary.path().join("destination");
         fs::create_dir(&destination).unwrap();
@@ -2255,7 +2292,7 @@ mod tests {
             source_installation_id: SwiftUuid(Uuid::new_v4()),
             destination_installation_id: SwiftUuid(Uuid::new_v4()),
         };
-        let accepted = ExportAccepted {
+        let mut accepted = ExportAccepted {
             history_observation: None,
             job_id,
             accepted_at: now,
@@ -2275,6 +2312,34 @@ mod tests {
             partition_target_bytes: 48 * 1024 * 1024,
             created_at: now,
         };
+        if observed {
+            let fixture: serde_json::Value = serde_json::from_str(include_str!(
+                "../tests/fixtures/export-history-direct-job-v1.json"
+            ))
+            .unwrap();
+            accepted.resolved_canonical_selection = Some(
+                serde_json::from_value(fixture["accepted"]["resolvedCanonicalSelection"].clone())
+                    .unwrap(),
+            );
+            let mut evidence = fixture["accepted"]["historyObservation"].clone();
+            evidence["operation_id"] = json!(job_id.0.to_string());
+            evidence["request_binding_sha256"] = json!(session.request_fingerprint.sha256);
+            evidence["source_installation_id"] =
+                json!(session.peer_binding.source_installation_id.0.to_string());
+            evidence["destination_installation_id"] = json!(
+                session
+                    .peer_binding
+                    .destination_installation_id
+                    .0
+                    .to_string()
+            );
+            evidence["time_zone_identifier"] = json!("UTC");
+            evidence["requested_start"] = json!("2026-07-23T00:00:00.000000000Z");
+            evidence["requested_end"] = json!("2026-07-23T00:00:00.000000000Z");
+            evidence["all_available"] = json!(false);
+            accepted.history_observation = Some(serde_json::from_value(evidence).unwrap());
+        }
+        let expected_history = accepted.history_observation.clone();
         let data = b"fresh".to_vec();
         let digest = sha256_hex(&data);
         let file_id = SwiftUuid(Uuid::new_v4());
@@ -2353,7 +2418,7 @@ mod tests {
             })
             .unwrap();
         fs::write(partition_path(&layout, job_id.0, 0).unwrap(), b"corrupt").unwrap();
-        let mut resumed = FileReceiver::new(layout, jobs.clone());
+        let mut resumed = FileReceiver::new(layout.clone(), jobs.clone());
         resumed.prepare(request, accepted, session.clone()).unwrap();
         assert_eq!(
             resumed
@@ -2403,6 +2468,63 @@ mod tests {
         );
         receiver.acknowledge_peer_completion(job_id.0).unwrap();
         assert_eq!(jobs.load(job_id.0).unwrap().state, JobState::Completed);
+        assert_eq!(receipt.payload.history_observation, expected_history);
+        let reopened = FileReceiver::new(layout, jobs.clone());
+        assert_eq!(reopened.receipt(job_id.0).unwrap(), receipt);
+        let wire: serde_json::Value =
+            serde_json::from_slice(&fs::read(&receipt.response_path).unwrap()).unwrap();
+        assert_eq!(wire.get("history_observation").is_some(), observed);
+        if observed {
+            let path = reopened
+                .session_directory(job_id.0)
+                .unwrap()
+                .join("file-journal.json");
+            let original = fs::read(&path).unwrap();
+            let mut changed = load_journal(&path).unwrap();
+            let mut evidence =
+                serde_json::to_value(changed.accepted.history_observation.as_ref().unwrap())
+                    .unwrap();
+            evidence["observation_id"] = json!(Uuid::new_v4().to_string());
+            changed.accepted.history_observation = Some(serde_json::from_value(evidence).unwrap());
+            save_journal(&reopened.layout, &changed).unwrap();
+            assert!(
+                load_journal(&path).is_ok(),
+                "replacement evidence remains internally valid"
+            );
+            assert!(
+                reopened.receipt(job_id.0).is_err(),
+                "finalized evidence cannot be relabelled"
+            );
+            changed = serde_json::from_slice(&original).unwrap();
+            changed.request.created_at += chrono::Duration::seconds(1);
+            changed.session.request_fingerprint = request_fingerprint(&changed.request).unwrap();
+            let mut evidence =
+                serde_json::to_value(changed.accepted.history_observation.as_ref().unwrap())
+                    .unwrap();
+            evidence["request_binding_sha256"] = json!(changed.session.request_fingerprint.sha256);
+            changed.accepted.history_observation = Some(serde_json::from_value(evidence).unwrap());
+            save_journal(&reopened.layout, &changed).unwrap();
+            assert!(load_journal(&path).is_ok());
+            assert!(
+                reopened.receipt(job_id.0).is_err(),
+                "another request cannot relabel finalized files"
+            );
+            changed = serde_json::from_slice(&original).unwrap();
+            changed.accepted.history_observation = None;
+            changed.version = LEGACY_JOURNAL_VERSION;
+            save_journal(&reopened.layout, &changed).unwrap();
+            assert!(load_journal(&path).is_ok());
+            assert!(
+                reopened.receipt(job_id.0).is_err(),
+                "a downgrade cannot erase finalized evidence"
+            );
+            fs::write(path, original).unwrap();
+            assert_eq!(reopened.receipt(job_id.0).unwrap(), receipt);
+            assert_eq!(
+                fs::read(destination.join("daily.md")).unwrap(),
+                b"old\n\nfresh"
+            );
+        }
     }
 
     #[test]

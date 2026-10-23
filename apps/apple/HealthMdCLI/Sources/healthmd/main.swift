@@ -1333,7 +1333,7 @@ struct DirectIPhoneBackend: CLIBackend {
                 )
                 return HTTPResult(
                     statusCode: 200,
-                    payload: directFileReceiptPayload(result.receipt)
+                    payload: try directFileReceiptPayload(result.receipt)
                 )
             } catch {
                 if case DirectClientControllerError.exportInterrupted(let jobID) = error,
@@ -1618,8 +1618,8 @@ struct DirectIPhoneBackend: CLIBackend {
         return UUID(uuidString: value)
     }
 
-    private func directFileReceiptPayload(_ receipt: DirectFileExportReceipt) -> [String: Any] {
-        [
+    private func directFileReceiptPayload(_ receipt: DirectFileExportReceipt) throws -> [String: Any] {
+        var payload: [String: Any] = [
             "backend": kind.rawValue,
             "job_id": receipt.jobID.uuidString.lowercased(),
             "status": receipt.status,
@@ -1632,6 +1632,10 @@ struct DirectIPhoneBackend: CLIBackend {
             "total_count": receipt.totalCount,
             "failed_date_identifiers": receipt.failedDateIdentifiers
         ]
+        if let observation = receipt.historyObservation {
+            payload["history_observation"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(observation))
+        }
+        return payload
     }
 
     private func directJobPayload(_ record: DirectJobRecord) -> [String: Any] {

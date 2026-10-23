@@ -44,6 +44,7 @@ public struct DirectFileExportReceipt: Codable, Equatable, Sendable {
     public let successCount: Int
     public let totalCount: Int
     public let failedDateIdentifiers: [String]
+    public let historyObservation: ExportHistoryObservation?
     public let responseFileURL: URL
     public let responseByteCount: Int64
     public let responseSHA256: String
@@ -58,6 +59,7 @@ public struct DirectFileExportReceipt: Codable, Equatable, Sendable {
         case successCount = "success_count"
         case totalCount = "total_count"
         case failedDateIdentifiers = "failed_date_identifiers"
+        case historyObservation = "history_observation"
         case responseFileURL, responseByteCount, responseSHA256
     }
 
@@ -73,7 +75,8 @@ public struct DirectFileExportReceipt: Codable, Equatable, Sendable {
         failedDateIdentifiers: [String],
         responseFileURL: URL,
         responseByteCount: Int64,
-        responseSHA256: String
+        responseSHA256: String,
+        historyObservation: ExportHistoryObservation? = nil
     ) {
         self.jobID = jobID
         self.status = status
@@ -87,6 +90,7 @@ public struct DirectFileExportReceipt: Codable, Equatable, Sendable {
         self.responseFileURL = responseFileURL
         self.responseByteCount = responseByteCount
         self.responseSHA256 = responseSHA256
+        self.historyObservation = historyObservation
     }
 }
 
@@ -398,7 +402,8 @@ public actor DirectFileReceiver {
             sha256: receipt.responseSHA256,
             dateRangeStart: journal.accepted.resolvedDateIdentifiers.first ?? "",
             dateRangeEnd: journal.accepted.resolvedDateIdentifiers.last ?? "",
-            totalDays: journal.accepted.resolvedDateIdentifiers.count
+            totalDays: journal.accepted.resolvedDateIdentifiers.count,
+            historyObservationSHA256: try directHistoryObservationDigest(journal.accepted.historyObservation)
         )
         try await jobStore.save(record)
         return receipt
@@ -430,6 +435,16 @@ public actor DirectFileReceiver {
             throw DirectFileReceiverError.invalidFinalization
         }
         let stored = try decoder().decode(DirectFileReceiptPayload.self, from: Data(contentsOf: url))
+        let checkpoint = try sessionDirectory(jobID: jobID).appendingPathComponent("file-journal.json")
+        let journal = try decoder().decode(DirectFileReceiveJournal.self, from: Data(contentsOf: checkpoint))
+        guard journal.hasValidHistoryVersion,
+              journal.request == record.request,
+              journal.request.jobID == jobID,
+              artifact.historyObservationSHA256 == (try directHistoryObservationDigest(journal.accepted.historyObservation)),
+              stored.jobID == jobID,
+              stored.historyObservation == journal.accepted.historyObservation else {
+            throw DirectFileReceiverError.invalidFinalization
+        }
         return DirectFileExportReceipt(
             jobID: stored.jobID,
             status: stored.status,
@@ -442,7 +457,8 @@ public actor DirectFileReceiver {
             failedDateIdentifiers: stored.failedDateIdentifiers,
             responseFileURL: url,
             responseByteCount: inspected.totalBytes,
-            responseSHA256: inspected.sha256
+            responseSHA256: inspected.sha256,
+            historyObservation: stored.historyObservation
         )
     }
 
@@ -771,7 +787,8 @@ public actor DirectFileReceiver {
             relativePaths: journal.manifests.values.map(\.relativePath).sorted(),
             successCount: outcome.successCount,
             totalCount: outcome.totalCount,
-            failedDateIdentifiers: outcome.failedDateIdentifiers
+            failedDateIdentifiers: outcome.failedDateIdentifiers,
+            historyObservation: journal.accepted.historyObservation
         )
         let directory = layout.responseSpoolsURL
             .appendingPathComponent(journal.request.jobID.uuidString.lowercased(), isDirectory: true)
@@ -798,7 +815,8 @@ public actor DirectFileReceiver {
             failedDateIdentifiers: payload.failedDateIdentifiers,
             responseFileURL: url,
             responseByteCount: inspected.totalBytes,
-            responseSHA256: inspected.sha256
+            responseSHA256: inspected.sha256,
+            historyObservation: payload.historyObservation
         )
     }
 
@@ -1242,6 +1260,7 @@ private struct DirectFileReceiptPayload: Codable {
     let successCount: Int
     let totalCount: Int
     let failedDateIdentifiers: [String]
+    let historyObservation: ExportHistoryObservation?
 
     enum CodingKeys: String, CodingKey {
         case jobID = "job_id"
@@ -1253,5 +1272,6 @@ private struct DirectFileReceiptPayload: Codable {
         case successCount = "success_count"
         case totalCount = "total_count"
         case failedDateIdentifiers = "failed_date_identifiers"
+        case historyObservation = "history_observation"
     }
 }
