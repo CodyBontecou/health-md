@@ -1,4 +1,5 @@
 import Foundation
+import HealthMdConnectionCore
 import XCTest
 @testable import HealthMd
 

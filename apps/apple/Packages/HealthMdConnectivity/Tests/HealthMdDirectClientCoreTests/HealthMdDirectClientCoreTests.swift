@@ -5,6 +5,84 @@ import HealthMdConnectionCore
 import XCTest
 
 final class HealthMdDirectClientCoreTests: XCTestCase {
+    func testControllerRejectsUnnegotiatedHistoryBeforePersistingRawOrFileAcceptance() async throws {
+        for mode in [DirectResponseMode.rawJSON, .writeFiles] {
+            for versions: [Int]? in [nil, [], [2]] {
+                try await assertUnnegotiatedHistoryIsRejected(mode: mode, versions: versions)
+            }
+        }
+    }
+
+    private func assertUnnegotiatedHistoryIsRejected(mode: DirectResponseMode, versions: [Int]?) async throws {
+        let root = temporaryRoot(), destination = temporaryRoot()
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: destination)
+        }
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+        let serverTrust = InMemoryManualIPTrustStore(), clientTrust = InMemoryManualIPTrustStore()
+        let controller = try DirectClientController(rootURL: root, trustStore: serverTrust)
+        let clientID = UUID(), now = Date(), secret = Data(repeating: 0x18, count: 32)
+        let port = try unusedLoopbackPort()
+        try serverTrust.saveState(ManualIPTrustState(ownerInstallationID: controller.identity.installationID,
+            trustedClients: [ManualIPTrustedClient(installationID: clientID, displayName: "History iPhone",
+                reconnectSecret: secret, pairedAt: now, lastConnectedAt: now)]))
+        try clientTrust.saveState(ManualIPTrustState(ownerInstallationID: clientID,
+            trustedMac: ManualIPTrustedMac(installationID: controller.identity.installationID,
+                displayName: "History CLI", host: "127.0.0.1", port: port, reconnectSecret: secret, pairedAt: now)))
+        let request = DirectExportRequest(jobID: UUID(), createdAt: now,
+            dateSelection: .exact(start: "2026-07-01", end: "2026-07-01"), responseMode: mode,
+            rawProfile: mode == .rawJSON ? .canonicalSourceRecordsV1 : nil,
+            canonicalSelection: .init(metricIDs: ["steps"], sourceIDs: ["apple_health"], detailLevel: .summary),
+            destination: mode == .writeFiles ? DirectExportDestination(rootPath: destination.path) : nil)
+        let phone = DirectManualIPClient(installationID: clientID, displayName: "History iPhone", trustStore: clientTrust)
+        let producer = Task {
+            try await Task.sleep(nanoseconds: 100_000_000)
+            let channel = try await phone.connect(host: "127.0.0.1", port: port, timeout: 5)
+            defer { channel.cancel() }
+            try await channel.send(.hello(DirectPeerCapabilities(platform: .iOS, installationID: clientID,
+                exportHistoryObservationVersions: versions)))
+            guard case .message(.hello(let local)) = try await channel.receive(),
+                  case .message(.exportRequest(let received)) = try await channel.receive(), received == request else {
+                throw DirectClientControllerError.unexpectedExportMessage
+            }
+            XCTAssertEqual(local.exportHistoryObservationVersions, [1])
+            let binding = DirectPeerBinding(sourceInstallationID: clientID, destinationInstallationID: controller.identity.installationID)
+            let observation = try ExportHistoryObservation(observationID: UUID(), operationID: request.jobID,
+                observedAt: "2026-07-01T00:00:00.000000000Z",
+                requestBindingSHA256: DirectRequestFingerprint.make(for: request).sha256,
+                sourceInstallationID: clientID, destinationInstallationID: controller.identity.installationID,
+                timeZoneIdentifier: "UTC", metricIDs: ["steps"],
+                requestedStart: "2026-07-01T00:00:00.000000000Z", requestedEnd: "2026-07-01T00:00:00.000000000Z",
+                allAvailable: false, rangeSemantics: "owner_dates", evidenceMethod: "healthkit_earliest_authorized_sample_date",
+                types: [.init(typeID: "HKQuantityTypeIdentifierStepCount", directMetricIDs: ["steps"], outcome: "unknown")])
+            try await channel.send(.exportAccepted(DirectExportAccepted(jobID: request.jobID, acceptedAt: now,
+                peerBinding: binding, resolvedDateIdentifiers: ["2026-07-01"], sourceTimeZoneIdentifier: "UTC",
+                resolvedCanonicalSelection: request.canonicalSelection, historyObservation: observation)))
+        }
+        do {
+            if mode == .rawJSON {
+                _ = try await controller.export(request, deviceID: clientID, port: port, timeout: 5)
+            } else {
+                _ = try await controller.exportFiles(request, deviceID: clientID, port: port, timeout: 5)
+            }
+            XCTFail("Unnegotiated history must be rejected before capture")
+        } catch DirectClientControllerError.unexpectedExportMessage {
+            // The acceptance packet is rejected, before journal/receipt persistence.
+        } catch {
+            XCTFail("Expected negotiation rejection for \(mode)/\(String(describing: versions)), got \(error)")
+        }
+        try await producer.value
+        let record = try await controller.jobRecord(jobID: request.jobID)
+        // Intended peer identity is pinned before connection; acceptance must
+        // not populate capture/session facts or create output metadata.
+        XCTAssertNil(record.totalDays)
+        XCTAssertNil(record.sessionID)
+        XCTAssertNil(record.responseArtifact)
+        XCTAssertEqual(record.committedBytes, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.appendingPathComponent(".healthmd/history-observations").path))
+    }
+
     func testExactRequestRequiresAcceptedDatesToMatchInclusiveRange() throws {
         let root = temporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }

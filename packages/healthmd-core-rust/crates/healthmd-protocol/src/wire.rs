@@ -249,6 +249,7 @@ impl PeerCapabilities {
             crate::IOS_QUERY_APPLICATION_PROTOCOL_VERSION,
         ];
         capabilities.query = Some(DirectQueryCapabilities::current());
+        capabilities.export_history_observation_versions = Some(vec![1]);
         capabilities
     }
 
@@ -508,6 +509,23 @@ mod tests {
             value["pairingRequest"]["_0"]
                 .get("trustedVerifier")
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn current_cli_negotiates_observations_without_changing_legacy_capabilities() {
+        let id = SwiftUuid(Uuid::nil());
+        let legacy = PeerCapabilities::portable_cli(id);
+        let current = PeerCapabilities::portable_cli_all_versions(id);
+        assert_eq!(legacy.export_history_observation_versions, None);
+        assert_eq!(current.export_history_observation_versions, Some(vec![1]));
+        assert_eq!(
+            current.negotiated_export_history_observation_version(&legacy),
+            None
+        );
+        assert_eq!(
+            current.negotiated_export_history_observation_version(&current),
+            Some(1)
         );
     }
 

@@ -102,13 +102,14 @@ struct ConnectedCorpusTransferCapabilities: Codable, Equatable, Sendable {
     let protocolVersions: [Int]
     let partitionTargetBounds: ConnectedCorpusPartitionTargetBounds
     /// Independently negotiated admission evidence for encrypted-context jobs.
-    /// Missing/unknown versions never imply support. Advertisement stays disabled
-    /// until producer, generation storage, query output and device qualification pass.
+    /// Missing/unknown versions never imply support. Release qualification must
+    /// cover the producer, generation storage, query output and physical devices.
     let contextHistoryObservationVersion: Int?
 
     static let current = ConnectedCorpusTransferCapabilities(
         protocolVersions: [1, 2, rangePlanProtocolVersion, currentProtocolVersion],
-        partitionTargetBounds: .default
+        partitionTargetBounds: .default,
+        contextHistoryObservationVersion: 1
     )
 
     init(protocolVersions: [Int], partitionTargetBounds: ConnectedCorpusPartitionTargetBounds = .default,

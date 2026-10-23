@@ -3,6 +3,7 @@ import Combine
 import CryptoKit
 import Darwin
 import Foundation
+import HealthMdConnectionCore
 
 /// Owns the durable Mac side of a connected-iPhone export. HTTP requests are
 /// only transient waiters on these records: losing a waiter never cancels the

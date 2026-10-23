@@ -6,7 +6,7 @@
   "platforms": {
     "apple": {
       "state": "planned",
-      "target": "Qualify the SDK27 adapter, native warning/execution reassessment, immutable portable query metadata and negotiated generation-bound Mac context observations on exact native/UI and physical-device matrices. Complete local/API/scheduled receipt propagation and output qualification before enabling advertisement or marking the capability available.",
+      "target": "Qualify the SDK27 adapter, native warning/execution reassessment, immutable portable query metadata, negotiated raw/file observations and generation-bound Mac context observations on exact native/UI and physical-device matrices. Local files/API envelopes retain capture-only semantics; their absent authorization metadata remains unverified. Candidate advertisement does not replace production acceptance.",
       "evidence": [
         "apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift",
         "apps/apple/HealthMd/Shared/Protocols/SystemHealthStoreAdapter.swift",

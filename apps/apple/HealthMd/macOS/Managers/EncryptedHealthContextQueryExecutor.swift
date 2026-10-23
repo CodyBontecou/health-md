@@ -1,6 +1,7 @@
 #if os(macOS)
 import CryptoKit
 import Foundation
+import HealthMdConnectionCore
 
 nonisolated private enum EncryptedQueryExecutionContext {
     struct Context: Sendable {

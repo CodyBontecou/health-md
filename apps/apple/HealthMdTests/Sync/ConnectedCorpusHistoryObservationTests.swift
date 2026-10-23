@@ -63,7 +63,9 @@ final class ConnectedCorpusHistoryObservationTests: XCTestCase {
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: legacyBytes) as? [String: Any])
         XCTAssertNil(object["contextHistoryObservationVersion"])
         XCTAssertEqual(try JSONDecoder().decode(ConnectedCorpusTransferCapabilities.self, from: legacyBytes), legacy)
-        XCTAssertNil(ConnectedCorpusTransferCapabilities.current.contextHistoryObservationVersion, "Do not advertise before complete qualification")
+        XCTAssertEqual(ConnectedCorpusTransferCapabilities.current.contextHistoryObservationVersion, 1)
+        XCTAssertEqual(ConnectedCorpusTransferNegotiator.negotiate(local: .current, remote: .current)?.contextHistoryObservationVersion, 1)
+        XCTAssertNil(ConnectedCorpusTransferNegotiator.negotiate(local: .current, remote: legacy)?.contextHistoryObservationVersion)
     }
 
     func testManifestBindsOriginalRequestThenObservedSessionAndPeer() throws {

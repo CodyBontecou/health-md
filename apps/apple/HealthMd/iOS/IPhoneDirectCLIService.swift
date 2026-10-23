@@ -316,8 +316,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         DirectPeerCapabilities(protocolVersions: [HealthMdDirectProtocol.currentVersion, HealthMdDirectProtocol.queryVersion],
             platform: .iOS, installationID: installationID, query: .current,
             wake: wakeManager?.advertisesWake == true ? DirectWakeCapabilities(supported: true) : nil,
-            // Enable only after producer, output and physical acceptance are qualified.
-            exportHistoryObservationVersions: nil)
+            exportHistoryObservationVersions: [1])
     }
 
     private let defaults: UserDefaults

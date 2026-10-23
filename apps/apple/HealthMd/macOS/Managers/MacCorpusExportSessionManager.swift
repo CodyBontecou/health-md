@@ -2,6 +2,7 @@
 import CryptoKit
 import Darwin
 import Foundation
+import HealthMdConnectionCore
 import HealthMdCoreRust
 
 /// Constructible only by the durable corpus receiver after validating its

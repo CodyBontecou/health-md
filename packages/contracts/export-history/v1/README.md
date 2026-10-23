@@ -34,7 +34,7 @@ Observed encrypted-context corpus jobs use the two-stage binding described below
 
 The optional hello field `exportHistoryObservationVersions` lists independently supported observation versions. Missing/null/empty has no support. A producer may attach `DirectExportAccepted.historyObservation` only after both endpoints select version 1. The accepted observation is persisted verbatim with the existing journal before capture; its request binding is the existing session fingerprint's `sha256` member (the fingerprint version remains separately pinned by the session/protocol authority). No request, packet, frame, pairing transcript, or raw-day manifest bytes change. Historical fixture objects with absent fields must remain byte-identical.
 
-Receivers require an authoritative non-nil `resolvedCanonicalSelection` whenever an observation is present, and validate operation, fingerprint, peer pair, calendar, resolved metrics and original requested range before capture/transfer admission. They must not infer a metric scope from legacy defaults or skip comparison when it is missing. Legacy jobs without observations remain compatible. They reject a changed/removed observation on resume. A new client resuming an older job leaves it unassessed; a producer must never backfill evidence onto existing captured bytes. Resuming an observed job requires a peer that supports that observation version; lack of support pauses/rejects that resume rather than stripping the observation. Unknown versions are rejected rather than interpreted as v1. `synthetic-direct-job.json` records a Swift-generated request/accepted/session/capability vector with its deployed unchanged request fingerprint. Live advertisement remains disabled until producer, output and physical qualification are complete.
+Receivers require an authoritative non-nil `resolvedCanonicalSelection` whenever an observation is present, and validate operation, fingerprint, peer pair, calendar, resolved metrics and original requested range before capture/transfer admission. They must not infer a metric scope from legacy defaults or skip comparison when it is missing. Legacy jobs without observations remain compatible. They reject a changed/removed observation on resume. A new client resuming an older job leaves it unassessed; a producer must never backfill evidence onto existing captured bytes. Resuming an observed job requires a peer that supports that observation version; lack of support pauses/rejects that resume rather than stripping the observation. Unknown versions are rejected rather than interpreted as v1. `synthetic-direct-job.json` records a Swift-generated request/accepted/session/capability vector with its deployed unchanged request fingerprint. The draft candidate advertises version 1 for end-to-end qualification. Production merge/release remains gated on complete producer/output/native/physical acceptance.
 
 ## Connected encrypted-context binding
 
@@ -42,7 +42,7 @@ Receivers require an authoritative non-nil `resolvedCanonicalSelection` whenever
 independent of corpus item/partition protocol versions. Both endpoints must select
 1 and durable installation binding before a new encrypted-context job attaches
 `ConnectedCorpusExportManifest.historyObservation`. Missing or unknown versions
-have no support. Live advertisement remains disabled pending complete qualification.
+have no support. Draft candidates advertise version 1 for qualification; production merge/release requires complete native/physical acceptance.
 Legacy manifests omit the field and retain their existing encoded bytes.
 
 The observation's `request_binding_sha256` is the existing v1 corpus fingerprint
@@ -112,7 +112,7 @@ valid observation or rebinding a different request cannot relabel finalized file
 The portable MCP file receipt forwards this object and uses the same conservative
 admission-time disclosure as raw exports. A generic presenter does not independently
 endorse supplied evidence. The direct-receiver sidecar contract below binds this evidence to committed file
-hashes. Local/app and Mac-context propagation and full qualification remain
+hashes. Native and physical qualification of these portable and Mac-context paths remain
 required before production advertisement.
 
 ## Artifact sidecar grammar and direct receiver placement
@@ -146,5 +146,6 @@ Metadata is excluded from health-file counts and transfer bytes. Observed source
 manifests cannot collide with the reserved directory or its parents. A matching
 sidecar is idempotent; a conflicting file or symlink fails without overwriting it.
 The durable receipt describes the historical commit, even if the owner later
-edits destination files. Local/app and Mac-context propagation plus physical
-qualification remain required before capability advertisement.
+edits destination files. Native and physical qualification of these implemented
+portable/Mac-context paths remain required before production merge/release.
+Local filesystem/API-envelope adoption is a separate feature; absent metadata stays unverified.

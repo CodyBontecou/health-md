@@ -26,9 +26,7 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`export-history/v1`](export-history/v1/README.md) | Frozen job admission observations and an operation-scoped generated/committed artifact sidecar model |
 
 These contracts and their synthetic fixture mirrors are inventoried as deferred.
-Production export observation advertisement remains disabled; file emission and
-complete consumer/physical qualification are still required. Their grammar and
-passing model tests do not certify current permission or full history.
+Draft candidates negotiate observation version 1 on implemented portable and Mac-context paths for end-to-end QA. Their receiver file sidecars and generation-bound provenance are implemented, but complete native/physical qualification remains a production merge/release gate. Local daily files and API envelopes retain capture-only semantics; they do not emit this history extension. The grammar and passing model tests do not certify current permission or full history.
 
 ## Scheduling proposals
 

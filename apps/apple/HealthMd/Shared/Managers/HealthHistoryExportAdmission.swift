@@ -14,29 +14,15 @@ final class HealthHistoryExportAdmission {
     func observe(scope: HealthHistoryScope, operationID: UUID, requestBindingSHA256: String,
                  peerBinding: DirectPeerBinding, notCompleted: HealthHistoryAssessment,
                  operation: @escaping @MainActor () async -> HealthHistoryAssessment) async throws -> ExportHistoryObservation {
-        let assessment = try await assess(scope: scope, notCompleted: notCompleted, operation: operation)
-        return try assessment.exportObservation(operationID: operationID, requestBindingSHA256: requestBindingSHA256,
-            sourceInstallationID: peerBinding.sourceInstallationID,
-            destinationInstallationID: peerBinding.destinationInstallationID)
-    }
-
-    /// Local/headless captures share the same retained physical owner as remote
-    /// admissions. The request is already frozen before this async boundary.
-    func observe(request: HealthHistoryLocalExportRequest, notCompleted: HealthHistoryAssessment,
-                 operation: @escaping @MainActor () async -> HealthHistoryAssessment) async throws -> ExportHistoryObservation {
-        let assessment = try await assess(scope: request.scope, notCompleted: notCompleted, operation: operation)
-        return try request.observation(from: assessment)
-    }
-
-    private func assess(scope: HealthHistoryScope, notCompleted: HealthHistoryAssessment,
-                        operation: @escaping @MainActor () async -> HealthHistoryAssessment) async throws -> HealthHistoryAssessment {
         guard notCompleted.scope == scope, notCompleted.requiresExplicitContinuation else {
             throw ExportHistoryObservation.ValidationError.invalidObservation
         }
         let assessment = await worker.assess(notCompleted: notCompleted, operation: operation)
         try Task.checkCancellation()
         guard assessment.scope == scope else { throw ExportHistoryObservation.ValidationError.invalidObservation }
-        return assessment
+        return try assessment.exportObservation(operationID: operationID, requestBindingSHA256: requestBindingSHA256,
+            sourceInstallationID: peerBinding.sourceInstallationID,
+            destinationInstallationID: peerBinding.destinationInstallationID)
     }
 
     enum AdmissionError: LocalizedError {
