@@ -1,4 +1,5 @@
 import Foundation
+import HealthMdConnectionCore
 
 /// Origin of a durable iPhone corpus export. The value is persisted so an app
 /// relaunch can restore the right product behavior without retaining closures.
