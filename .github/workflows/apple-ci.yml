@@ -810,6 +810,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Preserve the runner's actual compatibility metadata even when selection fails.
+          xcrun simctl list runtimes available -j | tee build/logs/ios-ui-runtimes.json
+          xcrun simctl list devicetypes -j > build/logs/ios-ui-device-types.json
+          xcrun simctl list devices available -j > build/logs/ios-ui-devices.json
           if [[ '${{ matrix.shard }}' == 3 ]]; then
             IOS_DESTINATION=$(scripts/select-ios-simulator.sh --device-family iPad --create-missing)
           else

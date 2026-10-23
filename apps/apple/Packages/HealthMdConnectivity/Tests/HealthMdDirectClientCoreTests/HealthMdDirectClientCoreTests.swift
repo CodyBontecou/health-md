@@ -967,136 +967,157 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
     }
 
     func testDirectRawReceiverCommitsResumesAndAssemblesWithoutCorpusMemory() async throws {
-        let root = temporaryRoot()
-        defer { try? FileManager.default.removeItem(at: root) }
-        let layout = try DirectClientStorageLayout(rootURL: root)
-        let store = try DirectJobStore(layout: layout)
-        let sourceID = UUID()
-        let destinationID = UUID()
-        let request = DirectExportRequest(
-            jobID: UUID(),
-            createdAt: Date(),
-            dateSelection: .exact(start: "2026-07-01", end: "2026-07-01"),
-            responseMode: .rawJSON,
-            rawProfile: .canonicalSourceRecordsV1
-        )
-        try await store.save(try DirectJobRecord(request: request, createdAt: request.createdAt))
-        let binding = DirectPeerBinding(
-            sourceInstallationID: sourceID,
-            destinationInstallationID: destinationID
-        )
-        let accepted = DirectExportAccepted(
-            jobID: request.jobID,
-            acceptedAt: request.createdAt,
-            peerBinding: binding,
-            resolvedDateIdentifiers: ["2026-07-01"],
-            sourceDeviceName: "Test iPhone",
-            sourceTimeZoneIdentifier: "UTC"
-        )
-        let session = try DirectTransferSession(
-            sessionID: UUID(),
-            jobID: request.jobID,
-            requestFingerprint: try DirectRequestFingerprint.make(for: request),
-            peerBinding: binding,
-            partitionTargetBytes: DirectTransferLimits.minimumPartitionBytes,
-            createdAt: request.createdAt
-        )
-        let healthData = try JSONSerialization.data(withJSONObject: [
-            "schema": "healthmd.health_data",
-            "schema_version": 7,
-            "time_context": ["calendar_time_zone_identifier": "UTC"],
-            "healthkit_record_archive": [
-                "schema": "healthmd.healthkit_records",
-                "schema_version": 1
-            ]
-        ], options: [.sortedKeys])
-        let manifest = try DirectRawDayManifest(
-            jobID: request.jobID,
-            date: "2026-07-01",
-            status: "complete",
-            captureStatus: "complete",
-            sampleCount: 1,
-            recordCount: 1,
-            queryStatusCounts: [
-                "success": 1, "failure": 0, "unsupported": 0,
-                "skipped": 0, "cancelled": 0
-            ],
-            integrityWarningCount: 0,
-            integrityWarningCodes: [],
-            partialFailureCount: 0,
-            partialFailureTypes: [],
-            healthDataByteCount: Int64(healthData.count),
-            healthDataSHA256: DirectTransferFile.sha256Hex(healthData)
-        )
-        let descriptor = try DirectTransferPartition(
-            index: 0,
-            transferID: UUID(),
-            sourceDates: [manifest.date],
-            byteCount: Int64(healthData.count),
-            chunkCount: 1,
-            sha256: DirectTransferFile.sha256Hex(healthData),
-            previousSHA256: nil,
-            itemSegment: try DirectTransferItemSegment(
-                itemID: manifest.date,
-                offset: 0,
-                itemByteCount: Int64(healthData.count),
-                isFinalSegment: true
+        for observed in [false, true] {
+            let root = temporaryRoot()
+            defer { try? FileManager.default.removeItem(at: root) }
+            let layout = try DirectClientStorageLayout(rootURL: root)
+            let store = try DirectJobStore(layout: layout)
+            let sourceID = UUID()
+            let destinationID = UUID()
+            let request = DirectExportRequest(
+                jobID: UUID(),
+                createdAt: Date(),
+                dateSelection: .exact(start: "2026-07-01", end: "2026-07-01"),
+                responseMode: .rawJSON,
+                rawProfile: .canonicalSourceRecordsV1
             )
-        )
-        let open = try DirectTransferOpen(session: session, partition: descriptor)
-        let receiver = DirectRawReceiver(layout: layout, jobStore: store)
-        try await receiver.prepare(request: request, accepted: accepted, session: session)
-        try await receiver.store(manifest: manifest)
-        let needed = try await receiver.disposition(for: open)
-        XCTAssertEqual(needed.disposition, .needed)
-        let chunk = try DirectTransferChunk(
-            transferID: descriptor.transferID,
-            sequence: 1,
-            data: healthData,
-            sha256: DirectTransferFile.sha256Hex(healthData)
-        )
-        let chunkAcknowledgement = try await receiver.receive(chunk)
-        XCTAssertTrue(chunkAcknowledgement.accepted)
-        let completed = try DirectTransferPartitionComplete(
-            sessionID: session.sessionID,
-            jobID: request.jobID,
-            partitionIndex: 0,
-            transferID: descriptor.transferID,
-            partitionSHA256: descriptor.sha256
-        )
-        let partitionAcknowledgement = try await receiver.commit(completed)
-        XCTAssertTrue(partitionAcknowledgement.accepted)
+            try await store.save(try DirectJobRecord(request: request, createdAt: request.createdAt))
+            let binding = DirectPeerBinding(
+                sourceInstallationID: sourceID,
+                destinationInstallationID: destinationID
+            )
+            let observation: ExportHistoryObservation? = observed ? try ExportHistoryObservation(
+                observationID: UUID(), operationID: request.jobID, observedAt: "2026-07-01T00:00:00.000000000Z",
+                requestBindingSHA256: DirectRequestFingerprint.make(for: request).sha256,
+                sourceInstallationID: sourceID, destinationInstallationID: destinationID,
+                timeZoneIdentifier: "UTC", metricIDs: ["steps"],
+                requestedStart: "2026-07-01T00:00:00.000000000Z", requestedEnd: "2026-07-01T00:00:00.000000000Z",
+                allAvailable: false, rangeSemantics: "owner_dates", evidenceMethod: "synthetic_ui_fixture",
+                types: [.init(typeID: "steps_type", directMetricIDs: ["steps"], dependencyMetricIDs: [],
+                    dependencyReasons: [], outcome: "unknown")]) : nil
+            let accepted = DirectExportAccepted(
+                jobID: request.jobID,
+                acceptedAt: request.createdAt,
+                peerBinding: binding,
+                resolvedDateIdentifiers: ["2026-07-01"],
+                sourceDeviceName: "Test iPhone",
+                sourceTimeZoneIdentifier: "UTC",
+                resolvedCanonicalSelection: observed ? .init(metricIDs: ["steps"], detailLevel: .lossless) : nil,
+                historyObservation: observation
+            )
+            let session = try DirectTransferSession(
+                sessionID: UUID(),
+                jobID: request.jobID,
+                requestFingerprint: try DirectRequestFingerprint.make(for: request),
+                peerBinding: binding,
+                partitionTargetBytes: DirectTransferLimits.minimumPartitionBytes,
+                createdAt: request.createdAt
+            )
+            let healthData = try JSONSerialization.data(withJSONObject: [
+                "schema": "healthmd.health_data",
+                "schema_version": 7,
+                "time_context": ["calendar_time_zone_identifier": "UTC"],
+                "healthkit_record_archive": [
+                    "schema": "healthmd.healthkit_records",
+                    "schema_version": 1
+                ]
+            ], options: [.sortedKeys])
+            let manifest = try DirectRawDayManifest(
+                jobID: request.jobID,
+                date: "2026-07-01",
+                status: "complete",
+                captureStatus: "complete",
+                sampleCount: 1,
+                recordCount: 1,
+                queryStatusCounts: [
+                    "success": 1, "failure": 0, "unsupported": 0,
+                    "skipped": 0, "cancelled": 0
+                ],
+                integrityWarningCount: 0,
+                integrityWarningCodes: [],
+                partialFailureCount: 0,
+                partialFailureTypes: [],
+                healthDataByteCount: Int64(healthData.count),
+                healthDataSHA256: DirectTransferFile.sha256Hex(healthData)
+            )
+            let descriptor = try DirectTransferPartition(
+                index: 0,
+                transferID: UUID(),
+                sourceDates: [manifest.date],
+                byteCount: Int64(healthData.count),
+                chunkCount: 1,
+                sha256: DirectTransferFile.sha256Hex(healthData),
+                previousSHA256: nil,
+                itemSegment: try DirectTransferItemSegment(
+                    itemID: manifest.date,
+                    offset: 0,
+                    itemByteCount: Int64(healthData.count),
+                    isFinalSegment: true
+                )
+            )
+            let open = try DirectTransferOpen(session: session, partition: descriptor)
+            let receiver = DirectRawReceiver(layout: layout, jobStore: store)
+            try await receiver.prepare(request: request, accepted: accepted, session: session)
+            try await receiver.store(manifest: manifest)
+            let needed = try await receiver.disposition(for: open)
+            XCTAssertEqual(needed.disposition, .needed)
+            let chunk = try DirectTransferChunk(
+                transferID: descriptor.transferID,
+                sequence: 1,
+                data: healthData,
+                sha256: DirectTransferFile.sha256Hex(healthData)
+            )
+            let chunkAcknowledgement = try await receiver.receive(chunk)
+            XCTAssertTrue(chunkAcknowledgement.accepted)
+            let completed = try DirectTransferPartitionComplete(
+                sessionID: session.sessionID,
+                jobID: request.jobID,
+                partitionIndex: 0,
+                transferID: descriptor.transferID,
+                partitionSHA256: descriptor.sha256
+            )
+            let partitionAcknowledgement = try await receiver.commit(completed)
+            XCTAssertTrue(partitionAcknowledgement.accepted)
 
-        let resumed = DirectRawReceiver(layout: layout, jobStore: store)
-        try await resumed.prepare(request: request, accepted: accepted, session: session)
-        try await resumed.store(manifest: manifest)
-        let resumedDisposition = try await resumed.disposition(for: open)
-        XCTAssertEqual(resumedDisposition.disposition, .alreadyCommitted)
-        let artifact = try await resumed.finalize(try DirectTransferFinalize(
-            sessionID: session.sessionID,
-            jobID: request.jobID,
-            requestFingerprint: session.requestFingerprint,
-            totalPartitions: 1,
-            totalBytes: Int64(healthData.count),
-            finalPartitionSHA256: descriptor.sha256
-        ))
-        XCTAssertEqual(artifact.status, "success")
-        XCTAssertEqual(artifact.totalDays, 1)
-        XCTAssertEqual(try DirectTransferFile.inspect(artifact.fileURL).sha256, artifact.sha256)
-        let response = try XCTUnwrap(
-            try JSONSerialization.jsonObject(with: Data(contentsOf: artifact.fileURL)) as? [String: Any]
-        )
-        let raw = try XCTUnwrap(response["raw_result"] as? [String: Any])
-        let days = try XCTUnwrap(raw["days"] as? [[String: Any]])
-        XCTAssertEqual(days.first?["date"] as? String, "2026-07-01")
-        XCTAssertNotNil(days.first?["health_data"] as? [String: Any])
-        XCTAssertEqual(posixPermissions(at: artifact.fileURL), 0o600)
-        let awaitingRecord = try await store.load(jobID: request.jobID)
-        XCTAssertEqual(awaitingRecord.state, .awaitingPeerAcknowledgement)
-        try await resumed.acknowledgePeerCompletion(jobID: request.jobID)
-        let acknowledgedRecord = try await store.load(jobID: request.jobID)
-        XCTAssertEqual(acknowledgedRecord.state, .completed)
+            let resumed = DirectRawReceiver(layout: layout, jobStore: store)
+            try await resumed.prepare(request: request, accepted: accepted, session: session)
+            try await resumed.store(manifest: manifest)
+            let resumedDisposition = try await resumed.disposition(for: open)
+            XCTAssertEqual(resumedDisposition.disposition, .alreadyCommitted)
+            let artifact = try await resumed.finalize(try DirectTransferFinalize(
+                sessionID: session.sessionID,
+                jobID: request.jobID,
+                requestFingerprint: session.requestFingerprint,
+                totalPartitions: 1,
+                totalBytes: Int64(healthData.count),
+                finalPartitionSHA256: descriptor.sha256
+            ))
+            XCTAssertEqual(artifact.status, "success")
+            XCTAssertEqual(artifact.totalDays, 1)
+            XCTAssertEqual(try DirectTransferFile.inspect(artifact.fileURL).sha256, artifact.sha256)
+            let response = try XCTUnwrap(
+                try JSONSerialization.jsonObject(with: Data(contentsOf: artifact.fileURL)) as? [String: Any]
+            )
+            let raw = try XCTUnwrap(response["raw_result"] as? [String: Any])
+            XCTAssertNil(raw["history_observation"])
+            XCTAssertNil(raw["canonical_selection"])
+            if let observation {
+                let decoded = try JSONDecoder().decode(ExportHistoryObservation.self,
+                    from: JSONSerialization.data(withJSONObject: try XCTUnwrap(response["history_observation"])))
+                XCTAssertEqual(decoded, observation)
+            } else { XCTAssertNil(response["history_observation"]) }
+            let days = try XCTUnwrap(raw["days"] as? [[String: Any]])
+            XCTAssertEqual(days.first?["date"] as? String, "2026-07-01")
+            XCTAssertNotNil(days.first?["health_data"] as? [String: Any])
+            XCTAssertEqual(posixPermissions(at: artifact.fileURL), 0o600)
+            let awaitingRecord = try await store.load(jobID: request.jobID)
+            XCTAssertEqual(awaitingRecord.state, .awaitingPeerAcknowledgement)
+            try await resumed.acknowledgePeerCompletion(jobID: request.jobID)
+            let acknowledgedRecord = try await store.load(jobID: request.jobID)
+            XCTAssertEqual(acknowledgedRecord.state, .completed)
+        }
     }
+
 
     func testDirectRawReceiverRejectsTamperedChunksBeforeCommit() async throws {
         let root = temporaryRoot()

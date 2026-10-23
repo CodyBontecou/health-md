@@ -509,6 +509,10 @@ public actor DirectRawReceiver {
         try writeMember("job_id", value: journal.request.jobID.uuidString.lowercased(), first: true, to: output)
         try writeMember("message", value: "iPhone direct raw export completed.", first: false, to: output)
         try writeMember("status", value: status, first: false, to: output)
+        if let observation = journal.accepted.historyObservation {
+            let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(observation))
+            try writeMember("history_observation", value: object, first: false, to: output)
+        }
         try output.write(contentsOf: Data(",\"raw_result\":{".utf8))
         try writeMember("schema", value: "healthmd.raw_result", first: true, to: output)
         try writeMember("schema_version", value: 1, first: false, to: output)

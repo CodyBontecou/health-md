@@ -1386,7 +1386,7 @@ fn assemble_extraction(
     // for an all-empty corpus while the plural field explicitly records that no version was
     // evidenced. A non-empty homogeneous corpus uses its validated source version.
     let source_schema_version = distinct_source_versions.first().copied().unwrap_or(7);
-    let receipt = json!({
+    let mut receipt = json!({
         "protocol": "healthmd.extract_receipt",
         "protocol_version": 1,
         "status": status,
@@ -1412,6 +1412,10 @@ fn assemble_extraction(
         },
         "total_requested_days": dates.len()
     });
+    if let Some(observation) = &journal.accepted.history_observation {
+        receipt["history_observation"] = serde_json::to_value(observation)
+            .map_err(|_| invalid("history observation JSON failed"))?;
+    }
     output.write_all(b"],\"receipt\":").map_err(storage_error)?;
     output
         .write_all(&canonical_json(&receipt).map_err(|_| invalid("receipt JSON failed"))?)
@@ -1564,12 +1568,24 @@ fn assemble_response(
 
     write!(
         output,
-        "{{\"job_id\":{},\"message\":{},\"status\":{},\"raw_result\":{{",
+        "{{\"job_id\":{},\"message\":{},\"status\":{}",
         json_string(&journal.request.job_id.0.to_string().to_lowercase())?,
         json_string("iPhone direct raw export completed.")?,
         json_string(&response_status)?
     )
     .map_err(storage_error)?;
+    if let Some(observation) = &journal.accepted.history_observation {
+        write!(
+            output,
+            ",\"history_observation\":{}",
+            serde_json::to_string(observation)
+                .map_err(|_| invalid("history observation JSON failed"))?
+        )
+        .map_err(storage_error)?;
+    }
+    output
+        .write_all(b",\"raw_result\":{")
+        .map_err(storage_error)?;
     write!(
         output,
         "\"schema\":\"healthmd.raw_result\",\"schema_version\":1,\"profile\":{}",
@@ -2211,6 +2227,102 @@ mod tests {
         assert_eq!(receipt["protocol_version"], 1);
         assert_eq!(receipt["source_schema_version"], scalar);
         assert_eq!(receipt["source_schema_versions"], json!(plural));
+    }
+
+    #[test]
+    fn history_output_preserves_raw_body_and_survives_json_and_jsonl_extraction() {
+        for profile in [
+            RawProfile::CanonicalSourceRecordsV1,
+            RawProfile::HealthDataProjection,
+        ] {
+            let corpus = test_corpus(&[None, Some(8)]);
+            let mut journal = corpus.receiver.journal.as_ref().unwrap().clone();
+            journal.request.raw_profile = Some(profile);
+            if profile == RawProfile::CanonicalSourceRecordsV1 {
+                journal.request.canonical_selection = None;
+            }
+            journal.session.request_fingerprint = request_fingerprint(&journal.request).unwrap();
+            let selection = journal
+                .accepted
+                .resolved_canonical_selection
+                .take()
+                .unwrap();
+            if profile == RawProfile::HealthDataProjection {
+                journal.accepted.resolved_canonical_selection = Some(selection.clone());
+            }
+            let baseline = assemble_response(&corpus.receiver.layout, &journal).unwrap();
+            let baseline: Value =
+                serde_json::from_slice(&fs::read(baseline.path).unwrap()).unwrap();
+            assert!(baseline.get("history_observation").is_none());
+            let fixture: Value = serde_json::from_str(include_str!(
+                "../tests/fixtures/export-history-direct-job-v1.json"
+            ))
+            .unwrap();
+            let mut evidence = fixture["accepted"]["historyObservation"].clone();
+            evidence["operation_id"] = json!(journal.request.job_id.0.to_string());
+            evidence["request_binding_sha256"] = json!(journal.session.request_fingerprint.sha256);
+            evidence["source_installation_id"] = json!(
+                journal
+                    .session
+                    .peer_binding
+                    .source_installation_id
+                    .0
+                    .to_string()
+            );
+            evidence["destination_installation_id"] = json!(
+                journal
+                    .session
+                    .peer_binding
+                    .destination_installation_id
+                    .0
+                    .to_string()
+            );
+            evidence["time_zone_identifier"] = json!("UTC");
+            evidence["metric_ids"] = json!(selection.metric_ids);
+            evidence["requested_start"] = json!("2026-07-23T00:00:00.000000000Z");
+            evidence["requested_end"] = json!("2026-07-24T00:00:00.000000000Z");
+            evidence["all_available"] = json!(false);
+            evidence["types"] = json!([{"type_id":"sleep_type","direct_metric_ids":selection.metric_ids,
+                "dependency_metric_ids":[],"dependency_reasons":[],"outcome":"unknown"}]);
+            journal.accepted.resolved_canonical_selection = Some(selection);
+            journal.accepted.history_observation =
+                Some(serde_json::from_value(evidence.clone()).unwrap());
+            assert!(
+                journal
+                    .accepted
+                    .history_observation
+                    .as_ref()
+                    .unwrap()
+                    .matches(&journal.request, &journal.accepted, &journal.session)
+            );
+            journal.version = journal_version(&journal.accepted);
+            save_journal(&corpus.receiver.layout, &journal).unwrap();
+            let observed = assemble_response(&corpus.receiver.layout, &journal).unwrap();
+            let observed: Value =
+                serde_json::from_slice(&fs::read(observed.path).unwrap()).unwrap();
+            assert_eq!(observed["history_observation"], evidence);
+            assert_eq!(observed["raw_result"], baseline["raw_result"]);
+            assert_eq!(observed["status"], baseline["status"]);
+            if profile == RawProfile::CanonicalSourceRecordsV1 {
+                assert!(observed["raw_result"].get("canonical_selection").is_none());
+            } else {
+                let extraction = corpus.receiver.extraction(corpus.job_id, &[]).unwrap();
+                let extraction: Value =
+                    serde_json::from_slice(&fs::read(extraction.path).unwrap()).unwrap();
+                assert_eq!(extraction["receipt"]["history_observation"], evidence);
+                let jsonl = corpus
+                    .receiver
+                    .extraction_jsonl(corpus.job_id, &[])
+                    .unwrap();
+                let receipt: Value =
+                    serde_json::from_slice(&fs::read(jsonl.receipt_path).unwrap()).unwrap();
+                assert_eq!(receipt["history_observation"], evidence);
+                for line in fs::read_to_string(jsonl.path).unwrap().lines() {
+                    let row: Value = serde_json::from_str(line).unwrap();
+                    assert!(row.get("history_observation").is_none());
+                }
+            }
+        }
     }
 
     #[test]

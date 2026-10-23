@@ -35,3 +35,13 @@ Connected corpus adoption must similarly use its existing version-pinned session
 The optional hello field `exportHistoryObservationVersions` lists independently supported observation versions. Missing/null/empty has no support. A producer may attach `DirectExportAccepted.historyObservation` only after both endpoints select version 1. The accepted observation is persisted verbatim with the existing journal before capture; its request binding is the existing session fingerprint's `sha256` member (the fingerprint version remains separately pinned by the session/protocol authority). No request, packet, frame, pairing transcript, or raw-day manifest bytes change. Historical fixture objects with absent fields must remain byte-identical.
 
 Receivers require an authoritative non-nil `resolvedCanonicalSelection` whenever an observation is present, and validate operation, fingerprint, peer pair, calendar, resolved metrics and original requested range before capture/transfer admission. They must not infer a metric scope from legacy defaults or skip comparison when it is missing. Legacy jobs without observations remain compatible. They reject a changed/removed observation on resume. A new client resuming an older job leaves it unassessed; a producer must never backfill evidence onto existing captured bytes. Resuming an observed job requires a peer that supports that observation version; lack of support pauses/rejects that resume rather than stripping the observation. Unknown versions are rejected rather than interpreted as v1. `synthetic-direct-job.json` records a Swift-generated request/accepted/session/capability vector with its deployed unchanged request fingerprint. Live advertisement remains disabled until producer, output and physical qualification are complete.
+
+## Raw and extraction output attachment
+
+A receiver with a validated observed job emits the unchanged observation as optional
+`history_observation` on the outer raw response, beside `raw_result`. It never inserts this
+field or an admission-only canonical selection into the frozen strict raw-result body.
+Canonical extraction embeds the same observation in `receipt.history_observation`; JSONL
+keeps it in the companion receipt, rather than inventing a health-data row. Absent evidence
+omits these fields and remains unverified. These attachments do not alter capture status,
+daily documents, the raw-result schema version, or the extraction protocol version.
