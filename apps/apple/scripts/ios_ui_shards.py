@@ -11,7 +11,7 @@ import sys
 
 from validate_ios_ui_xctestrun import qualify
 
-# All fourteen pre-existing CI selectors. Keep XCTest classes together: their
+# All fourteen pre-existing CI selectors plus the Custom reentry regression. Keep XCTest classes together: their
 # journeys intentionally share installed-app fixture state within a class.
 SHARDS = (
     (
@@ -28,6 +28,7 @@ SHARDS = (
         "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
     ),
     (
+        "ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport",
         "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
         "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
         "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",

@@ -4,7 +4,7 @@ Health.md exposes an explicit-only broadcast receiver for Tasker/adb/other autom
 
 ## Security model
 
-The receiver is exported but has **no manifest intent-filter**. External callers must address the component explicitly. This prevents arbitrary implicit broadcasts from triggering health-data exports.
+The receiver is exported but has **no manifest intent-filter**. External callers must address the component explicitly. This prevents implicit broadcasts from triggering health-data exports. It does not authenticate callers: external tools can invoke the exported receiver explicitly.
 
 Component:
 
@@ -17,8 +17,8 @@ com.healthmd.android/com.healthmd.automation.AutomationReceiver
 | Action | Extras | Behavior |
 |---|---|---|
 | `com.healthmd.android.action.EXPORT_YESTERDAY` | Optional `com.healthmd.android.extra.PROFILE` ID or name | Exports yesterday. |
-| `com.healthmd.android.action.EXPORT_LAST_DAYS` | `com.healthmd.android.extra.DAYS` int; optional `PROFILE` | Exports the last N complete days ending yesterday. |
-| `com.healthmd.android.action.EXPORT_DATE` | `com.healthmd.android.extra.DATE` ISO date; optional `PROFILE` | Exports one date. Defaults to yesterday if omitted. |
+| `com.healthmd.android.action.EXPORT_LAST_DAYS` | `com.healthmd.android.extra.DAYS` int; optional `PROFILE` | Exports the last N complete days ending yesterday; DAYS defaults to 1 and is clamped to 1–365. |
+| `com.healthmd.android.action.EXPORT_DATE` | `com.healthmd.android.extra.DATE` ISO date; optional `PROFILE` | Exports one date. Defaults to yesterday if omitted or malformed. |
 | `com.healthmd.android.action.EXPORT_RANGE` | `START_DATE`, `END_DATE` ISO dates; optional `PROFILE` | Exports an inclusive date range. |
 | `com.healthmd.android.action.GET_LAST_STATUS` | — | Returns latest export-history status when called as an ordered broadcast. |
 

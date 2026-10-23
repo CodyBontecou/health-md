@@ -77,6 +77,7 @@ Protocol numbers are not substitutes for exact mobile build IDs.
 - Both Mach-O signatures use hardened runtime and secure timestamp: pass/fail
 - Notary submission IDs/statuses (no logs containing user data):
 - Both DMGs stapled and Gatekeeper-assessed: pass/fail
+- Both extracted Mach-O binaries strictly codesign-verified; notarization evidence supplied by their accepted, stapled DMGs: pass/fail
 - Both extracted Mach-O binaries match the Gatekeeper-assessed DMG copies: pass/fail
 - Keychain signed-upgrade synthetic device probe: pass/fail
 - Windows expected publisher subject (or `pending_external_certificate_provisioning` deferred):

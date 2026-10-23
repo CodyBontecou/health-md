@@ -3,7 +3,10 @@ title: "How to export Apple Health data to Obsidian."
 description: "A practical guide to exporting Apple Health data into an Obsidian vault with Health.md using Markdown, Obsidian Bases, JSON, CSV, and daily note workflows."
 lead: "Health.md turns the Apple Health data on your iPhone into plain files for an Obsidian vault: Markdown notes, Obsidian Bases-ready frontmatter, JSON, CSV, and optional Daily Note updates."
 date: "2026-06-13"
-updated: "2026-07-16"
+updated: "2026-10-22"
+verified: "2026-10-22"
+verified_by: "Codex (agent)"
+verified_method: mixed
 category: "Workflow guide"
 draft: false
 image: "/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-configuration.png"
@@ -58,7 +61,7 @@ Health.md supports four daily export formats, and you do not have to choose only
 <figcaption>Enable Markdown for readable notes, Obsidian Bases for structured frontmatter, and JSON or CSV when you want machine-readable exports.</figcaption>
 </figure>
 
-A Markdown export can look like this:
+An abbreviated Markdown example can look like this (illustrative values; schema and capture metadata omitted):
 
 ```
 ---
@@ -78,7 +81,7 @@ workout_count: 1
 
 An Obsidian Bases export uses the same idea, but leans harder into clean frontmatter properties: dates stay dates, numbers stay numeric, and fields such as `steps`, `sleep_total_hours`, `resting_heart_rate`, and `workout_details` are ready for Bases views.
 
-JSON exports include top-level fields such as `date`, `type`, and `units`, followed by category objects like `activity`, `sleep`, `heart`, `vitals`, and `workouts`. CSV exports use a stable `Date,Category,Metric,Value,Unit,Timestamp` header, with timestamps filled in for individual samples when available.
+JSON exports include top-level fields such as `date`, `type`, and `units`, followed by category objects like `activity`, `sleep`, `heart`, `vitals`, and `workouts`. CSV exports use the `Date,Category,Metric,Value,Unit,Timestamp` header. `Value` contains numbers and nonnumeric metadata or status values, so filter by Category, Metric, and Unit before numeric analysis. Some summary rows have five fields without Timestamp; timestamped samples have all six. See the [producer-generated CSV row contract](/docs/reference/export-formats/#csv) for exact row shapes.
 
 ## Use Daily Note Injection for journal workflows
 
@@ -108,7 +111,7 @@ If the daily note already has frontmatter, Health.md preserves your keys and upd
 
 ## Decide which metrics belong in your vault
 
-The production-generated Health.md catalog covers hundreds of selectable summary and source-record definitions across ordinary HealthKit metrics, workouts, symptoms, medications, clinical records, and other specialized domains. You can keep the vault lightweight by exporting only a few high-signal properties, or build a fuller archive with sleep stages, heart-rate samples, workouts, vitals, nutrition, symptoms, and canonical source records.
+The production-generated Health.md catalog documents hundreds of summary and source-record definitions. Availability depends on the app build, operating system, permissions, and records actually returned. A registry entry is not a promise that every source is readable: current Apple App Store builds do not request historical clinical records. You can select a few properties or include sleep stages, heart-rate samples, workouts, vitals, nutrition, symptoms, and supported source archives; inspect capture status and warnings when completeness matters.
 
 A good starting set for Obsidian is:
 
@@ -120,13 +123,15 @@ A good starting set for Obsidian is:
 
 ## Keep it local-first
 
-Health.md is designed around files you control. HealthKit reads happen on your Apple devices, and the exported Markdown, Bases, JSON, and CSV files land in the folder you choose. There is no Health.md cloud account for your health archive. If you send exports to a Mac, the Mac acts as a local destination rather than a remote health-data service.
+Health.md is designed around files you control. HealthKit reads happen on your Apple devices, and the exported Markdown, Bases, JSON, and CSV files land in the folder you choose. This Obsidian folder workflow does not require a Health.md cloud account or create a Health.md server copy. If you send exports to a Mac, the Mac acts as a local destination rather than a remote health-data service.
+
+A separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it, subject to its quota. There is no public signup and no automatic device sync; this Obsidian folder workflow does not upload to it. The pilot is unbacked, retains accepted revisions without an age cutoff, and erases stored data asynchronously after account deletion disables access. See the [privacy policy](/privacy-policy.html#retention) for retention, deletion, and loss risks.
 
 That local-first shape matters for health data. You can back up the vault, sync it with the provider you already trust, version it with your own tools, or delete the exported files without asking a service to remove your account.
 
 ## Troubleshooting notes
 
-- If exports are empty, open iOS Settings and confirm Health.md has permission for the relevant Apple Health categories.
+- If exports are empty, review Health.md’s Health permissions, selected categories, date range, and capture warnings. Empty output alone does not prove that the source contains no records.
 - If Obsidian does not see the files, confirm the destination folder is inside the vault Obsidian is opening on that device.
 - If you use scheduled exports, remember that iOS background refresh is opportunistic. Treat the scheduled time as a target, not a guarantee.
 - If you need database-style views, enable Obsidian Bases or keep Markdown frontmatter enabled so properties are queryable.
