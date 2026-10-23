@@ -127,7 +127,7 @@ final class ConnectedCorpusHistoryObservationTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("pr183-corpus-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
         let store = ConnectedCorpusOutboundStore(rootURL: root)
-        let journal = try store.begin(origin: .macInitiated, session: fixture.session, manifest: fixture.manifest)
+        let journal = try store.createOrRestore(origin: .macInitiated, session: fixture.session, manifest: fixture.manifest)
         XCTAssertEqual(journal.version, ConnectedCorpusOutboundJournal.historyObservationVersion)
         let reopened = ConnectedCorpusOutboundStore(rootURL: root)
         XCTAssertEqual(try reopened.load(jobID: fixture.session.jobID)?.exportManifest.historyObservation,

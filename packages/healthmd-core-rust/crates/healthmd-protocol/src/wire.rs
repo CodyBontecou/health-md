@@ -249,7 +249,20 @@ impl PeerCapabilities {
             crate::IOS_QUERY_APPLICATION_PROTOCOL_VERSION,
         ];
         capabilities.query = Some(DirectQueryCapabilities::current());
-        capabilities.export_history_observation_versions = Some(vec![1]);
+        capabilities
+    }
+
+    /// Advertise Apple observations only after pairing has established the source platform.
+    /// Unknown/new peers keep the source-neutral hello, including strict Android readers.
+    #[must_use]
+    pub fn portable_cli_for_source(
+        installation_id: SwiftUuid,
+        source_platform: Option<PeerPlatform>,
+    ) -> Self {
+        let mut capabilities = Self::portable_cli_all_versions(installation_id);
+        if source_platform == Some(PeerPlatform::Ios) {
+            capabilities.export_history_observation_versions = Some(vec![1]);
+        }
         capabilities
     }
 
@@ -516,8 +529,21 @@ mod tests {
     fn current_cli_negotiates_observations_without_changing_legacy_capabilities() {
         let id = SwiftUuid(Uuid::nil());
         let legacy = PeerCapabilities::portable_cli(id);
-        let current = PeerCapabilities::portable_cli_all_versions(id);
+        let current = PeerCapabilities::portable_cli_for_source(id, Some(PeerPlatform::Ios));
         assert_eq!(legacy.export_history_observation_versions, None);
+        for platform in [None, Some(PeerPlatform::Android)] {
+            let neutral = PeerCapabilities::portable_cli_for_source(id, platform);
+            assert!(
+                serde_json::to_value(neutral)
+                    .unwrap()
+                    .get("exportHistoryObservationVersions")
+                    .is_none()
+            );
+        }
+        assert_eq!(
+            PeerCapabilities::portable_cli_all_versions(id).export_history_observation_versions,
+            None
+        );
         assert_eq!(current.export_history_observation_versions, Some(vec![1]));
         assert_eq!(
             current.negotiated_export_history_observation_version(&legacy),

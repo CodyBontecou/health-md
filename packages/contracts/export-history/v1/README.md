@@ -42,7 +42,7 @@ Receivers require an authoritative non-nil `resolvedCanonicalSelection` whenever
 independent of corpus item/partition protocol versions. Both endpoints must select
 1 and durable installation binding before a new encrypted-context job attaches
 `ConnectedCorpusExportManifest.historyObservation`. Missing or unknown versions
-have no support. Draft candidates advertise version 1 for qualification; production merge/release requires complete native/physical acceptance.
+have no support. Draft candidates advertise version 1 for qualification; production merge/release requires complete native/physical acceptance. The Rust CLI keeps its source-neutral hello unchanged for new/unknown and Android peers; it advertises Apple observations only for an established iOS source. A connection uses the version selected from its actual sent and received hellos, never a platform learned afterward.
 Legacy manifests omit the field and retain their existing encoded bytes.
 
 The observation's `request_binding_sha256` is the existing v1 corpus fingerprint
