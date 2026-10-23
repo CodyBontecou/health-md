@@ -161,7 +161,7 @@ impl DirectIphoneBackend {
             )
             .await
             .map_err(|error| backend_error(&error, Some(job_id)))?;
-        Ok(raw_export_success(
+        let mut receipt = raw_export_success(
             job_id,
             "ios",
             "apple_health",
@@ -171,7 +171,9 @@ impl DirectIphoneBackend {
                 BackendError::new("healthmd_integrity_error", "Invalid raw artifact size.")
             })?,
             &result.artifact.sha256,
-        ))
+        );
+        attach_history_observation(&mut receipt, result.artifact.history_observation.as_ref());
+        Ok(receipt)
     }
 
     /// The shared wake-window object with enrollment reported truthfully for the configured
@@ -900,7 +902,7 @@ fn durable_raw_export_success(
     job_id: Uuid,
     artifact: &healthmd_client::direct::DurableRawArtifact,
 ) -> Value {
-    raw_export_success(
+    let mut receipt = raw_export_success(
         job_id,
         match artifact.platform {
             RawArtifactPlatform::Ios => "ios",
@@ -911,7 +913,18 @@ fn durable_raw_export_success(
         &artifact.status,
         artifact.byte_count,
         &artifact.sha256,
-    )
+    );
+    attach_history_observation(&mut receipt, artifact.history_observation.as_ref());
+    receipt
+}
+
+fn attach_history_observation(
+    receipt: &mut Value,
+    observation: Option<&healthmd_protocol::history::ExportHistoryObservation>,
+) {
+    if let Some(observation) = observation {
+        receipt["history_observation"] = json!(observation);
+    }
 }
 
 fn normalized_raw_status(status: &str) -> &str {
@@ -927,6 +940,7 @@ fn attach_raw_artifact_metadata(
     receipt: &mut Value,
     artifact: &healthmd_client::direct::DurableRawArtifact,
 ) {
+    attach_history_observation(receipt, artifact.history_observation.as_ref());
     receipt["status"] = json!(normalized_raw_status(&artifact.status));
     receipt["scope"] = json!("all_public_authorized");
     receipt["artifact"] = json!({

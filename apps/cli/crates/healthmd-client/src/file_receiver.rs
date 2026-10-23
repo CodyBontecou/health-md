@@ -873,6 +873,7 @@ impl FileReceiver {
                 .cloned()
                 .unwrap_or_default(),
             total_days: record.total_days.unwrap_or_default(),
+            history_observation_sha256: None,
         });
         self.jobs.save(&record)?;
         self.journal = Some(journal);

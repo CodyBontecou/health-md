@@ -252,6 +252,20 @@ impl PeerCapabilities {
         capabilities
     }
 
+    /// Only the independently implemented v1 is eligible; future-only peers are unverified.
+    #[must_use]
+    pub fn negotiated_export_history_observation_version(&self, peer: &Self) -> Option<i32> {
+        (self
+            .export_history_observation_versions
+            .as_ref()
+            .is_some_and(|versions| versions.contains(&1))
+            && peer
+                .export_history_observation_versions
+                .as_ref()
+                .is_some_and(|versions| versions.contains(&1)))
+        .then_some(1)
+    }
+
     #[must_use]
     pub fn negotiated_protocol_version(&self, peer: &Self) -> Option<i32> {
         self.protocol_versions
@@ -446,6 +460,34 @@ pub enum DirectMessage {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn history_negotiation_requires_bilateral_implemented_version() {
+        let versions = [
+            None,
+            Some(vec![]),
+            Some(vec![1]),
+            Some(vec![2]),
+            Some(vec![1, 2]),
+        ];
+        for local in &versions {
+            for remote in &versions {
+                let mut left = super::PeerCapabilities::portable_cli(crate::encoding::SwiftUuid(
+                    uuid::Uuid::nil(),
+                ));
+                let mut right = left.clone();
+                left.export_history_observation_versions = local.clone();
+                right.export_history_observation_versions = remote.clone();
+                let expected = (local.as_ref().is_some_and(|v| v.contains(&1))
+                    && remote.as_ref().is_some_and(|v| v.contains(&1)))
+                .then_some(1);
+                assert_eq!(
+                    left.negotiated_export_history_observation_version(&right),
+                    expected
+                );
+            }
+        }
+    }
+
     use super::*;
     use uuid::Uuid;
 

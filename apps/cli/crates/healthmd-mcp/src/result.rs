@@ -88,7 +88,26 @@ pub fn export_tool_result(
             "response": value
         })
     });
-    tool_result(value, is_error, structured, Vec::new())
+    let additional = if !is_error && value["schema"] == "healthmd.raw_export_receipt" {
+        let message = match value.get("history_observation") {
+            None => {
+                "History: legacy/unassessed. Completed capture and empty results do not prove full history."
+            }
+            Some(observation)
+                if observation["schema"] == "healthmd.export_history_observation"
+                    && observation["schema_version"] == 1 =>
+            {
+                "History: supplied admission observation is unverified by this presenter. It describes access observed before this job, not current permission or full history. Resume preserves the original observation; later permission changes are not assessed. See the original observation for its timestamp, metrics, range, and sample-END boundaries."
+            }
+            Some(_) => {
+                "History: invalid or unsupported supplied observation; historical access is unverified."
+            }
+        };
+        vec![json!({"type": "text", "text": message})]
+    } else {
+        Vec::new()
+    };
+    tool_result(value, is_error, structured, additional)
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -120,6 +139,46 @@ fn valid_export_receipt(value: &Value) -> bool {
 #[cfg(test)]
 mod history_disclosure_tests {
     use super::*;
+
+    #[test]
+    fn raw_export_disclosure_preserves_receipt_and_never_endorses_supplied_evidence() {
+        for (observation, expected) in [
+            (None, "legacy/unassessed"),
+            (Some(Value::Null), "invalid or unsupported"),
+            (
+                Some(json!({"schema":"healthmd.export_history_observation","schema_version":99})),
+                "invalid or unsupported",
+            ),
+            (
+                Some(json!({"schema":"healthmd.export_history_observation","schema_version":1})),
+                "unverified by this presenter",
+            ),
+        ] {
+            let mut receipt = json!({"schema":"healthmd.raw_export_receipt","schema_version":1,"status":"success"});
+            if let Some(observation) = observation {
+                receipt["history_observation"] = observation;
+            }
+            let result = export_tool_result("healthmd_export_raw", receipt.clone(), false, true);
+            assert_eq!(
+                serde_json::from_str::<Value>(result["content"][0]["text"].as_str().unwrap())
+                    .unwrap(),
+                receipt
+            );
+            assert!(
+                result["content"][1]["text"]
+                    .as_str()
+                    .unwrap()
+                    .contains(expected)
+            );
+        }
+        let failed = export_tool_result(
+            "healthmd_export_raw",
+            json!({"schema":"healthmd.raw_export_receipt"}),
+            true,
+            false,
+        );
+        assert_eq!(failed["content"].as_array().unwrap().len(), 1);
+    }
 
     fn complete_fixture() -> Value {
         let fixture = include_str!("test-fixtures/history-assessment-v1.json");

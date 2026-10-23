@@ -211,6 +211,7 @@ pub struct DurableRawArtifact {
     pub platform: RawArtifactPlatform,
     pub format: &'static str,
     pub profile: String,
+    pub history_observation: Option<healthmd_protocol::history::ExportHistoryObservation>,
     pub provider_id: Option<String>,
     pub status: String,
     pub byte_count: u64,
@@ -1474,6 +1475,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                     platform: RawArtifactPlatform::Ios,
                     format: "json",
                     profile: profile.to_owned(),
+                    history_observation: artifact.history_observation,
                     provider_id: Some("apple_health".to_owned()),
                     status: artifact.status,
                     byte_count: u64::try_from(artifact.byte_count)
@@ -1515,6 +1517,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                     platform: RawArtifactPlatform::Android,
                     format,
                     profile: "android_provider_native_snapshot_v1".to_owned(),
+                    history_observation: None,
                     provider_id: Some(provider_id),
                     status: receipt.status,
                     byte_count: receipt.byte_count,
@@ -1858,6 +1861,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                             || value.peer_binding != expected
                             || value.resolved_date_identifiers.is_empty()
                             || !accepted_dates_match(request, &value.resolved_date_identifiers)
+                            || (value.history_observation.is_some()
+                                && PeerCapabilities::portable_cli_all_versions(
+                                    self.identity.installation_id,
+                                )
+                                .negotiated_export_history_observation_version(peer)
+                                    != Some(1))
                         {
                             return Err(ClientError::UnexpectedMessage);
                         }
@@ -2035,6 +2044,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                             || value.peer_binding != expected_binding
                             || value.resolved_date_identifiers.is_empty()
                             || !accepted_dates_match(request, &value.resolved_date_identifiers)
+                            || (value.history_observation.is_some()
+                                && PeerCapabilities::portable_cli_all_versions(
+                                    self.identity.installation_id,
+                                )
+                                .negotiated_export_history_observation_version(peer)
+                                    != Some(1))
                         {
                             return Err(ClientError::UnexpectedMessage);
                         }

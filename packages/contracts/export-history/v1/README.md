@@ -45,3 +45,11 @@ Canonical extraction embeds the same observation in `receipt.history_observation
 keeps it in the companion receipt, rather than inventing a health-data row. Absent evidence
 omits these fields and remains unverified. These attachments do not alter capture status,
 daily documents, the raw-result schema version, or the extraction protocol version.
+
+Portable raw finalization pins the canonical observation digest alongside the saved artifact
+hash in private job metadata. Offline artifact, extraction, and JSONL recovery require the
+same immutable job request and pinned observation. An internally valid replacement journal
+cannot relabel already finalized bytes. Legacy records omit the pin and remain unobserved.
+The MCP raw receipt preserves validated backend observations, while the generic presenter
+makes no independent endorsement and discloses admission-time scope and permission-change
+limitations. Android raw metadata does not acquire an Apple observation.
