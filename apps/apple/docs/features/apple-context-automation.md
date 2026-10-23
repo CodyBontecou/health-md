@@ -23,6 +23,17 @@ all-history API, private API, flag enablement or deployment is involved.
   Manual IP v2** pairing/reconnect. Nearby encryption and `hello.installationID`
   alone do not prove an installation identity, so Nearby is unavailable for this
   new family. Pairing proofs and their cryptographic transcripts are unchanged.
+- Both actions open Health.md on iPhone to use its foreground authenticated
+  session. They briefly wait for foreground activation and existing transport
+  restoration (nominally five seconds). The profile/date scope is frozen before waiting; peer,
+  binding, execution and protected-data checks run again before admission. They
+  do not promise headless background acquisition; a disconnected or not-yet-ready
+  session still reports unavailable. Status retains the original request identity
+  on timeout. The Mac must already be awake and available.
+- Mac admission checks its encryption key away from the UI/receiver thread and
+  requests noninteractive Keychain authentication. Locked/unavailable key access
+  must not admit acquisition or claim completion; status retries the same request
+  after the owner restores access. Peer authority is checked again after waiting.
 - Choose an existing Connected Mac profile in Export Profiles and explicitly use
   **Bind context automation to this authenticated Mac**. This is a separate local
   binding, not a change to the frozen export profile or Shared Setup grammar.

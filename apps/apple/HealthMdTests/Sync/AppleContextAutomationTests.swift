@@ -256,6 +256,84 @@ final class AppleContextAutomationTests: XCTestCase {
     }
 
     #if os(iOS)
+    func testForegroundIntentWaitFreezesScopeAndPreservesAuthorityOnTimeoutLockAndPeerChange() async throws {
+        let peer = UUID()
+        let sync = service(peerID: peer)
+        let defaults = UserDefaults(suiteName: "context-foreground-\(UUID().uuidString)")!
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")
+        settings.metricSelection.enabledMetrics = ["steps"]
+        settings.detailPolicy = .summary
+        let profiles = LifecycleHarness.retain(ExportProfileStore(userDefaults: defaults))
+        let profile = profiles.add(name: "Foreground", settings: .from(settings), target: .connectedMac)
+        let journal = AppleContextJournal(root: root.appendingPathComponent("phone"))
+        var foreground = true
+        var protected = true
+        var poll: () -> Void = {}
+        let client = AppleContextPhoneClient(journal: journal, bindingRoot: root.appendingPathComponent("bindings"),
+            protectedDataAvailable: { protected }, executionBlocked: { _ in false },
+            foregroundAvailable: { foreground }, readinessPoll: { poll() })
+        client.install(sync)
+        try client.bind(profileID: profile.id, expectedPeerID: peer)
+        var refreshes: [AppleContextRequest] = []
+        var statuses: [AppleContextRequest] = []
+        sync.testMessageSendObserver = { message in
+            if case .appleContext(.refresh(let request)) = message { refreshes.append(request) }
+            if case .appleContext(.status(let request)) = message { statuses.append(request) }
+        }
+        sync.connectionState = .disconnected
+        foreground = false
+        poll = {
+            XCTAssertTrue(refreshes.isEmpty)
+            settings.metricSelection.enabledMetrics = ["heart_rate"]
+            profiles.updateSettings(id: profile.id, settings: .from(settings))
+            foreground = true
+            sync.connectionState = .connected
+        }
+        let day = request().startDate
+        let result = try await client.refreshAfterOpeningApp(profileName: "Foreground", startDate: day, endDate: day, profiles: profiles)
+        let frozen = try XCTUnwrap(refreshes.first)
+        XCTAssertEqual(refreshes.count, 1)
+        XCTAssertEqual(frozen.selection.metricIDs, ["steps"])
+        XCTAssertEqual(frozen.ownerDates, ["2026-01-02"])
+        XCTAssertEqual(frozen.macInstallationID, peer)
+        let id = try XCTUnwrap(UUID(uuidString: result.id))
+        sync.connectionState = .disconnected
+        foreground = false
+        poll = { foreground = true; sync.connectionState = .connected }
+        _ = try await client.statusAfterOpeningApp(id: id)
+        XCTAssertEqual(statuses, [frozen], "Status restores the original request, never the changed profile")
+
+        foreground = false
+        sync.connectionState = .disconnected
+        var polls = 0
+        poll = { polls += 1 }
+        let unavailable = try await client.statusAfterOpeningApp(id: id)
+        XCTAssertEqual(unavailable.id, result.id)
+        XCTAssertEqual(unavailable.status, "unavailable")
+        XCTAssertEqual(polls, 50)
+        XCTAssertEqual(statuses.count, 1, "Timeout cannot send against a background or disconnected session")
+
+        poll = { protected = false }
+        do {
+            _ = try await client.refreshAfterOpeningApp(profileName: "Foreground", startDate: day, endDate: day, profiles: profiles)
+            XCTFail("Protected data must be rechecked after suspension")
+        } catch AppleContextPhoneClient.ClientError.locked { }
+        protected = true
+        let replacement = UUID()
+        poll = {
+            foreground = true
+            sync.testSetAuthenticatedContextPeer(replacement)
+            sync.remoteCapabilities = .current(platform: .macOS, installationID: replacement)
+        }
+        do {
+            _ = try await client.refreshAfterOpeningApp(profileName: "Foreground", startDate: day, endDate: day, profiles: profiles)
+            XCTFail("A different authenticated Mac cannot satisfy the frozen request")
+        } catch AppleContextPhoneClient.ClientError.profile { }
+        XCTAssertEqual(refreshes.count, 1)
+        XCTAssertEqual(journal.allRecords.count, 1, "Rejected waits must not create ephemeral or duplicate jobs")
+    }
+
     func testExplicitBindingRejectsChangedPeerProtectedDataAndBlockedProfileWithoutReplacingAuthority() throws {
         let originalPeer = UUID()
         let sync = service(peerID: originalPeer)
@@ -601,6 +679,10 @@ final class AppleContextAutomationTests: XCTestCase {
         let metadata = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: metadataURL)) as? [String: Any])
         let actions = try XCTUnwrap(metadata["actions"] as? [String: Any])
         let action = try XCTUnwrap(actions["RefreshMacHealthContextIntent"] as? [String: Any])
+        XCTAssertEqual(action["openAppWhenRun"] as? Bool, true,
+                       "Context capture requires the phone app's foreground authenticated session")
+        let statusAction = try XCTUnwrap(actions["GetMacContextRefreshStatusIntent"] as? [String: Any])
+        XCTAssertEqual(statusAction["openAppWhenRun"] as? Bool, true)
         let configuration = try XCTUnwrap(action["actionConfiguration"] as? [String: Any])
         let summary = try XCTUnwrap(configuration["actionSummary"] as? [String: Any])
         let wrapper = try XCTUnwrap(summary["wrapper"] as? [String: Any])
@@ -1168,7 +1250,7 @@ final class AppleContextAutomationTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: retained, encoding: .utf8), "retained obstruction")
     }
 
-    func testMacLockedAdmissionAndForeignPeerNeverAcquireOrClaimSuccess() throws {
+    func testMacLockedAdmissionAndForeignPeerNeverAcquireOrClaimSuccess() async throws {
         let peer = UUID()
         let service = service(peerID: peer)
         let scope = request(phone: peer, mac: service.installationID)
@@ -1181,12 +1263,37 @@ final class AppleContextAutomationTests: XCTestCase {
             if case .iphoneExportRequest = message { acquisitions += 1 }
         }
         adapter.handle(.refresh(scope), sync: service, jobs: jobs, destination: destination(service))
+        for _ in 0..<100 where receipts.isEmpty { await Task.yield() }
         XCTAssertEqual(receipts.last?.state, .locked)
         XCTAssertEqual(acquisitions, 0)
         service.testSetAuthenticatedContextPeer(UUID())
         adapter.handle(.status(scope), sync: service, jobs: jobs, destination: destination(service))
         XCTAssertEqual(receipts.count, 1)
         XCTAssertFalse(adapter.allows(jobID: scope.id, sync: service))
+
+        // Security services can suspend: ingress stays available, duplicate
+        // requests share the waiter, and authority is rechecked after readiness.
+        service.testSetAuthenticatedContextPeer(peer)
+        let delayedScope = request(phone: peer, mac: service.installationID)
+        var readinessCalls = 0
+        var resumeReadiness: CheckedContinuation<AppleContextReceipt.State?, Never>?
+        let delayed = LifecycleHarness.retain(MacContextAutomationCoordinator(
+            journal: AppleContextJournal(root: root.appendingPathComponent("delayed-readiness")),
+            contextReadiness: {
+                readinessCalls += 1
+                return await withCheckedContinuation { resumeReadiness = $0 }
+            }))
+        delayed.handle(.refresh(delayedScope), sync: service, jobs: jobs, destination: destination(service))
+        for _ in 0..<100 where resumeReadiness == nil { await Task.yield() }
+        XCTAssertNotNil(resumeReadiness)
+        delayed.handle(.status(delayedScope), sync: service, jobs: jobs, destination: destination(service))
+        XCTAssertEqual(readinessCalls, 1)
+        service.testSetAuthenticatedContextPeer(UUID())
+        resumeReadiness?.resume(returning: nil)
+        for _ in 0..<100 { await Task.yield() }
+        XCTAssertEqual(acquisitions, 0)
+        XCTAssertEqual(receipts.count, 1)
+        XCTAssertFalse(delayed.journal.record(delayedScope.id)?.jobWasAdmitted ?? true)
     }
     #endif
 }

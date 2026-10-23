@@ -1,6 +1,7 @@
 #if os(macOS)
 import CryptoKit
 import Foundation
+import LocalAuthentication
 import Security
 
 /// Supplies the data-encryption key for the local Mac query-context store.
@@ -40,17 +41,20 @@ nonisolated final class KeychainHealthContextEncryptionKeyProvider: HealthContex
 
     private let service: String
     private let account: String
+    private let allowsAuthenticationUI: Bool
 
     init(
         service: String = "com.codybontecou.obsidianhealth.query-context",
-        account: String = "aes-gcm-key-v1"
+        account: String = "aes-gcm-key-v1",
+        allowsAuthenticationUI: Bool = true
     ) {
         self.service = service
         self.account = account
+        self.allowsAuthenticationUI = allowsAuthenticationUI
     }
 
     func existingKeyData() throws -> Data? {
-        let query = baseQuery.merging([
+        let query = authenticationQuery.merging([
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]) { _, new in new }
@@ -75,7 +79,7 @@ nonisolated final class KeychainHealthContextEncryptionKeyProvider: HealthContex
             throw HealthContextEncryptionKeyProviderError.randomGenerationFailed(randomStatus)
         }
 
-        var addQuery = baseQuery
+        var addQuery = authenticationQuery
         addQuery[kSecValueData as String] = generated
         addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
@@ -96,6 +100,17 @@ nonisolated final class KeychainHealthContextEncryptionKeyProvider: HealthContex
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw HealthContextEncryptionKeyProviderError.keychainDeleteFailed(status)
         }
+    }
+
+    /// Background automation must report locked rather than starting an authentication prompt.
+    private var authenticationQuery: [String: Any] {
+        var query = baseQuery
+        if !allowsAuthenticationUI {
+            let context = LAContext()
+            context.interactionNotAllowed = true
+            query[kSecUseAuthenticationContext as String] = context
+        }
+        return query
     }
 
     private var baseQuery: [String: Any] {

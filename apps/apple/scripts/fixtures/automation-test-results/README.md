@@ -5,7 +5,7 @@ They are fixtures, not hosted test receipts or native/device qualification.
 
 Each complete tree names the exact platform-conditional
 `AppleContextAutomationTests` inventory and has one `Passed` result per identity.
-iOS includes 18 cases, including explicit binding and changed-peer rejection;
+iOS includes 19 cases, including foreground readiness, frozen scope, explicit binding and changed-peer rejection;
 macOS includes 20 cases with stable-storage/admission regressions. An unrelated skipped case verifies that
 these receipts qualify only the named automation suite, not the full native run.
 The independent full-suite workflow gates remain authoritative.

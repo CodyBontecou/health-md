@@ -24,6 +24,7 @@ COMMON_CASES = (
 )
 PLATFORM_CASES = {
     "iOS": (
+        "testForegroundIntentWaitFreezesScopeAndPreservesAuthorityOnTimeoutLockAndPeerChange",
         "testExplicitBindingRejectsChangedPeerProtectedDataAndBlockedProfileWithoutReplacingAuthority",
         "testPhoneProductionAdapterFreezesProfileBeforeSendAndRecoversLostAckWithoutQuota",
         "testPhoneFailedPersistenceUnknownIneligibleUnboundAndLockedProfilesNeverSend",

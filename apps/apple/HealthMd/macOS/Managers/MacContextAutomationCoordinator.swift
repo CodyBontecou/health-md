@@ -14,7 +14,7 @@ final class MacContextAutomationCoordinator: ObservableObject {
     }
     private var tasks: [UUID: Task<Void, Never>] = [:]
     private var transferJobs: [UUID: UUID] = [:]
-    private let contextReadiness: () -> AppleContextReceipt.State?
+    private let contextReadiness: () async -> AppleContextReceipt.State?
 
     func allowsMessage(_ message: SyncMessage, sync: SyncService, inbound: Bool = true) -> Bool {
         let jobID: UUID?
@@ -109,17 +109,21 @@ final class MacContextAutomationCoordinator: ObservableObject {
         return await executor.execute(job, vaultManager: vault, progress: progress)
     }
 
-    init(journal: AppleContextJournal? = nil, contextReadiness: (() -> AppleContextReceipt.State?)? = nil) {
+    init(journal: AppleContextJournal? = nil, contextReadiness: (() async -> AppleContextReceipt.State?)? = nil) {
         self.journal = journal ?? AppleContextJournal(root: AppleContextJournal.productionRoot("MacContextRequests"))
         self.contextReadiness = contextReadiness ?? {
-            do {
-                _ = try KeychainHealthContextEncryptionKeyProvider().existingOrCreateKeyData()
-                return nil
-            } catch HealthContextEncryptionKeyProviderError.keychainReadFailed(let status) {
-                return status == errSecInteractionNotAllowed ? .locked : .unavailable
-            } catch HealthContextEncryptionKeyProviderError.keychainWriteFailed(let status) {
-                return status == errSecInteractionNotAllowed ? .locked : .unavailable
-            } catch { return .unavailable }
+            // Security services may block even without authentication UI. Keep the
+            // receiver and UI responsive while checking the existing encryption key.
+            await Task.detached(priority: .userInitiated) { () -> AppleContextReceipt.State? in
+                do {
+                    _ = try KeychainHealthContextEncryptionKeyProvider(allowsAuthenticationUI: false).existingOrCreateKeyData()
+                    return nil
+                } catch HealthContextEncryptionKeyProviderError.keychainReadFailed(let status) {
+                    return status == errSecInteractionNotAllowed ? .locked : .unavailable
+                } catch HealthContextEncryptionKeyProviderError.keychainWriteFailed(let status) {
+                    return status == errSecInteractionNotAllowed ? .locked : .unavailable
+                } catch { return .unavailable }
+            }.value
         }
     }
 
@@ -184,15 +188,18 @@ final class MacContextAutomationCoordinator: ObservableObject {
             publishState(request, state: .unavailable, sync: sync)
             return
         }
-        if let state = contextReadiness() {
-            publishState(request, state: state, sync: sync)
-            return
-        }
         guard tasks[request.id] == nil else { return }
         tasks[request.id] = Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.tasks.removeValue(forKey: request.id) }
             guard self.allows(jobID: request.id, sync: sync) else { return }
+            let readiness = await self.contextReadiness()
+            // Authentication/peer authority may change while Security services run.
+            guard !Task.isCancelled, self.allows(jobID: request.id, sync: sync) else { return }
+            if let readiness {
+                self.publishState(request, state: readiness, sync: sync)
+                return
+            }
             let response = await jobs.requestExport(.init(
                 jobID: request.id, startDate: request.startDate, endDate: request.endDate,
                 requestedDateIdentifiers: request.ownerDates, requestedBy: .cli,

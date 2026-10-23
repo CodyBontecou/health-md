@@ -8,6 +8,7 @@
           "name": "AppleContextAutomationTests",
           "nodeType": "Test Suite",
           "children": [
+            {"name": "testForegroundIntentWaitFreezesScopeAndPreservesAuthorityOnTimeoutLockAndPeerChange()", "nodeIdentifier": "AppleContextAutomationTests/testForegroundIntentWaitFreezesScopeAndPreservesAuthorityOnTimeoutLockAndPeerChange()", "nodeType": "Test Case", "result": "Passed"},
             {"name": "testExplicitBindingRejectsChangedPeerProtectedDataAndBlockedProfileWithoutReplacingAuthority()", "nodeIdentifier": "AppleContextAutomationTests/testExplicitBindingRejectsChangedPeerProtectedDataAndBlockedProfileWithoutReplacingAuthority()", "nodeType": "Test Case", "result": "Passed"},
             {"name": "testProductAutomationInventoryIsSeparateFromFrozenMetricAuthorityAndHasConcreteParityTargets()", "nodeIdentifier": "AppleContextAutomationTests/testProductAutomationInventoryIsSeparateFromFrozenMetricAuthorityAndHasConcreteParityTargets()", "nodeType": "Test Case", "result": "Passed"},
             {"name": "testLegacyCapabilityMissingOrFalseAndUnauthenticatedOrWrongRoleNeverSend()", "nodeIdentifier": "AppleContextAutomationTests/testLegacyCapabilityMissingOrFalseAndUnauthenticatedOrWrongRoleNeverSend()", "nodeType": "Test Case", "result": "Passed"},

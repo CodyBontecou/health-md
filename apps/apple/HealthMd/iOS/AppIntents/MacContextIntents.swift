@@ -11,14 +11,19 @@ final class AppleContextPhoneClient {
     private let bindingRoot: URL
     private let protectedDataAvailable: () -> Bool
     private let executionBlocked: (UUID) -> Bool
+    private let foregroundAvailable: () -> Bool
+    private let readinessPoll: () async throws -> Void
     private var transferJobs: [UUID: UUID] = [:]
 
     init(journal: AppleContextJournal? = nil, bindingRoot: URL? = nil,
-         protectedDataAvailable: (() -> Bool)? = nil, executionBlocked: ((UUID) -> Bool)? = nil) {
+         protectedDataAvailable: (() -> Bool)? = nil, executionBlocked: ((UUID) -> Bool)? = nil,
+         foregroundAvailable: (() -> Bool)? = nil, readinessPoll: (() async throws -> Void)? = nil) {
         self.journal = journal ?? AppleContextJournal(root: AppleContextJournal.productionRoot("PhoneContextRequests"))
         self.bindingRoot = bindingRoot ?? AppleContextJournal.productionRoot("ContextProfileBindings")
         self.protectedDataAvailable = protectedDataAvailable ?? { UIApplication.shared.isProtectedDataAvailable }
         self.executionBlocked = executionBlocked ?? { SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: $0) }
+        self.foregroundAvailable = foregroundAvailable ?? { UIApplication.shared.applicationState == .active }
+        self.readinessPoll = readinessPoll ?? { try await Task.sleep(for: .milliseconds(100)) }
     }
     func install(_ sync: SyncService) {
         self.sync = sync
@@ -81,6 +86,18 @@ final class AppleContextPhoneClient {
 
     func refresh(profileName: String?, startDate: Date, endDate: Date,
                  profiles suppliedProfiles: ExportProfileStore? = nil) throws -> MacContextRefreshEntity {
+        try sendRefresh(makeRequest(profileName: profileName, startDate: startDate, endDate: endDate, profiles: suppliedProfiles))
+    }
+
+    func refreshAfterOpeningApp(profileName: String?, startDate: Date, endDate: Date,
+                                profiles: ExportProfileStore? = nil) async throws -> MacContextRefreshEntity {
+        let request = try makeRequest(profileName: profileName, startDate: startDate, endDate: endDate, profiles: profiles)
+        try await awaitForegroundConnection(for: request)
+        return try sendRefresh(request)
+    }
+
+    private func makeRequest(profileName: String?, startDate: Date, endDate: Date,
+                             profiles suppliedProfiles: ExportProfileStore?) throws -> AppleContextRequest {
         guard protectedDataAvailable() else { throw ClientError.locked }
         let profiles = suppliedProfiles ?? ExportProfileStore()
         let profile: ExportProfile?
@@ -90,10 +107,6 @@ final class AppleContextPhoneClient {
         guard let profile, profile.target == .connectedMac,
               !executionBlocked(profile.id),
               let peer = boundPeer(profileID: profile.id) else { throw ClientError.profile }
-        guard let sync, sync.connectionState == .connected else { throw ClientError.unavailable }
-        guard sync.canUsePhoneContextAutomation else { throw ClientError.incompatible }
-        guard sync.authenticatedContextPeerID == peer else { throw ClientError.profile }
-
         // All scope resolution is synchronous, before the intent's first await.
         // Only Apple Health is supported by this first automation adapter.
         guard profile.settings.detailPolicy == .summary || profile.settings.detailPolicy == .lossless else { throw ClientError.scope }
@@ -109,15 +122,61 @@ final class AppleContextPhoneClient {
         guard start <= end else { throw ClientError.scope }
         let dates = ExportOrchestrator.dateRange(from: start, to: end, calendar: calendar)
         let formatter = AppleContextRequest.formatter(zone: zone)
-        let request = AppleContextRequest(phoneInstallationID: sync.installationID,
+        return AppleContextRequest(phoneInstallationID: sync?.installationID ?? SyncInstallationIdentity.persisted(),
             macInstallationID: peer, profileID: profile.id,
             ownerDates: dates.map { formatter.string(from: $0) }, timeZoneIdentifier: zone.identifier,
             startDate: start, endDate: end,
             selection: CanonicalHealthDataSelection(metricIDs: Array(profile.settings.metricSelection.enabledMetricIDs),
                 sourceIDs: ["apple_health"], detailLevel: profile.settings.detailPolicy.includesCanonicalArchive ? .lossless : .summary))
+    }
+
+    private func awaitForegroundConnection(for request: AppleContextRequest) async throws {
+        // Opening the app and restoring its saved transport are asynchronous.
+        // This never initiates pairing or substitutes another peer or scope.
+        for _ in 0..<50 {
+            try Task.checkCancellation()
+            guard protectedDataAvailable() else { throw ClientError.locked }
+            if foregroundAvailable(), let sync, sync.connectionState == .connected,
+               sync.remoteCapabilities != nil {
+                guard sync.canUsePhoneContextAutomation else { throw ClientError.incompatible }
+                guard sync.authenticatedContextPeerID == request.macInstallationID,
+                      sync.installationID == request.phoneInstallationID else { throw ClientError.profile }
+                return
+            }
+            try await readinessPoll()
+        }
+        throw ClientError.unavailable
+    }
+
+    private func sendRefresh(_ request: AppleContextRequest) throws -> MacContextRefreshEntity {
+        guard protectedDataAvailable() else { throw ClientError.locked }
+        guard !executionBlocked(request.profileID),
+              boundPeer(profileID: request.profileID) == request.macInstallationID else { throw ClientError.profile }
+        guard let sync, sync.connectionState == .connected else { throw ClientError.unavailable }
+        guard sync.canUsePhoneContextAutomation else { throw ClientError.incompatible }
+        guard sync.authenticatedContextPeerID == request.macInstallationID,
+              sync.installationID == request.phoneInstallationID else { throw ClientError.profile }
         try journal.admit(request) // Failure means ZERO sends, no ephemeral success.
         sync.send(.appleContext(.refresh(request)))
         return entity(for: request.id)
+    }
+
+    func statusAfterOpeningApp(id: UUID) async throws -> MacContextRefreshEntity {
+        guard protectedDataAvailable() else { throw ClientError.locked }
+        guard let request = journal.recoveryRequest(id),
+              request.phoneInstallationID == (sync?.installationID ?? SyncInstallationIdentity.persisted()) else {
+            throw ClientError.unknownRequest
+        }
+        do {
+            try await awaitForegroundConnection(for: request)
+        } catch ClientError.unavailable {
+            return MacContextRefreshEntity(id: id.uuidString, status: "unavailable")
+        } catch ClientError.incompatible {
+            return MacContextRefreshEntity(id: id.uuidString, status: "incompatible")
+        } catch ClientError.profile {
+            return MacContextRefreshEntity(id: id.uuidString, status: "unavailable")
+        }
+        return try status(id: id)
     }
 
     func status(id: UUID) throws -> MacContextRefreshEntity {
@@ -227,7 +286,7 @@ struct MacContextRefreshQuery: EntityQuery {
 struct RefreshMacHealthContextIntent: AppIntent {
     static var title: LocalizedStringResource = "Refresh Mac Health Context"
     static var description = IntentDescription("Refresh explicit owner dates in the paired Mac's encrypted context, without export files or file quota. Requires open, authenticated apps.", categoryName: "Health")
-    static var openAppWhenRun = false
+    static var openAppWhenRun = true
     @Parameter(title: "Profile", description: "Saved Connected Mac profile name. Empty selects the active saved profile; no live-settings fallback.")
     var profile: String?
     @Parameter(title: "Start Date") var startDate: Date
@@ -239,7 +298,7 @@ struct RefreshMacHealthContextIntent: AppIntent {
     }
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<MacContextRefreshEntity> & ProvidesDialog {
-        let entity = try AppleContextPhoneClient.shared.refresh(profileName: profile, startDate: startDate, endDate: endDate)
+        let entity = try await AppleContextPhoneClient.shared.refreshAfterOpeningApp(profileName: profile, startDate: startDate, endDate: endDate)
         return .result(value: entity, dialog: "Request saved; context refresh is pending. Use Get Mac Context Refresh Status with this request.")
     }
 }
@@ -247,12 +306,12 @@ struct RefreshMacHealthContextIntent: AppIntent {
 struct GetMacContextRefreshStatusIntent: AppIntent {
     static var title: LocalizedStringResource = "Get Mac Context Refresh Status"
     static var description = IntentDescription("Read a saved context refresh receipt and request an updated status from its original authenticated Mac. Disconnection is not completion.", categoryName: "Health")
-    static var openAppWhenRun = false
+    static var openAppWhenRun = true
     @Parameter(title: "Refresh Request") var request: MacContextRefreshEntity
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<MacContextRefreshEntity> & ProvidesDialog {
         guard let id = UUID(uuidString: request.id) else { throw AppleContextPhoneClient.ClientError.unknownRequest }
-        let entity = try AppleContextPhoneClient.shared.status(id: id)
+        let entity = try await AppleContextPhoneClient.shared.statusAfterOpeningApp(id: id)
         return .result(value: entity, dialog: IntentDialog(stringLiteral: "Context refresh: \(entity.status). Request: \(entity.id)."))
     }
 }
