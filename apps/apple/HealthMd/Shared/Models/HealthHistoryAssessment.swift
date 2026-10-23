@@ -86,6 +86,9 @@ nonisolated struct HealthHistoryAssessment: Equatable, Sendable {
         self.evidenceSource = evidenceSource
     }
 
+    /// A bounded logical wait is not consent to start an unverified export.
+    var requiresExplicitContinuation: Bool { evidenceSource == "assessment_not_completed" }
+
     var hasIntersectingLimit: Bool { types.contains { $0.limitationIntersects(scope) } }
     var hasUnverifiedHistory: Bool {
         types.contains {

@@ -207,6 +207,82 @@ final class HealthHistoryPhonePreviewTests: XCTestCase {
         XCTAssertEqual(provider.callCount, 1)
     }
 
+    func testRepeatedExecutionCancelAndRetryRetainsOnePhysicalProviderUntilReturn() async {
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        let worker = HealthHistoryAssessmentWorker(logicalDeadline: 60)
+        let provider = SuspendedHistoryProvider()
+        let request = scope(metrics: ["steps"])
+        let fallback = assessment(scope: request, completed: false)
+        func attempt() -> Task<HealthHistoryAssessment?, Never> {
+            Task { @MainActor in
+                await coordinator.assessExecution(worker: worker, notCompleted: fallback,
+                    scope: request, isCurrent: { true }) {
+                        await provider.assess(scope: request)
+                    }
+            }
+        }
+        let first = attempt()
+        for _ in 0..<200 {
+            if provider.callCount > 0 { break }
+            await Task.yield()
+        }
+        XCTAssertEqual(provider.callCount, 1)
+        var retries: [Task<HealthHistoryAssessment?, Never>] = []
+        for _ in 0..<3 {
+            coordinator.invalidate()
+            worker.cancelLogicalWaiter()
+            first.cancel()
+            retries.append(attempt())
+            for _ in 0..<20 { await Task.yield() }
+        }
+        XCTAssertEqual(provider.callCount, 1, "Cancel/Continue and retry must not multiply unresolved SDK calls")
+        XCTAssertTrue(worker.hasUnresolvedPhysicalOperation)
+        provider.suspend = false
+        provider.resumeAll()
+        let obsolete = await first.value
+        XCTAssertNil(obsolete, "The cancelled assessment cannot publish after physical completion")
+        for task in retries {
+            let result = await task.value
+            if let result { XCTAssertEqual(result.evidenceSource, "assessment_not_completed") }
+        }
+        for _ in 0..<200 {
+            if !worker.hasUnresolvedPhysicalOperation { break }
+            await Task.yield()
+        }
+        XCTAssertFalse(worker.hasUnresolvedPhysicalOperation)
+        let latestRetry = await retries[2].value
+        XCTAssertNotNil(latestRetry, "The current busy-path attempt returns conservative evidence")
+        XCTAssertEqual(latestRetry?.evidenceSource, "assessment_not_completed")
+        XCTAssertEqual(latestRetry?.requiresExplicitContinuation, true)
+        let fresh = await attempt().value
+        XCTAssertEqual(fresh?.evidenceSource, "synthetic_provider")
+        XCTAssertEqual(fresh?.requiresExplicitContinuation, false)
+        XCTAssertEqual(provider.callCount, 2, "Only genuine provider retirement admits a fresh assessment")
+    }
+
+    func testExecutionDeadlineRetainsExplicitContinuationDecisionAndPhysicalOwner() async {
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        let worker = HealthHistoryAssessmentWorker(logicalDeadline: 0.05)
+        let provider = SuspendedHistoryProvider()
+        let request = scope(metrics: ["steps"])
+        let result = await coordinator.assessExecution(worker: worker,
+            notCompleted: assessment(scope: request, completed: false), scope: request,
+            isCurrent: { true }) { await provider.assess(scope: request) }
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.requiresExplicitContinuation, true,
+            "A logical deadline must keep capture behind the user's Continue action")
+        XCTAssertEqual(provider.callCount, 1)
+        XCTAssertTrue(worker.hasUnresolvedPhysicalOperation)
+        provider.resumeAll()
+        for _ in 0..<200 {
+            if !worker.hasUnresolvedPhysicalOperation { break }
+            await Task.yield()
+        }
+        XCTAssertFalse(worker.hasUnresolvedPhysicalOperation)
+        XCTAssertEqual(result?.requiresExplicitContinuation, true,
+            "Late provider completion cannot relabel the pending user decision")
+    }
+
     private func scope(metrics: Set<String>) -> HealthHistoryScope {
         HealthHistoryScope(metricIDs: metrics, startDate: Date(timeIntervalSince1970: 1_800_000_000),
             endDate: Date(timeIntervalSince1970: 1_800_086_400), timeZoneIdentifier: "UTC",

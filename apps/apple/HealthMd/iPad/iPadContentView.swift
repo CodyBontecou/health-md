@@ -619,20 +619,32 @@ struct iPadContentView: View {
         refreshHistoryProfileIdentity()
         let selection = freshInteractiveHistorySelection()
         let requestID = historyExecutionCoordinator.beginRequest()
+        executionHistoryAssessment = nil
         pendingHistorySelection = selection
         pendingHistoryRequestID = requestID
         isAssessingHistory = true
         exportStatusMessage = "Checking history access…"
         historyExecutionTask = Task {
-            defer { if pendingHistoryRequestID == requestID { clearPendingHistoryCheck() } }
-            let result = await historyExecutionCoordinator.assess(requestID: requestID, scope: selection.scope, isCurrent: {
-                selection == freshInteractiveHistorySelection() && scenePhase == .active
-            }, operation: {
-                await historyExecutionWorker.assess(notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: selection.scope)) {
+            var awaitingUserDecision = false
+            defer { if !awaitingUserDecision && pendingHistoryRequestID == requestID { clearPendingHistoryCheck() } }
+            let result = await historyExecutionCoordinator.assessExecution(requestID: requestID,
+                worker: historyExecutionWorker,
+                notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: selection.scope),
+                scope: selection.scope, isCurrent: {
+                    selection == freshInteractiveHistorySelection() && scenePhase == .active
+                }, operation: {
                     await healthKitManager.assessHistoryAccess(scope: selection.scope)
-                }
-            })
+                })
             guard pendingHistoryRequestID == requestID, let assessment = result else { return }
+            if assessment.requiresExplicitContinuation {
+                // The logical deadline releases this task, but the SDK owner
+                // stays retained. Keep Continue/Cancel reachable until the user
+                // chooses; a timeout must never admit capture automatically.
+                awaitingUserDecision = true
+                historyExecutionTask = nil
+                exportStatusMessage = "History check did not complete. Continue without verification or cancel."
+                return
+            }
             clearPendingHistoryCheck()
             executionHistoryAssessment = assessment
             beginInteractiveCapture(selection)

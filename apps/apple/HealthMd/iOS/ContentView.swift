@@ -40,6 +40,7 @@ struct ContentView: View {
     @State private var isAssessingHistory = false
     @State private var executionHistoryAssessment: HealthHistoryAssessment?
     @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
+    @State private var historyExecutionWorker = HealthHistoryAssessmentWorker()
     @State private var historyProfilePublicationObserver = HealthHistoryProfilePublicationObserver()
     @State private var historyExecutionTask: Task<Void, Never>?
     @State private var pendingHistorySelection: HealthHistoryExecutionSelection?
@@ -1220,16 +1221,19 @@ struct ContentView: View {
         // completion. This is UI evidence only: consumer receipts need review.
         let selection = interactiveHistorySelection
         let requestID = historyExecutionCoordinator.beginRequest()
+        executionHistoryAssessment = nil
         pendingHistorySelection = selection
         pendingHistoryRequestID = requestID
         isAssessingHistory = true
         exportStatusMessage = "Checking history access…"
         historyExecutionTask = Task {
+            var awaitingUserDecision = false
             defer {
                 // A cancelled/stalled old request must not clear a newer owner.
-                if pendingHistoryRequestID == requestID { clearPendingHistoryCheck() }
+                if !awaitingUserDecision && pendingHistoryRequestID == requestID { clearPendingHistoryCheck() }
             }
-            let result = await historyExecutionCoordinator.assess(requestID: requestID, scope: selection.scope, isCurrent: {
+            let result = await historyExecutionCoordinator.assessExecution(requestID: requestID, worker: historyExecutionWorker,
+                notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: selection.scope), scope: selection.scope, isCurrent: {
                 selection == interactiveHistorySelection
             }, operation: {
                 await healthKitManager.assessHistoryAccess(scope: selection.scope)
@@ -1237,6 +1241,15 @@ struct ContentView: View {
             guard pendingHistoryRequestID == requestID else { return }
             guard let assessment = result else {
                 exportStatusMessage = "Export selection changed. Review the range and export again."
+                return
+            }
+            if assessment.requiresExplicitContinuation {
+                // The logical deadline releases this task, but the SDK owner
+                // stays retained. Keep Continue/Cancel reachable until the user
+                // chooses; a timeout must never admit capture automatically.
+                awaitingUserDecision = true
+                historyExecutionTask = nil
+                exportStatusMessage = "History check did not complete. Continue without verification or cancel."
                 return
             }
             clearPendingHistoryCheck()
@@ -1258,6 +1271,7 @@ struct ContentView: View {
 
     private func invalidateExecutionHistory(reason: String) {
         historyExecutionCoordinator.invalidate()
+        historyExecutionWorker.cancelLogicalWaiter()
         executionHistoryAssessment = nil
         historyExecutionTask?.cancel()
         if isAssessingHistory {
@@ -1275,6 +1289,7 @@ struct ContentView: View {
             return
         }
         historyExecutionCoordinator.invalidate()
+        historyExecutionWorker.cancelLogicalWaiter()
         historyExecutionTask?.cancel()
         clearPendingHistoryCheck()
         executionHistoryAssessment = healthKitManager.historyAssessmentNotCompleted(scope: selection.scope)

@@ -24,6 +24,23 @@ final class HealthHistoryAssessmentCoordinator {
         }
     }
 
+    /// Shared phone/tablet execution seam; the surface retains its worker.
+    func assessExecution(
+        requestID: UUID? = nil,
+        worker: HealthHistoryAssessmentWorker,
+        notCompleted: HealthHistoryAssessment,
+        scope: HealthHistoryScope,
+        isCurrent: () -> Bool,
+        operation: @escaping @MainActor () async -> HealthHistoryAssessment
+    ) async -> HealthHistoryAssessment? {
+        await assess(requestID: requestID, scope: scope, isCurrent: isCurrent) {
+            // A cancelled SDK call still owns the physical slot. Execution does
+            // not queue behind it or multiply it; return explicit unverified
+            // evidence until the provider actually retires.
+            await worker.assess(notCompleted: notCompleted, operation: operation)
+        }
+    }
+
     func invalidate() { revision = UUID() }
     func beginRequest() -> UUID {
         invalidate()
