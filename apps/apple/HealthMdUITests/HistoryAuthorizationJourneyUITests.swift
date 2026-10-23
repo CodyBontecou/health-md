@@ -153,8 +153,11 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         for _ in 0..<12 {
             let exists = element.exists
             let viewport = scroll.frame.intersection(app.frame)
-            let tabs = app.tabBars.firstMatch
-            var bottom = tabs.exists ? min(viewport.maxY, tabs.frame.minY) : viewport.maxY
+            // Both native roots lay this identified viewport inside their safe
+            // area. A broad TabBar firstMatch snapshot hangs on the SDK27 large-
+            // text phone root before any pan; use the viewport's own boundary.
+            // The pinned export/status overlays still reduce it below.
+            var bottom = viewport.maxY
             // The completion badge and export footer are pinned above the tab
             // bar. A pan at 70% of the AX scroll frame lands on them, not on the
             // page (the exact bounded/pending execution failures showed no travel).
