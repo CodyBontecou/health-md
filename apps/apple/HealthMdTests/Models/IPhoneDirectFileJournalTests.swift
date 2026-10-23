@@ -84,7 +84,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
             from: JSONEncoder().encode(journal)
         )
 
-        XCTAssertEqual(decoded.version, IPhoneDirectFileJournal.currentVersion)
+        XCTAssertEqual(decoded.version, IPhoneDirectFileJournal.derivedOutputReconciliationVersion)
         XCTAssertEqual(decoded.appleExportEnginePin, journal.appleExportEnginePin)
         XCTAssertEqual(decoded.appleExportEnginePin?.engine, .rust)
         XCTAssertEqual(decoded.appleDirectProtocolPin, journal.appleDirectProtocolPin)
@@ -750,6 +750,32 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         }
     }
     #endif
+
+    @MainActor
+    func testCapturePlanPreservesRollupDaysAndRejectsInjectedTransferDay() throws {
+        let journal = try makeJournal()
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let ownerDate = calendar.startOfDay(for: journal.requestedDates[0])
+        let metadata = MacExportStreamingJobBuilder.metadata(startDate: ownerDate, endDate: ownerDate,
+            requestedDates: [ownerDate], rollupRequestedDates: [ownerDate],
+            settings: journal.settingsSnapshot.makeAdvancedExportSettings(), healthSubfolder: journal.healthSubfolder,
+            destinationDisplayName: nil, frozenSettingsSnapshot: journal.settingsSnapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(journal)) as? [String: Any])
+        object["requestedDates"] = [ownerDate.timeIntervalSinceReferenceDate]
+        object["originalRequestedDates"] = [ownerDate.timeIntervalSinceReferenceDate]
+        object["transferDates"] = metadata.transferDates.map(\.timeIntervalSinceReferenceDate)
+        object["capturedDays"] = []
+        func decoded() throws -> IPhoneDirectFileJournal {
+            try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: JSONSerialization.data(withJSONObject: object))
+        }
+        XCTAssertTrue(metadata.transferDates.contains { $0 != ownerDate }, "Weekly rollup context must be exercised")
+        XCTAssertNoThrow(try decoded().validateCapturePlan())
+        object["transferDates"] = (metadata.transferDates + [ownerDate.addingTimeInterval(86400 * 400)])
+            .map(\.timeIntervalSinceReferenceDate)
+        XCTAssertThrowsError(try decoded().validateCapturePlan())
+    }
 
     private func makeJournal() throws -> IPhoneDirectFileJournal {
         let jobID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!

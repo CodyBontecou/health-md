@@ -105,7 +105,15 @@ private struct DirectDestinationIdentity: Codable, Equatable {
 }
 
 private struct DirectFileReceiveJournal: Codable, Equatable {
-    static let currentVersion = 2
+    static let legacyVersion = 2
+    static let currentVersion = 3
+    static func version(for accepted: DirectExportAccepted) -> Int {
+        accepted.historyObservation == nil ? legacyVersion : currentVersion
+    }
+    var hasValidHistoryVersion: Bool {
+        version == Self.version(for: accepted)
+            && (accepted.historyObservation.map { $0.matches(request: request, accepted: accepted, session: session) } ?? true)
+    }
     let version: Int
     let request: DirectExportRequest
     let accepted: DirectExportAccepted
@@ -167,7 +175,7 @@ public actor DirectFileReceiver {
                 DirectFileReceiveJournal.self,
                 from: Data(contentsOf: url)
             )
-            guard persisted.version == DirectFileReceiveJournal.currentVersion,
+            guard persisted.hasValidHistoryVersion,
                   persisted.request == request,
                   persisted.destinationIdentity == currentDestinationIdentity else {
                 throw DirectFileReceiverError.requestChanged
@@ -181,7 +189,7 @@ public actor DirectFileReceiver {
             journal = persisted
         } else {
             let created = DirectFileReceiveJournal(
-                version: DirectFileReceiveJournal.currentVersion,
+                version: DirectFileReceiveJournal.version(for: accepted),
                 request: request,
                 accepted: accepted,
                 session: session,

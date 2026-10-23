@@ -10,6 +10,18 @@ final class ExportHistoryResumeTests: XCTestCase {
         let session: DirectTransferSession
     }
 
+    func testObservationNegotiationRequiresBothPeersAndImplementedVersion() {
+        func capabilities(_ versions: [Int]?) -> DirectPeerCapabilities {
+            DirectPeerCapabilities(platform: .iOS, installationID: UUID(), exportHistoryObservationVersions: versions)
+        }
+        for local in [nil, [], [1], [2], [1, 2]] as [[Int]?] {
+            for remote in [nil, [], [1], [2], [1, 2]] as [[Int]?] {
+                let expected: Int? = local?.contains(1) == true && remote?.contains(1) == true ? 1 : nil
+                XCTAssertEqual(capabilities(local).negotiatedExportHistoryObservationVersion(with: capabilities(remote)), expected)
+            }
+        }
+    }
+
     func testRawAndFileResumeRejectChangedOrRemovedObservation() async throws {
         var sourceRoot = URL(fileURLWithPath: #filePath)
         for _ in 0..<7 { sourceRoot.deleteLastPathComponent() }
@@ -57,6 +69,20 @@ final class ExportHistoryResumeTests: XCTestCase {
                 }
             }
             try await prepare(first)
+            try await prepare(first)
+            let checkpoint = layout.corpusSessionsURL.appendingPathComponent(request.jobID.uuidString.lowercased())
+                .appendingPathComponent(mode == .rawJSON ? "journal.json" : "file-journal.json")
+            let saved = try Data(contentsOf: checkpoint)
+            let checkpointObject = try XCTUnwrap(JSONSerialization.jsonObject(with: saved) as? [String: Any])
+            for version in [mode == .rawJSON ? 1 : 2, 999] {
+                var changed = checkpointObject
+                changed["version"] = version
+                try JSONSerialization.data(withJSONObject: changed).write(to: checkpoint)
+                do { try await prepare(first); XCTFail("Resume accepted an incompatible checkpoint version") }
+                catch { XCTAssertTrue(error is DirectRawReceiverError || error is DirectFileReceiverError) }
+                XCTAssertEqual(try Data(contentsOf: checkpoint), try JSONSerialization.data(withJSONObject: changed))
+            }
+            try saved.write(to: checkpoint)
             try await prepare(first)
             object["observation_id"] = "66666666-6666-4666-8666-666666666666"
             for changed in [accepted(try observation(object)), accepted(nil)] {

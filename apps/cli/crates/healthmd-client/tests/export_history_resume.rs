@@ -49,7 +49,7 @@ fn raw_and_file_checkpoints_reject_changed_or_removed_observations() {
         let jobs = JobStore::new(layout.clone()).unwrap();
         jobs.save(&JobRecord::new(request.clone())).unwrap();
         let mut raw = RawReceiver::new(layout.clone(), jobs.clone());
-        let mut files = FileReceiver::new(layout, jobs);
+        let mut files = FileReceiver::new(layout.clone(), jobs);
         let mut prepare = |value: ExportAccepted| {
             if file_mode {
                 files.prepare(request.clone(), value, session.clone())
@@ -58,6 +58,26 @@ fn raw_and_file_checkpoints_reject_changed_or_removed_observations() {
             }
         };
         prepare(accepted.clone()).unwrap();
+        prepare(accepted.clone()).unwrap();
+        let checkpoint = layout
+            .corpus_sessions_dir()
+            .join(request.job_id.0.to_string())
+            .join(if file_mode {
+                "file-journal.json"
+            } else {
+                "journal.json"
+            });
+        let saved = std::fs::read(&checkpoint).unwrap();
+        let checkpoint_value: serde_json::Value = serde_json::from_slice(&saved).unwrap();
+        for version in [if file_mode { 2 } else { 1 }, 999] {
+            let mut changed = checkpoint_value.clone();
+            changed["version"] = json!(version);
+            let bytes = serde_json::to_vec(&changed).unwrap();
+            std::fs::write(&checkpoint, &bytes).unwrap();
+            assert!(prepare(accepted.clone()).is_err());
+            assert_eq!(std::fs::read(&checkpoint).unwrap(), bytes);
+        }
+        std::fs::write(&checkpoint, saved).unwrap();
         prepare(accepted.clone()).unwrap();
         evidence["observation_id"] = json!("66666666-6666-4666-8666-666666666666");
         let mut changed = accepted.clone();

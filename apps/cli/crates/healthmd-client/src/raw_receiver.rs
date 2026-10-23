@@ -38,7 +38,16 @@ use crate::{
     storage::StorageLayout,
 };
 
-const JOURNAL_VERSION: u16 = 1;
+const LEGACY_JOURNAL_VERSION: u16 = 1;
+const HISTORY_JOURNAL_VERSION: u16 = 2;
+
+fn journal_version(accepted: &ExportAccepted) -> u16 {
+    if accepted.history_observation.is_some() {
+        HISTORY_JOURNAL_VERSION
+    } else {
+        LEGACY_JOURNAL_VERSION
+    }
+}
 const MAXIMUM_FIELD_POINTERS: usize = 256;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -133,7 +142,7 @@ impl RawReceiver {
         let journal_path = directory.join("journal.json");
         let journal = if journal_path.exists() {
             let persisted = load_journal(&journal_path)?;
-            if persisted.version != JOURNAL_VERSION
+            if persisted.version != journal_version(&accepted)
                 || persisted.request != request
                 || persisted.session != session
                 || persisted.accepted.peer_binding != accepted.peer_binding
@@ -151,7 +160,7 @@ impl RawReceiver {
             persisted
         } else {
             let created = RawJournal {
-                version: JOURNAL_VERSION,
+                version: journal_version(&accepted),
                 request,
                 accepted,
                 session,
@@ -1567,7 +1576,12 @@ fn assemble_response(
         json_string(raw_profile_name(profile))?
     )
     .map_err(storage_error)?;
-    if let Some(selection) = &journal.accepted.resolved_canonical_selection {
+    if let Some(selection) = journal
+        .accepted
+        .resolved_canonical_selection
+        .as_ref()
+        .filter(|_| journal.request.raw_profile == Some(RawProfile::HealthDataProjection))
+    {
         write!(
             output,
             ",\"canonical_selection\":{}",
@@ -1816,12 +1830,26 @@ fn completed_day_count(journal: &RawJournal) -> Result<i64, ClientError> {
 }
 
 fn load_journal(path: &Path) -> Result<RawJournal, ClientError> {
-    serde_json::from_slice(&read_bounded(
+    let journal: RawJournal = serde_json::from_slice(&read_bounded(
         path,
         MAXIMUM_DURABLE_JSON_BYTES,
         "raw journal exceeds the durable metadata limit",
     )?)
-    .map_err(|_| invalid("raw journal is malformed"))
+    .map_err(|_| invalid("raw journal is malformed"))?;
+    if journal.version != journal_version(&journal.accepted)
+        || journal
+            .accepted
+            .history_observation
+            .as_ref()
+            .is_some_and(|evidence| {
+                !evidence.matches(&journal.request, &journal.accepted, &journal.session)
+            })
+    {
+        return Err(invalid(
+            "durable history observation or journal version changed",
+        ));
+    }
+    Ok(journal)
 }
 
 fn save_journal(layout: &StorageLayout, journal: &RawJournal) -> Result<(), ClientError> {

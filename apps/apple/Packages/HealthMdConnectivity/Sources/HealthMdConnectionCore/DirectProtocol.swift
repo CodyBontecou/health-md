@@ -188,6 +188,12 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
     public func negotiatedProtocolVersion(with peer: Self) -> Int? {
         Set(protocolVersions).intersection(peer.protocolVersions).max()
     }
+
+    /// Select only a locally implemented independent observation version.
+    public func negotiatedExportHistoryObservationVersion(with peer: Self) -> Int? {
+        exportHistoryObservationVersions?.contains(1) == true
+            && peer.exportHistoryObservationVersions?.contains(1) == true ? 1 : nil
+    }
 }
 
 public struct DirectPeerBinding: Codable, Equatable, Hashable, Sendable {

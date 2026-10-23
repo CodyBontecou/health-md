@@ -45,7 +45,16 @@ use crate::{
     storage::StorageLayout,
 };
 
-const JOURNAL_VERSION: u16 = 2;
+const LEGACY_JOURNAL_VERSION: u16 = 2;
+const HISTORY_JOURNAL_VERSION: u16 = 3;
+
+fn journal_version(accepted: &ExportAccepted) -> u16 {
+    if accepted.history_observation.is_some() {
+        HISTORY_JOURNAL_VERSION
+    } else {
+        LEGACY_JOURNAL_VERSION
+    }
+}
 const MAXIMUM_MERGE_BYTES: i64 = 64 * 1_024 * 1_024;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -434,7 +443,7 @@ impl FileReceiver {
         let path = directory.join("file-journal.json");
         let journal = if path.exists() {
             let persisted = load_journal(&path)?;
-            if persisted.version != JOURNAL_VERSION
+            if persisted.version != journal_version(&accepted)
                 || persisted.request != request
                 || persisted.session != session
                 || persisted.destination_identity != identity
@@ -453,7 +462,7 @@ impl FileReceiver {
             persisted
         } else {
             let journal = FileJournal {
-                version: JOURNAL_VERSION,
+                version: journal_version(&accepted),
                 request,
                 accepted,
                 session,
@@ -1876,12 +1885,26 @@ fn is_source_date(value: &str) -> bool {
 }
 
 fn load_journal(path: &Path) -> Result<FileJournal, ClientError> {
-    serde_json::from_slice(&read_bounded(
+    let journal: FileJournal = serde_json::from_slice(&read_bounded(
         path,
         MAXIMUM_DURABLE_JSON_BYTES,
         "file journal exceeds the durable metadata limit",
     )?)
-    .map_err(|_| invalid("file journal is malformed"))
+    .map_err(|_| invalid("file journal is malformed"))?;
+    if journal.version != journal_version(&journal.accepted)
+        || journal
+            .accepted
+            .history_observation
+            .as_ref()
+            .is_some_and(|evidence| {
+                !evidence.matches(&journal.request, &journal.accepted, &journal.session)
+            })
+    {
+        return Err(invalid(
+            "durable history observation or journal version changed",
+        ));
+    }
+    Ok(journal)
 }
 
 fn save_journal(layout: &StorageLayout, journal: &FileJournal) -> Result<(), ClientError> {

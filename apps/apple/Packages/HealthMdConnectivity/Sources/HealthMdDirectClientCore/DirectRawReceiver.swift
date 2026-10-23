@@ -64,7 +64,15 @@ public struct DirectRawReceiveArtifact: Equatable, Sendable {
 }
 
 private struct DirectRawReceiveJournal: Codable, Equatable {
-    static let currentVersion = 1
+    static let legacyVersion = 1
+    static let currentVersion = 2
+    static func version(for accepted: DirectExportAccepted) -> Int {
+        accepted.historyObservation == nil ? legacyVersion : currentVersion
+    }
+    var hasValidHistoryVersion: Bool {
+        version == Self.version(for: accepted)
+            && (accepted.historyObservation.map { $0.matches(request: request, accepted: accepted, session: session) } ?? true)
+    }
 
     let version: Int
     let request: DirectExportRequest
@@ -124,7 +132,7 @@ public actor DirectRawReceiver {
                 DirectRawReceiveJournal.self,
                 from: Data(contentsOf: journalURL)
             )
-            guard persisted.request == request else { throw DirectRawReceiverError.requestChanged }
+            guard persisted.hasValidHistoryVersion, persisted.request == request else { throw DirectRawReceiverError.requestChanged }
             guard persisted.session == session,
                   persisted.accepted.peerBinding == accepted.peerBinding,
                   persisted.accepted.historyObservation == accepted.historyObservation,
@@ -136,7 +144,7 @@ public actor DirectRawReceiver {
             journal = persisted
         } else {
             let created = DirectRawReceiveJournal(
-                version: DirectRawReceiveJournal.currentVersion,
+                version: DirectRawReceiveJournal.version(for: accepted),
                 request: request,
                 accepted: accepted,
                 session: session,
@@ -505,7 +513,8 @@ public actor DirectRawReceiver {
         try writeMember("schema", value: "healthmd.raw_result", first: true, to: output)
         try writeMember("schema_version", value: 1, first: false, to: output)
         try writeMember("profile", value: profile.rawValue, first: false, to: output)
-        if let selection = journal.accepted.resolvedCanonicalSelection {
+        if journal.request.rawProfile == .healthDataProjection,
+           let selection = journal.accepted.resolvedCanonicalSelection {
             try writeMember("canonical_selection", value: canonicalSelectionObject(selection), first: false, to: output)
         }
         try writeMember("created_at", value: Self.rfc3339(journal.request.createdAt), first: false, to: output)
@@ -674,10 +683,12 @@ public actor DirectRawReceiver {
 
     private func loadJournal(jobID: UUID) throws -> DirectRawReceiveJournal {
         let url = try sessionDirectory(jobID: jobID).appendingPathComponent("journal.json")
-        return try JSONDecoder.healthMdDirect.decode(
+        let stored = try JSONDecoder.healthMdDirect.decode(
             DirectRawReceiveJournal.self,
             from: Data(contentsOf: url)
         )
+        guard stored.hasValidHistoryVersion else { throw DirectRawReceiverError.sessionChanged }
+        return stored
     }
 
     private func restrictedAtomicWrite(_ data: Data, to destination: URL) throws {
