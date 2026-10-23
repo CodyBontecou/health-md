@@ -1635,6 +1635,9 @@ struct DirectIPhoneBackend: CLIBackend {
         if let observation = receipt.historyObservation {
             payload["history_observation"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(observation))
         }
+        if let sidecar = receipt.historySidecar {
+            payload["history_sidecar"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(sidecar))
+        }
         return payload
     }
 

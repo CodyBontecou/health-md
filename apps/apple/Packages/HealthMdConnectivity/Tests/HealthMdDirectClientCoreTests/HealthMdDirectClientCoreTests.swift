@@ -923,6 +923,25 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         }
         let receipt = try await transfer.receiver.finalize(transfer.finalization)
         XCTAssertNotNil(receipt.historyObservation)
+        let descriptor = try XCTUnwrap(receipt.historySidecar)
+        XCTAssertEqual(receipt.filesWritten, 1)
+        let publicSidecar = transfer.destinationRoot.appendingPathComponent(descriptor.relativePath)
+        let sidecarData = try Data(contentsOf: publicSidecar)
+        XCTAssertEqual(Int64(sidecarData.count), descriptor.byteCount)
+        XCTAssertEqual(DirectTransferFile.sha256Hex(sidecarData), descriptor.sha256)
+        let sidecar = try JSONDecoder().decode(ExportHistoryFileReceipt.self, from: sidecarData)
+        XCTAssertEqual(sidecar.historyObservation, receipt.historyObservation)
+        XCTAssertEqual(sidecar.artifacts.count, 1)
+        XCTAssertEqual(sidecar.artifacts[0].generatedByteCount, 3)
+        XCTAssertEqual(sidecar.artifacts[0].generatedSHA256, DirectTransferFile.sha256Hex(Data("new".utf8)))
+        XCTAssertEqual(sidecar.artifacts[0].committedSHA256, DirectTransferFile.sha256Hex(Data("old\n\nnew".utf8)))
+        let conflicting = try DirectExportFileManifest(jobID: receipt.jobID, fileID: UUID(),
+            relativePath: ".HEALTHMD/history-observations/fake.json", byteCount: 0,
+            sha256: DirectTransferFile.sha256Hex(Data()), writeMode: .overwrite)
+        do {
+            try await transfer.receiver.store(manifest: conflicting)
+            XCTFail("Observed manifests must not collide with the reserved metadata namespace")
+        } catch {}
         let layout = try DirectClientStorageLayout(rootURL: transfer.storageRoot)
         let store = try DirectJobStore(layout: layout)
         let reopened = DirectFileReceiver(layout: layout, jobStore: store)
@@ -936,6 +955,36 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         try await assertFinalizedHistoryRejectsTampering(checkpoint: checkpoint, legacyVersion: 2) {
             _ = try await reopened.receipt(jobID: jobID)
         }
+        let privateSidecar = layout.responseSpoolsURL.appendingPathComponent(jobID.uuidString.lowercased())
+            .appendingPathComponent("file-history-receipt.json")
+        let privateData = try Data(contentsOf: privateSidecar)
+        try Data("tampered".utf8).write(to: privateSidecar)
+        do {
+            _ = try await reopened.receipt(jobID: jobID)
+            XCTFail("Recovery must validate the private sidecar bytes")
+        } catch {}
+        try privateData.write(to: privateSidecar)
+        let restoredReceipt = try await reopened.receipt(jobID: jobID)
+        XCTAssertEqual(restoredReceipt, receipt)
+        let ownerData = Data("owner edit".utf8)
+        try ownerData.write(to: publicSidecar)
+        do {
+            _ = try await transfer.receiver.finalize(transfer.finalization)
+            XCTFail("Finalization must preserve a changed destination sidecar")
+        } catch {}
+        XCTAssertEqual(try Data(contentsOf: publicSidecar), ownerData)
+        // Historical receipts remain valid when their destination is edited later.
+        let historicalReceipt = try await reopened.receipt(jobID: jobID)
+        XCTAssertEqual(historicalReceipt, receipt)
+        let outside = transfer.storageRoot.appendingPathComponent("outside-sidecar.json")
+        try ownerData.write(to: outside)
+        try FileManager.default.removeItem(at: publicSidecar)
+        try FileManager.default.createSymbolicLink(at: publicSidecar, withDestinationURL: outside)
+        do {
+            _ = try await transfer.receiver.finalize(transfer.finalization)
+            XCTFail("Finalization must reject a destination symlink")
+        } catch {}
+        XCTAssertEqual(try Data(contentsOf: outside), ownerData)
         XCTAssertEqual(String(data: try Data(contentsOf: transfer.output), encoding: .utf8), "old\n\nnew")
     }
 

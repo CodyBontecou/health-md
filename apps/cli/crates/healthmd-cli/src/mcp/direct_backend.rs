@@ -838,6 +838,9 @@ fn export_success(payload: &FileReceiptPayload) -> Value {
         "failed_date_identifiers_truncated": payload.failed_date_identifiers.len() > MAXIMUM_RECEIPT_PATHS
     });
     attach_history_observation(&mut receipt, payload.history_observation.as_ref());
+    if let Some(sidecar) = &payload.history_sidecar {
+        receipt["history_sidecar"] = json!(sidecar);
+    }
     receipt
 }
 
@@ -1232,9 +1235,11 @@ mod tests {
             "types":[{"type_id":"HKQuantityTypeIdentifierStepCount", "direct_metric_ids":["steps"],
                 "dependency_metric_ids":[], "dependency_reasons":[], "outcome":"unknown"}]
         });
+        value["history_sidecar"] = json!({"relative_path":".healthmd/history-observations/synthetic.json", "byte_count":123, "sha256":"b".repeat(64)});
         let observed: FileReceiptPayload = serde_json::from_value(value.clone()).unwrap();
         let receipt = export_success(&observed);
         assert_eq!(receipt["history_observation"], value["history_observation"]);
+        assert_eq!(receipt["history_sidecar"], value["history_sidecar"]);
         assert_eq!(receipt["files_written"], 1);
         assert_eq!(receipt["status"], "success");
     }

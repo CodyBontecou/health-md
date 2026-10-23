@@ -34,6 +34,19 @@ public enum DirectFileReceiverError: LocalizedError, Equatable {
     }
 }
 
+/// Locates an operation-scoped history receipt; paths are informational, not filesystem authority.
+public struct DirectHistoryFileSidecar: Codable, Equatable, Sendable {
+    public let relativePath: String
+    public let byteCount: Int64
+    public let sha256: String
+
+    enum CodingKeys: String, CodingKey {
+        case relativePath = "relative_path"
+        case byteCount = "byte_count"
+        case sha256
+    }
+}
+
 public struct DirectFileExportReceipt: Codable, Equatable, Sendable {
     public let jobID: UUID
     public let status: String
@@ -45,6 +58,7 @@ public struct DirectFileExportReceipt: Codable, Equatable, Sendable {
     public let totalCount: Int
     public let failedDateIdentifiers: [String]
     public let historyObservation: ExportHistoryObservation?
+    public let historySidecar: DirectHistoryFileSidecar?
     public let responseFileURL: URL
     public let responseByteCount: Int64
     public let responseSHA256: String
@@ -60,6 +74,7 @@ public struct DirectFileExportReceipt: Codable, Equatable, Sendable {
         case totalCount = "total_count"
         case failedDateIdentifiers = "failed_date_identifiers"
         case historyObservation = "history_observation"
+        case historySidecar = "history_sidecar"
         case responseFileURL, responseByteCount, responseSHA256
     }
 
@@ -76,7 +91,8 @@ public struct DirectFileExportReceipt: Codable, Equatable, Sendable {
         responseFileURL: URL,
         responseByteCount: Int64,
         responseSHA256: String,
-        historyObservation: ExportHistoryObservation? = nil
+        historyObservation: ExportHistoryObservation? = nil,
+        historySidecar: DirectHistoryFileSidecar? = nil
     ) {
         self.jobID = jobID
         self.status = status
@@ -91,6 +107,7 @@ public struct DirectFileExportReceipt: Codable, Equatable, Sendable {
         self.responseByteCount = responseByteCount
         self.responseSHA256 = responseSHA256
         self.historyObservation = historyObservation
+        self.historySidecar = historySidecar
     }
 }
 
@@ -139,6 +156,8 @@ public actor DirectFileReceiver {
         var nextSequence: Int
         var receivedBytes: Int64
     }
+
+    private static let historySidecarDirectory = ".healthmd/history-observations"
 
     private let layout: DirectClientStorageLayout
     private let jobStore: DirectJobStore
@@ -236,6 +255,7 @@ public actor DirectFileReceiver {
             throw DirectFileReceiverError.manifestChanged
         }
         _ = try safeRelativeComponents(manifest.relativePath)
+        try validateHistoryNamespace(manifest.relativePath, journal: journal)
         if let existing = journal.manifests[manifest.fileID], existing != manifest {
             throw DirectFileReceiverError.manifestChanged
         }
@@ -442,8 +462,15 @@ public actor DirectFileReceiver {
               journal.request.jobID == jobID,
               artifact.historyObservationSHA256 == (try directHistoryObservationDigest(journal.accepted.historyObservation)),
               stored.jobID == jobID,
-              stored.historyObservation == journal.accepted.historyObservation else {
+              stored.historyObservation == journal.accepted.historyObservation,
+              stored.historySidecar == (try expectedHistorySidecar(journal)) else {
             throw DirectFileReceiverError.invalidFinalization
+        }
+        if let sidecar = stored.historySidecar {
+            let bytes = try DirectTransferFile.inspect(historySidecarSpoolURL(jobID: jobID))
+            guard bytes.totalBytes == sidecar.byteCount, bytes.sha256 == sidecar.sha256 else {
+                throw DirectFileReceiverError.invalidFinalization
+            }
         }
         return DirectFileExportReceipt(
             jobID: stored.jobID,
@@ -458,7 +485,8 @@ public actor DirectFileReceiver {
             responseFileURL: url,
             responseByteCount: inspected.totalBytes,
             responseSHA256: inspected.sha256,
-            historyObservation: stored.historyObservation
+            historyObservation: stored.historyObservation,
+            historySidecar: stored.historySidecar
         )
     }
 
@@ -501,6 +529,9 @@ public actor DirectFileReceiver {
     }
 
     private func validateCompleteCorpus(_ journal: DirectFileReceiveJournal) throws {
+        for manifest in journal.manifests.values {
+            try validateHistoryNamespace(manifest.relativePath, journal: journal)
+        }
         var grouped: [UUID: [DirectTransferPartition]] = [:]
         for descriptor in journal.committedPartitions {
             guard let value = descriptor.itemSegment?.itemID,
@@ -773,6 +804,78 @@ public actor DirectFileReceiver {
         try Data(result.utf8).write(to: destination, options: .atomic)
     }
 
+    private func validateHistoryNamespace(_ path: String, journal: DirectFileReceiveJournal) throws {
+        guard journal.accepted.historyObservation != nil else { return }
+        let folded = path.decomposedStringWithCanonicalMapping.folding(
+            options: [.caseInsensitive], locale: Locale(identifier: "en_US_POSIX")
+        )
+        let reserved = Self.historySidecarDirectory
+        guard folded != reserved, !folded.hasPrefix(reserved + "/"),
+              !reserved.hasPrefix(folded + "/") else {
+            throw DirectFileReceiverError.unsafeRelativePath(path)
+        }
+    }
+
+    private func historyFileReceipt(_ journal: DirectFileReceiveJournal) throws -> ExportHistoryFileReceipt? {
+        guard let observation = journal.accepted.historyObservation else { return nil }
+        let artifacts = try journal.manifests.values.map { manifest in
+            try validateHistoryNamespace(manifest.relativePath, journal: journal)
+            guard let plan = journal.commitPlans[manifest.fileID], plan.committed,
+                  plan.destinationRelativePath == manifest.relativePath else {
+                throw DirectFileReceiverError.invalidFinalization
+            }
+            return try ExportHistoryFileArtifact(
+                relativePath: manifest.relativePath, writeMode: manifest.writeMode,
+                generatedByteCount: manifest.byteCount, generatedSHA256: manifest.sha256,
+                committedSHA256: plan.afterSHA256
+            )
+        }
+        return try ExportHistoryFileReceipt(historyObservation: observation, artifacts: artifacts)
+    }
+
+    private func expectedHistorySidecar(_ journal: DirectFileReceiveJournal) throws -> DirectHistoryFileSidecar? {
+        guard let receipt = try historyFileReceipt(journal) else { return nil }
+        let data = try encoder().encode(receipt)
+        return DirectHistoryFileSidecar(
+            relativePath: Self.historySidecarDirectory + "/" + journal.request.jobID.uuidString.lowercased() + ".json",
+            byteCount: Int64(data.count), sha256: DirectTransferFile.sha256Hex(data)
+        )
+    }
+
+    private func historySidecarSpoolURL(jobID: UUID) -> URL {
+        layout.responseSpoolsURL.appendingPathComponent(jobID.uuidString.lowercased(), isDirectory: true)
+            .appendingPathComponent("file-history-receipt.json")
+    }
+
+    private func installHistorySidecar(_ journal: DirectFileReceiveJournal) throws -> DirectHistoryFileSidecar? {
+        guard let receipt = try historyFileReceipt(journal),
+              let sidecar = try expectedHistorySidecar(journal),
+              let destination = journal.request.destination else { return nil }
+        let root = try validatedDestinationURL(destination.rootPath)
+        guard try destinationIdentity(root) == journal.destinationIdentity else {
+            throw DirectFileReceiverError.invalidDestination
+        }
+        let spool = historySidecarSpoolURL(jobID: journal.request.jobID)
+        try fileManager.createDirectory(at: spool.deletingLastPathComponent(), withIntermediateDirectories: true,
+                                        attributes: [.posixPermissions: 0o700])
+        try restrictedAtomicWrite(encoder().encode(receipt), to: spool)
+        try ensureSafeParent(root: root, relativePath: sidecar.relativePath, expectedRootIdentity: journal.destinationIdentity)
+        if let current = try digestIfRegularFile(root: root, relativePath: sidecar.relativePath,
+                                                expectedRootIdentity: journal.destinationIdentity) {
+            guard current == sidecar.sha256 else {
+                throw DirectFileReceiverError.destinationConflict(sidecar.relativePath)
+            }
+            return sidecar
+        }
+        try atomicInstall(stage: spool, root: root, relativePath: sidecar.relativePath,
+                          expectedBeforeSHA256: nil, expectedRootIdentity: journal.destinationIdentity)
+        guard try digestIfRegularFile(root: root, relativePath: sidecar.relativePath,
+                                      expectedRootIdentity: journal.destinationIdentity) == sidecar.sha256 else {
+            throw DirectFileReceiverError.invalidFinalization
+        }
+        return sidecar
+    }
+
     private func makeReceipt(_ journal: DirectFileReceiveJournal) throws -> DirectFileExportReceipt {
         guard let destination = journal.request.destination,
               let outcome = journal.outcome else {
@@ -788,7 +891,8 @@ public actor DirectFileReceiver {
             successCount: outcome.successCount,
             totalCount: outcome.totalCount,
             failedDateIdentifiers: outcome.failedDateIdentifiers,
-            historyObservation: journal.accepted.historyObservation
+            historyObservation: journal.accepted.historyObservation,
+            historySidecar: try installHistorySidecar(journal)
         )
         let directory = layout.responseSpoolsURL
             .appendingPathComponent(journal.request.jobID.uuidString.lowercased(), isDirectory: true)
@@ -816,7 +920,8 @@ public actor DirectFileReceiver {
             responseFileURL: url,
             responseByteCount: inspected.totalBytes,
             responseSHA256: inspected.sha256,
-            historyObservation: payload.historyObservation
+            historyObservation: payload.historyObservation,
+            historySidecar: payload.historySidecar
         )
     }
 
@@ -1261,6 +1366,7 @@ private struct DirectFileReceiptPayload: Codable {
     let totalCount: Int
     let failedDateIdentifiers: [String]
     let historyObservation: ExportHistoryObservation?
+    let historySidecar: DirectHistoryFileSidecar?
 
     enum CodingKeys: String, CodingKey {
         case jobID = "job_id"
@@ -1273,5 +1379,6 @@ private struct DirectFileReceiptPayload: Codable {
         case totalCount = "total_count"
         case failedDateIdentifiers = "failed_date_identifiers"
         case historyObservation = "history_observation"
+        case historySidecar = "history_sidecar"
     }
 }

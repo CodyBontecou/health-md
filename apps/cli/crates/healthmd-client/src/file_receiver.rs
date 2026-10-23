@@ -14,6 +14,7 @@ use chrono::{NaiveDate, Utc};
 use healthmd_protocol::{
     TRANSFER_FRAME_BYTES,
     encoding::{SwiftUuid, canonical_json},
+    history::{ExportHistoryFileArtifact, ExportHistoryFileReceipt},
     models::{
         ExportAccepted, ExportOutcome, ExportRequest, FileManifest, FileWriteMode, ResponseMode,
         TransferChunk, TransferChunkAcknowledgement, TransferDisposition, TransferDispositionKind,
@@ -55,6 +56,7 @@ fn journal_version(accepted: &ExportAccepted) -> u16 {
         LEGACY_JOURNAL_VERSION
     }
 }
+const HISTORY_SIDECAR_DIRECTORY: &str = ".healthmd/history-observations";
 const MAXIMUM_MERGE_BYTES: i64 = 64 * 1_024 * 1_024;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -136,6 +138,17 @@ pub struct FileReceiptPayload {
     /// Frozen admission evidence; capture completion never certifies full history.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub history_observation: Option<healthmd_protocol::history::ExportHistoryObservation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history_sidecar: Option<HistoryFileSidecar>,
+}
+
+/// Digest-pinned operation metadata, additional to the generated health files.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct HistoryFileSidecar {
+    pub relative_path: String,
+    pub byte_count: i64,
+    pub sha256: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -511,7 +524,9 @@ impl FileReceiver {
             .journal
             .as_mut()
             .ok_or_else(|| invalid("file receiver is not prepared"))?;
-        if manifest.job_id != journal.request.job_id
+        if (journal.accepted.history_observation.is_some()
+            && generated_paths_conflict(&manifest.relative_path, HISTORY_SIDECAR_DIRECTORY))
+            || manifest.job_id != journal.request.job_id
             || journal
                 .manifests
                 .get(&manifest.file_id)
@@ -807,6 +822,16 @@ impl FileReceiver {
             self.journal = Some(journal);
             return Err(invalid("file finalization mismatch"));
         }
+        if journal.accepted.history_observation.is_some()
+            && journal
+                .manifests
+                .values()
+                .any(|m| generated_paths_conflict(&m.relative_path, HISTORY_SIDECAR_DIRECTORY))
+        {
+            return Err(invalid(
+                "generated files conflict with operation history metadata",
+            ));
+        }
         validate_complete_corpus(&self.layout, &journal)?;
         let resolved_count = i64::try_from(journal.accepted.resolved_date_identifiers.len())
             .map_err(|_| invalid("too many accepted dates"))?;
@@ -933,10 +958,21 @@ impl FileReceiver {
             || artifact.history_observation_sha256 != history_observation_digest(&journal.accepted)?
             || payload.job_id != journal.request.job_id
             || payload.history_observation != journal.accepted.history_observation
+            || payload.history_sidecar != expected_history_sidecar(&journal)?
         {
             return Err(invalid(
                 "saved file observation does not match the immutable job receipt",
             ));
+        }
+        if let Some(sidecar) = &payload.history_sidecar {
+            let private = path
+                .parent()
+                .ok_or_else(|| invalid("receipt directory is missing"))?
+                .join("file-history-receipt.json");
+            let (sidecar_bytes, sidecar_hash) = inspect_file(&private)?;
+            if sidecar_bytes != sidecar.byte_count || sidecar_hash != sidecar.sha256 {
+                return Err(invalid("saved history sidecar changed"));
+            }
         }
         Ok(FileExportReceipt {
             payload,
@@ -1745,6 +1781,105 @@ fn assemble_source(
     Ok(path)
 }
 
+fn history_file_receipt(
+    journal: &FileJournal,
+) -> Result<Option<ExportHistoryFileReceipt>, ClientError> {
+    let Some(observation) = &journal.accepted.history_observation else {
+        return Ok(None);
+    };
+    let artifacts = journal
+        .manifests
+        .values()
+        .map(|manifest| {
+            validate_generated_relative_path(&manifest.relative_path)?;
+            if generated_paths_conflict(&manifest.relative_path, HISTORY_SIDECAR_DIRECTORY) {
+                return Err(invalid("generated file conflicts with history metadata"));
+            }
+            let plan = journal
+                .commit_plans
+                .get(&manifest.file_id)
+                .ok_or_else(|| invalid("history artifact commit is missing"))?;
+            if !plan.committed || plan.destination_relative_path != manifest.relative_path {
+                return Err(invalid("history artifact commit is incomplete"));
+            }
+            Ok(ExportHistoryFileArtifact {
+                relative_path: manifest.relative_path.clone(),
+                write_mode: manifest.write_mode,
+                generated_byte_count: manifest.byte_count,
+                generated_sha256: manifest.sha256.clone(),
+                committed_sha256: plan.after_sha256.clone(),
+            })
+        })
+        .collect::<Result<Vec<_>, ClientError>>()?;
+    ExportHistoryFileReceipt::new(observation.clone(), artifacts)
+        .map(Some)
+        .map_err(|_| invalid("history artifact receipt is invalid"))
+}
+
+fn expected_history_sidecar(
+    journal: &FileJournal,
+) -> Result<Option<HistoryFileSidecar>, ClientError> {
+    history_file_receipt(journal)?
+        .map(|value| {
+            let bytes =
+                canonical_json(&value).map_err(|_| invalid("history sidecar encoding failed"))?;
+            Ok(HistoryFileSidecar {
+                relative_path: format!(
+                    "{HISTORY_SIDECAR_DIRECTORY}/{}.json",
+                    journal.request.job_id.0
+                ),
+                byte_count: i64::try_from(bytes.len())
+                    .map_err(|_| invalid("history sidecar is too large"))?,
+                sha256: sha256_hex(&bytes),
+            })
+        })
+        .transpose()
+}
+
+fn install_history_sidecar(
+    layout: &StorageLayout,
+    journal: &FileJournal,
+) -> Result<Option<HistoryFileSidecar>, ClientError> {
+    let Some(value) = history_file_receipt(journal)? else {
+        return Ok(None);
+    };
+    let descriptor =
+        expected_history_sidecar(journal)?.ok_or_else(|| invalid("history sidecar is missing"))?;
+    let binding = journal
+        .request
+        .destination
+        .as_ref()
+        .ok_or_else(|| invalid("destination missing"))?;
+    let destination = GeneratedDestination::open(Path::new(&binding.root_path))?
+        .with_private_storage_root(&layout.root);
+    if destination.identity != journal.destination_identity {
+        return Err(invalid("history destination changed"));
+    }
+    let directory = layout
+        .response_spools_dir()
+        .join(journal.request.job_id.0.to_string());
+    let private = directory.join("file-history-receipt.json");
+    save_json(&layout.root, &private, &value)?;
+    match destination.current_digest(&descriptor.relative_path)? {
+        Some(existing) if existing == descriptor.sha256 => return Ok(Some(descriptor)),
+        Some(_) => return Err(invalid("existing operation history sidecar changed")),
+        None => {}
+    }
+    let stage =
+        session_directory(layout, journal.request.job_id.0)?.join("file-history-receipt.stage");
+    let planned = destination.prepare_stage(
+        &descriptor.relative_path,
+        &private,
+        &stage,
+        healthmd_protocol::v2::FileWriteMode::Overwrite,
+    )?;
+    if planned.before_sha256.is_some() || planned.after_sha256 != descriptor.sha256 {
+        return Err(invalid("operation history sidecar destination changed"));
+    }
+    destination.install_stage(&descriptor.relative_path, &stage, None, &descriptor.sha256)?;
+    Ok(Some(descriptor))
+}
+
 fn make_receipt(
     layout: &StorageLayout,
     journal: &FileJournal,
@@ -1776,6 +1911,7 @@ fn make_receipt(
         total_count: outcome.total_count,
         failed_date_identifiers: outcome.failed_date_identifiers.clone(),
         history_observation: journal.accepted.history_observation.clone(),
+        history_sidecar: install_history_sidecar(layout, journal)?,
     };
     let directory = layout
         .response_spools_dir()
@@ -2387,6 +2523,13 @@ mod tests {
             .prepare(request.clone(), accepted.clone(), session.clone())
             .unwrap();
         receiver.store_manifest(manifest.clone()).unwrap();
+        if observed {
+            let mut conflict = manifest.clone();
+            conflict.file_id = SwiftUuid(Uuid::new_v4());
+            conflict.relative_path = ".HEALTHMD/History-Observations/collision.json".into();
+            assert!(receiver.store_manifest(conflict).is_err());
+        }
+
         let mut duplicate_path = manifest.clone();
         duplicate_path.file_id = SwiftUuid(Uuid::new_v4());
         assert!(receiver.store_manifest(duplicate_path).is_err());
@@ -2469,11 +2612,37 @@ mod tests {
         receiver.acknowledge_peer_completion(job_id.0).unwrap();
         assert_eq!(jobs.load(job_id.0).unwrap().state, JobState::Completed);
         assert_eq!(receipt.payload.history_observation, expected_history);
+        assert_eq!(receipt.payload.history_sidecar.is_some(), observed);
+        if let Some(descriptor) = &receipt.payload.history_sidecar {
+            let public = destination.join(&descriptor.relative_path);
+            let bytes = fs::read(&public).unwrap();
+            assert_eq!(i64::try_from(bytes.len()).unwrap(), descriptor.byte_count);
+            assert_eq!(sha256_hex(&bytes), descriptor.sha256);
+            let sidecar: ExportHistoryFileReceipt = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(
+                Some(sidecar.history_observation()),
+                expected_history.as_ref()
+            );
+            assert_eq!(sidecar.artifacts().len(), 1);
+            let artifact = &sidecar.artifacts()[0];
+            assert_eq!(artifact.relative_path, "daily.md");
+            assert_eq!(artifact.write_mode, FileWriteMode::Append);
+            assert_eq!(artifact.generated_byte_count, 5);
+            assert_eq!(artifact.generated_sha256, sha256_hex(b"fresh"));
+            assert_eq!(
+                artifact.committed_sha256,
+                sha256_hex(&fs::read(destination.join("daily.md")).unwrap())
+            );
+            assert_ne!(artifact.generated_sha256, artifact.committed_sha256);
+        }
+
         let reopened = FileReceiver::new(layout, jobs.clone());
         assert_eq!(reopened.receipt(job_id.0).unwrap(), receipt);
         let wire: serde_json::Value =
             serde_json::from_slice(&fs::read(&receipt.response_path).unwrap()).unwrap();
         assert_eq!(wire.get("history_observation").is_some(), observed);
+        assert_eq!(wire.get("history_sidecar").is_some(), observed);
+
         if observed {
             let path = reopened
                 .session_directory(job_id.0)
@@ -2518,12 +2687,52 @@ mod tests {
                 reopened.receipt(job_id.0).is_err(),
                 "a downgrade cannot erase finalized evidence"
             );
-            fs::write(path, original).unwrap();
+            fs::write(&path, original).unwrap();
             assert_eq!(reopened.receipt(job_id.0).unwrap(), receipt);
             assert_eq!(
                 fs::read(destination.join("daily.md")).unwrap(),
                 b"old\n\nfresh"
             );
+            let descriptor = receipt.payload.history_sidecar.as_ref().unwrap();
+            let private = receipt
+                .response_path
+                .parent()
+                .unwrap()
+                .join("file-history-receipt.json");
+            let saved_private = fs::read(&private).unwrap();
+            fs::write(&private, b"tampered").unwrap();
+            assert!(reopened.receipt(job_id.0).is_err());
+            fs::write(&private, saved_private).unwrap();
+            assert_eq!(reopened.receipt(job_id.0).unwrap(), receipt);
+
+            let public = destination.join(&descriptor.relative_path);
+            fs::write(&public, b"changed by owner").unwrap();
+            assert!(
+                receiver.finalize(&finalize).is_err(),
+                "metadata collision must never be overwritten"
+            );
+            assert_eq!(fs::read(&public).unwrap(), b"changed by owner");
+            assert_eq!(
+                fs::read(destination.join("daily.md")).unwrap(),
+                b"old\n\nfresh"
+            );
+            // The historical receipt remains available even when destination
+            // files subsequently change; its sidecar descriptor pins original bytes.
+            assert_eq!(reopened.receipt(job_id.0).unwrap(), receipt);
+
+            #[cfg(unix)]
+            {
+                let outside = temporary.path().join("outside.json");
+                fs::write(&outside, b"outside sentinel").unwrap();
+                fs::remove_file(&public).unwrap();
+                std::os::unix::fs::symlink(&outside, &public).unwrap();
+                let saved = load_journal(&path).unwrap();
+                receiver
+                    .prepare(saved.request, saved.accepted, saved.session)
+                    .unwrap();
+                assert!(receiver.finalize(&finalize).is_err());
+                assert_eq!(fs::read(outside).unwrap(), b"outside sentinel");
+            }
         }
     }
 
