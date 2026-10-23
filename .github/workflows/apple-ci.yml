@@ -544,7 +544,36 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make coverage CORE_RUST_PREPARE=: 2>&1 | tee build/logs/build-macos.log
+          make coverage CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/macos-qa-derived 2>&1 | tee build/logs/build-macos.log
+
+      - name: Retain tested macOS QA candidate
+        if: ${{ success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
+        run: |
+          set -euo pipefail
+          app=build/macos-qa-derived/Build/Products/Debug/Health.md.app
+          test -f "$app/Contents/MacOS/Health.md"
+          mkdir -p build/macos-qa
+          {
+            echo "SOURCE_SHA=$(git rev-parse HEAD)"
+            echo "SOURCE_TREE=$(git rev-parse HEAD^{tree})"
+            echo "PURPOSE=tested-macOS-QA-only"
+            xcodebuild -version
+            xcrun --sdk macosx --show-sdk-version
+            xcrun vtool -show-build "$app/Contents/MacOS/Health.md"
+          } > build/macos-qa/provenance.txt
+          cp build/logs/history-sdk27-receipt.txt build/macos-qa/
+          tar -czf build/macos-qa/HealthMd-macOS.app.tar.gz \
+            -C build/macos-qa-derived/Build/Products/Debug Health.md.app
+          (cd build/macos-qa && shasum -a 256 HealthMd-macOS.app.tar.gz > SHA256SUMS)
+
+      - name: Upload tested macOS QA candidate
+        if: ${{ success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-tested-qa-candidate
+          path: apps/apple/build/macos-qa/
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Verify generated export documentation
         if: ${{ success() }}
