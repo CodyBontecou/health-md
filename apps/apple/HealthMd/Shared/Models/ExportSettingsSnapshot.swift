@@ -369,8 +369,25 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     }
 
     func encode(to encoder: Encoder) throws {
+        try encode(to: encoder, sortingHistoryBindingSets: false)
+    }
+
+    /// Local history bindings sort only the three set-valued selections. Ordered
+    /// presentation arrays retain their meaning. Normal wire encoding is unchanged.
+    struct HistoryBindingEncoding: Encodable {
+        let snapshot: ExportSettingsSnapshot
+        func encode(to encoder: Encoder) throws {
+            try snapshot.encode(to: encoder, sortingHistoryBindingSets: true)
+        }
+    }
+
+    private func encode(to encoder: Encoder, sortingHistoryBindingSets: Bool) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(exportFormats, forKey: .exportFormats)
+        if sortingHistoryBindingSets {
+            try container.encode(exportFormats.sorted { $0.rawValue < $1.rawValue }, forKey: .exportFormats)
+        } else {
+            try container.encode(exportFormats, forKey: .exportFormats)
+        }
         try container.encode(includeMetadata, forKey: .includeMetadata)
         try container.encode(groupByCategory, forKey: .groupByCategory)
         try container.encode(filenameFormat, forKey: .filenameFormat)
@@ -398,7 +415,13 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             forKey: .includeGranularData
         )
         try container.encode(generateRangeSummary, forKey: .generateRangeSummary)
-        try container.encode(metricSelection, forKey: .metricSelection)
+        if sortingHistoryBindingSets {
+            var selection = container.nestedContainer(keyedBy: HistoryMetricSelectionKeys.self, forKey: .metricSelection)
+            try selection.encode(metricSelection.enabledMetricIDs.sorted(), forKey: .enabledMetricIDs)
+            try selection.encode(metricSelection.enabledCategoryIDs.sorted(), forKey: .enabledCategoryIDs)
+        } else {
+            try container.encode(metricSelection, forKey: .metricSelection)
+        }
         try container.encodeIfPresent(appleExportEnginePin, forKey: .appleExportEnginePin)
         try container.encode(
             appleExportEngineAuthorityIsFrozen,
@@ -408,6 +431,10 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             calendarTimeZoneIdentifier,
             forKey: .calendarTimeZoneIdentifier
         )
+    }
+
+    private enum HistoryMetricSelectionKeys: String, CodingKey {
+        case enabledMetricIDs, enabledCategoryIDs
     }
 
     static func from(
