@@ -8,6 +8,9 @@ struct ExportHistoryOperationDetails: Codable, Equatable {
         case generatedFiles = "generated_files"
         case rawExport = "raw_export"
         case canonicalExtraction = "canonical_extraction"
+        /// Agent Data gateway upload run: bounded, health-free per-run
+        /// accounting over uploaded artifacts (no filenames, no contents).
+        case agentDataGatewayUpload = "agent_data_gateway_upload"
     }
 
     let kind: Kind

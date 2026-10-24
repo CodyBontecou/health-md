@@ -485,6 +485,50 @@ final class ExportJourneyUITests: XCTestCase {
 
     // MARK: - Export Target
 
+    /// Exercises the real destination preflight and post-history admission before
+    /// test-mode capture. A configured gateway must not depend on a local folder.
+    func testConfiguredGateway_admitsExportWithoutLocalFolder() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: false,
+            purchaseUnlocked: true
+        )
+        app.launch()
+
+        let gateway = app.buttons["export.target.agentDataGateway"]
+        scrollDatePresetIntoView(gateway, in: app)
+        XCTAssertTrue(gateway.waitForExistence(timeout: 5))
+        XCTAssertTrue(gateway.isHittable)
+        gateway.tap()
+
+        let endpoint = app.textFields["Agent Data gateway endpoint URL"]
+        XCTAssertTrue(endpoint.waitForExistence(timeout: 5))
+        endpoint.tap()
+        endpoint.typeText("http://127.0.0.1:8791")
+        XCTAssertTrue(app.staticTexts["Ready to export to the gateway"].waitForExistence(timeout: 5))
+        app.navigationBars["Agent Data Gateway"].buttons["Done"].tap()
+        XCTAssertTrue(gateway.waitForExistence(timeout: 5))
+        XCTAssertTrue(gateway.isSelected)
+
+        let json = app.switches["JSON"]
+        scrollDatePresetIntoView(json, in: app)
+        XCTAssertTrue(json.exists && json.isHittable)
+        let jsonValue = json.value as? String
+        if jsonValue != "1" && jsonValue != "Enabled" { json.tap() }
+        let selectedJSON = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == '1' OR value == 'Enabled'"), object: json
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [selectedJSON], timeout: 5), .completed)
+
+        let export = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(export.isHittable)
+        export.tap()
+        let status = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
+        XCTAssertTrue(status.waitForExistence(timeout: 10),
+                      "Configured gateway must pass production admission before synthetic capture")
+        XCTAssertFalse(app.staticTexts["Export setup changed. Review the destination and settings before exporting."].exists)
+    }
+
     func testExportTargetSelector_visible() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()

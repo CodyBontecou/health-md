@@ -265,6 +265,7 @@ final class CIQualityGateTests: XCTestCase {
             "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
             "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
             "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+            "ExportJourneyUITests/testConfiguredGateway_admitsExportWithoutLocalFolder",
             "ExportJourneyUITests/testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens",
             "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
             "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
@@ -275,8 +276,8 @@ final class CIQualityGateTests: XCTestCase {
             "HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
             "HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot",
         ]
-        XCTAssertEqual(selections.count, 23, "PR smoke must preserve nineteen phone and four tablet executions")
-        XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the exact historical UI inventory")
+        XCTAssertEqual(selections.count, 24, "PR smoke must preserve twenty phone and four tablet executions")
+        XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the historical UI inventory plus configured gateway admission")
         XCTAssertTrue(content.contains("needs: [changes, prepare-ui-artifacts, ios-ui-shards]"))
         XCTAssertTrue(content.contains("test \"$SHARDS_RESULT\" = success"))
         XCTAssertTrue(content.contains("python3 apps/apple/scripts/ios_ui_shards.py verify"))

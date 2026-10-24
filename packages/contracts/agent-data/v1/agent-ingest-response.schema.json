@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/agent-data/v1/agent-ingest-response.schema.json",
+  "title": "Health.md Agent Ingest Response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "outcome"],
+  "properties": {
+    "schema": { "const": "healthmd.agent_ingest_response" },
+    "schema_version": { "const": 1 },
+    "outcome": { "enum": ["accepted", "rejected"] },
+    "stored": { "$ref": "#/$defs/stored_revision" },
+    "rejection": { "$ref": "#/$defs/rejection" },
+    "partition": { "$ref": "#/$defs/partition_view" }
+  },
+  "oneOf": [
+    {
+      "properties": { "outcome": { "const": "accepted" } },
+      "required": ["outcome", "stored", "partition"],
+      "not": { "required": ["rejection"] }
+    },
+    {
+      "properties": { "outcome": { "const": "rejected" } },
+      "required": ["outcome", "rejection"],
+      "not": { "required": ["stored"] }
+    }
+  ],
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "completeness": { "$ref": "agent-data-ingest.schema.json#/$defs/completeness" },
+    "stored_revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision_id", "byte_count", "completeness"],
+      "properties": {
+        "revision_id": { "$ref": "#/$defs/digest" },
+        "byte_count": { "type": "integer", "minimum": 1, "maximum": 67108864 },
+        "completeness": { "$ref": "#/$defs/completeness" }
+      }
+    },
+    "rejection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": {
+          "enum": ["truncated", "transient", "checksum_invalid", "manifest_incomplete"]
+        }
+      }
+    },
+    "partition_view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner_date",
+        "authoritative",
+        "complete_revision_present",
+        "partial_revision_present"
+      ],
+      "properties": {
+        "owner_date": { "type": "string", "format": "date" },
+        "authoritative": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["revision_id", "completeness"],
+          "properties": {
+            "revision_id": { "$ref": "#/$defs/digest" },
+            "completeness": { "$ref": "#/$defs/completeness" }
+          }
+        },
+        "complete_revision_present": { "type": "boolean" },
+        "partial_revision_present": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["complete_revision_present"],
+            "properties": { "complete_revision_present": { "const": true } }
+          },
+          "then": {
+            "required": ["authoritative"],
+            "properties": {
+              "authoritative": {
+                "required": ["completeness"],
+                "properties": {
+                  "completeness": {
+                    "required": ["type"],
+                    "properties": { "type": { "const": "complete" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
