@@ -913,6 +913,48 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertTrue(rangeContent.contains("\"days_counted\" : 1"))
     }
 
+    func testConnectedDailyEmptyRecordIsNoDataAndTerminalBesideWrittenDay() async throws {
+        let dates = [Self.day(2026, 2, 10), Self.day(2026, 2, 11)]
+        let context = try makeContext(requestedDates: dates)
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try emptyHealthItem(date: dates[0]))
+        assembler.append(try healthItem(date: dates[1]))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        ), vaultManager: vaultManager).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        let outcome = try await manager.finalize(ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        ), vaultManager: vaultManager)
+        guard case .files(let result, let acknowledgement) = outcome else {
+            return XCTFail("Expected daily file result")
+        }
+        XCTAssertEqual(result.status, .partialSuccess)
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
+        XCTAssertEqual(result.failedDateDetails.map(\.date), [dates[0]])
+        XCTAssertEqual(Set(result.completedDates), Set(dates))
+        XCTAssertEqual(Set(acknowledgement.completedDates), Set(dates))
+    }
+
     func testPinnedConnectedMultiDateAllEmptySummaryOnlyIsTerminalExactlyOncePerDate() async throws {
         let dates = [Self.day(2026, 2, 10), Self.day(2026, 2, 11)]
         let settings = makeSettings()

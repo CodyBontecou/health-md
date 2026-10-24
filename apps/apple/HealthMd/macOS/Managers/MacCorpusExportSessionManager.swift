@@ -2003,6 +2003,12 @@ final class MacCorpusExportSessionManager {
                                 ))
                             }
                         }
+                    } catch ExportError.noHealthData {
+                        session.journal.failedDateDetails.append(FailedDateDetail(
+                            date: payload.sourceDate,
+                            reason: .noHealthData
+                        ))
+                        session.journal.completedDates.append(payload.sourceDate)
                     } catch {
                         session.journal.failedDateDetails.append(FailedDateDetail(
                             date: payload.sourceDate,
