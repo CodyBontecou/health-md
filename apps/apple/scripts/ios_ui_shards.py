@@ -28,6 +28,7 @@ SHARDS = (
         "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
         "HealthMdUILaunchTests/testAppLaunches",
         "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
+        "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
     ),
     (
         "ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport",
@@ -37,7 +38,6 @@ SHARDS = (
         "ExportJourneyUITests/testConfiguredGateway_admitsExportWithoutLocalFolder",
         "ExportJourneyUITests/testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens",
         "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
-        "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
         "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
         "HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
         "HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport",
