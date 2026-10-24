@@ -951,8 +951,8 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
         XCTAssertEqual(result.failedDateDetails.map(\.date), [dates[0]])
-        XCTAssertEqual(Set(result.completedDates), Set(dates))
-        XCTAssertEqual(Set(acknowledgement.completedDates), Set(dates))
+        XCTAssertEqual(Set(try XCTUnwrap(result.completedDates)), Set(dates))
+        XCTAssertEqual(Set(try XCTUnwrap(acknowledgement.completedDates)), Set(dates))
     }
 
     func testPinnedConnectedMultiDateAllEmptySummaryOnlyIsTerminalExactlyOncePerDate() async throws {
