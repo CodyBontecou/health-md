@@ -5,6 +5,7 @@ enum ExportTargetSelection: String, CaseIterable, Codable, Equatable, Identifiab
     case localIPhoneFolder
     case connectedMac
     case apiEndpoint
+    case agentDataGateway
 
     static let storageKey = "exportTargetSelection"
 
@@ -18,6 +19,9 @@ enum ExportTargetSelection: String, CaseIterable, Codable, Equatable, Identifiab
             return "Connected Mac"
         case .apiEndpoint:
             return "API Endpoint"
+        case .agentDataGateway:
+            // Terminology is identical on Android; do not relabel.
+            return "Agent Data gateway"
         }
     }
 
@@ -25,7 +29,7 @@ enum ExportTargetSelection: String, CaseIterable, Codable, Equatable, Identifiab
         switch self {
         case .localIPhoneFolder:
             return false
-        case .connectedMac, .apiEndpoint:
+        case .connectedMac, .apiEndpoint, .agentDataGateway:
             return true
         }
     }
@@ -40,7 +44,8 @@ struct ExportTargetReadiness {
         target: ExportTargetSelection,
         hasLocalFolder: Bool,
         canExportToConnectedMac: Bool,
-        apiEndpointConfigured: Bool = false
+        apiEndpointConfigured: Bool = false,
+        agentDataGatewayConfigured: Bool = false
     ) -> Bool {
         guard isHealthKitAuthorized else { return false }
 
@@ -52,6 +57,10 @@ struct ExportTargetReadiness {
         case .apiEndpoint:
             // API destinations cannot resolve or mutate a filesystem daily note.
             return hasSelectedFormat && !dailyNotesOnlyModeEnabled && apiEndpointConfigured
+        case .agentDataGateway:
+            // The gateway uploads the export's JSON artifacts; it cannot
+            // resolve or mutate a filesystem daily note.
+            return hasSelectedFormat && !dailyNotesOnlyModeEnabled && agentDataGatewayConfigured
         }
     }
 }
