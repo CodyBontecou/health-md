@@ -60,6 +60,17 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         return element.exists && element.isHittable
     }
 
+    /// Disabled controls have no hit point, but must still be visible for guard assertions.
+    private func scrollUntilVisible(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 8) -> Bool {
+        func isVisible() -> Bool {
+            element.exists && !element.frame.isEmpty && app.frame.contains(element.frame)
+        }
+        for _ in 0..<maxSwipes where !isVisible() {
+            app.swipeUp()
+        }
+        return isVisible()
+    }
+
     private func openProfilesManagementSheet(_ app: XCUIApplication) {
         let settingsTab = app.tabBars.buttons["Settings"]
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
@@ -201,9 +212,9 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         // disabled by the last-profile guard, so tapping it must present
         // neither the confirmation dialog nor mutate anything.
         let delete = app.buttons["Delete Profile…"]
-        XCTAssertTrue(scrollUntilHittable(delete, in: app), "The Delete action should be reachable")
+        XCTAssertTrue(scrollUntilVisible(delete, in: app), "The disabled Delete action should be visible")
         XCTAssertFalse(delete.isEnabled, "The last remaining profile must not be deletable")
-        delete.tap()
+        delete.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertFalse(app.staticTexts["Delete this profile?"].waitForExistence(timeout: 1))
     }
 

@@ -288,3 +288,26 @@ The byte-frozen [field-coverage baseline](field-coverage-baseline-v1.json) recor
 The baseline pins each complete row and the inventory metadata by SHA-256 of UTF-8 JSON with sorted object keys, no whitespace separators, and unescaped non-ASCII text. It separately pins the exact public schema and existing fixture bytes. [`validate.py`](../../validate.py) checks the baseline's own immutable byte hash, rejects removals or changes to approved rows, and allows only the new prohibited entries described above. Native field-coverage suites remain responsible for matching actual stored/encoded fields and proving mapper exclusion.
 
 Do not regenerate this baseline or update its hash to silence a failure. Later reviewed additions must remain append-only and be frozen in a separately versioned additive baseline successor at approval; retain and validate the historical baseline and every previously approved row. This audit amendment changes no public v2 schema, platform extension, export schema, direct-protocol version, capability classification, default writer, or outstanding physical-device/accessibility QA gate.
+
+## Apple source-field audit revision 2
+
+The additive [Apple source-field audit revision 2](apple-profile-field-coverage-v2.json)
+tracks the subsequently introduced local workout table presentation preference without
+rewriting the original [revision 1 audit](apple-profile-field-coverage.json). Revision 2
+still targets the unchanged `healthmd.shared_setup` v2 wire allowlist: the new field is
+`local_only`, persists in native profiles/frozen Mac jobs, and defaults enabled when
+materializing a setup file that cannot represent it. Portable adoption requires a
+separate Android convergence and contract review. Audit revisions do not change the
+public Shared Setup grammar or its frozen artifact fixtures.
+
+
+## Apple source-field audit revision 3
+
+[Revision 3](apple-profile-field-coverage-v3.json) preserves every revision 2
+classification and adds `ExportSettingsSnapshot.historicalCalendarRollupPeriods`.
+The new `stored_only` kind describes native in-memory recovery authority without
+a new serialized key. Its disposition is `prohibited`, with no Shared Setup path:
+only known historical v7 operations may restore their original calendar summary
+settings. New preferences and imported Shared Setup cannot acquire this authority.
+The public v2 grammar, fixtures and both historical audit files remain unchanged.
+Native tests separately retain the local minute-refresh persistence audit.
