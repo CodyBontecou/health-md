@@ -1333,7 +1333,7 @@ struct DirectIPhoneBackend: CLIBackend {
                 )
                 return HTTPResult(
                     statusCode: 200,
-                    payload: directFileReceiptPayload(result.receipt)
+                    payload: try directFileReceiptPayload(result.receipt)
                 )
             } catch {
                 if case DirectClientControllerError.exportInterrupted(let jobID) = error,
@@ -1618,8 +1618,8 @@ struct DirectIPhoneBackend: CLIBackend {
         return UUID(uuidString: value)
     }
 
-    private func directFileReceiptPayload(_ receipt: DirectFileExportReceipt) -> [String: Any] {
-        [
+    private func directFileReceiptPayload(_ receipt: DirectFileExportReceipt) throws -> [String: Any] {
+        var payload: [String: Any] = [
             "backend": kind.rawValue,
             "job_id": receipt.jobID.uuidString.lowercased(),
             "status": receipt.status,
@@ -1632,6 +1632,13 @@ struct DirectIPhoneBackend: CLIBackend {
             "total_count": receipt.totalCount,
             "failed_date_identifiers": receipt.failedDateIdentifiers
         ]
+        if let observation = receipt.historyObservation {
+            payload["history_observation"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(observation))
+        }
+        if let sidecar = receipt.historySidecar {
+            payload["history_sidecar"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(sidecar))
+        }
+        return payload
     }
 
     private func directJobPayload(_ record: DirectJobRecord) -> [String: Any] {
@@ -2998,9 +3005,12 @@ func isValidMetricQueryResponse(_ payload: Any) -> Bool {
           response["coverage"] is [String: Any],
           response["sources"] is [Any],
           response["evidence"] is [Any],
-          response["limitations"] is [Any],
-          let nextCursor = response["next_cursor"],
-          nextCursor is NSNull || nextCursor is String else { return false }
+          response["limitations"] is [Any] else { return false }
+    // Codable omits a nil cursor on terminal pages. Both omission and explicit
+    // null end traversal; a present cursor must still have the declared type.
+    if let nextCursor = response["next_cursor"] {
+        return nextCursor is NSNull || nextCursor is String
+    }
     return true
 }
 

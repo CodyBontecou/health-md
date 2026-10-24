@@ -2195,7 +2195,18 @@ final class VaultManager: ObservableObject {
 
     /// Set a fake vault for UI testing — avoids real bookmark/security-scoped access.
     func setTestVault() {
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("TestVault")
+        var root = FileManager.default.temporaryDirectory
+        #if DEBUG && targetEnvironment(simulator)
+        if TestMode.isUITesting,
+           ProcessInfo.processInfo.environment["UITEST_BROWSABLE_VAULT"] == "true" {
+            precondition(Bundle.main.object(forInfoDictionaryKey: "HealthMdUITestBrowsableDocuments") as? Bool == true)
+            guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                preconditionFailure("Missing synthetic UI-test document directory")
+            }
+            root = documents
+        }
+        #endif
+        let tempDir = root.appendingPathComponent("TestVault", isDirectory: true)
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         vaultURL = tempDir
         vaultName = "TestVault"

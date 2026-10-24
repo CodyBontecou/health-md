@@ -139,6 +139,7 @@ coverage: prepare-healthmd-core-rust
 	xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
+	  $(MACOS_DERIVED_DATA_FLAGS) \
 	  -destination '$(MACOS_DEST)' \
 	  -enableCodeCoverage YES \
 	  -resultBundlePath $(XCRESULT_PATH) \

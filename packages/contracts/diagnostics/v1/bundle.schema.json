@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:healthmd:diagnostic-bundle:v1",
+  "title": "Health.md diagnostic bundle manifest v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "generated_at",
+    "platform",
+    "app_version",
+    "app_build",
+    "os_version",
+    "include_private_context",
+    "contains_private_context",
+    "health_content",
+    "event_count",
+    "session_dropped_event_count",
+    "invalid_event_count",
+    "truncated",
+    "files"
+  ],
+  "properties": {
+    "schema": {
+      "const": "healthmd.diagnostic_bundle"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "platform": {
+      "enum": [
+        "ios",
+        "macos",
+        "android"
+      ]
+    },
+    "app_version": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "app_build": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "os_version": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "include_private_context": {
+      "type": "boolean"
+    },
+    "contains_private_context": {
+      "type": "boolean"
+    },
+    "health_content": {
+      "enum": [
+        "not_included",
+        "possible"
+      ]
+    },
+    "event_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "session_dropped_event_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "invalid_event_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "selection_since": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "selection_subsystem": {
+      "enum": [
+        "connection",
+        "diagnostics",
+        "export",
+        "lifecycle",
+        "notification",
+        "schedule"
+      ]
+    },
+    "selection_operation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 53,
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "byte_count",
+          "sha256",
+          "privacy"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^(README\\.txt|events\\.(jsonl|txt)|attachments/attachment-[1-9][0-9]?\\.[a-z0-9]{1,10})$"
+          },
+          "byte_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "privacy": {
+            "enum": [
+              "operational",
+              "private_context",
+              "user_attachment"
+            ]
+          },
+          "original_name": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "original_name_truncated": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
