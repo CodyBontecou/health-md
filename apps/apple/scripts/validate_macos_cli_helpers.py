@@ -19,6 +19,8 @@ def validate(app):
         paths = re.findall(r"cmd LC_RPATH\s+cmdsize \d+\s+path (.*?) \(offset", commands)
         if "@loader_path/../Frameworks" not in paths:
             raise ValueError(f"{name}: missing app-relative framework search path")
+        if any(Path(path).is_absolute() and Path(path).name == "PackageFrameworks" for path in paths):
+            raise ValueError(f"{name}: embedded helper retains a build-only framework search path")
         required = set()
         libraries = subprocess.check_output(["otool", "-L", str(helper)], text=True)
         for line in libraries.splitlines()[1:]:
