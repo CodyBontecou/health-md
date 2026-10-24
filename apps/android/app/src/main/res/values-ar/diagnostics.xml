@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">التشخيصات</string>
+    <string name="diagnostics_entry">راجع الأحداث التقنية المحلية واختر ما تريد مشاركته</string>
+    <string name="diagnostics_recording">التسجيل المحلي</string>
+    <string name="diagnostics_privacy">تبقى التشخيصات على هذا الجهاز حتى تحفظها أو تشاركها. تستثني الأحداث التشغيلية القيم الصحية ومعرّفات السجلات الصحية وتواريخ البيانات الصحية المطلوبة والمسارات ونقاط الاتصال وبيانات الاعتماد. وهي ليست مجهولة الهوية.</string>
+    <string name="diagnostics_enabled">تسجيل الأحداث التشغيلية</string>
+    <string name="diagnostics_retention">يغيّر مستوى التفصيل التفاصيل، وليس الإذن بجمع المحتوى الصحي. الاحتفاظ: حتى 7 أيام / 20 MiB. لا توجد عمليات رفع تلقائية.</string>
+    <string name="diagnostics_start_private">تسجيل السياق الخاص لمدة 15 دقيقة</string>
+    <string name="diagnostics_stop_private">إيقاف التسجيل الخاص</string>
+    <string name="diagnostics_private_description">يسجل السياق الخاص في V1 أسماء الأجهزة المتصلة عند توفرها. ولا يلتقط المحتوى الصحي أو بيانات الاعتماد أو نصوص الأخطاء العشوائية. تنتهي صلاحية المقاطع الخاصة خلال 24 ساعة عند الوصول التالي إلى التطبيق.</string>
+    <string name="diagnostics_private_until">تنتهي صلاحية التسجيل الخاص: %1$s</string>
+    <string name="diagnostics_clear">مسح جميع التشخيصات</string>
+    <string name="diagnostics_clear_question">هل تريد حذف الأحداث المحلية والحزم المُعدّة ونسخ المرفقات؟ سيؤدي ذلك إلى إيقاف التسجيل الخاص. لن تتأثر الملفات المُصدّرة والنسخ المشتركة.</string>
+    <string name="diagnostics_select">اختيار الأحداث</string>
+    <string name="diagnostics_hour">الساعة الماضية</string>
+    <string name="diagnostics_day">آخر 24 ساعة</string>
+    <string name="diagnostics_week">آخر 7 أيام</string>
+    <string name="diagnostics_operation">UUID للعملية (اختياري)</string>
+    <string name="diagnostics_include_private">تضمين السياق الخاص المُسجّل</string>
+    <string name="diagnostics_search">البحث في معرّفات الأحداث أو الحقول</string>
+    <string name="diagnostics_refresh">تحديث الأحداث</string>
+    <string name="diagnostics_summary">الأحداث: %1$d · المفقود في الجلسة: %2$d · غير الصالح: %3$d · مقتطع: %4$s</string>
+    <string name="diagnostics_view_limit">تُعرض أحدث 100 حدث مطابق. تتضمن الحزمة اللقطة المحددة، حتى 10,000 حدث؛ ويُوضَّح أي اقتطاع.</string>
+    <string name="diagnostics_attachments">مرفقات اختيارية</string>
+    <string name="diagnostics_attachment_description">أضف ملفات موجودة، بما فيها ملفات تصدير الصحة أو لقطات الشاشة. تُنسخ البايتات الأصلية دون تغيير ولا تُنقَّح لإزالة المعلومات الحساسة. تُضمَّن أسماء الملفات الأصلية. لا تُجرى قراءات صحية جديدة. الحد: 50 ملفًا / 100 MiB.</string>
+    <string name="diagnostics_choose">اختيار ملفات…</string>
+    <string name="diagnostics_remove">إزالة %1$s</string>
+    <string name="diagnostics_prepare">إعداد الحزمة</string>
+    <string name="diagnostics_review">الإعداد والمراجعة</string>
+    <string name="diagnostics_frozen">لقطة ثابتة. الأحداث: %1$d. المحتوى الصحي: %2$s. ملف ZIP غير مشفّر.</string>
+    <string name="diagnostics_reviewed">راجعت الملفات التي أريد مشاركتها</string>
+    <string name="diagnostics_share">مشاركة ملف ZIP الذي تمت مراجعته</string>
+    <string name="diagnostics_save">حفظ ملف ZIP الذي تمت مراجعته</string>
+    <string name="diagnostics_share_question">هل تريد مشاركة حزمة التشخيص هذه؟</string>
+    <string name="diagnostics_share_warning">ملف ZIP غير مشفّر. قد يكشف السياق الخاص والمرفقات المُضمَّنة عن بيانات صحية أو أسرار. وقد تكون منشورات GitHub أو Discord العامة متاحة لأي شخص. تتحكم الوجهة في نسخها الخاصة؛ ولا يستطيع Health.md سحبها.</string>
+    <string name="diagnostics_share_confirm">مشاركة هذه الحزمة</string>
+    <string name="diagnostics_bundle_retention">تنتهي صلاحية الحزم المحلية خلال 24 ساعة عند الوصول التالي إلى التطبيق؛ ويُحتفظ بأحدث 3 فقط. للنسخ المحفوظة أو المشتركة مدد احتفاظ خاصة بها.</string>
+    <string name="diagnostics_preview_truncated">\n\n[اقتُطعت المعاينة عند 128 KiB. يبقى الملف الأصلي الكامل داخل ZIP.]</string>
+    <string name="diagnostics_failure">فشلت عملية التشخيص. تحقّق من الوصول إلى الملفات والتخزين المحلي، ثم أعد الإعداد والمراجعة.</string>
+    <string name="diagnostics_invalid_operation">يجب أن يكون معرّف العملية UUID.</string>
+</resources>

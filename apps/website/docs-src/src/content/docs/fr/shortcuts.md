@@ -1,17 +1,21 @@
 ---
 title: "Raccourcis et App Intents"
-description: "Utilisez sept actions publiées et deux actions de contexte Mac du code en développement dans Raccourcis et Siri."
+description: "Utilisez sept actions Health.md dans Raccourcis et Siri. Les actions d’actualisation du contexte Mac sont proposées, pas disponibles."
 ---
 
-<div class="availability preview"><strong>Sept actions publiées · neuf dans le code actuel</strong><p>Les deux actions de contexte Mac exigent des builds iPhone/Mac compatibles. Vérifiez les notes de la version exacte.</p></div>
+<div class="availability preview"><strong>Sept actions enregistrées dans le code</strong><p>Refresh Mac Health Context et Get Mac Context Refresh Status sont proposées, non implémentées et non disponibles en développement. Suivez le <a href="https://github.com/CodyBontecou/health-md/issues/173">ticket #173</a> ; leur disponibilité exige une implémentation, une qualification et les notes d’une version Apple exacte.</p></div>
 
 ## Actions
 
 - exporter hier, une date, une plage ou les N derniers jours ;
 - obtenir un résumé santé ou le dernier état d’exportation ;
-- activer ou suspendre la planification ;
-- **Refresh Mac Health Context** (développement) : mise à jour chiffrée durable liée à un profil ;
-- **Get Mac Context Refresh Status** (développement) : état et job ID.
+- activer ou suspendre la planification.
+
+### Actions de contexte Mac proposées (non disponibles)
+
+L’action demandée **Refresh Mac Health Context** utiliserait une portée explicite de profil et de dates, des appareils compatibles authentifiés et une acquisition durable du contexte sans fichiers d’exportation ni consommation du quota d’exportation de fichiers. **Get Mac Context Refresh Status** signalerait l’état en attente/terminé/échoué avec une identité de tâche récupérable. Il s’agit d’exigences, pas de noms d’actions, paramètres ou résultats pris en charge dans l’application actuelle.
+
+L’actualisation MCP depuis l’ordinateur ne fournit pas une automatisation personnelle iOS. N’utilisez pas les raccourcis d’exportation ordinaires comme substitut : ils conservent la destination dossier iPhone. Aucune automatisation ne peut promettre de réveiller un Mac endormi ni de contourner les données protégées de HealthKit. La vérification d’une automatisation après réveil sur un iPhone physique reste nécessaire avant de qualifier cette fonction.
 
 Les quatre actions d’exportation acceptent un **Profil** facultatif. Un nom inconnu échoue sans repli. Les exportations ordinaires écrivent dans le dossier iPhone et ne basculent pas silencieusement vers API Endpoint ou Connected Mac.
 

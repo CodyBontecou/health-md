@@ -243,8 +243,8 @@
     <string name="health_provider_status_ready_to_connect">Ready to connect</string>
     <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
     <string name="section_health_diagnostics">Health source diagnostics</string>
-    <string name="health_diagnostics_description">Share a redacted provider report with beta testers or support. It includes provider setup, permission states, and last export error categories without health measurements, credentials, or raw file paths.</string>
-    <string name="health_diagnostics_share_title">Share redacted technical report</string>
+    <string name="health_diagnostics_description">Share a provider report with beta testers or support. It includes selected providers, export date ranges, permission states, and error categories. It excludes health measurements, credentials, and raw paths, but is not operational-only or anonymous.</string>
+    <string name="health_diagnostics_share_title">Share provider report (includes settings)</string>
     <string name="health_diagnostics_share_subtitle">No credentials, provider secrets, raw file paths, or health measurements</string>
     <string name="health_diagnostics_share_subject">Health.md redacted technical report</string>
     <string name="health_diagnostics_share_chooser">Share technical report</string>

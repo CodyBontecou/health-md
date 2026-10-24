@@ -1,17 +1,21 @@
 ---
 title: "Comandi rapidi e App Intents"
-description: "Usa sette azioni pubblicate e due azioni di contesto Mac del codice in sviluppo in Comandi rapidi e Siri."
+description: "Usa sette azioni Health.md in Comandi rapidi e Siri. Le azioni di aggiornamento del contesto Mac sono proposte, non disponibili."
 ---
 
-<div class="availability preview"><strong>Sette azioni pubblicate · nove nel codice attuale</strong><p>Le due azioni di contesto Mac richiedono build iPhone/Mac compatibili. Controlla le note della versione esatta.</p></div>
+<div class="availability preview"><strong>Sette azioni registrate nel codice</strong><p>Refresh Mac Health Context e Get Mac Context Refresh Status sono proposte, non implementate né disponibili in sviluppo. Segui la <a href="https://github.com/CodyBontecou/health-md/issues/173">segnalazione #173</a>; la disponibilità richiede implementazione, qualificazione e note di una versione Apple esatta.</p></div>
 
 ## Azioni
 
 - esportare ieri, una data, un intervallo o gli ultimi N giorni;
 - ottenere riepilogo salute o ultimo stato;
-- attivare o sospendere la pianificazione;
-- **Refresh Mac Health Context** (sviluppo): aggiornamento crittografato durevole legato al profilo;
-- **Get Mac Context Refresh Status** (sviluppo): stato e job ID.
+- attivare o sospendere la pianificazione.
+
+### Azioni di contesto Mac proposte (non disponibili)
+
+L’azione richiesta **Refresh Mac Health Context** userebbe un ambito esplicito di profilo e date, dispositivi compatibili autenticati e acquisizione durevole del contesto senza file di esportazione né consumo della quota di esportazione file. **Get Mac Context Refresh Status** riporterebbe lo stato in attesa/completato/fallito con un’identità di lavoro recuperabile. Questi sono requisiti, non nomi di azioni, parametri o risultati supportati nell’app attuale.
+
+L’aggiornamento MCP dal computer non soddisfa un’automazione personale iOS. Non usare i normali comandi di esportazione come sostituti: mantengono la semantica della cartella iPhone. Nessuna automazione può promettere di risvegliare un Mac in stop o aggirare i dati protetti di HealthKit. Prima di qualificare questa funzione resta necessaria la verifica dell’automazione su un iPhone fisico dopo il risveglio.
 
 Le quattro azioni di esportazione accettano un **Profilo** facoltativo. Un nome sconosciuto fallisce senza ripiego. I comandi ordinari scrivono nella cartella iPhone e non passano silenziosamente a API Endpoint o Connected Mac.
 

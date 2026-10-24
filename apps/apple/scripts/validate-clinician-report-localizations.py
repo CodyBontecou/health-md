@@ -52,6 +52,24 @@ def apple_catalog_value(value: str) -> str:
     return re.sub(r"%(\d+)\$s", r"%\1$@", value)
 
 
+# This generic label predates the report and belongs to the native Shared Setup
+# sheet. Keep its exception tied to the actual localized consumer, rather than
+# enrolling an iOS-only control in the macOS translation inventory.
+REVIEWED_SHARED_UI_OWNERS = {
+    "Close": ("HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift", 'Button("Close")'),
+}
+
+
+def reviewed_shared_ui_keys(apple: Path) -> set[str]:
+    reviewed = set()
+    for key, (relative_path, localized_use) in REVIEWED_SHARED_UI_OWNERS.items():
+        owner = apple / relative_path
+        if not owner.is_file() or localized_use not in owner.read_text(encoding="utf-8"):
+            fail(f"reviewed shared UI owner no longer contains {key!r}: {relative_path}")
+        reviewed.add(key)
+    return reviewed
+
+
 def main() -> None:
     apple = Path(__file__).resolve().parents[1]
     manifest_path = apple / "scripts/fixtures/clinician-report-localization-en.json"
@@ -73,7 +91,7 @@ def main() -> None:
             f"missing={sorted(expected_keys - provider_keys)}, extra={sorted(provider_keys - expected_keys)}"
         )
     catalog_keys = {key for key in catalog["strings"] if key.startswith("clinician_report_")}
-    legacy_keys = LEGACY_UNREVIEWED_KEYS.intersection(catalog["strings"]) - mac_reviewed_keys
+    legacy_keys = LEGACY_UNREVIEWED_KEYS.intersection(catalog["strings"]) - mac_reviewed_keys - reviewed_shared_ui_keys(apple)
     if legacy_keys:
         fail(f"legacy keys without an explicit reviewed owner remain in catalog: {sorted(legacy_keys)}")
     if catalog_keys != expected_keys:

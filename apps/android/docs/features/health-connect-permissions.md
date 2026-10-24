@@ -13,7 +13,7 @@ Health.md asks Health Connect for read access to the health record types it can 
 
 ## Who it is for
 
-- Every user: without read permission, exports come back empty.
+- Users exporting from Health Connect: read permission is required for the record types they want to export.
 - Users with older devices or the sideloaded Health Connect APK, where newer record types may be unavailable.
 - Anyone reviewing Health.md's privacy claims from the Health Connect privacy-policy screen.
 
@@ -52,7 +52,7 @@ With sleep granted and nothing else, a daily export contains sleep metrics and r
 |---|---|---|
 | Exports report "no data" | Permission not granted, or no app writes that type to Health Connect | Re-check granted types in Health Connect settings |
 | A newer metric (e.g. skin temperature) is missing | Provider does not expose that record type | Nothing to fix on Health.md's side; the type is not requested from providers that cannot grant it |
-| History export stops at an older date | History read permission missing or unavailable | Grant it from the Export-tab notice, or export that range in shorter windows |
+| History export stops at an older date | History read permission missing or unavailable | Grant it from the Export-tab notice when available; shorter batches do not bypass Health Connect's history-access limit |
 | "Health Connect needs setup" | Provider not initialized | Open Health Connect once, accept its terms, then return |
 
 ## Video outline
@@ -69,3 +69,9 @@ With sleep granted and nothing else, a daily export contains sleep metrics and r
 ## Implementation notes
 
 `HealthConnectPermissionPolicy` builds a `HealthConnectPermissionPlan`: `alwaysAvailableForegroundPermissions` (the core record set), feature-gated additions for `FEATURE_SKIN_TEMPERATURE`, `FEATURE_MINDFULNESS_SESSION`, `FEATURE_PLANNED_EXERCISE`, `FEATURE_ACTIVITY_INTENSITY`, and `FEATURE_PERSONAL_HEALTH_RECORD` (medical FHIR resources), plus `PERMISSION_READ_HEALTH_DATA_HISTORY` and `PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND` when those features report available. Types that a provider cannot grant are never sent in the request (important for the Android 13 APK provider). `HealthPermissionsRationaleActivity` satisfies Health Connect's rationale requirement with twelve category cards (sleep, activity, heart, vitals, body, nutrition, mobility, reproductive, mindfulness, medical, history, background); `ViewPermissionUsageActivity` is an exported activity-alias onto it for `VIEW_PERMISSION_USAGE`, enforced by `HealthConnectManifestContractTest`. Permission state re-checks on every `ON_RESUME`. Deliberate difference from Apple: Android requests Health Connect record-type permissions in one system sheet; there is no per-object selector equivalent to Apple's special-access flows.
+
+## Typed-query history-assessment contract
+
+Android's current history permission and first-grant checks do not produce the independently versioned [`healthmd.history_assessment/1` query metadata](../../../../packages/contracts/query-history/v1/README.md). The [machine-readable platform record](../../../apple/docs/testing/history-assessment-platform-v1.json) marks Android `planned`, with a concrete Health Connect adapter, native warning and portable receipt-test target. The Apple source implementation and portable Rust consumer are also awaiting qualification; neither platform is recorded as an available shared capability.
+
+A known Health Connect `history_permission_missing` result must remain distinct from Apple's privacy-ambiguous omission of a per-type boundary. Unknown legacy first-grant dates remain conservative. Existing permission/export behavior and historical Android v4/v5 and raw-v1 bytes are unchanged; absence of the new query extension means legacy/unassessed, not complete historical authorization.

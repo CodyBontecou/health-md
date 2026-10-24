@@ -1,6 +1,11 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+struct ExportFolderBrowserPresentation: Identifiable {
+    let id = UUID()
+    let target: ExportPresentationTarget
+}
+
 struct ExportFolderBrowser: UIViewControllerRepresentable {
     let initialDirectoryURL: URL
     let onFileSelected: (URL) -> Void

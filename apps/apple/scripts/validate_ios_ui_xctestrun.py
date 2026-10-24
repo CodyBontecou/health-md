@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from ui_test_document_fixture import verify_simulator
+
 SCHEME = "HealthMd-UITests-iOS"
 TARGET = "HealthMdUITests"
 CONFIGURATION = "Debug-iOS-iphonesimulator"
@@ -160,6 +162,7 @@ def qualify(derived_data: Path, source_sha: str) -> tuple[Path, dict[str, Any]]:
         info = bundle_info(bundle, products)
         if info.get("CFBundleIdentifier") != identifier or info.get("CFBundleSupportedPlatforms") != ["iPhoneSimulator"]:
             raise ValueError("generated manifest points to the wrong simulator bundle identity")
+    verify_simulator(bundle_info(app, products))
     if len(expected) != 3:
         raise ValueError("generated test, host, and app paths must be distinct")
     if "TestHostBundleIdentifier" in target and target["TestHostBundleIdentifier"] != expected[host][1]:
