@@ -40,7 +40,7 @@ def validate(app):
                 raise ValueError("MCP helper did not complete its local initialize handshake")
         loaded = {Path(path).resolve() for path in re.findall(r"^dyld\[\d+\]: (?:<[^>]+> )?(/.+)$", result.stderr, re.MULTILINE)}
         if not required.issubset(loaded):
-            raise ValueError(f"{name}: loader did not confirm all dependencies came from this app bundle")
+            raise ValueError(f"{name}: dependencies outside app or absent from loader trace: {sorted(str(path) for path in required - loaded)}; loaded package frameworks: {sorted(str(path) for path in loaded if '_PackageProduct.framework' in str(path))}")
         frameworks = (app / "Contents" / "Frameworks").resolve()
         for path in loaded:
             if "_PackageProduct.framework" in str(path) and not path.is_relative_to(frameworks):

@@ -1026,8 +1026,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
 					"@loader_path/../Frameworks",
+					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
@@ -1051,8 +1051,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
 					"@loader_path/../Frameworks",
+					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
@@ -1076,8 +1076,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
 					"@loader_path/../Frameworks",
+					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
@@ -1100,8 +1100,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
 					"@loader_path/../Frameworks",
+					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
@@ -1263,8 +1263,8 @@
 				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				INFOPLIST_KEY_CFBundleName = healthmd;
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
 					"@loader_path/../Frameworks",
+					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
@@ -1992,8 +1992,8 @@
 				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				INFOPLIST_KEY_CFBundleName = healthmd;
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
 					"@loader_path/../Frameworks",
+					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
@@ -2168,8 +2168,8 @@
 				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				INFOPLIST_KEY_CFBundleName = healthmd;
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
 					"@loader_path/../Frameworks",
+					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
@@ -2233,8 +2233,8 @@
 				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				INFOPLIST_KEY_CFBundleName = healthmd;
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
 					"@loader_path/../Frameworks",
+					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
