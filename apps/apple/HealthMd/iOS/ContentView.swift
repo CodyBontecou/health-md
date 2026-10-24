@@ -1762,7 +1762,7 @@ struct ContentView: View {
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
                 exportStatusMessage = outcome.uploads.localizedDescription
-                vaultManager.lastExportStatus = "Agent Data gateway export complete"
+                vaultManager.recordSuccessfulExportStatus("Agent Data gateway export complete")
                 startStatusDismissTimer()
 
                 if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
