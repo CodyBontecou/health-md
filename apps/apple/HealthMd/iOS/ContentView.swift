@@ -3115,7 +3115,7 @@ struct SettingsTabView: View {
             SettingsRow(
                 icon: "hand.raised.fill",
                 title: "Privacy Policy",
-                subtitle: "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.",
+                subtitle: "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.",
                 isActive: true,
                 accessibilityHint: "Double tap to open the Health.md privacy policy",
                 action: { UIApplication.shared.open(privacyPolicyURL) }

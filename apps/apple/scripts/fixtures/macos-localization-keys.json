@@ -97,7 +97,7 @@
     "Already have it on your iPhone? Continue to connect.",
     "An encrypted Health.md query-context day is corrupt.",
     "Analytics events are automatically deleted within 13 months.",
-    "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.",
+    "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.",
     "App Launched",
     "App Store QR code",
     "App Store-safe by design.",

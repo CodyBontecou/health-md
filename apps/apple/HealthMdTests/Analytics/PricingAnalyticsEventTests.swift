@@ -42,7 +42,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertEqual(payload.eventName, "pricing_paywall_viewed")
         XCTAssertEqual(
             Set(payload.properties.keys),
-            Set(PricingAnalyticsPropertyKey.allCases),
+            Set(PricingAnalyticsPropertyKey.allCases.filter { !$0.rawValue.hasPrefix("appleAds") }),
             "The encoded model should contain every allowlisted property and no arbitrary keys."
         )
         XCTAssertEqual(payload.properties[.experimentId], .string("pricing_activation_2026_05"))
@@ -342,6 +342,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertTrue(declaredTypeNames.contains("NSPrivacyCollectedDataTypeProductInteraction"))
         XCTAssertTrue(declaredTypeNames.contains("NSPrivacyCollectedDataTypePurchaseHistory"))
         XCTAssertTrue(declaredTypeNames.contains("NSPrivacyCollectedDataTypeOtherUsageData"))
+        XCTAssertTrue(declaredTypeNames.contains("NSPrivacyCollectedDataTypeAdvertisingData"))
         XCTAssertTrue(analyticsTypes.allSatisfy { ($0["NSPrivacyCollectedDataTypeTracking"] as? Bool) == false })
         XCTAssertTrue(analyticsTypes.allSatisfy { ($0["NSPrivacyCollectedDataTypeLinked"] as? Bool) == false })
     }
