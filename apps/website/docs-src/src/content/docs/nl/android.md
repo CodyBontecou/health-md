@@ -16,7 +16,7 @@ description: Stel Health.md in op Android, exporteer Health Connect-gegevens naa
 <div class="reference-stats">
 <div><strong>106</strong><span>selecteerbare Health Connect-meetwaarden</span></div>
 <div><strong>4</strong><span>exportformaten</span></div>
-<div><strong>10</strong><span>gratis handmatige exportacties</span></div>
+<div><strong>5</strong><span>gratis handmatige exportacties</span></div>
 <div><strong>0</strong><span>vereiste Health.md-cloudaccounts</span></div>
 </div>
 
@@ -47,7 +47,7 @@ Health.md voor Android maakt van Health Connect een gezondheidsdagboek met lokal
 6. Bekijk een voorbeeld van de uitvoer.
 7. Tik op exporteren en controleer de gemaakte bestanden in je map of kluis.
 
-Met het gratis aanbod kun je 10 handmatige exportacties uitvoeren. Zo kun je machtigingen, maptoegang, formaten en je Obsidian-workflow testen voordat je onbeperkte exports ontgrendelt.
+Met het gratis aanbod kun je 5 handmatige exportacties uitvoeren. Zo kun je machtigingen, maptoegang, formaten en je Obsidian-workflow testen voordat je onbeperkte exports ontgrendelt.
 
 ## Bestemmingen op Android
 
@@ -125,7 +125,7 @@ Dagtotalen gebruiken exacte lokale daggrenzen met tijdzone. Health.md knipt en s
 
 ## Prijzen en aankopen herstellen
 
-- De Android-app bevat 10 gratis handmatige exportacties.
+- De Android-app bevat 5 gratis handmatige exportacties.
 - Met een eenmalige aankoop voor levenslange toegang via Google Play Billing ontgrendel je onbeperkte exports en geplande automatisering.
 - Er is geen abonnement of terugkerende betaling.
 - Google Play toont vóór de aankoop de actuele lokale prijs.

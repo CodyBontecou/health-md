@@ -81,7 +81,7 @@ Some data is deliberately **not treated as equivalent** across platforms. Heart-
 
 | Capability | iPhone / iPad | Mac | Android | Wear OS |
 |---|---|---|---|---|
-| Free tier | ✓ 10 manual or scheduled export actions | — | ✓ 10 manual export actions | — |
+| Free tier | ✓ 5 manual or scheduled export actions | — | ✓ 5 manual export actions | — |
 | Unlock | ✓ one-time lifetime (individual / family) | ◐ same Apple unlock | ✓ one-time lifetime purchase, including scheduling | — |
 | Local-first privacy | ✓ no Health.md health-data cloud | ✓ | ✓ | △ planned |
 | Clinician report (one PDF for appointments) | ✓ | — | ✓ | — |

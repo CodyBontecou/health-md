@@ -34,7 +34,7 @@ First-run setup walks through a welcome, Health Connect access, an export folder
 1. **Welcome** — review what Health.md does. If you already have a shared setup file, tap **Use a Shared Setup** to review and apply a `.healthmdconfig` file instead of configuring by hand (the shared-setup surface also lives under Settings after onboarding).
 2. **Health** — tap to grant Health Connect read access. The page shows a green check when permission is granted and continues automatically.
 3. **Storage** — tap to open the Android folder picker and choose where exports are written. The selected folder name is shown and the page continues automatically.
-4. **Access** — on Play, optionally buy the lifetime unlock or restore a purchase; **Continue free** keeps the 10 free export actions. On F-Droid, confirm the included full-access explanation and continue without a paywall.
+4. **Access** — on Play, optionally buy the lifetime unlock or restore a purchase; **Continue free** keeps the 5 free export actions. On F-Droid, confirm the included full-access explanation and continue without a paywall.
 5. **Ready** — finish setup.
 
 ## Example output

@@ -70,7 +70,7 @@ description: "“导出”标签页是主要操作界面。它会显示 HealthKi
 
 <div class="callout">
 <strong>解锁规则。</strong>
-<p style="margin-top:6px;">在 Apple 平台上，免费额度由 10 次手动或计划导出操作共用。Full Access 会移除此上限，并解锁 Mac 目标工作流和“快捷指令”。Android 则提供 10 次免费手动操作，计划功能需要一次性终身购买。有关 Apple 购买详情，请参阅<a href="/zh-hans/docs/paywall/">付费墙页面</a>。</p>
+<p style="margin-top:6px;">在 Apple 平台上，免费额度由 5 次手动或计划导出操作共用。Full Access 会移除此上限，并解锁 Mac 目标工作流和“快捷指令”。Android 则提供 5 次免费手动操作，计划功能需要一次性终身购买。有关 Apple 购买详情，请参阅<a href="/zh-hans/docs/paywall/">付费墙页面</a>。</p>
 </div>
 
 ## 相关内容

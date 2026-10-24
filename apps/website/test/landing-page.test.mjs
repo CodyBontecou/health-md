@@ -90,7 +90,7 @@ test("landing closes with a localized download decision and compact footer", () 
   const footer = index.slice(index.indexOf('<footer class="site-footer">'));
 
   assert.match(downloadSection, /Take your health data with you\./);
-  assert.match(downloadSection, /Google Play: try 10 exports free, then make one lifetime purchase\. F-Droid: Full Access is included\./);
+  assert.match(downloadSection, /Google Play: try 5 exports free, then make one lifetime purchase\. F-Droid: Full Access is included\./);
   assert.match(downloadSection, /class="download-actions" aria-label="Download Health\.md"/);
   assert.equal((downloadSection.match(/class="hero-store-badge /g) ?? []).length, 3);
   assert.match(downloadSection, /href="https:\/\/apps\.apple\.com\/us\/app\/health-md\/id6757763969"/);
@@ -253,7 +253,7 @@ test("terms of service uses the legal design and covers the current product mode
   assert.match(terms, /consumer apps for iPhone, iPad, Mac, and Android/);
   assert.match(terms, /command-line and MCP tools where made available/);
   assert.match(terms, /preview, source-build, beta, or compatibility path/);
-  assert.match(terms, /current consumer offer is 10 free exports/);
+  assert.match(terms, /current consumer offer is 5 free exports/);
   assert.match(terms, /It is not a subscription and does not renew/);
   assert.match(terms, /never exposing a local loopback API or its port to another machine/);
   assert.match(terms, /not a medical device, healthcare provider, diagnostic service, treatment, or emergency service/);

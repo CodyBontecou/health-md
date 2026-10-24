@@ -16,7 +16,7 @@ description: Configure o Health.md para Android, exporte dados do Health Connect
 <div class="reference-stats">
 <div><strong>106</strong><span>métricas selecionáveis do Health Connect</span></div>
 <div><strong>4</strong><span>formatos de exportação</span></div>
-<div><strong>10</strong><span>ações gratuitas de exportação manual</span></div>
+<div><strong>5</strong><span>ações gratuitas de exportação manual</span></div>
 <div><strong>0</strong><span>contas obrigatórias na nuvem do Health.md</span></div>
 </div>
 
@@ -47,7 +47,7 @@ O Health.md para Android transforma o Health Connect em um diário de saúde que
 6. Visualize a saída.
 7. Toque em exportar e verifique os arquivos gerados na sua pasta ou no seu cofre.
 
-O plano gratuito inclui 10 ações de exportação manual para você testar permissões, acesso à pasta, formatos e seu fluxo no Obsidian antes de desbloquear exportações ilimitadas.
+O plano gratuito inclui 5 ações de exportação manual para você testar permissões, acesso à pasta, formatos e seu fluxo no Obsidian antes de desbloquear exportações ilimitadas.
 
 ## Destinos no Android
 
@@ -125,7 +125,7 @@ Os totais usam os limites exatos do dia local com fuso. O Health.md recorta e di
 
 ## Preços e restauração
 
-- O app para Android inclui 10 ações gratuitas de exportação manual.
+- O app para Android inclui 5 ações gratuitas de exportação manual.
 - Exportações ilimitadas e automação agendada são desbloqueadas por uma compra única e vitalícia pelo Google Play Billing.
 - Não há assinatura nem cobrança recorrente.
 - O Google Play mostra o preço local vigente antes da compra.

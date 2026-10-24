@@ -35,6 +35,7 @@ struct iPadContentView: View {
     @State private var showPaywall = false
     @State private var showUpgradePromptPaywall = false
     @State private var presentPaywallAfterUpgradePrompt = false
+    @State private var presentScheduleAfterExportGuidance = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
@@ -185,7 +186,10 @@ struct iPadContentView: View {
                     }
                 ),
                 onDismiss: {
-                    if presentPaywallAfterUpgradePrompt {
+                    if presentScheduleAfterExportGuidance {
+                        presentScheduleAfterExportGuidance = false
+                        selectedTab = .schedule
+                    } else if presentPaywallAfterUpgradePrompt {
                         presentPaywallAfterUpgradePrompt = false
                         showUpgradePromptPaywall = true
                     }
@@ -193,6 +197,12 @@ struct iPadContentView: View {
             ) {
                 ExportUpgradePrompt(
                     milestone: purchaseManager.pendingUpgradePrompt ?? 0,
+                    onSchedule: {
+                        let quotaState = purchaseManager.analyticsQuotaState
+                        purchaseManager.consumeUpgradePrompt()
+                        PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
+                        presentScheduleAfterExportGuidance = true
+                    },
                     onUpgrade: {
                         let quotaState = purchaseManager.analyticsQuotaState
                         purchaseManager.consumeUpgradePrompt()
@@ -555,7 +565,7 @@ struct iPadContentView: View {
 
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
                 trackSuccessfulExport(
                     startDate: normalizedStartDate,
                     endDate: normalizedEndDate

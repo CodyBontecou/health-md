@@ -81,7 +81,7 @@ Einige Daten werden plattformübergreifend bewusst **nicht als gleichwertig beha
 
 | Funktion | iPhone / iPad | Mac | Android | Wear OS |
 |---|---|---|---|---|
-| Kostenloses Kontingent | ✓ 10 manuelle oder geplante Exportaktionen | — | ✓ 10 manuelle Exportaktionen | — |
+| Kostenloses Kontingent | ✓ 5 manuelle oder geplante Exportaktionen | — | ✓ 5 manuelle Exportaktionen | — |
 | Freischaltung | ✓ einmaliger Lebenszeitkauf (Einzeln / Familie) | ◐ gleiche Apple-Freischaltung | ✓ einmaliger Lebenszeitkauf, Zeitplanung inklusive | — |
 | Datenschutz mit lokaler Verarbeitung | ✓ keine Health.md-Cloud für Gesundheitsdaten | ✓ | ✓ | △ geplant |
 | Arztbericht (ein PDF für Termine) | ✓ | — | ✓ | — |

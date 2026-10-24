@@ -551,7 +551,7 @@
     <string name="export_notification_unknown_error">ਅਣਜਾਣ ਗਲਤੀ</string>
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md ਅਨਲਾਕ ਕਰੋ</string>
-    <string name="paywall_subtitle">ਤੁਸੀਂ ਆਪਣੇ 10 ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਵਰਤ ਲਏ ਹਨ</string>
+    <string name="paywall_subtitle">ਤੁਸੀਂ ਆਪਣੇ 5 ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਵਰਤ ਲਏ ਹਨ</string>
     <string name="paywall_unlimited_exports">ਅਨੰਤ ਨਿਰਯਾਤ, ਹਮੇਸ਼ਾ ਲਈ</string>
     <string name="paywall_scheduled_exports">ਸਵੈਚਲਿਤ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ</string>
     <string name="paywall_future_features">ਭਵਿੱਖ ਦੀਆਂ ਸਾਰੀਆਂ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਸ਼ਾਮਲ</string>
@@ -747,7 +747,7 @@
     <string name="export_source_shortcut">ਸ਼ਾਰਟਕੱਟ</string>
     <string name="export_source_remote">ਰਿਮੋਟ</string>
     <string name="schedule_unlock_required_title">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਅਨਲੌਕ ਕਰੋ</string>
-    <string name="schedule_unlock_required_body">ਦਸਤੀ ਨਿਰਯਾਤ 10 ਵਾਰ ਮੁਫ਼ਤ ਚਲਾਏ ਜਾ ਸਕਦੇ ਹਨ। ਆਟੋਮੈਟਿਕ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਇੱਕ-ਵਾਰ ਦੇ ਜੀਵਨ ਭਰ ਅਨਲੌਕ ਵਿੱਚ ਸ਼ਾਮਲ ਹਨ।</string>
+    <string name="schedule_unlock_required_body">ਦਸਤੀ ਨਿਰਯਾਤ 5 ਵਾਰ ਮੁਫ਼ਤ ਚਲਾਏ ਜਾ ਸਕਦੇ ਹਨ। ਆਟੋਮੈਟਿਕ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਇੱਕ-ਵਾਰ ਦੇ ਜੀਵਨ ਭਰ ਅਨਲੌਕ ਵਿੱਚ ਸ਼ਾਮਲ ਹਨ।</string>
     <string name="schedule_unlock_required_short">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਸਮਰੱਥ ਬਣਾਉਣ ਲਈ Health.md ਨੂੰ ਅਨਲੌਕ ਕਰੋ।</string>
     <string name="export_folder_root_label">ਨਿਰਯਾਤ ਫੋਲਡਰ</string>
     <string name="history_clear_title">ਕੀ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਸਾਫ਼ ਕਰਨਾ ਹੈ?</string>
@@ -1396,4 +1396,12 @@
     <string name="myself_claim_store_unavailable">Google Play ਖਰੀਦ ਪ੍ਰਾਪਤ ਨਹੀਂ ਕਰ ਸਕਿਆ। ਕਨੈਕਸ਼ਨ ਅਤੇ Google Play ਖਾਤਾ ਜਾਂਚ ਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="myself_claim_verification_failed">ਖਰੀਦ ਦੀ ਪੁਸ਼ਟੀ ਨਹੀਂ ਹੋ ਸਕੀ। ਕਨੈਕਸ਼ਨ ਜਾਂਚ ਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ। ਸਮੱਸਿਆ ਜਾਰੀ ਰਹੇ ਤਾਂ ਸਹਾਇਤਾ ਨਾਲ ਸੰਪਰਕ ਕਰੋ; ਪਹੁੰਚ ਨਹੀਂ ਦਿੱਤੀ ਗਈ।</string>
     <string name="myself_claim_browser_unavailable">ਬ੍ਰਾਊਜ਼ਰ ਨਹੀਂ ਖੁੱਲ੍ਹ ਸਕਿਆ। ਬ੍ਰਾਊਜ਼ਰ ਚਾਲੂ ਕਰਕੇ ਖਰੀਦ ਦੀ ਮੁੜ ਪੁਸ਼ਟੀ ਕਰੋ।</string>
+    <string name="post_export_first_title">ਤੁਹਾਡਾ ਪਹਿਲਾ ਨਿਰਯਾਤ ਪੂਰਾ ਹੋ ਗਿਆ</string>
+    <string name="post_export_first_body">ਇਹ ਕਦਮ ਦੁਹਰਾਉਣ ਤੋਂ ਬਚਣ ਲਈ ਰੋਜ਼ਾਨਾ ਨਿਰਯਾਤ ਸੈੱਟ ਕਰੋ। ਅਨੁਸੂਚੀ ਲਈ ਜੀਵਨ ਭਰ ਪਹੁੰਚ ਚਾਹੀਦੀ ਹੈ; ਦਸਤੀ ਨਿਰਯਾਤ ਤੁਹਾਡਾ ਮੁਫ਼ਤ ਕੋਟਾ ਵਰਤਦੇ ਹਨ।</string>
+    <string name="post_export_third_title">ਆਪਣੇ ਸਿਹਤ ਨੋਟਸ ਜਾਰੀ ਰੱਖੋ</string>
+    <string name="post_export_third_body">ਤੁਸੀਂ ਤਿੰਨ ਨਿਰਯਾਤ ਪੂਰੇ ਕਰ ਲਏ ਹਨ। ਇੱਕ ਵਾਰ ਦੀ ਖਰੀਦ ਨਾਲ ਅਸੀਮਤ ਦਸਤੀ ਨਿਰਯਾਤ ਅਤੇ ਅਨੁਸੂਚੀ ਮਿਲਦੀ ਹੈ। ਕੋਈ ਗਾਹਕੀ ਨਹੀਂ। ਨਿਰਯਾਤ ਕੀਤੀਆਂ ਫ਼ਾਈਲਾਂ ਤੁਹਾਡੀਆਂ ਹੀ ਰਹਿਣਗੀਆਂ।</string>
+    <string name="post_export_schedule_action">ਰੋਜ਼ਾਨਾ ਨਿਰਯਾਤ ਵੇਖੋ</string>
+    <string name="post_export_upgrade_action">ਜੀਵਨ ਭਰ ਪਹੁੰਚ ਵੇਖੋ</string>
+    <string name="post_export_manual_action">ਦਸਤੀ ਨਿਰਯਾਤ ਜਾਰੀ ਰੱਖੋ</string>
+    <string name="post_export_continue_free">ਮੁਫ਼ਤ ਜਾਰੀ ਰੱਖੋ</string>
 </resources>

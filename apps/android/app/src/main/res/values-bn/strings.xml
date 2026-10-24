@@ -551,7 +551,7 @@
     <string name="export_notification_unknown_error">অজানা ত্রুটি</string>
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md আনলক করুন</string>
-    <string name="paywall_subtitle">আপনি আপনার ১০টি বিনামূল্যের রপ্তানি ব্যবহার করেছেন</string>
+    <string name="paywall_subtitle">আপনি আপনার ৫টি বিনামূল্যের রপ্তানি ব্যবহার করেছেন</string>
     <string name="paywall_unlimited_exports">সীমাহীন রপ্তানি, চিরকাল</string>
     <string name="paywall_scheduled_exports">স্বয়ংক্রিয় নির্ধারিত রপ্তানি</string>
     <string name="paywall_future_features">সমস্ত ভবিষ্যত বৈশিষ্ট্য অন্তর্ভুক্ত</string>
@@ -747,7 +747,7 @@
     <string name="export_source_shortcut">শর্টকাট</string>
     <string name="export_source_remote">দূরবর্তী</string>
     <string name="schedule_unlock_required_title">নির্ধারিত রপ্তানি আনলক করুন</string>
-    <string name="schedule_unlock_required_body">ম্যানুয়াল রপ্তানি ১০ বার বিনামূল্যে চালানো যায়। এককালীন আজীবন আনলকের সঙ্গে স্বয়ংক্রিয় নির্ধারিত রপ্তানি অন্তর্ভুক্ত।</string>
+    <string name="schedule_unlock_required_body">ম্যানুয়াল রপ্তানি ৫ বার বিনামূল্যে চালানো যায়। এককালীন আজীবন আনলকের সঙ্গে স্বয়ংক্রিয় নির্ধারিত রপ্তানি অন্তর্ভুক্ত।</string>
     <string name="schedule_unlock_required_short">নির্ধারিত রপ্তানি সক্ষম করতে Health.md আনলক করুন।</string>
     <string name="export_folder_root_label">রপ্তানি ফোল্ডার</string>
     <string name="history_clear_title">রপ্তানির ইতিহাস সাফ করবেন?</string>
@@ -1396,4 +1396,12 @@
     <string name="myself_claim_store_unavailable">Google Play কেনাকাটা আনতে পারেনি। সংযোগ ও Google Play অ্যাকাউন্ট পরীক্ষা করে আবার চেষ্টা করুন।</string>
     <string name="myself_claim_verification_failed">কেনাকাটা যাচাই করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন। সমস্যা থাকলে সহায়তায় যোগাযোগ করুন; কোনো অ্যাক্সেস দেওয়া হয়নি।</string>
     <string name="myself_claim_browser_unavailable">ব্রাউজার খোলা যায়নি। একটি ব্রাউজার চালু করে কেনাকাটা আবার যাচাই করুন।</string>
+    <string name="post_export_first_title">আপনার প্রথম রপ্তানি সম্পূর্ণ</string>
+    <string name="post_export_first_body">এই ধাপগুলো বারবার না করতে দৈনিক রপ্তানি সেট করুন। সময়সূচির জন্য আজীবন অ্যাক্সেস প্রয়োজন; ম্যানুয়াল রপ্তানি আপনার বিনামূল্যের কোটা ব্যবহার করে।</string>
+    <string name="post_export_third_title">আপনার স্বাস্থ্য নোট চালিয়ে যান</string>
+    <string name="post_export_third_body">আপনি তিনটি রপ্তানি সম্পন্ন করেছেন। এককালীন কেনাকাটায় সীমাহীন ম্যানুয়াল রপ্তানি ও সময়সূচি পাবেন। সাবস্ক্রিপশন নেই। রপ্তানি করা ফাইল আপনারই থাকবে।</string>
+    <string name="post_export_schedule_action">দৈনিক রপ্তানি দেখুন</string>
+    <string name="post_export_upgrade_action">আজীবন অ্যাক্সেস দেখুন</string>
+    <string name="post_export_manual_action">ম্যানুয়াল রপ্তানি চালিয়ে যান</string>
+    <string name="post_export_continue_free">বিনামূল্যে চালিয়ে যান</string>
 </resources>

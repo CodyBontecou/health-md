@@ -296,7 +296,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Разблокировать Health.md</string>
-    <string name="paywall_subtitle">Вы исчерпали 10 бесплатных экспортов</string>
+    <string name="paywall_subtitle">Вы исчерпали 5 бесплатных экспортов</string>
     <string name="paywall_unlimited_exports">Неограниченные экспорты, навсегда</string>
     <string name="paywall_scheduled_exports">Автоматизированные запланированные экспорты</string>
     <string name="paywall_future_features">Все будущие функции включены</string>
@@ -798,7 +798,7 @@
     <string name="export_source_shortcut">Ярлык</string>
     <string name="export_source_remote">Удаленный</string>
     <string name="schedule_unlock_required_title">Разблокируйте запланированный экспорт</string>
-    <string name="schedule_unlock_required_body">Ручной экспорт включает 10 бесплатных запусков. Автоматический экспорт по расписанию включен в одноразовую пожизненную разблокировку.</string>
+    <string name="schedule_unlock_required_body">Ручной экспорт включает 5 бесплатных запусков. Автоматический экспорт по расписанию включен в одноразовую пожизненную разблокировку.</string>
     <string name="schedule_unlock_required_short">Разблокируйте Health.md, чтобы включить запланированный экспорт.</string>
     <string name="export_folder_root_label">Папка экспорта</string>
     <string name="history_clear_title">Очистить историю экспорта?</string>
@@ -1524,4 +1524,12 @@
     <string name="myself_claim_store_unavailable">Google Play не удалось получить покупку. Проверьте подключение и аккаунт Google Play, затем повторите попытку.</string>
     <string name="myself_claim_verification_failed">Не удалось проверить покупку. Проверьте подключение и повторите попытку. Если ошибка сохраняется, обратитесь в поддержку. Доступ не предоставлен.</string>
     <string name="myself_claim_browser_unavailable">Не удалось открыть браузер. Включите браузер и снова проверьте покупку.</string>
+    <string name="post_export_first_title">Первый экспорт завершён</string>
+    <string name="post_export_first_body">Настройте ежедневный экспорт, чтобы не повторять эти шаги. Расписание требует пожизненного доступа; ручной экспорт использует бесплатный лимит.</string>
+    <string name="post_export_third_title">Продолжайте вести заметки о здоровье</string>
+    <string name="post_export_third_body">Вы выполнили три экспорта. Одна покупка открывает неограниченный ручной экспорт и расписание. Без подписки. Экспортированные файлы остаются вашими.</string>
+    <string name="post_export_schedule_action">Посмотреть ежедневный экспорт</string>
+    <string name="post_export_upgrade_action">Посмотреть пожизненный доступ</string>
+    <string name="post_export_manual_action">Продолжить ручной экспорт</string>
+    <string name="post_export_continue_free">Продолжить бесплатно</string>
 </resources>

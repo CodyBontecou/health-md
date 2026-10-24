@@ -15,7 +15,7 @@ La prise en main apparaît au premier lancement sur iPhone. Elle explique le mod
 4. **Dossier :** choisir iCloud Drive, Sur mon iPhone, un coffre Obsidian ou un autre fournisseur Fichiers.
 5. **Prêt :** réparer une connexion manquante et ouvrir l’aperçu de la première exportation.
 
-Après la fermeture de cet aperçu, une offre unique et fermable peut apparaître. Des rappels non bloquants peuvent suivre après les 3e et 7e exportations gratuites. La limite ferme reste 10 actions terminées.
+Après le premier export gratuit terminé, un guide propose de vérifier une programmation quotidienne sans l’activer. Après le troisième, une offre à vie fermable indique deux actions gratuites restantes. La limite est de cinq actions terminées.
 
 Vous pourrez ensuite modifier autorisations, métriques, dossier, formats, noms, profils, planification et connexion Mac.
 

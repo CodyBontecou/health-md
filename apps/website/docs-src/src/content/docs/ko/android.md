@@ -16,7 +16,7 @@ description: Android용 Health.md를 설정하고, Health Connect 데이터를 M
 <div class="reference-stats">
 <div><strong>106</strong><span>선택 가능한 Health Connect 측정 항목</span></div>
 <div><strong>4</strong><span>내보내기 형식</span></div>
-<div><strong>10</strong><span>무료 수동 내보내기 작업</span></div>
+<div><strong>5</strong><span>무료 수동 내보내기 작업</span></div>
 <div><strong>0</strong><span>필요한 Health.md 클라우드 계정</span></div>
 </div>
 
@@ -47,7 +47,7 @@ Android용 Health.md는 Health Connect를 로컬 우선 건강 일지로 바꿔 
 6. 결과를 미리 봅니다.
 7. 내보내기를 탭하고 폴더 또는 보관함에서 생성된 파일을 확인합니다.
 
-무료 요금제에는 수동 내보내기 작업 10회가 포함되어 있어 무제한 내보내기를 잠금 해제하기 전에 권한, 폴더 접근, 형식 및 Obsidian 워크플로를 테스트할 수 있습니다.
+무료 요금제에는 수동 내보내기 작업 5회가 포함되어 있어 무제한 내보내기를 잠금 해제하기 전에 권한, 폴더 접근, 형식 및 Obsidian 워크플로를 테스트할 수 있습니다.
 
 ## Android의 대상 위치
 
@@ -125,7 +125,7 @@ Health Connect가 Android의 권장 건강 데이터 계층이므로 Google Fit�
 
 ## 가격 및 구매 복원
 
-- Android 앱에는 무료 수동 내보내기 작업 10회가 포함됩니다.
+- Android 앱에는 무료 수동 내보내기 작업 5회가 포함됩니다.
 - Google Play Billing을 통한 일회성 평생 구매로 무제한 내보내기와 예약 자동화를 잠금 해제할 수 있습니다.
 - 구독과 반복 청구는 없습니다.
 - 구매 전에 Google Play에 현재 현지 가격이 표시됩니다.

@@ -16,7 +16,7 @@ description: Richten Sie Health.md für Android ein, exportieren Sie Health Conn
 <div class="reference-stats">
 <div><strong>106</strong><span>auswählbare Health Connect-Metriken</span></div>
 <div><strong>4</strong><span>Exportformate</span></div>
-<div><strong>10</strong><span>kostenlose manuelle Exporte</span></div>
+<div><strong>5</strong><span>kostenlose manuelle Exporte</span></div>
 <div><strong>0</strong><span>erforderliche Health.md-Cloud-Konten</span></div>
 </div>
 
@@ -47,7 +47,7 @@ Health.md für Android macht Health Connect zu einem lokalen Gesundheitstagebuch
 6. Prüfen Sie die Ausgabe in der Vorschau.
 7. Tippen Sie auf „Exportieren“ und verifizieren Sie die generierten Dateien in Ihrem Ordner oder Vault.
 
-Der kostenlose Tarif umfasst 10 manuelle Exportaktionen. So können Sie Berechtigungen, Ordnerzugriff, Formate und Ihren Obsidian-Workflow testen, bevor Sie unbegrenzte Exporte freischalten.
+Der kostenlose Tarif umfasst 5 manuelle Exportaktionen. So können Sie Berechtigungen, Ordnerzugriff, Formate und Ihren Obsidian-Workflow testen, bevor Sie unbegrenzte Exporte freischalten.
 
 ## Ziele unter Android
 
@@ -125,7 +125,7 @@ Tagesschritte verwenden exakte lokale Tagesgrenzen mit Zeitzone. Health.md besch
 
 ## Preise und Wiederherstellung
 
-- Die Android-App umfasst 10 kostenlose manuelle Exporte.
+- Die Android-App umfasst 5 kostenlose manuelle Exporte.
 - Unbegrenzte Exporte und geplante Automatisierungen werden durch einen einmaligen Kauf mit dauerhafter Freischaltung über Google Play Billing freigeschaltet.
 - Es gibt kein Abonnement und keine wiederkehrenden Kosten.
 - Google Play zeigt vor dem Kauf den aktuellen lokalen Preis an.
