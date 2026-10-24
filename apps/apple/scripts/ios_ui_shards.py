@@ -13,7 +13,7 @@ import sys
 
 from validate_ios_ui_xctestrun import qualify
 
-# Preserve fifteen existing phone cases plus three history phone and four tablet cases.
+# Preserve the phone inventory, including history and folder-browser regressions, plus four tablet cases.
 # Keep stateful XCTest classes together within each device family.
 SHARDS = (
     (
@@ -34,6 +34,7 @@ SHARDS = (
         "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
         "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
         "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+        "ExportJourneyUITests/testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens",
         "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
         "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
         "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",

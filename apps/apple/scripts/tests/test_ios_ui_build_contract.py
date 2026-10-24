@@ -28,6 +28,7 @@ SOURCE_SHA = "a" * 40
 EXPECTED_TESTS = [
     "HealthMdUILaunchTests/testAppLaunches",
     "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+    "ExportJourneyUITests/testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens",
     "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
     "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
     "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
@@ -492,7 +493,7 @@ class WorkflowExecutionTests(unittest.TestCase):
 
     def test_every_phone_and_tablet_case_has_an_implemented_test_method(self) -> None:
         from ios_ui_shards import SHARDS
-        self.assertEqual(sum(map(len, SHARDS)), 22)
+        self.assertEqual(sum(map(len, SHARDS)), 23)
         for lane in SHARDS:
             for selection in lane:
                 suite, method = selection.split("/")
