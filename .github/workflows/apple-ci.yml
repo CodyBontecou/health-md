@@ -367,7 +367,7 @@ jobs:
             -project HealthMd.xcodeproj -scheme HealthMd \
             -configuration Debug -destination 'generic/platform=iOS' \
             -derivedDataPath build/device-qa-derived \
-            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
+            ONLY_ACTIVE_ARCH=NO COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee build/logs/build-device-qa.log
@@ -376,6 +376,10 @@ jobs:
           python3 scripts/ui_test_document_fixture.py verify-device --plist "$app/Info.plist"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
           xcrun lipo -verify_arch arm64 "$app/HealthMd"
+          # Keep per-platform standard architectures: Series 7 requires arm64_32.
+          watch="$app/Watch/HealthMdWatch.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$watch/Info.plist")" = WatchOS
+          xcrun lipo -verify_arch arm64_32 "$watch/HealthMdWatch"
           {
             echo "SOURCE_SHA=$(git rev-parse HEAD)"
             echo "SOURCE_TREE=$(git rev-parse 'HEAD^{tree}')"
