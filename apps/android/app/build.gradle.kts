@@ -274,6 +274,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.work.testing)
     testImplementation("com.networknt:json-schema-validator:1.5.9")
+    androidTestImplementation(libs.truth)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)

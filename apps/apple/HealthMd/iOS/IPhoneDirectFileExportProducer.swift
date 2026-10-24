@@ -507,6 +507,7 @@ final class IPhoneDirectFileExportProducer {
                   day.succeeded == (payload.record != nil) else {
                 throw IPhoneDirectFileProducerError.invalidSpool
             }
+            guard day.isRequestedDate || !settingsSnapshot.operationRollupPeriods.isEmpty else { continue }
             guard let record = payload.record else { continue }
             let prepared = record.preparedExport(settings: settings)
             records.append(record)
@@ -823,12 +824,9 @@ final class IPhoneDirectFileExportProducer {
             guard operationSurface == .directGeneratedFilesWithoutSideEffects else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
-            let effectivePairs = zip(journal.capturedDays, payloads).filter { day, _ in
-                effectiveSettingsSnapshot.generateRangeSummary || day.isRequestedDate
-            }
             let rangeInput = try Self.rangePlanningInput(
-                capturedDays: effectivePairs.map(\.0),
-                payloads: effectivePairs.map(\.1),
+                capturedDays: journal.capturedDays,
+                payloads: payloads,
                 settings: settings,
                 settingsSnapshot: effectiveSettingsSnapshot
             )

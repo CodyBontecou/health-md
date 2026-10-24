@@ -574,6 +574,7 @@ fn period_identifier(rollup: &SemanticRollupResult) -> Result<String, RenderErro
         ),
         RollupPeriod::CalendarMonth => format!("{:04}-{:02}", start.year(), start.month()),
         RollupPeriod::CalendarYear => format!("{:04}", start.year()),
+        RollupPeriod::Range => return Err(RenderError::InvalidSemanticResult),
     })
 }
 
@@ -586,23 +587,25 @@ fn days_expected(rollup: &SemanticRollupResult) -> Result<u32, RenderError> {
     u32::try_from(days).map_err(|_| RenderError::InvalidSemanticResult)
 }
 
-const fn period_id(period: RollupPeriod) -> &'static str {
+fn period_id(period: RollupPeriod) -> &'static str {
     match period {
         RollupPeriod::IsoWeek => "weekly",
         RollupPeriod::CalendarMonth => "monthly",
         RollupPeriod::CalendarYear => "yearly",
+        RollupPeriod::Range => unreachable!("v7 authority never admits range"),
     }
 }
 
-const fn period_display(period: RollupPeriod) -> &'static str {
+fn period_display(period: RollupPeriod) -> &'static str {
     match period {
         RollupPeriod::IsoWeek => "Weekly",
         RollupPeriod::CalendarMonth => "Monthly",
         RollupPeriod::CalendarYear => "Yearly",
+        RollupPeriod::Range => unreachable!("v7 authority never admits range"),
     }
 }
 
-const fn period_folder(period: RollupPeriod) -> &'static str {
+fn period_folder(period: RollupPeriod) -> &'static str {
     period_display(period)
 }
 

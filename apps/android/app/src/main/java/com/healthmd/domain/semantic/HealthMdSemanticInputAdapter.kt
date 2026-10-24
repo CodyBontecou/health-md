@@ -6,7 +6,7 @@ import com.healthmd.domain.model.ExactSourceIdentity
 import com.healthmd.domain.model.ExactSourceTimestamp
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.HealthDataFields
-import com.healthmd.domain.model.HEALTHMD_CORE_REGISTRY_SHA256
+import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.MetricSelectionState
 import com.healthmd.domain.model.TimeFormatPreference
 import com.healthmd.domain.model.UnitConverter
@@ -507,7 +507,7 @@ object HealthMdSemanticInputAdapter {
             registry.publicSchemaVersion != expectedSchemaVersion ||
             registry.profileRevision != 1u ||
             registry.registryVersion != REGISTRY_VERSION.toUInt() ||
-            registry.registrySha256 != HEALTHMD_CORE_REGISTRY_SHA256 ||
+            !ExportEnginePin.supportsRegistryHash(registry.registrySha256) ||
             registry.publicSchema != "healthmd.health_data"
         ) {
             throw AdapterException("shared-core registry metadata is incompatible")

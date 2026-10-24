@@ -1,6 +1,8 @@
 package com.healthmd.domain.exportengine
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
+import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.CustomFrontmatterField
 import com.healthmd.domain.model.DailyNoteInjectionSettings
@@ -31,6 +33,36 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class AndroidExportSettingsSnapshotTest {
+    @Test
+    fun historicalSnapshotRestorationKeepsExactFrozenAuthority() {
+        for (profile in AndroidExportProfile.entries) {
+            for (mode in listOf(ExportEngineMode.rust, ExportEngineMode.shadow)) {
+                val original = syntheticExportEnginePin(mode = mode, profile = profile).copy(
+                    registrySha256 = ExportEnginePin.HISTORICAL_REGISTRY_SHA256,
+                    renderProfileRevision = 2u,
+                )
+                val settings = ExportSettings().let { it.copy(formatCustomization = it.formatCustomization.copy(
+                    compatibilitySchemaProfile = if (profile == AndroidExportProfile.android_frozen_v4) CompatibilitySchemaProfile.IOS_V4_FROZEN else CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5,
+                )) }
+                val snapshot = AndroidExportSettingsSnapshot.capture(settings, original, ZoneId.of(original.ianaTimeZone))
+                val encoded = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+                val decoded = AndroidExportSettingsSnapshotCodec.decode(encoded)
+                assertThat(decoded.restoreOnto(ExportSettings()).executionEnginePin).isNull()
+                val restored = requireNotNull(ScheduledProfileSnapshotFactory(ExportEnginePinPlanner()).restoreForRun(
+                    profile = ExportProfile(
+                        id = "historical-profile", name = "Synthetic historical profile",
+                        settingsSnapshotJson = encoded, target = settings.exportTarget,
+                        createdAtEpochMillis = 0L, updatedAtEpochMillis = 0L,
+                    ),
+                    current = ExportSettings(), lookbackDays = 1,
+                ))
+                assertThat(decoded.enginePin).isEqualTo(original)
+                assertThat(restored.executionEnginePin).isEqualTo(original)
+                assertThat(restored.executionEngineAuthorityIsFrozen).isTrue()
+            }
+        }
+    }
+
     private val zone = ZoneId.of("America/Los_Angeles")
 
     @Test
