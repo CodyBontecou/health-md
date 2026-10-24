@@ -25,7 +25,7 @@ Health Connect is the default export source in both channels. The Google Play bu
 
 ## Prerequisites
 
-- A Fitbit, Oura, WHOOP, or Withings account
+- A Fitbit, Oura, WHOOP, or Withings account and a Play build configured for that provider's OAuth client. See [provider prerequisites](../health-provider-support.md#direct-provider-prerequisites).
 - Network access for cloud reads
 - Android 9 / API 28+
 
@@ -42,7 +42,7 @@ Compatibility exports map provider records into the same `HealthData` shape as H
 ## Tips
 
 - Tokens are stored encrypted (Android Keystore-backed) and excluded from backup, logs, and export history.
-- Endpoint behavior differs: Fitbit/Withings plans do not paginate; Oura/WHOOP next-tokens are capped and cycle-detected; some summary endpoints declare `serverAggregation=true`.
+- Endpoint behavior and supported pagination are documented in the [raw-provider ledger](../export-contract/cloud-raw-provider-ledger.md); page caps, cycle detection, and server aggregation vary by endpoint.
 - A provider that is not supported shows up as **unsupported** in raw snapshots — it is never silently filled in with Health Connect data.
 
 ## Troubleshooting

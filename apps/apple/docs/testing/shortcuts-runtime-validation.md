@@ -1,6 +1,6 @@
 # Shortcuts Runtime Validation
 
-This document tracks the runtime validation path for Health.md App Intents, starting with Linear issue ISO-153.
+Use this runbook to validate the `ExportLastNDaysIntent` date window and its supervised Shortcuts runtime path. Unit date-window coverage is not proof that the action works in Shortcuts. Run commands from `apps/apple`; simulator/device checks require the current task's explicit authorization under the root [verification policy](../../../../AGENTS.md#verification-policy).
 
 ## Export Last N Days
 
@@ -62,12 +62,10 @@ Use this path when validating the Shortcut action itself in the Shortcuts app on
 
 If there is no HealthKit fixture data for one or more days, the acceptable runtime result is a partial or failure dialog that names the primary reason. The Shortcut is still considered runtime-valid when the App Intent launches without StoreKit prompts, computes the correct clamped date range, respects the vault requirement, records export history, and returns the expected success/partial/failure dialog.
 
-### ISO-153 Linear Metadata
+### Source owners
 
-Verified with:
+- [App Intent and date-window helper](../../HealthMd/iOS/AppIntents/ExportLastNDaysIntent.swift).
+- [Date-window and pending-export regressions](../../HealthMdTests/iOS/ExportLastNDaysIntentTests.swift).
+- [Purchase fixture/cutoff behavior](../../HealthMd/Shared/Managers/PurchaseManager.swift).
 
-```sh
-linear issue view ISO-153 --json
-```
-
-As of 2026-05-11, ISO-153 is attached to parent `ISO-142`, project `Health.md`, and project milestone `P0 — Gates & Release Blockers`.
+Current issue ownership and milestones belong in the tracker, not this runbook.

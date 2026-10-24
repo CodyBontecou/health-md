@@ -79,9 +79,10 @@ class ExportWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = try {
         if (ScheduledExportOccurrence.fromWorkData(inputData) != null) {
-            setForeground(getForegroundInfo())
+            withScheduledExportForeground(getForegroundInfo()) { doWorkManaged() }
+        } else {
+            doWorkManaged()
         }
-        doWorkManaged()
     } finally {
         ScheduledExportCancellationCoordinator.finish(id)
     }

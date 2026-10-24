@@ -19,6 +19,20 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |
 | [`agent-data/v1`](agent-data/v1/contract.md) | Public read-only grant, query, and response contracts plus phone-to-gateway ingestion manifest and health-free receipt contracts, shared by local and future hosted agent data stores |
 
+## Scheduling proposals
+
+| Path | Purpose |
+|---|---|
+| [`proposals/receiver-coverage-v1`](proposals/receiver-coverage-v1/contract.md) | Deferred opt-in scheduled API receiver coverage query, strict explicit-hole selection, correction/Today Refresh policy, and frozen-retry reference model; neither native app implements it yet |
+
+The receiver-coverage proposal is not a canonical/shipped manifest entry. Its
+behavior tests run in Core Rust CI's `Receiver coverage proposal behavior` job.
+Query request/response v1 is separate from recovery-plan JSON v2, which retains
+bounded validated coverage to check the exact original selection; evidence-less
+v1 plans fail closed for explicit recovery. Native networking, secure binding,
+atomic storage, and device validation remain adoption gates. Existing schedules
+continue full-lookback exports.
+
 ## Typed provider contracts
 
 | Path | Purpose |

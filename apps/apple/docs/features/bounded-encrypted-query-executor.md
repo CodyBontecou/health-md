@@ -1,6 +1,6 @@
 # Bounded encrypted query execution
 
-`EncryptedHealthContextQueryExecutor` is the macOS production executor for the encrypted context store. It conforms to `HealthMdAgentQueryExecuting` but is intentionally not wired into an app surface by this change.
+`EncryptedHealthContextQueryExecutor` is the macOS production executor for the encrypted context store. It conforms to `HealthMdAgentQueryExecuting` and is supplied to `HealthMdAgentAPIService` by the macOS app.
 
 ## Memory and traversal
 
@@ -16,7 +16,7 @@ Coverage is page-local while `requested_range` and `available_range` retain quer
 
 ## Cursors and mutation safety
 
-Cursor plaintext contains the request fingerprint, manifest revision, and traversal position. The fingerprint includes every request field except `page.cursor`, including page bounds and agent detail level. Cursor plaintext is sealed with AES-GCM and fixed domain AAD. Its 256-bit key is derived via HKDF-SHA256 from the Keychain-backed store key with cursor-only salt/info; neither store nor cursor keys are persisted in plaintext.
+Cursor plaintext contains the request fingerprint, manifest revision, and traversal position. The fingerprint includes every request field except `page.cursor`, including page bounds and agent detail level, and also binds the effective evidence authorization scope. Cursor plaintext is sealed with AES-GCM and fixed domain AAD. Its 256-bit key is derived via HKDF-SHA256 from the Keychain-backed store key with cursor-only salt/info; neither store nor cursor keys are persisted in plaintext.
 
 Tampering fails as `invalidCursor`, using a cursor with another request fails as `cursorDoesNotMatchQuery`, and any committed store mutation changes the manifest revision and fails as `staleCursor`. A query interrupted by concurrent blob replacement fails closed through the store's authenticated snapshot entry checks.
 

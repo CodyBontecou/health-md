@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "ee8abf473864c6fc6afd30885218b00000a62dec4ec561d28d5b9874f2420024",
+      "sha256": "cc98b33ea5987ad9a6617d88235389e7dbb8737f14d98321eb3dc52ddf683e9e",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -484,7 +484,8 @@
         "packages/contracts/shared-setup/v2/shared-setup.schema.json",
         "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
         "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
-        "packages/contracts/shared-setup/v2/field-coverage-baseline-v1.json"
+        "packages/contracts/shared-setup/v2/field-coverage-baseline-v1.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
       ],
       "implementations": [
         "packages/contracts/validate.py",

@@ -7,6 +7,10 @@
 - **Primary screen:** Schedule
 - **Source files:** `app/src/main/java/com/healthmd/data/scheduler/ExportScheduler.kt`, `app/src/main/java/com/healthmd/data/scheduler/ExportWorker.kt`, `app/src/main/java/com/healthmd/data/scheduler/ScheduledExportRecoveryManager.kt`, `app/src/main/java/com/healthmd/presentation/schedule/ScheduleScreen.kt`
 
+## Android background execution
+
+Android may deny foreground-service promotion when a WorkManager fallback wakes the app in the background, including when exact-alarm access is unavailable. In that case scheduled exports continue within WorkManager's ordinary bounded execution budget. When notifications are allowed, the same operation-scoped progress notification and Cancel Export action remain available and are cleared when the attempt ends. Health Connect background permission, purchase checks, destination authority, cancellation checkpoints, and retry rules still apply. Long exports remain subject to WorkManager stopping them; this fallback does not promise exact timer delivery or unlimited background runtime.
+
 ## What it does
 
 Scheduled exports run your compatibility export (or Raw API Snapshot) automatically at a chosen time and frequency, and can also refresh the current day's partial file during the day so a daytime run captures last night's sleep alongside yesterday. Results arrive as Android notifications — **Export Complete**, **Export Partial**, or **Export Failed** — and every run lands in export history where you can retry it.
@@ -38,8 +42,8 @@ To abandon obsolete recovery without recreating the profile, open **Schedule →
 
 ## Prerequisites
 
-- Lifetime unlock (free plan: manual exports only)
-- Health Connect **background access** — grant it when prompted; scheduled reads need it
+- Google Play: lifetime unlock (free plan: manual exports only). F-Droid includes scheduling.
+- For schedules reading Health Connect, grant **background access** when prompted. Cloud-only provider schedules do not require that permission.
 - Notifications enabled to see results; exports still run with notifications off
 
 ## Setup

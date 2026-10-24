@@ -342,6 +342,7 @@ struct ExportProfileDetailView: View {
     @ObservedObject private var entryStore: ScheduledExportEntryStore
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject private var syncService: SyncService
     @Environment(\.dismiss) private var dismiss
 
     let profileID: UUID
@@ -354,6 +355,10 @@ struct ExportProfileDetailView: View {
     // Keep the immutable ID's copy receipt readable until this detail closes.
     // A timer can erase it before a slow AX snapshot or VoiceOver read finishes.
     @State private var idCopied = false
+    @State private var contextBindingPeer: UUID?
+    @State private var pendingContextPeer: UUID?
+    @State private var showContextBindingConfirmation = false
+    @State private var contextBindingError: String?
     /// Pending overlap warning for a just-duplicated profile; undo deletes
     /// the copy (the source profile stays untouched and active).
     @State private var duplicateOverlapWarning: (copyID: UUID, names: [String])?
@@ -399,6 +404,9 @@ struct ExportProfileDetailView: View {
                 activeBanner(for: profile)
                 overlapCard(for: profile)
                 destinationCard(for: profile)
+                if profile.target == .connectedMac {
+                    contextAutomationCard
+                }
                 outputCard(for: profile)
                 scheduleCard(for: profile)
                 profileIDCard(for: profile)
@@ -425,6 +433,23 @@ struct ExportProfileDetailView: View {
             ExportProfileEditorSheet(coordinator: coordinator, editing: profile)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .onAppear {
+            contextBindingPeer = AppleContextPhoneClient.shared.boundPeer(profileID: profileID)
+        }
+        .alert("Bind context automation?", isPresented: $showContextBindingConfirmation) {
+            Button("Bind to this Mac") { bindContextAutomation() }
+            Button("Cancel", role: .cancel) { pendingContextPeer = nil }
+        } message: {
+            Text("Allow this profile’s refresh shortcuts to use the currently authenticated Mac’s encrypted context. Confirm again to replace an earlier binding. This does not change file exports.")
+        }
+        .alert("Context automation unavailable", isPresented: Binding(
+            get: { contextBindingError != nil },
+            set: { if !$0 { contextBindingError = nil } }
+        )) {
+            Button("OK", role: .cancel) { contextBindingError = nil }
+        } message: {
+            Text(contextBindingError ?? "")
         }
         .geistDialog(
             isPresented: Binding(
@@ -506,6 +531,52 @@ struct ExportProfileDetailView: View {
     }
 
     // MARK: Cards
+
+    private var contextAutomationCard: some View {
+        sectionCard(title: String(localized: "Mac context automation")) {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                Text(contextBindingPeer == nil
+                     ? String(localized: "Not bound. Refresh shortcuts require a separate authenticated Mac binding.")
+                     : String(localized: "A Mac binding is saved. Refresh shortcuts require that same authenticated Mac."))
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Connect both updated apps using authenticated Manual IP pairing before binding. Refresh uses this profile’s Apple Health scope without creating export files.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Bind context automation to this authenticated Mac") {
+                    configurationProtection.performConfigurationChange {
+                        guard syncService.canUsePhoneContextAutomation,
+                              let peer = syncService.authenticatedContextPeerID else {
+                            contextBindingError = AppleContextPhoneClient.ClientError.unavailable.localizedDescription
+                            return
+                        }
+                        pendingContextPeer = peer
+                        showContextBindingConfirmation = true
+                    }
+                }
+                .accessibilityIdentifier("export.profiles.bind-context")
+                .accessibilityHint("Confirms the authenticated Mac used by this profile’s context refresh shortcuts.")
+            }
+        }
+    }
+
+    private func bindContextAutomation() {
+        let peer = pendingContextPeer
+        pendingContextPeer = nil
+        configurationProtection.performConfigurationChange {
+            do {
+                guard let peer, let profile, profile.target == .connectedMac else {
+                    throw AppleContextPhoneClient.ClientError.profile
+                }
+                try AppleContextPhoneClient.shared.bind(profileID: profileID, expectedPeerID: peer)
+                contextBindingPeer = peer
+            } catch {
+                contextBindingError = error.localizedDescription
+            }
+        }
+    }
 
     private func activeBanner(for profile: ExportProfile) -> some View {
         Group {
