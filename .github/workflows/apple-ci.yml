@@ -552,6 +552,7 @@ jobs:
           set -euo pipefail
           app=build/macos-qa-derived/Build/Products/Debug/Health.md.app
           test -f "$app/Contents/MacOS/Health.md"
+          python3 scripts/validate_macos_cli_helpers.py "$app"
           mkdir -p build/macos-qa
           {
             echo "SOURCE_SHA=$(git rev-parse HEAD)"
