@@ -6094,7 +6094,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein lokales Ziel für Exporte wurde am iPhone gestartet"
+            "value" : "Ein lokales Ziel für Exporte wurde auf dem iPhone gestartet"
           }
         },
         "en" : {
@@ -6901,7 +6901,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die tatsächliche Ausgabegröße kann im ausgewählten Datumsbereich variieren"
+            "value" : "Die tatsächliche Ausgabegröße kann im ausgewählten Datumsbereich variieren."
           }
         },
         "en" : {
@@ -7030,7 +7030,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein benutzerdefiniertes Feld hinzufügen, das in jedem Export enthalten ist"
+            "value" : "Fügen Sie ein benutzerdefiniertes Feld hinzu, das in jeden Export aufgenommen wird."
           }
         },
         "en" : {
@@ -7693,7 +7693,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fügt detaillierte Zeitreihen und das kanonische HealthKit-Quellarchiv mit Identitäten, Herkunft, Metadaten und Beziehungen hinzu. Dateien können deutlich größer sein."
+            "value" : "Fügt detaillierte Zeitreihen und das kanonische HealthKit-Quellarchiv mit Identitäten, Herkunft, Metadaten und Beziehungen hinzu. Die Dateien können deutlich größer sein."
           }
         },
         "en" : {
@@ -7758,7 +7758,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fügt ausgewählte Messwerte mit Zeitstempel hinzu, etwa Herzfrequenz, HRV, Blutsauerstoff, Atemfrequenz und Schlafphasen, ohne das kanonische Quellarchiv."
+            "value" : "Fügt ausgewählte, zeitlich markierte Messwerte wie Herzfrequenz, HRV, Blutsauerstoff, Atemfrequenz und Schlafphasen ohne das kanonische Quellarchiv hinzu."
           }
         },
         "en" : {
@@ -7823,7 +7823,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fügt das kanonische HealthKit-Quellarchiv ohne doppelte kompatible Zeitreihenprojektionen hinzu."
+            "value" : "Fügt das kanonische HealthKit-Quellarchiv ohne doppelte Kompatibilitäts-Zeitreihenprojektionen hinzu."
           }
         },
         "en" : {
@@ -8464,7 +8464,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Richten Sie Läufe am vorhergehenden und folgenden Schlaf aus"
+            "value" : "Läufe mit vorausgehendem und folgendem Schlaf abgleichen"
           }
         },
         "en" : {
@@ -8785,7 +8785,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle Formate verwenden dieselbe Schemaversion, sind jedoch für unterschiedliche Arten des Lesens und Wiederverwendens Ihrer Gesundheitsdaten optimiert."
+            "value" : "Alle Formate verwenden dieselbe Schema-Version, sind jedoch für unterschiedliche Arten der Anzeige und Wiederverwendung Ihrer Gesundheitsdaten optimiert."
           }
         },
         "en" : {
@@ -8978,7 +8978,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bei „Gesamter Zeitraum“ werden alle Gesundheitsdaten synchronisiert. Dies kann einige Minuten dauern."
+            "value" : "„Gesamter Zeitraum“ synchronisiert alle Tage Ihrer Gesundheitsdaten. Dies kann einige Minuten dauern."
           }
         },
         "en" : {
@@ -10199,7 +10199,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Health hat keine Datensätze für den ausgewählten Datumsbereich und die ausgewählten Datentypen zurückgegeben. Dies wird auf einem neuen oder leeren Gerät erwartet und kann auch passieren, wenn Health.md keinen Lesezugriff auf die ausgewählten Daten hat."
+            "value" : "Apple Health hat für den ausgewählten Zeitraum und die gewählten Datentypen keine Einträge gefunden. Dies ist bei einem neuen oder leeren Gerät zu erwarten und kann auch auftreten, wenn Health.md keinen Lesezugriff auf die ausgewählten Daten hat."
           }
         },
         "en" : {
@@ -10817,7 +10817,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Automatisieren Sie Ihre Gesundheitsdatenexporte"
+            "value" : "Automatisieren Sie den Export Ihrer Gesundheitsdaten"
           }
         },
         "en" : {
@@ -11003,7 +11003,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Daten beim Exportieren automatisch an den Mac senden"
+            "value" : "Daten beim Export automatisch an den Mac senden"
           }
         },
         "en" : {
@@ -11389,7 +11389,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wach im Schlaf"
+            "value" : "Wach während des Schlafs"
           }
         },
         "en" : {
@@ -11707,7 +11707,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Basisordner für Ihre Gesundheitsdatenexporte"
+            "value" : "Basisordner für Ihre Gesundheitsdaten-Exporte"
           }
         },
         "en" : {
@@ -13147,7 +13147,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Atemzüge/Min"
+            "value" : "Atemzüge/min"
           }
         },
         "en" : {
@@ -14192,7 +14192,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auf den ausgewählten Ordner kann nicht zugegriffen werden. Verbinden Sie den Speicherort unter „Dateien“ erneut oder wählen Sie den Ordner erneut aus."
+            "value" : "Auf den ausgewählten Ordner kann nicht zugegriffen werden. Verbinden Sie den Speicherort in „Dateien“ erneut oder wählen Sie den Ordner erneut aus."
           }
         },
         "en" : {
@@ -14257,7 +14257,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auf den Tresorordner kann nicht zugegriffen werden. Verknüpfen Sie es erneut in den Dateien oder wählen Sie es erneut aus."
+            "value" : "Auf den Tresor-Ordner kann nicht zugegriffen werden. Verbinden Sie ihn in „Dateien“ erneut oder wählen Sie ihn erneut aus."
           }
         },
         "en" : {
@@ -15199,7 +15199,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Überprüfen Sie, ob das Ziel online ist und über freien Speicherplatz verfügt. Wählen Sie den Exportordner erneut aus, um den Zugriff zu aktualisieren, und versuchen Sie es dann erneut."
+            "value" : "Stellen Sie sicher, dass das Ziel online ist und über ausreichend freien Speicherplatz verfügt. Wählen Sie den Exportordner erneut aus, um den Zugriff zu aktualisieren, und versuchen Sie es dann erneut."
           }
         },
         "en" : {
@@ -16040,7 +16040,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie einen Exportordner in Health.md und versuchen Sie dann den Export erneut."
+            "value" : "Wählen Sie einen Exportordner in Health.md aus und versuchen Sie den Export erneut."
           }
         },
         "en" : {
@@ -16237,7 +16237,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie Datum, Metrik, Format, Dateiname und Schreibmodus auf iPhone"
+            "value" : "Wählen Sie auf dem iPhone Daten, Metriken, Formate, Dateinamen und den Schreibmodus aus."
           }
         },
         "en" : {
@@ -16951,7 +16951,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie einen Mac-Ordner aus oder wählen Sie ihn erneut aus, oder verwenden Sie `--raw`, wenn Sie nur JSON benötigen."
+            "value" : "Wählen Sie einen Mac-Ordner aus oder wählen Sie ihn erneut, oder verwenden Sie `--raw`, wenn Sie nur JSON benötigen."
           }
         },
         "en" : {
@@ -17016,7 +17016,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie den Ordner aus, in dem Ihr Coding-Agent die Fertigkeiten liest. Health.md installiert oder aktualisiert dort seinen benutzerorientierten CLI-Skill."
+            "value" : "Wählen Sie den Ordner aus, aus dem Ihr Coding-Agent Skills liest. Health.md installiert oder aktualisiert dort sein benutzerorientiertes CLI-Skill."
           }
         },
         "en" : {
@@ -17393,7 +17393,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie das Kompetenzverzeichnis Ihres Agenten. Health.md erstellt dort `healthmd-cli/SKILL.md`."
+            "value" : "Wählen Sie das Verzeichnis für die Fähigkeiten Ihres Agenten aus. Health.md erstellt dort `healthmd-cli/SKILL.md`."
           }
         },
         "en" : {
@@ -17516,7 +17516,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chrom"
+            "value" : "Chromium"
           }
         },
         "en" : {
@@ -17581,7 +17581,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Claude Desktop oder vertrauenswürdiges .mcp.json"
+            "value" : "Claude Desktop oder vertrauenswürdige .mcp.json"
           }
         },
         "en" : {
@@ -18569,7 +18569,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Klinische Medikamentenaufzeichnungen"
+            "value" : "Klinische Medikationsaufzeichnungen"
           }
         },
         "en" : {
@@ -18764,7 +18764,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Klinische Vitalzeichenaufzeichnungen"
+            "value" : "Klinische Vitalzeichen-Aufzeichnungen"
           }
         },
         "en" : {
@@ -32357,7 +32357,14 @@
 
     },
     "Close" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließen"
+          }
+        }
+      }
     },
     "Close other apps using the camera, then try again. Manual IP and pairing-code entry remain available." : {
 
@@ -32952,7 +32959,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kompatible native Hosts rendern die interaktive MCP-App inline. Andere Codex- und Claude-Oberflächen behalten den exakten JSON bei und erhalten ein PNG-Metrikdiagramm-Fallback. Neue Erwerbs- und Exportmutationen bedürfen einer Genehmigung."
+            "value" : "Kompatible native Hosts stellen die interaktive MCP-App direkt dar. Andere Codex- und Claude-Oberflächen behalten das exakte JSON-Format und erhalten ein PNG-Metrikdiagramm als Fallback. Neue Erfassungs- und Exportvorgänge erfordern eine Genehmigung."
           }
         },
         "en" : {
@@ -33880,7 +33887,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verbinden Sie Codex oder Claude, um den Gesundheitskontext zu analysieren, native Diagramme zu rendern und genehmigte iPhone-Exporte auszuführen, während Health.md die Verbindung, den Sandbox-Zugriff und den Localhost-Server besitzt."
+            "value" : "Verbinden Sie Codex oder Claude, um Gesundheitskontexte zu analysieren, native Diagramme darzustellen und genehmigte iPhone-Exporte durchzuführen, während Health.md die Verbindung, den Sandbox-Zugriff und den lokalen Server verwaltet."
           }
         },
         "en" : {
@@ -35062,7 +35069,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Kontextstatus wird nicht automatisch geladen, sodass bei normaler Verwendung der Mac-App nicht auf Keychain zugegriffen wird."
+            "value" : "Der Kontextstatus wird nicht automatisch geladen, daher greift die normale Nutzung der Mac-App nicht auf den Schlüsselbund zu."
           }
         },
         "en" : {
@@ -35823,6 +35830,21 @@
         }
       }
     },
+    "Copy Report" : {
+      "comment" : "Explicit copy action in the local feedback fallback",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Bericht kopieren" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy Report" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Copiar informe" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier le rapport" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Copia resoconto" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "レポートをコピー" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "보고서 복사" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Rapport kopiëren" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Copiar relatório" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "复制报告" } }
+      }
+    },
     "Copy profile ID" : {
       "comment" : "Accessibility label for the copy ID button"
     },
@@ -35897,7 +35919,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kopieren Sie die Eingabeaufforderung jetzt oder erweitern Sie sie, um zunächst eine Vorschau anzuzeigen."
+            "value" : "Kopieren Sie die Eingabeaufforderung jetzt oder erweitern Sie sie, um sie zuerst anzuzeigen."
           }
         },
         "en" : {
@@ -36157,7 +36179,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auf den ausgewählten Exportordner konnte nicht zugegriffen werden. Verbinden Sie es erneut oder wählen Sie es in Health.md erneut aus."
+            "value" : "Auf den ausgewählten Exportordner konnte nicht zugegriffen werden. Bitte stellen Sie die Verbindung erneut her oder wählen Sie ihn in Health.md erneut aus."
           }
         },
         "en" : {
@@ -36602,7 +36624,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erstellt für ausgewählte Metriken einzelne Dateien mit Zeitstempel zusätzlich zu Tageszusammenfassungen."
+            "value" : "Erstellen Sie für ausgewählte Messwerte zusätzlich zu den täglichen Zusammenfassungen einzelne Dateien mit Zeitstempel."
           }
         },
         "en" : {
@@ -37717,7 +37739,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Datum-/Uhrzeitformate, Einheiten, Frontmatter-Felder und Markdown-Vorlagen anpassen"
+            "value" : "Passen Sie Datums- und Zeitformate, Einheiten, Frontmatter-Felder und Markdown-Vorlagen an."
           }
         },
         "en" : {
@@ -37782,7 +37804,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Exportformat und Datentypen anpassen"
+            "value" : "Passen Sie das Exportformat und die Datentypen an."
           }
         },
         "en" : {
@@ -37847,7 +37869,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Feldnamen anpassen und benutzerdefinierte Eigenschaften für das Obsidian Bases-Format hinzufügen"
+            "value" : "Passen Sie Feldnamen an und fügen Sie benutzerdefinierte Eigenschaften für das Obsidian Bases-Format hinzu."
           }
         },
         "en" : {
@@ -38095,7 +38117,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Radentfernung"
+            "value" : "Radfahrstrecke"
           }
         },
         "en" : {
@@ -38160,7 +38182,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fahrradleistung"
+            "value" : "Leistung beim Radfahren"
           }
         },
         "en" : {
@@ -38225,7 +38247,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fahrradgeschwindigkeit"
+            "value" : "Geschwindigkeit beim Radfahren"
           }
         },
         "en" : {
@@ -38355,7 +38377,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tägliche Aggregate wie Durchschnitts-, Mindest- und Höchstwerte."
+            "value" : "Tägliche Zusammenfassungen wie Durchschnittswerte, Minimal- und Maximalwerte."
           }
         },
         "en" : {
@@ -38736,7 +38758,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Aktualisierung der täglichen Notizen wurde nicht durchgeführt"
+            "value" : "Die Aktualisierung der täglichen Notiz wurde nicht durchgeführt"
           }
         },
         "en" : {
@@ -39575,7 +39597,14 @@
       }
     },
     "Date" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datum"
+          }
+        }
+      }
     },
     "Date & Time" : {
       "extractionState" : "stale",
@@ -42337,7 +42366,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Detaillierte Zeitreihen behalten ausgewählte Messwerte mit Zeitstempel ohne das kanonische Archiv. Lossless Health Records fügt die vollständige ausgewählte HealthKit-Quelldarstellung hinzu und kann deutlich größere Dateien erzeugen."
+            "value" : "Detaillierte Zeitreihen behalten ausgewählte, mit Zeitstempel versehene Proben ohne das kanonische Archiv. Verlustfreie Gesundheitsakten fügen die vollständige, ausgewählte HealthKit-Quellrepräsentation hinzu und können deutlich größere Dateien erzeugen."
           }
         },
         "en" : {
@@ -42585,12 +42614,71 @@
         }
       }
     },
+    "Diagnostics" : {
+      "comment" : "Diagnostics entry in Settings; local review and sharing are controlled by the user.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnose"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnóstico"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostic"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostica"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "진단"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostiek"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnóstico"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断"
+          }
+        }
+      }
+    },
     "Diagnostics included automatically:" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Automatisch enthaltene Diagnosedaten:"
+            "value" : "Diagnosedaten werden automatisch einbezogen:"
           }
         },
         "en" : {
@@ -42976,7 +43064,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deaktivieren Sie den Blutdruck in Health.md"
+            "value" : "Blutdruck in Health.md deaktivieren"
           }
         },
         "en" : {
@@ -43099,7 +43187,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deaktiviert. Die Erkennung in der Nähe funktioniert weiterhin über lokales Wi‑Fi/Bluetooth."
+            "value" : "Deaktiviert. Die Erkennung in der Nähe funktioniert weiterhin über lokales WLAN/Bluetooth."
           }
         },
         "en" : {
@@ -45397,7 +45485,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abfahrts-Schneesportdistanz"
+            "value" : "Abfahrts-Schneesport-Distanz"
           }
         },
         "en" : {
@@ -46034,7 +46122,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bearbeiten Sie `SKILLS_DIR` so, dass es mit dem Ordner übereinstimmt, den Ihr Agent liest. Das App-Installationsprogramm ersetzt den Skill-Ordner Health.md; Der Shell-Befehl überschreibt nur `SKILL.md`."
+            "value" : "Passen Sie `SKILLS_DIR` an den Ordner an, den Ihr Agent liest. Der App-Installer ersetzt den Ordner Health.md, während der Shell-Befehl nur die Datei `SKILL.md` überschreibt."
           }
         },
         "en" : {
@@ -46104,6 +46192,71 @@
     },
     "Edit Schedule…" : {
       "comment" : "Action opening the profile schedule editor"
+    },
+    "Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data." : {
+      "comment" : "Local feedback recovery and privacy instructions; reports are not sent or stored automatically",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bearbeiten Sie den Bericht und kopieren Sie ihn, bevor Sie das Fenster schließen. Es wird nichts automatisch gesendet. Vermeiden Sie es, private Gesundheitsdaten einzufügen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edita el informe y cópialo antes de cerrar. No se envía nada automáticamente. Evita incluir datos de salud privados."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifiez le rapport, puis copiez-le avant de fermer. Rien n’est envoyé automatiquement. Évitez d’inclure des données de santé privées."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifica il resoconto e copialo prima di chiudere. Nulla viene inviato automaticamente. Evita di includere dati sanitari privati."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レポートを編集し、閉じる前にコピーしてください。自動的に送信されることはありません。個人の健康データを含めないでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보고서를 편집한 다음 닫기 전에 복사하세요. 아무것도 자동으로 전송되지 않습니다. 개인 건강 데이터는 포함하지 마세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bewerk het rapport en kopieer het voordat je sluit. Er wordt niets automatisch verzonden. Vermijd het opnemen van privégezondheidsgegevens."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edite o relatório e copie-o antes de fechar. Nada é enviado automaticamente. Evite incluir dados de saúde privados."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑报告，然后在关闭前复制。不会自动发送任何内容。请勿包含私密健康数据。"
+          }
+        }
+      }
     },
     "Electrocardiograms" : {
       "comment" : "macOS Health metric picker UI",
@@ -49430,7 +49583,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jeder verschlüsselte Besitzertag vor diesem Datum wird dauerhaft entfernt. Das Grenzdatum und neuere Tage bleiben erhalten."
+            "value" : "Alle verschlüsselten Eigentümer-Tage vor diesem Datum werden dauerhaft entfernt. Das Stichtagsdatum und spätere Tage bleiben erhalten."
           }
         },
         "en" : {
@@ -49831,7 +49984,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erweitert die Liste, um alle gespeicherten Synchronisierungsereignisse anzuzeigen"
+            "value" : "Erweitert die Liste, um alle gespeicherten Synchronisierungsereignisse anzuzeigen."
           }
         },
         "en" : {
@@ -52177,7 +52330,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Exportpfad ist unsicher oder steht mit einer anderen Ausgabe in Konflikt: %@. Ändere vor dem Export den Ausgabeordner oder Dateinamen."
+            "value" : "Der Exportpfad ist unsicher oder steht im Konflikt mit einer anderen Ausgabedatei: %@. Bitte wählen Sie einen anderen Ordner oder Dateinamen, bevor Sie exportieren."
           }
         },
         "en" : {
@@ -52636,7 +52789,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Exportieren Sie ausgewählte Schlafzusammenfassungen"
+            "value" : "Ausgewählte Schlafzusammenfassungen exportieren"
           }
         },
         "en" : {
@@ -53294,7 +53447,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Exportieren Sie Ihre Gesundheitsdaten als Markdown"
+            "value" : "Exportieren Sie Ihre Wellness-Daten als Markdown"
           }
         },
         "en" : {
@@ -55653,7 +55806,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rückmeldung"
+            "value" : "Feedback"
           }
         },
         "en" : {
@@ -55710,6 +55863,36 @@
             "value" : "反馈意见"
           }
         }
+      }
+    },
+    "Feedback Could Not Be Sent" : {
+      "comment" : "Local feedback fallback sheet title",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Feedback konnte nicht gesendet werden" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Feedback Could Not Be Sent" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron enviar los comentarios" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible d’envoyer les commentaires" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Impossibile inviare il feedback" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "フィードバックを送信できませんでした" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "피드백을 보낼 수 없습니다" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Feedback kon niet worden verzonden" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível enviar o feedback" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法发送反馈" } }
+      }
+    },
+    "Feedback report" : {
+      "comment" : "Accessibility label for the local feedback report editor",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Feedback-Bericht" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Feedback report" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Informe de comentarios" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rapport de commentaires" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Resoconto del feedback" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "フィードバックのレポート" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "피드백 보고서" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Feedbackrapport" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Relatório de feedback" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "反馈报告" } }
       }
     },
     "Fever" : {
@@ -59464,7 +59647,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allgemeiner Lebensdaten-Ordner"
+            "value" : "Allgemeiner Ordner zur Lebensaufzeichnung"
           }
         },
         "en" : {
@@ -59529,7 +59712,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Generalisierter Körperschmerz"
+            "value" : "Generalisierte Körperschmerzen"
           }
         },
         "en" : {
@@ -59594,7 +59777,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Generieren Sie einen Code"
+            "value" : "Code generieren"
           }
         },
         "en" : {
@@ -59724,7 +59907,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erstellt in jedem ausgewählten Exportformat eine Zusammenfassung für den angeforderten Zeitraum."
+            "value" : "Erstellen Sie für jeden ausgewählten Exporttyp eine Zusammenfassung für den gewünschten Zeitraum."
           }
         },
         "en" : {
@@ -59792,7 +59975,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erzeugte Dateien"
+            "value" : "Erstellte Dateien"
           }
         },
         "en" : {
@@ -59858,7 +60041,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wird für jedes ausgewählte Format unter Verwendung der vollständig berührten Wochen-/Monats-/Jahresfenster generiert."
+            "value" : "Für jedes ausgewählte Format unter Verwendung des vollständigen berührten Wochen-/Monats-/Jahreszeitraums erstellt."
           }
         },
         "en" : {
@@ -59923,7 +60106,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wird für den angeforderten Zeitraum einmal pro ausgewähltem Format erstellt."
+            "value" : "Einmal pro ausgewähltem Format für den gewünschten Zeitraum erstellt."
           }
         },
         "en" : {
@@ -59988,7 +60171,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erstellt für jedes ausgewählte Exportformat eine Zeitraumzusammenfassung"
+            "value" : "Erstellt für jedes ausgewählte Exportformat eine Bereichszusammenfassung"
           }
         },
         "en" : {
@@ -60065,7 +60248,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Holen Sie sich Health.md auf iPhone"
+            "value" : "Health.md auf dem iPhone erhalten"
           }
         },
         "en" : {
@@ -60130,7 +60313,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nehmen Sie Kontakt auf"
+            "value" : "Kontakt aufnehmen"
           }
         },
         "en" : {
@@ -60198,7 +60381,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Legen Sie los"
+            "value" : "Loslegen"
           }
         },
         "en" : {
@@ -62012,7 +62195,14 @@
       }
     },
     "Health Summary" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesundheitsübersicht"
+          }
+        }
+      }
     },
     "health-data" : {
       "localizations" : {
@@ -62200,7 +62390,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md kann weiterhin den Rest Ihrer Daten exportieren, aber iOS erlaubte keinen Zugriff auf den Blutdruck, daher werden systolische und diastolische Werte übersprungen."
+            "value" : "Health.md kann den Rest Ihrer Daten weiterhin exportieren, aber iOS hat den Zugriff auf Blutdruckdaten nicht erlaubt. Daher werden systolische und diastolische Werte übersprungen."
           }
         },
         "en" : {
@@ -62265,7 +62455,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md kann den gespeicherten Exportordner nicht überprüfen. Wählen Sie vor dem Exportieren erneut den gewünschten Ordner aus."
+            "value" : "Health.md kann den gespeicherten Exportordner nicht verifizieren. Bitte wählen Sie vor dem Export den gewünschten Ordner erneut aus."
           }
         },
         "en" : {
@@ -62518,7 +62708,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md konnte keine unveränderliche Abfragekontextgenerierung zuordnen."
+            "value" : "Health.md konnte keine unveränderliche Query-Context-Generation zuweisen."
           }
         },
         "en" : {
@@ -62583,7 +62773,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md konnte keinen Abfragekontext-Verschlüsselungsschlüssel generieren."
+            "value" : "Health.md konnte keinen Verschlüsselungsschlüssel für den Query-Kontext generieren."
           }
         },
         "en" : {
@@ -62642,13 +62832,78 @@
         }
       }
     },
+    "Health.md could not open the GitHub issue template. No issue was submitted. You can write and copy a report here to submit later or from another device." : {
+      "comment" : "Rejected GitHub handoff; opening a template is not submission",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md konnte die GitHub-Issue-Vorlage nicht öffnen. Es wurde kein Problem eingereicht. Sie können hier einen Bericht verfassen und kopieren, um ihn später oder von einem anderen Gerät einzureichen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md could not open the GitHub issue template. No issue was submitted. You can write and copy a report here to submit later or from another device."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md no pudo abrir la plantilla de incidencias de GitHub. No se envió ninguna incidencia. Puedes escribir y copiar un informe aquí para enviarlo más tarde o desde otro dispositivo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md n’a pas pu ouvrir le modèle de ticket GitHub. Aucun ticket n’a été envoyé. Vous pouvez rédiger et copier un rapport ici pour l’envoyer plus tard ou depuis un autre appareil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md non ha potuto aprire il modello di segnalazione GitHub. Nessuna segnalazione è stata inviata. Puoi scrivere e copiare un resoconto qui per inviarlo in seguito o da un altro dispositivo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.mdはGitHubのIssueテンプレートを開けませんでした。Issueは送信されていません。ここでレポートを作成してコピーし、後で、または別のデバイスから送信できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md가 GitHub 이슈 템플릿을 열지 못했습니다. 이슈는 제출되지 않았습니다. 여기에서 보고서를 작성하고 복사하여 나중에 또는 다른 기기에서 제출할 수 있습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md kon het GitHub-issuesjabloon niet openen. Er is geen issue ingediend. Je kunt hier een rapport schrijven en kopiëren om het later of vanaf een ander apparaat in te dienen."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Health.md não conseguiu abrir o modelo de issue do GitHub. Nenhuma issue foi enviada. Você pode escrever e copiar um relatório aqui para enviá-lo mais tarde ou de outro dispositivo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md无法打开GitHub问题模板。尚未提交任何问题。你可以在此编写并复制报告，稍后或从其他设备提交。"
+          }
+        }
+      }
+    },
     "Health.md could not open the selected export folder. The Files, iCloud Drive, or network location may be offline, or the saved folder permission may have expired." : {
       "comment" : "Detailed error: vault access denied",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md konnte den ausgewählten Exportordner nicht öffnen. Die Dateien, das iCloud-Laufwerk oder der Netzwerkspeicherort sind möglicherweise offline oder die Berechtigung zum Speichern des Ordners ist möglicherweise abgelaufen."
+            "value" : "Health.md konnte den ausgewählten Exportordner nicht öffnen. Die Dateien, iCloud Drive oder der Netzwerkstandort sind möglicherweise offline, oder die Berechtigung für den gespeicherten Ordner ist abgelaufen."
           }
         },
         "en" : {
@@ -62707,13 +62962,78 @@
         }
       }
     },
+    "Health.md could not open your email app. You can write and copy a report here to send later or from another device." : {
+      "comment" : "Rejected email handoff with a local copyable fallback",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md konnte Ihre E-Mail-App nicht öffnen. Sie können hier einen Bericht verfassen und kopieren, um ihn später oder von einem anderen Gerät zu versenden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md could not open your email app. You can write and copy a report here to send later or from another device."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md no pudo abrir tu app de correo. Puedes escribir y copiar un informe aquí para enviarlo más tarde o desde otro dispositivo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md n’a pas pu ouvrir votre app de messagerie. Vous pouvez rédiger et copier un rapport ici pour l’envoyer plus tard ou depuis un autre appareil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md non ha potuto aprire la tua app di posta. Puoi scrivere e copiare un resoconto qui per inviarlo in seguito o da un altro dispositivo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.mdはメールアプリを開けませんでした。ここでレポートを作成してコピーし、後で、または別のデバイスから送信できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md가 이메일 앱을 열지 못했습니다. 여기에서 보고서를 작성하고 복사하여 나중에 또는 다른 기기에서 보낼 수 있습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md kon je e-mailapp niet openen. Je kunt hier een rapport schrijven en kopiëren om het later of vanaf een ander apparaat te verzenden."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Health.md não conseguiu abrir seu app de e-mail. Você pode escrever e copiar um relatório aqui para enviá-lo mais tarde ou de outro dispositivo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md无法打开你的邮件App。你可以在此编写并复制报告，稍后或从其他设备发送。"
+          }
+        }
+      }
+    },
     "Health.md could not read one or more requested data types from Apple Health." : {
       "comment" : "Detailed error: HealthKit error",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md konnte einen oder mehrere angeforderte Datentypen von Apple Health nicht lesen."
+            "value" : "Health.md konnte einen oder mehrere angeforderte Datentypen nicht aus Apple Health lesen."
           }
         },
         "en" : {
@@ -62778,7 +63098,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md konnte den Abfragekontext-Verschlüsselungsschlüssel von Keychain nicht lesen."
+            "value" : "Health.md konnte den Verschlüsselungsschlüssel für den Query-Kontext nicht aus dem Schlüsselbund lesen."
           }
         },
         "en" : {
@@ -62843,7 +63163,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md konnte den Abfragekontext-Verschlüsselungsschlüssel nicht aus Keychain entfernen."
+            "value" : "Health.md konnte den Verschlüsselungsschlüssel für den Query-Kontext nicht aus dem Schlüsselbund entfernen."
           }
         },
         "en" : {
@@ -62907,7 +63227,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md konnte die vollständigen YAML-Properties in der vorhandenen Markdown-Datei nicht sicher erkennen und hat die Datei deshalb unverändert gelassen."
+            "value" : "Health.md konnte die vollständigen YAML-Eigenschaften in der bestehenden Markdown-Datei nicht eindeutig identifizieren und hat daher die Datei unverändert gelassen."
           }
         },
         "en" : {
@@ -62972,7 +63292,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md konnte den Abfragekontext-Verschlüsselungsschlüssel nicht in Keychain speichern."
+            "value" : "Health.md konnte den Verschlüsselungsschlüssel für den Query-Kontext nicht im Schlüsselbund speichern."
           }
         },
         "en" : {
@@ -63037,7 +63357,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md hat beim Export einen unerwarteten Fehler festgestellt. Alle zu diesem Zeitpunkt erfassten Systemmeldungen werden im Abschnitt „Technische Details“ angezeigt."
+            "value" : "Beim Export ist in Health.md ein unerwarteter Fehler aufgetreten. Alle zu diesem Zeitpunkt erfassten Systemmeldungen finden Sie im Abschnitt Technische Details."
           }
         },
         "en" : {
@@ -63231,7 +63551,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md für Mac dient als lokales Exportziel. Konfiguriere Formate, Messwerte, Datumsbereiche, Dateinamen, Schreibmodi und Datendetails auf dem iPhone und sende den Export anschließend an diesen Mac."
+            "value" : "Health.md für Mac dient als lokales Exportziel. Konfigurieren Sie Formate, Metriken, Datumsbereiche, Dateinamen, Schreibmodi und Detaillierungsgrad der Daten auf dem iPhone und senden Sie den Export anschließend an diesen Mac."
           }
         },
         "en" : {
@@ -63542,7 +63862,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md überwacht nur den lokalen Host und besitzt den Verbindungsstatus iPhone."
+            "value" : "Health.md lauscht ausschließlich auf localhost und verwaltet den Verbindungsstatus zum iPhone."
           }
         },
         "en" : {
@@ -63607,7 +63927,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md Mac Zielmenü"
+            "value" : "Health.md Mac-Zielmenü"
           }
         },
         "en" : {
@@ -63684,7 +64004,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md auf iPhone liest Apple Health, wendet Ihre ausgewählten Formate und Einstellungen an und sendet dann Exportaufträge über das lokale Netzwerk an diesen Mac – es wird nichts in die Cloud hochgeladen."
+            "value" : "Health.md auf dem iPhone liest Ihre Apple Health-Daten aus, wendet die gewählten Formate und Einstellungen an und sendet die Exporte dann über das lokale Netzwerk an diesen Mac – es wird nichts in die Cloud hochgeladen."
           }
         },
         "en" : {
@@ -63816,7 +64136,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md liest Ihre Apple Health-Daten lokal auf diesem Gerät."
+            "value" : "Health.md liest Ihre Apple Health-Daten lokal auf diesem Gerät aus."
           }
         },
         "en" : {
@@ -63881,7 +64201,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md wird in der Menüleiste ausgeführt, um geplante Exporte durchzuführen. Aktivieren Sie „Beim Anmelden starten“, damit Exporte automatisch erfolgen, wenn Ihr Mac startet."
+            "value" : "Health.md läuft in der Menüleiste, um geplante Exporte durchzuführen. Aktivieren Sie „Beim Login öffnen“, damit Exporte automatisch beim Start Ihres Macs erfolgen."
           }
         },
         "en" : {
@@ -63957,7 +64277,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md exportiert Ihre Gesundheitsdaten automatisch gemäß dem folgenden Zeitplan."
+            "value" : "Health.md exportiert Ihre Gesundheitsdaten automatisch nach dem unten angegebenen Zeitplan."
           }
         },
         "en" : {
@@ -64861,7 +65181,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vollständige Eingabeaufforderung ausblenden"
+            "value" : "Vollständige Eingabe ausblenden"
           }
         },
         "en" : {
@@ -65527,7 +65847,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lesbares Format, perfekt für Obsidian. Enthält Überschriften, Listen und Frontmatter-Metadaten."
+            "value" : "Menschenlesbares Format, ideal für Obsidian. Enthält Überschriften, Listen und Frontmatter-Metadaten."
           }
         },
         "en" : {
@@ -65722,7 +66042,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn die vorgeschlagene Lösung nicht funktioniert, fügen Sie diese Meldung in Ihren Fehlerbericht ein, nachdem Sie alle privaten Ordner- oder Serverinformationen entfernt haben."
+            "value" : "Falls die vorgeschlagene Lösung nicht funktioniert, fügen Sie diese Nachricht Ihrem Fehlerbericht hinzu, nachdem Sie alle privaten Ordner- oder Serverinformationen entfernt haben."
           }
         },
         "en" : {
@@ -66174,7 +66494,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Inaktiv, während „Nur tägliche Notizen“ aktiviert ist. Ihre individuellen Eingabeeinstellungen bleiben erhalten."
+            "value" : "Inaktiv, solange Nur Tagesnotizen aktiviert ist. Ihre Einstellungen für einzelne Einträge bleiben erhalten."
           }
         },
         "en" : {
@@ -66966,6 +67286,21 @@
         }
       }
     },
+    "Include workout Details and Metadata tables" : {
+      "comment" : "iPhone/iPad workout presentation toggle accessibility label; not a capture setting",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Details- und Metadatentabellen für Trainings einbeziehen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Include workout Details and Metadata tables" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Incluir tablas de detalles y metadatos de los entrenamientos" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inclure les tableaux de détails et de métadonnées des entraînements" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Includi le tabelle dei dettagli e dei metadati degli allenamenti" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ワークアウトの詳細とメタデータの表を含める" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "운동 세부 정보 및 메타데이터 표 포함" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Tabellen met trainingsdetails en metadata opnemen" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Incluir tabelas de detalhes e metadados dos treinos" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "包含体能训练详情和元数据表格" } }
+      }
+    },
     "Included in frontmatter" : {
 
     },
@@ -67483,7 +67818,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Einzelerfassung"
+            "value" : "Individuelle Nachverfolgung"
           }
         },
         "en" : {
@@ -68289,7 +68624,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fügt ausgewählte Metriken in die YAML-Frontmatter Ihrer vorhandenen Tagesnotizen ein. Der Notizenordner ist relativ zum ausgewählten Tresor/Stammverzeichnis, nicht zum Exportunterordner Health.md. Aktivieren Sie „Metrikabschnitte einfügen“, um auch Schlaf, Aktivität usw. in den Notiztext zu schreiben. Lassen Sie den Ordner leer, um das Tresorstammverzeichnis zu durchsuchen. Platzhalter: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}."
+            "value" : "Fügt ausgewählte Messwerte in das YAML-Frontmatter Ihrer bestehenden täglichen Notizen ein. Der Notizen-Ordner ist relativ zum ausgewählten Tresor/Wurzelverzeichnis und nicht zum Health.md-Export-Unterordner. Aktivieren Sie \"Metrikabschnitte einfügen\", um zusätzlich Schlaf, Aktivität usw. in den Notiztext zu schreiben. Lassen Sie das Ordnerfeld leer, um im Wurzelverzeichnis des Tresors zu suchen. Platzhalter: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}."
           }
         },
         "en" : {
@@ -68542,6 +68877,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "检查最近睡眠的前四个小时"
+          }
+        }
+      }
+    },
+    "Inspect local technical events and choose what to share. No automatic uploads." : {
+      "comment" : "Diagnostics entry in Settings; local review and sharing are controlled by the user.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokale technische Ereignisse prüfen und auswählen, was geteilt werden soll. Keine automatischen Uploads."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revisa los eventos técnicos locales y elige qué compartir. No se realizan cargas automáticas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consultez les événements techniques locaux et choisissez quoi partager. Aucun envoi automatique."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esamina gli eventi tecnici locali e scegli cosa condividere. Nessun caricamento automatico."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイス上の技術イベントを確認し、共有する内容を選択できます。自動アップロードは行われません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기기에 저장된 기술 이벤트를 확인하고 공유할 내용을 선택하세요. 자동으로 업로드되지 않습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bekijk lokale technische gebeurtenissen en kies wat je wilt delen. Geen automatische uploads."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inspecione os eventos técnicos locais e escolha o que compartilhar. Nenhum envio automático."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看本地技术事件并选择要共享的内容。不会自动上传。"
           }
         }
       }
@@ -69292,7 +69686,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iOS beendete den Hintergrundexport, bevor Health.md das Schreiben aller angeforderten Daten abschließen konnte."
+            "value" : "iOS hat den Hintergrundexport beendet, bevor Health.md alle angeforderten Daten schreiben konnte."
           }
         },
         "en" : {
@@ -69357,7 +69751,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iOS hat Ihre Gesundheitsdaten geschützt, da der iPhone gesperrt war, als Health.md versuchte, ihn zu lesen."
+            "value" : "iOS hat Ihre Gesundheitsdaten geschützt, weil das iPhone gesperrt war, als Health.md versucht hat, darauf zuzugreifen."
           }
         },
         "en" : {
@@ -69750,7 +70144,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhone bleibt die Quelle der Wahrheit"
+            "value" : "Das iPhone bleibt die maßgebliche Datenquelle"
           }
         },
         "en" : {
@@ -69879,7 +70273,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhone-kontrollierte Exporte"
+            "value" : "Vom iPhone gesteuerte Exporte"
           }
         },
         "en" : {
@@ -70009,7 +70403,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unregelmäßiges Herzrhythmus-Ereignis"
+            "value" : "Ereignis mit unregelmäßigem Herzrhythmus"
           }
         },
         "en" : {
@@ -70485,7 +70879,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "JSON behält den gesamten strukturierten Export bei, einschließlich Trainings, Routenpunkten, Proben, Medikamenten und Metadaten. Markdown und Obsidian Bases sind für lesbare Notizen und flach abfragbare Eigenschaften optimiert. CSV eignet sich am besten für Tabellenkalkulationen, bei denen verschachtelte Daten in Zeilen zusammengefasst werden."
+            "value" : "JSON bewahrt den vollständigen strukturierten Export, einschließlich Workouts, Routenpunkten, Messwerten, Medikamenten und Metadaten. Markdown und Obsidian Bases sind für gut lesbare Notizen und flache, abfragbare Eigenschaften optimiert. CSV eignet sich am besten für Tabellenkalkulationen, wobei verschachtelte Daten in Zeilen umgewandelt werden."
           }
         },
         "en" : {
@@ -72552,7 +72946,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leer lassen für flache Struktur oder Platzhalter unten verwenden"
+            "value" : "Für eine flache Struktur leer lassen oder die untenstehenden Platzhalter verwenden"
           }
         },
         "en" : {
@@ -72734,7 +73128,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Legacy-Cache"
+            "value" : "Veralteter Cache"
           }
         },
         "en" : {
@@ -73112,7 +73506,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Listen Sie abfragbare Schlafmetriken auf"
+            "value" : "Abfragbare Schlafmetriken auflisten"
           }
         },
         "en" : {
@@ -73177,7 +73571,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Listen Sie die letzten Trainingseinheiten auf"
+            "value" : "Kürzlich absolvierte Workouts auflisten"
           }
         },
         "en" : {
@@ -73242,7 +73636,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zuhören"
+            "value" : "Empfangsbereit"
           }
         },
         "en" : {
@@ -73307,7 +73701,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auf Health.md achten"
+            "value" : "Warte auf Health.md"
           }
         },
         "en" : {
@@ -73372,7 +73766,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auf iPhone achten"
+            "value" : "Warte auf iPhone"
           }
         },
         "en" : {
@@ -74296,7 +74690,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lossless Health Records ist aktiviert. Ein Export dieser Größe mit dem kanonischen Archiv kann Stunden dauern und möglicherweise nicht genügend Arbeitsspeicher haben. Wähle Detaillierte Zeitreihen oder Zusammenfassung für einen kleineren Export."
+            "value" : "Lossless Health Records ist aktiviert. Ein so großer Export mit dem kanonischen Archiv kann mehrere Stunden dauern und möglicherweise vor Abschluss aufgrund von Speichermangel abgebrochen werden. Wählen Sie für einen kleineren Export die Option „Detaillierte Zeitreihen“ oder „Zusammenfassung“."
           }
         },
         "en" : {
@@ -74361,7 +74755,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Low-Cardio-Fitness-Event"
+            "value" : "Ereignis: Niedrige kardiorespiratorische Fitness"
           }
         },
         "en" : {
@@ -76170,6 +76564,71 @@
         }
       }
     },
+    "Mail could not queue your feedback. No delivery was confirmed. You can write and copy a report here. Text entered in Mail is not available to Health.md; re-enter it below if needed." : {
+      "comment" : "Mail completion failed; Mail editor text is not returned to Health.md",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail konnte Ihr Feedback nicht in die Warteschlange stellen. Es wurde keine Zustellung bestätigt. Sie können hier einen Bericht verfassen und kopieren. In Mail eingegebener Text steht Health.md nicht zur Verfügung; geben Sie ihn bei Bedarf unten erneut ein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail could not queue your feedback. No delivery was confirmed. You can write and copy a report here. Text entered in Mail is not available to Health.md; re-enter it below if needed."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail no pudo poner tus comentarios en cola para enviarlos. No se confirmó la entrega. Puedes escribir y copiar un informe aquí. Health.md no tiene acceso al texto introducido en Mail; vuelve a escribirlo abajo si es necesario."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail n’a pas pu mettre vos commentaires en attente d’envoi. Aucune livraison n’a été confirmée. Vous pouvez rédiger et copier un rapport ici. Health.md n’a pas accès au texte saisi dans Mail ; saisissez-le à nouveau ci-dessous si nécessaire."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail non ha potuto mettere in coda il tuo feedback per l’invio. La consegna non è stata confermata. Puoi scrivere e copiare un resoconto qui. Health.md non ha accesso al testo inserito in Mail; reinseriscilo qui sotto se necessario."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メールはフィードバックを送信待ちにできませんでした。配信は確認されていません。ここでレポートを作成してコピーできます。メールで入力したテキストをHealth.mdは取得できません。必要に応じて下に再入力してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail이 피드백을 전송 대기열에 추가하지 못했습니다. 전달은 확인되지 않았습니다. 여기에서 보고서를 작성하고 복사할 수 있습니다. Health.md는 Mail에 입력한 텍스트에 접근할 수 없으므로 필요한 경우 아래에 다시 입력하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail kon je feedback niet in de verzendwachtrij plaatsen. De bezorging is niet bevestigd. Je kunt hier een rapport schrijven en kopiëren. Tekst die in Mail is ingevoerd, is niet beschikbaar in Health.md; voer deze zo nodig hieronder opnieuw in."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Mail não conseguiu colocar seu feedback na fila de envio. A entrega não foi confirmada. Você pode escrever e copiar um relatório aqui. O Health.md não tem acesso ao texto digitado no Mail; digite-o novamente abaixo, se necessário."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邮件无法将你的反馈加入发送队列。尚未确认送达。你可以在此编写并复制报告。Health.md无法获取在邮件中输入的文字；如有需要，请在下方重新输入。"
+          }
+        }
+      }
+    },
     "Make Active & Edit" : {
       "comment" : "Action activating this profile"
     },
@@ -76179,7 +76638,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stellen Sie sicher, dass Health.md auf Ihrem iPhone mit aktiviertem Mac-Ziel geöffnet ist"
+            "value" : "Stellen Sie sicher, dass Health.md auf Ihrem iPhone geöffnet ist und die Option „Mac-Ziel“ aktiviert ist."
           }
         },
         "en" : {
@@ -77071,7 +77530,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Für die Nachverfolgung von Medikamenten ist eine Sondergenehmigung von Apple erforderlich. Wir haben einen Antrag gestellt und warten auf die Genehmigung. Wir aktivieren diese Metrik automatisch, sobald sie gewährt wird."
+            "value" : "Für die Medikamentenverfolgung ist eine besondere Genehmigung von Apple erforderlich. Wir haben diese beantragt und warten auf die Freigabe. Sobald die Genehmigung erteilt wurde, wird diese Kennzahl automatisch aktiviert."
           }
         },
         "en" : {
@@ -80270,7 +80729,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Neue auf Mac ausgerichtete Exporte werden auf iPhone erstellt und direkt an den ausgewählten Ordner gesendet. Dieser Cache ist nur für den alten manuellen Synchronisierungsfluss vorgesehen."
+            "value" : "Neue für den Mac bestimmte Exporte werden auf dem iPhone erstellt und direkt in den ausgewählten Ordner gesendet. Dieser Cache wird nur für den alten manuellen Synchronisationsablauf verwendet."
           }
         },
         "en" : {
@@ -81097,7 +81556,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Für dieses Ziel wurde kein Exportordner ausgewählt, sodass Health.md keinen Ort zum Speichern der Dateien hatte."
+            "value" : "Für dieses Ziel wurde kein Exportordner ausgewählt, daher konnte Health.md die Dateien nicht speichern."
           }
         },
         "en" : {
@@ -81676,7 +82135,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Für das ausgewählte Datum sind keine Gesundheitsdaten verfügbar"
+            "value" : "Für das ausgewählte Datum sind keine Gesundheitsdaten verfügbar."
           }
         },
         "en" : {
@@ -81805,7 +82264,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Es werden keine Gesundheitsdaten oder persönlichen Informationen übermittelt — nur App-Version und Systeminformationen."
+            "value" : "Es werden keine Gesundheitsdaten oder persönlichen Informationen übermittelt – nur die App-Version und Systeminformationen."
           }
         },
         "en" : {
@@ -81930,7 +82389,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine Gesundheitsakten erhalten"
+            "value" : "Keine Gesundheitsdaten empfangen"
           }
         },
         "en" : {
@@ -82054,7 +82513,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Noch keine iPhone-Aktivität. Führen Sie eine Synchronisierung oder einen Mac-Export durch, um es hier anzuzeigen."
+            "value" : "Bisher keine iPhone-Aktivität. Führen Sie eine Synchronisierung oder einen Mac-Export durch, um sie hier anzuzeigen."
           }
         },
         "en" : {
@@ -82119,7 +82578,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Es wurden keine Legacy-Datensätze aus dem alten Synchronisierungsablauf zwischengespeichert."
+            "value" : "Keine alten Datensätze aus dem vorherigen Synchronisationsprozess zwischengespeichert."
           }
         },
         "en" : {
@@ -82431,7 +82890,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine neuen Rekorde"
+            "value" : "Keine neuen Datensätze"
           }
         },
         "en" : {
@@ -82496,7 +82955,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine Nicht-Loopback-IPv4-Adressen gefunden. Überprüfen Sie Tailscale oder Wi‑Fi und aktualisieren Sie es."
+            "value" : "Keine Nicht-Loopback-IPv4-Adressen gefunden. Bitte überprüfen Sie Tailscale oder WLAN und aktualisieren Sie die Ansicht."
           }
         },
         "en" : {
@@ -83478,7 +83937,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hinweis: Ihr iPhone muss entsperrt sein, damit Exporte funktionieren – iOS schützt Gesundheitsdaten bei gesperrtem Gerät. Falls gesperrt, senden wir zur geplanten Zeit eine Benachrichtigung; tippen Sie darauf, um den Export zu starten. Die geplante Zeit ist ungefähr; iOS bestimmt, wann Hintergrundaufgaben basierend auf Nutzungsmustern und Systembedingungen ausgeführt werden."
+            "value" : "Hinweis: Ihr iPhone muss entsperrt sein, damit Exporte funktionieren – iOS schützt Gesundheitsdaten, wenn das Gerät gesperrt ist. Ist Ihr iPhone gesperrt, senden wir zur geplanten Zeit eine Benachrichtigung; tippen Sie darauf, um den Export auszuführen. Die geplante Zeit ist ein Richtwert; iOS steuert den Start von Hintergrundaufgaben anhand Ihrer Nutzungsmuster und Systembedingungen."
           }
         },
         "en" : {
@@ -84450,7 +84909,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Es werden nur Kategorien mit aktivierten Metriken in Ihren Exporteinstellungen angezeigt. Aktivieren Sie weitere Metriken in den Gesundheitsmetriken-Einstellungen."
+            "value" : "Es werden nur Kategorien angezeigt, für die in Ihren Exporteinstellungen Metriken aktiviert sind. Aktivieren Sie weitere Metriken in den Einstellungen für Gesundheitsmetriken."
           }
         },
         "en" : {
@@ -84572,7 +85031,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sende Apple Health-Daten nur an Endpunkte, die du kontrollierst oder denen du vertraust. API-Exporte verwenden deine ausgewählten Messwerte und die Einstellung Datendetails."
+            "value" : "Senden Sie Apple Health-Daten nur an Endpunkte, die Sie kontrollieren oder denen Sie vertrauen. API-Exporte verwenden Ihre ausgewählten Metriken und die Einstellung für Detailgrad der Daten."
           }
         },
         "en" : {
@@ -84638,7 +85097,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Es werden nur Zusammenfassungsdateien für die gesamten berührten Wochen-/Monats-/Jahresfenster geschrieben."
+            "value" : "Es werden nur Zusammenfassungsdateien für die vollständigen betroffenen Wochen-, Monats- oder Jahreszeiträume erstellt."
           }
         },
         "en" : {
@@ -84768,7 +85227,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein Issue auf GitHub erstellen"
+            "value" : "Ein Problem auf GitHub melden"
           }
         },
         "en" : {
@@ -85027,7 +85486,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnen Sie Health.md und versuchen Sie es erneut, während die App sichtbar ist. Wenn es erneut auftritt, exportieren Sie einen kleineren Datumsbereich."
+            "value" : "Öffnen Sie Health.md und versuchen Sie es erneut, während die App sichtbar ist. Falls das Problem erneut auftritt, exportieren Sie einen kleineren Datumsbereich."
           }
         },
         "en" : {
@@ -85095,7 +85554,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnen Sie Health.md auf iPhone"
+            "value" : "Öffnen Sie Health.md auf dem iPhone"
           }
         },
         "en" : {
@@ -85160,7 +85619,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnen Sie Health.md auf Mac. Der CLI kommuniziert mit der laufenden App, nicht direkt mit iPhone."
+            "value" : "Öffnen Sie Health.md auf dem Mac. Die CLI kommuniziert mit der laufenden App, nicht direkt mit dem iPhone."
           }
         },
         "en" : {
@@ -85225,7 +85684,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnen Sie Health.md auf Ihrem iPhone, gehen Sie zu Mac-Ziel und aktivieren Sie den Mac-Zielumschalter. Wählen Sie dann einen Zielordner auf diesem Mac und wählen Sie „Verbundenes Mac“ auf der Registerkarte „Exportieren“ von iPhone aus."
+            "value" : "Öffnen Sie Health.md auf Ihrem iPhone, gehen Sie zu „Mac-Ziel“ und aktivieren Sie den Schalter für das Mac-Ziel. Wählen Sie anschließend auf diesem Mac einen Zielordner aus und wählen Sie „Verbundener Mac“ im Export-Tab des iPhones."
           }
         },
         "en" : {
@@ -85481,7 +85940,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnen Sie den Ordner unter „Dateien“, um zu bestätigen, dass er verfügbar ist. Wählen Sie dann den Ordner in Health.md erneut aus und versuchen Sie es erneut."
+            "value" : "Öffnen Sie den Ordner in „Dateien“, um zu bestätigen, dass er verfügbar ist. Wählen Sie dann den Ordner erneut in Health.md aus und versuchen Sie es erneut."
           }
         },
         "en" : {
@@ -85546,7 +86005,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnen Sie die Health-App und überprüfen Sie Health.md unter Profil → Apps und Dienste. Erlauben Sie die erforderlichen Datentypen und versuchen Sie es dann erneut."
+            "value" : "Öffnen Sie die Health-App und prüfen Sie Health.md unter Profil → Apps und Dienste. Erlauben Sie die benötigten Datentypen und versuchen Sie es anschließend erneut."
           }
         },
         "en" : {
@@ -85610,7 +86069,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnet eine vorausgefüllte Issue-Vorlage"
+            "value" : "Öffnet eine vorab ausgefüllte Fehlerberichtsvorlage"
           }
         },
         "en" : {
@@ -85684,7 +86143,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnet die Ordnerauswahl zur Auswahl des Exportziels"
+            "value" : "Öffnet den Ordnerauswahldialog, um das Exportziel auszuwählen"
           }
         },
         "en" : {
@@ -85749,7 +86208,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnet die Metrikauswahl, um auszuwählen, welche Gesundheitsdaten exportiert werden sollen"
+            "value" : "Öffnet die Metrikauswahl, um festzulegen, welche Gesundheitsdaten exportiert werden sollen"
           }
         },
         "en" : {
@@ -85828,7 +86287,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnet Ihren Standard-E-Mail-Client"
+            "value" : "Öffnet Ihr Standard-E-Mail-Programm"
           }
         },
         "en" : {
@@ -85899,7 +86358,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Optimiert für Obsidian Bases. Alle Metriken werden als Frontmatter-Eigenschaften zum Abfragen, Filtern und Sortieren gespeichert."
+            "value" : "Optimiert für Obsidian Bases. Alle Metriken werden als Frontmatter-Eigenschaften gespeichert, um Abfragen, Filterungen und Sortierungen zu ermöglichen."
           }
         },
         "en" : {
@@ -86220,7 +86679,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nach Dateityp organisieren ist standardmäßig deaktiviert. Aktivieren Sie es nur, wenn Sie die Ordner Markdown/, Bases/, JSON/ und CSV/ benötigen. Aktualisieren Sie zuerst Plugins, Verknüpfungen oder Skripte, die flache Pfade erwarten."
+            "value" : "Die Option „Nach Dateityp organisieren“ ist standardmäßig deaktiviert. Aktivieren Sie sie nur, wenn Sie separate Ordner für Markdown, Bases, JSON und CSV benötigen. Aktualisieren Sie zuvor alle Plugins, Kurzbefehle oder Skripte, die flache Pfade erwarten."
           }
         },
         "en" : {
@@ -92074,7 +92533,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zeitraumzusammenfassung"
+            "value" : "Bereichszusammenfassung"
           }
         },
         "en" : {
@@ -92139,7 +92598,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zeitraumzusammenfassung"
+            "value" : "Bereichszusammenfassung"
           }
         },
         "en" : {
@@ -92204,7 +92663,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nur Zeitraumzusammenfassung"
+            "value" : "Nur Bereichszusammenfassung"
           }
         },
         "en" : {
@@ -92269,7 +92728,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schneller/hämmernder Herzschlag"
+            "value" : "Schneller/starker Herzschlag"
           }
         },
         "en" : {
@@ -92337,7 +92796,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Raw JSON kann auch dann funktionieren, wenn kein Zielordner Mac ausgewählt ist."
+            "value" : "Raw-JSON kann auch verwendet werden, wenn kein Zielordner auf dem Mac ausgewählt wurde."
           }
         },
         "en" : {
@@ -95380,6 +95839,21 @@
         }
       }
     },
+    "Report copied" : {
+      "comment" : "Accessibility confirmation after explicitly copying the current feedback report",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Bericht kopiert" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Report copied" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Informe copiado" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rapport copié" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Resoconto copiato" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "レポートをコピーしました" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "보고서가 복사되었습니다" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Rapport gekopieerd" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Relatório copiado" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "报告已复制" } }
+      }
+    },
     "Reports are generated on your device and stay private until you explicitly share or save them." : {
 
     },
@@ -96123,7 +96597,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auf Standardwerte zurücksetzen"
+            "value" : "Auf Standardeinstellungen zurücksetzen"
           }
         },
         "en" : {
@@ -97163,7 +97637,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Überprüfen Sie den Speicherort unter „Dateien“ und wählen Sie dann den gewünschten Ordner erneut aus."
+            "value" : "Überprüfen Sie den Speicherort in „Dateien“ und wählen Sie anschließend erneut den gewünschten Ordner aus."
           }
         },
         "en" : {
@@ -97228,7 +97702,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sehen Sie sich den Abschnitt „Technische Details“ unten an und versuchen Sie es dann erneut. Wenn es erneut fehlschlägt, fügen Sie genau diese Meldung in Ihren Fehlerbericht ein."
+            "value" : "Lesen Sie den Abschnitt „Technische Details“ unten und versuchen Sie es dann erneut. Falls der Vorgang wieder fehlschlägt, fügen Sie diese genaue Meldung Ihrem Fehlerbericht bei."
           }
         },
         "en" : {
@@ -97755,7 +98229,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "rpm"
+            "value" : "U/min"
           }
         },
         "en" : {
@@ -97820,7 +98294,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Führen Sie eine abgeleitete Schlafmetrikabfrage aus"
+            "value" : "Führen Sie eine abgeleitete Schlafmetriken-Abfrage aus."
           }
         },
         "en" : {
@@ -97897,7 +98371,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Führen Sie diese aus, nachdem die Mac-App geöffnet und die iPhone-App verbunden ist."
+            "value" : "Führen Sie diese Schritte aus, nachdem die Mac-App geöffnet und die iPhone-App verbunden ist."
           }
         },
         "en" : {
@@ -98553,7 +99027,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Zugriff auf gespeicherte Ordner muss aktualisiert werden. Stellen Sie die Verbindung wieder her oder wählen Sie den Ordner erneut aus."
+            "value" : "Der Zugriff auf den gespeicherten Ordner muss aktualisiert werden. Verbinden Sie den Ordner erneut oder wählen Sie ihn erneut aus."
           }
         },
         "en" : {
@@ -98618,7 +99092,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gespeicherter Ordner nicht verfügbar. Verbinden Sie den Speicherort unter „Dateien“ erneut oder wählen Sie den Ordner erneut aus."
+            "value" : "Der gespeicherte Ordner ist nicht verfügbar. Stellen Sie die Verbindung zum Speicherort in „Dateien“ wieder her oder wählen Sie den Ordner erneut aus."
           }
         },
         "en" : {
@@ -98760,7 +99234,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scannen Sie mit Ihrer iPhone-Kamera, um Health.md im App Store zu öffnen"
+            "value" : "Scannen Sie mit der Kamera Ihres iPhones, um Health.md im App Store zu öffnen."
           }
         },
         "en" : {
@@ -99915,7 +100389,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Suche …"
+            "value" : "Suche…"
           }
         },
         "en" : {
@@ -100097,7 +100571,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie ein erkanntes Gerät aus, um eine Verbindung über das lokale Netzwerk herzustellen."
+            "value" : "Wählen Sie ein gefundenes Gerät aus, um über das lokale Netzwerk eine Verbindung herzustellen."
           }
         },
         "en" : {
@@ -100357,7 +100831,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie mindestens ein Exportformat aus oder aktivieren Sie „Nur tägliche Notizen“."
+            "value" : "Wählen Sie mindestens ein Exportformat aus oder aktivieren Sie ausschließlich Tägliche Notizen."
           }
         },
         "en" : {
@@ -100613,7 +101087,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie den Zielordner aus, in dem Health.md Ihre exportierten Gesundheitsdaten speichert (z. B. einen Obsidian-Tresor)."
+            "value" : "Wählen Sie den Zielordner aus, in dem Health.md Ihre exportierten Gesundheitsdaten speichert (zum Beispiel einen Obsidian-Tresor)."
           }
         },
         "en" : {
@@ -100794,7 +101268,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie diesen Mac aus und starten Sie den Export"
+            "value" : "Diesen Mac auswählen und exportieren"
           }
         },
         "en" : {
@@ -100859,7 +101333,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie diesen Mac als Ziel aus"
+            "value" : "Diesen Mac als Ziel auswählen"
           }
         },
         "en" : {
@@ -100924,7 +101398,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wählen Sie diese Option, um Details anzuzeigen"
+            "value" : "Auswählen, um Details anzuzeigen"
           }
         },
         "en" : {
@@ -101445,7 +101919,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Senden Sie eine E-Mail oder erstellen Sie ein GitHub-Issue — beide enthalten automatisch Ihre App-Version und Systeminformationen."
+            "value" : "Senden Sie eine E-Mail oder öffnen Sie ein GitHub-Issue – in beiden Fällen werden Ihre App-Version und Systeminformationen automatisch hinzugefügt."
           }
         },
         "en" : {
@@ -101761,7 +102235,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sendet die letzten 7 Tage an Gesundheitsdaten an Ihren verbundenen Mac."
+            "value" : "Sendet die letzten 7 Tage Ihrer Gesundheitsdaten an Ihren verbundenen Mac."
           }
         },
         "en" : {
@@ -102287,7 +102761,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Legt den Exportdatumsbereich auf heute fest."
+            "value" : "Setzt den Exportzeitraum auf heute."
           }
         },
         "en" : {
@@ -102352,7 +102826,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Legt den Exportdatumsbereich auf gestern fest."
+            "value" : "Setzt den Exportzeitraum auf gestern."
           }
         },
         "en" : {
@@ -102692,7 +103166,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Einrichtungsschritte: Health.md auf iPhone öffnen, Mac-Ziel aktivieren, einen Zielordner auswählen, diesen Mac auswählen und exportieren"
+            "value" : "Einrichtungsschritte: Öffnen Sie Health.md auf dem iPhone, aktivieren Sie Mac-Ziel, wählen Sie einen Zielordner, wählen Sie diesen Mac aus und exportieren Sie"
           }
         },
         "en" : {
@@ -103440,6 +103914,21 @@
     "Show the onboarding flow again" : {
 
     },
+    "Show these two workout tables in Markdown exports and daily notes. Turn off to keep readable workout summaries without the tables. Structured data and source capture are unchanged." : {
+      "comment" : "iPhone/iPad workout setting explanation and accessibility hint; presentation only",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Zeige diese beiden Trainingstabellen in Markdown-Exporten und täglichen Notizen. Schalte sie aus, um lesbare Trainingszusammenfassungen ohne die Tabellen zu behalten. Strukturierte Daten und Quelldatenerfassung bleiben unverändert." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show these two workout tables in Markdown exports and daily notes. Turn off to keep readable workout summaries without the tables. Structured data and source capture are unchanged." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Muestra estas dos tablas de entrenamientos en las exportaciones Markdown y las notas diarias. Desactívalo para conservar resúmenes legibles de los entrenamientos sin las tablas. Los datos estructurados y la captura de datos de origen no cambian." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Affiche ces deux tableaux d’entraînement dans les exports Markdown et les notes quotidiennes. Désactivez cette option pour conserver des résumés d’entraînement lisibles sans les tableaux. Les données structurées et la capture des données sources restent inchangées." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Mostra queste due tabelle degli allenamenti nelle esportazioni Markdown e nelle note giornaliere. Disattiva per mantenere riepiloghi leggibili degli allenamenti senza le tabelle. I dati strutturati e l’acquisizione dei dati di origine restano invariati." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Markdownのエクスポートとデイリーノートに、この2つのワークアウトの表を表示します。オフにすると、表なしで読みやすいワークアウトの概要を残します。構造化データとソースデータの取得は変わりません。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Markdown 내보내기와 일일 노트에 이 두 운동 표를 표시합니다. 끄면 표 없이 읽기 쉬운 운동 요약이 유지됩니다. 구조화된 데이터와 원본 데이터 수집은 변경되지 않습니다." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Toon deze twee trainingstabellen in Markdown-exports en dagelijkse notities. Schakel uit om leesbare trainingssamenvattingen zonder de tabellen te behouden. Gestructureerde gegevens en het vastleggen van brongegevens blijven ongewijzigd." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Mostra estas duas tabelas de treinos nas exportações Markdown e nas notas diárias. Desative para manter resumos legíveis dos treinos sem as tabelas. Os dados estruturados e a captura de dados de origem permanecem inalterados." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在Markdown导出和每日笔记中显示这两个体能训练表格。关闭后可保留不含表格的易读体能训练摘要。结构化数据和源数据采集保持不变。" } }
+      }
+    },
     "Showing a lightweight preview of this %@ file. The full export will still include all data." : {
       "comment" : "macOS production UI",
       "localizations" : {
@@ -103572,7 +104061,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zeigt die Start- und Enddatumsauswahl für einen benutzerdefinierten Exportbereich an."
+            "value" : "Zeigt Auswahlfelder für Start- und Enddatum für einen benutzerdefinierten Exportzeitraum an."
           }
         },
         "en" : {
@@ -103637,7 +104126,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zeigt die Dateien und Inhalte an, die exportiert werden"
+            "value" : "Zeigt die Dateien und Inhalte an, die exportiert werden."
           }
         },
         "en" : {
@@ -103708,7 +104197,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verstopfung der Nebenhöhlen"
+            "value" : "Nasennebenhöhlenverstopfung"
           }
         },
         "en" : {
@@ -103838,7 +104327,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skating-Sportdistanz"
+            "value" : "Strecke beim Skaten"
           }
         },
         "en" : {
@@ -104357,7 +104846,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Überspringt aggregierte Exporte, ZIPs, Roll-ups, einzelne Einträge, Anbieter-Sidecars und das Datenwörterbuch, während ihre Einstellungen beibehalten werden"
+            "value" : "Überspringt Sammel-Exporte, ZIP-Dateien, Zusammenfassungen, einzelne Einträge, Anbieter-Sidecars und das Datenwörterbuch, wobei deren Einstellungen erhalten bleiben."
           }
         },
         "en" : {
@@ -104426,7 +104915,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Überspringt tägliche Dateien und Nebenwirkungen. Health.md ruft weiterhin die vollständig berührten Zeiträume ab, um die aktivierten Zusammenfassungen zu erstellen."
+            "value" : "Überspringt Tagesdateien und Nebeneffekte. Health.md ruft dennoch die gesamten betroffenen Zeiträume ab, um die aktivierten Zusammenfassungen zu erstellen."
           }
         },
         "en" : {
@@ -104491,7 +104980,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Überspringt tägliche Dateien und Nebeneffekte. Health.md ruft den angeforderten Zeitraum weiterhin ab, um die Zusammenfassung zu erstellen."
+            "value" : "Überspringt Tagesdateien und Nebeneffekte. Health.md ruft dennoch den angeforderten Zeitraum ab, um die Zusammenfassung zu erstellen."
           }
         },
         "en" : {
@@ -104556,7 +105045,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Überspringt tägliche Dateien, wenn die Zeitraumzusammenfassung aktiviert ist."
+            "value" : "Überspringt Tagesdateien, wenn die Bereichszusammenfassung aktiviert ist."
           }
         },
         "en" : {
@@ -105073,7 +105562,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Für einige Daten wurden keine Daten synchronisiert, andere Daten bleiben bestehen. Öffnen Sie Health.md, um es erneut zu versuchen."
+            "value" : "Für einige Daten lagen keine synchronisierten Daten vor, andere Daten verbleiben. Öffnen Sie Health.md, um es erneut zu versuchen."
           }
         },
         "en" : {
@@ -105523,7 +106012,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tabellenkalkulationskompatibles Format. Jeder Datenpunkt wird zu einer Zeile mit Datum-, Kategorie-, Metrik- und Wert-Spalten."
+            "value" : "Tabellenkompatibles Format. Jeder Datenpunkt wird zu einer Zeile mit den Spalten Datum, Kategorie, Messwert und Wert."
           }
         },
         "en" : {
@@ -107141,7 +107630,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strukturiertes Datenformat, ideal für programmatischen Zugriff und Datenanalyse."
+            "value" : "Strukturiertes Datenformat, ideal für den programmatischen Zugriff und die Datenanalyse."
           }
         },
         "en" : {
@@ -108768,7 +109257,15 @@
       }
     },
     "Summary only" : {
-      "comment" : "Profile editor summary-only toggle"
+      "comment" : "Profile editor summary-only toggle",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Übersicht"
+          }
+        }
+      }
     },
     "Supports {date}, {time}, {metric}, and {category}." : {
       "extractionState" : "stale",
@@ -109735,7 +110232,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Synchronisieren Sie Gesundheitsdaten von Ihrem iPhone und wählen Sie einen Exportordner aus, um zu beginnen."
+            "value" : "Synchronisieren Sie Gesundheitsdaten von Ihrem iPhone und wählen Sie einen Exportordner, um zu beginnen."
           }
         },
         "en" : {
@@ -109800,7 +110297,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Synchronisieren Sie Gesundheitsdaten von Ihrem iPhone zum Exportieren."
+            "value" : "Synchronisieren Sie Gesundheitsdaten von Ihrem iPhone, um sie zu exportieren."
           }
         },
         "en" : {
@@ -111149,7 +111646,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der verschlüsselte Abfragekontextindex Health.md stimmt nicht mit seinem Tagesblob überein."
+            "value" : "Der verschlüsselte Health.md Query-Context-Index stimmt nicht mit seinem Tages-Blob überein."
           }
         },
         "en" : {
@@ -111214,7 +111711,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der verschlüsselte Abfragekontextindex Health.md ist beschädigt."
+            "value" : "Der verschlüsselte Health.md Query-Context-Index ist beschädigt."
           }
         },
         "en" : {
@@ -111279,7 +111776,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Verschlüsselungsschlüssel für den Abfragekontext Health.md ist ungültig."
+            "value" : "Der Verschlüsselungsschlüssel für den Health.md Query-Context ist ungültig."
           }
         },
         "en" : {
@@ -111344,7 +111841,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Verschlüsselungsschlüssel für den Abfragekontext Health.md ist nicht verfügbar."
+            "value" : "Der Verschlüsselungsschlüssel für den Health.md Query-Context ist nicht verfügbar."
           }
         },
         "en" : {
@@ -111480,7 +111977,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der Abfragekontext-Verschlüsselungsschlüssel Health.md ist ungültig."
+            "value" : "Der Verschlüsselungsschlüssel für den Health.md Query-Context ist ungültig."
           }
         },
         "en" : {
@@ -111548,7 +112045,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der iPhone sendet einen konfigurierten Exportauftrag über Wi-Fi"
+            "value" : "Das iPhone sendet einen konfigurierten Exportauftrag über WLAN."
           }
         },
         "en" : {
@@ -111675,7 +112172,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Sandbox-Helfer `healthmd` und `healthmd-mcp` rufen feste Localhost-Routen auf; weder liest HealthKit direkt."
+            "value" : "Die in einer Sandbox ausgeführten Hilfsprogramme `healthmd` und `healthmd-mcp` rufen festgelegte Localhost-Routen auf; keines liest HealthKit direkt aus."
           }
         },
         "en" : {
@@ -111743,7 +112240,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der gespeicherte Exportordner wird nun an einem anderen Speicherort aufgelöst. Health.md wurde vor dem Schreiben von Dateien gestoppt. Überprüfen Sie den Speicherort unter „Dateien“ und wählen Sie dann den gewünschten Ordner erneut aus."
+            "value" : "Der gespeicherte Exportordner verweist jetzt auf einen anderen Speicherort. Health.md hat vor dem Schreiben von Dateien angehalten. Überprüfen Sie den Speicherort in „Dateien“ und wählen Sie dann den gewünschten Ordner erneut aus."
           }
         },
         "en" : {
@@ -111870,7 +112367,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das Startdatum legt die Wiederholungsphase fest. Bei Monatsplänen wird der letzte Tag verwendet, wenn ein Monat kürzer ist."
+            "value" : "Das Startdatum legt die Wiederholungsphase fest. Bei monatlichen Zeitplänen wird der letzte Tag verwendet, wenn ein Monat kürzer ist."
           }
         },
         "en" : {
@@ -111938,7 +112435,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Für die ausgewählten Daten sind keine Gesundheitsdaten vorhanden oder es sind keine Formate ausgewählt."
+            "value" : "Für die ausgewählten Daten liegen keine Gesundheitsdaten vor oder es wurden keine Formate ausgewählt."
           }
         },
         "en" : {
@@ -112389,7 +112886,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dieser Ordner wird innerhalb des ausgewählten Exportziels erstellt. Leer lassen, um direkt in den Stammordner zu exportieren."
+            "value" : "Dieser Ordner wird innerhalb des von Ihnen gewählten Exportverzeichnisses erstellt. Lassen Sie das Feld leer, um direkt in den Stammordner zu exportieren."
           }
         },
         "en" : {
@@ -112515,7 +113012,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dieser mit Keychain verschlüsselte Speicher ist unabhängig von exportierten Dateien. Die Aufbewahrung erfolgt nie automatisch; Durch das Löschen ändert sich Apple Health nicht auf iPhone."
+            "value" : "Dieser im Schlüsselbund verschlüsselte Speicher ist unabhängig von exportierten Dateien. Die Aufbewahrung erfolgt nie automatisch; das Löschen hat keine Auswirkungen auf Apple Health auf dem iPhone."
           }
         },
         "en" : {
@@ -112580,7 +113077,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Diese Mac-App benötigt die iPhone-App, um Apple Health zu lesen und Exporte zu starten. Die Mac-App wählt nur aus, wo empfangene Dateien gespeichert werden."
+            "value" : "Diese Mac-App benötigt die iPhone-App, um Apple Health auszulesen und Exporte zu starten. Die Mac-App legt nur fest, wo empfangene Dateien gespeichert werden."
           }
         },
         "en" : {
@@ -112645,7 +113142,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dieser Mac speichert die empfangenen Markdown-, Bases-, JSON- oder CSV-Dateien"
+            "value" : "Dieser Mac speichert die empfangenen Markdown-, Bases-, JSON- oder CSV-Dateien."
           }
         },
         "en" : {
@@ -112728,7 +113225,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dadurch werden alle kompakten Kontexttage und der zugehörige Schlüssel Keychain entfernt. Exportierte Dateien und Apple Health bleiben unverändert."
+            "value" : "Dadurch werden alle kompakten Kontexttage und deren zugehörige Schlüsselbund-Schlüssel entfernt. Exportierte Dateien und Apple Health bleiben unverändert."
           }
         },
         "en" : {
@@ -112793,7 +113290,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dadurch werden aufgezeichnete iPhone→Mac-Synchronisierungs- und Exportereignisse aus diesem Mac entfernt. Ihre synchronisierten Gesundheitsdaten und exportierten Dateien sind nicht betroffen."
+            "value" : "Dadurch werden aufgezeichnete iPhone→Mac-Synchronisierungs- und Exportereignisse von diesem Mac entfernt. Ihre synchronisierten Gesundheitsdaten und exportierten Dateien bleiben unberührt."
           }
         },
         "en" : {
@@ -112858,7 +113355,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dadurch werden aufgezeichnete iPhone→Mac-Synchronisierungs- und Mac-Exportereignisse aus diesem Mac entfernt. Ihre synchronisierten Gesundheitsdaten und exportierten Dateien sind nicht betroffen."
+            "value" : "Dadurch werden aufgezeichnete iPhone→Mac-Synchronisierungs- und Mac-Exportereignisse von diesem Mac entfernt. Ihre synchronisierten Gesundheitsdaten und exportierten Dateien bleiben unberührt."
           }
         },
         "en" : {
@@ -112923,7 +113420,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dadurch wird der alte iPhone→Mac-Cache aus diesem Mac entfernt. Es wirkt sich nicht auf Gesundheitsdaten auf iPhone oder exportierten Dateien aus."
+            "value" : "Dadurch wird der alte iPhone→Mac-Cache von diesem Mac entfernt. Gesundheitsdaten auf dem iPhone oder exportierte Dateien werden nicht beeinflusst."
           }
         },
         "en" : {
@@ -112988,7 +113485,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dadurch wird der alte iPhone→Mac-Cache aus diesem Mac entfernt. Es wirkt sich nicht auf Gesundheitsdaten auf iPhone oder Dateien aus, die bereits in Ihren Zielordner exportiert wurden."
+            "value" : "Dadurch wird der alte iPhone→Mac-Cache von diesem Mac entfernt. Gesundheitsdaten auf dem iPhone oder bereits in Ihren Zielordner exportierte Dateien werden nicht beeinflusst."
           }
         },
         "en" : {
@@ -113053,7 +113550,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Diese Version von Health.md kann den Abfragekontext-Speichervertrag nicht lesen."
+            "value" : "Diese Version von Health.md kann den Query-Context-Speichervertrag nicht lesen."
           }
         },
         "en" : {
@@ -113183,7 +113680,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hiermit werden alle auf diesem Mac zwischengespeicherten Gesundheitsdaten entfernt. Sie können jederzeit erneut von Ihrem iPhone synchronisieren."
+            "value" : "Dadurch werden alle auf diesem Mac zwischengespeicherten Gesundheitsdaten entfernt. Sie können jederzeit erneut von Ihrem iPhone synchronisieren."
           }
         },
         "en" : {
@@ -114776,7 +115273,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Versuchen Sie es mit „Gesamter Zeitraum“ oder einem anderen Datumsbereich. Sie können auch Apple Health öffnen und Health.md unter Profil → Apps und Dienste überprüfen. Wenn das Gerät keine passenden Datensätze enthält, gibt es noch nichts zu exportieren."
+            "value" : "Versuchen Sie „Gesamter Zeitraum“ oder wählen Sie einen anderen Datumsbereich. Sie können auch Apple Health öffnen und Health.md unter Profil → Apps und Dienste überprüfen. Wenn auf dem Gerät keine passenden Einträge vorhanden sind, gibt es derzeit nichts zu exportieren."
           }
         },
         "en" : {
@@ -114899,6 +115396,20 @@
     },
     "Turn off Prevent Accidental Changes in Settings to edit your configuration." : {
 
+    },
+    "Turn off to omit these two tables from Markdown exports and daily notes while keeping readable workout summaries. Structured data and source capture are unchanged." : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Deaktivieren, um diese beiden Tabellen in Markdown-Exporten und täglichen Notizen wegzulassen. Lesbare Trainingszusammenfassungen bleiben erhalten. Strukturierte Daten und Quelldatenerfassung bleiben unverändert." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Turn off to omit these two tables from Markdown exports and daily notes while keeping readable workout summaries. Structured data and source capture are unchanged." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Desactiva para omitir estas dos tablas en las exportaciones Markdown y notas diarias, conservando los resúmenes legibles del entrenamiento. Los datos estructurados y la captura de datos de origen no cambian." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Désactivez pour omettre ces deux tableaux des exports Markdown et des notes quotidiennes, tout en conservant les résumés lisibles des entraînements. Les données structurées et la capture des données sources restent inchangées." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Disattiva per omettere queste due tabelle dalle esportazioni Markdown e dalle note giornaliere, mantenendo i riepiloghi leggibili degli allenamenti. I dati strutturati e l’acquisizione dei dati di origine non cambiano." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "オフにすると、読みやすいワークアウトの概要を残したまま、Markdownエクスポートとデイリーノートからこの2つの表を省略します。構造化データとソースデータの取得は変わりません。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "끄면 읽기 쉬운 운동 요약은 유지하고 Markdown 내보내기와 일일 노트에서 이 두 표를 제외합니다. 구조화된 데이터와 원본 데이터 수집은 변경되지 않습니다." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Schakel uit om deze twee tabellen weg te laten uit Markdown-exports en dagelijkse notities, met behoud van leesbare trainingssamenvattingen. Gestructureerde gegevens en brongegevensverzameling blijven ongewijzigd." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Desative para omitir estas duas tabelas das exportações Markdown e notas diárias, mantendo os resumos legíveis dos treinos. Os dados estruturados e a captura de dados de origem não mudam." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭后，Markdown导出和每日笔记将省略这两个表格，同时保留可读的体能训练摘要。结构化数据和源数据采集不变。" } }
+      }
     },
     "Turn off to keep generated output free of %@." : {
       "localizations" : {
@@ -115902,7 +116413,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Entsperren Sie iPhone, öffnen Sie Health.md und warten Sie auf die Zielverbindung Mac."
+            "value" : "Entsperren Sie Ihr iPhone, öffnen Sie Health.md und warten Sie auf die Verbindung zum Mac-Zielgerät."
           }
         },
         "en" : {
@@ -116028,7 +116539,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Entsperren Sie Ihr iPhone, öffnen Sie Health.md und versuchen Sie es erneut. Geplante HealthKit-Lesevorgänge können nicht abgeschlossen werden, während iPhone gesperrt ist."
+            "value" : "Entsperren Sie Ihr iPhone, öffnen Sie Health.md und versuchen Sie es erneut. Geplante HealthKit-Abfragen können nicht abgeschlossen werden, solange das iPhone gesperrt ist."
           }
         },
         "en" : {
@@ -117354,7 +117865,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verwenden Sie die iPhone-Einstellungen genau"
+            "value" : "Verwenden Sie exakt die iPhone-Einstellungen"
           }
         },
         "en" : {
@@ -117620,7 +118131,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verwenden Sie diese Mac-App als lokales Ziel für Exporte, die von Health.md auf iPhone gestartet wurden. Die Mac-App verkauft oder verschafft keinen Zugriff."
+            "value" : "Verwenden Sie diese Mac-App als lokales Ziel für Exporte, die von Health.md auf dem iPhone gestartet wurden. Die Mac-App verkauft nichts und beschränkt den Zugriff nicht."
           }
         },
         "en" : {
@@ -117685,7 +118196,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verwenden Sie diese Option, wenn Ihr iPhone den Mac nicht automatisch erkennen kann."
+            "value" : "Verwenden Sie dies, wenn Ihr iPhone den Mac nicht automatisch findet."
           }
         },
         "en" : {
@@ -117815,7 +118326,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anwendungen"
+            "value" : "Verwendungen"
           }
         },
         "en" : {
@@ -117883,7 +118394,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "UV-Exposition"
+            "value" : "UV-Belastung"
           }
         },
         "en" : {
@@ -122013,7 +122524,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn aktiviert, fasst Health.md den gesamten angeforderten Zeitraum zusammen, überspringt aber tägliche Dateien, die Einfügung in tägliche Notizen und einzelne Einträge."
+            "value" : "Wenn aktiviert, fasst Health.md den gesamten angeforderten Zeitraum zusammen, überspringt jedoch Tagesdateien, das Einfügen in Tagesnotizen und einzelne Einträge."
           }
         },
         "en" : {
@@ -122078,7 +122589,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn aktiviert, werden für ausgewählte Metriken zusätzlich zu den Tageszusammenfassungen einzelne Dateien mit Zeitstempel erstellt."
+            "value" : "Wenn aktiviert, werden für ausgewählte Messwerte zusätzlich zu den täglichen Zusammenfassungen einzelne Dateien mit Zeitstempel erstellt."
           }
         },
         "en" : {
@@ -122142,7 +122653,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn aktiviert, kann Ihr Mac dieses iPad erkennen und Gesundheitsdaten über Ihr lokales Netzwerk anfordern."
+            "value" : "Wenn aktiviert, kann Ihr Mac dieses iPad im lokalen Netzwerk erkennen und Gesundheitsdaten anfordern."
           }
         },
         "en" : {
@@ -122207,7 +122718,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn aktiviert, kann Ihr Mac dieses iPhone erkennen und Gesundheitsdaten über Ihr lokales Netzwerk anfordern."
+            "value" : "Wenn aktiviert, kann Ihr Mac dieses iPhone im lokalen Netzwerk erkennen und Gesundheitsdaten anfordern."
           }
         },
         "en" : {
@@ -122460,7 +122971,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wobei dieser Mac Dateien schreibt, die von iPhone empfangen wurden."
+            "value" : "Wo dieser Mac Dateien speichert, die vom iPhone empfangen wurden."
           }
         },
         "en" : {
@@ -122661,7 +123172,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wi‑Fi / lokales Netzwerk"
+            "value" : "WLAN / lokales Netzwerk"
           }
         },
         "en" : {
@@ -122726,7 +123237,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erstellt einzelne Dateien für:"
+            "value" : "Es werden einzelne Dateien erstellt für:"
           }
         },
         "en" : {
@@ -122842,6 +123353,21 @@
             "value" : "不含扩展名。支持 {date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}"
           }
         }
+      }
+    },
+    "Workout Details and Metadata" : {
+      "comment" : "Markdown presentation toggle; does not change source capture",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Trainingsdetails und Metadaten" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Workout Details and Metadata" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Detalles y metadatos del entrenamiento" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Détails et métadonnées de l’entraînement" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Dettagli e metadati dell’allenamento" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ワークアウトの詳細とメタデータ" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "운동 세부 정보 및 메타데이터" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Trainingsdetails en metadata" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Detalhes e metadados do treino" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "体能训练详情和元数据" } }
       }
     },
     "Workout Effort Score" : {
@@ -123364,7 +123890,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schreibt den maschinenlesbaren Schlüssel und die Einheitenlegende zusammen mit Exporten oder in ZIP-Archive"
+            "value" : "Schreibt den maschinenlesbaren Schlüssel und die Einheitenlegende zusammen mit den Exporten oder in ZIP-Archiven."
           }
         },
         "en" : {
@@ -123429,7 +123955,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Exportdateien schreiben"
+            "value" : "Exportdateien werden geschrieben"
           }
         },
         "en" : {
@@ -123748,7 +124274,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sie können die Verbindung später über den Zielbildschirm Mac abschließen – Sie müssen dies jetzt nicht tun."
+            "value" : "Sie können die Verbindung später auf dem Bildschirm „Mac-Ziel“ abschließen – das muss jetzt nicht erledigt werden."
           }
         },
         "en" : {
@@ -123813,7 +124339,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sie entscheiden sich für die Installation"
+            "value" : "Sie stimmen der Installation zu"
           }
         },
         "en" : {

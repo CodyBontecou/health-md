@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">ਡਾਇਗਨੋਸਟਿਕਸ</string>
+    <string name="diagnostics_entry">ਸਥਾਨਕ ਤਕਨੀਕੀ ਘਟਨਾਵਾਂ ਵੇਖੋ ਅਤੇ ਚੁਣੋ ਕਿ ਕੀ ਸਾਂਝਾ ਕਰਨਾ ਹੈ</string>
+    <string name="diagnostics_recording">ਸਥਾਨਕ ਰਿਕਾਰਡਿੰਗ</string>
+    <string name="diagnostics_privacy">ਡਾਇਗਨੋਸਟਿਕਸ ਸੰਭਾਲਣ ਜਾਂ ਸਾਂਝਾ ਕਰਨ ਤੱਕ ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਰਹਿੰਦੇ ਹਨ। ਕਾਰਵਾਈ ਸੰਬੰਧੀ ਘਟਨਾਵਾਂ ਵਿੱਚ ਸਿਹਤ ਮੁੱਲ, ਸਿਹਤ ਰਿਕਾਰਡ ID, ਮੰਗੀਆਂ ਸਿਹਤ ਡੇਟਾ ਤਾਰੀਖਾਂ, ਪਾਥ, ਐਂਡਪੌਇੰਟ ਜਾਂ ਪ੍ਰਮਾਣੀਕਰਨ ਜਾਣਕਾਰੀ ਸ਼ਾਮਲ ਨਹੀਂ ਹੁੰਦੀ। ਇਹ ਅਗਿਆਤ ਨਹੀਂ ਹਨ।</string>
+    <string name="diagnostics_enabled">ਕਾਰਵਾਈ ਸੰਬੰਧੀ ਘਟਨਾਵਾਂ ਰਿਕਾਰਡ ਕਰੋ</string>
+    <string name="diagnostics_retention">ਵੇਰਵੇ ਦਾ ਪੱਧਰ ਜਾਣਕਾਰੀ ਦੀ ਮਾਤਰਾ ਬਦਲਦਾ ਹੈ, ਸਿਹਤ ਸਮੱਗਰੀ ਇਕੱਠੀ ਕਰਨ ਦੀ ਇਜਾਜ਼ਤ ਨਹੀਂ। ਸੰਭਾਲ: ਵੱਧ ਤੋਂ ਵੱਧ 7 ਦਿਨ / 20 MiB। ਕੋਈ ਆਪਣੇ ਆਪ ਅੱਪਲੋਡ ਨਹੀਂ।</string>
+    <string name="diagnostics_start_private">ਨਿੱਜੀ ਸੰਦਰਭ 15 ਮਿੰਟ ਲਈ ਰਿਕਾਰਡ ਕਰੋ</string>
+    <string name="diagnostics_stop_private">ਨਿੱਜੀ ਰਿਕਾਰਡਿੰਗ ਰੋਕੋ</string>
+    <string name="diagnostics_private_description">V1 ਨਿੱਜੀ ਸੰਦਰਭ ਉਪਲਬਧ ਹੋਣ ਉੱਤੇ ਜੁੜੇ ਡਿਵਾਈਸਾਂ ਦੇ ਨਾਮ ਰਿਕਾਰਡ ਕਰਦਾ ਹੈ। ਇਹ ਸਿਹਤ ਸਮੱਗਰੀ, ਪ੍ਰਮਾਣੀਕਰਨ ਜਾਣਕਾਰੀ ਜਾਂ ਮਨਮਾਨਾ ਗਲਤੀ ਟੈਕਸਟ ਨਹੀਂ ਲੈਂਦਾ। ਨਿੱਜੀ ਹਿੱਸਿਆਂ ਦੀ ਮਿਆਦ 24 ਘੰਟਿਆਂ ਅੰਦਰ ਸੀਮਿਤ ਹੁੰਦੀ ਹੈ ਅਤੇ ਅਗਲੀ ਵਾਰ ਐਪ ਖੋਲ੍ਹਣ ਉੱਤੇ ਲਾਗੂ ਹੁੰਦੀ ਹੈ।</string>
+    <string name="diagnostics_private_until">ਨਿੱਜੀ ਰਿਕਾਰਡਿੰਗ ਦੀ ਮਿਆਦ: %1$s</string>
+    <string name="diagnostics_clear">ਸਾਰੇ ਡਾਇਗਨੋਸਟਿਕਸ ਮਿਟਾਓ</string>
+    <string name="diagnostics_clear_question">ਸਥਾਨਕ ਘਟਨਾਵਾਂ, ਤਿਆਰ ਬੰਡਲ ਅਤੇ ਅਟੈਚਮੈਂਟ ਕਾਪੀਆਂ ਮਿਟਾਉਣੀਆਂ ਹਨ? ਇਸ ਨਾਲ ਨਿੱਜੀ ਰਿਕਾਰਡਿੰਗ ਰੁਕ ਜਾਵੇਗੀ। ਐਕਸਪੋਰਟ ਕੀਤੀਆਂ ਫਾਈਲਾਂ ਅਤੇ ਸਾਂਝੀਆਂ ਕਾਪੀਆਂ ਨਹੀਂ ਬਦਲਣਗੀਆਂ।</string>
+    <string name="diagnostics_select">ਘਟਨਾਵਾਂ ਚੁਣੋ</string>
+    <string name="diagnostics_hour">ਪਿਛਲਾ ਘੰਟਾ</string>
+    <string name="diagnostics_day">ਪਿਛਲੇ 24 ਘੰਟੇ</string>
+    <string name="diagnostics_week">ਪਿਛਲੇ 7 ਦਿਨ</string>
+    <string name="diagnostics_operation">ਕਾਰਵਾਈ UUID (ਵਿਕਲਪਿਕ)</string>
+    <string name="diagnostics_include_private">ਰਿਕਾਰਡ ਕੀਤਾ ਨਿੱਜੀ ਸੰਦਰਭ ਸ਼ਾਮਲ ਕਰੋ</string>
+    <string name="diagnostics_search">ਘਟਨਾ ID ਜਾਂ ਖੇਤਰ ਲੱਭੋ</string>
+    <string name="diagnostics_refresh">ਘਟਨਾਵਾਂ ਤਾਜ਼ਾ ਕਰੋ</string>
+    <string name="diagnostics_summary">ਘਟਨਾਵਾਂ: %1$d · ਸੈਸ਼ਨ ਵਿੱਚ ਛੁੱਟੀਆਂ: %2$d · ਅਵੈਧ: %3$d · ਘਟਾਇਆ ਗਿਆ: %4$s</string>
+    <string name="diagnostics_view_limit">ਮਿਲਦੀਆਂ ਸਭ ਤੋਂ ਨਵੀਆਂ 100 ਘਟਨਾਵਾਂ ਦਿਖਾਈਆਂ ਜਾ ਰਹੀਆਂ ਹਨ। ਬੰਡਲ ਵਿੱਚ ਚੁਣਿਆ ਸਨੈਪਸ਼ਾਟ, ਵੱਧ ਤੋਂ ਵੱਧ 10,000 ਘਟਨਾਵਾਂ ਹੁੰਦੀਆਂ ਹਨ; ਕੋਈ ਕਟੌਤੀ ਹੋਵੇ ਤਾਂ ਦੱਸੀ ਜਾਂਦੀ ਹੈ।</string>
+    <string name="diagnostics_attachments">ਵਿਕਲਪਿਕ ਅਟੈਚਮੈਂਟ</string>
+    <string name="diagnostics_attachment_description">ਸਿਹਤ ਐਕਸਪੋਰਟ ਜਾਂ ਸਕ੍ਰੀਨਸ਼ੌਟ ਸਮੇਤ ਮੌਜੂਦਾ ਫਾਈਲਾਂ ਜੋੜੋ। ਅਸਲ ਬਾਈਟ ਬਿਨਾਂ ਬਦਲਾਅ ਕਾਪੀ ਹੁੰਦੇ ਹਨ ਅਤੇ ਸੰਵੇਦਨਸ਼ੀਲ ਜਾਣਕਾਰੀ ਹਟਾਈ ਨਹੀਂ ਜਾਂਦੀ। ਅਸਲ ਫਾਈਲਾਂ ਦੇ ਨਾਮ ਸ਼ਾਮਲ ਹੁੰਦੇ ਹਨ। ਸਿਹਤ ਡੇਟਾ ਨਵਾਂ ਨਹੀਂ ਪੜ੍ਹਿਆ ਜਾਂਦਾ। ਹੱਦ: 50 ਫਾਈਲਾਂ / 100 MiB।</string>
+    <string name="diagnostics_choose">ਫਾਈਲਾਂ ਚੁਣੋ…</string>
+    <string name="diagnostics_remove">%1$s ਹਟਾਓ</string>
+    <string name="diagnostics_prepare">ਬੰਡਲ ਤਿਆਰ ਕਰੋ</string>
+    <string name="diagnostics_review">ਤਿਆਰ ਕਰੋ ਅਤੇ ਜਾਂਚੋ</string>
+    <string name="diagnostics_frozen">ਸਥਿਰ ਸਨੈਪਸ਼ਾਟ। ਘਟਨਾਵਾਂ: %1$d। ਸਿਹਤ ਸਮੱਗਰੀ: %2$s। ZIP ਇਨਕ੍ਰਿਪਟਡ ਨਹੀਂ ਹੈ।</string>
+    <string name="diagnostics_reviewed">ਮੈਂ ਸਾਂਝੀਆਂ ਕਰਨ ਵਾਲੀਆਂ ਫਾਈਲਾਂ ਦੀ ਜਾਂਚ ਕਰ ਲਈ ਹੈ</string>
+    <string name="diagnostics_share">ਜਾਂਚੀ ZIP ਸਾਂਝੀ ਕਰੋ</string>
+    <string name="diagnostics_save">ਜਾਂਚੀ ZIP ਸੰਭਾਲੋ</string>
+    <string name="diagnostics_share_question">ਇਹ ਡਾਇਗਨੋਸਟਿਕ ਬੰਡਲ ਸਾਂਝਾ ਕਰਨਾ ਹੈ?</string>
+    <string name="diagnostics_share_warning">ZIP ਇਨਕ੍ਰਿਪਟਡ ਨਹੀਂ ਹੈ। ਸ਼ਾਮਲ ਨਿੱਜੀ ਸੰਦਰਭ ਅਤੇ ਅਟੈਚਮੈਂਟ ਸਿਹਤ ਡੇਟਾ ਜਾਂ ਗੁਪਤ ਜਾਣਕਾਰੀ ਖੋਲ੍ਹ ਸਕਦੇ ਹਨ। GitHub ਜਾਂ Discord ਦੀਆਂ ਜਨਤਕ ਪੋਸਟਾਂ ਕੋਈ ਵੀ ਵੇਖ ਸਕਦਾ ਹੈ। ਮੰਜ਼ਿਲ ਆਪਣੀਆਂ ਕਾਪੀਆਂ ਨੂੰ ਨਿਯੰਤਰਿਤ ਕਰਦੀ ਹੈ; Health.md ਉਹਨਾਂ ਨੂੰ ਵਾਪਸ ਨਹੀਂ ਲੈ ਸਕਦਾ।</string>
+    <string name="diagnostics_share_confirm">ਇਹ ਬੰਡਲ ਸਾਂਝਾ ਕਰੋ</string>
+    <string name="diagnostics_bundle_retention">ਸਥਾਨਕ ਬੰਡਲਾਂ ਦੀ ਮਿਆਦ 24 ਘੰਟਿਆਂ ਅੰਦਰ ਸੀਮਿਤ ਹੁੰਦੀ ਹੈ ਅਤੇ ਅਗਲੀ ਵਾਰ ਐਪ ਖੋਲ੍ਹਣ ਉੱਤੇ ਲਾਗੂ ਹੁੰਦੀ ਹੈ; ਸਿਰਫ਼ ਨਵੇਂ 3 ਰੱਖੇ ਜਾਂਦੇ ਹਨ। ਸੰਭਾਲੀਆਂ ਜਾਂ ਸਾਂਝੀਆਂ ਕਾਪੀਆਂ ਦੀ ਆਪਣੀ ਸੰਭਾਲ ਮਿਆਦ ਹੁੰਦੀ ਹੈ।</string>
+    <string name="diagnostics_preview_truncated">\n\n[ਝਲਕ 128 KiB ਤੱਕ ਘਟਾਈ ਗਈ ਹੈ। ਪੂਰੀ ਅਸਲ ਫਾਈਲ ZIP ਵਿੱਚ ਰਹਿੰਦੀ ਹੈ।]</string>
+    <string name="diagnostics_failure">ਡਾਇਗਨੋਸਟਿਕ ਕਾਰਵਾਈ ਅਸਫਲ ਰਹੀ। ਫਾਈਲ ਪਹੁੰਚ ਅਤੇ ਸਥਾਨਕ ਸਟੋਰੇਜ ਜਾਂਚੋ, ਫਿਰ ਮੁੜ ਤਿਆਰ ਕਰਕੇ ਜਾਂਚ ਕਰੋ।</string>
+    <string name="diagnostics_invalid_operation">ਕਾਰਵਾਈ ID ਇੱਕ UUID ਹੋਣੀ ਚਾਹੀਦੀ ਹੈ।</string>
+</resources>

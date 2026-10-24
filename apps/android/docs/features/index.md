@@ -1,11 +1,10 @@
 # Health.md for Android Feature Documentation Index
 
-This directory is the canonical inventory for documenting Health.md for Android end-to-end, mirroring the Apple feature index at `apps/apple/docs/features/index.md`. Each feature should eventually have:
+This directory indexes Android workflow guides. Code, tests, and configuration establish implemented behavior; normative contracts and product policy define the requirements. The table is documentation navigation and editorial planning, not a separate capability or release-status database.
 
-1. a user-facing docs page here (use [`_template.md`](./_template.md)), and
-2. a video outline that can become one episode in the feature series.
+Update an existing guide when its user workflow changes. Create a new page only when a distinct audience or task needs information not already covered; link the canonical website guide or reference instead of copying it. Use [`_template.md`](./_template.md) when a new guide is warranted. Video outlines are optional, for commissioned video work.
 
-Deep machine contracts live in [`docs/export-contract/`](../export-contract/) and are linked from each page rather than duplicated. Product-wide cross-platform status lives in the repository-root [`docs/features/feature-inventory.md`](../../../../docs/features/feature-inventory.md), and the per-capability Apple↔Android pairing lives in [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md).
+Deep machine contracts live in [`docs/export-contract/`](../export-contract/) and are linked rather than duplicated. The repository-root [`documentation map`](../../../../docs/features/feature-inventory.md) points to each component's canonical owners. Cross-platform rationale lives in [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md); machine-readable classifications live in [`product-capabilities.json`](../../../../packages/contracts/product-capabilities.json).
 
 ## Draft status
 
@@ -68,5 +67,5 @@ All new pages below are first-pass drafts written from source. The next editoria
 - Never fabricate parity with Apple: if Health Connect cannot express something HealthKit can (or vice versa), say so explicitly and keep identities distinct (for example, HRV RMSSD here is not HealthKit SDNN).
 - Link machine contracts under `docs/export-contract/` instead of restating field lists.
 - Call out Android realities honestly: exact-alarm permission trade-offs, SAF provider quirks, lock-screen widget redaction limits.
-- Every feature page should include a video outline, even if the video is low priority.
-- Update this index and the root [`feature-inventory.md`](../../../../docs/features/feature-inventory.md) when a feature is added.
+- Add a video outline only for commissioned video work; a feature change does not require a new page or video.
+- Update this index when guide navigation changes. Update the root documentation map only when a canonical owner or documentation location changes.

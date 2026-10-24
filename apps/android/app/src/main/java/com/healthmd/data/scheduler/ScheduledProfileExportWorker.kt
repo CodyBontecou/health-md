@@ -14,6 +14,11 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.healthmd.HealthMdApplication
+import com.healthmd.diagnostics.Diagnostics
+import com.healthmd.diagnostics.diagnosticOutcome
+import com.healthmd.diagnostics.DiagnosticEventID
+import com.healthmd.diagnostics.DiagnosticField
+import com.healthmd.diagnostics.DiagnosticValue
 import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
@@ -95,13 +100,21 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val distributionPolicy: DistributionPolicy,
 ) : CoroutineWorker(appContext, workerParams) {
 
-    override suspend fun doWork(): Result = try {
-        if (!inputData.getString(INPUT_PROFILE_ID).isNullOrBlank()) {
-            setForeground(getForegroundInfo())
+    override suspend fun doWork(): Result {
+        val identity = mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString()), DiagnosticField.TRIGGER to DiagnosticValue.Text("background_task"))
+        Diagnostics.record(DiagnosticEventID.ATTEMPT_STARTED, identity)
+        return try {
+            val result = if (!inputData.getString(INPUT_PROFILE_ID).isNullOrBlank()) {
+                withScheduledExportForeground(getForegroundInfo()) { doWorkManaged() }
+            } else {
+                doWorkManaged()
+            }
+            Diagnostics.record(DiagnosticEventID.WORKER_RESULT, identity + (DiagnosticField.REASON to DiagnosticValue.Text(result.diagnosticOutcome())))
+            result
+        } finally {
+            Diagnostics.record(DiagnosticEventID.ATTEMPT_FINISHED, identity)
+            ScheduledExportCancellationCoordinator.finish(id)
         }
-        doWorkManaged()
-    } finally {
-        ScheduledExportCancellationCoordinator.finish(id)
     }
 
     private suspend fun doWorkManaged(): Result {
@@ -668,6 +681,12 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 .setContentIntent(contentIntent)
                 .build()
             manager.notify(NOTIFICATION_REQUEST_CODE, notification)
+            Diagnostics.record(DiagnosticEventID.NOTIFICATION_REQUESTED, mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString())))
+        }.onFailure { error ->
+            Diagnostics.record(
+                DiagnosticEventID.NOTIFICATION_FAILED,
+                Diagnostics.errorFields(error) + (DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString())),
+            )
         }
     }
 

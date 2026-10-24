@@ -1,0 +1,30 @@
+{
+  "schema": "healthmd.product_automation_capabilities",
+  "schema_version": 1,
+  "metric_authority": false,
+  "capabilities": [
+    {
+      "id": "automation.refresh-encrypted-desktop-context",
+      "name": "Mobile-initiated encrypted desktop context refresh",
+      "classification": "planned",
+      "summary": "Refresh an explicitly selected saved profile and frozen owner-date, source and detail scope on an authenticated paired desktop, without export files or file quota, and recover a durable request-bound status after disconnect or restart.",
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Qualify the Apple Sync context-automation v1 source and both iOS App Intents on exact-head hosted Xcode CI and physical iPhone/Mac automation, old-peer, locked, restart and accessibility gates before release. Initial adapter requires authenticated Manual IP v2 and Apple Health source scope."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Add explicit refresh/status automation actions to AutomationReceiver with saved-profile and owner-date Health Connect scope, durable mobile receipts and an authenticated capability-negotiated encrypted desktop-context receiver. Existing direct raw acquisition and desktop CLI export are not this mobile-initiated no-file outcome."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Sync/AppleContextAutomation.swift",
+        "apps/apple/HealthMd/iOS/AppIntents/MacContextIntents.swift",
+        "apps/apple/HealthMd/macOS/Managers/MacContextAutomationCoordinator.swift",
+        "apps/apple/docs/features/apple-context-automation.md",
+        "apps/android/app/src/main/java/com/healthmd/automation/AutomationReceiver.kt"
+      ]
+    }
+  ]
+}

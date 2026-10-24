@@ -2,7 +2,9 @@
 
 - Date: 2026-09-07 (UTC)
 - Source revision: `a5fbf59f8f3cde73af12bafd6a09dde33db39b98`
-- Status: **audit findings; no production fixes applied**
+- Status: **historical audit findings; no production fixes applied in this audit**
+
+This describes the cited September 7 revision, not current UI defects. Subsequent repairs and their bounded verification receipts are recorded in the [implementation ledger](accessibility-ios-implementation.md). Neither record grants authorization to run simulator/device QA.
 
 ## Summary
 

@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "4deb6e31763f9c9440dd6f58704a244bbe9b0d6fc38b543852e4944e217a58ea",
+      "sha256": "abc0f04ab484ddf5b3854266a52732ee2811854e6a031422b3c7d6666cd88e27",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -26,6 +26,51 @@
     }
   ],
   "contracts": [
+    {
+      "id": "healthmd.diagnostics",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Local privacy-classified technical events and explicitly reviewed original-attachment diagnostic ZIPs, independently versioned from health exports and Direct protocols.",
+      "specification": "packages/contracts/diagnostics/v1/contract.md",
+      "authorities": [
+        "packages/contracts/diagnostics/v1/contract.md",
+        "packages/contracts/diagnostics/v1/catalog.json",
+        "packages/contracts/diagnostics/v1/event.schema.json",
+        "packages/contracts/diagnostics/v1/bundle.schema.json"
+      ],
+      "implementations": [
+        "packages/contracts/diagnostics/generate.py",
+        "apps/apple/HealthMd/Shared/Diagnostics/DiagnosticRecorder.swift",
+        "apps/apple/HealthMd/Shared/Diagnostics/DiagnosticBundle.swift",
+        "apps/apple/HealthMd/Shared/Diagnostics/DiagnosticsView.swift",
+        "apps/android/app/src/main/java/com/healthmd/diagnostics/DiagnosticStore.kt",
+        "apps/android/app/src/main/java/com/healthmd/diagnostics/DiagnosticBundle.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/diagnostics/DiagnosticsScreen.kt"
+      ],
+      "consumers": [
+        "packages/contracts/diagnostics/validate.py",
+        "apps/apple/HealthMdTests/Diagnostics/DiagnosticRecorderTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/diagnostics/DiagnosticStoreTest.kt"
+      ],
+      "documentation": [
+        "apps/apple/docs/features/diagnostics.md",
+        "apps/android/docs/features/diagnostics.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/diagnostics/v1/fixtures/privacy.json",
+          "sha256": "cd6ac1a5d8c1fa757e59c42952f4307e0f2ea59d578fa6e2229214d0700ffc09",
+          "provenance": "Reviewed synthetic privacy-admission/sharing vector tested by Swift and Kotlin; no user or live credential data.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/diagnostics/v1/fixtures/bundle.json",
+          "sha256": "36cbea8b032f3b9ce369954c357160ab5a087fc5ee09828b088da68d33a06d0b",
+          "provenance": "Reviewed hand-authored synthetic manifest inventory with explicit unchanged attachment content, validated digests and truthful sensitivity.",
+          "mirrors": []
+        }
+      ]
+    },
     {
       "id": "healthmd.direct.ios",
       "version": 1,
@@ -388,7 +433,8 @@
         "packages/contracts/shared-setup/v2/shared-setup.schema.json",
         "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
         "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
-        "packages/contracts/shared-setup/v2/field-coverage-baseline-v1.json"
+        "packages/contracts/shared-setup/v2/field-coverage-baseline-v1.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
       ],
       "implementations": [
         "packages/contracts/validate.py",
@@ -666,6 +712,101 @@
         "apps/website/test/visualization-catalog.test.mjs"
       ],
       "fixtures": []
+    },
+    {
+      "id": "healthmd.export_history_observation",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Frozen selected-type export admission evidence; producers/consumers implemented in part, production advertisement disabled pending complete output and physical qualification.",
+      "specification": "packages/contracts/export-history/v1/README.md",
+      "authorities": [
+        "packages/contracts/export-history/v1/README.md"
+      ],
+      "implementations": [
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/ExportHistoryObservation.swift",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/history.rs"
+      ],
+      "consumers": [
+        "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/ExportHistoryObservationTests.swift",
+        "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/file_receiver.rs"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/export-history/v1/synthetic-observation.json",
+          "sha256": "71faa01bb36088070e3260ab814f7b9092fadbc98f556ad25e539408a6676e47",
+          "provenance": "Generated and validated by the Swift history contract tests; synthetic grammar evidence only, not physical permission or capture evidence. Packaged language tests preserve the canonical bytes.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/export-history-v1.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/export-history/v1/synthetic-direct-job.json",
+          "sha256": "d70f43566e7072f930562a5c683de58267f20bb646329cf10942e8e9c5e939b2",
+          "provenance": "Generated and validated by the Swift history contract tests; synthetic grammar evidence only, not physical permission or capture evidence. Packaged language tests preserve the canonical bytes.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/export-history-direct-job-v1.json",
+            "apps/cli/crates/healthmd-client/tests/fixtures/export-history-direct-job-v1.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.export_history_file_receipt",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Operation-scoped history sidecar model separating generated contribution and committed-file hashes; emission and destination qualification are not implemented yet.",
+      "specification": "packages/contracts/export-history/v1/README.md",
+      "authorities": [
+        "packages/contracts/export-history/v1/README.md"
+      ],
+      "implementations": [
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/ExportHistoryObservation.swift",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/history.rs"
+      ],
+      "consumers": [
+        "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/ExportHistoryObservationTests.swift"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/export-history/v1/synthetic-file-receipt.json",
+          "sha256": "705ef275aff984cba199b15612a2365b1b320634d53bc863936de5a41cf16b11",
+          "provenance": "Generated and validated by the Swift history contract tests; synthetic grammar evidence only, not physical permission or capture evidence. Packaged language tests preserve the canonical bytes.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/export-history-file-receipt-v1.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.history_assessment",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Independent typed-query history evidence; Apple producer and portable consumers implemented, complete physical qualification pending.",
+      "specification": "packages/contracts/query-history/v1/README.md",
+      "authorities": [
+        "packages/contracts/query-history/v1/README.md"
+      ],
+      "implementations": [
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "apps/cli/crates/healthmd-client/src/history.rs"
+      ],
+      "consumers": [
+        "apps/cli/crates/healthmd-cli/src/output.rs",
+        "apps/cli/crates/healthmd-mcp/src/result.rs"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/query-history/v1/synthetic-response.json",
+          "sha256": "9bd67d0fe39ccbaed8294fe988992027e730752e9a8475a0ce5dfde590ce4c86",
+          "provenance": "Complete synthetic typed-query grammar vector; placeholder digests do not establish dataset/capture or physical authorization acceptance. Rust client/CLI/MCP tests consume byte-identical packaged copies.",
+          "mirrors": [
+            "apps/cli/crates/healthmd-client/src/test-fixtures/history-assessment-v1.json",
+            "apps/cli/crates/healthmd-cli/src/test-fixtures/history-assessment-v1.json",
+            "apps/cli/crates/healthmd-mcp/src/test-fixtures/history-assessment-v1.json"
+          ]
+        }
+      ]
     }
   ]
 }

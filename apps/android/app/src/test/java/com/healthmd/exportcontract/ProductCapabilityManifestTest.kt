@@ -45,6 +45,7 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
+                "support.local-reporting-fallback",
             ),
             idsWithState(states, "planned"),
         )
@@ -63,6 +64,7 @@ class ProductCapabilityManifestTest {
             "planned",
             pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
+
         val claimCapability = capabilities.single {
             it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
         }
@@ -82,6 +84,23 @@ class ProductCapabilityManifestTest {
                     availability["target"]?.jsonPrimitive?.content?.isNotBlank() == true,
                 )
             }
+        }
+    }
+
+    @Test
+    fun productOnlyAutomationInventoryHasConcreteAndroidTargetWithoutMetricAuthority() {
+        val supplemental = File(manifestFile().parentFile, "product-automation-capabilities-v1.json")
+        val inventory = Json.parseToJsonElement(supplemental.readText()).jsonObject
+        assertEquals("healthmd.product_automation_capabilities", inventory.getValue("schema").jsonPrimitive.content)
+        assertEquals("1", inventory.getValue("schema_version").jsonPrimitive.content)
+        assertEquals("false", inventory.getValue("metric_authority").jsonPrimitive.content)
+        val capability = inventory.getValue("capabilities").jsonArray.single().jsonObject
+        assertEquals("automation.refresh-encrypted-desktop-context", capability.getValue("id").jsonPrimitive.content)
+        assertEquals("planned", capability.getValue("classification").jsonPrimitive.content)
+        for (platform in listOf("apple", "android")) {
+            val availability = capability.getValue("platforms").jsonObject.getValue(platform).jsonObject
+            assertEquals("planned", availability.getValue("state").jsonPrimitive.content)
+            assertTrue(availability.getValue("target").jsonPrimitive.content.isNotBlank())
         }
     }
 
@@ -121,6 +140,8 @@ class ProductCapabilityManifestTest {
             "direct-cli.shared-qr-pairing",
             "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
+            "direct.full_public_authorized_corpus",
+            "diagnostics.local_bundle",
         )
 
         val appleCapabilities = setOf(
@@ -148,8 +169,9 @@ class ProductCapabilityManifestTest {
             "direct.cli_agent_push_wake",
             "export.range-summary",
             "setup.share-portable-configuration",
-            "core.shared-rust-profile-engine",
             "account.myself_lifetime_claim",
+            "core.shared-rust-profile-engine",
+            "support.local-reporting-fallback",
         )
     }
 }

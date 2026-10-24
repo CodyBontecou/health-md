@@ -25,7 +25,7 @@ elif a == ['shell', 'getprop', 'sys.boot_completed']:
  s['boots'] += 1; p.write_text(json.dumps(s))
  print('0' if mode == 'booting' and s['boots'] == 1 else '1')
 elif a[:3] == ['shell', 'cmd', 'package']:
- if mode in ('setup', 'setup-anr', 'stuck-setup') and not s['provisioned']:
+ if mode in ('setup', 'setup-anr', 'stuck-setup', 'retired-setup', 'missing-setup', 'launch-transport-error') and not s['provisioned']:
   print('com.google.android.googlesdksetup/.DefaultActivity')
  else: print('other.launcher/.Home' if mode == 'wrong-home' else 'com.google.android.apps.nexuslauncher/.NexusLauncherActivity')
 elif a == ['shell', 'dumpsys', 'window', 'windows']:
@@ -41,6 +41,14 @@ elif a == ['shell', 'dumpsys', '-t', '2', 'window']:
 elif a == ['shell', 'am', 'force-stop', 'com.google.android.apps.nexuslauncher']:
  s['recovered'] = True; p.write_text(json.dumps(s))
 elif a[:4] == ['shell', 'am', 'start', '-W']:
+ if mode == 'launch-transport-error':
+  print('error: device offline', file=sys.stderr)
+  sys.exit(23)
+ if mode in ('retired-setup', 'missing-setup') and a[-1] == 'com.google.android.googlesdksetup/.DefaultActivity':
+  s['provisioned'] = mode == 'retired-setup'; p.write_text(json.dumps(s))
+  print('Error type 3', file=sys.stderr)
+  print('Error: Activity class does not exist.', file=sys.stderr)
+  sys.exit(1)
  if a[-1] == 'com.google.android.googlesdksetup/.DefaultActivity' and mode != 'stuck-setup':
   s['provisioned'] = True; p.write_text(json.dumps(s))
  print('Status: ok')
@@ -78,6 +86,24 @@ class EmulatorReadinessTests(unittest.TestCase):
                 starts = [c for c in state['calls'] if 'start' in c]
                 self.assertEqual(1, sum(c[-1] == 'com.google.android.googlesdksetup/.DefaultActivity' for c in starts))
                 self.assertEqual('com.google.android.apps.nexuslauncher/.NexusLauncherActivity', starts[-1][-1])
+
+    def test_retired_setup_activity_requires_re_resolved_known_launcher(self):
+        result, state = self.run_setup('retired-setup')
+        self.assertEqual(0, result.returncode, result.stderr)
+        starts = [c for c in state['calls'] if 'start' in c]
+        self.assertEqual(2, len(starts))
+        self.assertEqual('com.google.android.apps.nexuslauncher/.NexusLauncherActivity', starts[-1][-1])
+        self.assertFalse(any('force-stop' in c for c in state['calls']))
+
+    def test_launch_transport_failure_is_not_mistaken_for_retired_setup(self):
+        result, state = self.run_setup('launch-transport-error')
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('device offline', result.stderr)
+
+    def test_missing_setup_without_launcher_transition_is_not_ignored(self):
+        result, state = self.run_setup('missing-setup')
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse(any('force-stop' in c for c in state['calls']))
 
     def test_setup_that_never_selects_launcher_remains_a_failure(self):
         result, state = self.run_setup('stuck-setup')

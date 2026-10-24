@@ -788,6 +788,15 @@ enum ExportFailureReason: String, Codable {
         }
     }
 
+    /// Message for the immediate export-failure dialog on both mobile layouts.
+    /// Keep persisted failure descriptions separate from presentation guidance.
+    func alertMessage(detail: FailedDateDetail? = nil) -> String {
+        let description = detail?.detailedMessage ?? detailedDescription
+        return self == .noHealthData
+            ? "\(description)\n\n\(recoverySuggestion)"
+            : description
+    }
+
     var recoverySuggestion: String {
         switch self {
         case .noVaultSelected:
