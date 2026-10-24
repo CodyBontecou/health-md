@@ -254,6 +254,29 @@ struct IPhoneDirectCLIBackgroundPolicy {
     }
 }
 
+nonisolated enum IPhoneDirectCLIPairingTrustContext: Equatable, Sendable {
+    case manualCode
+    case scannedCode(receivedAt: Date)
+
+    init(scannedAt: Date?) {
+        self = scannedAt.map { .scannedCode(receivedAt: $0) } ?? .manualCode
+    }
+
+    func permitsCommit(now: Date = Date()) -> Bool {
+        switch self {
+        case .manualCode:
+            return true
+        case .scannedCode(let receivedAt):
+            return IPhoneDirectCLIPairingHandoffPolicy.action(
+                appIsActive: true,
+                hasActiveOperation: false,
+                receivedAt: receivedAt,
+                now: now
+            ) != .expired
+        }
+    }
+}
+
 /// Opt-in client for a one-shot `healthmd --backend direct` listener. New CLI
 /// connections remain foreground-scoped, while an already-active export may
 /// use finite iOS background execution time to finish or reach a durable pause.
@@ -263,6 +286,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private struct ProvisionalPairingTrust {
         let sessionID: UUID
         let previousServer: ManualIPTrustedMac?
+        let context: IPhoneDirectCLIPairingTrustContext
     }
 
     struct PairingConfigurationSnapshot: Codable {
@@ -629,6 +653,9 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     func connect(host: String, port: UInt16, pairingCode: String) {
+        let pairingTrustContext = IPhoneDirectCLIPairingTrustContext(
+            scannedAt: pendingPairingLinkReceivedAt
+        )
         updateEndpoint(host: host, port: port)
         defaults.set(true, forKey: Self.enabledKey)
         updateIdleTimer()
@@ -645,7 +672,8 @@ final class IPhoneDirectCLIService: ObservableObject {
             await self.connectOnce(
                 pairingCode: pairingCode,
                 timeout: timeout,
-                reportErrors: true
+                reportErrors: true,
+                pairingTrustContext: pairingTrustContext
             )
             if self.visibleConnectionAttemptID == attemptID {
                 self.visibleConnectionAttemptID = nil
@@ -795,7 +823,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     private func connectOnce(
         pairingCode: String?,
         timeout: TimeInterval?,
-        reportErrors: Bool
+        reportErrors: Bool,
+        pairingTrustContext: IPhoneDirectCLIPairingTrustContext = .manualCode
     ) async {
         guard channel == nil, appIsActive else { return }
         let transport = configuredTransport
@@ -871,7 +900,8 @@ final class IPhoneDirectCLIService: ObservableObject {
             beginSession(
                 on: connected,
                 pairingTrustWasWritten: pairingTrustWasWritten,
-                previousServer: savedServerBeforePairing
+                previousServer: savedServerBeforePairing,
+                pairingTrustContext: pairingTrustContext
             )
         } catch {
             provisionalChannel?.cancel()
@@ -911,12 +941,7 @@ final class IPhoneDirectCLIService: ObservableObject {
                 "Keep Health.md foreground while pairing completes."
             )
         }
-        guard let receivedAt = pendingPairingLinkReceivedAt,
-              IPhoneDirectCLIPairingHandoffPolicy.action(
-                appIsActive: true,
-                hasActiveOperation: false,
-                receivedAt: receivedAt
-              ) != .expired else {
+        guard provisionalPairingTrust?.context.permitsCommit() == true else {
             let trustWasRestored = rollbackProvisionalPairingTrustIfNeeded(for: sessionID)
             guard trustWasRestored else {
                 throw DirectChannelError.authenticationFailed(
@@ -959,7 +984,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     private func beginSession(
         on connected: DirectSecureChannel,
         pairingTrustWasWritten: Bool,
-        previousServer: ManualIPTrustedMac?
+        previousServer: ManualIPTrustedMac?,
+        pairingTrustContext: IPhoneDirectCLIPairingTrustContext
     ) {
         let sessionID = UUID()
         activeSessionID = sessionID
@@ -969,7 +995,8 @@ final class IPhoneDirectCLIService: ObservableObject {
         if pairingTrustWasWritten {
             provisionalPairingTrust = ProvisionalPairingTrust(
                 sessionID: sessionID,
-                previousServer: previousServer
+                previousServer: previousServer,
+                context: pairingTrustContext
             )
         }
         let exportConnection = IPhoneDirectExportConnection(channel: connected)
