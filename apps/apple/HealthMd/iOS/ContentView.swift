@@ -37,6 +37,14 @@ struct ContentView: View {
     @State private var isExporting = false
     @State private var isTestExportWaitingForCompletion = false
     @State private var isRequestingHealthAuthorization = false
+    @State private var isAssessingHistory = false
+    @State private var executionHistoryAssessment: HealthHistoryAssessment?
+    @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
+    @State private var historyExecutionWorker = HealthHistoryAssessmentWorker()
+    @State private var historyProfilePublicationObserver = HealthHistoryProfilePublicationObserver()
+    @State private var historyExecutionTask: Task<Void, Never>?
+    @State private var pendingHistorySelection: HealthHistoryExecutionSelection?
+    @State private var pendingHistoryRequestID: UUID?
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
     @State private var partialExportNotice: PartialExportNotice?
@@ -51,7 +59,7 @@ struct ContentView: View {
     @State private var markdownPreviewTarget: ExportPresentationTarget?
     @State private var exportFolderBrowserTarget: ExportPresentationTarget?
     @State private var browsedFileURL: URL?
-    @State private var showExportFolderBrowser = false
+    @State private var exportFolderBrowserPresentation: ExportFolderBrowserPresentation?
     @State private var showPaywall = false
     @State private var showUpgradePromptPaywall = false
     @State private var presentPaywallAfterUpgradePrompt = false
@@ -163,7 +171,12 @@ struct ContentView: View {
                         presentFirstExportPreview: $presentFirstExportPreview,
                         onFirstExportPreviewDismissed: { handleFirstExportPreviewClosed() },
                         canExport: canExport,
-                        onExportTapped: exportData
+                        onExportTapped: exportData,
+                        historyProfileStore: profileCoordinator?.profileStore,
+                        executionHistoryAssessment: executionHistoryAssessment,
+                        isAssessingHistory: isAssessingHistory,
+                        onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
+                        onCancelHistoryVerification: invalidateExecutionHistory
                     )
                     .tabItem {
                         Label("Export", systemImage: "arrow.up.doc.fill")
@@ -209,6 +222,7 @@ struct ContentView: View {
                 .tint(Color.accent)
                 .task { ensureProfileCoordinator() }
                 .onChange(of: exportTargetSelection) { _, newValue in
+                    invalidateExecutionHistory()
                     profileCoordinator?.userSelectedTarget(newValue)
                 }
                 .onChange(of: profileCoordinator?.activeTarget) { _, newValue in
@@ -309,20 +323,18 @@ struct ContentView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showExportFolderBrowser, onDismiss: finishBrowsingExportFolder) {
-            if let target = exportFolderBrowserTarget {
-                ExportFolderBrowser(
-                    initialDirectoryURL: target.folderURL,
-                    onFileSelected: { url in
-                        browsedFileURL = url
-                        showExportFolderBrowser = false
-                    },
-                    onCancel: {
-                        showExportFolderBrowser = false
-                    }
-                )
-                .ignoresSafeArea()
-            }
+        .sheet(item: $exportFolderBrowserPresentation, onDismiss: finishBrowsingExportFolder) { presentation in
+            ExportFolderBrowser(
+                initialDirectoryURL: presentation.target.folderURL,
+                onFileSelected: { url in
+                    browsedFileURL = url
+                    exportFolderBrowserPresentation = nil
+                },
+                onCancel: {
+                    exportFolderBrowserPresentation = nil
+                }
+            )
+            .ignoresSafeArea()
         }
         .sheet(item: $markdownPreview, onDismiss: releaseMarkdownPreviewAccess) { presentation in
             ExportedMarkdownViewer(target: presentation.target)
@@ -553,29 +565,45 @@ struct ContentView: View {
                 if TestMode.noExportFormats {
                     advancedSettings.exportFormats = []
                 }
+                if ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil {
+                    advancedSettings.metricSelection.enabledMetrics = ["steps"]
+                }
                 advancedSettings.archiveExportFiles = TestMode.archiveExports
             }
 
             restoreInteractiveCorpusExportIfNeeded()
             await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
         }
+        .onReceive(advancedSettings.objectWillChange) { _ in invalidateExecutionHistory(reason: "settings_publication") }
+        .onReceive(healthKitManager.objectWillChange) { _ in invalidateExecutionHistory(reason: "health_publication") }
+        .onReceive(apiExportSettings.objectWillChange) { _ in invalidateExecutionHistory(reason: "api_publication") }
+        .onChange(of: vaultManager.vaultURL) { _, _ in invalidateExecutionHistory(reason: "vault_url") }
+        // Profile invalidation is still observed, but synchronously through
+        // typed execution inputs in ensureProfileCoordinator, not this store's
+        // broad pre-change/list/timestamp publication (which may be a flush).
         .onChange(of: scenePhase) { _, newPhase in
+            invalidateExecutionHistory()
             guard newPhase == .active else { return }
             restoreInteractiveCorpusExportIfNeeded()
             vaultManager.refreshVaultAccess()
             Task { await refreshDateRangeSelectionForOpening() }
         }
         .onChange(of: dateRangePreset) { _, _ in
+            invalidateExecutionHistory()
             saveDateRangeSelection()
         }
         .onChange(of: startDate) { _, _ in
+            invalidateExecutionHistory()
             saveDateRangeSelection()
         }
         .onChange(of: endDate) { _, _ in
+            invalidateExecutionHistory()
             saveDateRangeSelection()
         }
         .healthMdReleaseNotesSheet()
         .onDisappear {
+            invalidateExecutionHistory()
+            historyProfilePublicationObserver.unbind()
             statusDismissTimer?.invalidate()
             releaseQuickLookAccess()
             releaseMarkdownPreviewAccess()
@@ -875,7 +903,7 @@ struct ContentView: View {
 
         browsedFileURL = nil
         exportFolderBrowserTarget = target
-        showExportFolderBrowser = true
+        exportFolderBrowserPresentation = ExportFolderBrowserPresentation(target: target)
     }
 
     private func finishBrowsingExportFolder() {
@@ -909,6 +937,7 @@ struct ContentView: View {
         guard let target = exportFolderBrowserTarget else { return }
         vaultManager.stopAccessingExportPresentationTarget(target)
         exportFolderBrowserTarget = nil
+        exportFolderBrowserPresentation = nil
     }
 
     private func presentExportPresentationError(_ message: String) {
@@ -1045,7 +1074,10 @@ struct ContentView: View {
     /// active profile thereafter.
     @discardableResult
     private func ensureProfileCoordinator() -> ExportProfileCoordinator {
-        if let profileCoordinator { return profileCoordinator }
+        if let profileCoordinator {
+            bindHistoryProfilePublications(profileCoordinator.profileStore)
+            return profileCoordinator
+        }
         let coordinator = ExportProfileCoordinator(
             profileStore: ExportProfileStore(),
             destinationStore: ProfileDestinationStore(),
@@ -1066,12 +1098,19 @@ struct ContentView: View {
         }
         #endif
         profileCoordinator = coordinator
+        bindHistoryProfilePublications(coordinator.profileStore)
         // The Shared Setup v2 review flow runs above this view; register the
         // single production instance so its injected confirmation closures
         // can reach the verified rebind paths (weak — no lifetime impact, and
         // a missing registration keeps every confirmation fail-closed).
         SharedSetupV2ExportProfileBridge.register(coordinator)
         return coordinator
+    }
+
+    private func bindHistoryProfilePublications(_ store: ExportProfileStore) {
+        historyProfilePublicationObserver.bind(store) {
+            invalidateExecutionHistory(reason: "profile_semantic_change")
+        }
     }
 
     private func cancelExport() {
@@ -1099,6 +1138,7 @@ struct ContentView: View {
     }
 
     private func exportData() {
+        guard !isAssessingHistory else { return }
         // Persist any in-flight profile edits before freezing the request.
         let profiles = ensureProfileCoordinator()
         profiles.flushEdits()
@@ -1176,21 +1216,122 @@ struct ContentView: View {
             }
         }
 
-        // In UI test mode, simulate export only after the same configuration
-        // preflight checks that a release build performs.
-        if TestMode.isUITesting {
-            simulateTestExport()
+        // Assess a frozen request after normal preflight, independently of query
+        // completion. This is UI evidence only: consumer receipts need review.
+        let selection = interactiveHistorySelection
+        let requestID = historyExecutionCoordinator.beginRequest()
+        executionHistoryAssessment = nil
+        pendingHistorySelection = selection
+        pendingHistoryRequestID = requestID
+        isAssessingHistory = true
+        exportStatusMessage = "Checking history access…"
+        historyExecutionTask = Task {
+            var awaitingUserDecision = false
+            defer {
+                // A cancelled/stalled old request must not clear a newer owner.
+                if !awaitingUserDecision && pendingHistoryRequestID == requestID { clearPendingHistoryCheck() }
+            }
+            let result = await historyExecutionCoordinator.assessExecution(requestID: requestID, worker: historyExecutionWorker,
+                notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: selection.scope), scope: selection.scope, isCurrent: {
+                selection == interactiveHistorySelection
+            }, operation: {
+                await healthKitManager.assessHistoryAccess(scope: selection.scope)
+            })
+            guard pendingHistoryRequestID == requestID else { return }
+            guard let assessment = result else {
+                exportStatusMessage = "Export selection changed. Review the range and export again."
+                return
+            }
+            if assessment.requiresExplicitContinuation {
+                // The logical deadline releases this task, but the SDK owner
+                // stays retained. Keep Continue/Cancel reachable until the user
+                // chooses; a timeout must never admit capture automatically.
+                awaitingUserDecision = true
+                historyExecutionTask = nil
+                exportStatusMessage = "History check did not complete. Continue without verification or cancel."
+                return
+            }
+            clearPendingHistoryCheck()
+            executionHistoryAssessment = assessment
+            beginInteractiveCapture(selection)
+        }
+    }
+
+    private func clearPendingHistoryCheck() {
+        pendingHistorySelection = nil
+        pendingHistoryRequestID = nil
+        isAssessingHistory = false
+        historyExecutionTask = nil
+    }
+
+    private func invalidateExecutionHistory() {
+        invalidateExecutionHistory(reason: "selection_or_lifecycle")
+    }
+
+    private func invalidateExecutionHistory(reason: String) {
+        historyExecutionCoordinator.invalidate()
+        historyExecutionWorker.cancelLogicalWaiter()
+        executionHistoryAssessment = nil
+        historyExecutionTask?.cancel()
+        if isAssessingHistory {
+            exportStatusMessage = "History check cancelled. Review the selection and export again."
+            #if DEBUG
+            if TestMode.isUITesting { exportStatusMessage += " Synthetic invalidation source: \(reason)." }
+            #endif
+        }
+        clearPendingHistoryCheck()
+    }
+
+    private func continueWithoutHistoryVerification() {
+        guard let selection = pendingHistorySelection, selection == interactiveHistorySelection else {
+            invalidateExecutionHistory()
             return
         }
+        historyExecutionCoordinator.invalidate()
+        historyExecutionWorker.cancelLogicalWaiter()
+        historyExecutionTask?.cancel()
+        clearPendingHistoryCheck()
+        executionHistoryAssessment = healthKitManager.historyAssessmentNotCompleted(scope: selection.scope)
+        beginInteractiveCapture(selection)
+    }
 
-        switch exportTargetSelection {
-        case .localIPhoneFolder:
-            exportLocalData()
-        case .connectedMac:
-            exportDataToConnectedMac()
-        case .apiEndpoint:
-            exportDataToAPIEndpoint()
+    private func beginInteractiveCapture(_ selection: HealthHistoryExecutionSelection) {
+        guard selection == interactiveHistorySelection else { return }
+        guard purchaseManager.canExport else { presentExportPaywall(); return }
+        guard !ensureProfileCoordinator().isActiveProfileExecutionBlocked,
+              canExport, advancedSettings.hasFileDestinationOutput else {
+            presentExportConfigurationError("Export setup changed. Review the destination and settings before exporting.")
+            return
         }
+        if selection.target == .localIPhoneFolder {
+            vaultManager.refreshVaultAccess()
+            guard vaultManager.vaultURL != nil, !vaultManager.requiresVaultReselection else {
+                configurationProtection.performConfigurationChange { showDestinationChangedAlert = true }
+                return
+            }
+        }
+        if TestMode.isUITesting { simulateTestExport(); return }
+        switch selection.target {
+        case .localIPhoneFolder: exportLocalData(selection)
+        case .connectedMac: exportDataToConnectedMac(selection)
+        case .apiEndpoint: exportDataToAPIEndpoint(selection)
+        }
+    }
+
+    private var interactiveHistorySelection: HealthHistoryExecutionSelection {
+        HealthHistoryExecutionSelection(scope: interactiveHistoryScope,
+            settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
+            target: exportTargetSelection, preset: dateRangePreset)
+    }
+
+    private var interactiveHistoryScope: HealthHistoryScope {
+        HealthHistoryScope(
+            metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            startDate: startDate, endDate: endDate,
+            timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
+            allAvailable: dateRangePreset == .allTime,
+            profileID: profileCoordinator?.profileStore.activeProfileID, rangeSemantics: .ownerDates
+        )
     }
 
     private func requestHealthAuthorizationForExport() {
@@ -1232,7 +1373,7 @@ struct ContentView: View {
         detail: FailedDateDetail? = nil
     ) {
         errorReason = reason
-        errorMessage = detail?.detailedMessage ?? reason.detailedDescription
+        errorMessage = reason.alertMessage(detail: detail)
         showError = true
     }
 
@@ -1250,7 +1391,9 @@ struct ContentView: View {
         ExportDateRangeSelectionStore.shared.markInteractiveExportEnded()
     }
 
-    private func exportLocalData() {
+    private func exportLocalData(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
         // Set synchronously before any export work starts so a crash, kill, or
         // force quit mid-export leaves it armed for the next launch's
         // interrupted-restore downgrade. Cleared in the defer below on every
@@ -1269,7 +1412,6 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
             startDate = dateRange.startDate
             endDate = dateRange.endDate
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
@@ -1388,7 +1530,9 @@ struct ContentView: View {
         }
     }
 
-    private func exportDataToAPIEndpoint() {
+    private func exportDataToAPIEndpoint(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
         guard purchaseManager.canExport else {
             presentExportPaywall()
             return
@@ -1410,7 +1554,6 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
             startDate = dateRange.startDate
             endDate = dateRange.endDate
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
@@ -1516,7 +1659,10 @@ struct ContentView: View {
         }
     }
 
-    private func exportDataToConnectedMac() {
+    private func exportDataToConnectedMac(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let startDate = selection.scope.startDate
+        let endDate = selection.scope.endDate
         guard purchaseManager.canExport else {
             presentExportPaywall()
             return
@@ -1603,7 +1749,9 @@ struct ContentView: View {
                             jobID: jobID,
                             destinationName: destinationName,
                             dateFormatter: dateFormatter,
-                            externalRecordFetcher: externalRecordFetcher
+                            externalRecordFetcher: externalRecordFetcher,
+                            selection: selection,
+                            frozenSettings: advancedSettings
                         )
                     }
                     return
@@ -1757,8 +1905,13 @@ struct ContentView: View {
         jobID: UUID,
         destinationName: String,
         dateFormatter: DateFormatter,
-        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
+        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        selection: HealthHistoryExecutionSelection,
+        frozenSettings: AdvancedExportSettings
     ) async throws {
+        let advancedSettings = frozenSettings
+        let startDate = selection.scope.startDate
+        let endDate = selection.scope.endDate
         let metadata = await MacExportStreamingJobBuilder.metadataForNewOperation(
             startDate: startDate,
             endDate: endDate,

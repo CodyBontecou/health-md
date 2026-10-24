@@ -5,6 +5,84 @@ import HealthMdConnectionCore
 import XCTest
 
 final class HealthMdDirectClientCoreTests: XCTestCase {
+    func testControllerRejectsUnnegotiatedHistoryBeforePersistingRawOrFileAcceptance() async throws {
+        for mode in [DirectResponseMode.rawJSON, .writeFiles] {
+            for versions: [Int]? in [nil, [], [2]] {
+                try await assertUnnegotiatedHistoryIsRejected(mode: mode, versions: versions)
+            }
+        }
+    }
+
+    private func assertUnnegotiatedHistoryIsRejected(mode: DirectResponseMode, versions: [Int]?) async throws {
+        let root = temporaryRoot(), destination = temporaryRoot()
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: destination)
+        }
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+        let serverTrust = InMemoryManualIPTrustStore(), clientTrust = InMemoryManualIPTrustStore()
+        let controller = try DirectClientController(rootURL: root, trustStore: serverTrust)
+        let clientID = UUID(), now = Date(), secret = Data(repeating: 0x18, count: 32)
+        let port = try unusedLoopbackPort()
+        try serverTrust.saveState(ManualIPTrustState(ownerInstallationID: controller.identity.installationID,
+            trustedClients: [ManualIPTrustedClient(installationID: clientID, displayName: "History iPhone",
+                reconnectSecret: secret, pairedAt: now, lastConnectedAt: now)]))
+        try clientTrust.saveState(ManualIPTrustState(ownerInstallationID: clientID,
+            trustedMac: ManualIPTrustedMac(installationID: controller.identity.installationID,
+                displayName: "History CLI", host: "127.0.0.1", port: port, reconnectSecret: secret, pairedAt: now)))
+        let request = DirectExportRequest(jobID: UUID(), createdAt: now,
+            dateSelection: .exact(start: "2026-07-01", end: "2026-07-01"), responseMode: mode,
+            rawProfile: mode == .rawJSON ? .canonicalSourceRecordsV1 : nil,
+            canonicalSelection: .init(metricIDs: ["steps"], sourceIDs: ["apple_health"], detailLevel: .summary),
+            destination: mode == .writeFiles ? DirectExportDestination(rootPath: destination.path) : nil)
+        let phone = DirectManualIPClient(installationID: clientID, displayName: "History iPhone", trustStore: clientTrust)
+        let producer = Task {
+            try await Task.sleep(nanoseconds: 100_000_000)
+            let channel = try await phone.connect(host: "127.0.0.1", port: port, timeout: 5)
+            defer { channel.cancel() }
+            try await channel.send(.hello(DirectPeerCapabilities(platform: .iOS, installationID: clientID,
+                exportHistoryObservationVersions: versions)))
+            guard case .message(.hello(let local)) = try await channel.receive(),
+                  case .message(.exportRequest(let received)) = try await channel.receive(), received == request else {
+                throw DirectClientControllerError.unexpectedExportMessage
+            }
+            XCTAssertEqual(local.exportHistoryObservationVersions, [1])
+            let binding = DirectPeerBinding(sourceInstallationID: clientID, destinationInstallationID: controller.identity.installationID)
+            let observation = try ExportHistoryObservation(observationID: UUID(), operationID: request.jobID,
+                observedAt: "2026-07-01T00:00:00.000000000Z",
+                requestBindingSHA256: DirectRequestFingerprint.make(for: request).sha256,
+                sourceInstallationID: clientID, destinationInstallationID: controller.identity.installationID,
+                timeZoneIdentifier: "UTC", metricIDs: ["steps"],
+                requestedStart: "2026-07-01T00:00:00.000000000Z", requestedEnd: "2026-07-01T00:00:00.000000000Z",
+                allAvailable: false, rangeSemantics: "owner_dates", evidenceMethod: "healthkit_earliest_authorized_sample_date",
+                types: [.init(typeID: "HKQuantityTypeIdentifierStepCount", directMetricIDs: ["steps"], outcome: "unknown")])
+            try await channel.send(.exportAccepted(DirectExportAccepted(jobID: request.jobID, acceptedAt: now,
+                peerBinding: binding, resolvedDateIdentifiers: ["2026-07-01"], sourceTimeZoneIdentifier: "UTC",
+                resolvedCanonicalSelection: request.canonicalSelection, historyObservation: observation)))
+        }
+        do {
+            if mode == .rawJSON {
+                _ = try await controller.export(request, deviceID: clientID, port: port, timeout: 5)
+            } else {
+                _ = try await controller.exportFiles(request, deviceID: clientID, port: port, timeout: 5)
+            }
+            XCTFail("Unnegotiated history must be rejected before capture")
+        } catch DirectClientControllerError.unexpectedExportMessage {
+            // The acceptance packet is rejected, before journal/receipt persistence.
+        } catch {
+            XCTFail("Expected negotiation rejection for \(mode)/\(String(describing: versions)), got \(error)")
+        }
+        try await producer.value
+        let record = try await controller.jobRecord(jobID: request.jobID)
+        // Intended peer identity is pinned before connection; acceptance must
+        // not populate capture/session facts or create output metadata.
+        XCTAssertNil(record.totalDays)
+        XCTAssertNil(record.sessionID)
+        XCTAssertNil(record.responseArtifact)
+        XCTAssertEqual(record.committedBytes, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.appendingPathComponent(".healthmd/history-observations").path))
+    }
+
     func testExactRequestRequiresAcceptedDatesToMatchInclusiveRange() throws {
         let root = temporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -915,6 +993,79 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         }
     }
 
+    func testObservedFileReceiptSurvivesRestartAndRejectsReboundEvidence() async throws {
+        let transfer = try await preparedMarkdownTransfer(existing: "old", generated: "new", writeMode: .append, observed: true)
+        defer {
+            try? FileManager.default.removeItem(at: transfer.storageRoot)
+            try? FileManager.default.removeItem(at: transfer.destinationRoot)
+        }
+        let receipt = try await transfer.receiver.finalize(transfer.finalization)
+        XCTAssertNotNil(receipt.historyObservation)
+        let descriptor = try XCTUnwrap(receipt.historySidecar)
+        XCTAssertEqual(receipt.filesWritten, 1)
+        let publicSidecar = transfer.destinationRoot.appendingPathComponent(descriptor.relativePath)
+        let sidecarData = try Data(contentsOf: publicSidecar)
+        XCTAssertEqual(Int64(sidecarData.count), descriptor.byteCount)
+        XCTAssertEqual(DirectTransferFile.sha256Hex(sidecarData), descriptor.sha256)
+        let sidecar = try JSONDecoder().decode(ExportHistoryFileReceipt.self, from: sidecarData)
+        XCTAssertEqual(sidecar.historyObservation, receipt.historyObservation)
+        XCTAssertEqual(sidecar.artifacts.count, 1)
+        XCTAssertEqual(sidecar.artifacts[0].generatedByteCount, 3)
+        XCTAssertEqual(sidecar.artifacts[0].generatedSHA256, DirectTransferFile.sha256Hex(Data("new".utf8)))
+        XCTAssertEqual(sidecar.artifacts[0].committedSHA256, DirectTransferFile.sha256Hex(Data("old\n\nnew".utf8)))
+        let conflicting = try DirectExportFileManifest(jobID: receipt.jobID, fileID: UUID(),
+            relativePath: ".HEALTHMD/history-observations/fake.json", byteCount: 0,
+            sha256: DirectTransferFile.sha256Hex(Data()), writeMode: .overwrite)
+        do {
+            try await transfer.receiver.store(manifest: conflicting)
+            XCTFail("Observed manifests must not collide with the reserved metadata namespace")
+        } catch {}
+        let layout = try DirectClientStorageLayout(rootURL: transfer.storageRoot)
+        let store = try DirectJobStore(layout: layout)
+        let reopened = DirectFileReceiver(layout: layout, jobStore: store)
+        let jobID = transfer.finalization.jobID
+        try await reopened.acknowledgePeerCompletion(jobID: jobID)
+        let recovered = try await reopened.receipt(jobID: jobID)
+        XCTAssertEqual(recovered, receipt)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: receipt.responseFileURL)) as? [String: Any])
+        XCTAssertNotNil(object["history_observation"])
+        let checkpoint = layout.corpusSessionsURL.appendingPathComponent(jobID.uuidString.lowercased()).appendingPathComponent("file-journal.json")
+        try await assertFinalizedHistoryRejectsTampering(checkpoint: checkpoint, legacyVersion: 2) {
+            _ = try await reopened.receipt(jobID: jobID)
+        }
+        let privateSidecar = layout.responseSpoolsURL.appendingPathComponent(jobID.uuidString.lowercased())
+            .appendingPathComponent("file-history-receipt.json")
+        let privateData = try Data(contentsOf: privateSidecar)
+        try Data("tampered".utf8).write(to: privateSidecar)
+        do {
+            _ = try await reopened.receipt(jobID: jobID)
+            XCTFail("Recovery must validate the private sidecar bytes")
+        } catch {}
+        try privateData.write(to: privateSidecar)
+        let restoredReceipt = try await reopened.receipt(jobID: jobID)
+        XCTAssertEqual(restoredReceipt, receipt)
+        let ownerData = Data("owner edit".utf8)
+        try ownerData.write(to: publicSidecar)
+        do {
+            _ = try await transfer.receiver.finalize(transfer.finalization)
+            XCTFail("Finalization must preserve a changed destination sidecar")
+        } catch {}
+        XCTAssertEqual(try Data(contentsOf: publicSidecar), ownerData)
+        // Historical receipts remain valid when their destination is edited later.
+        let historicalReceipt = try await reopened.receipt(jobID: jobID)
+        XCTAssertEqual(historicalReceipt, receipt)
+        let outside = transfer.storageRoot.appendingPathComponent("outside-sidecar.json")
+        try ownerData.write(to: outside)
+        try FileManager.default.removeItem(at: publicSidecar)
+        try FileManager.default.createSymbolicLink(at: publicSidecar, withDestinationURL: outside)
+        do {
+            _ = try await transfer.receiver.finalize(transfer.finalization)
+            XCTFail("Finalization must reject a destination symlink")
+        } catch {}
+        XCTAssertEqual(try Data(contentsOf: outside), ownerData)
+        XCTAssertEqual(String(data: try Data(contentsOf: transfer.output), encoding: .utf8), "old\n\nnew")
+    }
+
     func testDirectFileReceiverMergesMarkdownExactlyOnceAndRejectsAmbiguousYAML() async throws {
         let preserving = try await preparedMarkdownTransfer(
             existing: "---\ndate: old\ntags:\n  - daily-notes\n---\nUser body without final newline",
@@ -967,136 +1118,165 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
     }
 
     func testDirectRawReceiverCommitsResumesAndAssemblesWithoutCorpusMemory() async throws {
-        let root = temporaryRoot()
-        defer { try? FileManager.default.removeItem(at: root) }
-        let layout = try DirectClientStorageLayout(rootURL: root)
-        let store = try DirectJobStore(layout: layout)
-        let sourceID = UUID()
-        let destinationID = UUID()
-        let request = DirectExportRequest(
-            jobID: UUID(),
-            createdAt: Date(),
-            dateSelection: .exact(start: "2026-07-01", end: "2026-07-01"),
-            responseMode: .rawJSON,
-            rawProfile: .canonicalSourceRecordsV1
-        )
-        try await store.save(try DirectJobRecord(request: request, createdAt: request.createdAt))
-        let binding = DirectPeerBinding(
-            sourceInstallationID: sourceID,
-            destinationInstallationID: destinationID
-        )
-        let accepted = DirectExportAccepted(
-            jobID: request.jobID,
-            acceptedAt: request.createdAt,
-            peerBinding: binding,
-            resolvedDateIdentifiers: ["2026-07-01"],
-            sourceDeviceName: "Test iPhone",
-            sourceTimeZoneIdentifier: "UTC"
-        )
-        let session = try DirectTransferSession(
-            sessionID: UUID(),
-            jobID: request.jobID,
-            requestFingerprint: try DirectRequestFingerprint.make(for: request),
-            peerBinding: binding,
-            partitionTargetBytes: DirectTransferLimits.minimumPartitionBytes,
-            createdAt: request.createdAt
-        )
-        let healthData = try JSONSerialization.data(withJSONObject: [
-            "schema": "healthmd.health_data",
-            "schema_version": 7,
-            "time_context": ["calendar_time_zone_identifier": "UTC"],
-            "healthkit_record_archive": [
-                "schema": "healthmd.healthkit_records",
-                "schema_version": 1
-            ]
-        ], options: [.sortedKeys])
-        let manifest = try DirectRawDayManifest(
-            jobID: request.jobID,
-            date: "2026-07-01",
-            status: "complete",
-            captureStatus: "complete",
-            sampleCount: 1,
-            recordCount: 1,
-            queryStatusCounts: [
-                "success": 1, "failure": 0, "unsupported": 0,
-                "skipped": 0, "cancelled": 0
-            ],
-            integrityWarningCount: 0,
-            integrityWarningCodes: [],
-            partialFailureCount: 0,
-            partialFailureTypes: [],
-            healthDataByteCount: Int64(healthData.count),
-            healthDataSHA256: DirectTransferFile.sha256Hex(healthData)
-        )
-        let descriptor = try DirectTransferPartition(
-            index: 0,
-            transferID: UUID(),
-            sourceDates: [manifest.date],
-            byteCount: Int64(healthData.count),
-            chunkCount: 1,
-            sha256: DirectTransferFile.sha256Hex(healthData),
-            previousSHA256: nil,
-            itemSegment: try DirectTransferItemSegment(
-                itemID: manifest.date,
-                offset: 0,
-                itemByteCount: Int64(healthData.count),
-                isFinalSegment: true
+        for observed in [false, true] {
+            let root = temporaryRoot()
+            defer { try? FileManager.default.removeItem(at: root) }
+            let layout = try DirectClientStorageLayout(rootURL: root)
+            let store = try DirectJobStore(layout: layout)
+            let sourceID = UUID()
+            let destinationID = UUID()
+            let request = DirectExportRequest(
+                jobID: UUID(),
+                createdAt: Date(),
+                dateSelection: .exact(start: "2026-07-01", end: "2026-07-01"),
+                responseMode: .rawJSON,
+                rawProfile: .canonicalSourceRecordsV1
             )
-        )
-        let open = try DirectTransferOpen(session: session, partition: descriptor)
-        let receiver = DirectRawReceiver(layout: layout, jobStore: store)
-        try await receiver.prepare(request: request, accepted: accepted, session: session)
-        try await receiver.store(manifest: manifest)
-        let needed = try await receiver.disposition(for: open)
-        XCTAssertEqual(needed.disposition, .needed)
-        let chunk = try DirectTransferChunk(
-            transferID: descriptor.transferID,
-            sequence: 1,
-            data: healthData,
-            sha256: DirectTransferFile.sha256Hex(healthData)
-        )
-        let chunkAcknowledgement = try await receiver.receive(chunk)
-        XCTAssertTrue(chunkAcknowledgement.accepted)
-        let completed = try DirectTransferPartitionComplete(
-            sessionID: session.sessionID,
-            jobID: request.jobID,
-            partitionIndex: 0,
-            transferID: descriptor.transferID,
-            partitionSHA256: descriptor.sha256
-        )
-        let partitionAcknowledgement = try await receiver.commit(completed)
-        XCTAssertTrue(partitionAcknowledgement.accepted)
+            try await store.save(try DirectJobRecord(request: request, createdAt: request.createdAt))
+            let binding = DirectPeerBinding(
+                sourceInstallationID: sourceID,
+                destinationInstallationID: destinationID
+            )
+            let observation: ExportHistoryObservation? = observed ? try ExportHistoryObservation(
+                observationID: UUID(), operationID: request.jobID, observedAt: "2026-07-01T00:00:00.000000000Z",
+                requestBindingSHA256: DirectRequestFingerprint.make(for: request).sha256,
+                sourceInstallationID: sourceID, destinationInstallationID: destinationID,
+                timeZoneIdentifier: "UTC", metricIDs: ["steps"],
+                requestedStart: "2026-07-01T00:00:00.000000000Z", requestedEnd: "2026-07-01T00:00:00.000000000Z",
+                allAvailable: false, rangeSemantics: "owner_dates", evidenceMethod: "synthetic_ui_fixture",
+                types: [.init(typeID: "steps_type", directMetricIDs: ["steps"], dependencyMetricIDs: [],
+                    dependencyReasons: [], outcome: "unknown")]) : nil
+            let accepted = DirectExportAccepted(
+                jobID: request.jobID,
+                acceptedAt: request.createdAt,
+                peerBinding: binding,
+                resolvedDateIdentifiers: ["2026-07-01"],
+                sourceDeviceName: "Test iPhone",
+                sourceTimeZoneIdentifier: "UTC",
+                resolvedCanonicalSelection: observed ? .init(metricIDs: ["steps"], detailLevel: .lossless) : nil,
+                historyObservation: observation
+            )
+            let session = try DirectTransferSession(
+                sessionID: UUID(),
+                jobID: request.jobID,
+                requestFingerprint: try DirectRequestFingerprint.make(for: request),
+                peerBinding: binding,
+                partitionTargetBytes: DirectTransferLimits.minimumPartitionBytes,
+                createdAt: request.createdAt
+            )
+            let healthData = try JSONSerialization.data(withJSONObject: [
+                "schema": "healthmd.health_data",
+                "schema_version": 7,
+                "time_context": ["calendar_time_zone_identifier": "UTC"],
+                "healthkit_record_archive": [
+                    "schema": "healthmd.healthkit_records",
+                    "schema_version": 1
+                ]
+            ], options: [.sortedKeys])
+            let manifest = try DirectRawDayManifest(
+                jobID: request.jobID,
+                date: "2026-07-01",
+                status: "complete",
+                captureStatus: "complete",
+                sampleCount: 1,
+                recordCount: 1,
+                queryStatusCounts: [
+                    "success": 1, "failure": 0, "unsupported": 0,
+                    "skipped": 0, "cancelled": 0
+                ],
+                integrityWarningCount: 0,
+                integrityWarningCodes: [],
+                partialFailureCount: 0,
+                partialFailureTypes: [],
+                healthDataByteCount: Int64(healthData.count),
+                healthDataSHA256: DirectTransferFile.sha256Hex(healthData)
+            )
+            let descriptor = try DirectTransferPartition(
+                index: 0,
+                transferID: UUID(),
+                sourceDates: [manifest.date],
+                byteCount: Int64(healthData.count),
+                chunkCount: 1,
+                sha256: DirectTransferFile.sha256Hex(healthData),
+                previousSHA256: nil,
+                itemSegment: try DirectTransferItemSegment(
+                    itemID: manifest.date,
+                    offset: 0,
+                    itemByteCount: Int64(healthData.count),
+                    isFinalSegment: true
+                )
+            )
+            let open = try DirectTransferOpen(session: session, partition: descriptor)
+            let receiver = DirectRawReceiver(layout: layout, jobStore: store)
+            try await receiver.prepare(request: request, accepted: accepted, session: session)
+            try await receiver.store(manifest: manifest)
+            let needed = try await receiver.disposition(for: open)
+            XCTAssertEqual(needed.disposition, .needed)
+            let chunk = try DirectTransferChunk(
+                transferID: descriptor.transferID,
+                sequence: 1,
+                data: healthData,
+                sha256: DirectTransferFile.sha256Hex(healthData)
+            )
+            let chunkAcknowledgement = try await receiver.receive(chunk)
+            XCTAssertTrue(chunkAcknowledgement.accepted)
+            let completed = try DirectTransferPartitionComplete(
+                sessionID: session.sessionID,
+                jobID: request.jobID,
+                partitionIndex: 0,
+                transferID: descriptor.transferID,
+                partitionSHA256: descriptor.sha256
+            )
+            let partitionAcknowledgement = try await receiver.commit(completed)
+            XCTAssertTrue(partitionAcknowledgement.accepted)
 
-        let resumed = DirectRawReceiver(layout: layout, jobStore: store)
-        try await resumed.prepare(request: request, accepted: accepted, session: session)
-        try await resumed.store(manifest: manifest)
-        let resumedDisposition = try await resumed.disposition(for: open)
-        XCTAssertEqual(resumedDisposition.disposition, .alreadyCommitted)
-        let artifact = try await resumed.finalize(try DirectTransferFinalize(
-            sessionID: session.sessionID,
-            jobID: request.jobID,
-            requestFingerprint: session.requestFingerprint,
-            totalPartitions: 1,
-            totalBytes: Int64(healthData.count),
-            finalPartitionSHA256: descriptor.sha256
-        ))
-        XCTAssertEqual(artifact.status, "success")
-        XCTAssertEqual(artifact.totalDays, 1)
-        XCTAssertEqual(try DirectTransferFile.inspect(artifact.fileURL).sha256, artifact.sha256)
-        let response = try XCTUnwrap(
-            try JSONSerialization.jsonObject(with: Data(contentsOf: artifact.fileURL)) as? [String: Any]
-        )
-        let raw = try XCTUnwrap(response["raw_result"] as? [String: Any])
-        let days = try XCTUnwrap(raw["days"] as? [[String: Any]])
-        XCTAssertEqual(days.first?["date"] as? String, "2026-07-01")
-        XCTAssertNotNil(days.first?["health_data"] as? [String: Any])
-        XCTAssertEqual(posixPermissions(at: artifact.fileURL), 0o600)
-        let awaitingRecord = try await store.load(jobID: request.jobID)
-        XCTAssertEqual(awaitingRecord.state, .awaitingPeerAcknowledgement)
-        try await resumed.acknowledgePeerCompletion(jobID: request.jobID)
-        let acknowledgedRecord = try await store.load(jobID: request.jobID)
-        XCTAssertEqual(acknowledgedRecord.state, .completed)
+            let resumed = DirectRawReceiver(layout: layout, jobStore: store)
+            try await resumed.prepare(request: request, accepted: accepted, session: session)
+            try await resumed.store(manifest: manifest)
+            let resumedDisposition = try await resumed.disposition(for: open)
+            XCTAssertEqual(resumedDisposition.disposition, .alreadyCommitted)
+            let artifact = try await resumed.finalize(try DirectTransferFinalize(
+                sessionID: session.sessionID,
+                jobID: request.jobID,
+                requestFingerprint: session.requestFingerprint,
+                totalPartitions: 1,
+                totalBytes: Int64(healthData.count),
+                finalPartitionSHA256: descriptor.sha256
+            ))
+            XCTAssertEqual(artifact.status, "success")
+            XCTAssertEqual(artifact.totalDays, 1)
+            XCTAssertEqual(try DirectTransferFile.inspect(artifact.fileURL).sha256, artifact.sha256)
+            let response = try XCTUnwrap(
+                try JSONSerialization.jsonObject(with: Data(contentsOf: artifact.fileURL)) as? [String: Any]
+            )
+            let raw = try XCTUnwrap(response["raw_result"] as? [String: Any])
+            XCTAssertNil(raw["history_observation"])
+            XCTAssertNil(raw["canonical_selection"])
+            if let observation {
+                let decoded = try JSONDecoder().decode(ExportHistoryObservation.self,
+                    from: JSONSerialization.data(withJSONObject: try XCTUnwrap(response["history_observation"])))
+                XCTAssertEqual(decoded, observation)
+            } else { XCTAssertNil(response["history_observation"]) }
+            let days = try XCTUnwrap(raw["days"] as? [[String: Any]])
+            XCTAssertEqual(days.first?["date"] as? String, "2026-07-01")
+            XCTAssertNotNil(days.first?["health_data"] as? [String: Any])
+            XCTAssertEqual(posixPermissions(at: artifact.fileURL), 0o600)
+            let awaitingRecord = try await store.load(jobID: request.jobID)
+            XCTAssertEqual(awaitingRecord.state, .awaitingPeerAcknowledgement)
+            try await resumed.acknowledgePeerCompletion(jobID: request.jobID)
+            let acknowledgedRecord = try await store.load(jobID: request.jobID)
+            XCTAssertEqual(acknowledgedRecord.state, .completed)
+            let reopened = DirectRawReceiver(layout: layout, jobStore: store)
+            _ = try await reopened.artifact(jobID: request.jobID)
+            if observed {
+                let checkpoint = layout.corpusSessionsURL.appendingPathComponent(request.jobID.uuidString.lowercased()).appendingPathComponent("journal.json")
+                try await assertFinalizedHistoryRejectsTampering(checkpoint: checkpoint, legacyVersion: 1) {
+                    _ = try await reopened.artifact(jobID: request.jobID)
+                }
+            }
+        }
     }
+
 
     func testDirectRawReceiverRejectsTamperedChunksBeforeCommit() async throws {
         let root = temporaryRoot()
@@ -1271,7 +1451,8 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
     private func preparedMarkdownTransfer(
         existing: String,
         generated: String,
-        writeMode: DirectExportFileWriteMode
+        writeMode: DirectExportFileWriteMode,
+        observed: Bool = false
     ) async throws -> PreparedMarkdownTransfer {
         let storageRoot = temporaryRoot()
         let destinationRoot = temporaryRoot()
@@ -1295,11 +1476,22 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
             sourceInstallationID: UUID(),
             destinationInstallationID: UUID()
         )
+        let observation: ExportHistoryObservation? = observed ? try ExportHistoryObservation(
+            observationID: UUID(), operationID: request.jobID, observedAt: "2026-07-01T00:00:00.000000000Z",
+            requestBindingSHA256: DirectRequestFingerprint.make(for: request).sha256,
+            sourceInstallationID: binding.sourceInstallationID, destinationInstallationID: binding.destinationInstallationID,
+            timeZoneIdentifier: "UTC", metricIDs: ["steps"],
+            requestedStart: "2026-07-01T00:00:00.000000000Z", requestedEnd: "2026-07-01T00:00:00.000000000Z",
+            allAvailable: false, rangeSemantics: "owner_dates", evidenceMethod: "synthetic_ui_fixture",
+            types: [.init(typeID: "steps_type", directMetricIDs: ["steps"], outcome: "unknown")]) : nil
         let accepted = DirectExportAccepted(
             jobID: request.jobID,
             acceptedAt: request.createdAt,
             peerBinding: binding,
-            resolvedDateIdentifiers: ["2026-07-01"]
+            resolvedDateIdentifiers: ["2026-07-01"],
+            sourceTimeZoneIdentifier: "UTC",
+            resolvedCanonicalSelection: observed ? .init(metricIDs: ["steps"]) : nil,
+            historyObservation: observation
         )
         let session = try DirectTransferSession(
             sessionID: UUID(),
@@ -1367,6 +1559,59 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
             receiver: receiver,
             finalization: finalization
         )
+    }
+
+    private func assertFinalizedHistoryRejectsTampering(
+        checkpoint: URL, legacyVersion: Int, recover: () async throws -> Void
+    ) async throws {
+        let original = try Data(contentsOf: checkpoint)
+        defer { try? original.write(to: checkpoint) }
+        for mutation in 0..<3 {
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
+            var accepted = try XCTUnwrap(object["accepted"] as? [String: Any])
+            var evidence = try XCTUnwrap(accepted["historyObservation"] as? [String: Any])
+            switch mutation {
+            case 0:
+                evidence["observation_id"] = UUID().uuidString.lowercased()
+                accepted["historyObservation"] = evidence
+            case 1:
+                accepted.removeValue(forKey: "historyObservation")
+                object["version"] = legacyVersion
+            default:
+                var request = try XCTUnwrap(object["request"] as? [String: Any])
+                let formatter = ISO8601DateFormatter()
+                let date = try XCTUnwrap(formatter.date(from: try XCTUnwrap(request["createdAt"] as? String)))
+                request["createdAt"] = formatter.string(from: date.addingTimeInterval(1))
+                let decoded = try JSONDecoder.healthMdDirect.decode(DirectExportRequest.self,
+                    from: JSONSerialization.data(withJSONObject: request))
+                let fingerprint = try DirectRequestFingerprint.make(for: decoded)
+                var session = try XCTUnwrap(object["session"] as? [String: Any])
+                session["requestFingerprint"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(fingerprint))
+                evidence["request_binding_sha256"] = fingerprint.sha256
+                accepted["historyObservation"] = evidence
+                object["request"] = request
+                object["session"] = session
+            }
+            object["accepted"] = accepted
+            let changed = try JSONSerialization.data(withJSONObject: object)
+            try changed.write(to: checkpoint)
+            // Replacement evidence and rebound requests remain internally valid;
+            // only the finalized artifact pin/immutable job record rejects them.
+            let request = try JSONDecoder.healthMdDirect.decode(DirectExportRequest.self,
+                from: JSONSerialization.data(withJSONObject: try XCTUnwrap(object["request"])))
+            let session = try JSONDecoder.healthMdDirect.decode(DirectTransferSession.self,
+                from: JSONSerialization.data(withJSONObject: try XCTUnwrap(object["session"])))
+            let acceptance = try JSONDecoder.healthMdDirect.decode(DirectExportAccepted.self,
+                from: JSONSerialization.data(withJSONObject: accepted))
+            if let observation = acceptance.historyObservation {
+                XCTAssertTrue(observation.matches(request: request, accepted: acceptance, session: session))
+            }
+            do { try await recover(); XCTFail("Recovered finalized bytes with changed history authority") }
+            catch { XCTAssertTrue(error is DirectFileReceiverError || error is DirectRawReceiverError) }
+            XCTAssertEqual(try Data(contentsOf: checkpoint), changed)
+        }
+        try original.write(to: checkpoint)
+        try await recover()
     }
 
     private func unusedLoopbackPort() throws -> UInt16 {

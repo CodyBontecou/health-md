@@ -137,6 +137,9 @@ struct HealthMdApp: App {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var advancedSettings: AdvancedExportSettings
+    // Read/observe canonical persisted profile identity on the tablet route;
+    // do not bootstrap/apply profiles or alter legacy tablet settings/authority.
+    @StateObject private var iPadHistoryProfileStore = ExportProfileStore()
     @StateObject private var apiExportSettings: APIExportSettings
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService: SyncService
@@ -252,7 +255,7 @@ struct HealthMdApp: App {
         #endif
 
         if TestMode.isUITesting {
-            configureTestMode()
+            configureTestMode(syncService: syncService)
             return
         }
 
@@ -333,7 +336,7 @@ struct HealthMdApp: App {
 
     /// Configure deterministic test state from launch environment variables.
     /// Skips all real HealthKit, StoreKit, and network interactions.
-    private func configureTestMode() {
+    private func configureTestMode(syncService: SyncService) {
         // UI tests reuse the installed app between methods, so establish the
         // requested launch state instead of inheriting an earlier journey.
         UserDefaults.standard.set(TestMode.hasCompletedOnboarding, forKey: "hasCompletedOnboarding")
@@ -368,10 +371,11 @@ struct HealthMdApp: App {
             forKey: SharedSetupV2ProfileTransaction.undoKey
         )
 
-        // All managers are @MainActor — set state in Task.
+        // Capture the existing sync service and use the canonical singletons,
+        // not StateObject wrappers whose scene storage may not be installed yet.
         Task { @MainActor in
             // HealthKit: set authorization state without showing dialogs
-            healthKitManager.isAuthorized = TestMode.healthAuthorized
+            HealthKitManager.shared.isAuthorized = TestMode.healthAuthorized
             UserDefaults.standard.set(ExportTargetSelection.localIPhoneFolder.rawValue, forKey: ExportTargetSelection.storageKey)
 
             // Purchase: set unlock/quota state without StoreKit
@@ -385,6 +389,7 @@ struct HealthMdApp: App {
 
             // Schedule: set enabled state
             if TestMode.scheduleEnabled {
+                let schedulingManager = SchedulingManager.shared
                 var schedule = schedulingManager.schedule
                 schedule.isEnabled = true
                 schedulingManager.schedule = schedule
@@ -396,7 +401,7 @@ struct HealthMdApp: App {
         WindowGroup {
             Group {
                 if UIDevice.current.userInterfaceIdiom == .pad {
-                    iPadContentView()
+                    iPadContentView(historyProfileStore: iPadHistoryProfileStore)
                 } else {
                     ContentView()
                 }
@@ -529,10 +534,12 @@ struct HealthMdApp: App {
                 directCLIService.cancelHandler = { jobID in
                     IPhoneDirectExportCoordinator.shared.cancel(jobID: jobID)
                 }
-                directCLIService.queryRequestHandler = { request, channel in
+                directCLIService.queryRequestHandler = { [weak directCLIService] request, channel in
+                    guard let sourceInstallationID = directCLIService?.querySourceInstallationID else { return }
                     await IPhoneDirectQueryCoordinator.shared.handle(
                         request,
                         channel: channel,
+                        sourceInstallationID: sourceInstallationID,
                         healthKitManager: healthKitManager
                     )
                 }

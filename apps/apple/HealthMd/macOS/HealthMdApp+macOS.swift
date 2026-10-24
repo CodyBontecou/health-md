@@ -690,7 +690,10 @@ struct HealthMdApp: App {
                         open,
                         vaultManager: vaultManager,
                         localInstallationID: syncService.installationID,
-                        remoteInstallationID: syncService.remoteCapabilities?.installationID
+                        remoteInstallationID: syncService.remoteCapabilities?.installationID,
+                        contextHistoryObservationVersion: syncService.remoteCapabilities.flatMap {
+                            syncService.localCapabilities.negotiateConnectedCorpusTransfer(with: $0)?.contextHistoryObservationVersion
+                        }
                     )
                     if disposition.disposition != .reject {
                         iphoneExportRequestCoordinator.handleCorpusSession(open, disposition: disposition)

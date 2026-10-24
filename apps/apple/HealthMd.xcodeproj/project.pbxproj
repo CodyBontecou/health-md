@@ -7,12 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		05BFC2FFD11E21648879ABE2 /* healthmd in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = EA90FDA2F7F779C70341E2FA /* healthmd */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A90000000000000000000004 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000002 /* main.swift */; };
 		A90000000000000000000005 /* HealthMdMCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000003 /* HealthMdMCPServer.swift */; };
 		A90000000000000000000012 /* HealthMdMCPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000011 /* HealthMdMCPApp.swift */; };
 		A90000000000000000000014 /* HealthMdMCPChartRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000013 /* HealthMdMCPChartRenderer.swift */; };
-		A90000000000000000000006 /* healthmd-mcp in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = A90000000000000000000001 /* healthmd-mcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1D5B9FA508C83CDD5E3B115D /* HealthMdWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */; };
 		23566ABF4BCC605C6A7092D4 /* HealthMdWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2BAFD29F142F1CE041BB8B6C /* WatchHealthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */; };
@@ -127,18 +125,6 @@
 				E7A72632889E567841E8160A /* HealthMdWatchWidgets.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		71230E0D39DE30240893B40D /* Embed CLI Helper */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers;
-			dstSubfolderSpec = 1;
-			files = (
-				05BFC2FFD11E21648879ABE2 /* healthmd in Embed CLI Helper */,
-				A90000000000000000000006 /* healthmd-mcp in Embed CLI Helper */,
-			);
-			name = "Embed CLI Helper";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E459765BA145EAD2EE1CDD7E /* Embed Watch Content */ = {
@@ -635,7 +621,7 @@
 				62CC00022F15D70300F9103F /* Sources */,
 				62CC00032F15D70300F9103F /* Frameworks */,
 				62CC00042F15D70300F9103F /* Resources */,
-				71230E0D39DE30240893B40D /* Embed CLI Helper */,
+				23D00B30D41D416EDA08C2B1 /* Embed CLI Helper */,
 			);
 			buildRules = (
 			);
@@ -877,6 +863,31 @@
 			shellScript = "\"$SRCROOT/scripts/inject-oauth-broker-config.sh\"";
 			showEnvVarsInLog = 0;
 		};
+		23D00B30D41D416EDA08C2B1 /* Embed CLI Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/scripts/relocate_macos_cli_helpers.py",
+				"$(BUILT_PRODUCTS_DIR)/healthmd",
+				"$(BUILT_PRODUCTS_DIR)/healthmd-mcp",
+			);
+			name = "Embed CLI Helper";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/healthmd",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/healthmd-mcp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "python3 \"$SRCROOT/scripts/relocate_macos_cli_helpers.py\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME\" --source-helpers \"$BUILT_PRODUCTS_DIR\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -1025,6 +1036,10 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Frameworks",
+					"$(inherited)",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-mcp";
@@ -1046,6 +1061,10 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Frameworks",
+					"$(inherited)",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-mcp";
@@ -1067,6 +1086,10 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Frameworks",
+					"$(inherited)",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-mcp";
@@ -1087,6 +1110,10 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Frameworks",
+					"$(inherited)",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-mcp";
@@ -1246,6 +1273,10 @@
 				INFOPLIST_KEY_CFBundleDisplayName = healthmd;
 				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				INFOPLIST_KEY_CFBundleName = healthmd;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Frameworks",
+					"$(inherited)",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
@@ -1971,6 +2002,10 @@
 				INFOPLIST_KEY_CFBundleDisplayName = healthmd;
 				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				INFOPLIST_KEY_CFBundleName = healthmd;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Frameworks",
+					"$(inherited)",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
@@ -2022,7 +2057,8 @@
 				CURRENT_PROJECT_VERSION = 202610071218;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = HealthMd/Info.plist;
+				HEALTHMD_IOS_INFO_PLIST = HealthMd/Info.plist;
+				INFOPLIST_FILE = "$(HEALTHMD_IOS_INFO_PLIST)";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -2143,6 +2179,10 @@
 				INFOPLIST_KEY_CFBundleDisplayName = healthmd;
 				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				INFOPLIST_KEY_CFBundleName = healthmd;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Frameworks",
+					"$(inherited)",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";
@@ -2204,6 +2244,10 @@
 				INFOPLIST_KEY_CFBundleDisplayName = healthmd;
 				INFOPLIST_KEY_CFBundleIdentifier = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				INFOPLIST_KEY_CFBundleName = healthmd;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Frameworks",
+					"$(inherited)",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-cli";

@@ -1,0 +1,46 @@
+{
+  "schema": "healthmd.history_assessment.platform_staging",
+  "schema_version": 1,
+  "classification": "planned",
+  "outcome": "Disclose selected-type historical access evidence separately from capture completion, without dropping readable records or changing their timestamps.",
+  "platforms": {
+    "apple": {
+      "state": "planned",
+      "target": "Qualify the SDK27 adapter, native warning/execution reassessment, immutable portable query metadata, negotiated raw/file observations and generation-bound Mac context observations on exact native/UI and physical-device matrices. Local files/API envelopes retain capture-only semantics; their absent authorization metadata remains unverified. Candidate advertisement does not replace production acceptance.",
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift",
+        "apps/apple/HealthMd/Shared/Protocols/SystemHealthStoreAdapter.swift",
+        "apps/apple/HealthMd/Shared/Models/HealthHistoryAssessment.swift",
+        "apps/apple/HealthMd/iOS/Views/ExportTabView.swift",
+        "apps/apple/HealthMd/iOS/ContentView.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthHistoryQueryCapture.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "packages/contracts/query-history/v1/README.md",
+        "apps/apple/HealthMd/Shared/Sync/ConnectedCorpusTransfer.swift",
+        "apps/apple/HealthMd/iOS/IPhoneExportRequestHandler.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextStore.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextQueryExecutor.swift",
+        "packages/contracts/export-history/v1/README.md"
+      ],
+      "produces_contract": "implemented_unqualified"
+    },
+    "android": {
+      "state": "planned",
+      "target": "Health Connect feature/permission/first-grant history-boundary adapter, Export warning, and portable receipt compatibility tests. Unknown legacy grant boundaries remain conservative; history_permission_missing is not equivalent to Apple's privacy-ambiguous omission.",
+      "evidence": [
+        "apps/android/app/src/main/java/com/healthmd/data/health/HealthConnectManager.kt",
+        "apps/android/app/src/main/java/com/healthmd/rawexport/HealthConnectRawDataProvider.kt",
+        "apps/android/docs/features/health-connect-permissions.md"
+      ],
+      "produces_contract": "planned"
+    }
+  },
+  "wire_adoption": "query_metadata_implemented_unqualified",
+  "frozen_contracts": "The independently versioned query-metadata extension has Apple production-source and portable Rust consumer implementations, with qualification still pending. It changes no historical daily/export, raw/file, Shared Setup, metric-registry or packet contract bytes. This platform-staging record is neither a permission receipt nor an export schema.",
+  "contract": {
+    "schema": "healthmd.history_assessment",
+    "schema_version": 1,
+    "response_location": "metadata.history_assessment",
+    "scope": "typed_query_observation_only"
+  }
+}
