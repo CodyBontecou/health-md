@@ -31,14 +31,14 @@ class WorkflowRoutingTests(unittest.TestCase):
             with self.subTest(job=job):
                 if output == "ios_ui":
                     self.assertIn("if: ${{ always() && needs.changes.outputs.ios_ui == 'true' }}", blocks[job])
-                    self.assertIn("needs: [changes, ios-ui-shards]", blocks[job])
+                    self.assertIn("needs: [changes, prepare-ui-artifacts, ios-ui-shards]", blocks[job])
                     self.assertIn("test \"$SHARDS_RESULT\" = success", blocks[job])
                     self.assertIn("ios_ui_shards.py verify", blocks[job])
                 else:
                     self.assertIn(f"if: ${{{{ needs.changes.outputs.{output} == 'true' }}}}", blocks[job])
                 if output in {"ios", "macos"}:
                     self.assertIn("needs: [changes, prepare-shared-core]", blocks[job])
-                    self.assertIn("name: apple-shared-core", blocks[job])
+                    self.assertIn("name: apple-sdk27-shared-core", blocks[job])
                 self.assertIn(f"      {output}: ${{{{ steps.detect.outputs.{output} }}}}", blocks["changes"])
 
     def test_planner_and_gate_regressions_and_links_run_before_selection_on_every_pr(self):
@@ -85,12 +85,12 @@ class WorkflowRoutingTests(unittest.TestCase):
         import sys
         sys.path.insert(0, str(REPO / "apps/apple/scripts"))
         from ios_ui_shards import SHARDS
-        self.assertEqual(15, sum(map(len, SHARDS)))
+        self.assertEqual(23, sum(map(len, SHARDS)))
         workers = jobs()["ios-ui-shards"]
-        self.assertIn("shard: [0, 1, 2]", workers)
+        self.assertIn("shard: [0, 1, 2, 3]", workers)
         self.assertIn("fail-fast: false", workers)
-        self.assertIn("needs: [changes, prepare-shared-core]", workers)
-        self.assertIn("name: apple-shared-core", workers)
+        self.assertIn("needs: [changes, prepare-shared-core, prepare-ui-artifacts]", workers)
+        self.assertIn("name: apple-sdk27-shared-core", workers)
         self.assertIn("ios_ui_shards.py run", workers)
         self.assertNotIn("continue-on-error", workflow)
 
@@ -107,7 +107,7 @@ class WorkflowRoutingTests(unittest.TestCase):
         self.assertIn('generate-apple-bindings.sh --check', collector)
         self.assertIn('--assemble "$PWD/build/apple-core-slices"', collector)
         self.assertIn('validate-apple-xcframework.sh', collector)
-        self.assertIn('name: apple-shared-core', collector)
+        self.assertIn('name: apple-sdk27-shared-core', collector)
 
     def test_main_native_tests_keep_complete_suite_and_overlap_boot_with_compile(self):
         native = jobs()['test-ios']
@@ -123,6 +123,7 @@ class GateExecutionTests(unittest.TestCase):
         for output in JOBS:
             environment[output.upper() + "_SELECTED"] = str(output in selected).lower()
             environment[output.upper() + "_RESULT"] = "success" if output in selected else "skipped"
+        environment["PREPARE_UI_RESULT"] = "success" if "ios_ui" in selected else "skipped"
         environment.update(updates)
         return subprocess.run(["bash", "-e", "-c", gate_script()], env=environment, text=True, capture_output=True)
 
@@ -139,6 +140,10 @@ class GateExecutionTests(unittest.TestCase):
                 with self.subTest(job=job, status=status):
                     result = self.run_gate({job}, **{job.upper() + "_RESULT": status})
                     self.assertNotEqual(0, result.returncode)
+
+    def test_selected_ui_preparation_must_succeed(self):
+        for status in ("skipped", "failure", "cancelled", "", "unknown"):
+            self.assertNotEqual(0, self.run_gate({"ios_ui"}, PREPARE_UI_RESULT=status).returncode)
 
     def test_empty_or_invalid_selection_never_passes_as_an_unrelated_pr(self):
         for job in JOBS:

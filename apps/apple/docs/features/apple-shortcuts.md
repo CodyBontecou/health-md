@@ -136,6 +136,8 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 
 An automation cannot be promised to wake a sleeping Mac, bypass protected HealthKit data, or run without the supported app/session availability conditions. Physical-iPhone personal-automation QA after wake remains required. See the [source investigation and remaining work](../investigations/issue-173-mac-context-shortcuts.md).
 
+**Refresh Mac Health Context** is intentionally different. It freezes the selected profile's metric/detail scope into an authenticated request, uses an explicit date window (30 days by default) or a deliberate All Available History request, and persists the Mac job ID plus pending/completed/failed status on iPhone. Current source checks catalog/query completion and uses the oldest currently readable sample; it does **not** assess OS 27 history authorization or prove full-history access. A successful empty query also cannot prove there is no older data. Apple's OS 27 boundary API identifies limited access, but omitted entries cannot distinguish full access from denied access (or limited access without a known boundary). Prefer an explicit date window when the requested scope matters; it pins dates but cannot bypass HealthKit authorization. Type-scoped assessment, a visible warning, and truthful consumer coverage remain pending under [issue 172](https://github.com/CodyBontecou/health-md/issues/172); see the [investigation](../testing/history-authorization-investigation.md). A disconnect may leave the durable job pending; it never redirects output or silently changes the scope.
+
 ## Locked-device behavior
 
 Apple protects HealthKit data while the iPhone is locked and [relinquishes app access about ten minutes after locking](https://support.apple.com/guide/security/protecting-access-to-users-health-data-sec88be9900f/web). A Shortcut that runs shortly after the phone locks may sometimes finish, but an unattended automation cannot rely on that window.
@@ -166,7 +168,9 @@ When an export Shortcut encounters locked HealthKit data, Health.md preserves th
 | **Get Last Export Status** shows an older run | Locked-device requests remain pending and are not recorded as completed exports | Retry the pending request first; use Health.md’s recovery notification to identify pending work. |
 | A large historical export takes a long time | Multi-year HealthKit capture depends on corpus density and selected formats. | Keep Health.md available, leave the iPhone unlocked when prompted, and allow the export to continue while progress is reported. |
 | No health data returned | No HealthKit data for that date or permission missing | Check Apple Health and Health.md permissions. |
-| Cannot find Refresh Mac Health Context or Get Mac Context Refresh Status | These proposed actions are not implemented | Follow issue #173; ordinary Export actions do not refresh Mac context. |
+| Mac context refresh says no Mac is connected | The App Intent has no authenticated live Mac session | Open Health.md on both devices, confirm the expected peer, and retry. |
+| Mac context refresh remains pending | The durable Mac job was accepted but the phone locked, disconnected, or exhausted foreground execution time | Open/unlock both apps; check **Get Mac Context Refresh Status** and resume from the Mac readiness/job surfaces. |
+| Older history is missing from All Available Mac refresh | Current source discovers only readable samples; read restrictions and absent data cannot be distinguished from those queries | Review access in Apple Health and use explicit dates to pin the request. No limited/unverified authorization warning is implemented yet; OS 27 assessment remains pending in issue 172. |
 | Action appears but fails in Simulator | App Intents can be unreliable in simulator builds | Verify on a real iPhone before filming or shipping docs. |
 
 ## Video outline

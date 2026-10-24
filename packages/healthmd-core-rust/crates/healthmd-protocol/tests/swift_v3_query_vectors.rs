@@ -38,6 +38,7 @@ fn rust_matches_swift_direct_query_v3_fixture() {
     assert_eq!(fixture.schema_version, 1);
 
     let peer = PeerCapabilities {
+        export_history_observation_versions: None,
         protocol_versions: vec![1, IOS_QUERY_APPLICATION_PROTOCOL_VERSION],
         platform: PeerPlatform::Ios,
         installation_id: SwiftUuid(

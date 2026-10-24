@@ -211,6 +211,7 @@ pub struct DurableRawArtifact {
     pub platform: RawArtifactPlatform,
     pub format: &'static str,
     pub profile: String,
+    pub history_observation: Option<healthmd_protocol::history::ExportHistoryObservation>,
     pub provider_id: Option<String>,
     pub status: String,
     pub byte_count: u64,
@@ -447,8 +448,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let device_id = connection.device.installation_id.0;
         let was_new_pairing = connection.was_new_pairing;
         let result = async {
-            let (peer, wake_enrollment) =
-                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            let (peer, wake_enrollment, _) = exchange_hello(
+                &mut connection.channel,
+                self.identity.installation_id,
+                connection.device.platform,
+            )
+            .await?;
             let (source, _) = validate_source_peer(&connection.channel, &peer)?;
             if expected_source.is_some_and(|expected| expected != source) {
                 return Err(ClientError::Authentication(
@@ -671,8 +676,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let mut connection = self
             .accept_compatible(listener, None, Some(selected), timeout)
             .await?;
-        let (peer, wake_enrollment) =
-            exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+        let (peer, wake_enrollment, _) = exchange_hello(
+            &mut connection.channel,
+            self.identity.installation_id,
+            connection.device.platform,
+        )
+        .await?;
         let (source, application_protocol_version) =
             validate_source_peer(&connection.channel, &peer)?;
         self.remember_platform(selected, peer.platform).await?;
@@ -785,8 +794,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let mut connection = self
             .accept_compatible(&listener, None, Some(selected), timeout)
             .await?;
-        let (peer, _wake_enrollment) =
-            exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+        let (peer, _wake_enrollment, _) = exchange_hello(
+            &mut connection.channel,
+            self.identity.installation_id,
+            connection.device.platform,
+        )
+        .await?;
         let (source, _) = validate_source_peer(&connection.channel, &peer)?;
         self.remember_platform(selected, peer.platform).await?;
         if source != SourceKind::Ios
@@ -822,6 +835,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let (max_items, max_bytes) = clamp_query_page(&mut request.query, capabilities)?;
 
         let request_id = request.request_id;
+        let history_query = request.query.clone();
         connection
             .channel
             .send(&DirectMessage::QueryRequest(Unlabeled::from(request)))
@@ -840,6 +854,13 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                             .len()
                             > max_bytes
                         || !query_response_is_well_formed_and_bounded(&value.response, max_items)
+                        || crate::history::validate_response(
+                            &value.response,
+                            &history_query,
+                            self.identity.installation_id.0,
+                            selected,
+                        )
+                        .is_err()
                     {
                         return Err(ClientError::MalformedPacket);
                     }
@@ -977,8 +998,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), overall_remaining)
                 .await?;
-            let (peer, _wake_enrollment) =
-                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            let (peer, _wake_enrollment, _) = exchange_hello(
+                &mut connection.channel,
+                self.identity.installation_id,
+                connection.device.platform,
+            )
+            .await?;
             let (source, version) = validate_source_peer(&connection.channel, &peer)?;
             if source != SourceKind::Android || version != ANDROID_APPLICATION_PROTOCOL_VERSION {
                 return Err(ClientError::Authentication(
@@ -1180,8 +1205,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let (peer, _wake_enrollment) =
-                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            let (peer, _wake_enrollment, history_observation_version) = exchange_hello(
+                &mut connection.channel,
+                self.identity.installation_id,
+                connection.device.platform,
+            )
+            .await?;
             validate_iphone_peer(&connection.channel, &peer)?;
             let negotiation = negotiate_transfer(
                 &PeerCapabilities::portable_cli(self.identity.installation_id).transfer,
@@ -1200,7 +1229,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 .await?;
             self.process_raw_export(
                 &mut connection.channel,
-                &peer,
+                history_observation_version,
                 &request,
                 &jobs,
                 negotiation.partition_target_bytes,
@@ -1321,8 +1350,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let (peer, _wake_enrollment) =
-                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            let (peer, _wake_enrollment, history_observation_version) = exchange_hello(
+                &mut connection.channel,
+                self.identity.installation_id,
+                connection.device.platform,
+            )
+            .await?;
             validate_iphone_peer(&connection.channel, &peer)?;
             let negotiation = negotiate_transfer(
                 &PeerCapabilities::portable_cli(self.identity.installation_id).transfer,
@@ -1341,7 +1374,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 .await?;
             self.process_file_export(
                 &mut connection.channel,
-                &peer,
+                history_observation_version,
                 &request,
                 &jobs,
                 negotiation.partition_target_bytes,
@@ -1466,6 +1499,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                     platform: RawArtifactPlatform::Ios,
                     format: "json",
                     profile: profile.to_owned(),
+                    history_observation: artifact.history_observation,
                     provider_id: Some("apple_health".to_owned()),
                     status: artifact.status,
                     byte_count: u64::try_from(artifact.byte_count)
@@ -1507,6 +1541,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                     platform: RawArtifactPlatform::Android,
                     format,
                     profile: "android_provider_native_snapshot_v1".to_owned(),
+                    history_observation: None,
                     provider_id: Some(provider_id),
                     status: receipt.status,
                     byte_count: receipt.byte_count,
@@ -1587,8 +1622,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), remaining)
                 .await?;
-            let (peer, _wake_enrollment) =
-                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            let (peer, _wake_enrollment, _) = exchange_hello(
+                &mut connection.channel,
+                self.identity.installation_id,
+                connection.device.platform,
+            )
+            .await?;
             if validate_source_peer(&connection.channel, &peer)?.0 != SourceKind::Android {
                 return Err(ClientError::Authentication(
                     "the selected cancellation source is not Android".into(),
@@ -1661,8 +1700,12 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let (peer, _wake_enrollment) =
-                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            let (peer, _wake_enrollment, _) = exchange_hello(
+                &mut connection.channel,
+                self.identity.installation_id,
+                connection.device.platform,
+            )
+            .await?;
             validate_iphone_peer(&connection.channel, &peer)?;
             connection
                 .channel
@@ -1793,7 +1836,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     async fn process_file_export(
         &self,
         channel: &mut SecureChannel,
-        peer: &PeerCapabilities,
+        history_observation_version: Option<i32>,
         request: &ExportRequest,
         jobs: &JobStore,
         partition_target_bytes: i64,
@@ -1843,13 +1886,15 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 SecurePayload::Message(message) => match *message {
                     DirectMessage::ExportAccepted(Unlabeled { value }) => {
                         let expected = PeerBinding {
-                            source_installation_id: peer.installation_id,
+                            source_installation_id: SwiftUuid(channel.peer_installation_id),
                             destination_installation_id: self.identity.installation_id,
                         };
                         if value.job_id != request.job_id
                             || value.peer_binding != expected
                             || value.resolved_date_identifiers.is_empty()
                             || !accepted_dates_match(request, &value.resolved_date_identifiers)
+                            || (value.history_observation.is_some()
+                                && history_observation_version != Some(1))
                         {
                             return Err(ClientError::UnexpectedMessage);
                         }
@@ -1969,7 +2014,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     async fn process_raw_export(
         &self,
         channel: &mut SecureChannel,
-        peer: &PeerCapabilities,
+        history_observation_version: Option<i32>,
         request: &ExportRequest,
         jobs: &JobStore,
         partition_target_bytes: i64,
@@ -2020,13 +2065,15 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 SecurePayload::Message(message) => match *message {
                     DirectMessage::ExportAccepted(Unlabeled { value }) => {
                         let expected_binding = PeerBinding {
-                            source_installation_id: peer.installation_id,
+                            source_installation_id: SwiftUuid(channel.peer_installation_id),
                             destination_installation_id: self.identity.installation_id,
                         };
                         if value.job_id != request.job_id
                             || value.peer_binding != expected_binding
                             || value.resolved_date_identifiers.is_empty()
                             || !accepted_dates_match(request, &value.resolved_date_identifiers)
+                            || (value.history_observation.is_some()
+                                && history_observation_version != Some(1))
                         {
                             return Err(ClientError::UnexpectedMessage);
                         }
@@ -2597,16 +2644,18 @@ async fn bind_listener(port: u16) -> Result<TcpListener, ClientError> {
 async fn exchange_hello(
     channel: &mut SecureChannel,
     installation_id: SwiftUuid,
+    source_platform: Option<PeerPlatform>,
 ) -> Result<
     (
         PeerCapabilities,
         Option<healthmd_protocol::wire::WakeEnrollment>,
+        Option<i32>,
     ),
     ClientError,
 > {
-    let local = PeerCapabilities::portable_cli_all_versions(installation_id);
+    let local = PeerCapabilities::portable_cli_for_source(installation_id, source_platform);
     channel
-        .send(&DirectMessage::Hello(Unlabeled::from(local)))
+        .send(&DirectMessage::Hello(Unlabeled::from(local.clone())))
         .await?;
     let DirectMessage::Hello(Unlabeled { value: peer }) =
         receive_message(channel, Duration::from_secs(10)).await?
@@ -2625,7 +2674,8 @@ async fn exchange_hello(
         } else {
             None
         };
-    Ok((peer, enrollment))
+    let history_observation_version = local.negotiated_export_history_observation_version(&peer);
+    Ok((peer, enrollment, history_observation_version))
 }
 
 async fn receive_message(
@@ -4132,6 +4182,22 @@ mod tests {
         assert_eq!(record.committed_partitions, 4);
         assert_eq!(record.committed_bytes, 4_096);
         assert_eq!(record.processed_days, 2);
+    }
+
+    #[test]
+    fn unchanged_old_query_decoder_accepts_history_only_inside_response_metadata() {
+        let response = crate::history_tests::response();
+        // This decoder body is unchanged from the pre-receipt implementation.
+        assert!(query_response_is_well_formed_and_bounded(&response, 1));
+        let mut top_level = response.clone();
+        top_level["history_assessment"] = response["metadata"]["history_assessment"].clone();
+        assert!(!query_response_is_well_formed_and_bounded(&top_level, 1));
+        let mut packet_metadata = serde_json::json!({
+            "generated_at": "2026-01-01T00:00:00Z", "producer": "Health.md"
+        });
+        assert!(query_packet_metadata_is_well_formed(&packet_metadata));
+        packet_metadata["history_assessment"] = response["metadata"]["history_assessment"].clone();
+        assert!(!query_packet_metadata_is_well_formed(&packet_metadata));
     }
 
     #[test]

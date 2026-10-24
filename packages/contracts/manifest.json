@@ -667,6 +667,101 @@
         "apps/website/test/visualization-catalog.test.mjs"
       ],
       "fixtures": []
+    },
+    {
+      "id": "healthmd.export_history_observation",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Frozen selected-type export admission evidence; producers/consumers implemented in part, production advertisement disabled pending complete output and physical qualification.",
+      "specification": "packages/contracts/export-history/v1/README.md",
+      "authorities": [
+        "packages/contracts/export-history/v1/README.md"
+      ],
+      "implementations": [
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/ExportHistoryObservation.swift",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/history.rs"
+      ],
+      "consumers": [
+        "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/ExportHistoryObservationTests.swift",
+        "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/file_receiver.rs"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/export-history/v1/synthetic-observation.json",
+          "sha256": "71faa01bb36088070e3260ab814f7b9092fadbc98f556ad25e539408a6676e47",
+          "provenance": "Generated and validated by the Swift history contract tests; synthetic grammar evidence only, not physical permission or capture evidence. Packaged language tests preserve the canonical bytes.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/export-history-v1.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/export-history/v1/synthetic-direct-job.json",
+          "sha256": "d70f43566e7072f930562a5c683de58267f20bb646329cf10942e8e9c5e939b2",
+          "provenance": "Generated and validated by the Swift history contract tests; synthetic grammar evidence only, not physical permission or capture evidence. Packaged language tests preserve the canonical bytes.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/export-history-direct-job-v1.json",
+            "apps/cli/crates/healthmd-client/tests/fixtures/export-history-direct-job-v1.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.export_history_file_receipt",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Operation-scoped history sidecar model separating generated contribution and committed-file hashes; emission and destination qualification are not implemented yet.",
+      "specification": "packages/contracts/export-history/v1/README.md",
+      "authorities": [
+        "packages/contracts/export-history/v1/README.md"
+      ],
+      "implementations": [
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/ExportHistoryObservation.swift",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/history.rs"
+      ],
+      "consumers": [
+        "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/ExportHistoryObservationTests.swift"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/export-history/v1/synthetic-file-receipt.json",
+          "sha256": "705ef275aff984cba199b15612a2365b1b320634d53bc863936de5a41cf16b11",
+          "provenance": "Generated and validated by the Swift history contract tests; synthetic grammar evidence only, not physical permission or capture evidence. Packaged language tests preserve the canonical bytes.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/export-history-file-receipt-v1.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.history_assessment",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Independent typed-query history evidence; Apple producer and portable consumers implemented, complete physical qualification pending.",
+      "specification": "packages/contracts/query-history/v1/README.md",
+      "authorities": [
+        "packages/contracts/query-history/v1/README.md"
+      ],
+      "implementations": [
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "apps/cli/crates/healthmd-client/src/history.rs"
+      ],
+      "consumers": [
+        "apps/cli/crates/healthmd-cli/src/output.rs",
+        "apps/cli/crates/healthmd-mcp/src/result.rs"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/query-history/v1/synthetic-response.json",
+          "sha256": "9bd67d0fe39ccbaed8294fe988992027e730752e9a8475a0ce5dfde590ce4c86",
+          "provenance": "Complete synthetic typed-query grammar vector; placeholder digests do not establish dataset/capture or physical authorization acceptance. Rust client/CLI/MCP tests consume byte-identical packaged copies.",
+          "mirrors": [
+            "apps/cli/crates/healthmd-client/src/test-fixtures/history-assessment-v1.json",
+            "apps/cli/crates/healthmd-cli/src/test-fixtures/history-assessment-v1.json",
+            "apps/cli/crates/healthmd-mcp/src/test-fixtures/history-assessment-v1.json"
+          ]
+        }
+      ]
     }
   ]
 }

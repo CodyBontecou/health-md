@@ -48,11 +48,12 @@ class NightlyWorkflowTests(unittest.TestCase):
     def test_both_nightly_jobs_use_the_same_hosted_toolchain_as_apple_ci(self):
         ci_mac = job(CI.read_text(), "test-macos")
         hosted = re.search(r"runs-on: (\S+)", ci_mac).group(1)
-        self.assertEqual(hosted, "macos-26")
+        self.assertEqual(hosted, "xcode-27")
         for block in [self.ios, self.mac, self.prepare]:
             self.assertIn(f"runs-on: {hosted}", block)
             self.assertNotIn("self-hosted", block)
-            self.assertIn("xcode-version: latest-stable", block)
+            self.assertIn("xcode-version: '27.0'", block)
+            self.assertIn("bash scripts/qualify-history-authorization-sdk27.sh", block)
 
     def test_mac_runs_one_full_coverage_suite_and_keeps_all_diagnostics(self):
         self.assertNotIn("make test-macos", self.mac)
