@@ -168,12 +168,26 @@ final class ExportJourneyUITests: XCTestCase {
         exportButton.tap()
 
         let browseButton = app.buttons["Browse Export Folder"]
-        for _ in 0..<2 {
+        for opening in 0..<2 {
             XCTAssertTrue(browseButton.waitForExistence(timeout: 10))
             browseButton.tap()
 
             let files = app.collectionViews["File View"]
-            XCTAssertTrue(files.waitForExistence(timeout: 10), "The first opening must render the document picker instead of an empty sheet")
+            // A fresh hosted simulator can spend over ten seconds launching Files.
+            // Keep the first presentation open: reopening must not make it pass.
+            let startupTimeout: TimeInterval = opening == 0 ? 30 : 10
+            guard files.waitForExistence(timeout: startupTimeout) else {
+                let hierarchy = XCTAttachment(string: app.debugDescription)
+                hierarchy.name = "Export folder opening \(opening + 1) hierarchy"
+                hierarchy.lifetime = .keepAlways
+                add(hierarchy)
+                let screenshot = XCTAttachment(screenshot: app.screenshot())
+                screenshot.name = "Export folder opening \(opening + 1)"
+                screenshot.lifetime = .keepAlways
+                add(screenshot)
+                XCTFail("The first opening must render the document picker instead of an empty sheet")
+                return
+            }
             let exportedFile = files.descendants(matching: .any).matching(
                 NSPredicate(format: "label CONTAINS %@", "2026-03-28")
             ).firstMatch
