@@ -209,7 +209,7 @@ nonisolated struct IPhoneDirectCLIPairingLink: Equatable, Sendable {
     }
 }
 
-enum IPhoneDirectCLIPairingHandoffAction: Equatable, Sendable {
+nonisolated enum IPhoneDirectCLIPairingHandoffAction: Equatable, Sendable {
     case deferUntilActive
     case connect
     case waitForActiveOperation
