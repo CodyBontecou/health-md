@@ -291,7 +291,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Deblocați Health.md</string>
-    <string name="paywall_subtitle">Ați folosit cele 10 exporturi gratuite</string>
+    <string name="paywall_subtitle">Ați folosit cele 5 exporturi gratuite</string>
     <string name="paywall_unlimited_exports">Exporturi nelimitate, pentru totdeauna</string>
     <string name="paywall_scheduled_exports">Exporturi programate automatizate</string>
     <string name="paywall_future_features">Toate caracteristicile viitoare incluse</string>
@@ -786,7 +786,7 @@
     <string name="export_source_shortcut">Comandă rapidă</string>
     <string name="export_source_remote">La distanță</string>
     <string name="schedule_unlock_required_title">Deblocați exporturile programate</string>
-    <string name="schedule_unlock_required_body">Exporturile manuale includ 10 rulări gratuite. Exporturile automate programate sunt incluse cu deblocarea unică pe viață.</string>
+    <string name="schedule_unlock_required_body">Exporturile manuale includ 5 rulări gratuite. Exporturile automate programate sunt incluse cu deblocarea unică pe viață.</string>
     <string name="schedule_unlock_required_short">Deblocați Health.md pentru a activa exporturile programate.</string>
     <string name="export_folder_root_label">Dosar de export</string>
     <string name="history_clear_title">Ștergeți istoricul exporturilor?</string>
@@ -1490,4 +1490,12 @@
     <string name="agent_data_gateway_result_uploaded">Încărcat către gateway</string>
     <string name="export_target_gateway_configured_subtitle">Încărcați fiecare export către %1$s</string>
     <string name="export_target_gateway_unconfigured_subtitle">Încărcați exporturile în gateway-ul dumneavoastră Agent Data</string>
+    <string name="post_export_first_title">Primul export este finalizat</string>
+    <string name="post_export_first_body">Configurează exporturi zilnice pentru a nu repeta acești pași. Programarea necesită acces pe viață; exporturile manuale folosesc cota gratuită.</string>
+    <string name="post_export_third_title">Continuă notițele de sănătate</string>
+    <string name="post_export_third_body">Ai finalizat trei exporturi. O singură achiziție deblochează exporturi manuale nelimitate și programarea. Fără abonament. Fișierele exportate rămân ale tale.</string>
+    <string name="post_export_schedule_action">Explorează exporturile zilnice</string>
+    <string name="post_export_upgrade_action">Vezi accesul pe viață</string>
+    <string name="post_export_manual_action">Continuă exporturile manuale</string>
+    <string name="post_export_continue_free">Continuă gratuit</string>
 </resources>

@@ -64,6 +64,7 @@ struct ContentView: View {
     @State private var showPaywall = false
     @State private var showUpgradePromptPaywall = false
     @State private var presentPaywallAfterUpgradePrompt = false
+    @State private var presentScheduleAfterExportGuidance = false
     @State private var showExportProfiles = false
     @State private var showClinicianReport = false
     @State private var showMarketingMetricSelection = false
@@ -367,7 +368,10 @@ struct ContentView: View {
                 }
             ),
             onDismiss: {
-                if presentPaywallAfterUpgradePrompt {
+                if presentScheduleAfterExportGuidance {
+                    presentScheduleAfterExportGuidance = false
+                    selectedTab = .schedule
+                } else if presentPaywallAfterUpgradePrompt {
                     presentPaywallAfterUpgradePrompt = false
                     showUpgradePromptPaywall = true
                 }
@@ -375,6 +379,12 @@ struct ContentView: View {
         ) {
             ExportUpgradePrompt(
                 milestone: purchaseManager.pendingUpgradePrompt ?? 0,
+                onSchedule: {
+                    let quotaState = purchaseManager.analyticsQuotaState
+                    purchaseManager.consumeUpgradePrompt()
+                    PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
+                    presentScheduleAfterExportGuidance = true
+                },
                 onUpgrade: {
                     let quotaState = purchaseManager.analyticsQuotaState
                     purchaseManager.consumeUpgradePrompt()
@@ -1460,7 +1470,7 @@ struct ContentView: View {
 
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
                 trackSuccessfulExport(
                     targetType: .localFile,
                     startDate: normalizedStartDate,
@@ -1499,7 +1509,7 @@ struct ContentView: View {
                 }
                 startStatusDismissTimer()
 
-                if ReviewManager.shared.recordSuccessfulExport() {
+                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
                     ReviewManager.shared.didRequestReview()
                     requestReview()
                 }
@@ -1614,7 +1624,7 @@ struct ContentView: View {
             )
 
             if result.successCount > 0 {
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
                 trackSuccessfulExport(
                     targetType: .apiEndpoint,
                     startDate: normalizedStartDate,
@@ -1637,7 +1647,7 @@ struct ContentView: View {
                 vaultManager.lastExportStatus = "API export complete"
                 startStatusDismissTimer()
 
-                if ReviewManager.shared.recordSuccessfulExport() {
+                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
                     ReviewManager.shared.didRequestReview()
                     requestReview()
                 }
@@ -1735,7 +1745,7 @@ struct ContentView: View {
             )
 
             if result.successCount > 0 {
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
                 trackSuccessfulExport(
                     targetType: .agentDataGateway,
                     startDate: normalizedStartDate,
@@ -1754,7 +1764,7 @@ struct ContentView: View {
                 vaultManager.lastExportStatus = "Agent Data gateway export complete"
                 startStatusDismissTimer()
 
-                if ReviewManager.shared.recordSuccessfulExport() {
+                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
                     ReviewManager.shared.didRequestReview()
                     requestReview()
                 }
@@ -2501,7 +2511,7 @@ struct ContentView: View {
             )
 
             if result.successCount > 0, !macExportQuotaRecorded {
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: exportResult.isFullSuccess)
                 macExportQuotaRecorded = true
                 trackSuccessfulExport(
                     targetType: .connectedMac,
@@ -2552,7 +2562,7 @@ struct ContentView: View {
             }
             startStatusDismissTimer()
 
-            if ReviewManager.shared.recordSuccessfulExport() {
+            if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
                 ReviewManager.shared.didRequestReview()
                 requestReview()
             }
@@ -2756,7 +2766,7 @@ struct ContentView: View {
                 partialExportNotice = PartialExportNotice(result: exportResult)
                 exportStatusMessage = "Exported 1 file with 1 warning"
                 vaultManager.lastExportStatus = "Partial export: 1 warning"
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: false)
             case "fail", "no-data":
                 exportStatusMessage = "No matching health data"
                 vaultManager.lastExportStatus = "No health data"

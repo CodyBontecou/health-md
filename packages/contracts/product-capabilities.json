@@ -964,6 +964,29 @@
         "apps/android/app/src/main/java/com/healthmd/myselfclaim/MyselfClaimScreen.kt",
         "apps/android/app/src/play/java/com/healthmd/data/billing/MyselfClaimPurchase.kt"
       ]
+    },
+    {
+      "id": "purchase.free-export-journey",
+      "name": "Free export allowance and next steps",
+      "classification": "shared",
+      "summary": "Five completed free export actions on iOS/iPadOS and Google Play Android, with dismissible scheduling guidance after the first and a lifetime offer after the third. Existing usage and purchased access are retained. Apple scheduling shares the allowance; Google Play scheduling requires lifetime access. Free macOS companion and F-Droid Full Access are unchanged.",
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Managers/PurchaseManager.swift",
+        "apps/apple/HealthMd/iOS/Views/ExportUpgradePrompt.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/FreemiumPolicy.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportScreen.kt",
+        "apps/apple/docs/features/onboarding.md",
+        "apps/android/docs/features/lifetime-unlock.md"
+      ],
+      "profiles": []
     }
   ]
 }

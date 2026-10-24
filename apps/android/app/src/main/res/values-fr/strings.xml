@@ -374,7 +374,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Débloquer Health.md</string>
-    <string name="paywall_subtitle">Vous avez utilisé vos 10 exports gratuits</string>
+    <string name="paywall_subtitle">Vous avez utilisé vos 5 exports gratuits</string>
     <string name="paywall_unlimited_exports">Exports illimités à vie</string>
     <string name="paywall_scheduled_exports">Exports planifiés automatisés</string>
     <string name="paywall_future_features">Toutes les futures fonctionnalités incluses</string>
@@ -786,7 +786,7 @@
     <string name="export_source_shortcut">Raccourci</string>
     <string name="export_source_remote">À distance</string>
     <string name="schedule_unlock_required_title">Débloquer les exportations planifiées</string>
-    <string name="schedule_unlock_required_body">Les exportations manuelles incluent 10 exécutions gratuites. Les exportations automatiques planifiées sont incluses avec le déverrouillage à vie obtenu par un paiement unique.</string>
+    <string name="schedule_unlock_required_body">Les exportations manuelles incluent 5 exécutions gratuites. Les exportations automatiques planifiées sont incluses avec le déverrouillage à vie obtenu par un paiement unique.</string>
     <string name="schedule_unlock_required_short">Déverrouillez Health.md pour activer les exportations planifiées.</string>
     <string name="export_folder_root_label">Dossier d\'exportation</string>
     <string name="history_clear_title">Effacer l\'historique des exportations ?</string>
@@ -1490,4 +1490,12 @@
     <string name="agent_data_gateway_result_uploaded">Chargé vers la passerelle</string>
     <string name="export_target_gateway_configured_subtitle">Charger chaque export vers %1$s</string>
     <string name="export_target_gateway_unconfigured_subtitle">Charger les exports vers votre passerelle Agent Data</string>
+    <string name="post_export_first_title">Votre premier export est terminé</string>
+    <string name="post_export_first_body">Configurez des exports quotidiens pour éviter de répéter ces étapes. La programmation nécessite un accès à vie ; les exports manuels utilisent votre quota gratuit.</string>
+    <string name="post_export_third_title">Continuez vos notes de santé</string>
+    <string name="post_export_third_body">Vous avez effectué trois exports. Un achat unique débloque les exports manuels illimités et la programmation. Sans abonnement. Vos fichiers exportés restent à vous.</string>
+    <string name="post_export_schedule_action">Découvrir les exports quotidiens</string>
+    <string name="post_export_upgrade_action">Voir l’accès à vie</string>
+    <string name="post_export_manual_action">Continuer les exports manuels</string>
+    <string name="post_export_continue_free">Continuer gratuitement</string>
 </resources>

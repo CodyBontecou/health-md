@@ -102,6 +102,8 @@ fun ExportScreen(
     viewModel: ExportViewModel = hiltViewModel(),
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToAdvancedSettings: () -> Unit = {},
+    onNavigateToSchedule: () -> Unit = {},
+    onNavigateToUpgrade: () -> Unit = onNavigateToPaywall,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -356,6 +358,22 @@ fun ExportScreen(
             !uiState.isExporting &&
             !uiState.isPreviewing
     val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
+
+    uiState.postExportMilestone?.takeIf { !uiState.isPurchased }?.let { milestone ->
+        PostExportGuidanceDialog(
+            milestone = milestone,
+            remaining = uiState.freeExportsRemaining,
+            onSchedule = {
+                viewModel.dismissPostExportGuidance()
+                onNavigateToSchedule()
+            },
+            onUpgrade = {
+                viewModel.dismissPostExportGuidance()
+                onNavigateToUpgrade()
+            },
+            onDismiss = viewModel::dismissPostExportGuidance,
+        )
+    }
 
     if (uiState.isExporting) {
         ExportProgressDialog(

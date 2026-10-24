@@ -15,7 +15,7 @@ A introdução aparece na primeira abertura no iPhone. Ela explica o modelo loca
 4. **Pasta:** escolher iCloud Drive, No Meu iPhone, um cofre do Obsidian ou outro provedor de Arquivos.
 5. **Pronto:** corrigir conexões pendentes e abrir a prévia da primeira exportação.
 
-Depois de fechar essa prévia, uma oferta única e dispensável pode aparecer. Lembretes não bloqueantes também podem aparecer após a 3ª e a 7ª exportações gratuitas. O limite rígido continua em 10 ações concluídas.
+Após a primeira exportação gratuita concluída, um guia permite revisar um agendamento diário sem ativá-lo. Após a terceira, uma oferta vitalícia dispensável mostra duas ações gratuitas restantes. O limite é de cinco ações concluídas.
 
 Permissões, métricas, pasta, formatos, nomes, perfis, agendamento e conexão com o Mac podem ser alterados depois.
 

@@ -518,7 +518,7 @@
     <string name="export_notification_background_permission_required">计划导出需要 Health Connect 后台访问权限。请打开 Health.md &gt; 计划并启用该权限。</string>
     <string name="export_notification_unknown_error">未知错误</string>
     <string name="paywall_title">解锁 Health.md</string>
-    <string name="paywall_subtitle">您已使用 10 次免费导出</string>
+    <string name="paywall_subtitle">您已使用 5 次免费导出</string>
     <string name="paywall_unlimited_exports">无限导出，永久有效</string>
     <string name="paywall_scheduled_exports">自动计划导出</string>
     <string name="paywall_future_features">包含所有未来功能</string>
@@ -697,7 +697,7 @@
     <string name="export_source_shortcut">捷径</string>
     <string name="export_source_remote">远程</string>
     <string name="schedule_unlock_required_title">解锁预定导出</string>
-    <string name="schedule_unlock_required_body">手动导出包括 10 次免费运行。自动计划导出包含在一次性终身解锁中。</string>
+    <string name="schedule_unlock_required_body">手动导出包括 5 次免费运行。自动计划导出包含在一次性终身解锁中。</string>
     <string name="schedule_unlock_required_short">解锁 Health.md 以启用计划导出。</string>
     <string name="export_folder_root_label">导出文件夹</string>
     <string name="history_clear_title">清除导出历史记录？</string>
@@ -1265,4 +1265,12 @@
     <string name="agent_data_gateway_result_uploaded">已上传到网关</string>
     <string name="export_target_gateway_configured_subtitle">将每次导出上传到 %1$s</string>
     <string name="export_target_gateway_unconfigured_subtitle">将导出上传到你的Agent Data网关</string>
+    <string name="post_export_first_title">首次导出已完成</string>
+    <string name="post_export_first_body">设置每日导出，无需重复这些步骤。计划导出需要终身访问权限；手动导出仍可使用免费额度。</string>
+    <string name="post_export_third_title">继续记录健康笔记</string>
+    <string name="post_export_third_body">您已完成三次导出。一次购买即可解锁无限手动导出和计划导出。无需订阅。已导出的文件始终归您所有。</string>
+    <string name="post_export_schedule_action">了解每日导出</string>
+    <string name="post_export_upgrade_action">查看终身访问</string>
+    <string name="post_export_manual_action">继续手动导出</string>
+    <string name="post_export_continue_free">继续免费使用</string>
 </resources>

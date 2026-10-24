@@ -119,6 +119,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+            "purchase.free-export-journey",
             "account.myself_lifetime_claim",
             "export.daily-files",
             "export.sleep-summary",

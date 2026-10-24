@@ -15,7 +15,7 @@ Die Einrichtung erscheint beim ersten Start auf dem iPhone. Sie erklärt das lok
 4. **Ordner:** iCloud Drive, „Auf meinem iPhone“, einen Obsidian-Vault oder anderen Files-Anbieter wählen.
 5. **Bereit:** Fehlende Verbindungen reparieren und die erste Exportvorschau öffnen.
 
-Nach dem Schließen dieser Vorschau kann einmalig ein wegklickbares Angebot erscheinen. Nach dem 3. und 7. kostenlosen Export können weitere unverbindliche Hinweise folgen. Die feste Grenze bleibt bei 10 abgeschlossenen Aktionen.
+Nach dem ersten abgeschlossenen kostenlosen Export bietet ein Hinweis die Prüfung eines täglichen Zeitplans an, ohne ihn zu aktivieren. Nach dem dritten Export zeigt ein wegklickbares Dauerzugriffsangebot zwei verbleibende kostenlose Aktionen. Die Grenze beträgt fünf abgeschlossene Aktionen.
 
 Später lassen sich Berechtigungen, Metriken, Ordner, Formate, Namen, Profile, Zeitpläne und Mac-Verbindung ändern.
 

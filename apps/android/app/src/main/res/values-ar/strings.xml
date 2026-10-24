@@ -306,7 +306,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">إلغاء قفل Health.md</string>
-    <string name="paywall_subtitle">لقد استخدمت عمليات التصدير المجانية العشر</string>
+    <string name="paywall_subtitle">لقد استخدمت عمليات التصدير المجانية الخمس</string>
     <string name="paywall_unlimited_exports">عمليات تصدير غير محدودة، إلى الأبد</string>
     <string name="paywall_scheduled_exports">عمليات تصدير تلقائية مجدولة</string>
     <string name="paywall_future_features">جميع الميزات المستقبلية مضمنة</string>
@@ -822,7 +822,7 @@
     <string name="export_source_shortcut">الاختصار</string>
     <string name="export_source_remote">عن بُعد</string>
     <string name="schedule_unlock_required_title">إلغاء قفل عمليات التصدير المجدولة</string>
-    <string name="schedule_unlock_required_body">تتضمن عمليات التصدير اليدوية 10 مرات مجانية. وتصبح عمليات التصدير التلقائية المجدولة متاحة مع إلغاء القفل الدائم لمرة واحدة.</string>
+    <string name="schedule_unlock_required_body">تتضمن عمليات التصدير اليدوية 5 مرات مجانية. وتصبح عمليات التصدير التلقائية المجدولة متاحة مع إلغاء القفل الدائم لمرة واحدة.</string>
     <string name="schedule_unlock_required_short">قم بإلغاء قفل Health.md لتمكين عمليات التصدير المجدولة.</string>
     <string name="export_folder_root_label">مجلد التصدير</string>
     <string name="history_clear_title">هل تريد محو سجل التصدير؟</string>
@@ -1635,4 +1635,12 @@
     <string name="agent_data_gateway_result_uploaded">تم الرفع إلى البوابة</string>
     <string name="export_target_gateway_configured_subtitle">ارفع كل تصدير إلى %1$s</string>
     <string name="export_target_gateway_unconfigured_subtitle">ارفع التصديرات إلى بوابة Agent Data الخاصة بك</string>
+    <string name="post_export_first_title">اكتمل التصدير الأول</string>
+    <string name="post_export_first_body">أعدّ تصديرًا يوميًا لتجنب تكرار هذه الخطوات. تتطلب الجدولة وصولًا مدى الحياة؛ ويستخدم التصدير اليدوي رصيدك المجاني.</string>
+    <string name="post_export_third_title">واصل تدوين ملاحظاتك الصحية</string>
+    <string name="post_export_third_body">أكملت ثلاث عمليات تصدير. تتيح عملية شراء واحدة تصديرًا يدويًا غير محدود وجدولة التصدير. بلا اشتراك. تظل ملفاتك المصدّرة ملكًا لك.</string>
+    <string name="post_export_schedule_action">استكشاف التصدير اليومي</string>
+    <string name="post_export_upgrade_action">عرض الوصول مدى الحياة</string>
+    <string name="post_export_manual_action">متابعة التصدير اليدوي</string>
+    <string name="post_export_continue_free">المتابعة مجانًا</string>
 </resources>

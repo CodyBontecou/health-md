@@ -95,6 +95,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
 
     private static let sharedCapabilities: Set<String> = [
         "account.myself_lifetime_claim",
+            "purchase.free-export-journey",
         "export.daily-files",
         "export.sleep-summary",
         "export.activity-basics",

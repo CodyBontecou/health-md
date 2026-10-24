@@ -82,6 +82,7 @@ data class ExportUiState(
     val exportTotal: Int = 0,
     val exportProgressDate: LocalDate? = null,
     val lastResult: ExportResult? = null,
+    val postExportMilestone: Int? = null,
     val preview: ExportPreview? = null,
     val exportedFolderUri: String? = null,
     val healthConnectAvailable: Boolean = false,
@@ -213,6 +214,7 @@ class ExportViewModel @Inject constructor(
                         folderName = folderUri?.let { uri -> fileExportManager.getFolderDisplayName(uri) },
                         freeExportsRemaining = freeExports,
                         isPurchased = purchased,
+                        postExportMilestone = if (purchased) null else it.postExportMilestone,
                         firstHealthPermissionGrantDate = firstGrantDate,
                     )
                 }
@@ -605,8 +607,15 @@ class ExportViewModel @Inject constructor(
             )
 
             // Successful manual export actions consume one free-tier use.
+            var postExportMilestone: Int? = null
             if (ExportAccountingPolicy.shouldConsumeFreeExport(result, _uiState.value.isPurchased)) {
                 settingsRepository.recordFreeExportUse()
+                if (result.isFullSuccess) {
+                    postExportMilestone = FreemiumPolicy.guidanceMilestone(
+                        usedCount = settingsRepository.getFreeExportsUsed(),
+                        isUnlocked = _uiState.value.isPurchased,
+                    )
+                }
             }
 
             // Review prompts use their own counter, separate from free-tier quota. A Play
@@ -615,6 +624,7 @@ class ExportViewModel @Inject constructor(
                 settingsRepository.incrementSuccessfulExportCount()
                 val count = settingsRepository.getSuccessfulExportCount()
                 if (
+                    postExportMilestone == null &&
                     count >= ReviewPromptPolicy.MINIMUM_SUCCESSFUL_EXPORTS &&
                     reviewRequestState == ReviewRequestState.IDLE
                 ) {
@@ -644,6 +654,7 @@ class ExportViewModel @Inject constructor(
                 it.copy(
                     isExporting = false,
                     lastResult = presentationResult,
+                    postExportMilestone = postExportMilestone,
                     exportedFolderUri = if (presentationResult.artifactCount > 0) folderUri else null,
                     profileExecutionIssue = null,
                 )
@@ -773,6 +784,10 @@ class ExportViewModel @Inject constructor(
 
     fun dismissPreview() {
         _uiState.update { it.copy(preview = null) }
+    }
+
+    fun dismissPostExportGuidance() {
+        _uiState.update { it.copy(postExportMilestone = null) }
     }
 
     fun dismissResult() {

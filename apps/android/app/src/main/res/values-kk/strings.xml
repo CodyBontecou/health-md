@@ -529,7 +529,7 @@
     <string name="export_notification_background_permission_required">Жоспарланған экспортқа Health Connect фондық рұқсат қажет. Оны қосу үшін Health.md &gt; Кесте тармағын ашыңыз.</string>
     <string name="export_notification_unknown_error">Белгісіз қате</string>
     <string name="paywall_title">Health.md құлпын ашу</string>
-    <string name="paywall_subtitle">Сіз 10 тегін экспортты пайдаландыңыз</string>
+    <string name="paywall_subtitle">Сіз 5 тегін экспортты пайдаландыңыз</string>
     <string name="paywall_unlimited_exports">Шексіз экспорттар — мәңгілікке</string>
     <string name="paywall_scheduled_exports">Автоматты жоспарланған экспорттар</string>
     <string name="paywall_future_features">Барлық болашақ ерекшеліктер қосылған</string>
@@ -709,7 +709,7 @@
     <string name="export_source_shortcut">Таңбаша</string>
     <string name="export_source_remote">Қашықтан</string>
     <string name="schedule_unlock_required_title">Жоспарланған экспорттардың құлпын ашу</string>
-    <string name="schedule_unlock_required_body">Қолмен экспорттарға 10 тегін іске қосу кіреді. Автоматты жоспарланған экспорттар бір реттік өмір бойғы құлыпты ашумен бірге беріледі.</string>
+    <string name="schedule_unlock_required_body">Қолмен экспорттарға 5 тегін іске қосу кіреді. Автоматты жоспарланған экспорттар бір реттік өмір бойғы құлыпты ашумен бірге беріледі.</string>
     <string name="schedule_unlock_required_short">Жоспарланған экспортты қосу үшін Health.md құлпын ашыңыз.</string>
     <string name="export_folder_root_label">Экспорт қалтасы</string>
     <string name="history_clear_title">Экспорт тарихын тазалау керек пе?</string>
@@ -1383,4 +1383,12 @@
     <string name="agent_data_gateway_result_uploaded">Шлюзге жүктелді</string>
     <string name="export_target_gateway_configured_subtitle">Әр экспортты %1$s мекенжайына жүктеу</string>
     <string name="export_target_gateway_unconfigured_subtitle">Экспорттарды Agent Data шлюзіңізге жүктеу</string>
+    <string name="post_export_first_title">Алғашқы экспорт аяқталды</string>
+    <string name="post_export_first_body">Осы қадамдарды қайталамау үшін күнделікті экспортты орнатыңыз. Кесте өмір бойғы қолжетімділікті талап етеді; қолмен экспорт тегін лимитті пайдаланады.</string>
+    <string name="post_export_third_title">Денсаулық жазбаларын жалғастырыңыз</string>
+    <string name="post_export_third_body">Үш экспортты аяқтадыңыз. Бір реттік сатып алу шексіз қолмен экспорт пен кестені ашады. Жазылым жоқ. Экспортталған файлдар сіздікі болып қалады.</string>
+    <string name="post_export_schedule_action">Күнделікті экспортты көру</string>
+    <string name="post_export_upgrade_action">Өмір бойғы қолжетімділікті көру</string>
+    <string name="post_export_manual_action">Қолмен экспортты жалғастыру</string>
+    <string name="post_export_continue_free">Тегін жалғастыру</string>
 </resources>

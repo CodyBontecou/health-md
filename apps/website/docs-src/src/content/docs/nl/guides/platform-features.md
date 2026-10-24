@@ -81,7 +81,7 @@ Sommige gegevens worden bewust **niet als gelijkwaardig behandeld** tussen platf
 
 | Functie | iPhone / iPad | Mac | Android | Wear OS |
 |---|---|---|---|---|
-| Gratis laag | ✓ 10 handmatige of geplande exportacties | — | ✓ 10 handmatige exportacties | — |
+| Gratis laag | ✓ 5 handmatige of geplande exportacties | — | ✓ 5 handmatige exportacties | — |
 | Ontgrendeling | ✓ eenmalige aankoop voor levenslang (individueel / gezin) | ◐ dezelfde Apple-ontgrendeling | ✓ eenmalige aankoop voor levenslang, planning inbegrepen | — |
 | Privacy met lokale verwerking | ✓ standaard geen cloudkopie | ✓ | ✓ | △ gepland |
 | Verslag voor de zorgverlener (één PDF voor afspraken) | ✓ | — | ✓ | — |

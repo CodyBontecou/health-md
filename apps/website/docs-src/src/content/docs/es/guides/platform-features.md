@@ -81,7 +81,7 @@ Algunos datos deliberadamente **no se tratan como equivalentes** entre plataform
 
 | Función | iPhone / iPad | Mac | Android | Wear OS |
 |---|---|---|---|---|
-| Nivel gratuito | ✓ 10 acciones de exportación manuales o programadas | — | ✓ 10 acciones de exportación manuales | — |
+| Nivel gratuito | ✓ 5 acciones de exportación manuales o programadas | — | ✓ 5 acciones de exportación manuales | — |
 | Desbloqueo | ✓ compra vitalicia única (individual / familiar) | ◐ mismo desbloqueo de Apple | ✓ compra vitalicia única, con programación incluida | — |
 | Privacidad con procesamiento local | ✓ sin copia en la nube por defecto | ✓ | ✓ | △ previsto |
 | Informe para el médico (un PDF para las citas) | ✓ | — | ✓ | — |

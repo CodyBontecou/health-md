@@ -579,7 +579,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Unlock Health.md</string>
-    <string name="paywall_subtitle">You\'ve used your 10 free exports</string>
+    <string name="paywall_subtitle">You\'ve used your 5 free exports</string>
     <string name="paywall_unlimited_exports">Unlimited exports, forever</string>
     <string name="paywall_scheduled_exports">Automated scheduled exports</string>
     <string name="paywall_future_features">All future features included</string>
@@ -809,7 +809,7 @@
     <string name="export_source_shortcut">Shortcut</string>
     <string name="export_source_remote">Remote</string>
     <string name="schedule_unlock_required_title">Unlock scheduled exports</string>
-    <string name="schedule_unlock_required_body">Manual exports include 10 free runs. Automatic scheduled exports are included with the one-time lifetime unlock.</string>
+    <string name="schedule_unlock_required_body">Manual exports include 5 free runs. Automatic scheduled exports are included with the one-time lifetime unlock.</string>
     <string name="schedule_unlock_required_short">Unlock Health.md to enable scheduled exports.</string>
     <string name="export_folder_root_label">Export folder</string>
 
@@ -1492,4 +1492,12 @@
     <string name="myself_claim_store_unavailable">Google Play could not retrieve your purchase. Check your connection and Google Play account, then try again.</string>
     <string name="myself_claim_verification_failed">Your purchase could not be verified. Check your connection and try again. If it continues, contact support; no access has been claimed.</string>
     <string name="myself_claim_browser_unavailable">The claim browser could not open. Enable a browser, then verify your purchase again to continue.</string>
+    <string name="post_export_first_title">Your first export is complete</string>
+    <string name="post_export_first_body">Make your next export easier. Explore a daily schedule to keep saving new health notes without repeating these steps. Scheduled exports require lifetime access; manual exports use your free allowance.</string>
+    <string name="post_export_third_title">Keep your health notes going</string>
+    <string name="post_export_third_body">You\'ve completed three exports. Unlock once for unlimited manual exports and scheduling. No subscription. Your exported files stay yours.</string>
+    <string name="post_export_schedule_action">Explore daily exports</string>
+    <string name="post_export_upgrade_action">See lifetime access</string>
+    <string name="post_export_manual_action">Keep exporting manually</string>
+    <string name="post_export_continue_free">Continue free</string>
 </resources>

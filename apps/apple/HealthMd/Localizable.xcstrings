@@ -46113,7 +46113,7 @@
         }
       }
     },
-    "Each run exports the profile's metrics and formats to its own destination. A run consumes one of the 10 free export actions unless you have Full Access." : {
+    "Each run exports the profile's metrics and formats to its own destination. A run consumes one of the 5 free export actions unless you have Full Access." : {
 
     },
     "Edit `SKILLS_DIR` to match the folder your agent reads. The app installer replaces the Health.md skill folder; the shell command overwrites only `SKILL.md`." : {

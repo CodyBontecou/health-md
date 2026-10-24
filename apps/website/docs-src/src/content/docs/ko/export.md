@@ -70,7 +70,7 @@ description: "내보내기 탭은 기본 작업 공간입니다. HealthKit과 �
 
 <div class="callout">
 <strong>잠금 해제 후 이용할 수 있는 기능.</strong>
-<p style="margin-top:6px;">Apple 플랫폼의 무료 한도는 수동 또는 예약 내보내기 작업 10회에 함께 적용됩니다. Full Access는 이 한도를 없애고 Mac 대상 워크플로와 단축어를 잠금 해제합니다. Android는 수동 작업 10회만 무료이며 예약에는 평생 구매가 필요합니다. Apple 구매 정보는 <a href="/ko/docs/paywall/">결제 화면 페이지</a>를 확인하세요.</p>
+<p style="margin-top:6px;">Apple 플랫폼의 무료 한도는 수동 또는 예약 내보내기 작업 5회에 함께 적용됩니다. Full Access는 이 한도를 없애고 Mac 대상 워크플로와 단축어를 잠금 해제합니다. Android는 수동 작업 5회만 무료이며 예약에는 평생 구매가 필요합니다. Apple 구매 정보는 <a href="/ko/docs/paywall/">결제 화면 페이지</a>를 확인하세요.</p>
 </div>
 
 ## 관련 항목

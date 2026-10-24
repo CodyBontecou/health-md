@@ -551,7 +551,7 @@
     <string name="export_notification_unknown_error">अज्ञात त्रुटि</string>
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md अनलॉक करें</string>
-    <string name="paywall_subtitle">आपने अपने 10 निःशुल्क निर्यात का उपयोग किया है</string>
+    <string name="paywall_subtitle">आपने अपने 5 निःशुल्क निर्यात का उपयोग किया है</string>
     <string name="paywall_unlimited_exports">असीमित निर्यात, हमेशा के लिए</string>
     <string name="paywall_scheduled_exports">स्वचालित निर्धारित निर्यात</string>
     <string name="paywall_future_features">सभी भविष्य की सुविधाएं शामिल हैं</string>
@@ -747,7 +747,7 @@
     <string name="export_source_shortcut">शॉर्टकट</string>
     <string name="export_source_remote">रिमोट</string>
     <string name="schedule_unlock_required_title">निर्धारित निर्यात अनलॉक करें</string>
-    <string name="schedule_unlock_required_body">मैन्युअल निर्यात 10 बार मुफ़्त चलाए जा सकते हैं। एकमुश्त लाइफ़टाइम अनलॉक में स्वचालित निर्धारित निर्यात शामिल हैं।</string>
+    <string name="schedule_unlock_required_body">मैन्युअल निर्यात 5 बार मुफ़्त चलाए जा सकते हैं। एकमुश्त लाइफ़टाइम अनलॉक में स्वचालित निर्धारित निर्यात शामिल हैं।</string>
     <string name="schedule_unlock_required_short">शेड्यूल किए गए निर्यात चालू करने के लिए Health.md अनलॉक करें।</string>
     <string name="export_folder_root_label">निर्यात फ़ोल्डर</string>
     <string name="history_clear_title">निर्यात इतिहास साफ़ करें?</string>
@@ -1416,4 +1416,12 @@
     <string name="agent_data_gateway_result_uploaded">गेटवे पर अपलोड हो गया</string>
     <string name="export_target_gateway_configured_subtitle">प्रत्येक निर्यात %1$s पर अपलोड करें</string>
     <string name="export_target_gateway_unconfigured_subtitle">अपने Agent Data गेटवे पर निर्यात अपलोड करें</string>
+    <string name="post_export_first_title">आपका पहला निर्यात पूरा हो गया</string>
+    <string name="post_export_first_body">इन चरणों को दोहराने से बचने के लिए दैनिक निर्यात सेट करें। शेड्यूल के लिए लाइफ़टाइम एक्सेस चाहिए; मैन्युअल निर्यात आपका निःशुल्क कोटा उपयोग करते हैं।</string>
+    <string name="post_export_third_title">अपने स्वास्थ्य नोट्स जारी रखें</string>
+    <string name="post_export_third_body">आपने तीन निर्यात पूरे कर लिए हैं। एक बार की खरीद से असीमित मैन्युअल निर्यात और शेड्यूल मिलते हैं। कोई सदस्यता नहीं। निर्यात की गई फ़ाइलें आपकी ही रहती हैं।</string>
+    <string name="post_export_schedule_action">दैनिक निर्यात देखें</string>
+    <string name="post_export_upgrade_action">लाइफ़टाइम एक्सेस देखें</string>
+    <string name="post_export_manual_action">मैन्युअल निर्यात जारी रखें</string>
+    <string name="post_export_continue_free">निःशुल्क जारी रखें</string>
 </resources>

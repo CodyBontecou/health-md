@@ -11,7 +11,7 @@
 
 Onboarding walks new iPhone users through the minimum setup needed to export Apple Health data. The current flow has five non-blocking steps: welcome, Health access, sample output plus the optional Obsidian plugin link, folder setup, and ready. Health access and folder selection can both be skipped and repaired later.
 
-The unlock paywall no longer occupies an onboarding step. After onboarding opens the first real export preview, an eligible locked user receives a one-time, dismissible offer after that preview closes. Separate soft prompts can appear after the 3rd and 7th completed free exports; the hard quota remains 10 successful export actions.
+The unlock paywall no longer occupies an onboarding step. After onboarding opens the first real export preview, an eligible locked user receives a one-time, dismissible offer after that preview closes. After the first completed free export, a dismissible guide opens the Schedule tab for review without enabling a schedule. After the third, a dismissible Lifetime offer shows two free actions remaining. The hard quota is five successful export actions. Existing usage is retained; users who already used five or more actions have no free actions remaining.
 
 ## Who it is for
 
@@ -62,7 +62,7 @@ Free export allowance: 10 successful actions
 | Export asks for a folder | Folder setup was skipped or access was revoked | Use the Export vault badge to choose the intended Files folder. |
 | Health access is not connected | Permission was skipped, denied, or limited | Review Apple Health → Apps → Health.md and enable the intended reads. |
 | A paywall appears after preview | One-time post-onboarding offer | Dismiss it to continue with free exports or choose a Lifetime option. |
-| A reminder appears after the 3rd or 7th export | Non-blocking value-moment prompt | Dismiss it; remaining free exports are unchanged. |
+| Guidance appears after the 1st or 3rd export | Scheduling guide, then a Lifetime offer | Dismiss it; remaining free exports are unchanged. |
 | No data appears | Source data or permission is missing for the requested range | Check Apple Health, Health.md permission, and the date owner for overnight sleep. |
 
 ## Video outline
