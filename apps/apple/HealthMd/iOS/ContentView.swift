@@ -748,7 +748,8 @@ struct ContentView: View {
             target: exportTargetSelection,
             hasLocalFolder: vaultManager.vaultURL != nil || vaultManager.requiresVaultReselection,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
-            apiEndpointConfigured: apiExportSettings.isConfigured
+            apiEndpointConfigured: apiExportSettings.isConfigured,
+            agentDataGatewayConfigured: agentDataGatewaySettings.isConfigured
         )
     }
 

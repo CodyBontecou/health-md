@@ -34,6 +34,7 @@ SHARDS = (
         "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
         "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
         "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+        "ExportJourneyUITests/testConfiguredGateway_admitsExportWithoutLocalFolder",
         "ExportJourneyUITests/testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens",
         "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
         "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
