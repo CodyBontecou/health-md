@@ -174,7 +174,7 @@ struct iPadSettingsView: View {
                         .foregroundStyle(Color.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.")
+                    Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.")
                         .font(Typography.caption())
                         .foregroundStyle(Color.textMuted)
                         .fixedSize(horizontal: false, vertical: true)

@@ -9546,60 +9546,60 @@
         }
       }
     },
-    "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking." : {
+    "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Analysen enthalten niemals Gesundheitswerte, Messwertnamen, Datumsangaben zu Gesundheitsdaten, exportierte Dateien, Pfade, Peer-Namen oder Zugangsdaten. Sie werden nicht für Werbung oder appübergreifendes Tracking verwendet."
+            "value" : "Analysen enthalten niemals Gesundheitswerte, Messwertnamen, Gesundheitsdaten, exportierte Dateien, Pfade, Peer-Namen oder Zugangsdaten. Auf iPhone und iPad werden Apple Ads-Kampagnenkennungen mit Kaufergebnissen verknüpft, um die Konversion zu messen. Es werden keine Gesundheitsdaten oder Kaufereignisse an Apple Ads gesendet."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Las analíticas nunca incluyen valores de salud, nombres de métricas, fechas de salud, archivos exportados, rutas, nombres de dispositivos vinculados ni credenciales. No se usan para publicidad ni seguimiento entre apps."
+            "value" : "Las analíticas nunca incluyen valores de salud, nombres de métricas, fechas de salud, archivos exportados, rutas, nombres de dispositivos vinculados ni credenciales. En iPhone y iPad, los identificadores de campañas de Apple Ads se vinculan a los resultados de compra para medir la conversión. No se envían datos de salud ni eventos de compra a Apple Ads."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les analyses n’incluent jamais de valeurs de santé, noms de métriques, dates de santé, fichiers exportés, chemins, noms d’appareils associés ou identifiants de connexion. Elles ne servent ni à la publicité ni au suivi entre apps."
+            "value" : "Les analyses ne contiennent jamais de valeurs de santé, noms de métriques, dates de santé, fichiers exportés, chemins, noms d’appareils liés ou identifiants de connexion. Sur iPhone et iPad, les identifiants de campagne Apple Ads sont associés aux résultats d’achat pour mesurer la conversion. Aucune donnée de santé ni événement d’achat n’est envoyé à Apple Ads."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le analisi non includono mai valori sanitari, nomi delle metriche, date sanitarie, file esportati, percorsi, nomi di dispositivi associati o credenziali. Non vengono usate per pubblicità o tracciamento tra app."
+            "value" : "Le analisi non includono mai valori sanitari, nomi di metriche, date sanitarie, file esportati, percorsi, nomi di dispositivi collegati o credenziali. Su iPhone e iPad, gli identificatori delle campagne Apple Ads vengono collegati agli esiti degli acquisti per misurare la conversione. Nessun dato sanitario o evento di acquisto viene inviato a Apple Ads."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "分析には、健康値、指標名、健康データの日付、エクスポートファイル、パス、接続先名、認証情報は一切含まれません。広告やアプリ横断トラッキングには使用しません。"
+            "value" : "分析には健康の値、指標名、健康データの日付、エクスポートしたファイル、パス、接続先名、認証情報は含まれません。iPhoneとiPadでは、Apple AdsのキャンペーンIDを購入結果と関連付けてコンバージョンを測定します。健康データや購入イベントをApple Adsへ送信することはありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "분석에는 건강 수치, 지표 이름, 건강 날짜, 내보낸 파일, 경로, 연결된 기기 이름 또는 인증 정보가 절대 포함되지 않습니다. 광고나 앱 간 추적에는 사용되지 않습니다."
+            "value" : "분석에는 건강 수치, 지표 이름, 건강 데이터 날짜, 내보낸 파일, 경로, 연결 기기 이름 또는 인증 정보가 포함되지 않습니다. iPhone과 iPad에서는 Apple Ads 캠페인 식별자를 구매 결과와 연결하여 전환율을 측정합니다. 건강 데이터나 구매 이벤트는 Apple Ads로 전송되지 않습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Analyses bevatten nooit gezondheidswaarden, namen van statistieken, gezondheidsdatums, geëxporteerde bestanden, paden, namen van gekoppelde apparaten of inloggegevens. Ze worden niet gebruikt voor advertenties of tracking tussen apps."
+            "value" : "Analyses bevatten nooit gezondheidswaarden, meetnamen, gezondheidsdatums, geëxporteerde bestanden, paden, namen van gekoppelde apparaten of inloggegevens. Op iPhone en iPad worden Apple Ads-campagne-ID’s aan aankoopresultaten gekoppeld om conversie te meten. Er worden geen gezondheidsgegevens of aankoopgebeurtenissen naar Apple Ads gestuurd."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "As análises nunca incluem valores de saúde, nomes de métricas, datas de saúde, arquivos exportados, caminhos, nomes de dispositivos conectados ou credenciais. Elas não são usadas para publicidade nem rastreamento entre apps."
+            "value" : "As análises nunca incluem valores de saúde, nomes de métricas, datas de saúde, arquivos exportados, caminhos, nomes de dispositivos vinculados ou credenciais. No iPhone e iPad, identificadores de campanhas do Apple Ads são associados aos resultados de compras para medir a conversão. Nenhum dado de saúde ou evento de compra é enviado ao Apple Ads."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "分析绝不包含健康数值、指标名称、健康日期、导出文件、路径、已连接设备名称或凭据，也不会用于广告或跨应用跟踪。"
+            "value" : "分析绝不包含健康数值、指标名称、健康日期、导出的文件、路径、连接设备名称或凭据。在 iPhone 和 iPad 上，Apple Ads 广告系列标识符会与购买结果关联，以衡量转化率。健康数据和购买事件不会发送给 Apple Ads。"
           }
         }
       }

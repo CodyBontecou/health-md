@@ -231,7 +231,7 @@ test("privacy policy uses the landing design and describes the current app surfa
   assert.match(privacyPolicy, /<header class="site-header">/);
   assert.match(privacyPolicy, /<footer class="site-footer">/);
   assert.match(privacyPolicy, /Privacy,<br>in plain language\./);
-  assert.match(privacyPolicy, /Last updated: August 6, 2026/);
+  assert.match(privacyPolicy, /Last updated: 2026-10-24/);
   assert.match(privacyPolicy, /Scheduled Apple exports:[\s\S]*?APNs token/);
   assert.match(privacyPolicy, /Lossless files and direct results may preserve exact timestamps/);
   assert.match(privacyPolicy, /Android medical records \(FHIR\)/);
@@ -275,9 +275,11 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
   assert.match(privacyPolicy, /pseudonymous rather than anonymous/);
   assert.match(privacyPolicy, /collects these limited product events automatically/);
   assert.match(privacyPolicy, /retained for no more than 13 months/);
-  assert.match(privacyPolicy, /not used for advertising, fingerprinting, or cross-app tracking/);
+  assert.match(privacyPolicy, /not used for ad targeting, fingerprinting, or cross-app tracking/);
   assert.match(privacyPolicy, /never include HealthKit or Health Connect values or identifiers, metric names, health dates/);
   assert.match(privacyPolicy, /health records and exported content cannot be represented in an analytics payload/);
+  assert.match(privacyPolicy, /Apple AdServices resolves an Apple Ads attribution token directly with Apple/);
+  assert.match(privacyPolicy, /Failed lookups remain unknown, not organic/);
   assert.match(privacyPolicy, /credentials or tokens/);
   assert.doesNotMatch(publicCopy, /\bno analytics\b/i);
   assert.doesNotMatch(privacyPolicy, /opt out|turn(?:ing)? (?:it|analytics) off|reset (?:the )?(?:random )?analytics identifier/i);

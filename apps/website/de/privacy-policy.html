@@ -47,7 +47,7 @@
       <div class="legal-hero-inner">
         <p class="legal-eyebrow">Rechtliches · Datenschutz</p>
         <h1 id="privacy-title">Datenschutz,<br>klar erklärt.</h1>
-        <p class="legal-updated">Zuletzt aktualisiert: 6. August 2026</p>
+        <p class="legal-updated">Zuletzt aktualisiert: 2026-10-24</p>
         <p class="legal-lede">Health.md überträgt sensible Gesundheitsdaten, ohne eine Health.md-Cloud für Gesundheitsdaten aufzubauen. Dein Gerät liest die von dir freigegebenen Datensätze, und du entscheidest, wohin jeder Export oder jede direkte Antwort gesendet wird.</p>
 
         <div class="legal-promise" role="list" aria-label="Datenschutzgrundsätze">
@@ -102,7 +102,7 @@
           <div class="policy-note">
             <p><strong>Hinweis zur Übersetzung:</strong> Diese deutsche Übersetzung dient deiner Information. Bei Abweichungen ist die <a href="../privacy-policy.html" hreflang="en">englische Datenschutzerklärung</a> nur in dem Umfang maßgeblich, in dem das anwendbare Recht dies zulässt; zwingende Verbraucherrechte werden dadurch nicht eingeschränkt.</p>
             <p><strong>Kurz gesagt:</strong> Health.md erhebt oder speichert keine Gesundheitsdaten auf Health.md-Servern. Gesundheitsdaten werden auf deinen Geräten verarbeitet und nur an die Ziele oder Clients gesendet, die du auswählst.</p>
-            <p>Wir erheben automatisch begrenzte eigene Produktanalyse- und Kampagnendaten. Diese Systeme sind pseudonym, enthalten keine Gesundheitsdatensätze oder Exporte und werden nicht für Werbung verwendet.</p>
+            <p>Wir erheben automatisch begrenzte eigene Produktanalyse- und Kampagnendaten. Diese Systeme sind pseudonym, enthalten keine Gesundheitsdatensätze oder Exporte und dienen der Produkt- und Kampagnenmessung.</p>
           </div>
         </section>
 
@@ -163,12 +163,13 @@
           <p>Je nach Plattform und Ereignis kann eine akzeptierte Payload eine zufällige App-Installations-UUID, eine zufällige Ereignis-UUID, den Ereignisnamen, App-Version, Build-Nummer, Plattform, Experiment oder Variante, Onboarding-Schritt oder ausdrückliches Überspringen, begrenzte Anzahlen kostenloser Exporte, Exportzielkategorie, Anzahl der Formate, grobe Klassen für Metrikanzahl und Datumsspanne, Paywall-Kontext, Produktkennung, Ergebnis von Kauf oder Wiederherstellung und eine allgemeine Autorisierungs- oder Fehlerkategorie enthalten.</p>
           <p>Die Installations-UUID bleibt für diese App-Installation bestehen; die Daten sind daher <strong>pseudonym und nicht anonym</strong>. Sie wird zufällig erzeugt und nicht aus deinem Namen, Konto, einer Gesundheitskennung, einer Gerätehardwarekennung, Android ID oder Advertising ID abgeleitet.</p>
           <p>Produktanalysen enthalten <strong>niemals HealthKit- oder Health Connect-Werte oder -Kennungen, Metriknamen oder Gesundheitsdatumsangaben</strong>, Medikamente, Workouts, Exportinhalte, eingegebene Abfrageergebnisse, Ordner- oder Vault-Namen, Dateipfade, Peer- oder Gerätenamen, Kontodaten, Preise, <strong>Anmeldedaten oder Tokens</strong>, Texteingaben, unverarbeitete Referrer, vollständige User-Agent-Strings oder gespeicherte IP-Adressen. Unbekannte Ereignisse, Eigenschaften und Eigenschaftswerte werden abgewiesen. Die öffentlichen Zulassungslisten für Client und Worker sind so gestaltet, dass <strong>Gesundheitsdatensätze und exportierte Inhalte nicht in einer Analyse-Payload dargestellt werden können</strong>.</p>
-          <p>Diese Ereignisse werden nicht für Werbung, Fingerprinting oder appübergreifendes Tracking verwendet und nicht verkauft oder an Werbetreibende weitergegeben. Validierte Datensätze werden höchstens 13 Monate aufbewahrt und durch eine automatische tägliche Bereinigung gelöscht. Cloudflare verarbeitet nach seinen eigenen Bedingungen weiterhin gewöhnliche Verbindungsinformationen.</p>
+          <p>Diese Ereignisse werden nicht für Werbetargeting, Fingerprinting oder appübergreifendes Tracking verwendet und nicht verkauft oder an Werbetreibende weitergegeben. Validierte Datensätze werden höchstens 13 Monate aufbewahrt und durch eine automatische tägliche Bereinigung gelöscht. Cloudflare verarbeitet nach seinen eigenen Bedingungen weiterhin gewöhnliche Verbindungsinformationen.</p>
         </section>
 
         <section id="campaigns">
           <h2>Eigene Kampagnenattribution</h2>
           <p>Health.md verwendet eigene Kurzlinks wie <code>healthmd.app/v/yt-csv-001</code>, um die aggregierte Kampagnenleistung ohne Attributions-SDK eines Drittanbieters zu messen.</p>
+          <p>Auf iPhone und iPad fragt AdServices die Apple Ads-Attribution direkt bei Apple ab. Das temporäre Token wird weder gespeichert noch an Health.md gesendet. Nur Kampagnen-, Anzeigengruppen- und Keyword-IDs, Status, Klick oder Impression und Download oder erneuter Download werden mit der zufälligen Installations-ID und Kaufergebnissen verknüpft. Kein IDFA oder Attribution-SDK eines Drittanbieters wird verwendet. Gesundheitsdaten und Kaufereignisse gehen niemals an Apple Ads. Fehler bleiben unbekannt statt organisch.</p>
           <ul>
             <li>Der Weiterleitungsdienst kann Kampagnen-Token und Slug, Plattform und inhaltlichen Ansatz, eine grobe Ziel- oder Clientkategorie, den verweisenden Hostnamen, sofern übermittelt, einen groben Ländercode und die Zeit erfassen.</li>
             <li>Der gespeicherte Klickdatensatz enthält weder IP-Adresse noch vollständigen User-Agent, Cookie, Cloudflare-Anfrage-ID oder Fingerabdruck.</li>
