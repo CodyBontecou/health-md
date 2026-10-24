@@ -286,7 +286,7 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertTrue(runner.contains("run-owned-ui.py"))
         XCTAssertTrue(content.contains("Qualify SDK27 compiler before native slice build"))
         XCTAssertTrue(content.contains("apple-shared-core-v2-"))
-        XCTAssertEqual(content.components(separatedBy: "cmp build/logs/history-sdk27-receipt.txt").count - 1, 4)
+        XCTAssertEqual(content.components(separatedBy: "python3 scripts/compare-history-sdk27-receipts.py").count - 1, 4)
         let qualifier = try source("scripts/qualify-history-authorization-sdk27.sh")
         XCTAssertTrue(qualifier.contains("Xcode 27.0\\nBuild version 27A266a"))
         XCTAssertTrue(qualifier.contains("swiftlang-6.4.0.34.1 clang-2100.3.34.1"))
