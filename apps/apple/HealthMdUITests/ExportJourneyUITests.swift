@@ -513,9 +513,10 @@ final class ExportJourneyUITests: XCTestCase {
         let json = app.switches["JSON"]
         scrollDatePresetIntoView(json, in: app)
         XCTAssertTrue(json.exists && json.isHittable)
-        if (json.value as? String) != "1" { json.tap() }
+        let jsonValue = json.value as? String
+        if jsonValue != "1" && jsonValue != "Enabled" { json.tap() }
         let selectedJSON = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "value == '1'"), object: json
+            predicate: NSPredicate(format: "value == '1' OR value == 'Enabled'"), object: json
         )
         XCTAssertEqual(XCTWaiter.wait(for: [selectedJSON], timeout: 5), .completed)
 
