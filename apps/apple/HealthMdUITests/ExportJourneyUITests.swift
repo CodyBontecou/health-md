@@ -165,6 +165,48 @@ final class ExportJourneyUITests: XCTestCase {
         app.launch()
         addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
+        // Match normal setup: acquire the vault through Files before exporting.
+        // An unselected app-container path can make a cold provider fall back to
+        // its root even though the requested directory exists. Do not open the
+        // export browser during setup; its first presentation stays under test.
+        let vaultBadge = app.buttons[UITestLaunchHelper.Export.vaultBadge]
+        XCTAssertTrue(vaultBadge.waitForExistence(timeout: 5))
+        vaultBadge.tap()
+        let openFolder = app.buttons["Open"].firstMatch
+        guard openFolder.waitForExistence(timeout: 30) else {
+            XCTFail("Vault setup must present the real folder picker")
+            return
+        }
+        app.buttons["Browse"].firstMatch.tap()
+        let setupFiles = app.collectionViews["File View"]
+        guard setupFiles.waitForExistence(timeout: 10) else {
+            XCTFail("Vault setup must render the local Files provider")
+            return
+        }
+        let testVault = setupFiles.staticTexts["TestVault"].firstMatch
+        if !testVault.waitForExistence(timeout: 2) {
+            let appContainer = setupFiles.cells.containing(.staticText, identifier: "Health.md").firstMatch
+            guard appContainer.waitForExistence(timeout: 5) else {
+                let hierarchy = XCTAttachment(string: app.debugDescription)
+                hierarchy.name = "Synthetic vault selection hierarchy"
+                hierarchy.lifetime = .keepAlways
+                add(hierarchy)
+                XCTFail("Files must expose the UI-test app's synthetic document container")
+                return
+            }
+            appContainer.tap()
+        }
+        guard testVault.waitForExistence(timeout: 10) else {
+            XCTFail("Files must expose the synthetic TestVault folder")
+            return
+        }
+        testVault.tap()
+        openFolder.tap()
+        let pickerDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: openFolder
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [pickerDismissed], timeout: 10), .completed)
+
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
