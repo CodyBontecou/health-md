@@ -98,7 +98,10 @@ The next prepared iOS version is **3.4.4**, build **202610071219**, selected usi
 `asc builds next-build-number` across processed and in-flight iOS builds. Recheck
 that number before building if another upload occurs. Version/build settings,
 changelog, in-app notes, English fastlane notes and all ten canonical localized
-store descriptions/release notes are prepared together.
+store descriptions/release notes are prepared together. App Store Connect draft
+`3.4.4` (`6248152c-287e-48b6-8340-a8737f3b2738`) has been created and all ten
+localized descriptions and release notes applied. No build has been uploaded and
+no review submission has been made.
 
 Before submission:
 
@@ -110,7 +113,7 @@ Before submission:
   `PrivacyInfo.xcprivacy`. The CLI API key alone cannot update these answers;
   `asc web privacy pull` reported no cached Apple web session during preparation.
   Preserve the other current declarations.
-- Apply the canonical 3.4.4 localized metadata, run `asc validate`, and use the
+- Recheck the canonical 3.4.4 localized metadata, run `asc validate`, and use the
   existing `Apple Release iOS` workflow with the draft release tag. Keep the
   GitHub Release in draft while Apple reviews the app.
 - After release, verify a real Apple Ads acquisition and purchase. Production
