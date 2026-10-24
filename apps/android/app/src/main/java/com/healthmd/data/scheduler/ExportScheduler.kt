@@ -16,6 +16,7 @@ import androidx.work.await
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
@@ -626,11 +627,14 @@ class ExportScheduler @Inject constructor(
     private suspend fun destinationFingerprint(
         settings: ExportSettings,
         target: ExportTarget,
-    ): String? = if (target == ExportTarget.API_ENDPOINT) {
-        apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
-            ?: throw IllegalStateException("Scheduled API destination is not configured")
-    } else {
-        null
+    ): String? = when (target) {
+        ExportTarget.API_ENDPOINT ->
+            apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
+                ?: throw IllegalStateException("Scheduled API destination is not configured")
+        ExportTarget.AGENT_DATA_GATEWAY ->
+            AgentDataGatewayEndpoint.fingerprint(settings.agentDataGatewayUrl)
+                ?: throw IllegalStateException("Scheduled gateway destination is not configured")
+        ExportTarget.DEVICE_FOLDER -> null
     }
 
     private suspend fun armOccurrence(occurrence: ScheduledExportOccurrence) {
@@ -711,7 +715,9 @@ class ExportScheduler @Inject constructor(
     private suspend fun enqueueExport(admission: ScheduledExportAdmission) {
         val occurrence = admission.occurrence
         val constraints = Constraints.Builder().apply {
-            if (occurrence.configuration.target == ExportTarget.API_ENDPOINT) {
+            if (occurrence.configuration.target == ExportTarget.API_ENDPOINT ||
+                occurrence.configuration.target == ExportTarget.AGENT_DATA_GATEWAY
+            ) {
                 setRequiredNetworkType(NetworkType.CONNECTED)
             }
         }.build()

@@ -2169,15 +2169,14 @@ final class VaultManager: ObservableObject {
         _ url: URL,
         healthSubfolder: String
     ) throws {
-        let standardized = url.standardizedFileURL
         let containerRoots = [
             FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
             FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
             FileManager.default.temporaryDirectory
-        ].compactMap { $0?.standardizedFileURL.path }
-        guard containerRoots.contains(where: {
-            standardized.path == $0 || standardized.path.hasPrefix($0 + "/")
-        }) else {
+        ].compactMap { $0 }
+        // iOS can expose the same container through /var and /private/var.
+        // Compare resolved path components while retaining the root boundary.
+        guard let standardized = AppContainerStagingRoot.validated(url, allowedRoots: containerRoots) else {
             throw ExportError.accessDenied
         }
         try FileManager.default.createDirectory(

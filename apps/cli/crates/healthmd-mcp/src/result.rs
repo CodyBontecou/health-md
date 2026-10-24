@@ -36,8 +36,13 @@ pub fn query_tool_result(
     if !is_error && valid_query_result(&value) {
         let pages = value.get("pages").and_then(Value::as_array);
         let pages = pages.map_or_else(|| vec![&value], |pages| pages.iter().collect());
-        let messages: std::collections::BTreeSet<_> =
-            pages.into_iter().map(history_disclosure).collect();
+        // Grouped retained Agent Data responses use their own receipt contract;
+        // they must not acquire a direct-device capture-history disclosure.
+        let messages: std::collections::BTreeSet<_> = pages
+            .into_iter()
+            .filter(|page| page["schema"] == "healthmd.query_response")
+            .map(history_disclosure)
+            .collect();
         for message in messages {
             additional.push(json!({"type": "text", "text": message}));
         }
