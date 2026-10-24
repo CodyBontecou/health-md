@@ -39,6 +39,26 @@
   ],
   "capabilities": [
     {
+      "id": "apple.ads-purchase-attribution",
+      "name": "Apple Ads purchase attribution",
+      "classification": "apple_only",
+      "summary": "Measure campaign-to-purchase conversion using AdServices campaign dimensions and pseudonymous install-local purchase outcomes.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Apple AdServices attributes App Store acquisitions on iOS/iPadOS. Google Play Install Referrer is a separate provider and does not expose Apple Ads campaign claims."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/experiments/apple-ads-purchase-attribution.md",
+        "apps/android/docs/onboarding-analytics.md"
+      ]
+    },
+    {
       "id": "diagnostics.local_bundle",
       "name": "Local diagnostic events and reviewed bundles",
       "classification": "shared",

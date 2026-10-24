@@ -146,6 +146,7 @@ class ProductCapabilityManifestTest {
         )
 
         val appleCapabilities = setOf(
+            "apple.ads-purchase-attribution",
             "apple.lossless-healthkit-archive",
             "apple.medication-dose-events",
             "apple.state-of-mind",
