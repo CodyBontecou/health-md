@@ -340,7 +340,7 @@ jobs:
       - name: Verify SDK27 consumer provenance (iOS)
         run: |
           bash scripts/qualify-history-authorization-sdk27.sh
-          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -376,7 +376,7 @@ jobs:
           xcrun lipo -verify_arch arm64 "$app/HealthMd"
           {
             echo "SOURCE_SHA=$(git rev-parse HEAD)"
-            echo "SOURCE_TREE=$(git rev-parse HEAD^{tree})"
+            echo "SOURCE_TREE=$(git rev-parse 'HEAD^{tree}')"
             echo "PURPOSE=unsigned-device-QA-only"
             xcodebuild -version
             xcrun --sdk iphoneos --show-sdk-version
@@ -524,7 +524,7 @@ jobs:
       - name: Verify SDK27 consumer provenance (macOS)
         run: |
           bash scripts/qualify-history-authorization-sdk27.sh
-          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -555,7 +555,7 @@ jobs:
           mkdir -p build/macos-qa
           {
             echo "SOURCE_SHA=$(git rev-parse HEAD)"
-            echo "SOURCE_TREE=$(git rev-parse HEAD^{tree})"
+            echo "SOURCE_TREE=$(git rev-parse 'HEAD^{tree}')"
             echo "PURPOSE=tested-macOS-QA-only"
             xcodebuild -version
             xcrun --sdk macosx --show-sdk-version
@@ -688,7 +688,7 @@ jobs:
       - name: Verify SDK27 consumer provenance (UI)
         run: |
           bash scripts/qualify-history-authorization-sdk27.sh
-          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -801,7 +801,7 @@ jobs:
       - name: Verify SDK27 consumer provenance (UI)
         run: |
           bash scripts/qualify-history-authorization-sdk27.sh
-          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
