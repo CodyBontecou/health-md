@@ -70,7 +70,7 @@ description: "「エクスポート」タブは主要な操作画面です。Hea
 
 <div class="callout">
 <strong>ロック解除後の動作</strong>
-<p style="margin-top:6px;">Appleプラットフォームの無料枠は、手動またはスケジュールによる10回のエクスポート操作に共通です。Full Accessではこの上限がなくなり、Mac送信先ワークフローとショートカットも利用できます。Androidは手動操作10回のみ無料で、スケジュールには買い切りの解除が必要です。Appleでの購入は<a href="/ja/docs/paywall/">ペイウォールのページ</a>を参照してください。</p>
+<p style="margin-top:6px;">Appleプラットフォームの無料枠は、手動またはスケジュールによる5回のエクスポート操作に共通です。Full Accessではこの上限がなくなり、Mac送信先ワークフローとショートカットも利用できます。Androidは手動操作5回のみ無料で、スケジュールには買い切りの解除が必要です。Appleでの購入は<a href="/ja/docs/paywall/">ペイウォールのページ</a>を参照してください。</p>
 </div>
 
 ## 関連項目

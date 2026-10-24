@@ -374,7 +374,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Desbloquear Health.md</string>
-    <string name="paywall_subtitle">Você usou suas 10 exportações gratuitas</string>
+    <string name="paywall_subtitle">Você usou suas 5 exportações gratuitas</string>
     <string name="paywall_unlimited_exports">Exportações ilimitadas, para sempre</string>
     <string name="paywall_scheduled_exports">Exportações agendadas automatizadas</string>
     <string name="paywall_future_features">Todos os recursos futuros inclusos</string>
@@ -786,7 +786,7 @@
     <string name="export_source_shortcut">Atalho</string>
     <string name="export_source_remote">Remoto</string>
     <string name="schedule_unlock_required_title">Desbloqueie as exportações agendadas</string>
-    <string name="schedule_unlock_required_body">As exportações manuais incluem 10 execuções grátis. As exportações automáticas agendadas estão incluídas no desbloqueio vitalício com pagamento único.</string>
+    <string name="schedule_unlock_required_body">As exportações manuais incluem 5 execuções grátis. As exportações automáticas agendadas estão incluídas no desbloqueio vitalício com pagamento único.</string>
     <string name="schedule_unlock_required_short">Desbloqueie o Health.md para ativar exportações agendadas.</string>
     <string name="export_folder_root_label">Pasta de exportação</string>
     <string name="history_clear_title">Limpar histórico de exportação?</string>
@@ -1470,4 +1470,12 @@
     <string name="myself_claim_store_unavailable">O Google Play não conseguiu obter sua compra. Verifique a conexão e a conta do Google Play e tente novamente.</string>
     <string name="myself_claim_verification_failed">Não foi possível verificar sua compra. Confira a conexão e tente novamente. Se continuar, contate o suporte; nenhum acesso foi resgatado.</string>
     <string name="myself_claim_browser_unavailable">Não foi possível abrir o navegador. Ative um navegador e verifique a compra novamente.</string>
+    <string name="post_export_first_title">Sua primeira exportação está concluída</string>
+    <string name="post_export_first_body">Configure exportações diárias para não repetir estas etapas. O agendamento exige acesso vitalício; as exportações manuais usam sua cota gratuita.</string>
+    <string name="post_export_third_title">Continue suas notas de saúde</string>
+    <string name="post_export_third_body">Você concluiu três exportações. Uma única compra libera exportações manuais ilimitadas e agendamento. Sem assinatura. Seus arquivos exportados continuam sendo seus.</string>
+    <string name="post_export_schedule_action">Explorar exportações diárias</string>
+    <string name="post_export_upgrade_action">Ver acesso vitalício</string>
+    <string name="post_export_manual_action">Continuar exportando manualmente</string>
+    <string name="post_export_continue_free">Continuar grátis</string>
 </resources>

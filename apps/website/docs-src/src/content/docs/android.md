@@ -47,7 +47,7 @@ Health.md for Android turns Health Connect into a local-first health journal. Ch
 6. Preview the output.
 7. Tap export and verify the generated files in your folder or vault.
 
-The Google Play build includes 10 manual export actions before its one-time unlock. The F-Droid build includes unlimited access with no purchase or restore flow.
+The Google Play build includes 5 manual export actions before its one-time unlock. The F-Droid build includes unlimited access with no purchase or restore flow.
 
 ## Destinations on Android
 
@@ -125,7 +125,7 @@ Daily step totals use exact zoned-local-day boundaries. Before aggregation, Heal
 
 ## Distribution, pricing, and switching
 
-- **Google Play:** 10 free manual export actions, followed by one lifetime purchase through Google Play Billing. There is no subscription. Restore Purchase uses the purchasing Google account. The current release is phone-only. The Wear OS companion is deferred to a later qualification cycle.
+- **Google Play:** 5 free manual export actions, followed by one lifetime purchase through Google Play Billing. There is no subscription. Restore Purchase uses the purchasing Google account. The current release is phone-only. The Wear OS companion is deferred to a later qualification cycle.
 - **F-Droid:** unlimited access is included. There is no free counter, Billing dependency, paywall, purchase, or restore action.
 - **F-Droid scope:** Health Connect only, with no Wear OS integration, direct cloud-provider OAuth, Play review, attribution, or Health.md onboarding telemetry.
 - **Shared outcome:** both channels use the same Health Connect capture, exporters, schemas, automation actions, and direct-device protocol.

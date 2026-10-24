@@ -28,6 +28,6 @@ class SettingsRepositoryFreeExportTest {
         val used = resolveFreeExportsUsed(currentUsed = null, legacyRemaining = 0)
 
         assertThat(used).isEqualTo(3)
-        assertThat(FreemiumPolicy.remainingExports(used)).isEqualTo(7)
+        assertThat(FreemiumPolicy.remainingExports(used)).isEqualTo(2)
     }
 }

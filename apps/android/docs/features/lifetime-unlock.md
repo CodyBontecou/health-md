@@ -11,7 +11,7 @@
 
 Health.md has one channel-neutral entitlement outcome: access to unlimited manual exports, scheduled exports, automation, recovery, and Direct CLI export.
 
-- **Google Play:** 10 free manual export actions, followed by a one-time lifetime purchase through Google Play Billing. There is no subscription.
+- **Google Play:** 5 free manual export actions, followed by a one-time lifetime purchase through Google Play Billing. There is no subscription.
 - **F-Droid:** full access is included. There is no free counter, paywall, product lookup, purchase, or restore action.
 
 The distribution difference does not change export formats, bytes, schemas, or direct-device protocol behavior.
@@ -44,3 +44,7 @@ Google Play and F-Droid use different signing keys. Switching requires uninstall
 ## Implementation notes
 
 `DistributionPolicy` declares channel capabilities. Consumers gate behavior through `EntitlementRepository`, not Billing classes. The Play implementation combines current/cached Billing entitlement with `PurchaseRepository`; the F-Droid repository exposes a stable unlocked state and unavailable purchase operations. `ExportAccountingPolicy` never consumes a free action for an unlocked entitlement. Workers, automation, recovery, Direct CLI, schedules, export view models, and paywall navigation all use these channel-neutral boundaries.
+
+## After a successful free export
+
+The first completed free export offers a dismissible guide to daily scheduling. Opening Schedule does not enable it; Google Play scheduling still requires lifetime access. The third completed free export offers lifetime access with two manual actions remaining. Both offers return to the export screen when dismissed. Failed and partial exports do not display a success guide. Existing usage is retained when moving from ten to five free actions; a user who already used five or more has no new free actions. F-Droid continues to include Full Access without purchase prompts.

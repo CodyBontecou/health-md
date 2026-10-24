@@ -281,6 +281,12 @@ fun HealthMdNavigation(
                         }
                     },
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
+                    onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) { launchSingleTop = true } },
+                    onNavigateToUpgrade = {
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                        }
+                    },
                 )
             }
             composable(NavDestination.SCHEDULE.route) {

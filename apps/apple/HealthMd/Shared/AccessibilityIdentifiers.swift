@@ -122,6 +122,7 @@ enum AccessibilityID {
 
     // MARK: - Value Moment Prompt
     enum UpgradePrompt {
+        static let schedule = "upgradePrompt.scheduleButton"
         static let upgrade = "upgradePrompt.upgradeButton"
         static let notNow = "upgradePrompt.notNowButton"
         static let title = "upgradePrompt.title"

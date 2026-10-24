@@ -16,7 +16,7 @@ description: Health.md for Androidをセットアップし、Health Connectの�
 <div class="reference-stats">
 <div><strong>106</strong><span>選択可能なHealth Connect指標</span></div>
 <div><strong>4</strong><span>エクスポート形式</span></div>
-<div><strong>10</strong><span>無料の手動エクスポート回数</span></div>
+<div><strong>5</strong><span>無料の手動エクスポート回数</span></div>
 <div><strong>0</strong><span>必要なHealth.mdクラウドアカウント</span></div>
 </div>
 
@@ -47,7 +47,7 @@ Health.md for Androidは、Health Connectをローカルファーストのヘル
 6. 出力をプレビューします。
 7. エクスポートをタップし、フォルダまたはVaultで生成ファイルを確認します。
 
-無料プランには、手動エクスポート10回分が含まれます。無制限エクスポートを解除する前に、権限、フォルダアクセス、形式、Obsidianのワークフローを試せます。
+無料プランには、手動エクスポート5回分が含まれます。無制限エクスポートを解除する前に、権限、フォルダアクセス、形式、Obsidianのワークフローを試せます。
 
 ## Androidの保存先
 
@@ -125,7 +125,7 @@ Health ConnectがAndroidで推奨されるヘルスデータレイヤーであ�
 
 ## 価格と購入の復元
 
-- Androidアプリには、無料の手動エクスポート10回分が含まれます。
+- Androidアプリには、無料の手動エクスポート5回分が含まれます。
 - 無制限のエクスポートとスケジュール自動化は、Google Play Billingを介した1回限りの買い切りで解除できます。
 - サブスクリプションや継続課金はありません。
 - Google Playでは、購入前に現在の現地価格が表示されます。
