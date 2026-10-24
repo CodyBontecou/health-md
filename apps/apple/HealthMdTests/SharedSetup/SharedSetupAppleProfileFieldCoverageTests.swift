@@ -21,10 +21,16 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let v1Rows = try XCTUnwrap(v1["fields"] as? [NSDictionary])
         let v2Rows = try XCTUnwrap(v2["fields"] as? [NSDictionary])
         let currentRows = try XCTUnwrap(current["fields"] as? [NSDictionary])
-        XCTAssertEqual(Array(v2Rows.prefix(v1Rows.count)), v1Rows)
-        XCTAssertEqual(v2Rows.count, v1Rows.count + 1)
+        // Revision 1 gained approved minute-persistence exclusions after the
+        // presentation audit v2 was frozen. Preserve both existing inventories.
+        for row in v1Rows {
+            XCTAssertTrue(currentRows.contains(row), "Every approved revision 1 classification must survive")
+        }
         XCTAssertEqual(Array(currentRows.prefix(v2Rows.count)), v2Rows)
-        XCTAssertEqual(currentRows.count, v2Rows.count + 1)
+        let historicalIdentities = Set((v1Rows + v2Rows).map {
+            "\($0["source_type"] ?? "").\($0["field"] ?? "")"
+        })
+        XCTAssertEqual(currentRows.count, historicalIdentities.count + 1)
         let recovery = try XCTUnwrap(try loadLedger().fields.first {
             $0.sourceType == "ExportSettingsSnapshot" && $0.field == "historicalCalendarRollupPeriods"
         })
@@ -198,7 +204,12 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             SHA256.hash(data: historical).map { String(format: "%02x", $0) }.joined(),
             "35cc4677943f23372991792d48250d9e0871443e4bd2d686966aa03d12e0de8f"
         )
-        let rows = Self.minuteRefreshPersistenceFields
+        let minuteFields: Set<String> = [
+            "todayRefreshIntervalMinutes", "todayRefreshPersistenceVersion", "todayRefreshRequestedV2",
+        ]
+        let rows = try loadLedger().fields.filter {
+            $0.sourceType == "ScheduledExportEntry" && minuteFields.contains($0.field)
+        }
         XCTAssertEqual(Set(rows.map(\.field)), [
             "todayRefreshIntervalMinutes", "todayRefreshPersistenceVersion", "todayRefreshRequestedV2",
         ])
@@ -208,7 +219,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             XCTAssertNil(row.contractPath, "Local minute persistence must not claim frozen Shared Setup v2 authority")
             if row.field == "todayRefreshIntervalMinutes" {
                 XCTAssertEqual(row.fieldKind, .stored)
-                XCTAssertEqual(row.disposition, .localOnly)
+                XCTAssertEqual(row.disposition, .prohibited)
             } else {
                 XCTAssertEqual(row.fieldKind, .encodedOnly)
                 XCTAssertEqual(row.disposition, .prohibited)
@@ -216,39 +227,10 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         }
     }
 
-    // Native minute scheduling adds no authority to frozen Shared Setup v2.
-    // Audit its exact persistence fields alongside the unchanged historical ledger.
-    private static let minuteRefreshPersistenceFields: [CoverageLedger.Field] = [
-        .init(
-            sourceType: "ScheduledExportEntry", field: "todayRefreshIntervalMinutes",
-            fieldKind: .stored, serializedKey: "todayRefreshIntervalMinutes",
-            disposition: .localOnly, contractPath: nil,
-            reason: "Native 30/60-minute cadence is not represented by the frozen v2 hour-only schedule grammar."
-        ),
-        .init(
-            sourceType: "ScheduledExportEntry", field: "todayRefreshPersistenceVersion",
-            fieldKind: .encodedOnly, serializedKey: "todayRefreshPersistenceVersion",
-            disposition: .prohibited, contractPath: nil,
-            reason: "Native decoder migration marker must not become portable schedule intent or activation authority."
-        ),
-        .init(
-            sourceType: "ScheduledExportEntry", field: "todayRefreshRequestedV2",
-            fieldKind: .encodedOnly, serializedKey: "todayRefreshRequestedV2",
-            disposition: .prohibited, contractPath: nil,
-            reason: "Native consent-preserving minute persistence marker must not activate an imported Shared Setup schedule."
-        ),
-    ]
-
     private func loadLedger() throws -> CoverageLedger {
-        let historical = try JSONDecoder().decode(
+        try JSONDecoder().decode(
             CoverageLedger.self,
             from: Data(contentsOf: try ledgerURL())
-        )
-        return CoverageLedger(
-            schema: historical.schema, schemaVersion: historical.schemaVersion,
-            targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
-            dispositions: historical.dispositions,
-            fields: historical.fields + Self.minuteRefreshPersistenceFields
         )
     }
 

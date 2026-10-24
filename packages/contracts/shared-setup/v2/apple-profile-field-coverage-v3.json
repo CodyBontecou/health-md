@@ -1093,6 +1093,33 @@
       "reason": "Volume identity evidence is device-bound and forbidden."
     },
     {
+      "source_type": "ScheduledExportEntry",
+      "field": "todayRefreshIntervalMinutes",
+      "field_kind": "stored",
+      "serialized_key": "todayRefreshIntervalMinutes",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "reason": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ScheduledExportEntry",
+      "field": "todayRefreshRequestedV2",
+      "field_kind": "encoded_only",
+      "serialized_key": "todayRefreshRequestedV2",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "reason": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
+      "source_type": "ScheduledExportEntry",
+      "field": "todayRefreshPersistenceVersion",
+      "field_kind": "encoded_only",
+      "serialized_key": "todayRefreshPersistenceVersion",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "reason": "Local minute-cadence persistence v2 is not representable by frozen Shared Setup v2; the writer rejects minute schedules instead of rounding or omitting their intent."
+    },
+    {
       "source_type": "ExportSettingsSnapshot",
       "field": "historicalCalendarRollupPeriods",
       "field_kind": "stored_only",

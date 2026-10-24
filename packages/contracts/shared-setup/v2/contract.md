@@ -304,10 +304,11 @@ public Shared Setup grammar or its frozen artifact fixtures.
 ## Apple source-field audit revision 3
 
 [Revision 3](apple-profile-field-coverage-v3.json) preserves every revision 2
-classification and adds `ExportSettingsSnapshot.historicalCalendarRollupPeriods`.
+classification, incorporates the subsequently approved minute-scheduling exclusions
+from revision 1, and adds `ExportSettingsSnapshot.historicalCalendarRollupPeriods`.
 The new `stored_only` kind describes native in-memory recovery authority without
 a new serialized key. Its disposition is `prohibited`, with no Shared Setup path:
 only known historical v7 operations may restore their original calendar summary
 settings. New preferences and imported Shared Setup cannot acquire this authority.
 The public v2 grammar, fixtures and both historical audit files remain unchanged.
-Native tests separately retain the local minute-refresh persistence audit.
+Native tests verify the unchanged minute-refresh exclusions alongside the recovery field.
