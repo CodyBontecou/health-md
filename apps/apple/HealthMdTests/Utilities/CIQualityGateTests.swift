@@ -288,7 +288,7 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertTrue(runner.contains("run-owned-ui.py"))
         XCTAssertTrue(content.contains("Qualify SDK27 compiler before native slice build"))
         XCTAssertTrue(content.contains("apple-shared-core-v2-"))
-        XCTAssertEqual(content.components(separatedBy: "python3 scripts/compare-history-sdk27-receipts.py").count - 1, 4)
+        XCTAssertEqual(content.components(separatedBy: "python3 scripts/compare-history-sdk27-receipts.py").count - 1, 5)
         let qualifier = try source("scripts/qualify-history-authorization-sdk27.sh")
         XCTAssertTrue(qualifier.contains("Xcode 27.0\\nBuild version 27A266a"))
         XCTAssertTrue(qualifier.contains("swiftlang-6.4.0.34.1 clang-2100.3.34.1"))
@@ -350,16 +350,16 @@ final class CIQualityGateTests: XCTestCase {
         )
     }
 
-    func testWorkflow_exactFourConsumersValidateOneSharedCoreArtifactAndRemainBlocking() throws {
+    func testWorkflow_exactFiveConsumersValidateOneSharedCoreArtifactAndRemainBlocking() throws {
         let content = try String(contentsOfFile: appleCIWorkflowPath, encoding: .utf8)
         let jobs = try workflowJobs(content)
-        let consumers: Set<String> = ["test-ios", "test-macos", "ios-ui-shards", "build-watch"]
-        let artifactName = "name: apple-shared-core\n"
+        let consumers: Set<String> = ["test-ios", "test-macos", "prepare-ui-artifacts", "ios-ui-shards", "build-watch"]
+        let artifactName = "name: apple-sdk27-shared-core\n"
         let topology = try sharedCoreArtifactTopology(jobs)
         XCTAssertEqual(topology.consumers, consumers.sorted(), "Consumer identities matter, not just a count")
         XCTAssertEqual(topology.producers, ["prepare-shared-core"])
-        XCTAssertTrue(topology.isExpected, "Exactly one producer and four named consumers, without duplicates")
-        XCTAssertEqual(content.components(separatedBy: artifactName).count - 1, 5)
+        XCTAssertTrue(topology.isExpected, "Exactly one producer and five named consumers, without duplicates")
+        XCTAssertEqual(content.components(separatedBy: artifactName).count - 1, 6)
         let producer = try XCTUnwrap(jobs["prepare-shared-core"])
         XCTAssertEqual(producer.components(separatedBy: "scripts/build-apple-xcframework.sh").count - 1, 1)
         XCTAssertTrue(producer.contains("--assemble"))
@@ -373,30 +373,34 @@ final class CIQualityGateTests: XCTestCase {
             "test-ios": "make test-ios CORE_RUST_PREPARE=:",
             "test-macos": "make coverage CORE_RUST_PREPARE=:",
             "ios-ui-shards": "python3 scripts/ios_ui_shards.py run",
+            "prepare-ui-artifacts": "xcodebuild build-for-testing",
             "build-watch": "xcodebuild build -project HealthMd.xcodeproj -scheme HealthMdWatch",
         ]
         let resultVariables = [
             "test-ios": "IOS_RESULT", "test-macos": "MACOS_RESULT",
-            "ios-ui-shards": "IOS_UI_RESULT", "build-watch": "WATCH_RESULT",
+            "ios-ui-shards": "IOS_UI_RESULT", "prepare-ui-artifacts": "PREPARE_UI_RESULT", "build-watch": "WATCH_RESULT",
         ]
-        let selectionOutputs = ["test-ios": "ios", "test-macos": "macos", "ios-ui-shards": "ios_ui", "build-watch": "watch"]
+        let selectionOutputs = ["test-ios": "ios", "test-macos": "macos", "ios-ui-shards": "ios_ui", "prepare-ui-artifacts": "ios_ui", "build-watch": "watch"]
         let gate = try XCTUnwrap(jobs["gate"])
         XCTAssertTrue(gate.contains("if: ${{ always() }}"))
         // The shard worker consumes the binary; the blocking aggregate qualifies
         // every shard before contributing the UI result to the final gate.
         let aggregate = try XCTUnwrap(jobs["test-ios-ui"])
-        XCTAssertTrue(aggregate.contains("needs: [changes, ios-ui-shards]"))
+        XCTAssertTrue(aggregate.contains("needs: [changes, prepare-ui-artifacts, ios-ui-shards]"))
         XCTAssertTrue(aggregate.contains("if: ${{ always() && needs.changes.outputs.ios_ui == 'true' }}"))
         XCTAssertTrue(aggregate.contains("SHARDS_RESULT: ${{ needs.ios-ui-shards.result }}"))
         XCTAssertTrue(aggregate.contains("test \"$SHARDS_RESULT\" = success"))
         XCTAssertTrue(aggregate.contains("ios_ui_shards.py verify"))
         for id in consumers.sorted() {
             let job = try XCTUnwrap(jobs[id])
-            XCTAssertTrue(job.contains("needs: [changes, prepare-shared-core]"), id)
+            let dependencies = id == "ios-ui-shards"
+                ? "needs: [changes, prepare-shared-core, prepare-ui-artifacts]"
+                : "needs: [changes, prepare-shared-core]"
+            XCTAssertTrue(job.contains(dependencies), id)
             let selectedOutput = try XCTUnwrap(selectionOutputs[id])
             XCTAssertTrue(job.contains("if: ${{ needs.changes.outputs.\(selectedOutput) == 'true' }}"), id)
             XCTAssertTrue(job.contains("ref: ${{ inputs.release_sha || github.sha }}"), id)
-            XCTAssertEqual(job.components(separatedBy: "actions/download-artifact@v4").count - 1, 1, id)
+            XCTAssertEqual(job.components(separatedBy: "actions/download-artifact@v4").count - 1, id == "ios-ui-shards" ? 2 : 1, id)
             XCTAssertEqual(job.components(separatedBy: artifactName).count - 1, 1, id)
             XCTAssertTrue(job.contains("path: apps/apple/Packages/HealthMdCoreRust/Artifacts"), id)
             XCTAssertTrue(job.contains("test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256"), id)
@@ -409,11 +413,16 @@ final class CIQualityGateTests: XCTestCase {
             XCTAssertTrue(gate.contains("      - \(resultID)\n"), id)
             let variable = try XCTUnwrap(resultVariables[id])
             XCTAssertTrue(gate.contains("\(variable): ${{ needs.\(resultID).result }}"), id)
-            let selectedVariable = variable.replacingOccurrences(of: "_RESULT", with: "_SELECTED")
+            let selectedVariable = id == "prepare-ui-artifacts"
+                ? "IOS_UI_SELECTED"
+                : variable.replacingOccurrences(of: "_RESULT", with: "_SELECTED")
             XCTAssertTrue(gate.contains("\(selectedVariable): ${{ needs.changes.outputs.\(selectedOutput) }}"), id)
             XCTAssertTrue(gate.contains("require_job \"$\(selectedVariable)\" \"$\(variable)\""), id)
         }
         let watch = try XCTUnwrap(jobs["build-watch"])
+        XCTAssertTrue(watch.contains("runs-on: xcode-27"))
+        XCTAssertTrue(watch.contains("xcode-version: '27.0'"))
+        XCTAssertTrue(watch.contains("Verify SDK27 consumer provenance (Watch)"))
         XCTAssertTrue(watch.contains("timeout-minutes: 25"))
         XCTAssertTrue(watch.contains("generic/platform=watchOS Simulator"))
         XCTAssertTrue(watch.contains("-jobs 2"))
@@ -445,16 +454,16 @@ final class CIQualityGateTests: XCTestCase {
     func testSharedCoreArtifactTopology_diagnosticUploadsAreNotProducers() throws {
         let topology = try sharedCoreArtifactTopology(artifactFixtureJobs())
         XCTAssertEqual(topology.producers, ["prepare-shared-core"])
-        XCTAssertEqual(topology.consumers, ["build-watch", "ios-ui-shards", "test-ios", "test-macos"])
+        XCTAssertEqual(topology.consumers, ["build-watch", "ios-ui-shards", "prepare-ui-artifacts", "test-ios", "test-macos"])
         XCTAssertTrue(topology.isExpected)
     }
 
     func testSharedCoreArtifactTopology_extraSharedCoreUploadOrMissingConsumerFails() throws {
         var extraProducer = artifactFixtureJobs()
-        extraProducer["unexpected-producer"] = "    steps:\n" + artifactFixtureStep("upload", name: "apple-shared-core")
+        extraProducer["unexpected-producer"] = "    steps:\n" + artifactFixtureStep("upload", name: "apple-sdk27-shared-core")
         XCTAssertFalse(try sharedCoreArtifactTopology(extraProducer).isExpected)
         var duplicateUpload = artifactFixtureJobs()
-        duplicateUpload["prepare-shared-core", default: ""] += artifactFixtureStep("upload", name: "apple-shared-core")
+        duplicateUpload["prepare-shared-core", default: ""] += artifactFixtureStep("upload", name: "apple-sdk27-shared-core")
         XCTAssertFalse(try sharedCoreArtifactTopology(duplicateUpload).isExpected)
         var missingConsumer = artifactFixtureJobs()
         missingConsumer.removeValue(forKey: "build-watch")
@@ -465,12 +474,12 @@ final class CIQualityGateTests: XCTestCase {
         var jobs = artifactFixtureJobs()
         jobs["build-watch"] = """
             steps:
-              - name: apple-shared-core
+              - name: apple-sdk27-shared-core
                 uses: actions/download-artifact@v4
                 with:
                   name: diagnostics
                 env:
-                  name: apple-shared-core
+                  name: apple-sdk27-shared-core
               - uses: actions/upload-artifact@v4
                 with:
                   name: apple-watch-build-diagnostics
@@ -488,7 +497,7 @@ final class CIQualityGateTests: XCTestCase {
 
         var isExpected: Bool {
             producers == ["prepare-shared-core"] &&
-                consumers == ["build-watch", "ios-ui-shards", "test-ios", "test-macos"]
+                consumers == ["build-watch", "ios-ui-shards", "prepare-ui-artifacts", "test-ios", "test-macos"]
         }
     }
 
@@ -519,7 +528,7 @@ final class CIQualityGateTests: XCTestCase {
                 let fields = lines.dropFirst(withIndex + 1).prefix { $0.isEmpty || $0.hasPrefix("          ") }
                 let names = fields.filter { $0.hasPrefix("          name: ") }
                     .map { String($0.dropFirst("          name: ".count)) }
-                guard names == ["apple-shared-core"] else { continue }
+                guard names == ["apple-sdk27-shared-core"] else { continue }
                 if action == "actions/upload-artifact@v4" { topology.producers.append(id) }
                 else { topology.consumers.append(id) }
             }
@@ -534,10 +543,10 @@ final class CIQualityGateTests: XCTestCase {
     }
 
     private func artifactFixtureJobs() -> [String: String] {
-        var jobs = ["prepare-shared-core": "    steps:\n" + artifactFixtureStep("upload", name: "apple-shared-core")]
-        for id in ["test-ios", "test-macos", "ios-ui-shards", "build-watch"] {
+        var jobs = ["prepare-shared-core": "    steps:\n" + artifactFixtureStep("upload", name: "apple-sdk27-shared-core")]
+        for id in ["test-ios", "test-macos", "prepare-ui-artifacts", "ios-ui-shards", "build-watch"] {
             // A named download step followed by a uses-first diagnostic upload.
-            jobs[id] = "    steps:\n      - name: Restore shared core\n        uses: actions/download-artifact@v4\n        with:\n          name: apple-shared-core\n" +
+            jobs[id] = "    steps:\n      - name: Restore shared core\n        uses: actions/download-artifact@v4\n        with:\n          name: apple-sdk27-shared-core\n" +
                 artifactFixtureStep("upload", name: "\(id)-diagnostics")
         }
         return jobs

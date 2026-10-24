@@ -958,7 +958,7 @@ jobs:
     name: Watch app and widgets build
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.watch == 'true' }}
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 25
     permissions:
       contents: read
@@ -978,6 +978,11 @@ jobs:
         with:
           name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+      - name: Verify SDK27 consumer provenance (Watch)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+
       - name: Validate prepared shared Rust core
         run: |
           test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
