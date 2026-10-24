@@ -61,7 +61,7 @@ def prose_only(text: str) -> str:
 
 def literal_path(value: str) -> bool:
     # Agent receipts are optional ignored runtime state, not a repository navigation target.
-    if value == ".pi/":
+    if value.startswith(".pi/") and ".." not in Path(unquote(value)).parts:
         return False
     if not value or value.startswith(("/", "~", "#")) or re.search(r"\s|[<>*{}$?\[\]()\\]", value):
         return False

@@ -43,6 +43,25 @@ class NavigationTests(unittest.TestCase):
         errors, _ = self.validate("[Receipt](.pi/missing.md)\n")
         self.assertEqual(errors, ["AGENTS.md:1: missing local target .pi/missing.md"])
 
+    def test_ignored_runtime_children_are_optional_literal_outputs(self):
+        errors, count = self.validate(
+            "Write JSON/CSV to ignored `.pi/markdown-audit/` and "
+            "receipts to `.pi/checks/result.json`.\n"
+        )
+        self.assertEqual(errors, [])
+        self.assertEqual(count, 0)
+
+    def test_runtime_prefix_does_not_hide_source_traversal_or_similar_names(self):
+        for target in [
+            ".pi/../apps/missing.md",
+            ".pi/%2e%2e/apps/missing.md",
+            ".pillow/missing.md",
+        ]:
+            with self.subTest(target=target):
+                errors, count = self.validate(f"Read `{target}`.\n")
+                self.assertEqual(count, 1)
+                self.assertIn("missing literal navigation path", errors[0])
+
     def test_missing_task_pointer_reports_line_and_target(self):
         errors, _ = self.validate("# Tasks\n[Guide](apps/apple/docs/moved.md)\n")
         self.assertEqual(errors, ["AGENTS.md:2: missing local target apps/apple/docs/moved.md"])
