@@ -112,9 +112,10 @@ data class ScheduledExportConfiguration(
             lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1),
             dateWindow = settings.scheduleDateWindow,
             target = settings.scheduledExportTarget,
-            destinationFingerprint = if (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT) {
-                destinationFingerprint
-            } else null,
+            destinationFingerprint = when (settings.scheduledExportTarget) {
+                ExportTarget.API_ENDPOINT, ExportTarget.AGENT_DATA_GATEWAY -> destinationFingerprint
+                ExportTarget.DEVICE_FOLDER -> null
+            },
             zoneId = zoneId.id,
             enginePin = enginePin,
             settingsSnapshot = settingsSnapshot,

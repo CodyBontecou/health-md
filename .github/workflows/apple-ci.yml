@@ -84,6 +84,10 @@ jobs:
           FORCE_FULL_QUALIFICATION: ${{ inputs.full_qualification || false }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: python3 apps/apple/scripts/apple-ci-plan.py --release-sha "$RELEASE_SHA"
+      - name: Verify device shards fail closed
+        run: |
+          python3 apps/apple/scripts/test-history-ui-pipeline-status.py
+          python3 apps/apple/scripts/test-owned-ui-processes.py
 
   prepare-core-slices:
     name: Build Apple Rust slice ${{ matrix.target }}
@@ -93,7 +97,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios, aarch64-apple-darwin, x86_64-apple-darwin]
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 20
     steps:
       - name: Checkout exact source
@@ -103,7 +107,10 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
+      - name: Qualify SDK27 compiler before native slice build
+        run: bash apps/apple/scripts/qualify-history-authorization-sdk27.sh
+
       - name: Fingerprint active Apple toolchain
         id: toolchain
         shell: bash
@@ -170,7 +177,8 @@ jobs:
     name: Prepare shared Rust core once
     needs: [changes, prepare-core-slices]
     if: ${{ needs.changes.outputs.prepare == 'true' }}
-    runs-on: macos-26
+    # Free standard public-repository SDK27 runner, never xlarge.
+    runs-on: xcode-27
     timeout-minutes: 20
     defaults:
       run:
@@ -187,7 +195,13 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
+
+      - name: Require SDK27 public history signature and record provenance
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          mkdir -p Packages/HealthMdCoreRust/Artifacts
+          cp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Fingerprint active Apple toolchain
         id: toolchain
@@ -245,10 +259,11 @@ jobs:
       - name: Share the exact prepared XCFramework
         uses: actions/upload-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: |
             apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
@@ -256,9 +271,8 @@ jobs:
   test-ios:
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.ios == 'true' }}
-    # Notelet requires Swift tools 6.3. The macos-26 hosted image includes
-    # Xcode 26.6, so PR validation does not depend on a self-hosted runner.
-    runs-on: macos-26
+    # Public history API requires verified SDK27, unchanged deployment floors.
+    runs-on: xcode-27
     timeout-minutes: 75
     defaults:
       run:
@@ -316,13 +330,18 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
       - name: Restore prepared shared Rust core
         uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (iOS)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -330,6 +349,54 @@ jobs:
           test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
             Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+
+      - name: Build unsigned physical-device QA candidate
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/device-qa build/logs
+          # Debug inherits the project's iphoneos SDK; Debug-iOS is simulator-only.
+          xcodebuild -showBuildSettings -json \
+            -project HealthMd.xcodeproj -scheme HealthMd \
+            -configuration Debug -destination 'generic/platform=iOS' \
+            -derivedDataPath build/device-qa-derived CODE_SIGNING_ALLOWED=NO \
+            > build/device-qa-settings.json
+          python3 -c 'import json; rows=json.load(open("build/device-qa-settings.json")); settings=next(row["buildSettings"] for row in rows if row.get("target")=="HealthMd"); assert settings["PLATFORM_NAME"]=="iphoneos"; assert "iPhoneOS27.0.sdk" in settings["SDKROOT"]; print(json.dumps({key:settings[key] for key in ("SDKROOT","PLATFORM_NAME","CONFIGURATION","PRODUCT_BUNDLE_IDENTIFIER")},sort_keys=True))' \
+            > build/device-qa/build-settings.json
+          xcodebuild build \
+            -project HealthMd.xcodeproj -scheme HealthMd \
+            -configuration Debug -destination 'generic/platform=iOS' \
+            -derivedDataPath build/device-qa-derived \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee build/logs/build-device-qa.log
+          app=build/device-qa-derived/Build/Products/Debug-iphoneos/HealthMd.app
+          test -f "$app/HealthMd"
+          python3 scripts/ui_test_document_fixture.py verify-device --plist "$app/Info.plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
+          xcrun lipo -verify_arch arm64 "$app/HealthMd"
+          {
+            echo "SOURCE_SHA=$(git rev-parse HEAD)"
+            echo "SOURCE_TREE=$(git rev-parse 'HEAD^{tree}')"
+            echo "PURPOSE=unsigned-device-QA-only"
+            xcodebuild -version
+            xcrun --sdk iphoneos --show-sdk-version
+            xcrun vtool -show-build "$app/HealthMd"
+          } > build/device-qa/provenance.txt
+          cp build/logs/history-sdk27-receipt.txt build/device-qa/
+          tar -czf build/device-qa/HealthMd-unsigned.app.tar.gz \
+            -C build/device-qa-derived/Build/Products/Debug-iphoneos HealthMd.app
+          (cd build/device-qa && shasum -a 256 HealthMd-unsigned.app.tar.gz > SHA256SUMS)
+
+      - name: Upload unsigned physical-device QA candidate
+        if: ${{ success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-device-candidate
+          path: apps/apple/build/device-qa/
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Test iOS simulator selection policy
         run: python3 scripts/tests/test_select_ios_simulator.py
@@ -383,6 +450,9 @@ jobs:
                     f"{summary.get('skippedTests', 0)} skipped")
           PY
 
+      - name: Preserve tiny synthetic native failure diagnostics
+        if: ${{ !cancelled() }}
+        run: grep -F 'Health172 synthetic' build/logs/xcodebuild-ios-raw.log || true
       - name: Collect bounded named iOS automation test receipt
         id: ios-automation-receipt
         if: ${{ !cancelled() }}
@@ -426,8 +496,8 @@ jobs:
   test-macos:
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.macos == 'true' }}
-    # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
-    runs-on: macos-26
+    # Same SDK27 toolchain and single prepared core as iOS.
+    runs-on: xcode-27
     timeout-minutes: 75
     defaults:
       run:
@@ -445,13 +515,18 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
       - name: Restore prepared shared Rust core
         uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (macOS)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -471,7 +546,37 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make coverage CORE_RUST_PREPARE=: 2>&1 | tee build/logs/build-macos.log
+          make coverage CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/macos-qa-derived 2>&1 | tee build/logs/build-macos.log
+
+      - name: Retain tested macOS QA candidate
+        if: ${{ success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
+        run: |
+          set -euo pipefail
+          app=build/macos-qa-derived/Build/Products/Debug/Health.md.app
+          test -f "$app/Contents/MacOS/Health.md"
+          python3 scripts/validate_macos_cli_helpers.py "$app"
+          mkdir -p build/macos-qa
+          {
+            echo "SOURCE_SHA=$(git rev-parse HEAD)"
+            echo "SOURCE_TREE=$(git rev-parse 'HEAD^{tree}')"
+            echo "PURPOSE=tested-macOS-QA-only"
+            xcodebuild -version
+            xcrun --sdk macosx --show-sdk-version
+            xcrun vtool -show-build "$app/Contents/MacOS/Health.md"
+          } > build/macos-qa/provenance.txt
+          cp build/logs/history-sdk27-receipt.txt build/macos-qa/
+          tar -czf build/macos-qa/HealthMd-macOS.app.tar.gz \
+            -C build/macos-qa-derived/Build/Products/Debug Health.md.app
+          (cd build/macos-qa && shasum -a 256 HealthMd-macOS.app.tar.gz > SHA256SUMS)
+
+      - name: Upload tested macOS QA candidate
+        if: ${{ success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-tested-qa-candidate
+          path: apps/apple/build/macos-qa/
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Verify generated export documentation
         if: ${{ success() }}
@@ -551,15 +656,129 @@ jobs:
             apps/apple/build/logs/macos-automation-test-diagnostics.txt
           retention-days: 14
 
+  prepare-ui-artifacts:
+    name: Prepare qualified UI products once
+    needs: [changes, prepare-shared-core]
+    if: ${{ needs.changes.outputs.ios_ui == 'true' }}
+    runs-on: xcode-27
+    timeout-minutes: 20
+    outputs:
+      sha256: ${{ steps.package.outputs.sha256 }}
+    defaults:
+      run:
+        working-directory: apps/apple
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '27.0'
+
+      - name: Restore prepared shared Rust core
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-sdk27-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (UI)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+
+      - name: Validate prepared shared Rust core
+        run: |
+          test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+
+      - name: Test iOS simulator selection policy
+        run: python3 scripts/tests/test_select_ios_simulator.py
+
+      - name: Verify UI ownership controls on actual macOS
+        timeout-minutes: 5
+        run: |
+          python3 --version
+          command -v python3 bash ps
+          bash --version
+          python3 scripts/test-history-ui-pipeline-status.py
+          python3 scripts/test-owned-ui-processes.py
+
+      - name: Test UI build and execution contract
+        run: |
+          python3 scripts/tests/test_ios_ui_build_contract.py
+          python3 scripts/tests/test_ios_ui_shards.py
+
+      - name: Build UI test artifacts once
+        id: ui_artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs build/test-results
+          MD_UI_DERIVED_DATA=$(mktemp -d "$PWD/build/ios-ui-derived-data.XXXXXX")
+          touch "$MD_UI_DERIVED_DATA/.healthmd-ui-build-start"
+          python3 scripts/ui_test_document_fixture.py create \
+            --source HealthMd/Info.plist --output "$MD_UI_DERIVED_DATA/ui-test-Info.plist"
+          xcodebuild build-for-testing \
+            -project HealthMd.xcodeproj \
+            -scheme HealthMd-UITests-iOS \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug-iOS \
+            -derivedDataPath "$MD_UI_DERIVED_DATA" \
+            HEALTHMD_IOS_INFO_PLIST="$MD_UI_DERIVED_DATA/ui-test-Info.plist" \
+            ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee build/logs/build-ios-ui-compile.log
+          MD_UI_XCTESTRUN=$(python3 scripts/validate_ios_ui_xctestrun.py \
+            --derived-data "$MD_UI_DERIVED_DATA" \
+            --source-sha "$(git rev-parse HEAD)" \
+            --receipt build/logs/ios-ui-build-receipt.json)
+          MD_UI_APP=$(python3 -c 'import json; print(json.load(open("build/logs/ios-ui-build-receipt.json"))["products"][0]["path"])')
+          {
+            echo "xctestrun=$MD_UI_XCTESTRUN"
+            echo "app=$MD_UI_APP"
+            echo "derived_data=$MD_UI_DERIVED_DATA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Package qualified UI products and compile log
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/prepared-ios-ui
+          cp build/logs/build-ios-ui-compile.log '${{ steps.ui_artifacts.outputs.derived_data }}/compile.log'
+          MD_UI_ARCHIVE_SHA=$(python3 scripts/prepared_ios_ui_artifacts.py pack \
+            --derived-data '${{ steps.ui_artifacts.outputs.derived_data }}' \
+            --source-sha "$(git rev-parse HEAD)" \
+            --archive build/prepared-ios-ui/ui-products.tar.gz)
+          echo "sha256=$MD_UI_ARCHIVE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Share exact qualified UI products
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-sdk27-ui-products
+          path: apps/apple/build/prepared-ios-ui/ui-products.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
   ios-ui-shards:
     name: iOS UI shard ${{ matrix.shard }}
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2]
-    needs: [changes, prepare-shared-core]
+        shard: [0, 1, 2, 3]
+    needs: [changes, prepare-shared-core, prepare-ui-artifacts]
     if: ${{ needs.changes.outputs.ios_ui == 'true' }}
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     defaults:
       run:
@@ -577,13 +796,18 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
       - name: Restore prepared shared Rust core
         uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (UI)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -592,60 +816,49 @@ jobs:
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
             Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
-      - name: Test iOS simulator selection policy
-        run: python3 scripts/tests/test_select_ios_simulator.py
+      - name: Restore exact qualified UI products
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-sdk27-ui-products
+          path: apps/apple/build/prepared-ios-ui
 
-      - name: Test UI build and execution contract
-        run: |
-          python3 scripts/tests/test_ios_ui_build_contract.py
-          python3 scripts/tests/test_ios_ui_shards.py
-
-      - name: Select newest compatible iOS Simulator
-        id: simulator
-        shell: bash
-        run: |
-          set -euo pipefail
-          IOS_DESTINATION=$(scripts/start-ci-ios-simulator.sh)
-          echo "Using simulator destination: ${IOS_DESTINATION}"
-          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
-
-      - name: Build UI test artifacts once
+      - name: Verify restored UI products
         id: ui_artifacts
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p build/logs build/test-results
           MD_UI_DERIVED_DATA=$(mktemp -d "$PWD/build/ios-ui-derived-data.XXXXXX")
-          touch "$MD_UI_DERIVED_DATA/.healthmd-ui-build-start"
-          xcodebuild build-for-testing \
-            -project HealthMd.xcodeproj \
-            -scheme HealthMd-UITests-iOS \
-            -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug-iOS \
-            -derivedDataPath "$MD_UI_DERIVED_DATA" \
-            ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee build/logs/build-ios-ui-compile.log
-          MD_UI_XCTESTRUN=$(python3 scripts/validate_ios_ui_xctestrun.py \
+          MD_UI_XCTESTRUN=$(python3 scripts/prepared_ios_ui_artifacts.py restore \
             --derived-data "$MD_UI_DERIVED_DATA" \
             --source-sha "$(git rev-parse HEAD)" \
+            --archive build/prepared-ios-ui/ui-products.tar.gz \
+            --sha256 '${{ needs.prepare-ui-artifacts.outputs.sha256 }}' \
             --receipt build/logs/ios-ui-build-receipt.json)
+          cp "$MD_UI_DERIVED_DATA/compile.log" build/logs/build-ios-ui-compile.log
           MD_UI_APP=$(python3 -c 'import json; print(json.load(open("build/logs/ios-ui-build-receipt.json"))["products"][0]["path"])')
           echo "xctestrun=$MD_UI_XCTESTRUN" >> "$GITHUB_OUTPUT"
           echo "app=$MD_UI_APP" >> "$GITHUB_OUTPUT"
 
-      - name: Install freshly built UI app
+      - name: Select newest compatible iOS Simulator
+        id: simulator
         shell: bash
         run: |
           set -euo pipefail
-          IOS_DESTINATION='${{ steps.simulator.outputs.ios_destination }}'
-          python3 scripts/apple_nightly_ui.py ready-simulator --destination "$IOS_DESTINATION" \
-            --root build/main-ui --source-sha "$(git rev-parse HEAD)"
-          xcrun simctl install "${IOS_DESTINATION##*id=}" '${{ steps.ui_artifacts.outputs.app }}'
+          # Preserve the runner's actual compatibility metadata even when selection fails.
+          xcrun simctl list runtimes available -j | tee build/logs/ios-ui-runtimes.json
+          xcrun simctl list devicetypes -j > build/logs/ios-ui-device-types.json
+          xcrun simctl list devices available -j > build/logs/ios-ui-devices.json
+          if [[ '${{ matrix.shard }}' == 3 ]]; then
+            IOS_DESTINATION=$(scripts/select-ios-simulator.sh --device-family iPad --create-missing)
+          else
+            IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          fi
+          echo "Using simulator destination: ${IOS_DESTINATION}"
+          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
 
       - name: Run UI smoke tests (iOS)
-        timeout-minutes: 35
+        timeout-minutes: ${{ matrix.shard == 3 && 15 || 35 }}
         run: |
           set -euo pipefail
           python3 scripts/ios_ui_shards.py run \
@@ -654,6 +867,7 @@ jobs:
             --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}' \
             --xctestrun '${{ steps.ui_artifacts.outputs.xctestrun }}' \
             --build-receipt build/logs/ios-ui-build-receipt.json \
+            --prepared-sha256 '${{ needs.prepare-ui-artifacts.outputs.sha256 }}' \
             --destination '${{ steps.simulator.outputs.ios_destination }}' \
             --result build/test-results/HealthMd-UI-Shard.xcresult \
             --log build/logs/build-ios-ui.log \
@@ -664,6 +878,13 @@ jobs:
         run: |
           scripts/check-warnings.sh build/logs/build-ios-ui-compile.log
           scripts/check-warnings.sh build/logs/build-ios-ui.log
+          python3 - <<'PY'
+          from pathlib import Path
+          runtime_log = Path("build/logs/build-ios-ui.log").read_text(errors="replace")
+          if "Accessing StateObject<" in runtime_log:
+              raise SystemExit("::error::UI launch accessed StateObject before SwiftUI installed its storage")
+          print("PASS: no premature StateObject access in UI runtime.")
+          PY
 
       - name: Upload iOS UI artifacts
         if: ${{ !cancelled() }}
@@ -674,13 +895,14 @@ jobs:
             apps/apple/build/logs/build-ios-ui-compile.log
             apps/apple/build/logs/ios-ui-build-receipt.json
             apps/apple/build/logs/build-ios-ui.log
-            apps/apple/build/logs/ui-*.json
             apps/apple/build/test-results/HealthMd-UI-*.xcresult
+            apps/apple/build/logs/ui-*.json
+            apps/apple/build/logs/ui-owner-*.abort
           retention-days: 14
 
   test-ios-ui:
     name: iOS UI regressions
-    needs: [changes, ios-ui-shards]
+    needs: [changes, prepare-ui-artifacts, ios-ui-shards]
     if: ${{ always() && needs.changes.outputs.ios_ui == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -696,9 +918,11 @@ jobs:
           path: ui-shards
       - name: Require all selected UI cases from this source and run
         env:
+          PREPARE_RESULT: ${{ needs.prepare-ui-artifacts.result }}
           SHARDS_RESULT: ${{ needs.ios-ui-shards.result }}
         run: |
           set -euo pipefail
+          test "$PREPARE_RESULT" = success
           test "$SHARDS_RESULT" = success
           python3 apps/apple/scripts/ios_ui_shards.py verify \
             --reports ui-shards --source-sha "$(git rev-parse HEAD)" \
@@ -747,12 +971,12 @@ jobs:
           ref: ${{ inputs.release_sha || github.sha }}
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
       # Xcode resolves all project package references even though the Watch target
       # does not link Rust. Reuse the prepared artifact instead of another build.
       - uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
       - name: Validate prepared shared Rust core
         run: |
@@ -785,6 +1009,7 @@ jobs:
       - changes
       - workflow-policy
       - prepare-shared-core
+      - prepare-ui-artifacts
       - test-ios
       - test-ios-ui
       - test-macos
@@ -801,6 +1026,7 @@ jobs:
           PREPARE_RESULT: ${{ needs.prepare-shared-core.result }}
           IOS_SELECTED: ${{ needs.changes.outputs.ios }}
           IOS_RESULT: ${{ needs.test-ios.result }}
+          PREPARE_UI_RESULT: ${{ needs.prepare-ui-artifacts.result }}
           IOS_UI_SELECTED: ${{ needs.changes.outputs.ios_ui }}
           IOS_UI_RESULT: ${{ needs.test-ios-ui.result }}
           MACOS_SELECTED: ${{ needs.changes.outputs.macos }}
@@ -824,4 +1050,5 @@ jobs:
           require_job "$MACOS_SELECTED" "$MACOS_RESULT" "macOS coverage and documentation"
           require_job "$CONNECTIVITY_SELECTED" "$CONNECTIVITY_RESULT" "standalone connectivity package"
           require_job "$WATCH_SELECTED" "$WATCH_RESULT" "Watch app and widgets"
+          require_job "$IOS_UI_SELECTED" "$PREPARE_UI_RESULT" "UI artifact preparation"
           require_job "$POLICY_SELECTED" "$POLICY_RESULT" "release workflow policy"

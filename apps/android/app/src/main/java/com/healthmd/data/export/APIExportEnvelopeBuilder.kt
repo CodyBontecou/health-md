@@ -230,6 +230,7 @@ class APIExportEnvelopeBuilder @Inject constructor(
             ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> "background_permission_denied"
             ExportFailureReason.PAYWALL_REQUIRED -> "paywall_required"
             ExportFailureReason.INVALID_API_ENDPOINT -> "invalid_api_endpoint"
+            ExportFailureReason.GATEWAY_FORMAT_UNSUPPORTED -> "gateway_format_unsupported"
             ExportFailureReason.NETWORK_ERROR -> "network_error"
             ExportFailureReason.API_REJECTED -> "api_rejected"
             ExportFailureReason.RAW_UNSUPPORTED_PROVIDER -> "raw_unsupported_provider"

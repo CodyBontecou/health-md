@@ -26,7 +26,7 @@ This file records the approved positioning themes. The canonical listing copy li
 
 - Package: `com.healthmd.android`
 - Category: Health & Fitness
-- Pricing: 10 free manual exports, then a one-time lifetime unlock; no subscription
+- Pricing: 5 free manual exports, then a one-time lifetime unlock; no subscription
 - Privacy: no Health.md health-data cloud; Health Connect records are read only for user-requested exports
 - Audience: people who want portable health records, Obsidian users, self-quantifiers and privacy-conscious users
 

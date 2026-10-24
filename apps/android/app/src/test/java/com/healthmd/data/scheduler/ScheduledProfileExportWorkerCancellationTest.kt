@@ -10,6 +10,7 @@ import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.google.common.util.concurrent.Futures
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.settings.ExportProfileRepository
@@ -299,6 +300,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             healthRepository = healthRepository,
             exportHistoryRepository = mockk(relaxed = true),
             apiEndpointExportRunner = apiRunner,
+            agentDataGatewayExportRunner = mockk<AgentDataGatewayExportRunner>(relaxed = true),
             profileRepository = profileRepository,
             entryStore = entryStore,
             snapshotFactory = snapshotFactory,
@@ -338,7 +340,7 @@ class ScheduledProfileExportWorkerCancellationTest {
 
     @Test
     fun `raw profiles use the raw range runner for both targets and keep history mode`() = runTest {
-        for (target in ExportTarget.entries) {
+        for (target in listOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT)) {
             val harness = rawHarness(target = target) { ExportResult(1, 1, target = target, exportMode = ExportMode.RAW_SNAPSHOT) }
 
             assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.success())
@@ -362,7 +364,7 @@ class ScheduledProfileExportWorkerCancellationTest {
     @Test
     fun `delayed raw cadence and Today Refresh do not capture intervening days`() = runTest {
         val today = LocalDate.now(ZoneId.of("UTC"))
-        for (target in ExportTarget.entries) {
+        for (target in listOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT)) {
             val harness = rawHarness(
                 target = target,
                 todayRefresh = true,
@@ -387,7 +389,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val today = LocalDate.now(ZoneId.of("UTC"))
         val first = today.minusDays(10)
         val second = today.minusDays(7)
-        for (target in ExportTarget.entries) {
+        for (target in listOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT)) {
             val pending = ScheduledProfilePendingExport(
                 id = "separated-raw-retry",
                 ownerEpochDays = listOf(first.toEpochDay(), second.toEpochDay()),
@@ -694,6 +696,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             healthRepository = healthRepository,
             exportHistoryRepository = historyRepository,
             apiEndpointExportRunner = apiRunner,
+            agentDataGatewayExportRunner = mockk<AgentDataGatewayExportRunner>(relaxed = true),
             profileRepository = profileRepository,
             entryStore = entryStore,
             snapshotFactory = snapshotFactory,
@@ -719,6 +722,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         healthRepository: HealthRepository,
         exportHistoryRepository: ExportHistoryRepository,
         apiEndpointExportRunner: APIEndpointExportRunner,
+        agentDataGatewayExportRunner: AgentDataGatewayExportRunner = mockk(relaxed = true),
         profileRepository: ExportProfileRepository,
         entryStore: ScheduledProfileEntryStore,
         snapshotFactory: ScheduledProfileSnapshotFactory,
@@ -743,6 +747,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 exportRepository = exportRepository,
                 exportHistoryRepository = exportHistoryRepository,
                 apiEndpointExportRunner = apiEndpointExportRunner,
+                agentDataGatewayExportRunner = agentDataGatewayExportRunner,
                 rawSnapshotExportRunner = rawSnapshotExportRunner,
                 profileRepository = profileRepository,
                 entryStore = entryStore,

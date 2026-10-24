@@ -19,7 +19,7 @@ class OnboardingAnalyticsPayloadTest {
             step = OnboardingAnalyticsStep.UNLOCK,
             productId = OnboardingAnalyticsProductId.PREMIUM_LIFETIME,
             freeExportsUsed = 2,
-            freeExportsRemaining = 8,
+            freeExportsRemaining = 3,
         )
         val payload = OnboardingAnalyticsPayloadSerializer.serialize(
             OnboardingAnalyticsEnvelope(
@@ -44,7 +44,7 @@ class OnboardingAnalyticsPayloadTest {
             "productId",
         )
         assertThat(properties.getValue("freeExportsUsed").toString()).isEqualTo("2")
-        assertThat(properties.getValue("freeExportsRemaining").toString()).isEqualTo("8")
+        assertThat(properties.getValue("freeExportsRemaining").toString()).isEqualTo("3")
         assertThat(payload).doesNotContain("healthData")
         assertThat(payload).doesNotContain("healthPermissions")
         assertThat(payload).doesNotContain("permissionStatus")
@@ -56,6 +56,20 @@ class OnboardingAnalyticsPayloadTest {
         assertThat(payload).doesNotContain("price")
         assertThat(payload).doesNotContain("error")
         assertThat(payload).doesNotContain("androidId")
+    }
+
+    @Test
+    fun queuedTenActionOfferRemainsValidAfterAllowanceChange() {
+        val event = OnboardingAnalyticsEventFactory(
+            OnboardingAnalyticsAppInfo("1.9.4", "25"),
+            OnboardingAnalyticsUuidGenerator { "22222222-2222-4222-8222-222222222222" },
+        ).create(
+            PricingOnboardingEventName.STEP_VIEWED,
+            OnboardingAnalyticsStep.WELCOME,
+            freeExportsUsed = 2,
+            freeExportsRemaining = 8,
+        )
+        assertThat(OnboardingAnalyticsPrivacyValidator.isValid(event)).isTrue()
     }
 
     @Test

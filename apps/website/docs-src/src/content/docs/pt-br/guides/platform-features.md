@@ -81,7 +81,7 @@ Alguns dados deliberadamente **não são tratados como equivalentes** entre as p
 
 | Recurso | iPhone / iPad | Mac | Android | Wear OS |
 |---|---|---|---|---|
-| Nível gratuito | ✓ 10 ações de exportação manuais ou agendadas | — | ✓ 10 ações de exportação manuais | — |
+| Nível gratuito | ✓ 5 ações de exportação manuais ou agendadas | — | ✓ 5 ações de exportação manuais | — |
 | Desbloqueio | ✓ compra única vitalícia (individual / família) | ◐ mesmo desbloqueio da Apple | ✓ compra única vitalícia, com agendamento incluído | — |
 | Privacidade com processamento local | ✓ sem cópia na nuvem por padrão | ✓ | ✓ | △ previsto |
 | Relatório para o profissional de saúde (um PDF para consultas) | ✓ | — | ✓ | — |

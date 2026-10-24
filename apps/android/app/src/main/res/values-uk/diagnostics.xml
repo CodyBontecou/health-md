@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Діагностика</string>
+    <string name="diagnostics_entry">Перегляньте локальні технічні події та виберіть, чим поділитися</string>
+    <string name="diagnostics_recording">Локальний запис</string>
+    <string name="diagnostics_privacy">Діагностика залишається на цьому пристрої, доки ви її не збережете або не надішлете. Операційні події не містять показників здоров’я, ідентифікаторів медичних записів, запитаних дат даних здоров’я, шляхів, адрес підключення та облікових даних. Вони не анонімні.</string>
+    <string name="diagnostics_enabled">Записувати операційні події</string>
+    <string name="diagnostics_retention">Рівень докладності змінює деталі, а не дозвіл збирати дані здоров’я. Зберігання: до 7 днів / 20 MiB. Автоматичного надсилання немає.</string>
+    <string name="diagnostics_start_private">Записувати приватний контекст 15 хвилин</string>
+    <string name="diagnostics_stop_private">Зупинити приватний запис</string>
+    <string name="diagnostics_private_description">Приватний контекст V1 записує доступні назви підключених пристроїв. Дані здоров’я, облікові дані та довільний текст помилок не записуються. Приватні сегменти видаляються під час наступного доступу до застосунку після спливу 24 годин.</string>
+    <string name="diagnostics_private_until">Приватний запис завершується: %1$s</string>
+    <string name="diagnostics_clear">Видалити всю діагностику</string>
+    <string name="diagnostics_clear_question">Видалити локальні події, підготовлені пакети та копії вкладень? Приватний запис зупиниться. Експортовані файли й надіслані копії залишаться без змін.</string>
+    <string name="diagnostics_select">Вибрати події</string>
+    <string name="diagnostics_hour">Остання година</string>
+    <string name="diagnostics_day">Останні 24 години</string>
+    <string name="diagnostics_week">Останні 7 днів</string>
+    <string name="diagnostics_operation">UUID операції (необов’язково)</string>
+    <string name="diagnostics_include_private">Додати записаний приватний контекст</string>
+    <string name="diagnostics_search">Пошук ідентифікаторів подій або полів</string>
+    <string name="diagnostics_refresh">Оновити події</string>
+    <string name="diagnostics_summary">Події: %1$d · Втрати за сеанс: %2$d · Некоректні: %3$d · Скорочено: %4$s</string>
+    <string name="diagnostics_view_limit">Показано 100 найновіших відповідних подій. Пакет містить вибраний знімок, до 10 000 подій; будь-яке скорочення позначається.</string>
+    <string name="diagnostics_attachments">Необов’язкові вкладення</string>
+    <string name="diagnostics_attachment_description">Додайте наявні файли, зокрема експорти здоров’я або знімки екрана. Початкові байти копіюються без змін і НЕ очищуються. Назви вихідних файлів додаються. Нове читання даних здоров’я не виконується. Обмеження: 50 файлів / 100 MiB.</string>
+    <string name="diagnostics_choose">Вибрати файли…</string>
+    <string name="diagnostics_remove">Видалити %1$s</string>
+    <string name="diagnostics_prepare">Підготувати пакет</string>
+    <string name="diagnostics_review">Підготувати й перевірити</string>
+    <string name="diagnostics_frozen">Зафіксований знімок. Події: %1$d. Дані здоров’я: %2$s. ZIP не зашифровано.</string>
+    <string name="diagnostics_reviewed">Я перевірив файли, якими хочу поділитися</string>
+    <string name="diagnostics_share">Надіслати перевірений ZIP</string>
+    <string name="diagnostics_save">Зберегти перевірений ZIP</string>
+    <string name="diagnostics_share_question">Надіслати цей діагностичний пакет?</string>
+    <string name="diagnostics_share_warning">ZIP не зашифровано. Приватний контекст і вкладення можуть розкрити дані здоров’я або секрети. Публічні дописи в GitHub і Discord можуть бути доступні всім. Одержувач керує власними копіями; Health.md не може їх відкликати.</string>
+    <string name="diagnostics_share_confirm">Надіслати цей пакет</string>
+    <string name="diagnostics_bundle_retention">Локальні пакети видаляються під час наступного доступу до застосунку після спливу 24 годин; зберігаються лише 3 найновіші. Збережені або надіслані копії мають власні строки зберігання.</string>
+    <string name="diagnostics_preview_truncated">\n\n[Попередній перегляд скорочено до 128 KiB. Повний початковий файл залишається в ZIP.]</string>
+    <string name="diagnostics_failure">Операція діагностики не вдалася. Перевірте доступ до файлів і локальне сховище, потім підготуйте та перевірте пакет знову.</string>
+    <string name="diagnostics_invalid_operation">Ідентифікатор операції має бути UUID.</string>
+</resources>

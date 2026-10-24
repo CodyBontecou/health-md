@@ -136,7 +136,7 @@ struct UserNotificationExportScheduler: ExportNotificationScheduling {
             content: pendingExportContent(for: request),
             trigger: scheduledTrigger(for: request)
         )
-        try await notificationCenter.add(notificationRequest)
+        try await addNotification(notificationRequest, requestID: request.id)
     }
 
     func sendImmediatePendingExportNotification(for request: PendingExportRequest) async throws {
@@ -147,13 +147,26 @@ struct UserNotificationExportScheduler: ExportNotificationScheduling {
             content: pendingExportContent(for: request),
             trigger: nil
         )
-        try await notificationCenter.add(notificationRequest)
+        try await addNotification(notificationRequest, requestID: request.id)
+    }
+
+    private func addNotification(_ notification: UNNotificationRequest, requestID: UUID) async throws {
+        let identity: [DiagnosticField: DiagnosticValue] = [.operationId: .text(requestID.uuidString.lowercased())]
+        do {
+            try await notificationCenter.add(notification)
+            // Successful OS admission is not evidence of actual display.
+            DiagnosticRecorder.shared.record(.notificationRequested, fields: identity)
+        } catch {
+            DiagnosticRecorder.shared.record(.notificationFailed, fields: identity.merging(DiagnosticRecorder.errorFields(error)) { _, new in new })
+            throw error
+        }
     }
 
     func cancelPendingExportNotification(id: PendingExportRequest.ID) {
         let identifier = ExportNotificationIdentifiers.pendingExport(id: id)
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
         notificationCenter.removeDeliveredNotifications(withIdentifiers: [identifier])
+        DiagnosticRecorder.shared.record(.notificationCancelled, fields: [.operationId: .text(id.uuidString.lowercased()), .pendingOnly: .boolean(false)])
     }
 
     func cancelArmedPendingExportNotification(id: PendingExportRequest.ID) {
@@ -161,6 +174,7 @@ struct UserNotificationExportScheduler: ExportNotificationScheduling {
         // if the run that defused the timer ends without re-arming one.
         let identifier = ExportNotificationIdentifiers.pendingExport(id: id)
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
+        DiagnosticRecorder.shared.record(.notificationCancelled, fields: [.operationId: .text(id.uuidString.lowercased()), .pendingOnly: .boolean(true)])
     }
 
     private func pendingExportContent(for request: PendingExportRequest) -> UNNotificationContent {

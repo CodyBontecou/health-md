@@ -70,7 +70,7 @@ Een opgeslagen profiel bevriest de instellingen en bestemming voor de uitvoering
 
 <div class="callout">
 <strong>Wat Full Access ontgrendelt.</strong>
-<p style="margin-top:6px;">Op Apple-platforms geldt de gratis ruimte voor 10 handmatige of geplande exportacties. Full Access heft die limiet op en ontgrendelt Mac-bestemmingsworkflows en Opdrachten. Android biedt daarentegen 10 gratis handmatige acties en vereist de eenmalige aankoop voor planning. Lees de <a href="/nl/docs/paywall/">pagina over Full Access</a> voor de Apple-aankoop.</p>
+<p style="margin-top:6px;">Op Apple-platforms geldt de gratis ruimte voor 5 handmatige of geplande exportacties. Full Access heft die limiet op en ontgrendelt Mac-bestemmingsworkflows en Opdrachten. Android biedt daarentegen 5 gratis handmatige acties en vereist de eenmalige aankoop voor planning. Lees de <a href="/nl/docs/paywall/">pagina over Full Access</a> voor de Apple-aankoop.</p>
 </div>
 
 ## Gerelateerde documentatie
