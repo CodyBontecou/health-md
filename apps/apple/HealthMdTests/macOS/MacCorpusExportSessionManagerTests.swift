@@ -1,4 +1,5 @@
 import Foundation
+import HealthMdConnectionCore
 import XCTest
 @testable import HealthMd
 
@@ -1860,6 +1861,53 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertTrue(stored.metrics.isEmpty)
         XCTAssertEqual(stored.status, .available)
         XCTAssertTrue(stored.evidence.contains { $0.reference.providerID == "whoop" })
+    }
+
+    func testObservedContextNegotiationCommitAndRestartPreserveFrozenProvenance() async throws {
+        let context = try makeObservedContextTestFixture()
+        let assembler = try ConnectedCorpusPartitionAssembler(sessionID: context.session.sessionID,
+            jobID: context.session.jobID, targetBytes: context.session.partitionTargetBytes)
+        let record = HealthData(date: context.date, timeContext: .init(calendarTimeZoneIdentifier: "UTC"),
+            activity: ActivityData(steps: 1234))
+        assembler.append(try ConnectedCorpusSpoolItem.encode(ConnectedCorpusHealthDayPayload(
+            sourceDate: context.date, isRequestedDate: true, record: record, externalDailyRecords: [], failure: nil),
+            kind: .macHealthDay, sourceDate: context.date, isRequestedDate: true, protocolVersion: 2))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let key = InMemoryHealthContextEncryptionKeyProvider()
+        let contextStore = EncryptedHealthContextStore(rootURL: sessionRoot.appendingPathComponent("observed-context"), keyProvider: key)
+        let sessions = sessionRoot.appendingPathComponent("observed-sessions")
+        let manager = MacCorpusExportSessionManager(rootURL: sessions, queryContextStore: contextStore)
+        let open = ConnectedCorpusTransferOpen(session: context.session, partition: partition.descriptor,
+            exportManifest: context.manifest)
+        let binding = try XCTUnwrap(context.session.peerBinding)
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager,
+            localInstallationID: binding.destinationInstallationID,
+            remoteInstallationID: binding.sourceInstallationID).disposition, .reject)
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager,
+            localInstallationID: binding.destinationInstallationID, remoteInstallationID: binding.sourceInstallationID,
+            contextHistoryObservationVersion: 1).disposition, .accept)
+        try await manager.applyPartition(fileURL: partition.file.url, descriptor: partition.descriptor, vaultManager: vaultManager)
+        let snapshot = try await contextStore.snapshot()
+        let committed = try await contextStore.loadContext(from: snapshot, at: 0)
+        XCTAssertEqual(committed.day.metrics.first(where: { $0.metricID == "steps" })?.value,
+                       .quantity(value: 1234, unit: "steps"))
+        XCTAssertEqual(committed.historyProvenance.map(\.observation), [context.manifest.historyObservation!])
+        let reopened = MacCorpusExportSessionManager(rootURL: sessions, queryContextStore: contextStore)
+        XCTAssertEqual(reopened.open(open, vaultManager: vaultManager,
+            localInstallationID: binding.destinationInstallationID, remoteInstallationID: binding.sourceInstallationID,
+            contextHistoryObservationVersion: 1).disposition, .alreadyCommitted)
+        let outcome = try await reopened.finalize(ConnectedCorpusTransferFinalize(sessionID: context.session.sessionID,
+            jobID: context.session.jobID, requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1, totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256), vaultManager: vaultManager)
+        guard case .files(let result, _) = outcome else { return XCTFail("Expected context completion") }
+        XCTAssertEqual(result.totalFilesWritten, 0)
+        let executor = EncryptedHealthContextQueryExecutor(store: contextStore,
+            evidenceScope: HealthMdEvidenceScope(allowedMetricIDs: ["steps"]))
+        let response = try await executor.execute(HealthMdQueryRequest(metrics: .explicit(["steps"]),
+            dates: .exact(.init(startDate: "2026-04-17", endDate: "2026-04-17")), operation: .coverage), detailLevel: .summary)
+        XCTAssertTrue(response.limitations.contains { $0.code == "history_sample_end_limited" })
     }
 
     func testCommittedHealthDayIsProjectedIntoEncryptedQueryContextBeforeAcknowledgement() async throws {

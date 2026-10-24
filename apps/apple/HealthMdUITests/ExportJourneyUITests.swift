@@ -32,7 +32,10 @@ final class ExportJourneyUITests: XCTestCase {
         // After the simulated export, the status badge should appear
         // ExportStatusBadge is a complex view — use descendants query
         let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
-        XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Export status badge should appear after export")
+        let completed = statusBadge.waitForExistence(timeout: 10)
+        let diagnostic = app.staticTexts["export.synthetic.statusMessage"]
+        let syntheticStatus = diagnostic.exists ? diagnostic.label : "no synthetic stage element"
+        XCTAssertTrue(completed, "Export status badge should appear after export. Synthetic stage: \(syntheticStatus)")
         XCTAssertTrue(
             app.buttons["View Exported File"].exists,
             "A successful local export should offer an exact-file viewer"
@@ -41,6 +44,29 @@ final class ExportJourneyUITests: XCTestCase {
             app.buttons["Browse Export Folder"].exists,
             "A successful local export should offer the exact parent folder in the document picker"
         )
+    }
+
+    /// The App Review iPad lane selects this empty-device recovery journey.
+    /// Use the existing synthetic export result; never read simulator health data.
+    func testNoDataExport_showsGuidanceInsteadOfGenericError() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            exportResult: "no-data"
+        )
+        app.launch()
+        defer { app.terminate() }
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+        XCTAssertTrue(app.staticTexts["No Health Data Found"].waitForExistence(timeout: 10))
+        let guidance = app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS %@", "Try All Time or another date range"
+        )).firstMatch
+        XCTAssertTrue(guidance.waitForExistence(timeout: 5))
+        XCTAssertTrue(guidance.isHittable, "Empty-device recovery guidance must be visible")
+        XCTAssertFalse(app.staticTexts["Export Couldn’t Finish"].exists)
     }
 
     func testMultiFileExport_hidesCompletionUntilEntireExportFinishes() throws {
@@ -130,6 +156,31 @@ final class ExportJourneyUITests: XCTestCase {
             app.buttons["Browse Export Folder"].waitForExistence(timeout: 5),
             "Closing the viewer should preserve the export-folder action"
         )
+    }
+
+    func testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        let browseButton = app.buttons["Browse Export Folder"]
+        for _ in 0..<2 {
+            XCTAssertTrue(browseButton.waitForExistence(timeout: 10))
+            browseButton.tap()
+
+            let files = app.collectionViews["File View"]
+            XCTAssertTrue(files.waitForExistence(timeout: 10), "The first opening must render the document picker instead of an empty sheet")
+            let exportedFile = files.descendants(matching: .any).matching(
+                NSPredicate(format: "label CONTAINS %@", "2026-03-28")
+            ).firstMatch
+            XCTAssertTrue(exportedFile.waitForExistence(timeout: 5), "The picker must render the synthetic export filename instead of an empty sheet")
+            app.buttons["Cancel"].firstMatch.tap()
+        }
+        XCTAssertTrue(browseButton.waitForExistence(timeout: 5))
     }
 
     func testArchivedExport_stillUsesQuickLook() throws {

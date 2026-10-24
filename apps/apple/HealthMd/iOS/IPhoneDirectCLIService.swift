@@ -5,6 +5,13 @@ import UIKit
 
 final class IPhoneDirectExportConnection: @unchecked Sendable {
     let channel: DirectSecureChannel
+    @MainActor private(set) var exportHistoryObservationVersion: Int?
+
+    @MainActor
+    func configureExportHistoryObservation(local: DirectPeerCapabilities, remote: DirectPeerCapabilities) {
+        exportHistoryObservationVersion = local.negotiatedExportHistoryObservationVersion(with: remote)
+    }
+
     private let inbox = IPhoneDirectExportMessageInbox()
 
     init(channel: DirectSecureChannel) {
@@ -302,6 +309,15 @@ final class IPhoneDirectCLIService: ObservableObject {
     ) async -> Void)?
     var cancelHandler: ((UUID) -> Bool)?
     var queryRequestHandler: ((DirectQueryRequest, DirectSecureChannel) async -> Void)?
+    // Query receipt identity only; pairing, raw/file bindings and wires unchanged.
+    var querySourceInstallationID: UUID { installationID }
+
+    private var localCapabilities: DirectPeerCapabilities {
+        DirectPeerCapabilities(protocolVersions: [HealthMdDirectProtocol.currentVersion, HealthMdDirectProtocol.queryVersion],
+            platform: .iOS, installationID: installationID, query: .current,
+            wake: wakeManager?.advertisesWake == true ? DirectWakeCapabilities(supported: true) : nil,
+            exportHistoryObservationVersions: [1])
+    }
 
     private let defaults: UserDefaults
     private let trustStore: ManualIPTrustStore
@@ -821,18 +837,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             }
             pairingTrustWasWritten = isCodePairing
             provisionalChannel = connected
-            try await connected.send(.hello(DirectPeerCapabilities(
-                protocolVersions: [
-                    HealthMdDirectProtocol.currentVersion,
-                    HealthMdDirectProtocol.queryVersion
-                ],
-                platform: .iOS,
-                installationID: installationID,
-                query: .current,
-                wake: wakeManager?.advertisesWake == true
-                    ? DirectWakeCapabilities(supported: true)
-                    : nil
-            )))
+            try await connected.send(.hello(localCapabilities))
             guard !Task.isCancelled,
                   isEnabled,
                   appIsActive,
@@ -1043,21 +1048,14 @@ final class IPhoneDirectCLIService: ObservableObject {
         case .hello(let capabilities):
             guard capabilities.platform == .macOSCLI,
                   capabilities.installationID == channel.peerInstallationID,
-                  DirectPeerCapabilities(
-                    protocolVersions: [
-                        HealthMdDirectProtocol.currentVersion,
-                        HealthMdDirectProtocol.queryVersion
-                    ],
-                    platform: .iOS,
-                    installationID: installationID,
-                    query: .current
-                  ).negotiatedProtocolVersion(with: capabilities) != nil else {
+                  localCapabilities.negotiatedProtocolVersion(with: capabilities) != nil else {
                 throw DirectChannelError.authenticationFailed(
                     "The connected CLI is not protocol compatible."
                 )
             }
             _ = try protocolAuthority.negotiateTransfer(peer: capabilities.transfer)
             remoteCapabilities = capabilities
+            exportConnection.configureExportHistoryObservation(local: localCapabilities, remote: capabilities)
             protocolAuthority.beginBootstrap()
             try commitProvisionalPairingTrustIfNeeded(for: sessionID)
             // RFC-0005 P2: only a CLI that advertised wake support reads the enrollment, and
