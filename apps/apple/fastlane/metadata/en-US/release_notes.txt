@@ -1,5 +1,5 @@
-Health.md 3.4.3 improves schedule recovery and makes free-export reminders clearer.
+Health.md 3.4.4 improves repeat exports and explains Apple Ads purchase measurement.
 
-• Export-profile schedules restore their notifications when you reopen the app and avoid duplicate catch-up attempts.
-• Improved scheduled notification setup and recovery after temporary delivery errors.
-• Upgrade reminders correctly show how many free exports you have used.
+• Guidance after a successful export helps you export again or set up a schedule. The free plan includes five export actions.
+• Improved export history, connection recovery, and the export file browser.
+• On iPhone and iPad, Apple Ads campaign identifiers help measure which campaigns lead to purchases. Health data and purchase events are never sent to Apple Ads.
