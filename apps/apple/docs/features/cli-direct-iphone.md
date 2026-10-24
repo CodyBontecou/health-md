@@ -25,7 +25,7 @@ also offers a compatible direct mode selected with `--backend direct`. Neither c
 changes client mode or transport. HealthKit reads still occur on iPhone, Direct CLI Access is
 opt-in, and iOS foreground/protected-data constraints still apply.
 
-Direct mode supports pairing, device inspection, status, canonical `extract`, strict raw extraction, generated-file exports, durable status/resume, and explicit cancellation. Portable `healthmd mcp serve` adds fresh typed queries, evidence, metric catalog, interactive MCP Apps, PNG chart fallback, and an approval-gated full-corpus raw job with bounded job-artifact reads. Typed operations use query protocol v3; full-corpus raw reuses the durable v1 export path without the Mac app. After separate local pairing, `healthmd mcp serve-read-only` exposes the same 13 readiness/query operations over stdio without pairing, export-job, HTTP, OAuth, tunnel, or cloud authority. `healthmd setup codex` configures Codex and pairs the iPhone in one flow; the compatibility `healthmd-mcp` launcher execs `healthmd` on Unix and uses an authenticated same-file helper with the fixed Credential Manager service/account on Windows. In the bundled Swift helper, Mac encrypted-context query/refresh subcommands return deterministic `backend_unsupported` diagnostics when direct is selected. Those shell commands are not part of the standalone Rust grammar; Rust uses its fixed MCP tools instead.
+Direct mode supports pairing, device inspection, status, canonical `extract`, strict raw extraction, generated-file exports, durable status/resume, and explicit cancellation. Portable `healthmd mcp serve` adds fresh typed queries, evidence, metric catalog, interactive MCP Apps, PNG chart fallback, and an approval-gated full-corpus raw job with bounded job-artifact reads. Typed operations use query protocol v3; full-corpus raw reuses the durable v1 export path without the Mac app. After separate local pairing, `healthmd mcp serve-read-only` exposes the same 13 readiness/query operations over stdio without pairing, export-job, HTTP, OAuth, tunnel, or cloud authority. `healthmd setup codex` configures Codex and pairs the iPhone in one flow; the compatibility `healthmd-mcp` launcher execs `healthmd` on Unix and uses an authenticated same-file helper with the fixed Credential Manager service/account on Windows. In the bundled Swift helper, Mac encrypted-context query/refresh subcommands return deterministic `backend_unsupported` diagnostics when direct is selected. Those Mac encrypted-context commands are not part of the standalone Rust grammar; Rust exposes its fixed typed-operation registry through `healthmd query` and MCP.
 
 ## Requirements
 
@@ -34,7 +34,7 @@ Direct mode supports pairing, device inspection, status, canonical `extract`, st
 - Health.md open on an unlocked-enough iPhone.
 - **Sync → CLI → Direct CLI Access** enabled on iPhone.
 - HealthKit permission and export quota available.
-- For Manual IP: a reachable Mac address and TCP port `17647` by default. A Tailscale address is allowed.
+- For Manual IP: a reachable desktop host address and TCP port `17647` by default. A Tailscale address is allowed.
 - For Nearby: both devices on a network where Multipeer discovery is permitted and local-network permission granted.
 - For file mode: an existing absolute writable desktop destination on macOS, Linux, or Windows supplied with `--destination`.
 

@@ -83,7 +83,9 @@ Certaines données ne sont volontairement **pas traitées comme équivalentes** 
 |---|---|---|---|---|
 | Offre gratuite | ✓ 10 actions d’export manuelles ou planifiées | — | ✓ 10 actions d’export manuelles | — |
 | Déverrouillage | ✓ achat à vie unique (individuel / familial) | ◐ même déverrouillage Apple | ✓ achat à vie unique, planification incluse | — |
-| Confidentialité à traitement local | ✓ aucun cloud de données de santé Health.md | ✓ | ✓ | △ prévu |
+| Confidentialité à traitement local | ✓ aucune copie cloud par défaut | ✓ | ✓ | △ prévu |
 | Rapport clinicien (un PDF pour les rendez-vous) | ✓ | — | ✓ | — |
 
-Health.md n’exploite aucun cloud de données de santé. Les données de santé peuvent exister dans les destinations de votre choix, dans un contexte local chiffré et dans un état de transfert privé limité. Chaque dossier, Mac, point de terminaison API ou destination CLI est configuré explicitement. Les profils et planifications restent locaux à l’appareil où ils ont été créés. Pour le déroulé de chaque plateforme, voir les [profils d’export](/fr/docs/export-profiles/), le [guide Android](/fr/docs/android/) et le [guide d’export iPhone](/fr/docs/export/).
+Par défaut, les exports et les requêtes directes sur l’appareil ne créent pas de copie sur les serveurs Health.md. Le pilote Health.md Cloud, distinct et facultatif, est réservé à un seul propriétaire et conserve uniquement les exports API envoyés volontairement. Il n’y a pas d’inscription publique ni de synchronisation automatique des appareils. La [politique de confidentialité](/privacy-policy.html) décrit la conservation, la suppression, le quota et les risques de perte sans sauvegarde.
+
+Les données de santé peuvent exister dans les destinations de votre choix, dans un contexte local chiffré et dans un état de transfert privé limité. Chaque dossier, Mac, point de terminaison API ou destination CLI est configuré explicitement. Les profils et planifications restent locaux à l’appareil où ils ont été créés. Pour le déroulé de chaque plateforme, voir les [profils d’export](/fr/docs/export-profiles/), le [guide Android](/fr/docs/android/) et le [guide d’export iPhone](/fr/docs/export/).

@@ -26,9 +26,8 @@ production key custody until secret-FFI review. It does not own trust, pairing l
 credentials, random key generation, or persistence.
 
 Protocol API revision 1 is an internal API revision, not a wire version. The supported pairing
-selectors remain Apple 1 and Android 2, Apple exports remain 1, Android application remains 2,
-Apple query capability uses 3, and shared secure/binary framing remains 1. The canonical contract fixtures and crate mirrors are
-byte-identical and unchanged.
+selectors include legacy Apple 1 and Android 2 plus shared high-entropy selector 3, Apple exports remain 1, Android application remains 2,
+Apple query capability uses 3, and shared secure/binary framing remains 1. Canonical contract fixtures remain pinned compatibility evidence; `packages/contracts/validate.py` enforces exact-byte parity with their crate mirrors.
 
 ## Security-review gate
 

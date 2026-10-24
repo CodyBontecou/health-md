@@ -1,7 +1,8 @@
 # iOS UI tests
 
-Run from `apps/apple` using the `HealthMd-UITests-iOS` scheme. UI tests use synthetic
-launch state, not simulator Health data or production purchases.
+The iOS UI test target uses the `HealthMd-UITests-iOS` scheme and launches the app with `--uitesting`. Run commands from `apps/apple` only after obtaining the current task's explicit simulator/UI-QA authorization under the root [verification policy](../../../../AGENTS.md#verification-policy).
+
+UI tests use synthetic launch state, not simulator Health data or production purchases.
 
 ## Choose an existing recipe
 
@@ -82,8 +83,8 @@ Run the surrounding journey class next, then the affected broader suite.
    alongside another journey; a lone pass does not establish state isolation.
 
 Attachments must come from synthetic scenarios. Keep real health values, credentials, and user
-vault content out of test logs and reports. [Local TODO plans](TODO-INDEX.md) are session planning
-artifacts, not the testing runbook or fresh-checkout prerequisites.
+vault content out of test logs and reports. Local session plans belong in ignored `.pi/` state;
+they are not the testing runbook or fresh-checkout prerequisites.
 
 ## Pull-request UI coverage
 

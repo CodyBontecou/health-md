@@ -16,8 +16,8 @@
 
 ## More documentation
 
-- [Feature documentation](./features/index.md): full user-facing feature inventory and video planning.
+- [Feature documentation](./features/index.md): workflow guides and optional editorial/video planning.
 - [Privacy and local-first design](./features/privacy-local-first.md): what stays local, what can leave the device, and lossless-data sensitivity.
 - [Operational experiments](../../../docs/experiments/index.md): current pricing decisions and results; [Apple experiment archive](./experiments/index.md) retains historical plans.
-- [iOS UI tests](./testing/UI-TESTS.md): deterministic launch state, journey recipes, and failure attachments.
-- [CI quality gates](./testing/CI-QUALITY-GATES.md): broader testing and coverage commands.
+- [Testing docs](./testing/README.md): current test sources, verification policies and quality gates.
+- [iOS UI tests](./testing/UI-TESTS.md): deterministic synthetic launch state and journey recipes.

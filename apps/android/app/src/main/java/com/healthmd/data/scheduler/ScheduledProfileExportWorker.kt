@@ -97,9 +97,10 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = try {
         if (!inputData.getString(INPUT_PROFILE_ID).isNullOrBlank()) {
-            setForeground(getForegroundInfo())
+            withScheduledExportForeground(getForegroundInfo()) { doWorkManaged() }
+        } else {
+            doWorkManaged()
         }
-        doWorkManaged()
     } finally {
         ScheduledExportCancellationCoordinator.finish(id)
     }

@@ -35,7 +35,7 @@ Metric Selection controls which of Health.md's 106 selectable Health Connect met
 
 ## Categories
 
-Sleep, Activity, Heart, Respiratory, Vitals, Body, Nutrition, Mobility, Cycling, Hearing, Mindfulness, Reproductive Health, Symptoms, Medications, Other, and Workouts.
+The screen shows categories containing selectable metrics. `HealthMetrics.categories` in `app/src/main/java/com/healthmd/domain/model/MetricSelection.kt` owns the rendered groups; selectable definitions come from `packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json`. Unsupported concepts remain separately documented and are not fabricated as selectable data.
 
 Each metric shows its unit under the name where one applies, so you can see at a glance what will land in your files.
 
@@ -71,4 +71,4 @@ With only Sleep and Heart enabled, a daily Markdown note contains those sections
 
 ## Implementation notes
 
-`MetricSelectionScreen.kt` renders search (`contains` on localized display names), bulk buttons, a `LinearProgressIndicator`, and per-category `GeistCard` rows with tri-state category checkboxes (`isCategoryFullyEnabled`/`isCategoryPartiallyEnabled`) over a `LazyColumn`. The catalog is `HealthMetrics` in `domain/model/MetricSelection.kt`: `ALL_METRICS` (106 `HealthMetricDefinition`s across the 16 `HealthMetricCategory` values) plus `UNAVAILABLE_METRICS`, which document — with reasons — concepts that are not offered on Android (e.g. Apple-only equivalents); unavailable entries are never fabricated as selectable metrics. Selection state (`MetricSelectionState.enabledMetrics`) persists in settings and feeds every exporter. Category and metric display names localize via `presentation/i18n`. Deliberate difference from Apple: the Apple catalog is far larger (225+ definitions including archive-only and special-access flows); Android's list is exactly what Health Connect's pinned API exposes.
+`MetricSelectionScreen.kt` renders search (`contains` on localized display names), bulk buttons, a `LinearProgressIndicator`, and per-category `GeistCard` rows with tri-state category checkboxes (`isCategoryFullyEnabled`/`isCategoryPartiallyEnabled`) over a `LazyColumn`. The catalog is `HealthMetrics` in `domain/model/MetricSelection.kt`: `ALL_METRICS` (selectable `HealthMetricDefinition`s, with rendered categories derived only from populated groups) plus `UNAVAILABLE_METRICS`, which document — with reasons — concepts that are not offered on Android (e.g. Apple-only equivalents); unavailable entries are never fabricated as selectable metrics. Selection state (`MetricSelectionState.enabledMetrics`) persists in settings and feeds every exporter. Category and metric display names localize via `presentation/i18n`. Deliberate difference from Apple: the Apple catalog is far larger (225+ definitions including archive-only and special-access flows); Android's list is exactly what Health Connect's pinned API exposes.

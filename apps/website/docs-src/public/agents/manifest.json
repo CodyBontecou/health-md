@@ -8,8 +8,8 @@
       "index_version": 1,
       "path": "/docs/cli/llms.txt",
       "media_type": "text/markdown",
-      "bytes": 3111,
-      "sha256": "2a30675b8084f1dd4ff33e86e1914ffdc8e83c0c866922ffbe593a5bbc73a9de"
+      "bytes": 3666,
+      "sha256": "2371e0698c0bd1f921a5b20d41e3abbbfd7370d909ed5d1be8e62948a794bc03"
     },
     {
       "id": "mac_mcp_tools",
@@ -94,8 +94,8 @@
       "manifest_version": 1,
       "path": "/docs/reference/source-manifest.json",
       "media_type": "application/json",
-      "bytes": 80289,
-      "sha256": "09e0477e1b612d780055a2940f36334b0ddd0826c88ceaca9e09c313b21c3a13"
+      "bytes": 82318,
+      "sha256": "f985d06a31e8c9498336c4582528a0fa71e096bff8453e1c1e12913a6b14f45c"
     }
   ]
 }

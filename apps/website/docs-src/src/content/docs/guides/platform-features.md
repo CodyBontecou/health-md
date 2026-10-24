@@ -83,7 +83,9 @@ Some data is deliberately **not treated as equivalent** across platforms. Heart-
 |---|---|---|---|---|
 | Free tier | ✓ 10 manual or scheduled export actions | — | ✓ 10 manual export actions | — |
 | Unlock | ✓ one-time lifetime (individual / family) | ◐ same Apple unlock | ✓ one-time lifetime purchase, including scheduling | — |
-| Local-first privacy | ✓ no Health.md health-data cloud | ✓ | ✓ | △ planned |
+| Local-first privacy | ✓ no cloud copy by default | ✓ | ✓ | △ planned |
 | Clinician report (one PDF for appointments) | ✓ | — | ✓ | — |
 
-Health.md does not operate a health-data cloud. Health data can exist in destinations you choose, encrypted local context, and bounded private transfer state. Every folder, Mac, API endpoint, or CLI destination is configured explicitly. Profiles and schedules stay local to the device where they were created. See [Export profiles](/docs/export-profiles/), the [Android guide](/docs/android/), and the [iPhone export guide](/docs/export/) for each platform's workflow.
+Core exports and direct device queries do not create a Health.md server copy by default. The separate, optional single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it, with no public signup and no automatic device sync. See the [privacy policy](/privacy-policy.html) for retention, deletion, quota, and unbacked storage risks.
+
+Health data can exist in destinations you choose, encrypted local context, and bounded private transfer state. Every folder, Mac, API endpoint, or CLI destination is configured explicitly. Profiles and schedules stay local to the device where they were created. See [Export profiles](/docs/export-profiles/), the [Android guide](/docs/android/), and the [iPhone export guide](/docs/export/) for each platform's workflow.

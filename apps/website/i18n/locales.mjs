@@ -138,7 +138,7 @@ export const locales = Object.freeze({
     },
     assetFallbacks: ['firstExportOnboardingScreenshot'],
     translatedDocSlugs: authoredDocSlugs,
-    surfaces: { landing: true, docs: true, legal: true, redirect: true },
+    surfaces: { landing: true, docs: true, legal: false, redirect: true },
     ui: {
       languageSelector: 'Selector de idioma',
       docsPrimary: 'Principal',
@@ -175,7 +175,7 @@ export const locales = Object.freeze({
     },
     assetFallbacks: ['firstExportOnboardingScreenshot'],
     translatedDocSlugs: authoredDocSlugs,
-    surfaces: { landing: true, docs: true, legal: true, redirect: true },
+    surfaces: { landing: true, docs: true, legal: false, redirect: true },
     ui: {
       languageSelector: 'Sprachauswahl',
       docsPrimary: 'Hauptnavigation',
@@ -212,7 +212,7 @@ export const locales = Object.freeze({
     },
     assetFallbacks: ['firstExportOnboardingScreenshot'],
     translatedDocSlugs: authoredDocSlugs,
-    surfaces: { landing: true, docs: true, legal: true, redirect: true },
+    surfaces: { landing: true, docs: true, legal: false, redirect: true },
     ui: {
       languageSelector: 'Sélecteur de langue',
       docsPrimary: 'Navigation principale',
@@ -249,7 +249,7 @@ export const locales = Object.freeze({
     },
     assetFallbacks: ['firstExportOnboardingScreenshot'],
     translatedDocSlugs: authoredDocSlugs,
-    surfaces: { landing: true, docs: true, legal: true, redirect: true },
+    surfaces: { landing: true, docs: true, legal: false, redirect: true },
     ui: {
       languageSelector: 'Seletor de idioma',
       docsPrimary: 'Navegação principal',
@@ -286,7 +286,7 @@ export const locales = Object.freeze({
     },
     assetFallbacks: ['firstExportOnboardingScreenshot'],
     translatedDocSlugs: authoredDocSlugs,
-    surfaces: { landing: true, docs: true, legal: true, redirect: true },
+    surfaces: { landing: true, docs: true, legal: false, redirect: true },
     ui: {
       languageSelector: 'Selettore della lingua',
       docsPrimary: 'Navigazione principale',
@@ -323,7 +323,7 @@ export const locales = Object.freeze({
     },
     assetFallbacks: ['firstExportOnboardingScreenshot'],
     translatedDocSlugs: authoredDocSlugs,
-    surfaces: { landing: true, docs: true, legal: true, redirect: true },
+    surfaces: { landing: true, docs: true, legal: false, redirect: true },
     ui: {
       languageSelector: 'Taalkeuze',
       docsPrimary: 'Hoofdnavigatie',
@@ -360,7 +360,7 @@ export const locales = Object.freeze({
     },
     assetFallbacks: ['firstExportOnboardingScreenshot'],
     translatedDocSlugs: authoredDocSlugs,
-    surfaces: { landing: true, docs: true, legal: true, redirect: true },
+    surfaces: { landing: true, docs: true, legal: false, redirect: true },
     ui: {
       languageSelector: '言語選択',
       docsPrimary: 'メインナビゲーション',
@@ -397,7 +397,7 @@ export const locales = Object.freeze({
     },
     assetFallbacks: ['firstExportOnboardingScreenshot'],
     translatedDocSlugs: authoredDocSlugs,
-    surfaces: { landing: true, docs: true, legal: true, redirect: true },
+    surfaces: { landing: true, docs: true, legal: false, redirect: true },
     ui: {
       languageSelector: '언어 선택',
       docsPrimary: '기본 탐색',
@@ -434,7 +434,7 @@ export const locales = Object.freeze({
     },
     assetFallbacks: ['firstExportOnboardingScreenshot'],
     translatedDocSlugs: authoredDocSlugs,
-    surfaces: { landing: true, docs: true, legal: true, redirect: true },
+    surfaces: { landing: true, docs: true, legal: false, redirect: true },
     ui: {
       languageSelector: '语言选择',
       docsPrimary: '主导航',
