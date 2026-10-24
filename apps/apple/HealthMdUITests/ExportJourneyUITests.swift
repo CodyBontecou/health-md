@@ -158,6 +158,31 @@ final class ExportJourneyUITests: XCTestCase {
         )
     }
 
+    func testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        let browseButton = app.buttons["Browse Export Folder"]
+        for _ in 0..<2 {
+            XCTAssertTrue(browseButton.waitForExistence(timeout: 10))
+            browseButton.tap()
+
+            let files = app.collectionViews["File View"]
+            XCTAssertTrue(files.waitForExistence(timeout: 10), "The first opening must render the document picker instead of an empty sheet")
+            let exportedFile = files.descendants(matching: .any).matching(
+                NSPredicate(format: "label CONTAINS %@", "2026-03-28")
+            ).firstMatch
+            XCTAssertTrue(exportedFile.waitForExistence(timeout: 5), "The picker must render the synthetic export filename instead of an empty sheet")
+            app.buttons["Cancel"].firstMatch.tap()
+        }
+        XCTAssertTrue(browseButton.waitForExistence(timeout: 5))
+    }
+
     func testArchivedExport_stillUsesQuickLook() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_ARCHIVE_EXPORTS"] = "true"

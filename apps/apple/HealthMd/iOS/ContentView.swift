@@ -59,7 +59,7 @@ struct ContentView: View {
     @State private var markdownPreviewTarget: ExportPresentationTarget?
     @State private var exportFolderBrowserTarget: ExportPresentationTarget?
     @State private var browsedFileURL: URL?
-    @State private var showExportFolderBrowser = false
+    @State private var exportFolderBrowserPresentation: ExportFolderBrowserPresentation?
     @State private var showPaywall = false
     @State private var showUpgradePromptPaywall = false
     @State private var presentPaywallAfterUpgradePrompt = false
@@ -323,20 +323,18 @@ struct ContentView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showExportFolderBrowser, onDismiss: finishBrowsingExportFolder) {
-            if let target = exportFolderBrowserTarget {
-                ExportFolderBrowser(
-                    initialDirectoryURL: target.folderURL,
-                    onFileSelected: { url in
-                        browsedFileURL = url
-                        showExportFolderBrowser = false
-                    },
-                    onCancel: {
-                        showExportFolderBrowser = false
-                    }
-                )
-                .ignoresSafeArea()
-            }
+        .sheet(item: $exportFolderBrowserPresentation, onDismiss: finishBrowsingExportFolder) { presentation in
+            ExportFolderBrowser(
+                initialDirectoryURL: presentation.target.folderURL,
+                onFileSelected: { url in
+                    browsedFileURL = url
+                    exportFolderBrowserPresentation = nil
+                },
+                onCancel: {
+                    exportFolderBrowserPresentation = nil
+                }
+            )
+            .ignoresSafeArea()
         }
         .sheet(item: $markdownPreview, onDismiss: releaseMarkdownPreviewAccess) { presentation in
             ExportedMarkdownViewer(target: presentation.target)
@@ -905,7 +903,7 @@ struct ContentView: View {
 
         browsedFileURL = nil
         exportFolderBrowserTarget = target
-        showExportFolderBrowser = true
+        exportFolderBrowserPresentation = ExportFolderBrowserPresentation(target: target)
     }
 
     private func finishBrowsingExportFolder() {
@@ -939,6 +937,7 @@ struct ContentView: View {
         guard let target = exportFolderBrowserTarget else { return }
         vaultManager.stopAccessingExportPresentationTarget(target)
         exportFolderBrowserTarget = nil
+        exportFolderBrowserPresentation = nil
     }
 
     private func presentExportPresentationError(_ message: String) {
