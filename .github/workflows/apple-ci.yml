@@ -372,6 +372,7 @@ jobs:
             2>&1 | tee build/logs/build-device-qa.log
           app=build/device-qa-derived/Build/Products/Debug-iphoneos/HealthMd.app
           test -f "$app/HealthMd"
+          python3 scripts/ui_test_document_fixture.py verify-device --plist "$app/Info.plist"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
           xcrun lipo -verify_arch arm64 "$app/HealthMd"
           {
@@ -723,12 +724,15 @@ jobs:
           mkdir -p build/logs build/test-results
           MD_UI_DERIVED_DATA=$(mktemp -d "$PWD/build/ios-ui-derived-data.XXXXXX")
           touch "$MD_UI_DERIVED_DATA/.healthmd-ui-build-start"
+          python3 scripts/ui_test_document_fixture.py create \
+            --source HealthMd/Info.plist --output "$MD_UI_DERIVED_DATA/ui-test-Info.plist"
           xcodebuild build-for-testing \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
             -destination 'generic/platform=iOS Simulator' \
             -configuration Debug-iOS \
             -derivedDataPath "$MD_UI_DERIVED_DATA" \
+            HEALTHMD_IOS_INFO_PLIST="$MD_UI_DERIVED_DATA/ui-test-Info.plist" \
             ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \

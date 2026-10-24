@@ -298,10 +298,13 @@ jobs:
           set -euo pipefail
           mkdir -p build/logs build/nightly-ui
           touch build/nightly-ui/.healthmd-ui-build-start
+          python3 scripts/ui_test_document_fixture.py create \
+            --source HealthMd/Info.plist --output build/nightly-ui/ui-test-Info.plist
           xcodebuild build-for-testing \
             -project HealthMd.xcodeproj -scheme HealthMd-UITests-iOS \
             -configuration Debug-iOS -destination '${{ steps.ui_simulator.outputs.ios_destination }}' \
             -derivedDataPath build/nightly-ui \
+            HEALTHMD_IOS_INFO_PLIST="$PWD/build/nightly-ui/ui-test-Info.plist" \
             ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES \
             COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \

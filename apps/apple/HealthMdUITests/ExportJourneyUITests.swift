@@ -160,6 +160,8 @@ final class ExportJourneyUITests: XCTestCase {
 
     func testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
+        // Files can browse the UI host's synthetic Documents directory, not tmp.
+        app.launchEnvironment["UITEST_BROWSABLE_VAULT"] = "true"
         app.launch()
         addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 

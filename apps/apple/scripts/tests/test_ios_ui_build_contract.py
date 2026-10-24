@@ -23,6 +23,7 @@ REPO = SCRIPTS.parents[2]
 sys.path.insert(0, str(SCRIPTS))
 from validate_ios_ui_xctestrun import BUILD_MARKER, qualify  # noqa: E402
 from prepared_ios_ui_artifacts import digest, pack, restore  # noqa: E402
+from ui_test_document_fixture import create, verify_device, verify_simulator  # noqa: E402
 
 SOURCE_SHA = "a" * 40
 EXPECTED_TESTS = [
@@ -64,6 +65,8 @@ def make_products(derived: Path, version: int = 1) -> tuple[Path, dict]:
             "CFBundleExecutable": executable,
             "CFBundleIdentifier": identifier,
             "CFBundleSupportedPlatforms": ["iPhoneSimulator"],
+            **({"UIFileSharingEnabled": True, "LSSupportsOpeningDocumentsInPlace": True,
+                "HealthMdUITestBrowsableDocuments": True} if relative.endswith("/HealthMd.app") else {}),
         }))
     target = {
         "BlueprintName": "HealthMdUITests", "ProductModuleName": "HealthMdUITests", "IsUITestBundle": True,
@@ -92,6 +95,25 @@ def selected_target(payload: dict) -> dict:
 
 
 class ArtifactQualificationTests(unittest.TestCase):
+    def test_document_fixture_is_simulator_only_and_preserves_production_plist(self) -> None:
+        source = SCRIPTS.parent / "HealthMd/Info.plist"
+        original = source.read_bytes()
+        verify_device(plistlib.loads(original))
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "UI.plist"
+            create(source, output)
+            fixture = plistlib.loads(output.read_bytes())
+            with self.assertRaises(ValueError):
+                verify_device(fixture)
+            fixture["CFBundleSupportedPlatforms"] = ["iPhoneSimulator"]
+            verify_simulator(fixture)
+            fixture["CFBundleSupportedPlatforms"] = ["iPhoneOS"]
+            with self.assertRaises(ValueError):
+                verify_simulator(fixture)
+            with self.assertRaises(ValueError):
+                create(source, source)
+        self.assertEqual(source.read_bytes(), original)
+
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -341,6 +363,9 @@ class WorkflowExecutionTests(unittest.TestCase):
         scripts = self.root / "scripts"
         scripts.mkdir()
         shutil.copy(SCRIPTS / "validate_ios_ui_xctestrun.py", scripts)
+        shutil.copy(SCRIPTS / "ui_test_document_fixture.py", scripts)
+        (self.root / "HealthMd").mkdir()
+        shutil.copy(SCRIPTS.parent / "HealthMd/Info.plist", self.root / "HealthMd/Info.plist")
         shutil.copy(SCRIPTS / "ios_ui_shards.py", scripts)
         shutil.copy(SCRIPTS / "start-ci-ios-simulator.sh", scripts)
         shutil.copy(SCRIPTS / "apple_nightly_ui.py", scripts)

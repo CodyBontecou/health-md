@@ -2057,7 +2057,8 @@
 				CURRENT_PROJECT_VERSION = 202610071218;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = HealthMd/Info.plist;
+				HEALTHMD_IOS_INFO_PLIST = HealthMd/Info.plist;
+				INFOPLIST_FILE = "$(HEALTHMD_IOS_INFO_PLIST)";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
