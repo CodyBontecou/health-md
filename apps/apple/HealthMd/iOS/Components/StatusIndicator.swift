@@ -388,7 +388,3 @@ struct PartialExportNoticeToast: View {
         }
     }
 }
-
-extension View {
-    func shimmer() -> some View { self }
-}

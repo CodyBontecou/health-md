@@ -340,6 +340,8 @@ struct ExportProfileDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showScheduleEditor = false
     @State private var showSettingsEditor = false
+    // Keep the immutable ID's copy receipt readable until this detail closes.
+    // A timer can erase it before a slow AX snapshot or VoiceOver read finishes.
     @State private var idCopied = false
     @State private var contextBindingPeer: UUID?
     @State private var pendingContextPeer: UUID?
@@ -898,7 +900,7 @@ struct ExportProfileDetailView: View {
         ) {
             Button(
                 String(
-                    localized: "Delete “%@”",
+                    localized: "Delete “\(profile.name)”",
                     comment: "Destructive action deleting the named export profile"
                 ),
                 role: .destructive

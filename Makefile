@@ -1,6 +1,7 @@
 ## Health.md monorepo command router
 
 ANDROID_HOME ?= $(HOME)/Library/Android/sdk
+PYTHON ?= python3
 CORE_RUST_DIR := packages/healthmd-core-rust
 TEST_JOBS ?= 4
 ANDROID_TEST_ARGS ?= --max-workers=2 --init-script scripts/ci-gradle.init.gradle
@@ -10,14 +11,23 @@ CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
 .PHONY: test test-components test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
         test-apple test-android test-cli test-practice test-wake test-website apple-ios apple-macos cli-build \
         android-build android-play-debug android-fdroid-debug android-fdroid-release \
-        practice-build website-build
+        practice-build website-build check-doc-navigation cli-smoke
 
 # Bound component concurrency, preserve every gate, and report all failures.
 # TEST_JOBS=1 retains serial scheduling for diagnosis or smaller machines.
 test:
 	$(MAKE) --jobs="$(TEST_JOBS)" --keep-going test-components
 
-test-components: test-contracts test-core test-apple test-android test-cli test-practice test-wake test-website
+test-components: check-doc-navigation test-contracts test-core test-apple test-android test-cli test-practice test-wake test-website
+
+
+check-doc-navigation:
+	$(PYTHON) apps/apple/scripts/check-documentation-links.py --navigation-only
+	$(PYTHON) -m unittest apps/apple/scripts/tests/test_documentation_links.py
+
+cli-smoke:
+	cd apps/cli && $(PYTHON) -m unittest scripts/test_smoke_cli.py
+	cd apps/cli && $(PYTHON) scripts/smoke-cli.py
 
 test-contracts:
 	python3 packages/contracts/validate.py

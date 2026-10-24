@@ -2,7 +2,7 @@
 
 ## Clinical boundary
 
-Everything served after authentication, including identity and request metadata, is inside the clinical/PHI boundary. This component is independent from `apps/website`, every existing Worker, and root `worker/`. Never import from, proxy through, or share stores with those components.
+Everything served after authentication, including identity and request metadata, is inside the clinical/PHI boundary. This component is independent from [the website](../website/), [Apple Workers](../apple/worker/), and every other existing Worker. Never import from, proxy through, or share stores with those components.
 
 The checked-in runtime is **synthetic only**. Use fictional aliases and generated values. Never add real names, dates of birth, MRNs, readings, credentials, tenant URLs, access tokens, screenshots, or production configuration. `PRACTICE_RUNTIME_MODE` accepts only `synthetic`; do not add a production value without an approved architecture, compliance, security, BAA, and release-gate change.
 
@@ -30,6 +30,6 @@ npm run dry-run
 
 `npm run check:ci` is the component-local full synthetic gate after browser binaries are installed. Real-browser evidence covers bundled Chromium, Firefox, and WebKit; it does not replace pending manual screen-reader, physical-device, external security, compliance, BAA, backend, or pilot approval.
 
-`npm start` builds and starts the local synthetic Worker on `127.0.0.1:8787`. Generated `dist/` and `.wrangler/` content is never committed. CI qualifies a build but never deploys it.
+`npm start` builds and starts the local synthetic Worker on `127.0.0.1:8787`. Generated build output (`dist`) and local Wrangler state (`.wrangler`) are never committed; these directories are created by component commands and are not navigation targets. CI qualifies a build but never deploys it.
 
-Before finishing, run type checking, unit tests, the source/build/fixture scanner and canary, security/qualification verifiers, production build, real local-Wrangler browser projects where available, smoke, Wrangler dry-run, `npm audit --audit-level=moderate`, and `git diff --check`. Preserve strict no-store/security headers and the fail-closed runtime guard. Generated browser failure artifacts and `qualification/generated/` provenance are synthetic-only and ignored.
+Before finishing, run type checking, unit tests, the source/build/fixture scanner and canary, security/qualification verifiers, production build, real local-Wrangler browser projects where available, smoke, Wrangler dry-run, `npm audit --audit-level=moderate`, and `git diff --check`. Preserve strict no-store/security headers and the fail-closed runtime guard. Generated browser failure artifacts and provenance under the component's `qualification/generated` directory are synthetic-only and ignored; these outputs need not exist in a fresh checkout.

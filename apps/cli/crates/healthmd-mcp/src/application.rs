@@ -88,14 +88,6 @@ impl HealthMdApplication {
             .iter()
             .any(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
     }
-
-    async fn query_pages(
-        &self,
-        context: &CallContext,
-        invocation: catalog::QueryInvocation,
-    ) -> Result<Value, crate::BackendError> {
-        self.operations.query(context, invocation).await
-    }
 }
 
 pub struct HealthMdSession {
@@ -312,7 +304,7 @@ impl HealthMdSession {
         let invocation = catalog::query_invocation(name, arguments)
             .map_err(|_| ApplicationError::invalid_params("Invalid tool arguments"))?;
         let value = tokio::select! {
-            result = self.application.query_pages(context, invocation) => match result {
+            result = self.application.operations.query(context, invocation) => match result {
                 Ok(value) => value,
                 Err(error) => {
                     let value = if error.code == "healthmd_request_cancelled" {

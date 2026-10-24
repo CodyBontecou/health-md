@@ -2,7 +2,10 @@
 
 Cloudflare Worker + D1 ingestion endpoint for the Health.md pricing experiment.
 
-This is intentionally **not** a UI. Data is queried with Wrangler/D1.
+This is intentionally **not** a UI. Data is queried with Wrangler/D1. Current decisions and
+production price history live in the [operational experiment index](../../../../docs/experiments/index.md).
+The [Wrangler config](wrangler.toml) is the service locator; unrelated Practice/wake databases are
+not pricing sources.
 
 ## Privacy contract
 
@@ -41,8 +44,9 @@ headers beyond the intended provider-level minimum.
 ## Setup
 
 ```bash
-cd worker/pricing-analytics
-npm install
+# From the monorepo root.
+cd apps/apple/worker/pricing-analytics
+npm ci
 
 # Create the D1 database once.
 npm run db:create
@@ -166,6 +170,21 @@ wrangler d1 execute health-md-pricing-analytics --remote --command \
 ```
 
 Use distinct-install columns for funnel conversion; raw view/event counts measure frequency and can exceed the number of people in a stage.
+
+## Production price and commerce evidence
+
+Production price comes from ASC/Google Play deployment evidence, not `.storekit` test files or
+fallback strings in the app. Use commerce reports for proceeds/refunds and record report period,
+territory, currency, price-change evidence, and retrieval time. Keep one report catalog per analysis
+and filter structured JSON before displaying it; `head` does not bound a single-line JSON response.
+Request only aggregate commerce and privacy-allowlisted D1 data. Report unavailable access and
+external API/reporting delays separately from repository navigation.
+
+Start onboarding reads with `npm run query:onboarding`, backed by the
+[query script](scripts/query-onboarding.mjs) and [reviewed SQL](queries/onboarding-funnel.sql).
+It applies maturity windows and uses Worker receipt times; offline deliveries may cross price
+boundaries. Use distinct-install denominators and separate platform/build cohorts. Android
+milestones without purchase completion are not a zero-conversion estimate.
 
 Revenue still comes from App Store Connect. Join the D1 activation/paywall counts
 with ASC proceeds/refunds in the experiment runbook to compute:
