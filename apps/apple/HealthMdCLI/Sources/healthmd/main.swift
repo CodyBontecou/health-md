@@ -3005,9 +3005,12 @@ func isValidMetricQueryResponse(_ payload: Any) -> Bool {
           response["coverage"] is [String: Any],
           response["sources"] is [Any],
           response["evidence"] is [Any],
-          response["limitations"] is [Any],
-          let nextCursor = response["next_cursor"],
-          nextCursor is NSNull || nextCursor is String else { return false }
+          response["limitations"] is [Any] else { return false }
+    // Codable omits a nil cursor on terminal pages. Both omission and explicit
+    // null end traversal; a present cursor must still have the declared type.
+    if let nextCursor = response["next_cursor"] {
+        return nextCursor is NSNull || nextCursor is String
+    }
     return true
 }
 
