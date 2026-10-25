@@ -18,6 +18,8 @@ It is Tuesday morning. Your watch shows a completed night of sleep, but today's 
 
 Health.md assigns a sleep session to the local calendar day on which the session **started**. A session from Monday at 11:45 PM to Tuesday at 7:30 AM belongs to Monday.
 
+For the complete metric-selection, preview, and CSV workflow, follow [how to export Apple Health sleep data](/blog/export-apple-health-sleep-data/).
+
 ## What to export in the morning
 
 | What you want | Date to export |
