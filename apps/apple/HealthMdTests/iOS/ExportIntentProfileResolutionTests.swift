@@ -108,11 +108,11 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     func testRemoteProfileShortcutStillUsesLocalPipelineAndFileQuota() async throws {
         for target in [ExportTargetSelection.connectedMac, .apiEndpoint] {
             let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
-            let profile = store.add(
+            let profile = try XCTUnwrap(store.add(
                 name: "Remote-\(target.rawValue)",
                 settings: makeSettings(filenameFormat: "remote-{date}"),
                 target: target
-            )
+            ))
             let recorder = ProfileRunRecorder()
             let outcome = await ExportIntentRunner.run(
                 dates: [Date()],
@@ -132,9 +132,9 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         }
     }
 
-    func testRemoteProfileShortcutDoesNotBypassFileQuota() async {
+    func testRemoteProfileShortcutDoesNotBypassFileQuota() async throws {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
-        let profile = store.add(name: "Mac", settings: makeSnapshot(), target: .connectedMac)
+        let profile = try XCTUnwrap(store.add(name: "Mac", settings: makeSnapshot(), target: .connectedMac))
         let recorder = ProfileRunRecorder()
         var dependencies = recorder.makeDependencies(defaults: defaults)
         dependencies.canExport = { false }
