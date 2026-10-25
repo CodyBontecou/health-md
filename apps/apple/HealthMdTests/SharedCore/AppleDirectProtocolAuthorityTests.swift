@@ -741,14 +741,14 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
         let original = IPhoneDirectExportConnection(channel: channel)
         let local = DirectPeerCapabilities(platform: .iOS, installationID: UUID(),
             exportHistoryObservationVersions: [1])
-        let remote = DirectPeerCapabilities(platform: .macOS, installationID: UUID(),
+        let remote = DirectPeerCapabilities(platform: .macOSCLI, installationID: UUID(),
             exportHistoryObservationVersions: [1])
         original.configureExportHistoryObservation(local: local, remote: remote)
         let retained = original.retainingProtocolAuthority(session)
         XCTAssertTrue(retained.channel === original.channel)
         XCTAssertEqual(retained.exportHistoryObservationVersion, 1)
         original.configureExportHistoryObservation(local: local,
-            remote: DirectPeerCapabilities(platform: .macOS, installationID: remote.installationID))
+            remote: DirectPeerCapabilities(platform: .macOSCLI, installationID: remote.installationID))
         XCTAssertNil(original.exportHistoryObservationVersion)
         XCTAssertEqual(retained.exportHistoryObservationVersion, 1,
             "A retained operation must preserve its negotiated history admission version")

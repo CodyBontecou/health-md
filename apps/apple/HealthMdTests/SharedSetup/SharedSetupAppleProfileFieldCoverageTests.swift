@@ -177,6 +177,28 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         }
     }
 
+    func testSleepCaptureAuditDoesNotGrantPortableAuthority() throws {
+        XCTAssertEqual(Self.sleepCapturePersistenceFields.count, 1)
+        let row = try XCTUnwrap(Self.sleepCapturePersistenceFields.first)
+        XCTAssertEqual(row.sourceType, "ExportSettingsSnapshot")
+        XCTAssertEqual(row.field, "sleepCaptureContext")
+        XCTAssertEqual(row.serializedKey, row.field)
+        XCTAssertEqual(row.fieldKind, .stored)
+        XCTAssertEqual(row.disposition, .prohibited)
+        XCTAssertNil(row.contractPath)
+    }
+
+    // A frozen job's sleep authority belongs only to its durable journal.
+    // Ordinary profile/wire exclusion is exercised by AppleSleepCaptureContextTests.
+    private static let sleepCapturePersistenceFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "ExportSettingsSnapshot", field: "sleepCaptureContext",
+            fieldKind: .stored, serializedKey: "sleepCaptureContext",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Immutable native job capture authority is journal-only and cannot be imported as portable profile authority."
+        ),
+    ]
+
     // Native minute scheduling adds no authority to frozen Shared Setup v2.
     // Audit its exact persistence fields alongside the unchanged historical ledger.
     private static let minuteRefreshPersistenceFields: [CoverageLedger.Field] = [
@@ -209,7 +231,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             schema: historical.schema, schemaVersion: historical.schemaVersion,
             targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
             dispositions: historical.dispositions,
-            fields: historical.fields + Self.minuteRefreshPersistenceFields
+            fields: historical.fields + Self.minuteRefreshPersistenceFields + Self.sleepCapturePersistenceFields
         )
     }
 
