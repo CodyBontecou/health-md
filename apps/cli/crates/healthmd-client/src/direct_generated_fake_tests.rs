@@ -1,6 +1,5 @@
 //! Hermetic mobile dispatch/pairing/lifecycle coverage; all bytes and credentials are synthetic.
 use super::*;
-use chrono::Timelike as _;
 use healthmd_protocol::{
     models::{ExportDestination, ProfileReference},
     transfer::{encode_binary_chunk, sha256_hex},
