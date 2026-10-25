@@ -185,7 +185,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
             }
             val next = AgentBridgeNativeCatalogPublication((current?.revision ?: 0) + 1, sourceInstallationId, digest)
             next.validate()
-            tx.state = tx.state.copy(version = if (tx.state.captureClaims != null) 4 else if (tx.state.acceptedJobs != null) 3 else 2, nativeCatalog = next)
+            tx.state = tx.state.copy(version = if (tx.state.cancellationIntents != null) 5 else if (tx.state.captureClaims != null) 4 else if (tx.state.acceptedJobs != null) 3 else 2, nativeCatalog = next)
             selected = next
             next
         }
@@ -304,7 +304,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
         return file.state
     }
     private fun validate(state: AgentBridgeExportLedger) {
-        demand(state.version == (if (state.captureClaims != null) 4 else if (state.acceptedJobs != null) 3 else if (state.nativeCatalog == null) 1 else 2) && state.revision >= 1)
+        demand(state.version == (if (state.cancellationIntents != null) 5 else if (state.captureClaims != null) 4 else if (state.acceptedJobs != null) 3 else if (state.nativeCatalog == null) 1 else 2) && state.revision >= 1)
         state.nativeCatalog?.validate()
         demand(state.grants.size <= MAX_GRANTS && state.plans.size <= MAX_PLANS && state.decisions.size <= MAX_DECISIONS)
         val grants = state.grants.map { it.delegation() }
@@ -365,6 +365,17 @@ internal class AgentBridgeExportAuthorityStore private constructor(
                 val at = Instant.parse(claim.claimedAt)
                 demand(at >= Instant.parse(job.acceptedAt) && at < Instant.parse(job.expiresAt) && at < Instant.parse(plan.expiresAt))
             }
+        }
+        state.cancellationIntents?.let { intents ->
+            demand(intents.isNotEmpty() && intents.size <= 16)
+            val requests = intents.map { intent ->
+                val cancel = intent.request()
+                val job = state.acceptedJobs?.singleOrNull { it.requestSha256 == cancel.requestSha256 }
+                    ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
+                intent.validate(job)
+                cancel.requestSha256
+            }
+            demand(requests.distinct().size == requests.size)
         }
     }
 
@@ -554,7 +565,9 @@ internal data class AgentBridgeExportLedger(val version: Int, val revision: Long
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val acceptedJobs: List<AgentBridgeExportAcceptedJob>? = null,
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
-    val captureClaims: List<AgentBridgeExportStoredCaptureClaim>? = null)
+    val captureClaims: List<AgentBridgeExportStoredCaptureClaim>? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val cancellationIntents: List<AgentBridgeExportCancellationIntent>? = null)
 @Serializable
 internal data class AgentBridgeExportGrantRecord(val delegationCanonical: String, val revoked: Boolean) {
     fun delegation(): AgentBridgeExportDelegation {
@@ -690,6 +703,24 @@ internal object AgentBridgeExportNativeSetupConsent {
         AgentBridgeExportNativeDecision.InitializeStore, requireCurrentNativePolicy, clockNanos, operation)
 }
 
+
+/** A signed stop request, not a terminal cancellation receipt. Survives controller restart
+ * so a pending cancellation can never silently reopen native capture or immutable Resume. */
+@Serializable
+internal data class AgentBridgeExportCancellationIntent(val version: Int, val requestCanonical: String,
+    val requestedAt: String) {
+    fun request() = AgentBridgeCodec.decode(requestCanonical.toByteArray()) as AgentBridgeCancelRequest
+    fun validate(job: AgentBridgeExportAcceptedJob) {
+        val cancel = request(); val original = job.request(); val plan = original.plan as AgentBridgeGeneratedPlan
+        require(version == 1 && requestCanonical.toByteArray().size <= 48 * 1024 &&
+            AgentBridgeCodec.encode(cancel).decodeToString() == requestCanonical &&
+            cancel.peer == plan.intent.peer && cancel.jobId == original.jobId && cancel.requestSha256 == job.requestSha256 &&
+            cancel.approvalId == original.approval.approvalId && cancel.authorityId == plan.authorityReferences.native.authorityId)
+        val at = Instant.parse(requestedAt)
+        require(requestedAt.length == 20 && requestedAt == at.toString() && at.nano == 0 &&
+            at >= Instant.parse(job.acceptedAt) && at < Instant.parse(job.expiresAt))
+    }
+}
 
 @Serializable
 internal data class AgentBridgeExportAcceptedJob(val version: Int, val requestCanonical: String,

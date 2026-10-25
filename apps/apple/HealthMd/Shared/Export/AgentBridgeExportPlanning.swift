@@ -208,6 +208,32 @@ final class AgentBridgeExportPlanningService {
         })
     }
 
+    /// Stop authority is limited to the authenticated peer's exact accepted request. An expired
+    /// planning approval or revoked export grant cannot prevent that peer from requesting a stop;
+    /// this creates no read permission and does not declare terminal cancellation/completion.
+    func requestCancellation(_ supplied: AgentBridgeCancel,
+                             authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeExportCancellationIntent {
+        let bytes = try AgentBridgeV4Codec.encode(supplied)
+        let request = try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: bytes)
+        try authenticatedPeer.requireCurrent()
+        try requirePeer(request.peer, authenticatedPeer)
+        func validate(_ job: AgentBridgeExportAcceptedJob, _ intent: AgentBridgeExportCancellationIntent) throws {
+            try authenticatedPeer.requireCurrent()
+            try requirePeer(request.peer, authenticatedPeer)
+            let now = try utc(clock.now())
+            guard job.acceptedAt.rawValue <= now.rawValue, now.rawValue < job.expiresAt.rawValue else {
+                throw AgentBridgeValidationError.planExpired
+            }
+            try intent.validate(job: job)
+            guard try intent.request() == request else { throw AgentBridgeValidationError.bindingChanged }
+        }
+        return try store.recordCancellationIntent(request, prepare: { _, job in
+            let intent = AgentBridgeExportCancellationIntent(version: 1, requestBytes: bytes, requestedAt: try self.utc(self.clock.now()))
+            try validate(job, intent)
+            return intent
+        }, requireCurrent: { _, job, intent in try validate(job, intent) })
+    }
+
     /// Single durable reservation only. The reservation does not authorize SDK reads, supply a
     /// spool, or prove capture completion. Lost/failed returns never release an already published claim.
     func claimCapture(_ supplied: AgentBridgeExecute,
@@ -216,6 +242,9 @@ final class AgentBridgeExportPlanningService {
         let request = try AgentBridgeV4Codec.decode(AgentBridgeExecute.self, from: bytes)
         try authenticatedPeer.requireCurrent()
         return try store.claimCapture(requestBytes: bytes, prepare: { state, job in
+            guard try state.cancellationIntents?.contains(where: { try $0.request().requestSha256 == job.requestSHA256 }) != true else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
             guard try self.currentDecision(in: state, planID: request.plan.planId, peer: authenticatedPeer) == request.approval else {
                 throw AgentBridgeValidationError.approvalRequired
             }
@@ -241,6 +270,10 @@ final class AgentBridgeExportPlanningService {
                                   authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeRequestSettingsResolution {
         func validate(_ state: AgentBridgeExportAuthoritySnapshot) throws -> AgentBridgeRequestSettingsResolution {
             try authenticatedPeer.requireCurrent()
+            // A pending stop permanently fences further reads; it is not a terminal receipt.
+            guard try state.cancellationIntents?.contains(where: { try $0.request().requestSha256 == reservation.job.requestSHA256 }) != true else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
             guard state.acceptedJobs?.contains(reservation.job) == true,
                   state.captureClaims?.contains(reservation.claim) == true,
                   reservation.claim.requestSHA256 == reservation.job.requestSHA256 else { throw AgentBridgeValidationError.bindingChanged }

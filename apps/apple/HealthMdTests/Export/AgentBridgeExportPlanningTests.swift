@@ -42,6 +42,141 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         return try AgentBridgeExecute(approval: approval, idempotencyKey: id(81), jobId: id(82), plan: plan, requestId: id(83))
     }
 
+    private func cancellationRequest(_ request: AgentBridgeExecute) throws -> AgentBridgeCancel {
+        try .init(approvalId: request.approval.approvalId, authorityId: request.plan.authorityReferences.native.authorityId,
+            jobId: request.jobId, peer: request.plan.intent.peer,
+            requestSha256: AgentBridgeDigest(AgentBridgeV4Codec.sha256(AgentBridgeV4Codec.encode(request))))
+    }
+
+    func testCancellationIntentPersistsIdempotentlyAndFencesReadsAcrossRestart() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        let accepted = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+        _ = try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer)
+        rig.reader.calls = []
+        let cancel = try cancellationRequest(request)
+        let intent = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer)
+        XCTAssertEqual(try intent.request(), cancel)
+        let file = rig.directory.appendingPathComponent("state.json"), bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        XCTAssertEqual((try JSONSerialization.jsonObject(with: bytes) as? [String: Any])?["version"] as? Int, 5)
+        rig.clock.advance(seconds: 1)
+        XCTAssertEqual(try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer), intent)
+        let restarted = try rig.restartedService()
+        XCTAssertEqual(try restarted.requestCancellation(cancel, authenticatedPeer: rig.peer), intent)
+        XCTAssertThrowsError(try restarted.captureReadConfiguration(reservation, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        XCTAssertThrowsError(try restarted.claimCapture(request, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        XCTAssertEqual(try Data(contentsOf: file), bytes)
+        XCTAssertEqual(try rig.store.snapshot().acceptedJobs, [accepted.job])
+        XCTAssertEqual(try rig.store.snapshot().captureClaims, [reservation.claim])
+        XCTAssertTrue(rig.reader.calls.isEmpty)
+    }
+
+    func testCancellationIntentCannotTargetAnotherApprovalAuthorityPeerOrMissingJob() throws {
+        for mode in ["peer", "job", "approval", "authority", "request", "unaccepted", "trust", "expired", "delayed_key"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            if mode != "unaccepted" { _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer) }
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(cancellationRequest(request))) as? [String: Any])
+            switch mode {
+            case "peer":
+                var peer = try XCTUnwrap(object["peer"] as? [String: Any]); peer["host_installation_id"] = try id(99).rawValue; object["peer"] = peer
+            case "job": object["job_id"] = try id(99).rawValue
+            case "approval": object["approval_id"] = try id(99).rawValue
+            case "authority": object["authority_id"] = try id(99).rawValue
+            case "request": object["request_sha256"] = String(repeating: "0", count: 64)
+            default: break
+            }
+            let cancel = try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: JSONSerialization.data(withJSONObject: object))
+            let file = rig.directory.appendingPathComponent("state.json"), bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            rig.reader.calls = []
+            if mode == "trust" { rig.session.revoke() }
+            if mode == "expired" { rig.clock.advance(seconds: 604800) }
+            if mode == "delayed_key" { rig.keys.onNextLoad { rig.clock.advance(seconds: 604800) } }
+            let expected: AgentBridgeValidationError = mode == "trust" ? .permissionRequired : ["expired", "delayed_key"].contains(mode) ? .planExpired : .bindingChanged
+            XCTAssertThrowsError(try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, expected, mode)
+            }
+            XCTAssertEqual(try Data(contentsOf: file), bytes)
+            XCTAssertTrue(rig.reader.calls.isEmpty)
+        }
+    }
+
+    func testCancellationIntentDoesNotBlockUnrelatedJobsOrLoseItsStorageVersion() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let intent = try rig.service.requestCancellation(cancellationRequest(request), authenticatedPeer: rig.peer)
+        XCTAssertThrowsError(try rig.service.claimCapture(request, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        let other = AgentBridgeExecute(approval: request.approval, idempotencyKey: try id(97), jobId: try id(98), plan: request.plan, requestId: try id(99))
+        _ = try rig.service.acceptExecution(other, authenticatedPeer: rig.peer)
+        let reservation = try rig.service.claimCapture(other, authenticatedPeer: rig.peer)
+        _ = try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer)
+        _ = try rig.store.publishNativeCatalog(sourceInstallationID: rig.peer.peer.sourceInstallationID) { try self.nativeState() }
+        let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        XCTAssertEqual((try JSONSerialization.jsonObject(with: bytes) as? [String: Any])?["version"] as? Int, 5)
+        XCTAssertEqual(try rig.store.snapshot().cancellationIntents, [intent])
+    }
+
+    func testCancellationIntentRejectsForgedSignedShapeAndVersionWithoutRepair() throws {
+        for mode in ["version", "empty", "duplicate", "missing_job", "authority", "expiry", "unknown"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            let job = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer).job
+            _ = try rig.service.requestCancellation(cancellationRequest(request), authenticatedPeer: rig.peer)
+            let file = rig.directory.appendingPathComponent("state.json")
+            var root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+            var state = try XCTUnwrap(root["state"] as? [String: Any])
+            let intents = try XCTUnwrap(state["cancellationIntents"] as? [[String: Any]])
+            var intent = try XCTUnwrap(intents.first)
+            switch mode {
+            case "version": root["version"] = 4
+            case "empty": state["cancellationIntents"] = [] as [[String: Any]]
+            case "duplicate": state["cancellationIntents"] = [intent, intent]
+            case "missing_job": state["acceptedJobs"] = [] as [[String: Any]]
+            case "authority":
+                var cancel = try XCTUnwrap(JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(cancellationRequest(request))) as? [String: Any])
+                cancel["authority_id"] = try id(99).rawValue
+                intent["requestBytes"] = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: cancel)).base64EncodedString()
+            case "expiry": intent["requestedAt"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(job.expiresAt), options: .fragmentsAllowed)
+            default: intent["unexpected"] = true
+            }
+            if ["authority", "expiry", "unknown"].contains(mode) { state["cancellationIntents"] = [intent] }
+            let canonical = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: state))
+            let key = try XCTUnwrap(rig.keys.key)
+            let mac = Data(HMAC<SHA256>.authenticationCode(for: Data("HealthMd.AgentBridge.NativeExportAuthorityStore.v1\0".utf8) + canonical, using: key))
+            root["state"] = state; root["mac"] = mac.base64EncodedString()
+            let forged = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: root))
+            try forged.write(to: file)
+            XCTAssertThrowsError(try rig.store.snapshot()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged) }
+            XCTAssertThrowsError(try rig.restartedService().requestCancellation(cancellationRequest(request), authenticatedPeer: rig.peer)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            XCTAssertEqual(try Data(contentsOf: file), forged)
+        }
+    }
+
+    func testCancellationIntentAfterPlanExpiryAndGrantRevocationCreatesNoReadAuthority() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        rig.clock.advance(seconds: 601)
+        try rig.store.revokeNativeDelegation(request.plan.authorityReferences.native,
+            expectedGeneration: rig.store.snapshot().generation, authorization: FakeNativeAuthorization())
+        rig.reader.calls = []
+        XCTAssertEqual(try rig.service.requestCancellation(cancellationRequest(request), authenticatedPeer: rig.peer).request(), try cancellationRequest(request))
+        XCTAssertTrue(rig.reader.calls.isEmpty)
+        XCTAssertThrowsError(try rig.service.claimCapture(request, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+    }
+
     func testCaptureReadKeepsFrozenSavedOutputAfterPlanningExpiryWithoutPreferenceReads() throws {
         let rig = try Rig(withSaved: true); defer { rig.cleanup() }; try rig.enroll()
         let request = try executionRequest(rig, policy: .savedDeviceSettings(expectedRevision: 7))

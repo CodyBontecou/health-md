@@ -111,6 +111,28 @@ nonisolated struct AgentBridgeExportStoredCaptureClaim: Codable, Equatable {
     let requestSHA256: AgentBridgeDigest
     let claimedAt: AgentBridgeUTC
 }
+/// A durable request to stop the original accepted job, not a terminal cancellation receipt.
+/// Kept in the signed issuer ledger so an interrupted controller cannot resume health reads.
+nonisolated struct AgentBridgeExportCancellationIntent: Codable, Equatable {
+    let version: Int
+    let requestBytes: Data
+    let requestedAt: AgentBridgeUTC
+
+    func request() throws -> AgentBridgeCancel { try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: requestBytes) }
+    func validate(job: AgentBridgeExportAcceptedJob) throws {
+        let cancel = try request(), original = try job.request()
+        guard version == 1, requestBytes.count <= 48 * 1024,
+              try AgentBridgeV4Codec.encode(cancel) == requestBytes,
+              cancel.peer == original.plan.intent.peer, cancel.jobId == original.jobId,
+              cancel.requestSha256 == job.requestSHA256,
+              cancel.approvalId == original.approval.approvalId,
+              cancel.authorityId == original.plan.authorityReferences.native.authorityId,
+              requestedAt.rawValue >= job.acceptedAt.rawValue, requestedAt.rawValue < job.expiresAt.rawValue else {
+            throw AgentBridgeValidationError.bindingChanged
+        }
+    }
+}
+
 nonisolated struct AgentBridgeExportCaptureReservation {
     let job: AgentBridgeExportAcceptedJob
     let claim: AgentBridgeExportStoredCaptureClaim
@@ -124,6 +146,7 @@ nonisolated struct AgentBridgeExportAuthoritySnapshot: Codable {
     var nativeCatalog: AgentBridgeNativeCatalogPublication? = nil
     var acceptedJobs: [AgentBridgeExportAcceptedJob]? = nil
     var captureClaims: [AgentBridgeExportStoredCaptureClaim]? = nil
+    var cancellationIntents: [AgentBridgeExportCancellationIntent]? = nil
 
     func references(peer: AgentBridgePeer, now: AgentBridgeUTC) throws -> [AgentBridgeAuthorityReference] {
         let active = try delegations.filter { !$0.revoked }.map { try $0.description() }
@@ -349,6 +372,39 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         }
     }
 
+    /// Persist only a bound stop intent. This does not prove a worker stopped, remove a spool,
+    /// or replace an existing completion receipt. Replay preserves the original intent bytes.
+    func recordCancellationIntent(_ request: AgentBridgeCancel,
+        prepare: (AgentBridgeExportAuthoritySnapshot, AgentBridgeExportAcceptedJob) throws -> AgentBridgeExportCancellationIntent,
+        requireCurrent: (AgentBridgeExportAuthoritySnapshot, AgentBridgeExportAcceptedJob, AgentBridgeExportCancellationIntent) throws -> Void
+    ) throws -> AgentBridgeExportCancellationIntent {
+        var selected: (AgentBridgeExportAcceptedJob, AgentBridgeExportCancellationIntent)?
+        return try transaction(beforeCommit: { state in
+            guard let selected, state.acceptedJobs?.contains(selected.0) == true,
+                  state.cancellationIntents?.contains(selected.1) == true else { throw AgentBridgeValidationError.bindingChanged }
+            try requireCurrent(state, selected.0, selected.1)
+        }) { state in
+            guard let job = state.acceptedJobs?.first(where: { $0.requestSHA256 == request.requestSha256 }) else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            let intents = state.cancellationIntents ?? []
+            if let existing = try intents.first(where: { try $0.request().requestSha256 == job.requestSHA256 }) {
+                guard try existing.request() == request else { throw AgentBridgeValidationError.bindingChanged }
+                try requireCurrent(state, job, existing)
+                selected = (job, existing)
+                return (existing, false)
+            }
+            guard intents.count < 16 else { throw AgentBridgeValidationError.busy }
+            let intent = try prepare(state, job)
+            guard try intent.request() == request else { throw AgentBridgeValidationError.bindingChanged }
+            try intent.validate(job: job)
+            try requireCurrent(state, job, intent)
+            state.cancellationIntents = intents + [intent]
+            selected = (job, intent)
+            return (intent, true)
+        }
+    }
+
     /// Reserve once under the original issuer lock. A claimed-but-interrupted job is never
     /// reclaimed here; only future immutable spool recovery may continue it without recapture.
     func claimCapture(requestBytes: Data,
@@ -363,6 +419,9 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                 throw AgentBridgeValidationError.bindingChanged
             }
             let claims = state.captureClaims ?? []
+            guard try state.cancellationIntents?.contains(where: { try $0.request().requestSha256 == job.requestSHA256 }) != true else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
             guard !claims.contains(where: { $0.requestSHA256 == job.requestSHA256 }) else { throw AgentBridgeValidationError.busy }
             guard claims.count < 16 else { throw AgentBridgeValidationError.busy }
             let claim = try prepare(state, job)
@@ -533,7 +592,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
             let canonical = try AgentBridgeV4Codec.canonicalize(bytes)
             let signed = try JSONDecoder().decode(SignedState.self, from: canonical)
             let body = try canonicalPrivate(signed.state)
-            guard signed.version == (signed.state.captureClaims != nil ? 4 : (signed.state.acceptedJobs != nil ? 3 : (signed.state.nativeCatalog == nil ? 1 : 2))), try canonicalPrivate(signed) == canonical,
+            guard signed.version == (signed.state.cancellationIntents != nil ? 5 : (signed.state.captureClaims != nil ? 4 : (signed.state.acceptedJobs != nil ? 3 : (signed.state.nativeCatalog == nil ? 1 : 2)))), try canonicalPrivate(signed) == canonical,
                   HMAC<SHA256>.isValidAuthenticationCode(signed.mac, authenticating: Self.domain + body, using: key) else { throw AgentBridgeValidationError.bindingChanged }
             try validate(signed.state)
             let parsed = ParsedState(bytes: bytes, body: body, mac: signed.mac, state: signed.state)
@@ -598,6 +657,18 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                       claim.claimedAt.rawValue < (try job.request().plan.expiresAt).rawValue else { throw AgentBridgeValidationError.bindingChanged }
             }
         }
+        if let intents = state.cancellationIntents {
+            guard !intents.isEmpty, intents.count <= 16 else { throw AgentBridgeValidationError.bindingChanged }
+            var requests = Set<AgentBridgeDigest>()
+            for intent in intents {
+                let cancel = try intent.request()
+                guard requests.insert(cancel.requestSha256).inserted,
+                      let job = state.acceptedJobs?.first(where: { $0.requestSHA256 == cancel.requestSha256 }) else {
+                    throw AgentBridgeValidationError.bindingChanged
+                }
+                try intent.validate(job: job)
+            }
+        }
         guard Set(state.decisions.map(\.planID)).count == state.decisions.count else { throw AgentBridgeValidationError.bindingChanged }
     }
 
@@ -609,7 +680,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                        beforePublish: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { _ in }) throws {
         let stateBytes = try canonicalPrivate(state)
         let mac = Data(HMAC<SHA256>.authenticationCode(for: Self.domain + stateBytes, using: key))
-        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: state.captureClaims != nil ? 4 : (state.acceptedJobs != nil ? 3 : (state.nativeCatalog == nil ? 1 : 2)), state: state, mac: mac)),
+        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: state.cancellationIntents != nil ? 5 : (state.captureClaims != nil ? 4 : (state.acceptedJobs != nil ? 3 : (state.nativeCatalog == nil ? 1 : 2))), state: state, mac: mac)),
             beforeRename: {
                 try self.publication.prepared(state)
                 // Canonical serialization, HMAC, temp write and fsync have ALREADY completed. This

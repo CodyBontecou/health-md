@@ -5,6 +5,12 @@ import com.healthmd.direct.protocol.*
 import java.io.File
 import java.nio.file.Files
 import java.time.Instant
+import javax.crypto.Mac
+import android.os.Looper
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.serialization.json.*
 import org.junit.Test
 
@@ -18,6 +24,146 @@ class AgentBridgeExportPlanningBoundaryTest {
                 listOf(AgentBridgeApprovalRightsItem.EXPORT_EXECUTE), "healthmd.agent_approval", 1)
         return AgentBridgeExecuteRequest(approval, AgentBridgeExportPlanningFixture.id(82), AgentBridgeExportPlanningFixture.id(83),
             plan, AgentBridgeExportPlanningFixture.id(84), "healthmd.agent_execute_request", 1)
+    }
+
+    private fun cancellationRequest(request: AgentBridgeExecuteRequest): AgentBridgeCancelRequest {
+        val plan = request.plan as AgentBridgeGeneratedPlan
+        return AgentBridgeCancelRequest(request.approval.approvalId, plan.authorityReferences.native.authorityId,
+            request.jobId, plan.intent.peer, AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)), "healthmd.agent_cancel_request", 1)
+    }
+
+    @Test fun cancellationIntentPersistsIdempotentlyAndFencesReadsAcrossRestart() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            val accepted = f.service.acceptExecution(f.peerContext, request)
+            val reservation = f.service.claimCapture(f.peerContext, request)
+            f.service.captureReadConfiguration(f.peerContext, reservation)
+            f.configuration.calls = 0; f.configuration.readPolicies.clear()
+            val cancel = cancellationRequest(request)
+            val intent = f.service.requestCancellation(f.peerContext, cancel)
+            assertThat(intent.request()).isEqualTo(cancel)
+            assertThat(f.store.access { it!!.state.version }).isEqualTo(5)
+            val file = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val bytes = Files.readAllBytes(file)
+            f.clock.now = f.clock.now.plusSeconds(1)
+            assertThat(f.service.requestCancellation(f.peerContext, cancel)).isEqualTo(intent)
+            val restarted = AgentBridgeExportPlanningService(AgentBridgeExportAuthorityStore.inPrivateDirectory(f.parent, f.keys), f.configuration, f.clock)
+            assertThat(restarted.requestCancellation(f.peerContext, cancel)).isEqualTo(intent)
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { restarted.captureReadConfiguration(f.peerContext, reservation) }
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { restarted.claimCapture(f.peerContext, request) }
+            assertThat(Files.readAllBytes(file)).isEqualTo(bytes)
+            assertThat(f.store.access { it!!.state.acceptedJobs }).containsExactly(accepted.job)
+            assertThat(f.store.access { it!!.state.captureClaims }).containsExactly(reservation.claim)
+            assertThat(f.configuration.calls).isEqualTo(0)
+            assertThat(f.configuration.preferenceBytes()).isEqualTo(f.preferencesBefore)
+        }
+    }
+
+    @Test fun cancellationIntentCannotTargetAnotherApprovalAuthorityPeerOrMissingJob() {
+        for (mode in listOf("peer", "job", "approval", "authority", "request", "unaccepted", "trust", "expired", "delayed_key")) {
+            AgentBridgeExportPlanningFixture().use { f ->
+                val request = executionRequest(f)
+                if (mode != "unaccepted") f.service.acceptExecution(f.peerContext, request)
+                val original = cancellationRequest(request)
+                val cancel = when (mode) {
+                    "peer" -> original.copy(peer = f.peer.copy(hostInstallationId = AgentBridgeExportPlanningFixture.id(99)))
+                    "job" -> original.copy(jobId = AgentBridgeExportPlanningFixture.id(99))
+                    "approval" -> original.copy(approvalId = AgentBridgeExportPlanningFixture.id(99))
+                    "authority" -> original.copy(authorityId = AgentBridgeExportPlanningFixture.id(99))
+                    "request" -> original.copy(requestSha256 = "0".repeat(64))
+                    else -> original
+                }
+                val file = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+                val bytes = Files.readAllBytes(file); f.configuration.calls = 0
+                if (mode == "trust") f.peerContext.trusted = false
+                if (mode == "expired") f.clock.now = f.clock.now.plusSeconds(604800)
+                if (mode == "delayed_key") f.keys.onLoad = { f.keys.onLoad = null; f.clock.now = f.clock.now.plusSeconds(604800) }
+                val code = when (mode) {
+                    "trust", "peer" -> AgentBridgeErrorCode.PERMISSION_REQUIRED
+                    "expired", "delayed_key" -> AgentBridgeErrorCode.PLAN_EXPIRED
+                    else -> AgentBridgeErrorCode.BINDING_CHANGED
+                }
+                f.expect(code) { f.service.requestCancellation(f.peerContext, cancel) }
+                assertThat(Files.readAllBytes(file)).isEqualTo(bytes)
+                assertThat(f.configuration.calls).isEqualTo(0)
+            }
+        }
+    }
+
+    @Test fun cancellationIntentDoesNotBlockUnrelatedJobsOrLoseItsStorageVersion() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            val intent = f.service.requestCancellation(f.peerContext, cancellationRequest(request))
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { f.service.claimCapture(f.peerContext, request) }
+            val other = request.copy(jobId = AgentBridgeExportPlanningFixture.id(97), idempotencyKey = AgentBridgeExportPlanningFixture.id(98), requestId = AgentBridgeExportPlanningFixture.id(99))
+            f.service.acceptExecution(f.peerContext, other)
+            val reservation = f.service.claimCapture(f.peerContext, other)
+            f.service.captureReadConfiguration(f.peerContext, reservation)
+            assertThat(f.store.access { it!!.state.version }).isEqualTo(5)
+            val facts = AgentBridgeNativePlanningFacts(setOf("steps"), f.peer.sourceInstallationId, "UTC",
+                AgentBridgeDiscoveryConfigurationProtection.LOCKED, AgentBridgeDiscoveryNativeGrants.SATISFIED,
+                AgentBridgeDiscoveryEntitlement.SATISFIED, true, true)
+            // Only native worker classification is intercepted; publication, signed storage,
+            // private version validation and all assertions remain actual production behavior.
+            mockkStatic(Looper::class)
+            try {
+                every { Looper.getMainLooper() } returns mockk<Looper>()
+                every { Looper.myLooper() } returns null
+                f.store.publishNativeCatalog(f.peer.sourceInstallationId) { facts }
+            } finally { unmockkStatic(Looper::class) }
+            assertThat(f.store.access { it!!.state.version }).isEqualTo(5)
+            assertThat(f.store.access { it!!.state.cancellationIntents }).containsExactly(intent)
+        }
+    }
+
+    @Test fun cancellationIntentRejectsForgedSignedShapeAndVersionWithoutRepair() {
+        for (mode in listOf("version", "empty", "duplicate", "missing_job", "authority", "expiry", "unknown")) {
+            AgentBridgeExportPlanningFixture().use { f ->
+                val request = executionRequest(f)
+                val job = f.service.acceptExecution(f.peerContext, request).job
+                f.service.requestCancellation(f.peerContext, cancellationRequest(request))
+                val file = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+                val root = Json.parseToJsonElement(Files.readAllBytes(file).decodeToString()).jsonObject
+                val state = root.getValue("state").jsonObject.toMutableMap()
+                val intents = state.getValue("cancellationIntents").jsonArray
+                val intent = intents.single().jsonObject.toMutableMap()
+                when (mode) {
+                    "version" -> state["version"] = JsonPrimitive(4)
+                    "empty" -> state["cancellationIntents"] = JsonArray(emptyList())
+                    "duplicate" -> state["cancellationIntents"] = JsonArray(listOf(intents.single(), intents.single()))
+                    "missing_job" -> state["acceptedJobs"] = JsonArray(emptyList())
+                    "authority" -> intent["requestCanonical"] = JsonPrimitive(AgentBridgeCodec.encode(cancellationRequest(request).copy(authorityId = AgentBridgeExportPlanningFixture.id(99))).decodeToString())
+                    "expiry" -> intent["requestedAt"] = JsonPrimitive(job.expiresAt)
+                    "unknown" -> intent["unexpected"] = JsonPrimitive(true)
+                }
+                if (mode in listOf("authority", "expiry", "unknown")) state["cancellationIntents"] = JsonArray(listOf(JsonObject(intent)))
+                val canonical = AgentBridgeCodec.canonicalize(JsonObject(state).toString().toByteArray())
+                val mac = Mac.getInstance("HmacSHA256").apply {
+                    init(requireNotNull(f.keys.key)); update("HealthMd.AgentBridge.AndroidExportAuthorityStore.v1\u0000".toByteArray())
+                }.doFinal(canonical).joinToString("") { "%02x".format(it) }
+                val forged = AgentBridgeCodec.canonicalize(JsonObject(mapOf("state" to JsonObject(state), "mac" to JsonPrimitive(mac))).toString().toByteArray())
+                Files.write(file, forged)
+                f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { f.store.access { it!!.state } }
+                f.expect(AgentBridgeErrorCode.BINDING_CHANGED) {
+                    AgentBridgeExportAuthorityStore.inPrivateDirectory(f.parent, f.keys).access { it!!.state }
+                }
+                assertThat(Files.readAllBytes(file)).isEqualTo(forged)
+            }
+        }
+    }
+
+    @Test fun cancellationIntentAfterPlanExpiryAndGrantRevocationCreatesNoReadAuthority() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            f.clock.now = f.clock.now.plusSeconds(601)
+            f.store.revoke(f.native, f.peer, (request.plan as AgentBridgeGeneratedPlan).authorityReferences.native.authorityId, 1)
+            f.configuration.calls = 0
+            assertThat(f.service.requestCancellation(f.peerContext, cancellationRequest(request)).request()).isEqualTo(cancellationRequest(request))
+            assertThat(f.configuration.calls).isEqualTo(0)
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { f.service.claimCapture(f.peerContext, request) }
+        }
     }
 
     @Test
