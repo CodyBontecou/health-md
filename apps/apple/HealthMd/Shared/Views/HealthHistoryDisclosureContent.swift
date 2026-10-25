@@ -100,3 +100,24 @@ struct HealthHistoryPendingContent: View {
         .font(.footnote)
     }
 }
+
+/// Readable-date discovery is required for All Time; unlike the advisory
+/// boundary assessment, it cannot be bypassed with unverified continuation.
+struct HealthHistoryRangeDiscoveryContent: View {
+    let cancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            ProgressView("Finding the readable range for the selected metrics…")
+            Button(action: cancel) {
+                Text("Cancel range check")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, Spacing.s2)
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("export.historyWarning.cancelRangeCheck")
+        }
+        .font(.footnote)
+    }
+}

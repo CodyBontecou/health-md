@@ -46,6 +46,19 @@ final class HealthHistoryAssessmentCoordinator {
         HealthHistoryExportRequest(id: beginRequest(), selection: selection)
     }
 
+    /// Discovery may finish after configuration changed away and back. The
+    /// complete origin and action revision, not only date-query inputs, own it.
+    func resolveExportRequest(
+        _ request: HealthHistoryExportRequest,
+        liveSelection: () -> HealthHistoryExecutionSelection,
+        operation: () async throws -> ExportDateRange
+    ) async rethrows -> HealthHistoryExportRequest? {
+        guard !Task.isCancelled, isCurrent(request, liveSelection: liveSelection()) else { return nil }
+        let range = try await operation()
+        guard !Task.isCancelled, isCurrent(request, liveSelection: liveSelection()) else { return nil }
+        return request.selection.preset == .allTime ? request.resolvingAllTime(range) : request
+    }
+
     func isCurrent(_ request: HealthHistoryExportRequest,
                    liveSelection: HealthHistoryExecutionSelection) -> Bool {
         request.id == revision && request.originatingSelection == liveSelection
@@ -121,6 +134,38 @@ struct HealthHistoryExportRequest: Equatable {
         self.id = id
         self.originatingSelection = originatingSelection
         self.selection = selection
+    }
+
+    var dateRangeRequest: NativeExportDateRangeResolver.Request {
+        let origin = originatingSelection
+        return NativeExportDateRangeResolver.Request(
+            selection: ExportDateRangeSelection(preset: origin.preset,
+                startDate: origin.scope.startDate, endDate: origin.scope.endDate),
+            enabledMetricIDs: origin.scope.metricIDs,
+            timeZone: TimeZone(identifier: origin.scope.timeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)!)
+    }
+
+    var scaleVerdict: ExportScaleGuard.Verdict {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = dateRangeRequest.timeZone
+        return ExportScaleGuard.verdict(startDate: selection.scope.startDate,
+            endDate: selection.scope.endDate,
+            granularDataEnabled: selection.settings.detailPolicy.includesCanonicalArchive,
+            formatCount: selection.settings.exportFormats.count,
+            dailyNotesOnlyMode: selection.settings.dailyNotesOnlyModeEnabled,
+            calendar: calendar)
+    }
+
+    var scaleConfirmationMessage: String {
+        guard case .confirm(let scale) = scaleVerdict else { return "" }
+        let summary: String
+        if selection.settings.dailyNotesOnlyModeEnabled {
+            summary = String(localized: "This export covers \(scale.dayCount) days and updates about \(scale.estimatedFileCount) daily notes. Exports this large can take a long time to finish.")
+        } else {
+            summary = String(localized: "This export covers \(scale.dayCount) days and writes about \(scale.estimatedFileCount) files. Exports this large can take a long time to finish.")
+        }
+        guard scale.includesGranularData else { return summary }
+        return summary + "\n\n" + String(localized: "Lossless Health Records is enabled. An export this large with the canonical archive can run for hours and may run out of memory before it finishes. Choose Detailed Time-Series or Summary for a smaller export.")
     }
 
     func resolvingAllTime(_ range: ExportDateRange) -> Self? {

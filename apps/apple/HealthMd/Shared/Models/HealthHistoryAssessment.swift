@@ -110,8 +110,9 @@ nonisolated struct HealthHistoryAssessment: Equatable, Sendable {
         return "Apple Health does not let Health.md distinguish full access from denied access when no boundary is returned. Empty data and completed queries do not prove full history. Readable records can still be exported."
     }
 
-    static func displayed(preview: Self?, execution: Self?, scope: HealthHistoryScope) -> Self? {
-        if let execution, execution.scope == scope { return execution }
+    static func displayed(preview: Self?, execution: Self?, scope: HealthHistoryScope,
+                          executionScope: HealthHistoryScope? = nil) -> Self? {
+        if let execution, execution.scope == (executionScope ?? scope) { return execution }
         if let preview, preview.scope == scope { return preview }
         return nil
     }

@@ -27,7 +27,10 @@ struct iPadExportView: View {
     var onExportTapped: (() -> Void)?
     let historyProfileID: UUID?
     let executionHistoryAssessment: HealthHistoryAssessment?
+    let executionHistoryScope: HealthHistoryScope?
     let isAssessingHistory: Bool
+    let isDiscoveringExportRange: Bool
+    @Binding var isPreparingExport: Bool
     let historyPreviewWorker: HealthHistoryAssessmentWorker
     let onContinueWithoutHistoryVerification: () -> Void
     let onCancelHistoryVerification: () -> Void
@@ -46,9 +49,7 @@ struct iPadExportView: View {
     @State private var showMetricSelection = false
     @State private var showPreview = false
     @State private var showFormatHelp = false
-    @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
     @State private var isResolvingAllTimeRange = false
-    @State private var resumeExportTapWhenAllTimeResolves = false
     @State private var allTimeResolutionError: String?
 
     private var historyScope: HealthHistoryScope {
@@ -108,6 +109,15 @@ struct iPadExportView: View {
                 .accessibilityIdentifier("export.synthetic.historyPreviewStage")
         }
         #endif
+        if isDiscoveringExportRange {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                iPadBrandLabel("Checking readable date range")
+                HealthHistoryRangeDiscoveryContent(cancel: onCancelHistoryVerification)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.s4)
+            .iPadLiquidGlass()
+        }
         if isAssessingHistory {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 iPadBrandLabel("Checking history access")
@@ -119,7 +129,7 @@ struct iPadExportView: View {
             .iPadLiquidGlass()
         }
         if let assessment = HealthHistoryAssessment.displayed(preview: historyAssessment,
-            execution: executionHistoryAssessment, scope: historyScope), assessment.needsWarning {
+            execution: executionHistoryAssessment, scope: historyScope, executionScope: executionHistoryScope), assessment.needsWarning {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 iPadBrandLabel(LocalizedStringKey(assessment.warningTitle))
                 HealthHistoryDisclosureContent(assessment: assessment,
@@ -886,26 +896,6 @@ struct iPadExportView: View {
             )
         }
         .geistDialog(
-            isPresented: isPresentingLargeExportConfirmation,
-            title: Text("Confirm Large Export"),
-            message: Text(largeExportConfirmationMessage),
-            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
-            actions: [
-                .cancel(
-                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton
-                ) {
-                    pendingLargeExportConfirmation = nil
-                },
-                .action(
-                    "Export Anyway",
-                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton
-                ) {
-                    pendingLargeExportConfirmation = nil
-                    onExportTapped?()
-                }
-            ]
-        )
-        .geistDialog(
             isPresented: isPresentingAllTimeResolutionError,
             title: Text("All Time Unavailable"),
             message: Text(allTimeResolutionError ?? ""),
@@ -974,61 +964,10 @@ struct iPadExportView: View {
 
     // MARK: - Large Export Confirmation
 
-    /// Mirrors the iPhone Export tab guard: the interactive Export button must
-    /// confirm before starting a range large enough to saturate the main actor.
-    /// Scheduled, shortcut, CLI, preview, and programmatic paths never pass
-    /// through this handler.
+    // Every interactive entry, including Preview, uses the parent's single
+    // frozen request through discovery, scale confirmation and capture.
     private func handleExportButtonTapped() {
-        if dateRangePreset == .allTime {
-            resolveAllTimeRange(exportWhenResolved: true)
-            return
-        }
-        confirmExportScale(for: ExportDateRange(startDate: startDate, endDate: endDate))
-    }
-
-    private func confirmExportScale(for range: ExportDateRange) {
-        let verdict = ExportScaleGuard.verdict(
-            startDate: range.startDate,
-            endDate: range.endDate,
-            granularDataEnabled: advancedSettings.effectiveDetailPolicy
-                .includesCanonicalArchive,
-            formatCount: advancedSettings.exportFormats.count,
-            dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
-        )
-
-        switch verdict {
-        case .proceed:
-            onExportTapped?()
-        case .confirm(let scale):
-            pendingLargeExportConfirmation = scale
-        }
-    }
-
-    private var isPresentingLargeExportConfirmation: Binding<Bool> {
-        Binding(
-            get: { pendingLargeExportConfirmation != nil },
-            set: { isPresented in
-                if !isPresented { pendingLargeExportConfirmation = nil }
-            }
-        )
-    }
-
-    private var largeExportConfirmationMessage: String {
-        guard let scale = pendingLargeExportConfirmation else {
-            return ""
-        }
-
-        let scaleSummary: String
-        if advancedSettings.dailyNotesOnlyModeEnabled {
-            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and updates about \(scale.estimatedFileCount) daily notes. Exports this large can take a long time to finish.")
-        } else {
-            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and writes about \(scale.estimatedFileCount) files. Exports this large can take a long time to finish.")
-        }
-
-        guard scale.includesGranularData else { return scaleSummary }
-
-        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with the canonical archive can run for hours and may run out of memory before it finishes. Choose Detailed Time-Series or Summary for a smaller export.")
-        return scaleSummary + "\n\n" + granularWarning
+        onExportTapped?()
     }
 
     private var previewRequirementsMessage: String {
@@ -1104,7 +1043,7 @@ struct iPadExportView: View {
         case .custom:
             return
         case .allTime:
-            resolveAllTimeRange(exportWhenResolved: false)
+            resolveAllTimeRange()
         case .today, .yesterday:
             applyResolvedDateRange(for: preset)
         }
@@ -1123,35 +1062,29 @@ struct iPadExportView: View {
         )
     }
 
-    private func resolveAllTimeRange(exportWhenResolved: Bool) {
-        resumeExportTapWhenAllTimeResolves = resumeExportTapWhenAllTimeResolves || exportWhenResolved
+    private func resolveAllTimeRange() {
         guard !isResolvingAllTimeRange else { return }
         isResolvingAllTimeRange = true
         let request = nativeExportDateRangeRequest
         Task { @MainActor in
-            defer {
-                isResolvingAllTimeRange = false
-                resumeExportTapWhenAllTimeResolves = false
-            }
+            defer { isResolvingAllTimeRange = false }
             do {
                 let range = try await NativeExportDateRangeResolver.resolve(
                     request,
                     using: healthKitManager,
                     currentRequest: { nativeExportDateRangeRequest }
                 )
-                if !exportWhenResolved {
-                    guard configurationProtection.performConfigurationChange({
-                        startDate = range.startDate
-                        endDate = range.endDate
-                    }) else { return }
-                }
-                if resumeExportTapWhenAllTimeResolves {
-                    confirmExportScale(for: range)
+                // A preview finishing late must not rewrite the originating
+                // selection of an interactive export already being prepared.
+                guard !isPreparingExport else { return }
+                _ = configurationProtection.performConfigurationChange {
+                    startDate = range.startDate
+                    endDate = range.endDate
                 }
             } catch is CancellationError {
                 return
             } catch {
-                guard dateRangePreset == .allTime else { return }
+                guard dateRangePreset == .allTime, !isPreparingExport else { return }
                 allTimeResolutionError = error.localizedDescription
             }
         }

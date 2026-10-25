@@ -304,7 +304,7 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         XCTAssertEqual(result?.scope, selection.scope)
     }
 
-    func testResolvedExportRequestKeepsOriginAndExactCaptureScopeWithoutPreferenceWrites() throws {
+    func testResolvedExportRequestKeepsOriginAndExactCaptureScopeWithoutPreferenceWrites() async throws {
         let suite = "HistoryResolvedRequest.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -317,7 +317,8 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         let request = coordinator.beginExportRequest(selection: origin)
         let range = ExportDateRange(startDate: boundary.addingTimeInterval(-86400 * 30),
                                     endDate: boundary.addingTimeInterval(86400 * 2))
-        let resolved = try XCTUnwrap(request.resolvingAllTime(range))
+        let admitted = await coordinator.resolveExportRequest(request, liveSelection: { origin }) { range }
+        let resolved = try XCTUnwrap(admitted)
         XCTAssertEqual(resolved.id, request.id)
         XCTAssertEqual(resolved.originatingSelection, origin)
         XCTAssertNotEqual(resolved.selection, origin, "Equatable must retain the actual capture bounds")
@@ -330,6 +331,59 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         XCTAssertEqual(resolved.selection.localDestinationURL, origin.localDestinationURL)
         XCTAssertTrue(coordinator.isCurrent(resolved, liveSelection: origin))
         XCTAssertEqual(before, defaults.persistentDomain(forName: suite) as NSDictionary?)
+    }
+
+    func testResolvedBoundsDriveScaleAssessmentAndExecutionDisclosure() async throws {
+        let suite = "HistoryResolvedAdmission.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let origin = HealthHistoryExecutionSelection(scope: scope(allAvailable: true),
+            settings: ExportSettingsSnapshot.from(AdvancedExportSettings(userDefaults: defaults)),
+            target: .localIPhoneFolder, preset: .allTime)
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        let request = coordinator.beginExportRequest(selection: origin)
+        XCTAssertEqual(request.scaleVerdict, .proceed, "Original UI dates are only a few days")
+        let resolved = try XCTUnwrap(request.resolvingAllTime(ExportDateRange(
+            startDate: boundary.addingTimeInterval(-86400 * 366), endDate: boundary)))
+        guard case .confirm(let scale) = resolved.scaleVerdict else {
+            return XCTFail("Freshly discovered historical coverage must require scale confirmation")
+        }
+        XCTAssertGreaterThan(scale.dayCount, ExportScaleGuard.confirmationDayThreshold)
+        XCTAssertEqual(request.dateRangeRequest, resolved.dateRangeRequest,
+                       "Discovery identity remains the original UI selection")
+        let assessment = await coordinator.assess(requestID: resolved.id, scope: resolved.selection.scope,
+            isCurrent: { coordinator.isCurrent(resolved, liveSelection: origin) }) {
+                HealthHistoryAssessment(id: UUID(), assessedAt: self.boundary,
+                    scope: resolved.selection.scope, types: [])
+            }
+        let execution = try XCTUnwrap(assessment)
+        let preview = HealthHistoryAssessment(id: UUID(), assessedAt: boundary, scope: origin.scope, types: [])
+        XCTAssertEqual(execution.scope.startDate, resolved.selection.scope.startDate)
+        XCTAssertEqual(execution.scope.endDate, resolved.selection.scope.endDate)
+        XCTAssertEqual(HealthHistoryAssessment.displayed(preview: preview, execution: execution,
+            scope: origin.scope, executionScope: resolved.selection.scope)?.id, execution.id)
+        XCTAssertEqual(HealthHistoryAssessment.displayed(preview: preview, execution: execution,
+            scope: origin.scope)?.id, preview.id, "Execution bounds cannot silently replace preview scope")
+        XCTAssertEqual(request.originatingSelection, origin)
+    }
+
+    func testResolvedRequestRejectsInvalidBoundsAndNonAllTimeSelection() throws {
+        let suite = "HistoryInvalidResolvedAdmission.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = ExportSettingsSnapshot.from(AdvancedExportSettings(userDefaults: defaults))
+        let origin = HealthHistoryExecutionSelection(scope: scope(allAvailable: true),
+            settings: settings, target: .localIPhoneFolder, preset: .allTime)
+        let request = HealthHistoryExportRequest(id: UUID(), selection: origin)
+        XCTAssertNil(request.resolvingAllTime(ExportDateRange(startDate: boundary,
+            endDate: boundary.addingTimeInterval(-1))))
+        XCTAssertNil(request.resolvingAllTime(ExportDateRange(
+            startDate: Date(timeIntervalSinceReferenceDate: .infinity), endDate: boundary)))
+        XCTAssertNil(request.resolvingAllTime(ExportDateRange(startDate: boundary,
+            endDate: Date(timeIntervalSinceReferenceDate: .nan))))
+        let bounded = HealthHistoryExportRequest(id: UUID(), selection: HealthHistoryExecutionSelection(
+            scope: scope(), settings: settings, target: .localIPhoneFolder, preset: .custom))
+        XCTAssertNil(bounded.resolvingAllTime(ExportDateRange(startDate: boundary, endDate: boundary)))
     }
 
     func testResolvedExportRequestRejectsChangesBeforeConfirmationOrAssessment() async throws {
@@ -359,6 +413,15 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         ]
         let coordinator = HealthHistoryAssessmentCoordinator()
         for live in changed {
+            let discovering = coordinator.beginExportRequest(selection: origin)
+            var current = origin
+            let admission = await coordinator.resolveExportRequest(discovering, liveSelection: { current }) {
+                await Task.yield()
+                current = live
+                return ExportDateRange(startDate: self.boundary.addingTimeInterval(-86400 * 30),
+                                       endDate: self.boundary)
+            }
+            XCTAssertNil(admission, "Every origin field must remain current across discovery")
             let request = coordinator.beginExportRequest(selection: origin)
             let resolved = try XCTUnwrap(request.resolvingAllTime(ExportDateRange(
                 startDate: boundary.addingTimeInterval(-86400 * 30), endDate: boundary)))
@@ -374,7 +437,7 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         }
     }
 
-    func testResolvedExportRequestRejectsABAAndStaleCancellation() {
+    func testResolvedExportRequestRejectsABAAndStaleCancellation() async {
         let defaults = UserDefaults(suiteName: "HistoryResolvedABA")!
         defer { defaults.removePersistentDomain(forName: "HistoryResolvedABA") }
         let origin = HealthHistoryExecutionSelection(scope: scope(allAvailable: true),
@@ -387,6 +450,13 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         let current = coordinator.beginExportRequest(selection: origin)
         coordinator.invalidate(old)
         XCTAssertTrue(coordinator.isCurrent(current, liveSelection: origin))
+        let admission = await coordinator.resolveExportRequest(current, liveSelection: { origin }) {
+            await Task.yield()
+            coordinator.invalidate() // Away-and-back is equal by value, but has a new revision.
+            return ExportDateRange(startDate: self.boundary.addingTimeInterval(-86400 * 30),
+                                   endDate: self.boundary)
+        }
+        XCTAssertNil(admission)
     }
 
     func testFrozenCaptureSettingsRetainMetricScopeEngineAuthorityAndCalendar() {
