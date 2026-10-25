@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "145f65d9d45948629106636b84e2a0ac103024b8",
+  "docs_reference_git_tree": "99628d5e07b378769553d5836daabbee8ead1a18",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "92e4392d480f4e36391593034bd24b2ff869afd02b0443a9f7846075a3380079",
+    "digest": "fef7a9e9370f5b39a17ede95aab2b281af4d879328e6e58e4e135d166171da2c",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -426,7 +426,7 @@
     {
       "path": "generated/automation/manifest.json",
       "bytes": 6337,
-      "sha256": "1943a98769a8a958c17a0806fda0d5bdf57afea2389bf58246237a267bae04c8",
+      "sha256": "d718e9c91aba18bdff845d84a0fd6f94253af343ca867d092ebd3b954a1c8457",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -445,8 +445,8 @@
     },
     {
       "path": "generated/automation/peer-capabilities.json",
-      "bytes": 1773,
-      "sha256": "0e2f8666af901c63d72e2950863fc5211e610149d8319f84ff372f257d2beacf",
+      "bytes": 1772,
+      "sha256": "2cd6d4023de5d6d1a19202f5670504bb3803e0a792654cdafa601dabfe504438",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -1400,7 +1400,7 @@
     {
       "path": "public/reference/generated/automation/manifest.json",
       "bytes": 6337,
-      "sha256": "1943a98769a8a958c17a0806fda0d5bdf57afea2389bf58246237a267bae04c8",
+      "sha256": "d718e9c91aba18bdff845d84a0fd6f94253af343ca867d092ebd3b954a1c8457",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
@@ -1413,8 +1413,8 @@
     },
     {
       "path": "public/reference/generated/automation/peer-capabilities.json",
-      "bytes": 1773,
-      "sha256": "0e2f8666af901c63d72e2950863fc5211e610149d8319f84ff372f257d2beacf",
+      "bytes": 1772,
+      "sha256": "2cd6d4023de5d6d1a19202f5670504bb3803e0a792654cdafa601dabfe504438",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/peer-capabilities.json"
     },
@@ -1960,7 +1960,7 @@
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
       "bytes": 7327,
-      "sha256": "56717290594b95692062839da93510cec9922c85e136e94b8f85a8607156856a",
+      "sha256": "0bf8813fd0694ee6eefc016dcb6110bfb904a9dfb02ead25d7338003c022f645",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
@@ -2037,7 +2037,7 @@
     {
       "path": "src/content/docs/reference/generated/index.md",
       "bytes": 21605,
-      "sha256": "831339555a6bdd26f79915b89a8da1b143acc723d601bed6cf58d76d8b351578",
+      "sha256": "6767bf2f1e7094bf83cacd22498e8ffaa2b5404f566bd5939582b577cdc884a4",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },

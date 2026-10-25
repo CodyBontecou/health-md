@@ -112,9 +112,9 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 | `automation/mac-export-job.json` | 27691 | `eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `automation/mac-export-result-partial.json` | 1034 | `f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `automation/mac-export-result-success.json` | 585 | `b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `automation/manifest.json` | 6337 | `1943a98769a8a958c17a0806fda0d5bdf57afea2389bf58246237a267bae04c8` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `automation/manifest.json` | 6337 | `d718e9c91aba18bdff845d84a0fd6f94253af343ca867d092ebd3b954a1c8457` | — | [Download](/docs/reference/generated/automation/manifest.json) |
 | `automation/message-fields.md` | 136182 | `3ff0fa79ea502393010686b61289116eb8f0cdeb7d6b3b274beb8ce29aa8a4d8` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `automation/peer-capabilities.json` | 1773 | `0e2f8666af901c63d72e2950863fc5211e610149d8319f84ff372f257d2beacf` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `automation/peer-capabilities.json` | 1772 | `2cd6d4023de5d6d1a19202f5670504bb3803e0a792654cdafa601dabfe504438` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `automation/raw-result-complete.json` | 3241 | `bbf8f86a366590cae7823d1e6a2134d1ad14e77d539d26a5ee3ab8e2c96eb338` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `automation/raw-result-partial.json` | 5281 | `05979a293411c09f05f40476d893c2335658f9426d96e2fcf9ee4a48927750cb` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `automation/transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |
