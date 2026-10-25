@@ -51,6 +51,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.awaitCancellation
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import java.io.File
@@ -73,6 +74,7 @@ abstract class AccessibilityTestHarness(
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val fixtureContent = mutableStateOf<(@Composable () -> Unit)?>(null)
+    private var fixturePublished = false
 
     @Before
     fun keepTestActivityAwake() {
@@ -100,6 +102,28 @@ abstract class AccessibilityTestHarness(
         compose.setContent { TestViewport { fixtureContent.value?.invoke() } }
         waitForViewport()
         awaitNativeInputReady()
+    }
+
+    @After
+    fun releaseFixtureWindowsBeforeActivityTeardown() {
+        clearFixtureAndAwaitNativeHost()
+    }
+
+    /** Dispose popups/dialogs while their activity is still alive, rather than leaving native
+     * window removal to interleaved composition/activity rule teardown. This does not retry a test
+     * or relax input admission: the unchanged native focus check must pass after disposal. */
+    protected fun clearFixtureAndAwaitNativeHost() {
+        val removed = compose.runOnUiThread {
+            if (fixtureContent.value == null) false else {
+                fixtureContent.value = null
+                true
+            }
+        }
+        // Setup failures before fixture publication have no modal content to remove.
+        if (removed) {
+            waitForViewport()
+            awaitNativeInputReady()
+        }
     }
 
     /** Compose semantics can receive input before Android admits input to the native window. */
@@ -160,7 +184,8 @@ abstract class AccessibilityTestHarness(
         content: @Composable () -> Unit,
     ) {
         compose.runOnUiThread {
-            check(fixtureContent.value == null) { "Cannot call setContent twice per test!" }
+            check(!fixturePublished) { "Cannot call setContent twice per test!" }
+            fixturePublished = true
             fixtureContent.value = {
                 if (suppressSoftwareKeyboard) {
                     // The fitted dp matrix is intentionally independent of the physical

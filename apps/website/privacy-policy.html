@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Privacy Policy — Health.md</title>
-  <meta name="description" content="How Health.md keeps health data on user-controlled devices and destinations while using limited, health-free first-party analytics.">
+  <meta name="description" content="Health.md is local-first by default. An optional single-owner cloud pilot retains only intentionally uploaded exports; analytics remains health-free.">
   <link rel="canonical" href="https://healthmd.app/privacy-policy.html">
   <link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html">
   <link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html">
@@ -47,7 +47,7 @@
       <div class="legal-hero-inner">
         <p class="legal-eyebrow">Legal · Privacy</p>
         <h1 id="privacy-title">Privacy,<br>in plain language.</h1>
-        <p class="legal-updated">Last updated: September 28, 2026</p>
+        <p class="legal-updated">Last updated: 2026-10-24</p>
         <p class="legal-lede">Health.md is local-first. Your device reads the records you authorize; you choose where exports or direct responses go. A separate, optional single-owner cloud pilot stores exports intentionally sent to it.</p>
 
         <div class="legal-promise" role="list" aria-label="Privacy principles">
@@ -101,7 +101,7 @@
           <p>It does not replace the privacy terms of Apple, Google, a health provider, a file or sync provider, an API operator, an AI tool, or another destination you choose. Once you direct data to one of those services, that service's terms and your configuration govern its copy.</p>
           <div class="policy-note">
             <p><strong>The simple version:</strong> Health.md is local-first, but an optional, unbacked single-owner Health.md Cloud pilot stores API exports the owner chooses to upload. No public signup or automatic device sync exists. Direct queries remain on the paired device unless you choose to share results elsewhere.</p>
-            <p>We do automatically collect limited first-party product analytics and campaign data. Those systems are pseudonymous, contain no health records or exports, and are not used for advertising.</p>
+            <p>We do automatically collect limited first-party product analytics and campaign data. Those systems are pseudonymous, contain no health records or exports, and are used for product and campaign measurement.</p>
           </div>
         </section>
 
@@ -162,12 +162,13 @@
           <p>Depending on the platform and event, an accepted payload can contain a random app-install UUID, random event UUID, event name, app version, build number, platform, experiment or variant, onboarding step or explicit skip, bounded free-export counts, export-target category, format count, coarse metric-count and date-span buckets, paywall context, product identifier, purchase or restore outcome, and broad authorization or error category.</p>
           <p>The installation UUID persists for that app installation, so the data is <strong>pseudonymous rather than anonymous</strong>. It is randomly generated and is not derived from your name, account, health identifier, device hardware identifier, Android ID, or Advertising ID.</p>
           <p>Product analytics <strong>never include HealthKit or Health Connect values or identifiers, metric names, health dates</strong>, medications, workouts, export contents, typed query results, folder or vault names, file paths, peer or device names, account data, prices, <strong>credentials or tokens</strong>, user text, raw referrers, full User-Agent strings, or stored IP addresses. Unknown events, properties, and property values are rejected. The public client and Worker allowlists are designed so <strong>health records and exported content cannot be represented in an analytics payload</strong>.</p>
-          <p>These events are not used for advertising, fingerprinting, or cross-app tracking, and they are not sold or shared with advertisers. Validated rows are retained for no more than 13 months and removed by automatic daily cleanup. Cloudflare still processes ordinary connection information under its own terms.</p>
+          <p>These events are not used for ad targeting, fingerprinting, or cross-app tracking, and they are not sold or shared with advertisers. Validated rows are retained for no more than 13 months and removed by automatic daily cleanup. Cloudflare still processes ordinary connection information under its own terms.</p>
         </section>
 
         <section id="campaigns">
           <h2>First-party campaign attribution</h2>
           <p>Health.md uses first-party short links, such as <code>healthmd.app/v/yt-csv-001</code>, to measure aggregate campaign performance without a third-party attribution SDK.</p>
+          <p>On iPhone and iPad, Apple AdServices resolves an Apple Ads attribution token directly with Apple. The token is transient and never stored or sent to Health.md. Only campaign, ad group and keyword identifiers, match status, click or impression claim, and download or redownload category are linked to the random installation ID and purchase outcomes in first-party analytics. No IDFA or third-party attribution SDK is used. Health data and purchase events are never sent to Apple Ads. Failed lookups remain unknown, not organic.</p>
           <ul>
             <li>The redirect service can record the campaign token and slug, platform and content angle, coarse destination or client category, referring hostname when supplied, coarse country code, and time.</li>
             <li>The stored click row does not include an IP address, full User-Agent, cookie, Cloudflare request ID, or fingerprint.</li>

@@ -70,7 +70,7 @@ Ein gespeichertes Profil fixiert seine Einstellungen und sein Ziel für den Lauf
 
 <div class="callout">
 <strong>Freischaltung.</strong>
-<p style="margin-top:6px;">Auf Apple-Plattformen gilt die kostenlose Freigrenze für 10 manuelle oder geplante Exportaktionen. Full Access hebt dieses Limit auf und schaltet Mac-Ziel-Workflows und Kurzbefehle frei. Android bietet dagegen 10 kostenlose manuelle Aktionen; für Zeitplanung ist dort die dauerhafte Freischaltung erforderlich. Die <a href="/de/docs/paywall/">Paywall-Seite</a> erklärt den Apple-Kauf.</p>
+<p style="margin-top:6px;">Auf Apple-Plattformen gilt die kostenlose Freigrenze für 5 manuelle oder geplante Exportaktionen. Full Access hebt dieses Limit auf und schaltet Mac-Ziel-Workflows und Kurzbefehle frei. Android bietet dagegen 5 kostenlose manuelle Aktionen; für Zeitplanung ist dort die dauerhafte Freischaltung erforderlich. Die <a href="/de/docs/paywall/">Paywall-Seite</a> erklärt den Apple-Kauf.</p>
 </div>
 
 ## Verwandte Themen

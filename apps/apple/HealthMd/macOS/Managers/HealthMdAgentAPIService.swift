@@ -81,7 +81,10 @@ nonisolated struct HealthMdAgentQueryStoreBaseline: Sendable, Equatable {
     let ownerDateMutationIDs: [String: String]
 }
 
-protocol HealthMdAgentQueryExecuting: Sendable {
+// Executor-neutral async Sendable contract: actor implementations retain their
+// own isolation. Explicit opt-out prevents Swift 6.4's default MainActor from
+// turning this protocol into a global-actor conformance requirement.
+nonisolated protocol HealthMdAgentQueryExecuting: Sendable {
     func execute(
         _ request: HealthMdQueryRequest,
         detailLevel: HealthMdQueryDetailLevel,
@@ -118,7 +121,7 @@ nonisolated struct HealthMdAgentQueryStoreReadiness: Sendable, Equatable {
     let averageEncryptedBytesPerOwnerDate: Int64?
 }
 
-protocol HealthMdAgentQueryReadinessProviding: Sendable {
+nonisolated protocol HealthMdAgentQueryReadinessProviding: Sendable {
     func queryStoreReadiness() async throws -> HealthMdAgentQueryStoreReadiness
 }
 
@@ -639,7 +642,7 @@ final class HealthMdAgentAPIService {
                 "source": "iphone",
                 "limited_history_detection_supported": true,
                 "minimum_source_os": 27,
-                "message": "The Mac cache cannot infer iPhone HealthKit authorization. Fresh all-available acquisition requires an OS 27+ iPhone assessment that covers the complete selected scope and reports full_history; limited, unknown, API-unavailable, and unassessed scopes are rejected."
+                "message": "The Mac cache cannot infer current iPhone HealthKit authorization. All-available acquisition means currently readable data, not certified complete history. Fresh requests carry scoped assessment evidence when supported; omitted boundaries, limited access, unavailable APIs and incomplete assessments never prove unrestricted access."
             ],
             "query_store": queryStore,
             "iphone": [
@@ -758,7 +761,9 @@ final class HealthMdAgentAPIService {
             "all_available_metrics": true,
             "all_available_history": true,
             "all_available_history_semantics": "all_readable_user_authorized_history",
-            "full_history_claim_requires_os_27_boundary_check": true,
+            "full_history_claim_requires_os_27_boundary_check": false,
+            "unqualified_full_history_claim_supported": false,
+            "history_assessment_contract": "healthmd.history_assessment/1",
             "history_authorization_contract": "healthmd.history_authorization/1",
             "product_readiness": productReadiness(),
             "os_qualification": osQualification(),

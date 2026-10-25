@@ -2,6 +2,7 @@ use std::{collections::HashMap, sync::Mutex, time::Duration};
 
 use async_trait::async_trait;
 use base64::Engine as _;
+use chrono::Timelike as _;
 use healthmd_protocol::{
     crypto,
     models::SettingsPolicy,
@@ -177,6 +178,7 @@ fn mobile_capabilities(
     query: Option<DirectQueryCapabilities>,
 ) -> PeerCapabilities {
     PeerCapabilities {
+        export_history_observation_versions: None,
         protocol_versions: versions,
         platform,
         installation_id: trust.installation_id,
@@ -235,7 +237,8 @@ async fn pair_fake_ios(client: &DirectClient<MemoryCredentials>) -> FakeMobileTr
             None,
         )
         .await;
-        let _ = receive_cli_hello(&mut channel).await;
+        let hello = receive_cli_hello(&mut channel).await;
+        assert_eq!(hello.export_history_observation_versions, None);
         channel
             .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
                 &trust,
@@ -255,7 +258,8 @@ async fn pair_fake_ios(client: &DirectClient<MemoryCredentials>) -> FakeMobileTr
 async fn respond_with_ios_status(port: u16, trust: &FakeMobileTrust, app_active: bool) {
     let (mut channel, reconnect) =
         connect_fake_mobile(port, 1, &trust.display_name, None, Some(trust)).await;
-    let _ = receive_cli_hello(&mut channel).await;
+    let hello = receive_cli_hello(&mut channel).await;
+    assert_eq!(hello.export_history_observation_versions, Some(vec![1]));
     channel
         .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
             &reconnect,
@@ -910,23 +914,24 @@ async fn wake_window_expiry_is_bounded_when_the_peer_is_unreachable() {
     let temporary = TempDir::new().unwrap();
     let client = test_client(&temporary);
     let trust = pair_fake_ios(&client).await;
-    let probe = tokio::net::TcpListener::bind(("127.0.0.1", 0))
-        .await
-        .unwrap();
-    let port = probe.local_addr().unwrap().port();
-    drop(probe);
+    // Let the client reserve its own ephemeral listener atomically. A separate
+    // probe either races another test when dropped or prevents this bind on
+    // platforms that do not permit the two sockets to share the port.
     let started = std::time::Instant::now();
     let result = client
         .wait_for_active_source(
             Some(trust.installation_id.0),
-            port,
+            0,
             WakeWindow::from_seconds(1),
             false,
             &tokio_util::sync::CancellationToken::new(),
             |_| {},
         )
         .await;
-    assert!(matches!(result, Err(ClientError::TimedOut)));
+    assert!(
+        matches!(result, Err(ClientError::TimedOut)),
+        "unexpected wake result: {result:?}"
+    );
     assert!(started.elapsed() < Duration::from_secs(2));
 }
 
@@ -1128,4 +1133,141 @@ async fn ios_only_pairing_rejects_android_and_removes_new_trust() {
     let (result, ()) = tokio::join!(pair, peer);
     assert!(matches!(result, Err(ClientError::Authentication(_))));
     assert!(client.paired_devices().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn unknown_platform_reconnect_cannot_upgrade_its_neutral_history_hello() {
+    for file_mode in [false, true] {
+        let temporary = TempDir::new().unwrap();
+        let client = test_client(&temporary);
+        let trust = pair_fake_ios(&client).await;
+        let mut saved = client.load_trust().await.unwrap();
+        saved.trusted_clients[0].platform = None;
+        client.trust_store.save(&saved).await.unwrap();
+
+        let destination = temporary.path().join("vault");
+        fs::create_dir(&destination).unwrap();
+        let (request, accepted) =
+            rebound_history_acceptance_fixture(&client, &trust, file_mode, &destination);
+        let jobs = JobStore::new(client.layout.clone()).unwrap();
+        jobs.save(&JobRecord::new(request.clone())).unwrap();
+        let listener = bind_listener(0).await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let receiver = async {
+            let mut connection = client
+                .accept_compatible(
+                    &listener,
+                    None,
+                    Some(trust.installation_id.0),
+                    Duration::from_secs(5),
+                )
+                .await
+                .unwrap();
+            assert_eq!(connection.device.platform, None);
+            let (peer, _, selected_history_version) = exchange_hello(
+                &mut connection.channel,
+                client.identity.installation_id,
+                connection.device.platform,
+            )
+            .await
+            .unwrap();
+            validate_iphone_peer(&connection.channel, &peer).unwrap();
+            assert_eq!(selected_history_version, None);
+            if file_mode {
+                client
+                    .process_file_export(
+                        &mut connection.channel,
+                        selected_history_version,
+                        &request,
+                        &jobs,
+                        262_144,
+                        Duration::from_secs(5),
+                    )
+                    .await
+                    .map(|_| ())
+            } else {
+                client
+                    .process_raw_export(
+                        &mut connection.channel,
+                        selected_history_version,
+                        &request,
+                        &jobs,
+                        262_144,
+                        Duration::from_secs(5),
+                    )
+                    .await
+                    .map(|_| ())
+            }
+        };
+        let peer = async {
+            let (mut channel, reconnect) =
+                connect_fake_mobile(port, 3, &trust.display_name, None, Some(&trust)).await;
+            let local = receive_cli_hello(&mut channel).await;
+            assert_eq!(local.export_history_observation_versions, None);
+            let mut capabilities =
+                mobile_capabilities(&reconnect, PeerPlatform::Ios, vec![1, 3], None);
+            capabilities.export_history_observation_versions = Some(vec![1]);
+            channel
+                .send(&DirectMessage::Hello(Unlabeled::from(capabilities)))
+                .await
+                .unwrap();
+            channel
+                .send(&DirectMessage::ExportAccepted(Unlabeled::from(accepted)))
+                .await
+                .unwrap();
+        };
+        let (result, ()) = tokio::join!(receiver, peer);
+        assert!(
+            matches!(result, Err(ClientError::UnexpectedMessage)),
+            "{result:?}"
+        );
+        let record = jobs.load(request.job_id.0).unwrap();
+        assert_eq!(record.total_days, None);
+        assert_eq!(record.committed_bytes, 0);
+        assert!(
+            !client
+                .layout
+                .corpus_sessions_dir()
+                .join(request.job_id.0.to_string())
+                .exists()
+        );
+        assert_eq!(fs::read_dir(destination).unwrap().count(), 0);
+    }
+}
+
+fn rebound_history_acceptance_fixture(
+    client: &DirectClient<MemoryCredentials>,
+    trust: &FakeMobileTrust,
+    file_mode: bool,
+    destination: &std::path::Path,
+) -> (ExportRequest, healthmd_protocol::models::ExportAccepted) {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        "../tests/fixtures/export-history-direct-job-v1.json"
+    ))
+    .unwrap();
+    let mut request: ExportRequest = serde_json::from_value(fixture["request"].clone()).unwrap();
+    request.created_at = Utc::now().with_nanosecond(0).unwrap();
+    if file_mode {
+        request.response_mode = healthmd_protocol::models::ResponseMode::WriteFiles;
+        request.raw_profile = None;
+        request.destination = Some(healthmd_protocol::models::ExportDestination {
+            root_path: destination.to_str().unwrap().to_owned(),
+        });
+    }
+    let mut accepted = fixture["accepted"].clone();
+    accepted["peerBinding"]["sourceInstallationID"] = serde_json::json!(trust.installation_id);
+    accepted["peerBinding"]["destinationInstallationID"] =
+        serde_json::json!(client.identity.installation_id);
+    accepted["historyObservation"]["source_installation_id"] =
+        serde_json::json!(trust.installation_id.0.to_string());
+    accepted["historyObservation"]["destination_installation_id"] =
+        serde_json::json!(client.identity.installation_id.0.to_string());
+    accepted["historyObservation"]["request_binding_sha256"] = serde_json::json!(
+        healthmd_protocol::transfer::request_fingerprint(&request)
+            .unwrap()
+            .sha256
+    );
+    let accepted: healthmd_protocol::models::ExportAccepted =
+        serde_json::from_value(accepted).unwrap();
+    (request, accepted)
 }

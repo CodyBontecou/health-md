@@ -29,7 +29,9 @@ class MarkdownAuditTests(unittest.TestCase):
             "apps/apple/docs/reference/generated/core/metric-catalog.md": "generated-reference",
             "apps/website/docs-src/src/content/docs/reference/index.md": "publication-snapshot",
             "apps/website/docs-src/src/content/docs/fr/quickstart.md": "published-guide",
+            "apps/website/docs-src/src/content/docs/agents.md": "published-guide",
             "apps/website/assets/samples/health-data-sample.md": "fixture-or-sample",
+            "apps/apple/docs/testing/example-execution-plan.md": "planning-or-evidence",
             "apps/apple/docs/testing/WAVE1-EXECUTION-PLAN.md": "planning-or-evidence",
             "apps/cloud/docs/production-design-interview.md": "planning-or-evidence",
             "apps/cli/docs/releasing.md": "maintained-document",
@@ -72,6 +74,21 @@ class MarkdownAuditTests(unittest.TestCase):
             (website / "guide.md").write_text("# Guide\n")
             self.assertIsNone(audit.missing_link(root, website / "index.md", "guide"))
             self.assertEqual(audit.missing_link(root, root / "README.md", "guide"), "guide")
+
+    def test_public_snapshot_links_can_target_staged_markdown_alternatives(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            docs_root = root / "apps/website/docs-src"
+            source = docs_root / "src/content/docs/reference/index.md"
+            source.parent.mkdir(parents=True)
+            source.write_text("# Reference\n")
+            mirror = docs_root / "public/reference/generated/README.md"
+            mirror.parent.mkdir(parents=True)
+            mirror.write_text("# Generated\n[Reference](../index.md)\n")
+            # stage-public-paths.mjs publishes source Markdown alongside public
+            # assets. Neither a build nor a hand-edited mirror is required here.
+            self.assertIsNone(audit.missing_link(root, mirror, "../index.md"))
+            self.assertEqual(audit.missing_link(root, mirror, "../missing.md"), "apps/website/docs-src/public/reference/missing.md")
 
     def test_backlinks_include_code_consumers_and_ambiguous_names_are_not_guessed(self):
         docs = {"apps/apple/docs/guide.md", "apps/apple/README.md", "README.md"}

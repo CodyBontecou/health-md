@@ -1,5 +1,6 @@
 package com.healthmd.presentation.accessibility
 
+import android.os.SystemClock
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import androidx.compose.foundation.background
@@ -46,6 +47,7 @@ import java.util.Locale
 @RunWith(Parameterized::class)
 class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : AccessibilityTestHarness(display) {
     companion object {
+        private const val NATIVE_LAYOUT_SETTLE_MILLIS = 100L
         private const val ID = "synthetic-profile"
         private const val LONG_NAME = "Synthetic weekly archive for a family with a long descriptive profile name"
 
@@ -534,6 +536,11 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
 
     private fun tapNativeAction(tag: String, label: String) {
         val action = compose.onNodeWithTag(tag).scrollIfPossible()
+        // The button container can be visible while IME/scroll layout still clips its label.
+        // Bring the actual text into view before measuring it; keep all fit/touch assertions.
+        val copy = compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true)
+            .scrollIfPossible()
+        awaitNativeControlVisible(copy, "native action label $tag before tapping $label")
         action.assertMinimumTouchTarget().assertInNativeOwner().assertRole(Role.Button)
         assertActionTextFits(tag, label)
         action.performTouchInput { click() }
@@ -558,24 +565,39 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         assertTextFits(selected, GeistType.copy16.fontSize)
     }
 
-    /** Native popup dismissal/scroll layout can settle after Compose's semantics update. */
+    /** Native popup focus/scroll layout can move after Compose first reports visibility.
+     * Require fully visible geometry to remain stable before the unchanged assertions and tap. */
     private fun awaitNativeControlVisible(control: SemanticsNodeInteraction, stage: String) {
-        var previousGeometry: Pair<Rect, Rect>? = null
-        var lastAdmissionFailure: Throwable? = null
+        var previous: Triple<Rect, Rect, Rect>? = null
+        var stableSince = 0L
         try {
             compose.waitUntil(timeoutMillis = 5_000) {
-                // Partial display is insufficient while a native popup/owner is resizing.
-                // Keep the same physical admission checks and require a settled frame too.
-                val admission = runCatching {
-                    control.assertMinimumTouchTarget().assertInNativeOwner()
-                    val node = control.fetchSemanticsNode()
-                    node.boundsInRoot to generateSequence(node) { it.parent }.last().boundsInRoot
-                }
-                lastAdmissionFailure = admission.exceptionOrNull()
-                val geometry = admission.getOrNull()
-                val settled = geometry != null && geometry == previousGeometry
-                previousGeometry = geometry
-                settled
+                val geometry = if (control.isDisplayed()) control.readLayoutOnIdle { node ->
+                    if (!node.layoutInfo.isPlaced) return@readLayoutOnIdle null
+                    val position = node.positionInRoot
+                    val size = node.size
+                    Triple(Rect(position.x, position.y, position.x + size.width, position.y + size.height),
+                        node.boundsInRoot, generateSequence(node) { it.parent }.last().boundsInRoot)
+                } else null
+                val fullyVisible = geometry?.let { (bounds, clipped, owner) ->
+                    bounds.width > 0 && bounds.height > 0 &&
+                        kotlin.math.abs(bounds.left - clipped.left) <= 1 &&
+                        kotlin.math.abs(bounds.right - clipped.right) <= 1 &&
+                        kotlin.math.abs(bounds.top - clipped.top) <= 1 &&
+                        kotlin.math.abs(bounds.bottom - clipped.bottom) <= 1 &&
+                        bounds.left >= owner.left - 1 && bounds.right <= owner.right + 1 &&
+                        bounds.top >= owner.top - 1 && bounds.bottom <= owner.bottom + 1
+                } == true
+                val now = SystemClock.uptimeMillis()
+                if (!fullyVisible) {
+                    previous = null
+                    stableSince = now
+                    false
+                } else if (geometry != previous) {
+                    previous = geometry
+                    stableSince = now
+                    false
+                } else now - stableSince >= NATIVE_LAYOUT_SETTLE_MILLIS
             }
         } catch (failure: Throwable) {
             val geometry = runCatching {
@@ -585,11 +607,7 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                 }.joinToString("\n")
                 "unclipped=${control.getUnclippedBoundsInRoot()}\n$ancestors"
             }.getOrElse { "Unable to capture geometry: ${it.message}" }
-            throw AssertionError(
-                "Native visibility did not settle: $stage on $display\n" +
-                    "lastAdmissionFailure=${lastAdmissionFailure?.message}\n$geometry",
-                failure,
-            )
+            throw AssertionError("Native visibility did not settle: $stage on $display\n$geometry", failure)
         }
     }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import UIKit
 import os.log
 
@@ -24,6 +25,23 @@ struct iPadExportView: View {
     /// Called when the user taps "Export Now". The parent decides whether to export
     /// immediately or show the paywall.
     var onExportTapped: (() -> Void)?
+    let historyProfileID: UUID?
+    let executionHistoryAssessment: HealthHistoryAssessment?
+    let executionHistoryScope: HealthHistoryScope?
+    let isAssessingHistory: Bool
+    let isDiscoveringExportRange: Bool
+    @Binding var isPreparingExport: Bool
+    let historyPreviewWorker: HealthHistoryAssessmentWorker
+    let onContinueWithoutHistoryVerification: () -> Void
+    let onCancelHistoryVerification: () -> Void
+
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var historyAssessment: HealthHistoryAssessment?
+    @State private var historyRefreshID = UUID()
+    @State private var historyCoordinator = HealthHistoryAssessmentCoordinator()
+    #if DEBUG
+    @State private var syntheticHistoryPreviewStage = "not started"
+    #endif
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
@@ -31,7 +49,99 @@ struct iPadExportView: View {
     @State private var showMetricSelection = false
     @State private var showPreview = false
     @State private var showFormatHelp = false
-    @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
+    @State private var allTimeResolutionError: String?
+    @State private var isResolvingAllTimeRange = false
+
+    private var historyScope: HealthHistoryScope {
+        HealthHistoryScope(metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            startDate: startDate, endDate: endDate,
+            timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
+            allAvailable: dateRangePreset == .allTime, profileID: historyProfileID, rangeSemantics: .ownerDates)
+    }
+
+    private var historyPreviewRequest: HealthHistoryPreviewRequest {
+        HealthHistoryPreviewRequest(scope: historyScope, refreshID: historyRefreshID)
+    }
+
+    private func invalidateHistoryPreview() {
+        historyCoordinator.invalidate()
+        historyPreviewWorker.cancelLogicalWaiter()
+        historyRefreshID = UUID()
+        historyAssessment = nil
+    }
+
+    private func refreshHistoryAssessment() async {
+        #if DEBUG
+        if TestMode.isUITesting {
+            syntheticHistoryPreviewStage = "starting; active=\(scenePhase == .active); metrics=\(historyScope.metricIDs.count)"
+        }
+        #endif
+        guard scenePhase == .active else { return }
+        let request = historyPreviewRequest
+        let result = await historyCoordinator.assessPreview(worker: historyPreviewWorker,
+            notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: request.scope),
+            scope: request.scope, isCurrent: {
+            request == historyPreviewRequest && scenePhase == .active
+                && request.scope.profileID == HealthHistoryCanonicalProfileIdentity.read()
+        }, operation: {
+            await healthKitManager.assessHistoryAccess(scope: request.scope)
+        })
+        #if DEBUG
+        if TestMode.isUITesting, request == historyPreviewRequest {
+            // Diagnostic ownership follows the current request too: an obsolete
+            // cancelled/late result cannot relabel the newest task's stage.
+            // Keep identity mismatches visible for a CURRENT request.
+            // Public synthetic booleans/counts only; fresh canonical read is
+            // at the async boundary, never in body. No IDs/values/dates.
+            let canonicalMatches = request.scope.profileID == HealthHistoryCanonicalProfileIdentity.read()
+            syntheticHistoryPreviewStage = "returned=\(result != nil); active=\(scenePhase == .active); selection=\(request == historyPreviewRequest); identity=\(canonicalMatches); metrics=\(request.scope.metricIDs.count); types=\(result?.types.count ?? 0); warning=\(result?.needsWarning ?? false); displayed=\(result?.scope == historyScope)"
+        }
+        #endif
+        guard let result else { return }
+        historyAssessment = result
+    }
+
+    @ViewBuilder private var historyWarningSection: some View {
+        #if DEBUG
+        if TestMode.isUITesting, ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil {
+            Text(syntheticHistoryPreviewStage)
+                .font(.caption)
+                .accessibilityIdentifier("export.synthetic.historyPreviewStage")
+        }
+        #endif
+        if isDiscoveringExportRange {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                iPadBrandLabel("Checking readable date range")
+                HealthHistoryRangeDiscoveryContent(cancel: onCancelHistoryVerification)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.s4)
+            .iPadLiquidGlass()
+        }
+        if isAssessingHistory {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                iPadBrandLabel("Checking history access")
+                HealthHistoryPendingContent(continueUnverified: onContinueWithoutHistoryVerification,
+                                            cancel: onCancelHistoryVerification)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.s4)
+            .iPadLiquidGlass()
+        }
+        if let assessment = HealthHistoryAssessment.displayed(preview: historyAssessment,
+            execution: executionHistoryAssessment, scope: historyScope, executionScope: executionHistoryScope), assessment.needsWarning {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                iPadBrandLabel(LocalizedStringKey(assessment.warningTitle))
+                HealthHistoryDisclosureContent(assessment: assessment,
+                    isExecution: assessment.id == executionHistoryAssessment?.id,
+                    reviewAccess: { showHealthPermissionsGuide = true })
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.s4)
+            .iPadLiquidGlass()
+            .modifier(HealthHistoryWarningAccessibilityContainer())
+        }
+    }
 
     private var headerActions: some View {
         HStack(spacing: Spacing.s2) {
@@ -238,6 +348,10 @@ struct iPadExportView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+
+                // Advisory evidence is near the top, in the actual tablet route,
+                // not a phone-layout substitute. Native text/actions can wrap.
+                historyWarningSection
 
                 // MARK: - Date Range
                 VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -715,9 +829,17 @@ struct iPadExportView: View {
             .iPadContentColumn()
         }
         .scrollIndicators(.hidden)
+        .accessibilityIdentifier(AccessibilityID.Export.contentScroll)
         .iPadPageBackground()
         .navigationTitle("Export")
         .iPadHiddenSystemNavigationTitle()
+        .task(id: historyPreviewRequest) { await refreshHistoryAssessment() }
+        .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
+        .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
+        .onChange(of: healthKitManager.isAuthorized) { _, _ in invalidateHistoryPreview() }
+        .onChange(of: historyProfileID) { _, _ in invalidateHistoryPreview() }
+        .onChange(of: scenePhase) { _, _ in invalidateHistoryPreview() }
+        .onDisappear { historyCoordinator.invalidate(); historyPreviewWorker.cancelLogicalWaiter() }
         .sheet(isPresented: $showMetricSelection) {
             iPadMetricSelectionView(
                 selectionState: advancedSettings.metricSelection,
@@ -774,24 +896,10 @@ struct iPadExportView: View {
             )
         }
         .geistDialog(
-            isPresented: isPresentingLargeExportConfirmation,
-            title: Text("Confirm Large Export"),
-            message: Text(largeExportConfirmationMessage),
-            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
-            actions: [
-                .cancel(
-                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton
-                ) {
-                    pendingLargeExportConfirmation = nil
-                },
-                .action(
-                    "Export Anyway",
-                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton
-                ) {
-                    pendingLargeExportConfirmation = nil
-                    onExportTapped?()
-                }
-            ]
+            isPresented: isPresentingAllTimeResolutionError,
+            title: Text("All Time Unavailable"),
+            message: Text(allTimeResolutionError ?? ""),
+            actions: [.action("Done", role: .secondary)]
         )
         .geistDialog(
             isPresented: $showHealthPermissionsGuide,
@@ -861,48 +969,7 @@ struct iPadExportView: View {
     /// Scheduled, shortcut, CLI, preview, and programmatic paths never pass
     /// through this handler.
     private func handleExportButtonTapped() {
-        let verdict = ExportScaleGuard.verdict(
-            startDate: startDate,
-            endDate: endDate,
-            granularDataEnabled: advancedSettings.effectiveDetailPolicy
-                .includesCanonicalArchive,
-            formatCount: advancedSettings.exportFormats.count,
-            dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
-        )
-
-        switch verdict {
-        case .proceed:
-            onExportTapped?()
-        case .confirm(let scale):
-            pendingLargeExportConfirmation = scale
-        }
-    }
-
-    private var isPresentingLargeExportConfirmation: Binding<Bool> {
-        Binding(
-            get: { pendingLargeExportConfirmation != nil },
-            set: { isPresented in
-                if !isPresented { pendingLargeExportConfirmation = nil }
-            }
-        )
-    }
-
-    private var largeExportConfirmationMessage: String {
-        guard let scale = pendingLargeExportConfirmation else {
-            return ""
-        }
-
-        let scaleSummary: String
-        if advancedSettings.dailyNotesOnlyModeEnabled {
-            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and updates about \(scale.estimatedFileCount) daily notes. Exports this large can take a long time to finish.")
-        } else {
-            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and writes about \(scale.estimatedFileCount) files. Exports this large can take a long time to finish.")
-        }
-
-        guard scale.includesGranularData else { return scaleSummary }
-
-        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with the canonical archive can run for hours and may run out of memory before it finishes. Choose Detailed Time-Series or Summary for a smaller export.")
-        return scaleSummary + "\n\n" + granularWarning
+        onExportTapped?()
     }
 
     private var previewRequirementsMessage: String {
@@ -971,38 +1038,68 @@ struct iPadExportView: View {
 
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
         dateRangePreset = preset
+        allTimeResolutionError = nil
 
         switch preset {
         case .custom:
             return
         case .allTime:
-            Task {
-                let earliestDate = await healthKitManager.findEarliestHealthDataDate()
-                await MainActor.run {
-                    guard dateRangePreset == .allTime else { return }
-                    applyResolvedDateRange(
-                        for: .allTime,
-                        allTimeStartDate: earliestDate,
-                        allTimeEndDate: Date()
-                    )
-                }
-            }
+            resolveAllTimeRange()
         case .today, .yesterday:
             applyResolvedDateRange(for: preset)
         }
     }
 
-    private func applyResolvedDateRange(
-        for preset: ExportDateRangePreset,
-        allTimeStartDate: Date? = nil,
-        allTimeEndDate: Date? = nil
-    ) {
+
+    private var nativeExportDateRangeRequest: NativeExportDateRangeResolver.Request {
+        NativeExportDateRangeResolver.Request(
+            selection: ExportDateRangeSelection(
+                preset: dateRangePreset,
+                startDate: startDate,
+                endDate: endDate
+            ),
+            enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+        )
+    }
+
+    private func resolveAllTimeRange() {
+        guard !isResolvingAllTimeRange else { return }
+        isResolvingAllTimeRange = true
+        let request = nativeExportDateRangeRequest
+        Task { @MainActor in
+            defer { isResolvingAllTimeRange = false }
+            do {
+                let range = try await NativeExportDateRangeResolver.resolve(
+                    request,
+                    using: healthKitManager,
+                    currentRequest: { nativeExportDateRangeRequest }
+                )
+                // A preview finishing late must not rewrite the originating
+                // selection of an interactive export already being prepared.
+                guard !isPreparingExport else { return }
+                _ = configurationProtection.performConfigurationChange {
+                    startDate = range.startDate
+                    endDate = range.endDate
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard dateRangePreset == .allTime, !isPreparingExport else { return }
+                allTimeResolutionError = error.localizedDescription
+            }
+        }
+    }
+
+    private var isPresentingAllTimeResolutionError: Binding<Bool> {
+        Binding(
+            get: { allTimeResolutionError != nil },
+            set: { if !$0 { allTimeResolutionError = nil } }
+        )
+    }
+
+    private func applyResolvedDateRange(for preset: ExportDateRangePreset) {
         let range = preset.resolvedRange(
-            currentStartDate: startDate,
-            currentEndDate: endDate,
-            allTimeStartDate: allTimeStartDate,
-            allTimeEndDate: allTimeEndDate
-        ) ?? ExportDateRangePreset.today.resolvedRange(
             currentStartDate: startDate,
             currentEndDate: endDate
         )

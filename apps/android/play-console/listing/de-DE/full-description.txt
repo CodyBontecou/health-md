@@ -42,4 +42,4 @@ DATENSCHUTZ UND KONTROLLE
 • Berechtigungen können jederzeit in Health Connect geprüft oder widerrufen werden
 • Begrenzte eigene Analysen zu Installationsattribution, Einführung oder Preisen enthalten niemals Gesundheitsdaten, Details zu Health Connect-Berechtigungen, Exportinhalte, Kontotexte oder Dateipfade
 
-Health.md enthält 10 kostenlose manuelle Exportaktionen. Ein einmaliger Kauf schaltet unbegrenzte Exporte und Zeitpläne frei; es gibt kein Abonnement.
+Health.md enthält 5 kostenlose manuelle Exportaktionen. Ein einmaliger Kauf schaltet unbegrenzte Exporte und Zeitpläne frei; es gibt kein Abonnement.

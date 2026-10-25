@@ -249,6 +249,12 @@ private struct GeistDialogAccessibilityHost<Content: View>: UIViewControllerRepr
     func updateUIViewController(_ controller: GeistDialogAccessibilityController, context: Context) {
         controller.host.rootView = AnyView(content().environment(\.self, context.environment))
         controller.modalView.onCancel = onCancel
+        // A nested host can update native fonts without reflowing its fixed-size
+        // scroll proposal. Lay out the same host after every live environment
+        // update; replacing its identity would discard focus and selection.
+        controller.host.view.invalidateIntrinsicContentSize()
+        controller.host.view.setNeedsLayout()
+        controller.host.view.layoutIfNeeded()
     }
 }
 

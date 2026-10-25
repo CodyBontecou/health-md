@@ -58,6 +58,7 @@ Run commands from their owning component. Replace placeholders with the actual o
 | Android protocol | `./gradlew :direct-protocol:test --tests '<qualified.TestClass>'` |
 | Practice | `npm test -- <test-file>`; `npm run typecheck` |
 | Website | `node --test test/<file>.test.mjs` |
+| Markdown inventory | `python3 -m unittest discover -s scripts/tests -p 'test_audit_markdown.py'` from the repository root |
 
 Prefer existing standalone packages/modules when they own the behavior. App-hosted XCTest and Android app JVM tests may still compile substantial native dependencies even when execution is filtered. Do not invent a separate test-only implementation to bypass that cost.
 

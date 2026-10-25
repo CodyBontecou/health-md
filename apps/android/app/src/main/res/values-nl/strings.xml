@@ -366,7 +366,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md ontgrendelen</string>
-    <string name="paywall_subtitle">Je hebt je 10 gratis exports opgebruikt</string>
+    <string name="paywall_subtitle">Je hebt je 5 gratis exports opgebruikt</string>
     <string name="paywall_unlimited_exports">Onbeperkte exports, voor altijd</string>
     <string name="paywall_scheduled_exports">Automatische geplande exports</string>
     <string name="paywall_future_features">Alle toekomstige functies inbegrepen</string>
@@ -774,7 +774,7 @@
     <string name="export_source_shortcut">Snelkoppeling</string>
     <string name="export_source_remote">Extern</string>
     <string name="schedule_unlock_required_title">Ontgrendel geplande exports</string>
-    <string name="schedule_unlock_required_body">Handmatige exports zijn 10 keer gratis. Automatische geplande exports zijn inbegrepen bij de eenmalige levenslange ontgrendeling.</string>
+    <string name="schedule_unlock_required_body">Handmatige exports zijn 5 keer gratis. Automatische geplande exports zijn inbegrepen bij de eenmalige levenslange ontgrendeling.</string>
     <string name="schedule_unlock_required_short">Ontgrendel Health.md om geplande exports in te schakelen.</string>
     <string name="export_folder_root_label">Exportmap</string>
     <string name="history_clear_title">Exportgeschiedenis wissen?</string>
@@ -1422,4 +1422,32 @@
     <string name="myself_claim_store_unavailable">Google Play kon je aankoop niet ophalen. Controleer je verbinding en Google Play-account en probeer opnieuw.</string>
     <string name="myself_claim_verification_failed">Je aankoop kon niet worden gecontroleerd. Controleer je verbinding en probeer opnieuw. Neem bij aanhoudende problemen contact op met ondersteuning; er is geen toegang geclaimd.</string>
     <string name="myself_claim_browser_unavailable">De browser kon niet worden geopend. Schakel een browser in en controleer de aankoop opnieuw.</string>
+    <string name="export_preview_gateway_destination">Agent Data-gateway</string>
+    <string name="export_failure_gateway_format_label">JSON-indeling vereist</string>
+    <string name="export_guidance_gateway_format">De Agent Data-gateway uploadt JSON-export. Kies JSON onder Indelingen en probeer opnieuw.</string>
+    <string name="agent_data_gateway_dialog_title">Agent Data-gateway</string>
+    <string name="agent_data_gateway_dialog_description">Elk geëxporteerd bestand wordt ongewijzigd geüpload naar het /v1/ingest-endpoint van de gateway.</string>
+    <string name="agent_data_gateway_section_endpoint">Gateway-endpunt</string>
+    <string name="agent_data_gateway_url_label">Gateway-URL</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Vereist. Basis-URL van je gateway; Health.md voegt /v1/ingest toe. Houd API-sleutels en andere geheime gegevens buiten de URL.</string>
+    <string name="agent_data_gateway_close_settings">Instellingen sluiten</string>
+    <string name="agent_data_gateway_save_settings">Instellingen opslaan</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Voer een geldige %1$s- of %2$s-URL in zonder fragment of ingesloten gebruikersnaam/wachtwoord.</string>
+    <string name="agent_data_gateway_close_content_description">Gateway-instellingen sluiten</string>
+    <string name="agent_data_gateway_outcomes_title">Gateway-uploads</string>
+    <string name="agent_data_gateway_outcome_accepted">Geüpload</string>
+    <string name="agent_data_gateway_outcome_rejected">Geweigerd: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Upload mislukt</string>
+    <string name="agent_data_gateway_result_uploaded">Geüpload naar de gateway</string>
+    <string name="export_target_gateway_configured_subtitle">Elke export uploaden naar %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Export uploaden naar je Agent Data-gateway</string>
+    <string name="post_export_first_title">Je eerste export is voltooid</string>
+    <string name="post_export_first_body">Stel dagelijkse exports in om deze stappen niet te herhalen. Planning vereist levenslange toegang; handmatige exports gebruiken je gratis tegoed.</string>
+    <string name="post_export_third_title">Ga door met je gezondheidsnotities</string>
+    <string name="post_export_third_body">Je hebt drie exports voltooid. Eén aankoop ontgrendelt onbeperkte handmatige exports en planning. Geen abonnement. Je geëxporteerde bestanden blijven van jou.</string>
+    <string name="post_export_schedule_action">Dagelijkse exports bekijken</string>
+    <string name="post_export_upgrade_action">Levenslange toegang bekijken</string>
+    <string name="post_export_manual_action">Handmatig blijven exporteren</string>
+    <string name="post_export_continue_free">Gratis doorgaan</string>
 </resources>

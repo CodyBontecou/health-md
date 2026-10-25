@@ -143,7 +143,7 @@ nonisolated final class FeedbackReporterTests: XCTestCase {
     @MainActor func testGermanAndJapaneseRecoveryInstructionsAndCopyConfirmation() throws {
         let expected = [
             ("de", "Feedback konnte nicht gesendet werden",
-             "Bearbeite den Bericht und kopiere ihn vor dem Schließen. Nichts wird automatisch gesendet. Vermeide private Gesundheitsdaten.",
+             "Bearbeiten Sie den Bericht und kopieren Sie ihn, bevor Sie das Fenster schließen. Es wird nichts automatisch gesendet. Vermeiden Sie es, private Gesundheitsdaten einzufügen.",
              "Feedback-Bericht", "Bericht kopieren", "Kopiert", "Bericht kopiert"),
             ("ja", "フィードバックを送信できませんでした",
              "レポートを編集し、閉じる前にコピーしてください。自動的に送信されることはありません。個人の健康データを含めないでください。",

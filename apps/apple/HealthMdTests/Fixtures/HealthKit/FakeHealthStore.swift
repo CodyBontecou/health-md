@@ -22,6 +22,18 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var authorizedHistoryBoundaries: [String: Date] = [:]
     var errorForAuthorizedHistoryBoundaries: Error?
     var historyAuthorizationReadTypes: Set<HKObjectType> = []
+    var historyOutcome: HealthHistoryQueryOutcome = .boundaries([:])
+    var historyOutcomesByIdentifier: [String: HealthHistoryQueryOutcome] = [:]
+    var historyRequestedIdentifiers: [String] = []
+    /// Checked-continuation controls can intentionally ignore task cancellation.
+    var historySuspension: (@Sendable () async -> Void)?
+
+    func historyAuthorizationDates(for types: Set<HKObjectType>) async -> HealthHistoryQueryOutcome {
+        let identifiers = types.map(\.identifier).sorted()
+        historyRequestedIdentifiers.append(contentsOf: identifiers)
+        await historySuspension?()
+        return identifiers.first.flatMap { historyOutcomesByIdentifier[$0] } ?? historyOutcome
+    }
 
     // Pre-configured statistics results keyed by HKQuantityTypeIdentifier raw value
     var statisticsSums: [String: Double] = [:]
@@ -30,6 +42,8 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var statisticsMaxes: [String: Double] = [:]
     var statisticsMostRecent: [String: Double] = [:]
     var querySumResult: ((HKQuantityTypeIdentifier, NSPredicate?) -> Double?)?
+    var querySumSuspension: (@Sendable () async -> Void)?
+    var querySumAsyncResult: ((HKQuantityTypeIdentifier, NSPredicate?) async throws -> Double?)?
 
     // Pre-configured category sample results
     var categorySampleResults: [String: [CategorySampleValue]] = [:]
@@ -44,6 +58,8 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     /// Quantity/category/workout fixtures are inferred when no override exists.
     var earliestSampleDates: [String: Date] = [:]
     var errorsForEarliestSampleDates: [String: Error] = [:]
+    var earliestSampleDateQuery: (@MainActor (HKSampleType) async throws -> Date?)?
+    var queriedEarliestSampleTypeIdentifiers: [String] = []
     var earliestActivitySummaryDate: Date?
     var errorForEarliestActivitySummaryDate: Error?
 
@@ -222,6 +238,8 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     func querySum(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
         queriedSumIdentifiers.append(identifier.rawValue)
         if let error = errorsForSum[identifier.rawValue] { throw error }
+        await querySumSuspension?()
+        if let querySumAsyncResult { return try await querySumAsyncResult(identifier, predicate) }
         if let querySumResult { return querySumResult(identifier, predicate) }
         return statisticsSums[identifier.rawValue]
     }
@@ -305,6 +323,10 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
 
     func queryEarliestSampleDate(sampleType: HKSampleType) async throws -> Date? {
         let identifier = sampleType.identifier
+        queriedEarliestSampleTypeIdentifiers.append(identifier)
+        if let earliestSampleDateQuery {
+            return try await earliestSampleDateQuery(sampleType)
+        }
         if let error = errorsForEarliestSampleDates[identifier] { throw error }
         if let date = earliestSampleDates[identifier] { return date }
         if let quantityType = sampleType as? HKQuantityType {

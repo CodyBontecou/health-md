@@ -122,6 +122,23 @@ class ProductCapabilityManifestTest {
         assertTrue(android.getValue("target").jsonPrimitive.content.contains("step_count"))
     }
 
+    @Test
+    fun productOnlyAutomationInventoryHasConcreteAndroidTargetWithoutMetricAuthority() {
+        val supplemental = File(manifestFile().parentFile, "product-automation-capabilities-v1.json")
+        val inventory = Json.parseToJsonElement(supplemental.readText()).jsonObject
+        assertEquals("healthmd.product_automation_capabilities", inventory.getValue("schema").jsonPrimitive.content)
+        assertEquals("1", inventory.getValue("schema_version").jsonPrimitive.content)
+        assertEquals("false", inventory.getValue("metric_authority").jsonPrimitive.content)
+        val capability = inventory.getValue("capabilities").jsonArray.single().jsonObject
+        assertEquals("automation.refresh-encrypted-desktop-context", capability.getValue("id").jsonPrimitive.content)
+        assertEquals("planned", capability.getValue("classification").jsonPrimitive.content)
+        for (platform in listOf("apple", "android")) {
+            val availability = capability.getValue("platforms").jsonObject.getValue(platform).jsonObject
+            assertEquals("planned", availability.getValue("state").jsonPrimitive.content)
+            assertTrue(availability.getValue("target").jsonPrimitive.content.isNotBlank())
+        }
+    }
+
     private fun idsWithState(states: Map<String, String>, state: String): Set<String> =
         states.filterValues { it == state }.keys
 
@@ -137,6 +154,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+            "purchase.free-export-journey",
             "account.myself_lifetime_claim",
             "export.daily-files",
             "export.sleep-summary",
@@ -149,6 +167,7 @@ class ProductCapabilityManifestTest {
             "export.completed-workouts",
             "export.mobility-and-performance",
             "export.profiles",
+            "export.agent-data-gateway",
             "export.scheduled-today-refresh",
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
@@ -157,9 +176,12 @@ class ProductCapabilityManifestTest {
             "direct-cli.shared-qr-pairing",
             "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
+            "direct.full_public_authorized_corpus",
+            "diagnostics.local_bundle",
         )
 
         val appleCapabilities = setOf(
+            "apple.ads-purchase-attribution",
             "apple.lossless-healthkit-archive",
             "apple.medication-dose-events",
             "apple.state-of-mind",

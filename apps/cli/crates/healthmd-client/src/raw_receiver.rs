@@ -38,7 +38,16 @@ use crate::{
     storage::StorageLayout,
 };
 
-const JOURNAL_VERSION: u16 = 1;
+const LEGACY_JOURNAL_VERSION: u16 = 1;
+const HISTORY_JOURNAL_VERSION: u16 = 2;
+
+fn journal_version(accepted: &ExportAccepted) -> u16 {
+    if accepted.history_observation.is_some() {
+        HISTORY_JOURNAL_VERSION
+    } else {
+        LEGACY_JOURNAL_VERSION
+    }
+}
 const MAXIMUM_FIELD_POINTERS: usize = 256;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -89,6 +98,8 @@ pub struct RawReceiveArtifact {
     pub date_range_end: String,
     pub total_days: i64,
     pub profile: RawProfile,
+    /// Frozen admission evidence validated against the durable job, never current permission.
+    pub history_observation: Option<healthmd_protocol::history::ExportHistoryObservation>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -133,10 +144,11 @@ impl RawReceiver {
         let journal_path = directory.join("journal.json");
         let journal = if journal_path.exists() {
             let persisted = load_journal(&journal_path)?;
-            if persisted.version != JOURNAL_VERSION
+            if persisted.version != journal_version(&accepted)
                 || persisted.request != request
                 || persisted.session != session
                 || persisted.accepted.peer_binding != accepted.peer_binding
+                || persisted.accepted.history_observation != accepted.history_observation
                 || persisted.accepted.resolved_date_identifiers
                     != accepted.resolved_date_identifiers
                 || persisted.accepted.source_device_name != accepted.source_device_name
@@ -150,7 +162,7 @@ impl RawReceiver {
             persisted
         } else {
             let created = RawJournal {
-                version: JOURNAL_VERSION,
+                version: journal_version(&accepted),
                 request,
                 accepted,
                 session,
@@ -505,6 +517,7 @@ impl RawReceiver {
             date_range_start: artifact.date_range_start.clone(),
             date_range_end: artifact.date_range_end.clone(),
             total_days: artifact.total_days,
+            history_observation_sha256: history_observation_digest(&journal.accepted)?,
         });
         self.jobs.save(&record)?;
         Ok(artifact)
@@ -552,6 +565,7 @@ impl RawReceiver {
             return Err(invalid("saved raw response digest changed"));
         }
         let journal = load_journal(&self.session_directory(job_id)?.join("journal.json"))?;
+        validate_offline_history(&record.request, job_id, Some(&saved), &journal)?;
         Ok(RawReceiveArtifact {
             path,
             status: response_status(&journal),
@@ -561,6 +575,7 @@ impl RawReceiver {
             date_range_end: saved.date_range_end,
             total_days: saved.total_days,
             profile,
+            history_observation: journal.accepted.history_observation.clone(),
         })
     }
 
@@ -578,6 +593,13 @@ impl RawReceiver {
         pointers: &[String],
     ) -> Result<RawReceiveArtifact, ClientError> {
         let journal = load_journal(&self.session_directory(job_id)?.join("journal.json"))?;
+        let record = self.jobs.load(job_id)?;
+        validate_offline_history(
+            &record.request,
+            job_id,
+            record.response_artifact.as_ref(),
+            &journal,
+        )?;
         let source_versions = validate_complete_corpus(&self.layout, &journal)?;
         assemble_extraction(&self.layout, &journal, pointers, &source_versions)
     }
@@ -666,6 +688,10 @@ fn validate_prepare(
         || request.job_id != accepted.job_id
         || request.job_id != session.job_id
         || session.peer_binding != accepted.peer_binding
+        || accepted
+            .history_observation
+            .as_ref()
+            .is_some_and(|observation| !observation.matches(request, accepted, session))
         || dates.is_empty()
         || dates.len() > MAXIMUM_DATES_PER_JOB
         || dates.windows(2).any(|pair| pair[0] >= pair[1])
@@ -1372,7 +1398,7 @@ fn assemble_extraction(
     // for an all-empty corpus while the plural field explicitly records that no version was
     // evidenced. A non-empty homogeneous corpus uses its validated source version.
     let source_schema_version = distinct_source_versions.first().copied().unwrap_or(7);
-    let receipt = json!({
+    let mut receipt = json!({
         "protocol": "healthmd.extract_receipt",
         "protocol_version": 1,
         "status": status,
@@ -1398,6 +1424,10 @@ fn assemble_extraction(
         },
         "total_requested_days": dates.len()
     });
+    if let Some(observation) = &journal.accepted.history_observation {
+        receipt["history_observation"] = serde_json::to_value(observation)
+            .map_err(|_| invalid("history observation JSON failed"))?;
+    }
     output.write_all(b"],\"receipt\":").map_err(storage_error)?;
     output
         .write_all(&canonical_json(&receipt).map_err(|_| invalid("receipt JSON failed"))?)
@@ -1425,6 +1455,7 @@ fn assemble_extraction(
         date_range_end: dates.last().cloned().unwrap_or_default(),
         total_days: i64::try_from(dates.len()).map_err(|_| invalid("too many dates"))?,
         profile: RawProfile::HealthDataProjection,
+        history_observation: journal.accepted.history_observation.clone(),
     })
 }
 
@@ -1550,19 +1581,36 @@ fn assemble_response(
 
     write!(
         output,
-        "{{\"job_id\":{},\"message\":{},\"status\":{},\"raw_result\":{{",
+        "{{\"job_id\":{},\"message\":{},\"status\":{}",
         json_string(&journal.request.job_id.0.to_string().to_lowercase())?,
         json_string("iPhone direct raw export completed.")?,
         json_string(&response_status)?
     )
     .map_err(storage_error)?;
+    if let Some(observation) = &journal.accepted.history_observation {
+        write!(
+            output,
+            ",\"history_observation\":{}",
+            serde_json::to_string(observation)
+                .map_err(|_| invalid("history observation JSON failed"))?
+        )
+        .map_err(storage_error)?;
+    }
+    output
+        .write_all(b",\"raw_result\":{")
+        .map_err(storage_error)?;
     write!(
         output,
         "\"schema\":\"healthmd.raw_result\",\"schema_version\":1,\"profile\":{}",
         json_string(raw_profile_name(profile))?
     )
     .map_err(storage_error)?;
-    if let Some(selection) = &journal.accepted.resolved_canonical_selection {
+    if let Some(selection) = journal
+        .accepted
+        .resolved_canonical_selection
+        .as_ref()
+        .filter(|_| journal.request.raw_profile == Some(RawProfile::HealthDataProjection))
+    {
         write!(
             output,
             ",\"canonical_selection\":{}",
@@ -1671,6 +1719,7 @@ fn assemble_response(
         date_range_end: dates.last().cloned().unwrap_or_default(),
         total_days: i64::try_from(dates.len()).map_err(|_| invalid("too many dates"))?,
         profile,
+        history_observation: journal.accepted.history_observation.clone(),
     })
 }
 
@@ -1811,12 +1860,56 @@ fn completed_day_count(journal: &RawJournal) -> Result<i64, ClientError> {
 }
 
 fn load_journal(path: &Path) -> Result<RawJournal, ClientError> {
-    serde_json::from_slice(&read_bounded(
+    let journal: RawJournal = serde_json::from_slice(&read_bounded(
         path,
         MAXIMUM_DURABLE_JSON_BYTES,
         "raw journal exceeds the durable metadata limit",
     )?)
-    .map_err(|_| invalid("raw journal is malformed"))
+    .map_err(|_| invalid("raw journal is malformed"))?;
+    if journal.version != journal_version(&journal.accepted)
+        || journal
+            .accepted
+            .history_observation
+            .as_ref()
+            .is_some_and(|evidence| {
+                !evidence.matches(&journal.request, &journal.accepted, &journal.session)
+            })
+    {
+        return Err(invalid(
+            "durable history observation or journal version changed",
+        ));
+    }
+    Ok(journal)
+}
+
+fn validate_offline_history(
+    request: &ExportRequest,
+    job_id: Uuid,
+    finalized: Option<&ResponseArtifact>,
+    journal: &RawJournal,
+) -> Result<(), ClientError> {
+    let digest = history_observation_digest(&journal.accepted)?;
+    if journal.request != *request
+        || journal.request.job_id.0 != job_id
+        || finalized.is_some_and(|saved| saved.history_observation_sha256 != digest)
+    {
+        return Err(invalid(
+            "saved raw observation does not match the immutable job artifact",
+        ));
+    }
+    Ok(())
+}
+
+fn history_observation_digest(accepted: &ExportAccepted) -> Result<Option<String>, ClientError> {
+    accepted
+        .history_observation
+        .as_ref()
+        .map(|observation| {
+            canonical_json(observation)
+                .map(|bytes| sha256_hex(&bytes))
+                .map_err(|_| invalid("history observation digest failed"))
+        })
+        .transpose()
 }
 
 fn save_journal(layout: &StorageLayout, journal: &RawJournal) -> Result<(), ClientError> {
@@ -2061,6 +2154,7 @@ mod tests {
             destination_installation_id: SwiftUuid(Uuid::new_v4()),
         };
         let accepted = ExportAccepted {
+            history_observation: None,
             job_id,
             accepted_at: created_at,
             peer_binding: binding.clone(),
@@ -2177,6 +2271,188 @@ mod tests {
         assert_eq!(receipt["protocol_version"], 1);
         assert_eq!(receipt["source_schema_version"], scalar);
         assert_eq!(receipt["source_schema_versions"], json!(plural));
+    }
+
+    fn assert_observation_recovery_is_bound(corpus: &mut TestCorpus, journal: &RawJournal) {
+        corpus.receiver.journal = Some(journal.clone());
+        let finalization = TransferFinalize {
+            session_id: journal.session.session_id,
+            job_id: journal.request.job_id,
+            request_fingerprint: journal.session.request_fingerprint.clone(),
+            total_partitions: i64::try_from(journal.committed_partitions.len()).unwrap(),
+            total_bytes: journal
+                .committed_partitions
+                .iter()
+                .map(|p| p.byte_count)
+                .sum(),
+            final_partition_sha256: journal
+                .committed_partitions
+                .last()
+                .map(|p| p.sha256.clone()),
+            outcome: None,
+        };
+        let finalized = corpus.receiver.finalize(&finalization).unwrap();
+        corpus
+            .receiver
+            .acknowledge_peer_completion(corpus.job_id)
+            .unwrap();
+        assert_eq!(
+            corpus
+                .receiver
+                .artifact(corpus.job_id)
+                .unwrap()
+                .history_observation,
+            finalized.history_observation
+        );
+        let checkpoint = corpus
+            .receiver
+            .session_directory(corpus.job_id)
+            .unwrap()
+            .join("journal.json");
+        let saved = fs::read(&checkpoint).unwrap();
+        let mut changed: Value = serde_json::from_slice(&saved).unwrap();
+        changed["accepted"]["historyObservation"]["observation_id"] =
+            json!(Uuid::new_v4().to_string());
+        fs::write(&checkpoint, serde_json::to_vec(&changed).unwrap()).unwrap();
+        assert!(
+            load_journal(&checkpoint).is_ok(),
+            "Changed evidence remains internally valid"
+        );
+        assert!(
+            corpus.receiver.artifact(corpus.job_id).is_err(),
+            "Recovery must reject evidence changed after finalization"
+        );
+        assert!(corpus.receiver.extraction(corpus.job_id, &[]).is_err());
+        assert!(
+            corpus
+                .receiver
+                .extraction_jsonl(corpus.job_id, &[])
+                .is_err()
+        );
+        fs::write(&checkpoint, &saved).unwrap();
+        let mut other = journal.clone();
+        other.request.created_at += chrono::Duration::seconds(1);
+        other.session.request_fingerprint = request_fingerprint(&other.request).unwrap();
+        let mut evidence =
+            serde_json::to_value(other.accepted.history_observation.as_ref().unwrap()).unwrap();
+        evidence["request_binding_sha256"] = json!(other.session.request_fingerprint.sha256);
+        other.accepted.history_observation = Some(serde_json::from_value(evidence).unwrap());
+        save_journal(&corpus.receiver.layout, &other).unwrap();
+        assert!(load_journal(&checkpoint).is_ok());
+        assert!(
+            corpus.receiver.artifact(corpus.job_id).is_err(),
+            "Recovery must reject a different immutable request"
+        );
+        assert!(corpus.receiver.extraction(corpus.job_id, &[]).is_err());
+        assert!(
+            corpus
+                .receiver
+                .extraction_jsonl(corpus.job_id, &[])
+                .is_err()
+        );
+        fs::write(&checkpoint, saved).unwrap();
+        assert!(corpus.receiver.artifact(corpus.job_id).is_ok());
+    }
+
+    #[test]
+    fn history_output_preserves_raw_body_and_survives_json_and_jsonl_extraction() {
+        for profile in [
+            RawProfile::CanonicalSourceRecordsV1,
+            RawProfile::HealthDataProjection,
+        ] {
+            let mut corpus = test_corpus(&[None, Some(8)]);
+            let mut journal = corpus.receiver.journal.as_ref().unwrap().clone();
+            journal.request.raw_profile = Some(profile);
+            if profile == RawProfile::CanonicalSourceRecordsV1 {
+                journal.request.canonical_selection = None;
+            }
+            journal.session.request_fingerprint = request_fingerprint(&journal.request).unwrap();
+            let selection = journal
+                .accepted
+                .resolved_canonical_selection
+                .take()
+                .unwrap();
+            if profile == RawProfile::HealthDataProjection {
+                journal.accepted.resolved_canonical_selection = Some(selection.clone());
+            }
+            let baseline = assemble_response(&corpus.receiver.layout, &journal).unwrap();
+            let baseline: Value =
+                serde_json::from_slice(&fs::read(baseline.path).unwrap()).unwrap();
+            assert!(baseline.get("history_observation").is_none());
+            let fixture: Value = serde_json::from_str(include_str!(
+                "../tests/fixtures/export-history-direct-job-v1.json"
+            ))
+            .unwrap();
+            let mut evidence = fixture["accepted"]["historyObservation"].clone();
+            evidence["operation_id"] = json!(journal.request.job_id.0.to_string());
+            evidence["request_binding_sha256"] = json!(journal.session.request_fingerprint.sha256);
+            evidence["source_installation_id"] = json!(
+                journal
+                    .session
+                    .peer_binding
+                    .source_installation_id
+                    .0
+                    .to_string()
+            );
+            evidence["destination_installation_id"] = json!(
+                journal
+                    .session
+                    .peer_binding
+                    .destination_installation_id
+                    .0
+                    .to_string()
+            );
+            evidence["time_zone_identifier"] = json!("UTC");
+            evidence["metric_ids"] = json!(selection.metric_ids);
+            evidence["requested_start"] = json!("2026-07-23T00:00:00.000000000Z");
+            evidence["requested_end"] = json!("2026-07-24T00:00:00.000000000Z");
+            evidence["all_available"] = json!(false);
+            evidence["types"] = json!([{"type_id":"sleep_type","direct_metric_ids":selection.metric_ids,
+                "dependency_metric_ids":[],"dependency_reasons":[],"outcome":"unknown"}]);
+            journal.accepted.resolved_canonical_selection = Some(selection);
+            journal.accepted.history_observation =
+                Some(serde_json::from_value(evidence.clone()).unwrap());
+            assert!(
+                journal
+                    .accepted
+                    .history_observation
+                    .as_ref()
+                    .unwrap()
+                    .matches(&journal.request, &journal.accepted, &journal.session)
+            );
+            journal.version = journal_version(&journal.accepted);
+            save_journal(&corpus.receiver.layout, &journal).unwrap();
+            let observed = assemble_response(&corpus.receiver.layout, &journal).unwrap();
+            assert_eq!(
+                observed.history_observation,
+                journal.accepted.history_observation
+            );
+            let observed: Value =
+                serde_json::from_slice(&fs::read(observed.path).unwrap()).unwrap();
+            assert_eq!(observed["history_observation"], evidence);
+            assert_eq!(observed["raw_result"], baseline["raw_result"]);
+            assert_eq!(observed["status"], baseline["status"]);
+            if profile == RawProfile::CanonicalSourceRecordsV1 {
+                assert!(observed["raw_result"].get("canonical_selection").is_none());
+            } else {
+                let extraction = corpus.receiver.extraction(corpus.job_id, &[]).unwrap();
+                let extraction: Value =
+                    serde_json::from_slice(&fs::read(extraction.path).unwrap()).unwrap();
+                assert_eq!(extraction["receipt"]["history_observation"], evidence);
+                let jsonl = corpus
+                    .receiver
+                    .extraction_jsonl(corpus.job_id, &[])
+                    .unwrap();
+                let receipt: Value =
+                    serde_json::from_slice(&fs::read(jsonl.receipt_path).unwrap()).unwrap();
+                assert_eq!(receipt["history_observation"], evidence);
+                for line in fs::read_to_string(jsonl.path).unwrap().lines() {
+                    let row: Value = serde_json::from_str(line).unwrap();
+                    assert!(row.get("history_observation").is_none());
+                }
+                assert_observation_recovery_is_bound(&mut corpus, &journal);
+            }
+        }
     }
 
     #[test]
@@ -2316,6 +2592,7 @@ mod tests {
             destination_installation_id: SwiftUuid(Uuid::new_v4()),
         };
         let accepted = ExportAccepted {
+            history_observation: None,
             job_id,
             accepted_at: created_at,
             peer_binding: binding.clone(),

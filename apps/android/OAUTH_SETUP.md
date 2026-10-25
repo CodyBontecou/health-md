@@ -38,14 +38,11 @@ Upload-signing material never enters the Play-mutation job and is removed before
 Build and validate without Play authentication:
 
 ```bash
-./gradlew :app:bundlePlayRelease :wear:bundleRelease
-WEAR_REQUIRE_SIGNING_ATTESTATION=true \
-  ./scripts/validate-wear-artifact.sh \
-  wear/build/outputs/bundle/release/wear-release.aab \
-  app/build/outputs/bundle/playRelease/app-play-release.aab
+./gradlew :app:assemblePlayDebug :wear:assembleDebug
+./scripts/validate-wear-artifact.sh wear/build/outputs/apk/debug/wear-debug.apk
 ```
 
-For a read-only Play query:
+For the deferred paired-Wear path only, this historical read-only query illustrates the inspector's inputs. Use approved candidate version codes from release configuration; it does not qualify the current phone-only release:
 
 ```bash
 PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/health-md-read-only.json" \

@@ -15,7 +15,7 @@ La configuración inicial aparece la primera vez que abres Health.md en iPhone. 
 4. **Carpeta:** elige iCloud Drive, En mi iPhone, un vault de Obsidian u otro proveedor de Archivos.
 5. **Listo:** repara conexiones pendientes y abre la vista previa de la primera exportación.
 
-Después de cerrar esa vista previa, un usuario sin desbloqueo puede ver una oferta única y descartable. También pueden aparecer recordatorios no bloqueantes tras la 3.ª y 7.ª exportación gratuita. El límite obligatorio sigue siendo 10 acciones completadas.
+Después de la primera exportación gratuita completada, una guía permite revisar una programación diaria sin activarla. Después de la tercera, una oferta descartable de acceso de por vida muestra dos acciones gratuitas restantes. El límite es de cinco acciones completadas.
 
 Puedes cambiar después permisos, métricas, carpeta, formatos, nombres, perfiles, programación y conexión con Mac.
 

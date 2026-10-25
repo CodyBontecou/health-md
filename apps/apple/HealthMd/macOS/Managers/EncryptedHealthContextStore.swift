@@ -1,6 +1,7 @@
 #if os(macOS)
 import CryptoKit
 import Foundation
+import HealthMdConnectionCore
 
 /// Errors are deliberately fail-closed: callers never receive partially decoded health context.
 nonisolated enum EncryptedHealthContextStoreError: LocalizedError, Equatable {
@@ -98,6 +99,45 @@ nonisolated struct HealthContextStoreSnapshot: Sendable, Equatable {
     }
 }
 
+/// Scope within an authenticated immutable generation to which one admission
+/// observation applies. A scoped merge trims this association; it never rewrites
+/// or backfills the original observation.
+nonisolated struct HealthContextHistoryProvenance: Codable, Equatable, Sendable {
+    let metricIDs: [String]
+    let observation: ExportHistoryObservation
+
+    enum CodingKeys: String, CodingKey {
+        case metricIDs = "metric_ids"
+        case observation
+    }
+
+    func validate(for day: HealthMdCompactContextDay) throws {
+        guard let timeZone = TimeZone(identifier: day.calendarTimeZone) else {
+            throw EncryptedHealthContextStoreError.corruptBlob
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = timeZone
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard day.intervalStart == calendar.startOfDay(for: day.intervalStart),
+              calendar.date(byAdding: .day, value: 1, to: day.intervalStart) == day.intervalEnd,
+              formatter.string(from: day.intervalStart) == day.ownerDate,
+              !metricIDs.isEmpty, metricIDs == Array(Set(metricIDs)).sorted(),
+              Set(metricIDs).isSubset(of: Set(observation.metricIDs)),
+              observation.rangeSemantics == "owner_dates",
+              TimeZone(identifier: observation.timeZoneIdentifier) == timeZone,
+              let first = CanonicalRFC3339UTC.date(from: observation.requestedStart),
+              let last = CanonicalRFC3339UTC.date(from: observation.requestedEnd),
+              day.intervalStart >= calendar.startOfDay(for: first),
+              day.intervalStart <= calendar.startOfDay(for: last) else {
+            throw EncryptedHealthContextStoreError.corruptBlob
+        }
+    }
+}
+
 /// An encrypted, one-blob-per-day Mac store for compact query context.
 ///
 /// The encrypted manifest is the commit point. Upsert always writes a fresh immutable generation,
@@ -157,38 +197,74 @@ actor EncryptedHealthContextStore {
     func mergeScoped(
         _ days: [HealthMdCompactContextDay],
         replacingMetricIDs: Set<String>,
-        sourceIDs: Set<String>
+        sourceIDs: Set<String>,
+        historyObservation: ExportHistoryObservation? = nil
     ) throws {
         guard !days.isEmpty, !replacingMetricIDs.isEmpty, !sourceIDs.isEmpty else {
+            guard historyObservation == nil else { throw EncryptedHealthContextStoreError.corruptBlob }
             try upsert(days)
             return
         }
+        if let historyObservation {
+            guard sourceIDs.contains("apple_health"),
+                  historyObservation.metricIDs == replacingMetricIDs.sorted() else {
+                throw EncryptedHealthContextStoreError.corruptBlob
+            }
+        }
+        var provenanceByDate: [String: [HealthContextHistoryProvenance]] = [:]
         var merged: [HealthMdCompactContextDay] = []
         merged.reserveCapacity(days.count)
         for incoming in days {
+            var provenance = try historyProvenance(ownerDate: incoming.ownerDate)
+            if sourceIDs.contains("apple_health") {
+                provenance = provenance.compactMap { prior in
+                    let retained = Set(prior.metricIDs).subtracting(replacingMetricIDs).sorted()
+                    return retained.isEmpty ? nil : HealthContextHistoryProvenance(metricIDs: retained, observation: prior.observation)
+                }
+            }
             if let existing = try loadDay(ownerDate: incoming.ownerDate) {
-                merged.append(Self.merge(
-                    existing: existing,
-                    incoming: incoming,
-                    replacingMetricIDs: replacingMetricIDs,
-                    sourceIDs: sourceIDs
-                ))
+                let combined = Self.merge(existing: existing, incoming: incoming,
+                    replacingMetricIDs: replacingMetricIDs, sourceIDs: sourceIDs)
+                // Legacy/unattributed rows can replace off-scope content from
+                // any source. Prior evidence survives only with its actual content.
+                provenance = provenance.compactMap { prior in
+                    let retained = prior.metricIDs.filter { metricID in
+                        Self.historyContent(for: metricID, in: existing)
+                            == Self.historyContent(for: metricID, in: combined)
+                    }
+                    return retained.isEmpty ? nil : HealthContextHistoryProvenance(metricIDs: retained, observation: prior.observation)
+                }
+                merged.append(combined)
             } else {
                 merged.append(incoming)
             }
+            if let historyObservation {
+                let fresh = HealthContextHistoryProvenance(metricIDs: replacingMetricIDs.sorted(), observation: historyObservation)
+                try fresh.validate(for: incoming)
+                provenance.append(fresh)
+            }
+            provenanceByDate[incoming.ownerDate] = provenance
         }
-        try upsert(merged)
+        try upsert(merged, historyByOwnerDate: provenanceByDate)
     }
 
     /// Efficient import hook for callers that already hold a batch. Every day remains an
     /// independently encrypted blob; the batch does not create an aggregate health payload.
     func upsert(_ days: [HealthMdCompactContextDay]) throws {
+        try upsert(days, historyByOwnerDate: [:])
+    }
+
+    private func upsert(_ days: [HealthMdCompactContextDay],
+                        historyByOwnerDate: [String: [HealthContextHistoryProvenance]]) throws {
         guard !days.isEmpty else { return }
         try prepareRootDirectory()
 
         var incomingDates = Set<String>()
         for day in days {
             try validate(day: day)
+            for provenance in historyByOwnerDate[day.ownerDate, default: []] {
+                try provenance.validate(for: day)
+            }
             guard incomingDates.insert(day.ownerDate).inserted else {
                 throw EncryptedHealthContextStoreError.duplicateOwnerDate(day.ownerDate)
             }
@@ -212,11 +288,12 @@ actor EncryptedHealthContextStore {
                 let digest = HealthMdQueryCanonicalSerializer.sha256(data: canonicalDay)
                 let blob = StoredDayBlob(
                     schema: Self.storeSchema,
-                    schemaVersion: Self.storeSchemaVersion,
+                    schemaVersion: historyByOwnerDate[day.ownerDate, default: []].isEmpty ? Self.storeSchemaVersion : 2,
                     generation: generation,
                     ownerDate: day.ownerDate,
                     dayDigest: digest,
-                    day: day
+                    day: day,
+                    historyProvenance: historyByOwnerDate[day.ownerDate].flatMap { $0.isEmpty ? nil : $0 }
                 )
                 let ciphertext = try seal(
                     try HealthMdQueryCanonicalSerializer.data(for: blob),
@@ -245,6 +322,30 @@ actor EncryptedHealthContextStore {
             try? fileManager.removeItem(at: generationURL(entry.generation))
         }
         try? garbageCollectOrphans(referencedBy: manifest)
+    }
+
+    private struct HistoryMetricContent: Equatable {
+        let metrics: [HealthMdContextMetric]
+        let workouts: [HealthMdContextWorkout]
+        let sleep: [HealthMdContextSleepSession]
+        let evidence: [HealthMdContextEvidence]
+    }
+
+    private static func historyContent(for metricID: String, in day: HealthMdCompactContextDay) -> HistoryMetricContent {
+        let metrics = day.metrics.filter { $0.metricID == metricID }
+        let workouts = metricID == "workouts" ? day.workouts : []
+        let sleepIDs = HealthMdSleepSessionQuery.sleepMetricIDs
+        let sleep = sleepIDs.contains(metricID) ? day.sleepSessions : []
+        let references = Set(metrics.flatMap(\.evidenceIDs) + workouts.flatMap(\.evidenceIDs) + sleep.flatMap(\.evidenceIDs))
+        let evidence = day.evidence.filter {
+            $0.metricIDs.contains(metricID) || references.contains($0.reference.evidenceID)
+        }.map {
+            // Shared rows may lose another metric association during a scoped
+            // refresh. Compare this metric's evidence without relabelling storage.
+            HealthMdContextEvidence(reference: $0.reference, value: $0.value,
+                                    note: $0.note, metricIDs: [metricID])
+        }
+        return HistoryMetricContent(metrics: metrics, workouts: workouts, sleep: sleep, evidence: evidence)
     }
 
     private static func merge(
@@ -402,23 +503,33 @@ actor EncryptedHealthContextStore {
 
     /// Loads exactly one day from an immutable manifest snapshot. The caller can advance the index
     /// within a dense day, so no fixed per-day result limit is necessary.
-    func loadDay(
-        from snapshot: HealthContextStoreSnapshot,
-        at index: Int
-    ) throws -> HealthMdCompactContextDay {
-        guard snapshot.entries.indices.contains(index) else {
-            throw EncryptedHealthContextStoreError.corruptManifest
-        }
+    func loadDay(from snapshot: HealthContextStoreSnapshot, at index: Int) throws -> HealthMdCompactContextDay {
+        try loadContext(from: snapshot, at: index).day
+    }
+
+    func historyProvenance(from snapshot: HealthContextStoreSnapshot, at index: Int) throws -> [HealthContextHistoryProvenance] {
+        try loadContext(from: snapshot, at: index).historyProvenance
+    }
+
+    /// One authenticated immutable blob supplies both values, so actor reentrancy
+    /// cannot pair data from one generation with another generation's evidence.
+    func loadContext(from snapshot: HealthContextStoreSnapshot, at index: Int) throws
+        -> (day: HealthMdCompactContextDay, historyProvenance: [HealthContextHistoryProvenance]) {
+        guard snapshot.entries.indices.contains(index) else { throw EncryptedHealthContextStoreError.corruptManifest }
+        let value = snapshot.entries[index]
         let key = try encryptionKey(createIfMissing: false)
-        let snapshotEntry = snapshot.entries[index]
-        return try loadDay(
-            entry: ManifestEntry(
-                ownerDate: snapshotEntry.ownerDate,
-                generation: snapshotEntry.generation,
-                dayDigest: snapshotEntry.dayDigest
-            ),
-            key: key
-        )
+        let blob = try loadBlob(entry: ManifestEntry(ownerDate: value.ownerDate, generation: value.generation,
+                                                   dayDigest: value.dayDigest), key: key)
+        return (blob.day, blob.historyProvenance ?? [])
+    }
+
+    private func historyProvenance(ownerDate: String) throws -> [HealthContextHistoryProvenance] {
+        try prepareRootDirectory()
+        guard fileManager.fileExists(atPath: manifestURL.path) else { return [] }
+        let key = try encryptionKey(createIfMissing: false)
+        let manifest = try loadManifest(key: key)
+        guard let entry = manifest.entries.first(where: { $0.ownerDate == ownerDate }) else { return [] }
+        return try loadBlob(entry: entry, key: key).historyProvenance ?? []
     }
 
     /// Returns a cursor-only key derived with HKDF from the Keychain-backed store key. The store
@@ -588,6 +699,10 @@ actor EncryptedHealthContextStore {
     }
 
     private func loadDay(entry: ManifestEntry, key: SymmetricKey) throws -> HealthMdCompactContextDay {
+        try loadBlob(entry: entry, key: key).day
+    }
+
+    private func loadBlob(entry: ManifestEntry, key: SymmetricKey) throws -> StoredDayBlob {
         let url = generationURL(entry.generation)
         guard fileManager.fileExists(atPath: url.path) else {
             throw EncryptedHealthContextStoreError.manifestBlobMismatch(entry.ownerDate)
@@ -605,13 +720,16 @@ actor EncryptedHealthContextStore {
         } catch {
             throw EncryptedHealthContextStoreError.corruptBlob
         }
-        guard blob.schema == Self.storeSchema, blob.schemaVersion == Self.storeSchemaVersion else {
+        guard blob.schema == Self.storeSchema,
+              (blob.schemaVersion == Self.storeSchemaVersion && blob.historyProvenance == nil)
+                || (blob.schemaVersion == 2 && !(blob.historyProvenance?.isEmpty ?? true)) else {
             throw EncryptedHealthContextStoreError.unsupportedStoreContract(
                 schema: blob.schema,
                 version: blob.schemaVersion
             )
         }
         try validate(day: blob.day)
+        for provenance in blob.historyProvenance ?? [] { try provenance.validate(for: blob.day) }
         let digest = HealthMdQueryCanonicalSerializer.sha256(
             data: try HealthMdQueryCanonicalSerializer.data(for: blob.day)
         )
@@ -622,7 +740,7 @@ actor EncryptedHealthContextStore {
               digest == entry.dayDigest else {
             throw EncryptedHealthContextStoreError.manifestBlobMismatch(entry.ownerDate)
         }
-        return blob.day
+        return blob
     }
 
     private func validate(manifest: Manifest) throws {
@@ -817,6 +935,7 @@ private extension EncryptedHealthContextStore {
         let ownerDate: String
         let dayDigest: String
         let day: HealthMdCompactContextDay
+        let historyProvenance: [HealthContextHistoryProvenance]?
 
         enum CodingKeys: String, CodingKey {
             case schema
@@ -825,6 +944,7 @@ private extension EncryptedHealthContextStore {
             case ownerDate = "owner_date"
             case dayDigest = "day_digest"
             case day
+            case historyProvenance = "history_provenance"
         }
     }
 }
