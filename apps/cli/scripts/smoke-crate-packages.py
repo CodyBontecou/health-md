@@ -242,25 +242,11 @@ def main() -> int:
             verification_target(temporary / "msrv-target", env, "msrv", toolchain_rustc)
         )
         run([str(toolchain_rustc), "--version"], root, msrv_env)
-        # A fresh lockfile resolution can select crates that no longer compile on the
-        # package MSRV. Resolve with the MSRV toolchain so rust-version bounds apply,
-        # then pin yoke-derive back to its last release that compiles on Rust 1.85.
+        # Resolve with the MSRV toolchain so rust-version bounds apply, then check
+        # the actual resulting graph below. Do not force an obsolete transitive
+        # derive version: current yoke/zerovec require a matching newer derive.
         run(
             [str(toolchain_cargo), "generate-lockfile", "--manifest-path", str(manifest)],
-            root,
-            msrv_env,
-        )
-        run(
-            [
-                str(toolchain_cargo),
-                "update",
-                "--manifest-path",
-                str(manifest),
-                "--package",
-                "yoke-derive",
-                "--precise",
-                "0.8.2",
-            ],
             root,
             msrv_env,
         )
