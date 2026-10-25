@@ -2520,11 +2520,11 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
         let before = try rig.store.snapshot().generation
         rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
-        let base = try await planner.receiveAndHandleNext()
+        let base = try await planner.receiveAndHandleNext(on: channel)
         XCTAssertEqual(base, .base(.ping))
-        let handled = try await planner.receiveAndHandleNext()
+        let handled = try await planner.receiveAndHandleNext(on: channel)
         XCTAssertNil(handled)
-        let frame = try await planner.receiveAndHandleNext()
+        let frame = try await planner.receiveAndHandleNext(on: channel)
         XCTAssertEqual(frame, .binaryTransferFrame(binary))
         XCTAssertEqual(wire.receiveCount, 3); XCTAssertEqual(wire.packets.count, 1)
         guard case .encrypted(let response) = try XCTUnwrap(wire.packets.first) else { return XCTFail("Expected owned encrypted response") }
@@ -2533,6 +2533,26 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(discovery.peer, rig.peer.peer)
         XCTAssertEqual(try rig.store.snapshot().generation, before)
         XCTAssertTrue(try rig.store.snapshot().decisions.isEmpty)
+        XCTAssertEqual(rig.reader.defaults.reads, 0); XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testNativeReceiveRejectsDifferentChannelBeforeReadingOrAuthorityAccess() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let wire = NativePlanningResponsePackets(), otherWire = NativePlanningResponsePackets()
+        let key = SymmetricKey(data: Data(repeating: 7, count: 32)), peerID = UUID()
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: peerID, peerDisplayName: "Synthetic")
+        let other = DirectSecureChannel(packetConnection: otherWire, sessionKey: key, peerInstallationID: peerID, peerDisplayName: "Synthetic")
+        defer { channel.cancel(); other.cancel() }
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let before = try rig.store.snapshot().generation
+        rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
+        do { _ = try await planner.receiveAndHandleNext(on: other); XCTFail("A matching peer is not the original channel") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+        XCTAssertEqual(wire.receiveCount, 0); XCTAssertEqual(otherWire.receiveCount, 0)
+        XCTAssertTrue(wire.packets.isEmpty); XCTAssertTrue(otherWire.packets.isEmpty)
+        XCTAssertEqual(try rig.store.snapshot().generation, before)
         XCTAssertEqual(rig.reader.defaults.reads, 0); XCTAssertEqual(rig.reader.defaults.writes, 0)
     }
 

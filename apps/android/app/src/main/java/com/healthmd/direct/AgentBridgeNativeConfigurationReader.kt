@@ -244,6 +244,13 @@ internal class AgentBridgeNativePlanningSession(
         if (!wireOperationActive.compareAndSet(false, true)) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
         return try { receiveAndHandleNextOwned(caller) } finally { wireOperationActive.set(false) }
     }
+
+    /** Installed controller ingress must retain the original encrypted channel, not a
+     * freshly supplied peer or another channel with matching identity fields. */
+    fun receiveAndHandleNext(channel: DirectSecureChannel, caller: Job): ReceivedAgentBridgePayload? {
+        if (responseChannel !== channel) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+        return receiveAndHandleNext(caller)
+    }
     private fun receiveAndHandleNextOwned(caller: Job): ReceivedAgentBridgePayload? {
         val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         if (negotiation.baseApplication != 2 || !negotiation.agentExtension || negotiation.appleQueryExtension)

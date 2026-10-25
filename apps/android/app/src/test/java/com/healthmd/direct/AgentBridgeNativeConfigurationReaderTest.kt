@@ -1973,14 +1973,34 @@ class AgentBridgeNativeConfigurationReaderTest {
             }
             val planner = ownedPlanner(f, lifecycle, channel); val caller = Job()
             val before = f.store.access { it!!.state.revision }; reset()
-            assertThat(planner.receiveAndHandleNext(caller)).isSameInstanceAs(base)
-            assertThat(planner.receiveAndHandleNext(caller)).isNull()
-            assertThat(planner.receiveAndHandleNext(caller)).isSameInstanceAs(binary)
+            assertThat(planner.receiveAndHandleNext(channel, caller)).isSameInstanceAs(base)
+            assertThat(planner.receiveAndHandleNext(channel, caller)).isNull()
+            assertThat(planner.receiveAndHandleNext(channel, caller)).isSameInstanceAs(binary)
             assertThat((sent!!.payload as AgentBridgeDiscovery).peer).isEqualTo(f.peer)
             assertThat(f.store.access { it!!.state.revision }).isEqualTo(before)
             assertThat(f.store.access { it!!.state.decisions }).isEmpty()
             assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
             caller.complete()
+        }
+    }
+
+    @Test fun `native receive rejects a different channel before reading or authority access`() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val other = mockk<DirectSecureChannel>(relaxed = true)
+            val planner = ownedPlanner(f, lifecycle, channel)
+            val before = f.store.access { it!!.state.revision }; val checks = f.peerContext.checks
+            reset()
+            val caller = Job()
+            try {
+                f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { planner.receiveAndHandleNext(other, caller) }
+                verify { channel wasNot Called; other wasNot Called }
+                assertThat(f.peerContext.checks).isEqualTo(checks)
+                assertThat(f.store.access { it!!.state.revision }).isEqualTo(before)
+                assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
+            } finally { caller.complete() }
         }
     }
 

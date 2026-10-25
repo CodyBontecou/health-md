@@ -207,6 +207,11 @@ final class AgentBridgeNativePlanningSession {
     /// One native receive iteration. Bridge requests use this SAME original planner; deployed
     /// base messages and binary frames are returned intact to the existing native controller.
     /// The controller must not run another channel reader concurrently. This adds no advertisement.
+    func receiveAndHandleNext(on channel: DirectSecureChannel) async throws -> AgentBridgeSecurePayload? {
+        guard responseChannel === channel else { throw AgentBridgeValidationError.bindingChanged }
+        return try await receiveAndHandleNext()
+    }
+
     func receiveAndHandleNext() async throws -> AgentBridgeSecurePayload? {
         guard !wireOperationActive else { throw AgentBridgeValidationError.busy }
         wireOperationActive = true; defer { wireOperationActive = false }
