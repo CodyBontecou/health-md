@@ -1,5 +1,7 @@
 # Scheduled Export Recovery QA
 
+This is a maintained device checklist followed by dated historical receipts. The version/build below belongs to the May 2026 checkpoint; October follow-ups have their own scope and limitations. None is a current release approval or authorization to use a physical device or real health data. Follow the root [verification policy](../../../../AGENTS.md#verification-policy) before executing the checklist.
+
 ## Scope
 
 - Linear: ISO-307

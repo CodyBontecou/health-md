@@ -1,18 +1,19 @@
 ---
 title: "Unlock & Paywall"
-description: "Understand 10 free actions, non-blocking reminders, Lifetime purchases, and StoreKit restore."
+description: "Understand 5 free actions, non-blocking reminders, Lifetime purchases, and StoreKit restore."
 ---
 
-Health.md includes 10 completed export actions before Full Access is required. One action can write multiple days and formats. Manual, scheduled, Shortcut, and direct exports share the counter when applicable.
+Health.md includes 5 completed export actions before Full Access is required. One action can write multiple days and formats. Manual, scheduled, Shortcut, and direct exports share the counter when applicable.
 
 ## When an offer appears
 
 - Onboarding has no paywall step.
 - One dismissible offer may appear after the first real preview.
-- A reminder may appear after the 3rd and 7th free exports.
-- After 10 actions, the next counted export is blocked.
+- After the first completed free export, a guide offers to review a daily schedule without turning it on.
+- After the third free export, a dismissible Lifetime offer shows two actions remaining.
+- After 5 actions, the next counted export is blocked.
 
-Dismissing the earlier offers does not consume an action.
+Dismissing the earlier offers does not consume an action. Existing usage is retained when the allowance changes: users who already completed five or more counted actions need Full Access for their next new action. Purchased and grandfathered access is unchanged.
 
 ## Lifetime options
 
@@ -23,7 +24,7 @@ StoreKit 2 offers one-time purchases with no subscription: **Individual Lifetime
 | Problem | Action |
 |---|---|
 | Price is missing | Check the network/App Store and reopen the offer. |
-| Offer appears before action 10 | It is a dismissible reminder, not the final block. |
+| Offer appears before action 5 | It is a dismissible reminder, not the final block. |
 | A schedule paused | Purchase or restore, then use normal recovery. |
 
 <div class="related"><a href="/docs/onboarding/"><span>Start</span>Five-step setup.</a><a href="/docs/scheduling/"><span>Automation</span>Shared allowance behavior.</a></div>

@@ -908,7 +908,12 @@ class SharedSetupV2InventoryFreezeTests(unittest.TestCase):
         self.check_inventory_change(change)
 
     def test_existing_field_removal_is_rejected(self) -> None:
-        self.check_inventory_change(lambda payload, _: payload["fields"].pop(0), "frozen field removed")
+        def change(payload: dict[str, Any], platform: str) -> None:
+            # Private exclusions may precede the frozen rows. Remove an actual
+            # portable baseline field, not an arbitrary newly excluded field.
+            row = next(row for row in payload["fields"] if row["disposition"] == "portable")
+            payload["fields"].remove(row)
+        self.check_inventory_change(change, "frozen field removed")
 
     def test_approved_recovery_exclusions_cannot_be_removed_or_made_portable(self) -> None:
         for operation in ("remove", "reclassify"):

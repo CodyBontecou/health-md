@@ -8,6 +8,9 @@ struct ExportHistoryOperationDetails: Codable, Equatable {
         case generatedFiles = "generated_files"
         case rawExport = "raw_export"
         case canonicalExtraction = "canonical_extraction"
+        /// Agent Data gateway upload run: bounded, health-free per-run
+        /// accounting over uploaded artifacts (no filenames, no contents).
+        case agentDataGatewayUpload = "agent_data_gateway_upload"
     }
 
     let kind: Kind
@@ -786,6 +789,15 @@ enum ExportFailureReason: String, Codable {
         case .unknown:
             return String(localized: "Health.md encountered an unexpected error during export. Any system message captured at the time appears in the Technical details section.", comment: "Detailed error: unknown")
         }
+    }
+
+    /// Message for the immediate export-failure dialog on both mobile layouts.
+    /// Keep persisted failure descriptions separate from presentation guidance.
+    func alertMessage(detail: FailedDateDetail? = nil) -> String {
+        let description = detail?.detailedMessage ?? detailedDescription
+        return self == .noHealthData
+            ? "\(description)\n\n\(recoverySuggestion)"
+            : description
     }
 
     var recoverySuggestion: String {

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">診断</string>
+    <string name="diagnostics_entry">ローカルの技術イベントを確認し、共有する内容を選択します</string>
+    <string name="diagnostics_recording">ローカル記録</string>
+    <string name="diagnostics_privacy">診断情報は保存または共有するまでこのデバイスに留まります。動作イベントには健康値、健康記録ID、要求した健康データの日付、パス、接続先、認証情報は含まれません。匿名ではありません。</string>
+    <string name="diagnostics_enabled">動作イベントを記録</string>
+    <string name="diagnostics_retention">ログの詳細度を変えても、健康情報を収集する権限は変わりません。保存上限は7日間／20 MiBです。自動アップロードは行われません。</string>
+    <string name="diagnostics_start_private">プライベートコンテキストを15分間記録</string>
+    <string name="diagnostics_stop_private">プライベート記録を停止</string>
+    <string name="diagnostics_private_description">V1のプライベートコンテキストは、取得できる場合に接続デバイス名を記録します。健康データ、認証情報、任意のエラーテキストは収集しません。プライベート部分は24時間以内を期限とし、次回のアプリアクセス時に失効します。</string>
+    <string name="diagnostics_private_until">プライベート記録の有効期限：%1$s</string>
+    <string name="diagnostics_clear">すべての診断情報を削除</string>
+    <string name="diagnostics_clear_question">ローカルイベント、準備済みバンドル、添付ファイルのコピーを削除しますか？プライベート記録は停止します。エクスポート済みファイルや共有済みコピーには影響しません。</string>
+    <string name="diagnostics_select">イベントを選択</string>
+    <string name="diagnostics_hour">過去1時間</string>
+    <string name="diagnostics_day">過去24時間</string>
+    <string name="diagnostics_week">過去7日間</string>
+    <string name="diagnostics_operation">操作UUID（任意）</string>
+    <string name="diagnostics_include_private">記録済みプライベートコンテキストを含める</string>
+    <string name="diagnostics_search">イベントIDまたはフィールドを検索</string>
+    <string name="diagnostics_refresh">イベントを更新</string>
+    <string name="diagnostics_summary">イベント：%1$d · セッション中の欠落：%2$d · 無効：%3$d · 切り詰め：%4$s</string>
+    <string name="diagnostics_view_limit">一致する最新の100イベントを表示します。バンドルには選択したスナップショットを最大10,000イベントまで含め、切り詰めがあれば明示します。</string>
+    <string name="diagnostics_attachments">添付ファイル（任意）</string>
+    <string name="diagnostics_attachment_description">健康データのエクスポートやスクリーンショットなど、既存ファイルを追加します。元のバイト列は変更せずにコピーし、機密情報の除去は行いません。元のファイル名も含まれます。新たな健康データの読み取りは行いません。上限：50ファイル／100 MiB。</string>
+    <string name="diagnostics_choose">ファイルを選択…</string>
+    <string name="diagnostics_remove">%1$sを削除</string>
+    <string name="diagnostics_prepare">バンドルを準備</string>
+    <string name="diagnostics_review">準備して確認</string>
+    <string name="diagnostics_frozen">固定済みスナップショット。イベント：%1$d。健康情報：%2$s。ZIPは暗号化されていません。</string>
+    <string name="diagnostics_reviewed">共有したいファイルを確認しました</string>
+    <string name="diagnostics_share">確認済みZIPを共有</string>
+    <string name="diagnostics_save">確認済みZIPを保存</string>
+    <string name="diagnostics_share_question">この診断バンドルを共有しますか？</string>
+    <string name="diagnostics_share_warning">ZIPは暗号化されていません。プライベートコンテキストや添付ファイルに健康データや秘密情報が含まれる可能性があります。GitHubやDiscordへの公開投稿は誰でも閲覧できる場合があります。共有先がコピーを管理し、Health.mdから取り消すことはできません。</string>
+    <string name="diagnostics_share_confirm">このバンドルを共有</string>
+    <string name="diagnostics_bundle_retention">ローカルバンドルは24時間以内を期限とし、次回のアプリアクセス時に失効します。最新の3件のみ保持します。保存済みまたは共有済みのコピーは別の保存期間に従います。</string>
+    <string name="diagnostics_preview_truncated">\n\n[プレビューは128 KiBで切り詰められています。元のファイル全体はZIPに残っています。]</string>
+    <string name="diagnostics_failure">診断操作に失敗しました。ファイルへのアクセスとローカルストレージを確認し、もう一度準備して確認してください。</string>
+    <string name="diagnostics_invalid_operation">操作IDはUUIDである必要があります。</string>
+</resources>

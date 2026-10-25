@@ -41,8 +41,14 @@ final class ProductCapabilityManifestTests: XCTestCase {
             inventory.capabilities.first { $0.id == "direct.cli_agent_push_wake" }?.classification,
             "planned"
         )
+
         XCTAssertEqual(
             inventory.capabilities.first { $0.id == "account.myself_lifetime_claim" }?.classification,
+            "shared"
+        )
+
+        XCTAssertEqual(
+            inventory.capabilities.first { $0.id == "direct.full_public_authorized_corpus" }?.classification,
             "shared"
         )
 
@@ -89,6 +95,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
 
     private static let sharedCapabilities: Set<String> = [
         "account.myself_lifetime_claim",
+            "purchase.free-export-journey",
         "export.daily-files",
         "export.sleep-summary",
         "export.activity-basics",
@@ -100,6 +107,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.completed-workouts",
         "export.mobility-and-performance",
         "export.profiles",
+        "export.agent-data-gateway",
         "export.scheduled-today-refresh",
         "core.shared-rust-metric-registry",
         "automation.cancel-active-export",
@@ -108,9 +116,12 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "direct-cli.shared-qr-pairing",
         "direct.full_public_authorized_corpus",
         "direct.cli_agent_wake",
+        "direct.full_public_authorized_corpus",
+        "diagnostics.local_bundle",
     ]
 
     private static let appleCapabilities: Set<String> = [
+        "apple.ads-purchase-attribution",
         "apple.lossless-healthkit-archive",
         "apple.medication-dose-events",
         "apple.state-of-mind",
@@ -120,6 +131,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "automation.api-recovery-authority",
         "direct.cli_agent_push_wake",
         "export.range-summary",
+        "support.local-reporting-fallback",
     ]
 
     private static let androidCapabilities: Set<String> = [

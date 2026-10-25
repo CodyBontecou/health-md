@@ -14,6 +14,8 @@ struct iPadSettingsView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var metricProgressWidth: CGFloat = 100
     @State private var showMailCompose = false
+    @State private var showDiagnostics = false
+    @StateObject private var feedbackReporter = FeedbackReporter()
     @State private var showPaywall = false
     @State private var debugResult = ""
     @State private var showDebugAlert = false
@@ -174,7 +176,7 @@ struct iPadSettingsView: View {
                         .foregroundStyle(Color.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.")
+                    Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.")
                         .font(Typography.caption())
                         .foregroundStyle(Color.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -222,11 +224,17 @@ struct iPadSettingsView: View {
                 VStack(alignment: .leading, spacing: Spacing.s3) {
                     iPadBrandLabel("Feedback")
 
+                    Button("Diagnostics", systemImage: "doc.text.magnifyingglass") { showDiagnostics = true }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.textPrimary)
+                        .accessibilityIdentifier("diagnostics.entry")
+                    Divider().background(Color.borderSubtle)
+
                     Button {
                         if FeedbackHelper.canSendMail {
                             showMailCompose = true
-                        } else if let url = FeedbackHelper.mailtoURL() {
-                            UIApplication.shared.open(url)
+                        } else {
+                            feedbackReporter.open(.email)
                         }
                     } label: {
                         HStack {
@@ -248,7 +256,7 @@ struct iPadSettingsView: View {
                     Divider().background(Color.borderSubtle)
 
                     Button {
-                        FeedbackHelper.openGitHubIssue()
+                        feedbackReporter.open(.github)
                     } label: {
                         HStack {
                             Image(systemName: "ladybug")
@@ -301,9 +309,11 @@ struct iPadSettingsView: View {
         }
         .navigationTitle("Settings")
         .iPadHiddenSystemNavigationTitle()
-        .sheet(isPresented: $showMailCompose) {
-            MailComposeView()
+        .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
+        .sheet(isPresented: $showMailCompose, onDismiss: feedbackReporter.mailSheetDismissed) {
+            MailComposeView(onCompletion: feedbackReporter.completeMail)
         }
+        .feedbackFailureSheet($feedbackReporter.failure)
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: .settings)
                 .presentationDetents([.large])

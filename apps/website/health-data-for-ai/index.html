@@ -82,7 +82,7 @@
             "name": "Is my health data sent to Health.md's servers for AI use?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. Health.md is local-first and keeps no health-data cloud. Your records go only to the destinations and clients you choose."
+              "text": "Not by default. Local file exports and direct device MCP queries do not create a Health.md server copy. The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it; a separately authorized read-only cloud MCP endpoint can return retained fields to your agent. There is no public signup and no automatic device sync. Agent hosts and model providers may retain or process files and returned values under their own policies."
             }
           }
         ]
@@ -115,7 +115,7 @@
         <p class="about-eyebrow">Health data × AI</p>
         <h1 id="ai-title">Put your health data to work with AI.</h1>
         <p class="about-value-prop"><strong>Two paths from your Apple Health records to an AI assistant: hand it a file, or let it ask scoped questions through Health.md's MCP server.</strong></p>
-        <p class="about-intro">Either way, you control what the agent sees — and Health.md never stores your health data.</p>
+        <p class="about-intro">These local-first paths do not create a Health.md server copy by default. Agent hosts and model providers may process the files or returned values you share under their own policies.</p>
         <div class="hero-actions" aria-label="Download Health.md">
           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
             <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
@@ -171,7 +171,8 @@
           <p class="section-kicker">Privacy</p>
           <h2>Scoped by default</h2>
           <p class="section-lede"><strong>Every request carries its own scope.</strong> An agent can only ask about what you approve — queries return bounded pages with coverage, missing intervals, and limitations spelled out, so nothing is silently extrapolated.</p>
-          <p>Generated-file writes are approval-gated operations, and Health.md reports factual observations only: units, provenance, coverage, missingness. It does not diagnose or recommend treatment — and there is no Health.md health-data cloud in the loop.</p>
+          <p>Generated-file writes are approval-gated operations, and Health.md reports factual observations only: units, provenance, coverage, missingness. It does not diagnose or recommend treatment. Direct device queries do not automatically upload results to Health.md.</p>
+          <p>The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it. A separately authorized read-only cloud MCP endpoint can return retained fields to an agent. There is no public signup and no automatic device sync. Cloud MCP is distinct from the local Mac helper described above. Review the <a href="/privacy-policy.html#retention">privacy policy</a> for retention, deletion, and the pilot's unbacked storage limits; your agent or model provider's policies govern its copy.</p>
         </section>
 
         <section class="about-section" id="keep-going">
@@ -216,7 +217,7 @@
             </div>
             <div>
               <h3>Is my health data sent to Health.md's servers for AI use?</h3>
-              <p>No. Health.md is local-first and keeps no health-data cloud. Your records go only to the destinations and clients you choose.</p>
+              <p>Not by default. Local file exports and direct device MCP queries do not create a Health.md server copy. The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it; a separately authorized read-only cloud MCP endpoint can return retained fields to your agent. There is no public signup and no automatic device sync. Agent hosts and model providers may retain or process files and returned values under their own policies.</p>
             </div>
           </div>
         </section>

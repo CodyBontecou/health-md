@@ -9,7 +9,7 @@
   <link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html">
   <link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html">
   <link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html">
-  <meta name="robots" content="index,follow">
+  <meta name="robots" content="noindex,follow">
   <meta name="theme-color" content="#fafaf8">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
@@ -47,7 +47,7 @@
       <div class="legal-hero-inner">
         <p class="legal-eyebrow">Legal · Privacidade</p>
         <h1 id="privacy-title">Privacidade,<br>em linguagem simples.</h1>
-        <p class="legal-updated">Última atualização: 6 de agosto de 2026</p>
+        <p class="legal-updated">Última atualização: 2026-10-24</p>
         <p class="legal-lede">O Health.md movimenta dados de saúde sensíveis sem criar uma nuvem de dados de saúde do Health.md. Seu dispositivo lê os registros que você autoriza, e você escolhe para onde vai cada exportação ou resposta direta.</p>
 
         <div class="legal-promise" role="list" aria-label="Princípios de privacidade">
@@ -101,7 +101,7 @@
           <p>Ela não substitui os termos de privacidade da Apple, do Google, de um provedor de saúde, de um provedor de arquivos ou sincronização, de um operador de API, de uma ferramenta de IA nem de outro destino escolhido por você. Quando você direciona dados a um desses serviços, os termos do serviço e sua configuração regem a cópia recebida por ele.</p>
           <div class="policy-note">
             <p><strong>Em resumo:</strong> o Health.md não coleta nem armazena dados de saúde em servidores do Health.md. Os dados de saúde são processados nos seus dispositivos e enviados apenas aos destinos ou clientes escolhidos por você.</p>
-            <p>Coletamos automaticamente dados próprios e limitados de análise do produto e de campanhas. Esses sistemas são pseudônimos, não contêm registros de saúde nem exportações e não são usados para publicidade.</p>
+            <p>Coletamos automaticamente dados próprios e limitados de análise do produto e de campanhas. Esses sistemas são pseudônimos, não contêm registros de saúde nem exportações e são usados para medir o produto e as campanhas.</p>
           </div>
           <div class="policy-note">
             <p><strong>Aviso sobre a tradução:</strong> esta versão em português do Brasil é fornecida para sua conveniência. Em caso de divergência, a <a href="../privacy-policy.html" hreflang="en">versão em inglês</a> prevalece somente na medida permitida pela legislação aplicável, sem limitar direitos obrigatórios do consumidor.</p>
@@ -165,12 +165,13 @@
           <p>Dependendo da plataforma e do evento, um payload aceito pode conter um UUID aleatório de instalação do aplicativo, UUID aleatório do evento, nome do evento, versão do aplicativo, número da compilação, plataforma, experimento ou variante, etapa da introdução ou ação explícita de ignorá-la, contagens limitadas de exportações gratuitas, categoria do destino da exportação, quantidade de formatos, faixas gerais de contagem de métricas e intervalo de datas, contexto da tela de compra, identificador do produto, resultado de compra ou restauração e categoria ampla de autorização ou erro.</p>
           <p>O UUID da instalação persiste durante essa instalação do aplicativo; portanto, os dados são <strong>pseudônimos, não anônimos</strong>. Ele é gerado aleatoriamente e não deriva do seu nome, conta, identificador de saúde, identificador de hardware do dispositivo, Android ID nem Advertising ID.</p>
           <p>As análises do produto <strong>nunca incluem valores ou identificadores do HealthKit ou Health Connect, nomes de métricas nem datas de saúde</strong>, medicamentos, treinos, conteúdo de exportações, resultados de consultas tipadas, nomes de pastas ou cofres, caminhos de arquivos, nomes de pares ou dispositivos, dados de contas, preços, <strong>credenciais ou tokens</strong>, texto do usuário, referências brutas, strings completas de User-Agent nem endereços IP armazenados. Eventos, propriedades e valores de propriedades desconhecidos são rejeitados. As listas públicas de permissões do cliente e do Worker foram projetadas para que <strong>registros de saúde e conteúdo exportado não possam ser representados em um payload de análise</strong>.</p>
-          <p>Esses eventos não são usados para publicidade, identificação por impressão digital nem rastreamento entre aplicativos e não são vendidos nem compartilhados com anunciantes. As linhas validadas são mantidas por no máximo 13 meses e removidas por uma limpeza diária automática. A Cloudflare ainda processa informações comuns de conexão conforme seus próprios termos.</p>
+          <p>Esses eventos não são usados para segmentação publicitária, identificação por impressão digital nem rastreamento entre aplicativos e não são vendidos nem compartilhados com anunciantes. As linhas validadas são mantidas por no máximo 13 meses e removidas por uma limpeza diária automática. A Cloudflare ainda processa informações comuns de conexão conforme seus próprios termos.</p>
         </section>
 
         <section id="campaigns">
           <h2>Atribuição própria de campanhas</h2>
           <p>O Health.md usa links curtos próprios, como <code>healthmd.app/v/yt-csv-001</code>, para medir o desempenho agregado de campanhas sem um SDK de atribuição de terceiros.</p>
+          <p>No iPhone e iPad, o AdServices consulta a atribuição do Apple Ads diretamente com a Apple. O token temporário nunca é salvo nem enviado ao Health.md. Apenas IDs de campanha, grupo e palavra-chave, estado, clique ou impressão e download ou novo download são associados ao ID aleatório de instalação e aos resultados de compras. Não usamos IDFA nem SDK de atribuição de terceiros. Dados de saúde e eventos de compra nunca são enviados ao Apple Ads. Falhas permanecem desconhecidas, não orgânicas.</p>
           <ul>
             <li>O serviço de redirecionamento pode registrar o token e o slug da campanha, a plataforma e o enfoque do conteúdo, uma categoria genérica de destino ou cliente, o nome do host de referência quando fornecido, um código aproximado de país e o horário.</li>
             <li>A linha de clique armazenada não inclui endereço IP, User-Agent completo, cookie, ID de solicitação da Cloudflare nem impressão digital.</li>
