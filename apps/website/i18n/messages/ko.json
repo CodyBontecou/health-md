@@ -104,7 +104,14 @@
       "about": "Health.md 소개(영문)",
       "privacy": "개인정보 처리방침(영문)",
       "terms": "이용 약관(영문)",
-      "support": "지원"
+      "support": "지원",
+      "workflowLabel": "내보내기 안내",
+      "exportGuide": "내보내기 방법 선택",
+      "csvGuide": "CSV로 내보내기",
+      "obsidianGuide": "Obsidian에 건강 데이터 추가",
+      "androidGuide": "Health Connect에서 내보내기",
+      "scheduleGuide": "예약 내보내기 설정",
+      "aiGuide": "AI 활용 방법 선택"
     },
     "runtime": {
       "intlLocale": "ko-KR",

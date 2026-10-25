@@ -260,8 +260,8 @@ function renderIndex(posts) {
         </li>`;
   }).join('\n        ');
 
-  const title = 'Health.md Blog — Product Updates and Workflows';
-  const description = 'Product updates, release notes, and workflow articles for Health.md Apple Health exports, Obsidian workflows, and local-first data archives.';
+  const title = 'Health.md Guides — Export, Obsidian and Automation';
+  const description = 'Practical guides to exporting Apple Health and Health Connect data, opening CSV files, updating Obsidian notes, and automating your own health-data workflows.';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -274,13 +274,24 @@ function renderIndex(posts) {
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <span class="eyebrow">Product updates</span>
-          <h1>Release notes and workflow ideas for Health.md.</h1>
-          <p>New app features, workflow changes, and practical examples for Apple Health, Obsidian, and local data export systems.</p>
+          <span class="eyebrow">Health data guides</span>
+          <h1>Put your health data where you can use it.</h1>
+          <p>Start with one useful export, then connect your spreadsheet, Obsidian vault, or agent. Choose a workflow below, or browse the latest articles.</p>
         </div>
       </div>
     </section>
-    <section class="posts">
+    <section class="workflow-directory container" aria-labelledby="workflow-heading">
+      <h2 id="workflow-heading">Choose your first workflow</h2>
+      <div class="workflow-grid">
+        <article><h3>Spreadsheets</h3><p>Export selected dates, inspect a sample, and import CSV into Excel, Sheets, or Numbers.</p><a href="/apple-health-to-csv/">Export Apple Health to CSV</a></article>
+        <article><h3>Obsidian</h3><p>Write health notes to your vault or add selected metrics to existing daily notes.</p><a href="/blog/export-apple-health-data-to-obsidian/">Apple Health to Obsidian</a><a href="/blog/export-health-connect-to-obsidian/">Health Connect to Obsidian</a></article>
+        <article><h3>Android</h3><p>Authorize Health Connect, choose a folder, and verify your first exported file.</p><a href="/docs/android/">Start an Android export</a></article>
+        <article><h3>Automation and agents</h3><p>Choose scheduled files or an agent workflow, with the device requirements explained.</p><a href="/docs/scheduling/">Set up scheduled exports</a><a href="/health-data-for-ai/">Use health data with AI</a></article>
+      </div>
+      <p><a href="/apple-health-export/">Compare Apple Health export workflows</a> or <a href="/docs/troubleshooting/">troubleshoot an export</a>.</p>
+    </section>
+    <section class="posts" aria-labelledby="latest-articles">
+      <h2 class="container" id="latest-articles">Latest articles and product updates</h2>
       <ul class="container post-list">
         ${items || '<li class="post-item">No posts have been published yet.</li>'}
       </ul>

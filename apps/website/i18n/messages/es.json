@@ -104,7 +104,14 @@
       "about": "Acerca de (en inglés)",
       "privacy": "Privacidad",
       "terms": "Términos",
-      "support": "Soporte"
+      "support": "Soporte",
+      "workflowLabel": "Guías de exportación",
+      "exportGuide": "Elige cómo exportar",
+      "csvGuide": "Exportar a CSV",
+      "obsidianGuide": "Añade datos de salud a Obsidian",
+      "androidGuide": "Exportar desde Health Connect",
+      "scheduleGuide": "Configura exportaciones programadas",
+      "aiGuide": "Elige cómo usar la IA"
     },
     "runtime": {
       "intlLocale": "es",
