@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "91e8ffde749ce252333aa6b2539a1cd2150349a1",
+  "docs_reference_git_tree": "145f65d9d45948629106636b84e2a0ac103024b8",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "bd9c1e7256cd318ac3c342cf8e0f2277a90afbc820ebc27395bc15957c1967eb",
+    "digest": "92e4392d480f4e36391593034bd24b2ff869afd02b0443a9f7846075a3380079",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -81,16 +81,16 @@
     }
   ],
   "counts": {
-    "source_files": 109,
+    "source_files": 112,
     "handwritten_markdown_pages": 13,
-    "generated_artifacts": 96,
-    "generated_json_artifacts": 54,
+    "generated_artifacts": 99,
+    "generated_json_artifacts": 57,
     "generated_markdown_artifacts": 37,
     "generated_csv_artifacts": 5,
     "rendered_source_pages": 26,
     "generated_landing_pages": 6,
     "rendered_pages": 32,
-    "raw_artifacts": 96
+    "raw_artifacts": 99
   },
   "files": [
     {
@@ -241,6 +241,36 @@
       "routes": {
         "rendered": null,
         "raw": "/docs/reference/generated/automation/api-export-v2-provider-sidecar.json"
+      }
+    },
+    {
+      "path": "generated/automation/apple-context-receipt.json",
+      "bytes": 1020,
+      "sha256": "2bbe5bf1573415fa32e607352ea794be7d95dbc0d49978a3f4447efc3aa715cd",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/apple-context-receipt.json"
+      }
+    },
+    {
+      "path": "generated/automation/apple-context-refresh.json",
+      "bytes": 879,
+      "sha256": "1094c312f5f3be5f4d375d30bd9586dbf9dafc18ee6894dd8025c3385a38ecf1",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/apple-context-refresh.json"
+      }
+    },
+    {
+      "path": "generated/automation/apple-context-status.json",
+      "bytes": 878,
+      "sha256": "00919374ffc97ebd98972810eb0605238409723829fa1a3905dddea4c2b933af",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/apple-context-status.json"
       }
     },
     {
@@ -395,8 +425,8 @@
     },
     {
       "path": "generated/automation/manifest.json",
-      "bytes": 5848,
-      "sha256": "5f80a5c7c0ed23c7ee32cbb29cea1e84d70d01ce0651a028871fd340e1497051",
+      "bytes": 6337,
+      "sha256": "1943a98769a8a958c17a0806fda0d5bdf57afea2389bf58246237a267bae04c8",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -405,8 +435,8 @@
     },
     {
       "path": "generated/automation/message-fields.md",
-      "bytes": 130127,
-      "sha256": "4af01c7c7354abf92655475b0828c9995db1872f8a8643d58142e3b9b918ac89",
+      "bytes": 136182,
+      "sha256": "3ff0fa79ea502393010686b61289116eb8f0cdeb7d6b3b274beb8ce29aa8a4d8",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/automation/message-fields/",
@@ -415,8 +445,8 @@
     },
     {
       "path": "generated/automation/peer-capabilities.json",
-      "bytes": 1686,
-      "sha256": "66441092056c59e33592b6c1bfc80508405d5e0acf210d6e35a16ae4a25fb015",
+      "bytes": 1773,
+      "sha256": "0e2f8666af901c63d72e2950863fc5211e610149d8319f84ff372f257d2beacf",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -1242,6 +1272,27 @@
       "route": "/docs/reference/generated/automation/api-export-v2-provider-sidecar.json"
     },
     {
+      "path": "public/reference/generated/automation/apple-context-receipt.json",
+      "bytes": 1020,
+      "sha256": "2bbe5bf1573415fa32e607352ea794be7d95dbc0d49978a3f4447efc3aa715cd",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/apple-context-receipt.json"
+    },
+    {
+      "path": "public/reference/generated/automation/apple-context-refresh.json",
+      "bytes": 879,
+      "sha256": "1094c312f5f3be5f4d375d30bd9586dbf9dafc18ee6894dd8025c3385a38ecf1",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/apple-context-refresh.json"
+    },
+    {
+      "path": "public/reference/generated/automation/apple-context-status.json",
+      "bytes": 878,
+      "sha256": "00919374ffc97ebd98972810eb0605238409723829fa1a3905dddea4c2b933af",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/apple-context-status.json"
+    },
+    {
       "path": "public/reference/generated/automation/control-export-response-cancelled.json",
       "bytes": 363,
       "sha256": "75340fe314e9c77cba421c08b632da839123b3b564c17871ce975cd9e835a222",
@@ -1348,22 +1399,22 @@
     },
     {
       "path": "public/reference/generated/automation/manifest.json",
-      "bytes": 5848,
-      "sha256": "5f80a5c7c0ed23c7ee32cbb29cea1e84d70d01ce0651a028871fd340e1497051",
+      "bytes": 6337,
+      "sha256": "1943a98769a8a958c17a0806fda0d5bdf57afea2389bf58246237a267bae04c8",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
     {
       "path": "public/reference/generated/automation/message-fields.md",
-      "bytes": 130127,
-      "sha256": "4af01c7c7354abf92655475b0828c9995db1872f8a8643d58142e3b9b918ac89",
+      "bytes": 136182,
+      "sha256": "3ff0fa79ea502393010686b61289116eb8f0cdeb7d6b3b274beb8ce29aa8a4d8",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/message-fields.md"
     },
     {
       "path": "public/reference/generated/automation/peer-capabilities.json",
-      "bytes": 1686,
-      "sha256": "66441092056c59e33592b6c1bfc80508405d5e0acf210d6e35a16ae4a25fb015",
+      "bytes": 1773,
+      "sha256": "0e2f8666af901c63d72e2950863fc5211e610149d8319f84ff372f257d2beacf",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/peer-capabilities.json"
     },
@@ -1908,15 +1959,15 @@
     },
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
-      "bytes": 6752,
-      "sha256": "1ebebfba3f7d7276468a9e05f6c94759ac195e867bb9a930aba37b971693a530",
+      "bytes": 7327,
+      "sha256": "56717290594b95692062839da93510cec9922c85e136e94b8f85a8607156856a",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
     {
       "path": "src/content/docs/reference/generated/automation/message-fields.md",
-      "bytes": 130330,
-      "sha256": "f158e299ad98965c377a7807fe454754b1fde69e42c54716ee453ab680de3909",
+      "bytes": 136385,
+      "sha256": "f640d68da79aedf87f148a222577fdde2d2700cfb1ad689b1a502e359a72369c",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/message-fields/"
     },
@@ -1985,8 +2036,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/index.md",
-      "bytes": 20997,
-      "sha256": "3b982e2be5448c61a3b8bf8407a39f56c4a31a72174dbb5752b92aa8d0da4f8a",
+      "bytes": 21605,
+      "sha256": "831339555a6bdd26f79915b89a8da1b143acc723d601bed6cf58d76d8b351578",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },
