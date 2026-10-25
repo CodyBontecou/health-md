@@ -10,7 +10,6 @@ import { buildBlog } from '../scripts/build-blog.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DRAFTS = [
   'analyze-apple-health-with-claude',
-  'apple-health-to-google-sheets',
   'export-health-data-without-the-cloud',
 ];
 
@@ -31,5 +30,10 @@ test('review drafts stay out of generated articles, index and sitemap', async (t
     assert.ok(!sitemap.includes(`/blog/${slug}/`));
     await assert.rejects(access(path.join(outputRoot, 'blog', slug)), { code: 'ENOENT' });
   }
+  const publishedSlug = 'apple-health-to-google-sheets';
+  assert.ok(posts.some((post) => post.slug === publishedSlug), 'reviewed Sheets guide is published');
+  assert.ok(index.includes(`/blog/${publishedSlug}/`));
+  assert.ok(sitemap.includes(`/blog/${publishedSlug}/`));
+  await access(path.join(outputRoot, 'blog', publishedSlug, 'index.html'));
   await assert.rejects(access(path.join(outputRoot, 'blog/_review')), { code: 'ENOENT' });
 });
