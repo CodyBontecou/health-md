@@ -884,8 +884,8 @@ mod issuer_lock_release_tests {
             {
                 let _unlock = IssuerLockRelease(&owner);
                 assert_eq!(
-                    contender.try_lock_exclusive().unwrap_err().kind(),
-                    std::io::ErrorKind::WouldBlock
+                    contender.try_lock_exclusive().unwrap_err().raw_os_error(),
+                    fs2::lock_contended_error().raw_os_error()
                 );
             }
             drop(owner);
