@@ -283,7 +283,7 @@ function renderIndex(posts) {
     <section class="workflow-directory container" aria-labelledby="workflow-heading">
       <h2 id="workflow-heading">Choose your first workflow</h2>
       <div class="workflow-grid">
-        <article><h3>Spreadsheets</h3><p>Export selected dates, inspect a sample, and import CSV into Excel, Sheets, or Numbers.</p><a href="/apple-health-to-csv/">Export Apple Health to CSV</a><a href="/blog/export-apple-health-sleep-data/">Export sleep data</a></article>
+        <article><h3>Spreadsheets</h3><p>Export selected dates, inspect a sample, and import CSV into Excel, Sheets, or Numbers.</p><a href="/apple-health-to-csv/">Export Apple Health to CSV</a><a href="/blog/apple-health-to-excel/">Analyze Apple Health in Excel</a><a href="/blog/export-apple-health-sleep-data/">Export sleep data</a></article>
         <article><h3>Obsidian</h3><p>Write health notes to your vault or add selected metrics to existing daily notes.</p><a href="/blog/export-apple-health-data-to-obsidian/">Apple Health to Obsidian</a><a href="/blog/export-health-connect-to-obsidian/">Health Connect to Obsidian</a></article>
         <article><h3>Android</h3><p>Authorize Health Connect, choose a folder, and verify your first exported file.</p><a href="/health-connect-export/">Start an Android export</a></article>
         <article><h3>Automation and agents</h3><p>Choose scheduled files or an agent workflow, with the device requirements explained.</p><a href="/docs/scheduling/">Set up scheduled exports</a><a href="/health-data-for-ai/">Use health data with AI</a></article>
