@@ -104,7 +104,14 @@
       "about": "关于 Health.md（英文）",
       "privacy": "隐私政策（英文）",
       "terms": "服务条款（英文）",
-      "support": "支持"
+      "support": "支持",
+      "workflowLabel": "导出操作指南",
+      "exportGuide": "选择导出方式",
+      "csvGuide": "导出为 CSV",
+      "obsidianGuide": "将健康数据添加到 Obsidian",
+      "androidGuide": "从 Health Connect 导出",
+      "scheduleGuide": "设置定时导出",
+      "aiGuide": "选择 AI 使用方式"
     },
     "runtime": {
       "intlLocale": "zh-CN",

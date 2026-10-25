@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Export Apple Health to CSV — No Xcode, No Scripts | Health.md</title>
+  <title>Export Apple Health to CSV for Excel and Google Sheets | Health.md</title>
   <meta name="description" content="Export Apple Health to CSV for Excel, Google Sheets, or AI analysis. Pick your metrics and dates in the app — no Xcode project, no scripts, no XML wrangling.">
   <link rel="canonical" href="https://healthmd.app/apple-health-to-csv/">
   <meta name="robots" content="index,follow">
@@ -11,13 +11,13 @@
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
-  <meta property="og:title" content="Export Apple Health to CSV — No Xcode, No Scripts">
+  <meta property="og:title" content="Export Apple Health to CSV for Excel and Google Sheets">
   <meta property="og:description" content="Apple Health to CSV for Excel, Google Sheets, and AI tools. Choose metrics and dates in the app — no building, no scripts.">
   <meta property="og:url" content="https://healthmd.app/apple-health-to-csv/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Export Apple Health to CSV — No Xcode, No Scripts">
+  <meta name="twitter:title" content="Export Apple Health to CSV for Excel and Google Sheets">
   <meta name="twitter:description" content="Your Apple Health data as CSV: pick metrics and dates, open anywhere.">
   <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
 
@@ -36,7 +36,7 @@
         "@type": "WebPage",
         "@id": "https://healthmd.app/apple-health-to-csv/#page",
         "url": "https://healthmd.app/apple-health-to-csv/",
-        "name": "Export Apple Health to CSV — No Xcode, No Scripts",
+        "name": "Export Apple Health to CSV for Excel and Google Sheets",
         "description": "Export Apple Health to CSV for Excel, Google Sheets, or AI analysis. Pick your metrics and dates in the app — no Xcode project, no scripts, no XML wrangling.",
         "inLanguage": "en",
         "publisher": { "@id": "https://healthmd.app/about/#organization" }
@@ -113,7 +113,7 @@
     <section class="about-hero" aria-labelledby="csv-title">
       <div class="about-hero-inner">
         <p class="about-eyebrow">Apple Health → CSV</p>
-        <h1 id="csv-title">Apple Health to CSV, without the Xcode project.</h1>
+        <h1 id="csv-title">Export Apple Health to CSV</h1>
         <p class="about-value-prop"><strong>Export selected Apple Health data to CSV for Excel, Google Sheets, or Numbers. Choose metrics and dates, preview the output, and save it to your own folder.</strong></p>
         <p class="about-intro"><strong>5 free export actions.</strong> Then a one-time lifetime unlock for unlimited exports. No subscription.</p>
         <div class="hero-actions" role="group" aria-label="Download Health.md">
@@ -161,6 +161,10 @@
         <section class="about-section" id="how-it-works">
           <p class="section-kicker">How it works</p>
           <h2>Metrics, dates, export</h2>
+          <figure class="guide-screen">
+            <img src="/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-formats-and-daily-notes.png" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md export settings with a date range and switches for Markdown, Obsidian Bases, JSON, and CSV.">
+            <figcaption>The CSV switch is in Export Formats. This screenshot shows it off; enable CSV for your spreadsheet export. Your metric count and available options may differ.</figcaption>
+          </figure>
           <div class="process-list">
             <div>
               <span>1</span>
@@ -180,6 +184,28 @@
           </div>
         </section>
 
+        <section class="about-section" id="open-in-spreadsheet">
+          <p class="section-kicker">From file to spreadsheet</p>
+          <h2>Open your Apple Health CSV in Excel, Sheets, or Numbers</h2>
+          <p>Try the <a href="/docs/reference/generated/core/summary-day.csv" download>synthetic CSV sample</a> first, then repeat with one day of your own export. The sample contains fictional values and metadata rows.</p>
+          <div class="about-card-grid">
+            <div class="about-card">
+              <h3>Excel on desktop</h3>
+              <p>Use Data → From Text/CSV (under Get Data in some versions), select the file, and check the comma delimiter in the preview before loading. Keep Metric and Unit as text and inspect date conversions. See <a href="https://support.microsoft.com/en-us/excel/get-started/import-or-export-text-txt-or-csv-files">Microsoft's CSV import instructions</a>.</p>
+            </div>
+            <div class="about-card">
+              <h3>Google Sheets</h3>
+              <p>Open a spreadsheet, choose File → Import → Upload, and select the CSV. Insert a new sheet and choose Comma if automatic separator detection is wrong. Importing sends the file to Google; try the synthetic sample before deciding whether to upload your records. See <a href="https://support.google.com/docs/answer/40608">Google's import instructions</a>.</p>
+            </div>
+            <div class="about-card">
+              <h3>Numbers on Mac</h3>
+              <p>Open the CSV in Numbers. If the columns do not separate correctly, adjust the text import settings and delimiter before editing the table. See <a href="https://support.apple.com/guide/numbers/import-an-excel-or-text-file-tan9f3c54bdc/mac">Apple's Numbers import guide</a>.</p>
+            </div>
+          </div>
+          <p>Filter to the Category and Metric you want before charting Value. Keep Unit visible, exclude metadata rows, and do not add daily totals to individual readings. A longer date range produces multiple daily files; do not assume it is one combined workbook.</p>
+          <p>Ready to use your own data? <a href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>, authorize the metrics you need, and export one day as CSV.</p>
+        </section>
+
         <section class="about-section" id="verify-export">
           <p class="section-kicker">Check your first file</p>
           <h2>Verify dates, units, and missing data</h2>
@@ -189,7 +215,7 @@
             <li>If a metric is missing, check the source data in Apple Health, the selected day, metric selection, and Health permissions. Missing data does not mean zero.</li>
             <li>If Preview works but writing fails, reselect the destination folder and check that its file provider is available. See the <a href="/docs/folder-vault/">folder troubleshooting guide</a>.</li>
           </ul>
-          <p>For a screenshot walkthrough of authorization, Preview, and export results, see <a href="/docs/iphone-first-export/">your first iPhone export</a>.</p>
+          <p>After changing permissions, let your watch or source app finish syncing with Apple Health and try that date again. For a screenshot walkthrough of authorization, Preview, and export results, see <a href="/docs/iphone-first-export/">your first iPhone export</a>.</p>
         </section>
 
         <section class="about-section" id="whats-inside">

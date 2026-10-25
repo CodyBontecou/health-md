@@ -11,7 +11,7 @@ const PAGES = [
     dir: 'apple-health-export',
     url: 'https://healthmd.app/apple-health-export/',
     title: 'Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian | Health.md',
-    h1: 'Export your Apple Health data — your way.',
+    h1: 'How to export Apple Health data',
     minFaqs: 5,
   },
   {
@@ -24,8 +24,8 @@ const PAGES = [
   {
     dir: 'apple-health-to-csv',
     url: 'https://healthmd.app/apple-health-to-csv/',
-    title: 'Export Apple Health to CSV — No Xcode, No Scripts | Health.md',
-    h1: 'Apple Health to CSV, without the Xcode project.',
+    title: 'Export Apple Health to CSV for Excel and Google Sheets | Health.md',
+    h1: 'Export Apple Health to CSV',
     minFaqs: 4,
   },
 ];

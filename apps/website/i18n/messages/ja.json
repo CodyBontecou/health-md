@@ -104,7 +104,14 @@
       "about": "Health.mdについて（英語）",
       "privacy": "プライバシー（英語）",
       "terms": "利用規約（英語）",
-      "support": "サポート"
+      "support": "サポート",
+      "workflowLabel": "エクスポートの手順",
+      "exportGuide": "エクスポート方法を選ぶ",
+      "csvGuide": "CSV にエクスポート",
+      "obsidianGuide": "健康データを Obsidian に追加",
+      "androidGuide": "Health Connect からエクスポート",
+      "scheduleGuide": "定期エクスポートを設定",
+      "aiGuide": "AI の利用方法を選ぶ"
     },
     "runtime": {
       "intlLocale": "ja-JP",

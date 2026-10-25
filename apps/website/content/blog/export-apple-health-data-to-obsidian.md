@@ -92,7 +92,7 @@ An Obsidian Bases export stores selected metrics as frontmatter properties. Fiel
 
 In Obsidian, create a Bases view scoped to your health-note folder and add the properties you want as columns. Keep numbers numeric; the unit for `sleep_total_hours` is hours and `resting_heart_rate` is beats per minute. See the [format reference](/docs/reference/export-formats/) for units and omission rules before building calculations.
 
-JSON exports include top-level fields such as `date`, `type`, and `units`, followed by category objects like `activity`, `sleep`, `heart`, `vitals`, and `workouts`. CSV exports use a stable `Date,Category,Metric,Value,Unit,Timestamp` header, with timestamps filled in for individual samples when available.
+JSON exports include top-level fields such as `date`, `type`, and `units`, followed by category objects like `activity`, `sleep`, `heart`, `vitals`, and `workouts`. CSV exports use the `Date,Category,Metric,Value,Unit,Timestamp` header. `Value` contains numbers and nonnumeric metadata or status values, so filter by Category, Metric, and Unit before numeric analysis. Some summary rows have five fields without Timestamp; timestamped samples have all six. See the [producer-generated CSV row contract](/docs/reference/export-formats/#csv) for exact row shapes.
 
 ## Use Daily Note Injection for journal workflows
 

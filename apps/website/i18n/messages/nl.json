@@ -104,7 +104,14 @@
       "about": "Over ons (Engels)",
       "privacy": "Privacy (Engels)",
       "terms": "Voorwaarden (Engels)",
-      "support": "Ondersteuning"
+      "support": "Ondersteuning",
+      "workflowLabel": "Exporthandleidingen",
+      "exportGuide": "Kies een exportwerkwijze",
+      "csvGuide": "Exporteren naar CSV",
+      "obsidianGuide": "Voeg gezondheidsgegevens toe aan Obsidian",
+      "androidGuide": "Exporteren vanuit Health Connect",
+      "scheduleGuide": "Geplande exports instellen",
+      "aiGuide": "Kies een AI-werkwijze"
     },
     "runtime": {
       "intlLocale": "nl-NL",
