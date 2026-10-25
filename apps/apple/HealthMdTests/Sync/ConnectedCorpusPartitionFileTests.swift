@@ -443,15 +443,9 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         let encodeBaseline = residentBytes()
         let encodeSampler = ResidentSampler()
         encodeSampler.start()
-        var encodingPhases: [String] = []
         let file = try ConnectedCorpusApplicationItemCodec.encode(
             try XCTUnwrap(source),
-            kind: .macHealthDay,
-            stageObserver: { phase in
-                let peak = encodeSampler.peakBytes
-                let overhead = peak > encodeBaseline ? peak - encodeBaseline : 0
-                encodingPhases.append("[DEBUG-pr189-rss] \(phase)=\(overhead)")
-            }
+            kind: .macHealthDay
         )
         encodeSampler.stop()
         defer { file.remove() }
@@ -460,8 +454,7 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         XCTAssertLessThan(
             encodeOverhead,
             32 * 1_024 * 1_024,
-            "Production HealthData encoding must not create an item-sized Data copy. "
-                + encodingPhases.joined(separator: "; ")
+            "Production HealthData encoding must not create an item-sized Data copy"
         )
         source = nil
 
