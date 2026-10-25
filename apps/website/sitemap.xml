@@ -5112,4 +5112,10 @@
     <priority>0.7</priority>
   </url>
   <!-- END GENERATED VISUALIZATION URLS -->
+  <url>
+    <loc>https://healthmd.app/health-connect-export/</loc>
+    <lastmod>2026-10-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>
