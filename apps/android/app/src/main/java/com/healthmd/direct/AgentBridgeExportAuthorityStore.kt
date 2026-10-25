@@ -397,6 +397,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
                     ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
                 intent.validate(job)
                 if (intent.version == 2) demand(state.captureClaims.orEmpty().none { it.requestSha256 == job.requestSha256 })
+                if (intent.version == 3) demand(state.captureClaims.orEmpty().any { it.requestSha256 == job.requestSha256 })
                 cancel.requestSha256
             }
             demand(requests.distinct().size == requests.size)
@@ -742,7 +743,7 @@ internal data class AgentBridgeExportCancellationIntent(val version: Int, val re
     fun request() = AgentBridgeCodec.decode(requestCanonical.toByteArray()) as AgentBridgeCancelRequest
     fun validate(job: AgentBridgeExportAcceptedJob) {
         val cancel = request(); val original = job.request(); val plan = original.plan as AgentBridgeGeneratedPlan
-        require(version in 1..2 && requestCanonical.toByteArray().size <= 48 * 1024 &&
+        require(version in 1..3 && requestCanonical.toByteArray().size <= 48 * 1024 &&
             AgentBridgeCodec.encode(cancel).decodeToString() == requestCanonical &&
             cancel.peer == plan.intent.peer && cancel.jobId == original.jobId && cancel.requestSha256 == job.requestSha256 &&
             cancel.approvalId == original.approval.approvalId && cancel.authorityId == plan.authorityReferences.native.authorityId)
@@ -757,7 +758,20 @@ internal data class AgentBridgeExportCancellationIntent(val version: Int, val re
             require(confirmedAt.length == 20 && confirmedAt == confirmed.toString() && confirmed.nano == 0 &&
                 confirmed >= at && confirmed < Instant.parse(job.expiresAt) && bytes.size <= 48 * 1024)
             val receipt = requireNotNull(terminalReceipt())
-            require(AgentBridgeCodec.encode(receipt).contentEquals(bytes) && receipt == job.unclaimedCancellationReceipt())
+            require(AgentBridgeCodec.encode(receipt).contentEquals(bytes))
+            if (version == 2) require(receipt == job.unclaimedCancellationReceipt()) else {
+                val accepted = job.acceptedReceipt(); val zero = "0".repeat(64)
+                require(receipt.binding == accepted.binding && receipt.jobId == accepted.jobId &&
+                    receipt.requestSha256 == job.requestSha256 && receipt.expiresAt == job.expiresAt && receipt.sourceAcknowledged &&
+                    receipt.status in listOf(AgentBridgeExecutionReceiptStatus.CANCELLED, AgentBridgeExecutionReceiptStatus.COMPLETE,
+                        AgentBridgeExecutionReceiptStatus.COMPLETE_EMPTY, AgentBridgeExecutionReceiptStatus.PARTIAL) &&
+                    receipt.artifactCount >= 0 && receipt.committedPartitionCount >= 0 && receipt.committedPartitionCount <= receipt.artifactCount)
+                if (receipt.manifestSha256 == zero) require(receipt.status == AgentBridgeExecutionReceiptStatus.CANCELLED &&
+                    receipt.artifactCount == 0 && receipt.committedPartitionCount == 0 && receipt.frontierSha256 == zero)
+                else require(receipt.frontierSha256 != zero && (receipt.status == AgentBridgeExecutionReceiptStatus.CANCELLED ||
+                    receipt.committedPartitionCount == receipt.artifactCount))
+                if (receipt.status == AgentBridgeExecutionReceiptStatus.COMPLETE_EMPTY) require(receipt.artifactCount == 0)
+            }
         }
     }
 }

@@ -208,6 +208,59 @@ internal class AgentBridgeExportPlanningService(
         return terminal.terminalReceipt() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
     }
 
+    /** Stop-only recovery. No mutable settings, SDK access, recapture or grant restoration. */
+    fun finalizeCapturedCancellation(authenticated: AgentBridgeExportAuthenticatedPeer,
+        supplied: AgentBridgeCancelRequest): AgentBridgeExecutionReceipt {
+        val request = AgentBridgeCodec.decode(AgentBridgeCodec.encode(supplied)) as AgentBridgeCancelRequest
+        val expected = peer(authenticated, request.peer)
+        fun reservation(): AgentBridgeExportCaptureReservation = store.access { transaction ->
+            val state = transaction?.state ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val job = state.acceptedJobs?.singleOrNull { it.requestSha256 == request.requestSha256 }
+                ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            val claim = state.captureClaims?.singleOrNull { it.requestSha256 == request.requestSha256 }
+                ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            val intent = state.cancellationIntents?.singleOrNull { it.request() == request }
+                ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            validateCancellation(authenticated, expected, request, job, intent)
+            AgentBridgeExportCaptureReservation(job, claim)
+        }
+        val original = reservation()
+        return store.openCaptureSpool(original, false) {
+            require(reservation() == original, AgentBridgeErrorCode.BINDING_CHANGED)
+        }.use { spool ->
+            val checkpoint = spool.inspectCancellationCheckpoint()
+            var selected: AgentBridgeExportCancellationIntent? = null
+            fun retained(tx: AgentBridgeExportAuthorityTransaction, intent: AgentBridgeExportCancellationIntent) {
+                require(original.job in tx.state.acceptedJobs.orEmpty() && original.claim in tx.state.captureClaims.orEmpty(), AgentBridgeErrorCode.BINDING_CHANGED)
+                validateCancellation(authenticated, expected, request, original.job, intent)
+                // No callback follows this exact retained-file check at publication/return.
+                require(intent.terminalReceipt() == spool.cancellationReceipt(checkpoint), AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+            }
+            val terminal = store.access(fence = { transaction ->
+                val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                val result = selected ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                require(result in tx.state.cancellationIntents.orEmpty(), AgentBridgeErrorCode.BINDING_CHANGED)
+                retained(tx, result)
+            }) { transaction ->
+                val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                val intents = tx.state.cancellationIntents.orEmpty()
+                val index = intents.indexOfFirst { it.request() == request }
+                require(index >= 0, AgentBridgeErrorCode.BINDING_CHANGED)
+                val previous = intents[index]
+                validateCancellation(authenticated, expected, request, original.job, previous)
+                require(previous.version == 1 || previous.version == 3, AgentBridgeErrorCode.BINDING_CHANGED)
+                val receipt = spool.cancellationReceipt(checkpoint)
+                val result = if (previous.version == 3) previous else previous.copy(version = 3,
+                    terminalReceiptCanonical = AgentBridgeCodec.encode(receipt).decodeToString(), confirmedAt = now().toString())
+                result.validate(original.job); retained(tx, result)
+                if (result != previous) tx.state = tx.state.copy(cancellationIntents = intents.mapIndexed { i, value -> if (i == index) result else value })
+                selected = result; result
+            }
+            spool.requireCancellationCheckpoint(checkpoint)
+            terminal.terminalReceipt() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+        }
+    }
+
     private fun validateCancellation(authenticated: AgentBridgeExportAuthenticatedPeer, expected: AgentBridgePeer,
         request: AgentBridgeCancelRequest, job: AgentBridgeExportAcceptedJob, intent: AgentBridgeExportCancellationIntent) {
         peer(authenticated, expected)

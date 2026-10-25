@@ -243,6 +243,41 @@ final class AgentBridgeExportPlanningService {
         return receipt
     }
 
+    /// Stop-only recovery: no settings resolution, SDK read, recapture, or grant restoration.
+    /// The nonblocking original spool lock proves no capture owner still holds this resource.
+    func finalizeCapturedCancellation(_ supplied: AgentBridgeCancel,
+        authenticatedPeer: AgentBridgeExportAuthenticatedPeer,
+        fileProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection()
+    ) throws -> AgentBridgeExecutionReceipt {
+        let request = try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: AgentBridgeV4Codec.encode(supplied))
+        func reservation() throws -> AgentBridgeExportCaptureReservation {
+            try authenticatedPeer.requireCurrent(); try requirePeer(request.peer, authenticatedPeer)
+            return try store.inspectCurrent { state in
+                guard let job = state.acceptedJobs?.first(where: { $0.requestSHA256 == request.requestSha256 }),
+                      let claim = state.captureClaims?.first(where: { $0.requestSHA256 == request.requestSha256 }),
+                      let intent = try state.cancellationIntents?.first(where: { try $0.request() == request }) else {
+                    throw AgentBridgeValidationError.bindingChanged
+                }
+                try self.validateCancellation(request, job: job, intent: intent, authenticatedPeer: authenticatedPeer)
+                return .init(job: job, claim: claim)
+            }
+        }
+        let original = try reservation()
+        let spool = try store.openCaptureSpool(original, create: false, fileProtection: fileProtection) {
+            let current = try reservation()
+            guard current.job == original.job, current.claim == original.claim else { throw AgentBridgeValidationError.bindingChanged }
+        }
+        defer { spool.close() }
+        let checkpoint = try spool.inspectCancellationCheckpoint()
+        let terminal = try store.finalizeCapturedCancellation(request, reservation: original, spool: spool,
+            checkpoint: checkpoint, confirmedAt: utc(clock.now())) { job, intent in
+                try self.validateCancellation(request, job: job, intent: intent, authenticatedPeer: authenticatedPeer)
+            }
+        guard let receipt = try terminal.terminalReceipt() else { throw AgentBridgeValidationError.bindingChanged }
+        try spool.requireCancellationCheckpoint(checkpoint)
+        return receipt
+    }
+
     private func validateCancellation(_ request: AgentBridgeCancel, job: AgentBridgeExportAcceptedJob,
         intent: AgentBridgeExportCancellationIntent, authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws {
         try authenticatedPeer.requireCurrent(); try requirePeer(request.peer, authenticatedPeer)

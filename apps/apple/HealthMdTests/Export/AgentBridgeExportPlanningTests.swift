@@ -156,6 +156,66 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testCapturedCancellationPreservesPrivateBytesAndReplaysWithoutRenewalOrReadRights() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig); _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+        let spool = try rig.store.openCaptureSpool(reservation, create: true, fileProtection: rig.captureProtection) {}
+        do {
+            let day = try AgentBridgeDate("2026-03-08")
+            XCTAssertNil(try spool.loadOrBegin(day)); try spool.commit(day, payload: Data("synthetic".utf8))
+        } catch { spool.close(); throw error }; spool.close()
+        let directory = rig.directory.appendingPathComponent("captures/" + reservation.job.requestSHA256.rawValue)
+        func bytes() throws -> [String: Data] {
+            try Dictionary(uniqueKeysWithValues: FileManager.default.contentsOfDirectory(atPath: directory.path).map { ($0, try Data(contentsOf: directory.appendingPathComponent($0))) })
+        }
+        let before = try bytes(), cancel = try cancellationRequest(request)
+        _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer)
+        rig.clock.advance(seconds: 601)
+        try rig.store.revokeNativeDelegation(request.plan.authorityReferences.native,
+            expectedGeneration: rig.store.snapshot().generation, authorization: FakeNativeAuthorization())
+        rig.reader.calls = []
+        let receipt = try rig.service.finalizeCapturedCancellation(cancel, authenticatedPeer: rig.peer, fileProtection: rig.captureProtection)
+        XCTAssertEqual(receipt.status, .cancelled); XCTAssertTrue(receipt.sourceAcknowledged); XCTAssertEqual(receipt.artifactCount, 0)
+        XCTAssertEqual(try bytes(), before)
+        let file = rig.directory.appendingPathComponent("state.json"), ledger = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        rig.clock.advance(seconds: 1)
+        XCTAssertEqual(try rig.restartedService().finalizeCapturedCancellation(cancel, authenticatedPeer: rig.peer, fileProtection: rig.captureProtection), receipt)
+        XCTAssertEqual(try Data(contentsOf: file), ledger)
+        XCTAssertEqual(try rig.store.snapshot().cancellationIntents?.first?.version, 3)
+        XCTAssertThrowsError(try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        XCTAssertTrue(rig.reader.calls.isEmpty)
+    }
+
+    func testCapturedCancellationRefusesMissingIntentActiveWorkerAmbiguityAndExpiredTrust() throws {
+        for mode in ["no_intent", "busy", "ambiguous", "header", "expired", "delayed_key", "delayed_trust"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig); _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+            let spool = try rig.store.openCaptureSpool(reservation, create: true, fileProtection: rig.captureProtection) {}
+            defer { spool.close() }
+            let day = try AgentBridgeDate("2026-03-08")
+            XCTAssertNil(try spool.loadOrBegin(day))
+            if mode != "ambiguous" { try spool.commit(day, payload: Data("synthetic".utf8)) }
+            if mode != "busy" { spool.close() }
+            let cancel = try cancellationRequest(request)
+            if mode != "no_intent" { _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer) }
+            if mode == "header" { try FileManager.default.removeItem(at: rig.directory.appendingPathComponent("captures/" + reservation.job.requestSHA256.rawValue + "/header.json")) }
+            let file = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            if mode == "expired" { rig.clock.advance(seconds: 604800) }
+            if mode == "delayed_key" { rig.keys.onNextLoad { rig.clock.advance(seconds: 604800) } }
+            if mode == "delayed_trust" { rig.keys.onNextLoad { rig.session.revoke() } }
+            let expected: AgentBridgeValidationError = mode == "busy" ? .busy : mode == "no_intent" ? .bindingChanged :
+                ["expired", "delayed_key"].contains(mode) ? .planExpired : mode == "delayed_trust" ? .permissionRequired : .spoolMissingRestartRequired
+            XCTAssertThrowsError(try rig.service.finalizeCapturedCancellation(cancel, authenticatedPeer: rig.peer, fileProtection: rig.captureProtection)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, expected, mode)
+            }
+            XCTAssertEqual(try Data(contentsOf: file), before)
+        }
+    }
+
     func testCancellationIntentPersistsIdempotentlyAndFencesReadsAcrossRestart() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try executionRequest(rig)
@@ -233,7 +293,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
 
     func testCancellationIntentRejectsForgedSignedShapeAndVersionWithoutRepair() throws {
-        for mode in ["version", "empty", "duplicate", "missing_job", "authority", "expiry", "unknown", "terminal_status", "terminal_ack", "terminal_count", "terminal_job", "terminal_missing_time", "accepted_job_version"] {
+        for mode in ["version", "empty", "duplicate", "missing_job", "authority", "expiry", "unknown", "terminal_status", "terminal_ack", "terminal_count", "terminal_job", "terminal_missing_time", "terminal_captured_without_claim", "accepted_job_version"] {
             let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
             let request = try executionRequest(rig)
             let job = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer).job
@@ -259,6 +319,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             case "expiry": intent["requestedAt"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(job.expiresAt), options: .fragmentsAllowed)
             case "unknown": intent["unexpected"] = true
             case "terminal_missing_time": intent.removeValue(forKey: "confirmedAt")
+            case "terminal_captured_without_claim": intent["version"] = 3
             default:
                 let bytes = try XCTUnwrap(Data(base64Encoded: XCTUnwrap(intent["terminalReceiptBytes"] as? String)))
                 var receipt = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
@@ -1342,6 +1403,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
     func testNativeTransferSenderResumesExactPrefixWithoutReplayingBytes() async throws { try await checkNativeTransferSender("resume") }
     func testNativeTransferSenderRejectsHostRewindOfRecordedPrefix() async throws { try await checkNativeTransferSender("rewind") }
+    func testNativeCapturedCancellationRefusesManifestWithoutRetainedFrontier() async throws { try await checkNativeTransferSender("cancel-no-frontier") }
+
     func testNativeTransferSenderPublicationFailurePreventsNextPartitionAndFinalize() async throws { try await checkNativeTransferSender("publication") }
 
     func testNativeCompletionRequiresExactHostReceiptsAndPersistsReplay() async throws { try await checkNativeTransferSender("complete") }
@@ -1370,6 +1433,23 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         try await withNativeExportPreparation { rig, planner, request, store, manager in
             store.querySumResult = { _, _ in 123 }
             let original = try await planner.prepareTransferExport(request, manager: manager)
+            if mode == "cancel-no-frontier" {
+                let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+                let directory = rig.directory.appendingPathComponent("captures/" + job.requestSHA256.rawValue)
+                XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent("manifest.json").path))
+                let state = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent("progress.json"))) as? [String: Any])
+                let record = try XCTUnwrap(state["record"] as? [String: Any])
+                let payload = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(record["payload"] as? String)))
+                XCTAssertEqual((try JSONSerialization.jsonObject(with: payload) as? [String: Any])?["version"] as? Int, 5)
+                let cancel = try self.cancellationRequest(request)
+                _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer)
+                let file = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+                XCTAssertThrowsError(try rig.restartedService().finalizeCapturedCancellation(cancel, authenticatedPeer: rig.peer, fileProtection: rig.captureProtection)) {
+                    XCTAssertEqual($0 as? AgentBridgeValidationError, .spoolMissingRestartRequired)
+                }
+                XCTAssertEqual(try Data(contentsOf: file), before); XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+                return
+            }
             let completion = mode.hasPrefix("complete")
             let resumedPrefix = mode == "resume" || mode == "complete-resume"
             var resumeEnvelope: AgentBridgeResume?
@@ -1542,6 +1622,11 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
                 XCTAssertTrue(replacedAtNativeCallback)
                 XCTAssertEqual(try Data(contentsOf: completionDirectory.appendingPathComponent("completion.json")), before)
+                let cancel = try self.cancellationRequest(request)
+                _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer)
+                XCTAssertEqual(try rig.restartedService().finalizeCapturedCancellation(cancel, authenticatedPeer: rig.peer,
+                    fileProtection: rig.captureProtection), receipt)
+                XCTAssertEqual(try Data(contentsOf: completionDirectory.appendingPathComponent("completion.json")), before)
             }
             if !fails {
                 XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count - (resumedPrefix || mode == "mixed" ? 1 : 0))
@@ -1573,6 +1658,19 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTAssertEqual(progress["committedPartitionCount"] as? Int, count)
             XCTAssertEqual(progress["frontierSHA256"] as? String, expected.sha256.rawValue)
             XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("transfer.json")), original.checkpointCanonical)
+            if mode == "publication" {
+                func snapshot() throws -> [String: Data] {
+                    try Dictionary(uniqueKeysWithValues: FileManager.default.contentsOfDirectory(atPath: directory.path).map { ($0, try Data(contentsOf: directory.appendingPathComponent($0))) })
+                }
+                let before = try snapshot(), cancel = try self.cancellationRequest(request)
+                _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer)
+                let receipt = try rig.restartedService().finalizeCapturedCancellation(cancel, authenticatedPeer: rig.peer, fileProtection: rig.captureProtection)
+                XCTAssertEqual(receipt.status, .cancelled); XCTAssertTrue(receipt.sourceAcknowledged)
+                XCTAssertEqual(receipt.artifactCount, Int64(originalManifest.artifacts.count))
+                XCTAssertEqual(receipt.manifestSha256.rawValue, AgentBridgeV4Codec.sha256(original.export.manifestCanonical))
+                XCTAssertEqual(receipt.committedPartitionCount, 1); XCTAssertEqual(receipt.frontierSha256, expected.sha256)
+                XCTAssertEqual(try snapshot(), before)
+            }
             XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
         }
     }

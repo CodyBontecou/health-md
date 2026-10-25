@@ -104,6 +104,69 @@ class AgentBridgeExportPlanningBoundaryTest {
         }
     }
 
+    @Test fun capturedCancellationPreservesPrivateBytesAndReplaysWithoutRenewalOrReadRights() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            val reservation = f.service.claimCapture(f.peerContext, request)
+            f.store.openCaptureSpool(reservation, true) { }.use { spool ->
+                assertThat(spool.loadOrBegin("2026-03-08")).isNull()
+                spool.commit("2026-03-08", "synthetic".toByteArray())
+            }
+            val root = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+            val directory = root.resolve("captures").resolve(reservation.job.requestSha256)
+            fun bytes() = Files.list(directory).use { paths -> paths.toList().associate { it.fileName.toString() to AgentBridgeCodec.sha256(Files.readAllBytes(it)) } }
+            val before = bytes(); val cancel = cancellationRequest(request)
+            f.service.requestCancellation(f.peerContext, cancel)
+            f.clock.now = f.clock.now.plusSeconds(601)
+            f.store.revoke(f.native, f.peer, (request.plan as AgentBridgeGeneratedPlan).authorityReferences.native.authorityId, 1)
+            f.configuration.calls = 0
+            val receipt = f.service.finalizeCapturedCancellation(f.peerContext, cancel)
+            assertThat(receipt.status).isEqualTo(AgentBridgeExecutionReceiptStatus.CANCELLED)
+            assertThat(receipt.sourceAcknowledged).isTrue(); assertThat(receipt.artifactCount).isEqualTo(0)
+            assertThat(bytes()).isEqualTo(before)
+            val ledger = Files.readAllBytes(root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+            f.clock.now = f.clock.now.plusSeconds(1)
+            assertThat(f.restart().finalizeCapturedCancellation(f.peerContext, cancel)).isEqualTo(receipt)
+            assertThat(Files.readAllBytes(root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(ledger)
+            assertThat(f.store.access { it!!.state.cancellationIntents!!.single().version }).isEqualTo(3)
+            f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { f.service.captureReadConfiguration(f.peerContext, reservation) }
+            assertThat(f.configuration.calls).isEqualTo(0)
+        }
+    }
+
+    @Test fun capturedCancellationRefusesMissingIntentActiveWorkerAmbiguityAndExpiredTrust() {
+        for (mode in listOf("no_intent", "busy", "ambiguous", "header", "expired", "delayed_key", "delayed_trust")) {
+            AgentBridgeExportPlanningFixture().use { f ->
+                val request = executionRequest(f); f.service.acceptExecution(f.peerContext, request)
+                val reservation = f.service.claimCapture(f.peerContext, request)
+                val spool = f.store.openCaptureSpool(reservation, true) { }
+                try {
+                    assertThat(spool.loadOrBegin("2026-03-08")).isNull()
+                    if (mode != "ambiguous") spool.commit("2026-03-08", "synthetic".toByteArray())
+                    if (mode != "busy") spool.close()
+                    val cancel = cancellationRequest(request)
+                    if (mode != "no_intent") f.service.requestCancellation(f.peerContext, cancel)
+                    val root = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+                    if (mode == "header") Files.delete(root.resolve("captures").resolve(reservation.job.requestSha256).resolve("header.json"))
+                    val ledger = root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME); val before = Files.readAllBytes(ledger)
+                    if (mode == "expired") f.clock.now = f.clock.now.plusSeconds(604800)
+                    if (mode == "delayed_key") f.keys.onLoad = { f.keys.onLoad = null; f.clock.now = f.clock.now.plusSeconds(604800) }
+                    if (mode == "delayed_trust") f.keys.onLoad = { f.keys.onLoad = null; f.peerContext.trusted = false }
+                    val code = when(mode) {
+                        "busy" -> AgentBridgeErrorCode.BUSY
+                        "no_intent" -> AgentBridgeErrorCode.BINDING_CHANGED
+                        "expired", "delayed_key" -> AgentBridgeErrorCode.PLAN_EXPIRED
+                        "delayed_trust" -> AgentBridgeErrorCode.PERMISSION_REQUIRED
+                        else -> AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED
+                    }
+                    f.expect(code) { f.service.finalizeCapturedCancellation(f.peerContext, cancel) }
+                    assertThat(Files.readAllBytes(ledger)).isEqualTo(before)
+                } finally { spool.close() }
+            }
+        }
+    }
+
     @Test fun cancellationIntentPersistsIdempotentlyAndFencesReadsAcrossRestart() {
         AgentBridgeExportPlanningFixture().use { f ->
             val request = executionRequest(f)
@@ -190,7 +253,7 @@ class AgentBridgeExportPlanningBoundaryTest {
     }
 
     @Test fun cancellationIntentRejectsForgedSignedShapeAndVersionWithoutRepair() {
-        for (mode in listOf("version", "empty", "duplicate", "missing_job", "authority", "expiry", "unknown", "terminal_status", "terminal_ack", "terminal_count", "terminal_job", "terminal_missing_time", "accepted_job_version")) {
+        for (mode in listOf("version", "empty", "duplicate", "missing_job", "authority", "expiry", "unknown", "terminal_status", "terminal_ack", "terminal_count", "terminal_job", "terminal_missing_time", "terminal_captured_without_claim", "accepted_job_version")) {
             AgentBridgeExportPlanningFixture().use { f ->
                 val request = executionRequest(f)
                 val job = f.service.acceptExecution(f.peerContext, request).job
@@ -214,6 +277,7 @@ class AgentBridgeExportPlanningBoundaryTest {
                     "expiry" -> intent["requestedAt"] = JsonPrimitive(job.expiresAt)
                     "unknown" -> intent["unexpected"] = JsonPrimitive(true)
                     "terminal_missing_time" -> intent.remove("confirmedAt")
+                    "terminal_captured_without_claim" -> intent["version"] = JsonPrimitive(3)
                     else -> {
                         val receipt = Json.parseToJsonElement(intent.getValue("terminalReceiptCanonical").jsonPrimitive.content).jsonObject.toMutableMap()
                         when (mode) {

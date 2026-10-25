@@ -805,6 +805,8 @@ class AgentBridgeNativeConfigurationReaderTest {
 
     @Test fun `native transfer sender resumes exact prefix without replaying bytes`() = runBlocking { checkNativeTransferSender("resume") }
     @Test fun `native transfer sender rejects host rewind of recorded prefix`() = runBlocking { checkNativeTransferSender("rewind") }
+    @Test fun `native captured cancellation refuses manifest without retained frontier`() = runBlocking { checkNativeTransferSender("cancel-no-frontier") }
+
     @Test fun `native transfer sender publication failure prevents next partition and finalize`() = runBlocking { checkNativeTransferSender("publication") }
 
     @Test fun `native completion persists exact host receipts and source confirmation`() = runBlocking { checkNativeTransferSender("complete") }
@@ -833,6 +835,24 @@ class AgentBridgeNativeConfigurationReaderTest {
             coEvery { client.aggregate(any()) } returns values
             val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
             val original = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            if (mode == "cancel-no-frontier") {
+                val job = f.store.access { it!!.state.acceptedJobs!!.single() }
+                val root = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+                val directory = root.resolve("captures").resolve(job.requestSha256)
+                val plan = request.plan as AgentBridgeGeneratedPlan
+                val cancel = AgentBridgeCancelRequest(request.approval.approvalId, plan.authorityReferences.native.authorityId,
+                    request.jobId, plan.intent.peer, job.requestSha256, "healthmd.agent_cancel_request", 1)
+                assertThat(Files.exists(directory.resolve("manifest.json"))).isTrue()
+                val state = Json.parseToJsonElement(Files.readAllBytes(directory.resolve("progress.json")).decodeToString()).jsonObject.getValue("record").jsonObject
+                val progress = Json.parseToJsonElement(String(java.util.Base64.getDecoder().decode(state.getValue("payload").jsonPrimitive.content))).jsonObject
+                assertThat(progress.getValue("version").jsonPrimitive.int).isEqualTo(5)
+                f.service.requestCancellation(f.peerContext, cancel)
+                val ledger = Files.readAllBytes(root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+                f.expect(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) { f.restart().finalizeCapturedCancellation(f.peerContext, cancel) }
+                assertThat(Files.readAllBytes(root.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(ledger)
+                coVerify(exactly = 2) { client.aggregate(any()) }
+                return@withNativeExportPreparation
+            }
             val completion=mode.startsWith("complete")
             val resumedPrefix = mode == "resume" || mode == "complete-resume"
             var resumeEnvelope: AgentBridgeResumeRequest? = null
@@ -991,6 +1011,16 @@ class AgentBridgeNativeConfigurationReaderTest {
                 catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
                 assertThat(removedAtNativeCallback).isTrue()
                 assertThat(Files.exists(directory.resolve("completion.json"))).isFalse()
+                // Restore the original synthetic signed completion after the corruption check.
+                // A fresh stop-only owner must replay completion rather than overwrite it.
+                Files.write(directory.resolve("completion.json"), before)
+                Files.setPosixFilePermissions(directory.resolve("completion.json"), java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"))
+                val cancelledPlan = request.plan as AgentBridgeGeneratedPlan
+                val cancel = AgentBridgeCancelRequest(request.approval.approvalId, cancelledPlan.authorityReferences.native.authorityId,
+                    request.jobId, cancelledPlan.intent.peer, original.export.requestSha256, "healthmd.agent_cancel_request", 1)
+                f.service.requestCancellation(f.peerContext, cancel)
+                assertThat(f.restart().finalizeCapturedCancellation(f.peerContext, cancel)).isEqualTo(receipt)
+                assertThat(Files.readAllBytes(directory.resolve("completion.json"))).isEqualTo(before)
             }
             if (!fails) {
                 assertThat(chunks.size).isEqualTo(if (mode == "already") 0 else original.partitions.size - if (resumedPrefix || mode == "mixed") 1 else 0)
@@ -1017,6 +1047,19 @@ class AgentBridgeNativeConfigurationReaderTest {
             assertThat(progress.getValue("committedPartitionCount").jsonPrimitive.long).isEqualTo(count.toLong())
             assertThat(progress.getValue("frontierSHA256").jsonPrimitive.content).isEqualTo(expected.sha256)
             assertThat(Files.readAllBytes(directory.resolve("transfer.json"))).isEqualTo(original.checkpointCanonical)
+            if (mode == "publication") {
+                fun snapshot() = Files.list(directory).use { paths -> paths.toList().associate { it.fileName.toString() to AgentBridgeCodec.sha256(Files.readAllBytes(it)) } }
+                val before = snapshot(); val plan = request.plan as AgentBridgeGeneratedPlan
+                val cancel = AgentBridgeCancelRequest(request.approval.approvalId, plan.authorityReferences.native.authorityId,
+                    request.jobId, plan.intent.peer, job.requestSha256, "healthmd.agent_cancel_request", 1)
+                f.service.requestCancellation(f.peerContext, cancel)
+                val receipt = f.restart().finalizeCapturedCancellation(f.peerContext, cancel)
+                assertThat(receipt.status).isEqualTo(AgentBridgeExecutionReceiptStatus.CANCELLED); assertThat(receipt.sourceAcknowledged).isTrue()
+                assertThat(receipt.artifactCount).isEqualTo(manifest.artifacts.size)
+                assertThat(receipt.manifestSha256).isEqualTo(AgentBridgeCodec.sha256(original.export.manifestCanonical))
+                assertThat(receipt.committedPartitionCount).isEqualTo(1); assertThat(receipt.frontierSha256).isEqualTo(expected.sha256)
+                assertThat(snapshot()).isEqualTo(before)
+            }
             coVerify(exactly = 2) { client.aggregate(any()) }
         }
     }

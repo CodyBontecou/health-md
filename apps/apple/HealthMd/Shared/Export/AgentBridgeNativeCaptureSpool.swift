@@ -634,6 +634,36 @@ final class AgentBridgeNativeCaptureSpool {
         try requireProtectedEvidence(evidence)
     }
 
+    /// Only an authenticated retained checkpoint can supply this value. It does not persist a
+    /// terminal stop; the issuer must commit it while this exclusive spool lock is still held.
+    func cancellationReceipt(_ checkpoint: CancellationCheckpoint) throws -> AgentBridgeExecutionReceipt {
+        try requireCancellationCheckpoint(checkpoint)
+        if let completion = checkpoint.completion { return completion }
+        let accepted = try reservation.job.acceptedReceipt()
+        if checkpoint.manifestSHA256 == nil {
+            // Captured private bytes may exist; only the public manifest/frontier are absent.
+            return .init(artifactCount: 0, binding: accepted.binding, committedPartitionCount: 0,
+                expiresAt: accepted.expiresAt, frontierSha256: accepted.frontierSha256, jobId: accepted.jobId,
+                manifestSha256: accepted.manifestSha256, requestSha256: accepted.requestSha256,
+                sourceAcknowledged: true, status: .cancelled)
+        }
+        guard let manifest = checkpoint.manifestSHA256, let count = checkpoint.artifactCount,
+              let committed = checkpoint.committedPartitionCount, let frontier = checkpoint.frontierSHA256 else {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        return .init(artifactCount: Int64(count), binding: accepted.binding, committedPartitionCount: committed,
+            expiresAt: accepted.expiresAt, frontierSha256: try AgentBridgeDigest(frontier), jobId: accepted.jobId,
+            manifestSha256: try AgentBridgeDigest(manifest), requestSha256: accepted.requestSha256,
+            sourceAcknowledged: true, status: .cancelled)
+    }
+    func requireCancellationOwner(issuer: URL, reservation expected: AgentBridgeExportCaptureReservation) throws {
+        guard self.issuer.standardizedFileURL == issuer.standardizedFileURL,
+              reservation.job == expected.job, reservation.claim == expected.claim else {
+            throw AgentBridgeValidationError.bindingChanged
+        }
+        try pins(includeProtection: false)
+    }
+
     /// Persist the exact source-owned acknowledgement before any confirmation send. This is
     /// recoverable source state, not evidence that the host received the confirmation.
     func preserveCompletion() throws -> AgentBridgeExecutionReceipt {

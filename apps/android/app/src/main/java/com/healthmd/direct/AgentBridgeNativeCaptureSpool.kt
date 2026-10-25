@@ -516,6 +516,21 @@ internal class AgentBridgeNativeCaptureSpool(
         requireProtectedEvidence(cancellationEvidence ?: fail())
     }
 
+    /** Value only: the issuer must persist it while this original exclusive lock remains held. */
+    @Synchronized fun cancellationReceipt(checkpoint: CancellationCheckpoint): AgentBridgeExecutionReceipt = safeCall {
+        requireCancellationCheckpoint(checkpoint)
+        checkpoint.completion ?: if (checkpoint.manifestSha256 == null) {
+            // Private captured values can exist even though no public manifest/frontier exists.
+            reservation.job.acceptedReceipt().copy(sourceAcknowledged = true, status = AgentBridgeExecutionReceiptStatus.CANCELLED)
+        } else {
+            val accepted = reservation.job.acceptedReceipt()
+            accepted.copy(artifactCount = checkpoint.artifactCount ?: fail(),
+                committedPartitionCount = Math.toIntExact(checkpoint.committedPartitionCount ?: fail()),
+                frontierSha256 = checkpoint.frontierSha256 ?: fail(), manifestSha256 = checkpoint.manifestSha256,
+                sourceAcknowledged = true, status = AgentBridgeExecutionReceiptStatus.CANCELLED)
+        }
+    }
+
     @Synchronized fun preserveCompletion(): AgentBridgeExecutionReceipt = safeCall {
         guard(); validateStoredProgress()
         val state = progress().second
