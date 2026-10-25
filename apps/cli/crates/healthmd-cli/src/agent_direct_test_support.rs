@@ -417,7 +417,10 @@ impl NativeFake {
             output_profiles: vec![profile(&self.peer)],
             output_support: OutputSupport {
                 compatibility_detail: vec![CaptureCompatibilityDetail::Summary],
-                formats: vec![OutputSettingsFormatsItem::Json],
+                formats: self.stored_native.as_ref().map_or_else(
+                    || vec![OutputSettingsFormatsItem::Json],
+                    |stored| stored.bounds.formats.clone(),
+                ),
                 max_artifacts: 31,
                 max_path_bytes: 4096,
                 native_archive_products: vec![OutputSupportNativeArchiveProductsItem::None],
@@ -436,7 +439,10 @@ impl NativeFake {
                             .map(str::to_owned)
                     })
                     .collect(),
-                write_modes: vec![OutputSettingsWriteMode::Overwrite],
+                write_modes: self.stored_native.as_ref().map_or_else(
+                    || vec![OutputSettingsWriteMode::Overwrite],
+                    |stored| stored.bounds.write_modes.clone(),
+                ),
             },
             projection_catalog_sha256: Digest("0".repeat(64)),
             projection_products: vec![],
