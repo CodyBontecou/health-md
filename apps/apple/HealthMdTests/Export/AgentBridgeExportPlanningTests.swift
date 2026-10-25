@@ -48,6 +48,55 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             requestSha256: AgentBridgeDigest(AgentBridgeV4Codec.sha256(AgentBridgeV4Codec.encode(request))))
     }
 
+    func testCancellationCheckpointIsReadOnlyAndRejectsChangedOrForeignEvidence() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+        let root = rig.directory.appendingPathComponent("captures/" + reservation.job.requestSHA256.rawValue)
+        func snapshot() throws -> [String: Data] {
+            try Dictionary(uniqueKeysWithValues: FileManager.default.contentsOfDirectory(atPath: root.path).map {
+                ($0, try Data(contentsOf: root.appendingPathComponent($0)))
+            })
+        }
+        let spool = try rig.store.openCaptureSpool(reservation, create: true, fileProtection: rig.captureProtection) {}
+        let checkpoint: AgentBridgeNativeCaptureSpool.CancellationCheckpoint
+        do {
+            let day = try AgentBridgeDate("2026-03-08")
+            XCTAssertNil(try spool.loadOrBegin(day))
+            try spool.commit(day, payload: Data("synthetic".utf8))
+            let before = try snapshot()
+            checkpoint = try spool.inspectCancellationCheckpoint()
+            XCTAssertEqual(checkpoint.capturedDayCount, 1)
+            XCTAssertNil(checkpoint.artifactCount); XCTAssertNil(checkpoint.manifestSHA256)
+            XCTAssertNil(checkpoint.committedPartitionCount); XCTAssertNil(checkpoint.frontierSHA256)
+            XCTAssertNil(checkpoint.completion)
+            try spool.requireCancellationCheckpoint(checkpoint)
+            XCTAssertEqual(try snapshot(), before)
+            XCTAssertThrowsError(try rig.store.openCaptureSpool(reservation, create: false, fileProtection: rig.captureProtection) {}) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .busy)
+            }
+        } catch { spool.close(); throw error }
+        spool.close()
+        let retained = try rig.store.openCaptureSpool(reservation, create: false, fileProtection: rig.captureProtection) {}
+        defer { retained.close() }
+        let before = try snapshot(), reopened = try retained.inspectCancellationCheckpoint()
+        XCTAssertEqual(reopened.capturedDayCount, 1)
+        XCTAssertThrowsError(try retained.requireCancellationCheckpoint(checkpoint)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .spoolMissingRestartRequired)
+        }
+        XCTAssertEqual(try snapshot(), before)
+        let payload = root.appendingPathComponent("day-2026-03-08.json")
+        var bytes = try Data(contentsOf: payload); bytes.append(42)
+        try bytes.write(to: payload)
+        XCTAssertThrowsError(try retained.requireCancellationCheckpoint(reopened)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .spoolMissingRestartRequired)
+        }
+        XCTAssertThrowsError(try retained.inspectCancellationCheckpoint()) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .spoolMissingRestartRequired)
+        }
+    }
+
     func testUnclaimedCancellationConfirmsOriginalJobAndReplaysWithoutRenewal() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try executionRequest(rig), job = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer).job
@@ -1460,6 +1509,19 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     XCTAssertEqual(try context.preserveCompletion(), receipt)
                 }
                 XCTAssertEqual(try Data(contentsOf: completionDirectory.appendingPathComponent("completion.json")), before)
+                let state = try rig.store.snapshot()
+                let reservation = AgentBridgeExportCaptureReservation(job: try XCTUnwrap(state.acceptedJobs?.first { $0.requestSHA256 == receipt.requestSha256 }),
+                    claim: try XCTUnwrap(state.captureClaims?.first { $0.requestSHA256 == receipt.requestSha256 }))
+                let stopped = try rig.store.openCaptureSpool(reservation, create: false, fileProtection: rig.captureProtection) {}
+                do {
+                    let checkpoint = try stopped.inspectCancellationCheckpoint()
+                    XCTAssertEqual(checkpoint.completion, receipt)
+                    XCTAssertEqual(checkpoint.manifestSHA256, receipt.manifestSha256.rawValue)
+                    XCTAssertEqual(checkpoint.frontierSHA256, receipt.frontierSha256.rawValue)
+                    try stopped.requireCancellationCheckpoint(checkpoint)
+                    XCTAssertEqual(try Data(contentsOf: completionDirectory.appendingPathComponent("completion.json")), before)
+                } catch { stopped.close(); throw error }
+                stopped.close()
                 var replacedAtNativeCallback = false
                 do { try await reconnect.withRetainedCaptureContext(request) { context in
                     _ = try context.begin()

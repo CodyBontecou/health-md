@@ -584,6 +584,56 @@ final class AgentBridgeNativeCaptureSpool {
             try validateStoredProgress(); try check()
         } catch { throw Self.safe(error) }
     }
+    /// Read-only retained state, not authority to acknowledge cancellation. A missing manifest
+    /// or frontier stays absent; inspection never advances capture or creates completion.
+    final class CancellationCheckpoint {
+        let capturedDayCount: Int
+        let artifactCount: Int?
+        let manifestSHA256: String?
+        let committedPartitionCount: Int64?
+        let frontierSHA256: String?
+        let completion: AgentBridgeExecutionReceipt?
+
+        fileprivate init(capturedDayCount: Int, artifactCount: Int?, manifestSHA256: String?,
+                         frontier: AgentBridgeTransferFrontier?, completion: AgentBridgeExecutionReceipt?) {
+            self.capturedDayCount = capturedDayCount; self.artifactCount = artifactCount
+            self.manifestSHA256 = manifestSHA256; committedPartitionCount = frontier?.committedPartitionCount
+            frontierSHA256 = frontier?.sha256.rawValue; self.completion = completion
+        }
+    }
+    private var cancellationCheckpoint: CancellationCheckpoint?
+    private var cancellationEvidence: [String: ProtectedFileEvidence]?
+
+    func inspectCancellationCheckpoint() throws -> CancellationCheckpoint {
+        do {
+            try check()
+            collectingFileEvidence = [:]
+            defer { collectingFileEvidence = nil }
+            guard try read("header.json") == record(kind: "job", day: nil) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            try validateStoredProgress()
+            let state = try progress().1
+            let manifest = try state.manifestSHA256.map { _ in
+                try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: readManifest(state))
+            }
+            let frontier = try state.version == 6 ? checkedTransferFrontier(state) : nil
+            // validateStoredProgress has authenticated any existing completion and its commits.
+            // Do not call preserveCompletion: absence must never become a new completion here.
+            let completion = try exists("completion.json") ? manifest.map { try completionCandidate(state, manifest: $0) } : nil
+            let checkpoint = CancellationCheckpoint(capturedDayCount: state.captures.count,
+                artifactCount: manifest?.artifacts.count, manifestSHA256: state.manifestSHA256,
+                frontier: frontier, completion: completion)
+            let evidence = collectingFileEvidence ?? [:]
+            try check(); try requireProtectedEvidence(evidence)
+            cancellationCheckpoint = checkpoint; cancellationEvidence = evidence
+            return checkpoint
+        } catch { throw Self.safe(error) }
+    }
+    /// Local-only publication tail: no SDK, native callback, repair or file creation.
+    func requireCancellationCheckpoint(_ checkpoint: CancellationCheckpoint) throws {
+        guard cancellationCheckpoint === checkpoint, let evidence = cancellationEvidence else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        try requireProtectedEvidence(evidence)
+    }
+
     /// Persist the exact source-owned acknowledgement before any confirmation send. This is
     /// recoverable source state, not evidence that the host received the confirmation.
     func preserveCompletion() throws -> AgentBridgeExecutionReceipt {

@@ -482,6 +482,40 @@ internal class AgentBridgeNativeCaptureSpool(
         validateStoredProgress(); guard()
     }
     /** Source-owned durable acknowledgement; the host must still receive its guarded wire send. */
+    /** Read-only retained state, never cancellation authority. Missing manifest/frontier stay
+     * absent and inspection cannot advance capture, repair files or create completion. */
+    class CancellationCheckpoint internal constructor(val capturedDayCount: Int, val artifactCount: Int?,
+        val manifestSha256: String?, val committedPartitionCount: Long?, val frontierSha256: String?,
+        val completion: AgentBridgeExecutionReceipt?)
+    private var cancellationCheckpoint: CancellationCheckpoint? = null
+    private var cancellationEvidence: Map<String, ProtectedFileEvidence>? = null
+
+    @Synchronized fun inspectCancellationCheckpoint(): CancellationCheckpoint = safeCall {
+        guard()
+        collectingFileEvidence = mutableMapOf()
+        try {
+            if (read("header.json") != record("job", null)) fail()
+            validateStoredProgress()
+            val state = progress().second
+            val manifest = state.manifestSHA256?.let { AgentBridgeCodec.decode(readManifest(state)) as? AgentBridgeArtifactManifest ?: fail() }
+            val frontier = if (state.version == 6) checkedTransferFrontier(state) else null
+            // Validation already checked the original completion and host commits, if present.
+            // preserveCompletion is deliberately not called: missing completion stays missing.
+            val completion = if (exists("completion.json")) completionCandidate(state, manifest ?: fail()) else null
+            val checkpoint = CancellationCheckpoint(state.captures.size, manifest?.artifacts?.size,
+                state.manifestSHA256, frontier?.committedPartitionCount, frontier?.sha256, completion)
+            val evidence = collectingFileEvidence!!.toMap()
+            guard(); requireProtectedEvidence(evidence)
+            cancellationCheckpoint = checkpoint; cancellationEvidence = evidence
+            checkpoint
+        } finally { collectingFileEvidence = null }
+    }
+    /** Local-only publication tail: no SDK/native callback, repair or file creation. */
+    @Synchronized fun requireCancellationCheckpoint(checkpoint: CancellationCheckpoint) = safeCall {
+        if (cancellationCheckpoint !== checkpoint) fail()
+        requireProtectedEvidence(cancellationEvidence ?: fail())
+    }
+
     @Synchronized fun preserveCompletion(): AgentBridgeExecutionReceipt = safeCall {
         guard(); validateStoredProgress()
         val state = progress().second

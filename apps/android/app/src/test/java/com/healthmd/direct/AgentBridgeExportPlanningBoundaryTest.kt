@@ -254,6 +254,45 @@ class AgentBridgeExportPlanningBoundaryTest {
         }
     }
 
+    @Test fun cancellationCheckpointIsReadOnlyAndRejectsChangedOrForeignEvidence() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f)
+            f.service.acceptExecution(f.peerContext, request)
+            val reservation = f.service.claimCapture(f.peerContext, request)
+            // Derive the actual private root from the fixture, without assuming its leaf name.
+            val captured = Files.walk(f.parent).use { paths -> paths.filter { it.fileName.toString() == reservation.job.requestSha256 }.findFirst() }
+            assertThat(captured.isPresent).isFalse()
+            val spool = f.store.openCaptureSpool(reservation, true) { }
+            val root = Files.walk(f.parent).use { paths -> paths.filter { it.fileName.toString() == reservation.job.requestSha256 }.findFirst().get() }
+            fun snapshot() = Files.list(root).use { paths -> paths.toList().associate { it.fileName.toString() to AgentBridgeCodec.sha256(Files.readAllBytes(it)) } }
+            val checkpoint: AgentBridgeNativeCaptureSpool.CancellationCheckpoint
+            try {
+                assertThat(spool.loadOrBegin("2026-03-08")).isNull()
+                spool.commit("2026-03-08", "synthetic".toByteArray())
+                val before = snapshot()
+                checkpoint = spool.inspectCancellationCheckpoint()
+                assertThat(checkpoint.capturedDayCount).isEqualTo(1)
+                assertThat(checkpoint.artifactCount).isNull(); assertThat(checkpoint.manifestSha256).isNull()
+                assertThat(checkpoint.committedPartitionCount).isNull(); assertThat(checkpoint.frontierSha256).isNull()
+                assertThat(checkpoint.completion).isNull()
+                spool.requireCancellationCheckpoint(checkpoint)
+                assertThat(snapshot()).isEqualTo(before)
+                f.expect(AgentBridgeErrorCode.BUSY) { f.store.openCaptureSpool(reservation, false) { } }
+            } finally { spool.close() }
+            f.store.openCaptureSpool(reservation, false) { }.use { retained ->
+                val before = snapshot()
+                val reopened = retained.inspectCancellationCheckpoint()
+                assertThat(reopened.capturedDayCount).isEqualTo(1)
+                f.expect(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) { retained.requireCancellationCheckpoint(checkpoint) }
+                assertThat(snapshot()).isEqualTo(before)
+                val payload = root.resolve("day-2026-03-08.json")
+                Files.write(payload, Files.readAllBytes(payload) + byteArrayOf(42))
+                f.expect(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) { retained.requireCancellationCheckpoint(reopened) }
+                f.expect(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) { retained.inspectCancellationCheckpoint() }
+            }
+        }
+    }
+
     @Test
     fun concurrentDistinctDaysPersistAndReopenThroughFreshAuthorityStore() {
         AgentBridgeExportPlanningFixture().use { f ->

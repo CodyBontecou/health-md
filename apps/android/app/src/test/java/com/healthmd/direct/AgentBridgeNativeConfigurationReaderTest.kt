@@ -961,6 +961,17 @@ class AgentBridgeNativeConfigurationReaderTest {
                 val before=Files.readAllBytes(directory.resolve("completion.json"))
                 reconnect.withRetainedCaptureContext(request) { context -> context.begin();hostReceipts.forEach { context.recordHostCommit(it) };assertThat(context.preserveCompletion()).isEqualTo(receipt) }
                 assertThat(Files.readAllBytes(directory.resolve("completion.json"))).isEqualTo(before)
+                val state = f.store.access { it!!.state }
+                val reservation = AgentBridgeExportCaptureReservation(state.acceptedJobs!!.first { it.requestSha256 == receipt.requestSha256 },
+                    state.captureClaims!!.first { it.requestSha256 == receipt.requestSha256 })
+                f.store.openCaptureSpool(reservation, false) { }.use { stopped ->
+                    val checkpoint = stopped.inspectCancellationCheckpoint()
+                    assertThat(checkpoint.completion).isEqualTo(receipt)
+                    assertThat(checkpoint.manifestSha256).isEqualTo(receipt.manifestSha256)
+                    assertThat(checkpoint.frontierSha256).isEqualTo(receipt.frontierSha256)
+                    stopped.requireCancellationCheckpoint(checkpoint)
+                    assertThat(Files.readAllBytes(directory.resolve("completion.json"))).isEqualTo(before)
+                }
                 var removedAtNativeCallback = false
                 try { reconnect.withRetainedCaptureContext(request) { context ->
                     context.begin()
