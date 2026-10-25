@@ -29,6 +29,17 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         let allTime = app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton]
         reveal(allTime, in: app)
         allTime.tap()
+        // The default metric set includes unresolved readable-range types. The
+        // real All Time resolver correctly rejects that range independently of
+        // the advisory limited-history warning. Finish its dialog before tapping
+        // controls behind it; XCTest otherwise consumes Details to dismiss it.
+        let unavailable = app.staticTexts["All Time Unavailable"]
+        XCTAssertTrue(unavailable.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS %@", "The earliest date could not be determined for every selected metric."
+        )).firstMatch.exists)
+        app.buttons["Done"].tap()
+        XCTAssertTrue(unavailable.waitForNonExistence(timeout: 5))
         let message = app.staticTexts["export.historyWarning.message"]
         reveal(message, in: app)
         // Selecting a range invalidates the old preview before the asynchronous
