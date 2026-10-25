@@ -375,19 +375,20 @@ final class AgentBridgeNativeCaptureSpool {
         try check(); return bytes
     }
 
-    /// Read-only Resume admission from the original protected job. Never migrates or repairs
-    /// missing frontier metadata, and never installs a caller-provided prefix.
-    func requireResume(_ resume: AgentBridgeResume) throws {
+    /// Existing-job Resume admission. An optional exact original ACK may advance only its
+    /// proven pending prefix; no migration, metadata repair or caller-provided prefix installation.
+    func requireResume(_ resume: AgentBridgeResume, acknowledging acknowledgement: DirectTransferPartitionAcknowledgement? = nil) throws {
         do {
             try check()
             collectingFileEvidence = [:]
             defer { collectingFileEvidence = nil }
             guard try read("header.json") == record(kind: "job", day: nil) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             try validateStoredProgress()
-            let state = try progress().1
+            let (previous, state) = try progress()
             let request = try reservation.job.request()
             let manifest = try readManifest(state)
-            let frontier = try checkedTransferFrontier(state)
+            let current = try checkedTransferFrontier(state)
+            let frontier = try acknowledgement.map { try acknowledgementFrontier($0, state: state) } ?? current
             guard resume.jobId == request.jobId, resume.peer == request.plan.intent.peer,
                   resume.destination == request.plan.intent.destination,
                   resume.binding == AgentBridgeSemantics.binding(request.plan),
@@ -395,6 +396,14 @@ final class AgentBridgeNativeCaptureSpool {
                   resume.manifestSha256.rawValue == AgentBridgeV4Codec.sha256(manifest),
                   resume.committedPartitionCount == frontier.committedPartitionCount,
                   resume.frontierSha256 == frontier.sha256 else { throw AgentBridgeValidationError.bindingChanged }
+            if frontier != current {
+                // Compare the complete Resume before writing. Re-pin original files after the
+                // last native callback and immediately before the single progress publication.
+                guard let evidence = collectingFileEvidence else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                _ = try publishAcknowledgedFrontier(frontier, previous: previous, state: state, evidence: evidence)
+                try validateStoredProgress()
+                guard try checkedTransferFrontier(progress().1) == frontier else { throw AgentBridgeValidationError.bindingChanged }
+            }
             resumeEvidence = collectingFileEvidence
             admittedResume = resume
             try check(); try requirePreservedResume(resume)
@@ -447,27 +456,48 @@ final class AgentBridgeNativeCaptureSpool {
     /// Incoming counts/frontiers never install native progress.
     func reconcilePartitionAcknowledgement(_ ack: DirectTransferPartitionAcknowledgement) throws -> AgentBridgeTransferFrontier {
         do {
-            try check(); try validateStoredProgress()
-            let state = try progress().1
-            let frontier = try checkedTransferFrontier(state)
-            let bytes = try readManifest(state)
-            let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: bytes)
-            let checkpoint = try AgentBridgeNativeTransferCheckpoint.decode(readTransferPlan(state))
-            let ids = try checkpoint.validate(requestSHA256: acceptedRequestSHA256, manifestSHA256: AgentBridgeV4Codec.sha256(bytes),
-                createdAt: reservation.job.acceptedAt.rawValue, expiresAt: reservation.job.expiresAt.rawValue,
-                artifactIDs: manifest.artifacts.map { $0.artifactId.rawValue })
-            let index = Int64(ack.partitionIndex)
-            guard ack.accepted, ack.sessionID.uuidString.lowercased() == checkpoint.sessionID,
-                  ack.jobID == UUID(uuidString: manifest.jobId.rawValue), index >= 0, index < Int64(manifest.artifacts.count),
-                  (index == frontier.committedPartitionCount || index == frontier.committedPartitionCount - 1),
-                  ack.transferID == ids[Int(index)], ack.partitionSHA256 == manifest.artifacts[Int(index)].sha256.rawValue else {
-                throw AgentBridgeValidationError.bindingChanged
-            }
-            if index == frontier.committedPartitionCount {
-                guard try awaitingPartitionAcknowledgement(state) == index else { throw AgentBridgeValidationError.bindingChanged }
-            }
-            return try recordAcknowledgedTransferPartition(index)
+            try check()
+            collectingFileEvidence = [:]
+            defer { collectingFileEvidence = nil }
+            guard try read("header.json") == record(kind: "job", day: nil) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            try validateStoredProgress()
+            let (previous, state) = try progress()
+            let frontier = try acknowledgementFrontier(ack, state: state)
+            if frontier.committedPartitionCount == state.committedPartitionCount { try check(); return frontier }
+            guard let evidence = collectingFileEvidence else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            return try publishAcknowledgedFrontier(frontier, previous: previous, state: state, evidence: evidence)
         } catch { throw Self.safe(error) }
+    }
+
+    private func acknowledgementFrontier(_ ack: DirectTransferPartitionAcknowledgement, state: Progress) throws -> AgentBridgeTransferFrontier {
+        let frontier = try checkedTransferFrontier(state)
+        let bytes = try readManifest(state)
+        let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: bytes)
+        let checkpoint = try AgentBridgeNativeTransferCheckpoint.decode(readTransferPlan(state))
+        let ids = try checkpoint.validate(requestSHA256: acceptedRequestSHA256, manifestSHA256: AgentBridgeV4Codec.sha256(bytes),
+            createdAt: reservation.job.acceptedAt.rawValue, expiresAt: reservation.job.expiresAt.rawValue,
+            artifactIDs: manifest.artifacts.map { $0.artifactId.rawValue })
+        let index = Int64(ack.partitionIndex)
+        guard ack.accepted, ack.sessionID.uuidString.lowercased() == checkpoint.sessionID,
+              ack.jobID == UUID(uuidString: manifest.jobId.rawValue), index >= 0, index < Int64(manifest.artifacts.count),
+              (index == frontier.committedPartitionCount || index == frontier.committedPartitionCount - 1),
+              ack.transferID == ids[Int(index)], ack.partitionSHA256 == manifest.artifacts[Int(index)].sha256.rawValue else {
+            throw AgentBridgeValidationError.bindingChanged
+        }
+        if index < frontier.committedPartitionCount { return frontier }
+        guard try awaitingPartitionAcknowledgement(state) == index else { throw AgentBridgeValidationError.bindingChanged }
+        return try computedTransferFrontier(state, count: index + 1)
+    }
+
+    private func publishAcknowledgedFrontier(_ frontier: AgentBridgeTransferFrontier, previous: Record, state: Progress,
+        evidence: [String: ProtectedFileEvidence]) throws -> AgentBridgeTransferFrontier {
+        var next = state; next.committedPartitionCount = frontier.committedPartitionCount
+        next.frontierSHA256 = frontier.sha256.rawValue
+        try publish("progress.json", record: record(kind: "progress", day: nil, payload: progressBytes(next)),
+            replacing: previous, evidenceBeforePublication: evidence)
+        let result = try checkedTransferFrontier(progress().1)
+        guard result == frontier else { throw AgentBridgeValidationError.bindingChanged }
+        try check(); return result
     }
 
     private func awaitingPartitionAcknowledgement(_ state: Progress) throws -> Int64? {
@@ -847,16 +877,18 @@ final class AgentBridgeNativeCaptureSpool {
         }
         return bytes
     }
-    private func publish(_ name: String, record: Record, replacing previous: Record? = nil) throws {
+    private func publish(_ name: String, record: Record, replacing previous: Record? = nil,
+        evidenceBeforePublication: [String: ProtectedFileEvidence]? = nil) throws {
         let body = try Self.canonical(record)
         let bytes = try Self.canonical(Signed(record: record, mac: Data(HMAC<SHA256>.authenticationCode(for: Self.domain + body, using: key))))
         guard bytes.count <= Self.recordLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
         let previousBytes = try previous.map { value in
             try Self.canonical(Signed(record: value, mac: Data(HMAC<SHA256>.authenticationCode(for: Self.domain + (try Self.canonical(value)), using: key))))
         }
-        try publishBytes(name, bytes: bytes, previousBytes: previousBytes)
+        try publishBytes(name, bytes: bytes, previousBytes: previousBytes, evidenceBeforePublication: evidenceBeforePublication)
     }
-    private func publishBytes(_ name: String, bytes: Data, previousBytes: Data?) throws {
+    private func publishBytes(_ name: String, bytes: Data, previousBytes: Data?,
+        evidenceBeforePublication: [String: ProtectedFileEvidence]? = nil) throws {
         guard !bytes.isEmpty, bytes.count <= AgentBridgeV4Codec.maximumBytes,
               storedBytes + bytes.count <= Self.jobLimit else { throw AgentBridgeValidationError.queryBudgetExceeded }
         try check()
@@ -887,6 +919,7 @@ final class AgentBridgeNativeCaptureSpool {
         if let previousBytes {
             guard try readProtectedFile(name) == previousBytes else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         }
+        if let evidenceBeforePublication { try requireProtectedEvidence(evidenceBeforePublication) }
         // The protected read may invoke a native callback; re-pin the staged file afterwards.
         try AgentBridgeExportPrivateFiles.checkPath(directoryFD, temporary, fd: fd)
         guard renameatx_np(directoryFD, temporary, directoryFD, name, previousBytes == nil ? UInt32(RENAME_EXCL) : 0) == 0,
