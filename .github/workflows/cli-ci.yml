@@ -13,6 +13,7 @@ on:
       - 'packages/contracts/**'
       - 'packages/healthmd-core-rust/**'
       - '.github/workflows/cli-*.yml'
+      - '.gitattributes'
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -56,6 +57,7 @@ jobs:
             packages/contracts/**
             packages/healthmd-core-rust/**
             .github/workflows/cli-*.yml
+            .gitattributes
 
   msrv:
     name: Rust 1.85 MSRV
@@ -121,6 +123,7 @@ jobs:
             --features streamable-http --locked
           python3 scripts/update-mcp-shared-assets.py --check
           python3 scripts/test-safe-extract-release.py
+          python3 scripts/test_fixture_checkout.py
           python3 ../../packages/contracts/validate.py
           cmp LICENSE crates/healthmd-operations/LICENSE
           cmp LICENSE crates/healthmd-client/LICENSE

@@ -324,10 +324,20 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             for: NSPredicate(format: "value == 'Copied'"),
             evaluatedWith: copy
         )
-        wait(for: [copied], timeout: 5)
-        // The hosted first AX observation arrived four seconds after the tap.
-        // Confirmation must remain readable while this unchanged detail is open,
-        // rather than racing slow snapshots or a VoiceOver user's reading pace.
+        let copiedResult = XCTWaiter.wait(for: [copied], timeout: 5)
+        if copiedResult != .completed {
+            // Preserve the actual native tree and visible state when an OS accessibility
+            // change separates rendered copy feedback from the button's exposed value.
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "profile-copy-accessibility-tree"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screenshot.name = "profile-copy-confirmation-failure"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+        }
+        XCTAssertEqual(copiedResult, .completed, "Copy must expose its persistent accessibility confirmation")
         RunLoop.current.run(until: Date().addingTimeInterval(4))
         XCTAssertEqual(copy.value as? String, "Copied")
         snap("12a-copied-profile-id")

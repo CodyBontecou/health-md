@@ -8,6 +8,7 @@
     1
   ],
   "connectedCorpusTransferCapabilities" : {
+    "contextHistoryObservationVersion" : 1,
     "partitionTargetBounds" : {
       "maximumBytes" : 67108864,
       "minimumBytes" : 33554432,

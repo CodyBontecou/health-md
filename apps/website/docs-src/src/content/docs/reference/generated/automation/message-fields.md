@@ -335,6 +335,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.canonicalRawResultSchemaVersions` | array |
 | `$.hello._0.canonicalRawResultSchemaVersions[]` | integer |
 | `$.hello._0.connectedCorpusTransferCapabilities` | object |
+| `$.hello._0.connectedCorpusTransferCapabilities.contextHistoryObservationVersion` | integer |
 | `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds` | object |
 | `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds.maximumBytes` | integer |
 | `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds.minimumBytes` | integer |
@@ -1107,6 +1108,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.canonicalRawResultSchemaVersions` | array |
 | `$.macStatus._0.capabilities.canonicalRawResultSchemaVersions[]` | integer |
 | `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities` | object |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.contextHistoryObservationVersion` | integer |
 | `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds` | object |
 | `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds.maximumBytes` | integer |
 | `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds.minimumBytes` | integer |
@@ -2241,6 +2243,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.canonicalRawResultSchemaVersions` | array |
 | `$.canonicalRawResultSchemaVersions[]` | integer |
 | `$.connectedCorpusTransferCapabilities` | object |
+| `$.connectedCorpusTransferCapabilities.contextHistoryObservationVersion` | integer |
 | `$.connectedCorpusTransferCapabilities.partitionTargetBounds` | object |
 | `$.connectedCorpusTransferCapabilities.partitionTargetBounds.maximumBytes` | integer |
 | `$.connectedCorpusTransferCapabilities.partitionTargetBounds.minimumBytes` | integer |

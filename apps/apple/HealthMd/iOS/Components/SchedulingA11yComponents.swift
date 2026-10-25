@@ -667,6 +667,7 @@ struct SchedulingExportScroll<Content: View, Footer: View>: View {
                 }
             }
             .scrollIndicators(.hidden)
+            .accessibilityIdentifier(AccessibilityID.Export.contentScroll)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if showsFooter && !scrollsFooter { measuredFooter }
             }

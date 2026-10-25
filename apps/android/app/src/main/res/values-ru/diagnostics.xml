@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Диагностика</string>
+    <string name="diagnostics_entry">Просмотрите локальные технические события и выберите, чем поделиться</string>
+    <string name="diagnostics_recording">Локальная запись</string>
+    <string name="diagnostics_privacy">Диагностика остаётся на этом устройстве, пока вы её не сохраните или не отправите. Рабочие события не содержат показателей здоровья, идентификаторов медицинских записей, запрошенных дат данных здоровья, путей, адресов подключения и учётных данных. Они не анонимны.</string>
+    <string name="diagnostics_enabled">Записывать рабочие события</string>
+    <string name="diagnostics_retention">Уровень подробности меняет детали, а не разрешение собирать данные здоровья. Хранение: до 7 дней / 20 MiB. Автоматической отправки нет.</string>
+    <string name="diagnostics_start_private">Записывать личный контекст 15 минут</string>
+    <string name="diagnostics_stop_private">Остановить личную запись</string>
+    <string name="diagnostics_private_description">Личный контекст V1 записывает доступные имена подключённых устройств. Данные здоровья, учётные данные и произвольный текст ошибок не записываются. Личные сегменты удаляются при следующем открытии приложения по истечении 24 часов.</string>
+    <string name="diagnostics_private_until">Личная запись истекает: %1$s</string>
+    <string name="diagnostics_clear">Удалить всю диагностику</string>
+    <string name="diagnostics_clear_question">Удалить локальные события, подготовленные пакеты и копии вложений? Личная запись остановится. Экспортированные файлы и отправленные копии не изменятся.</string>
+    <string name="diagnostics_select">Выбрать события</string>
+    <string name="diagnostics_hour">Последний час</string>
+    <string name="diagnostics_day">Последние 24 часа</string>
+    <string name="diagnostics_week">Последние 7 дней</string>
+    <string name="diagnostics_operation">UUID операции (необязательно)</string>
+    <string name="diagnostics_include_private">Включить записанный личный контекст</string>
+    <string name="diagnostics_search">Поиск по идентификаторам событий или полям</string>
+    <string name="diagnostics_refresh">Обновить события</string>
+    <string name="diagnostics_summary">События: %1$d · Потери за сеанс: %2$d · Некорректные: %3$d · Усечено: %4$s</string>
+    <string name="diagnostics_view_limit">Показаны 100 последних подходящих событий. Пакет содержит выбранный снимок, до 10 000 событий; любое усечение отмечается.</string>
+    <string name="diagnostics_attachments">Необязательные вложения</string>
+    <string name="diagnostics_attachment_description">Добавьте существующие файлы, включая экспорты здоровья и снимки экрана. Исходные байты копируются без изменений и НЕ очищаются. Имена исходных файлов включаются. Новое чтение данных здоровья не выполняется. Предел: 50 файлов / 100 MiB.</string>
+    <string name="diagnostics_choose">Выбрать файлы…</string>
+    <string name="diagnostics_remove">Удалить %1$s</string>
+    <string name="diagnostics_prepare">Подготовить пакет</string>
+    <string name="diagnostics_review">Подготовить и проверить</string>
+    <string name="diagnostics_frozen">Зафиксированный снимок. События: %1$d. Данные здоровья: %2$s. ZIP не зашифрован.</string>
+    <string name="diagnostics_reviewed">Я проверил файлы, которыми хочу поделиться</string>
+    <string name="diagnostics_share">Отправить проверенный ZIP</string>
+    <string name="diagnostics_save">Сохранить проверенный ZIP</string>
+    <string name="diagnostics_share_question">Отправить этот диагностический пакет?</string>
+    <string name="diagnostics_share_warning">ZIP не зашифрован. Личный контекст и вложения могут раскрыть данные здоровья или секреты. Публичные публикации в GitHub и Discord могут быть доступны всем. Получатель управляет своими копиями; Health.md не может их отозвать.</string>
+    <string name="diagnostics_share_confirm">Отправить этот пакет</string>
+    <string name="diagnostics_bundle_retention">Локальные пакеты удаляются при следующем открытии приложения по истечении 24 часов; сохраняются только 3 последних. Сохранённые и отправленные копии имеют собственные сроки хранения.</string>
+    <string name="diagnostics_preview_truncated">\n\n[Предпросмотр усечён до 128 KiB. Полный исходный файл остаётся в ZIP.]</string>
+    <string name="diagnostics_failure">Операция диагностики не удалась. Проверьте доступ к файлам и локальное хранилище, затем подготовьте и проверьте пакет снова.</string>
+    <string name="diagnostics_invalid_operation">Идентификатор операции должен быть UUID.</string>
+</resources>

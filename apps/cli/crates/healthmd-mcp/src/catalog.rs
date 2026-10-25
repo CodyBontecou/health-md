@@ -6,7 +6,7 @@ pub use healthmd_operations::registry::{job_id, query_invocation, tool_catalog};
 
 pub fn list(profile: SurfaceProfile, ui_enabled: bool) -> Vec<Value> {
     let mut operations = healthmd_operations::registry::list(profile);
-    if ui_enabled {
+    if ui_enabled && !profile.is_data() {
         for operation in &mut operations {
             let name = operation
                 .get("name")

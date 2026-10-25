@@ -22,6 +22,7 @@ The worker stores only validated, coarse onboarding, pricing, and activation fie
 - coarse metric/date buckets
 - allowlisted StoreKit or Google Play product ID (including Android `health_md_premium_lifetime`)
 - purchase/restore outcome
+- bounded Apple Ads campaign/ad-group/keyword IDs, match status, click/view claim, and download category on dedicated iOS attribution events
 - coarse authorization/error categories
 
 Onboarding step values cover the seven-step iPhone flow, the macOS intro (`mac_how_it_works`, `mac_iphone_app`, `mac_connect`), and Android’s welcome/Health/folder/unlock/ready flow. Segment funnel reports by `platform`.
@@ -30,7 +31,7 @@ It rejects unknown envelope, event, and property fields and does **not** store r
 request IPs, user agents, request URLs, request headers, credentials, HealthKit
 values, metric names, health dates, vault/folder/file paths, peer device names,
 user text, or exported content. It is collected automatically and is not used for
-advertising or cross-app tracking. Apple builds explain the strict exclusions under
+ad targeting or cross-app tracking. Apple Ads campaign dimensions measure purchase conversion. Apple builds explain the strict exclusions under
 **Settings → Privacy & Analytics**; Android discloses its bounded, non-disableable
 collection during onboarding and in its Health Connect rationale. The full privacy
 policy covers both.
@@ -192,3 +193,20 @@ with ASC proceeds/refunds in the experiment runbook to compute:
 ```text
 net revenue per activated user = (ASC proceeds - refunds) / activated_users
 ```
+
+## Apple Ads purchase conversion (iOS/iPadOS)
+
+The dedicated `pricing_apple_ads_attribution_started` and
+`pricing_apple_ads_attribution_resolved` events join AdServices campaign dimensions
+to successful purchase outcomes using the existing random installation UUID.
+Resolution fields are validated, iOS-only, and stored in `payload_json`; each
+attribution event is deduplicated per installation. Tokens and raw Apple responses
+never reach this Worker. Existing event envelopes and database columns are unchanged.
+
+Run `npm run query:apple-ads` for distinct purchasing installations and campaign
+conversion percentages, separated by click/view claim and download/redownload.
+Purchases predating the first attribution-start receipt are excluded. Restores,
+failed purchases and repeated success events do not inflate buyer counts. This is
+client-reported conversion, not verified revenue or refund-adjusted ROAS.
+
+See [collection, privacy and release requirements](../../docs/experiments/apple-ads-purchase-attribution.md).

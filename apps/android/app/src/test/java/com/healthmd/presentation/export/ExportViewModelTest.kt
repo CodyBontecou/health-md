@@ -505,7 +505,7 @@ class ExportViewModelTest {
 
     @Test
     fun failedReviewRequestRemainsEligibleForLaterSuccessfulExport() = runTest {
-        val settingsRepository = FakeSettingsRepository(initialSuccessfulExportCount = 1)
+        val settingsRepository = FakeSettingsRepository(initialSuccessfulExportCount = 1, initialFreeExportsUsed = 3)
         val viewModel = createViewModel(
             healthRepository = FakeHealthRepository(hasPermissions = true),
             settingsRepository = settingsRepository,
@@ -532,7 +532,7 @@ class ExportViewModelTest {
 
     @Test
     fun completedReviewFlowRecordsAttemptAndStartsCooldown() = runTest {
-        val settingsRepository = FakeSettingsRepository(initialSuccessfulExportCount = 1)
+        val settingsRepository = FakeSettingsRepository(initialSuccessfulExportCount = 1, initialFreeExportsUsed = 3)
         val viewModel = createViewModel(
             healthRepository = FakeHealthRepository(hasPermissions = true),
             settingsRepository = settingsRepository,
@@ -562,6 +562,7 @@ class ExportViewModelTest {
         val recentAttempt = System.currentTimeMillis() - Duration.ofDays(1).toMillis()
         val settingsRepository = FakeSettingsRepository(
             initialSuccessfulExportCount = 1,
+            initialFreeExportsUsed = 3,
             initialLastReviewAttemptEpochMillis = recentAttempt,
         )
         val viewModel = createViewModel(
@@ -586,6 +587,7 @@ class ExportViewModelTest {
         val oldAttempt = System.currentTimeMillis() - Duration.ofDays(121).toMillis()
         val settingsRepository = FakeSettingsRepository(
             initialSuccessfulExportCount = 1,
+            initialFreeExportsUsed = 3,
             initialLastReviewAttemptEpochMillis = oldAttempt,
         )
         val viewModel = createViewModel(
@@ -601,6 +603,32 @@ class ExportViewModelTest {
         viewModel.startExport()
         advanceUntilIdle()
 
+        assertThat(reviewRequests).hasSize(1)
+        collector.cancel()
+    }
+
+    @Test
+    fun thirdExportGuidanceShowsTwoRemainingWithoutCompetingReviewPrompt() = runTest {
+        val settingsRepository = FakeSettingsRepository(initialSuccessfulExportCount = 2, initialFreeExportsUsed = 2)
+        val viewModel = createViewModel(
+            healthRepository = FakeHealthRepository(hasPermissions = true),
+            settingsRepository = settingsRepository,
+        )
+        advanceUntilIdle()
+        val reviewRequests = mutableListOf<Unit>()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.requestReview.toList(reviewRequests)
+        }
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.postExportMilestone).isEqualTo(3)
+        assertThat(viewModel.uiState.value.freeExportsRemaining).isEqualTo(2)
+        assertThat(reviewRequests).isEmpty()
+        viewModel.dismissPostExportGuidance()
+        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(3)
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.postExportMilestone).isNull()
         assertThat(reviewRequests).hasSize(1)
         collector.cancel()
     }
@@ -719,11 +747,12 @@ private class FakeSettingsRepository(
     initialSettings: ExportSettings = ExportSettings(),
     initialFolderUri: String? = "content://health-md",
     initialSuccessfulExportCount: Int = 0,
+    initialFreeExportsUsed: Int = 0,
     initialLastReviewAttemptEpochMillis: Long? = null,
 ) : SettingsRepository {
     private val exportSettingsState = MutableStateFlow(initialSettings)
     private val exportFolderUriState = MutableStateFlow(initialFolderUri)
-    private val freeExportsUsedState = MutableStateFlow(0)
+    private val freeExportsUsedState = MutableStateFlow(initialFreeExportsUsed)
     private val isPurchasedState = MutableStateFlow(false)
     private val hasCompletedOnboardingState = MutableStateFlow(true)
     private val selectedHealthProviderIdState = MutableStateFlow("health_connect")

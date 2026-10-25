@@ -75,6 +75,13 @@ pub struct ResponseArtifact {
     pub date_range_end: String,
     #[serde(rename = "totalDays")]
     pub total_days: i64,
+    /// Pin admission evidence to the artifact finalized with this job record.
+    #[serde(
+        rename = "historyObservationSHA256",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub history_observation_sha256: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

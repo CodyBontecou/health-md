@@ -66,7 +66,10 @@ final class HealthRecordsCapabilityTests: XCTestCase {
         let project = try source("HealthMd.xcodeproj/project.pbxproj")
         let appConfigurations = project
             .components(separatedBy: "isa = XCBuildConfiguration;")
-            .filter { $0.contains("INFOPLIST_FILE = HealthMd/Info.plist;") }
+            .filter {
+                $0.contains("INFOPLIST_FILE = HealthMd/Info.plist;")
+                    || $0.contains("INFOPLIST_FILE = \"$(HEALTHMD_IOS_INFO_PLIST)\";")
+            }
 
         XCTAssertEqual(
             appConfigurations.count,
@@ -75,6 +78,12 @@ final class HealthRecordsCapabilityTests: XCTestCase {
         )
 
         for configuration in appConfigurations {
+            if configuration.contains("INFOPLIST_FILE = \"$(HEALTHMD_IOS_INFO_PLIST)\";") {
+                XCTAssertTrue(
+                    configuration.contains("HEALTHMD_IOS_INFO_PLIST = HealthMd/Info.plist;"),
+                    "The UI-test override must default to the canonical iOS app privacy plist."
+                )
+            }
             XCTAssertTrue(
                 configuration.contains("CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;"),
                 "Every iOS app configuration must sign with HealthMd/HealthMd.entitlements."

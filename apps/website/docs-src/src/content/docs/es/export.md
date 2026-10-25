@@ -70,7 +70,7 @@ Un perfil guardado congela sus ajustes y destino para la ejecución. Las filas d
 
 <div class="callout">
 <strong>Comportamiento del desbloqueo.</strong>
-<p style="margin-top:6px;">En las plataformas Apple, la asignación gratuita cubre 10 acciones de exportación manuales o programadas. Full Access elimina ese límite y desbloquea los flujos con destino Mac y Atajos. Android ofrece en cambio 10 acciones manuales gratuitas y exige la compra vitalicia para programar. <a href="/es/docs/paywall/">Consulta la página del muro de pago</a> para conocer la compra de Apple.</p>
+<p style="margin-top:6px;">En las plataformas Apple, la asignación gratuita cubre 5 acciones de exportación manuales o programadas. Full Access elimina ese límite y desbloquea los flujos con destino Mac y Atajos. Android ofrece en cambio 5 acciones manuales gratuitas y exige la compra vitalicia para programar. <a href="/es/docs/paywall/">Consulta la página del muro de pago</a> para conocer la compra de Apple.</p>
 </div>
 
 ## Contenido relacionado

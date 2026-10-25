@@ -6,13 +6,15 @@ import argparse
 import json
 from pathlib import Path
 import re
+import shlex
+import time
 import subprocess
 import sys
 
 from validate_ios_ui_xctestrun import qualify
 
-# All fourteen pre-existing CI selectors plus the Custom reentry regression. Keep XCTest classes together: their
-# journeys intentionally share installed-app fixture state within a class.
+# Preserve the phone inventory, including history and folder-browser regressions, plus four tablet cases.
+# Keep stateful XCTest classes together within each device family.
 SHARDS = (
     (
         "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
@@ -26,16 +28,50 @@ SHARDS = (
         "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
         "HealthMdUILaunchTests/testAppLaunches",
         "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
+        "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
     ),
     (
         "ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport",
         "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
         "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
         "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+        "ExportJourneyUITests/testConfiguredGateway_admitsExportWithoutLocalFolder",
+        "ExportJourneyUITests/testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens",
         "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
-        "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
+        "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
+        "HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
+        "HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport",
+    ),
+    (
+        "ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError",
+        "HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
+        "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
+        "HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot",
     ),
 )
+DEVICE_FAMILIES = ("iPhone", "iPhone", "iPhone", "iPad")
+
+
+def device_family(index: int) -> str:
+    selection(index)
+    return DEVICE_FAMILIES[index]
+
+
+def qualify_device(payload: dict, destination: str, index: int) -> str:
+    prefix = "platform=iOS Simulator,id="
+    if not destination.startswith(prefix):
+        raise ValueError("One explicit simulator destination is required")
+    udid = destination[len(prefix):]
+    if not re.fullmatch(r"[0-9A-Fa-f-]{36}", udid):
+        raise ValueError("An exact simulator UUID is required")
+    devices = payload.get("devices")
+    if not isinstance(devices, dict) or any(not isinstance(v, list) for v in devices.values()):
+        raise ValueError("Invalid simulator device inventory")
+    matches = [d for values in devices.values() for d in values if isinstance(d, dict) and d.get("udid") == udid]
+    family = device_family(index)
+    if len(matches) != 1 or matches[0].get("isAvailable") is not True or not str(matches[0].get("deviceTypeIdentifier", "")).startswith("com.apple.CoreSimulator.SimDeviceType." + family + "-"):
+        raise ValueError("Actual simulator does not match the required device family")
+    return family
 
 
 def metadata(run_id: str, attempt: str, source_sha: str) -> None:
@@ -89,7 +125,7 @@ def qualify_results(tree: dict, summary: dict, index: int) -> dict:
             or summary.get("passedTests") != len(expected) or summary.get("failedTests") != 0
             or summary.get("skippedTests") != 0):
         raise ValueError("UI xcresult summary disagrees with the complete passing selection")
-    return {"cases": sorted(cases), "passed": len(cases)}
+    return {"cases": sorted(cases), "passed": len(cases), "device_family": device_family(index)}
 
 
 def verify_shards(reports: Path, run_id: str, attempt: str, source_sha: str) -> dict:
@@ -108,21 +144,26 @@ def verify_shards(reports: Path, run_id: str, attempt: str, source_sha: str) -> 
         receipt = json.loads(files[0].read_text())
         if any(receipt.get(k) != v for k, v in {
             "source_sha": source_sha, "run_id": run_id, "attempt": attempt, "shard": index,
-            "cases": sorted(selection(index)), "passed": len(selection(index)),
+            "cases": sorted(selection(index)), "passed": len(selection(index)), "device_family": device_family(index),
         }.items()):
             raise ValueError("UI receipt source, run, shard or actual case inventory mismatch")
-        combined.extend(receipt["cases"])
+        combined.extend((device_family(index), case) for case in receipt["cases"])
     if len(combined) != len(set(combined)):
-        raise ValueError("Duplicate UI cases across shards")
+        raise ValueError("Duplicate UI cases within a device family")
     return {"source_sha": source_sha, "run_id": run_id, "attempt": attempt,
-            "shards": len(SHARDS), "passed": len(combined), "cases": sorted(combined)}
+            "shards": len(SHARDS), "passed": len(combined),
+            "cases": [{"device_family": family, "case": case} for family, case in sorted(combined)]}
 
 
 def run(args) -> int:
+    started = time.monotonic()
     metadata(args.run_id, args.attempt, args.source_sha)
     # Requalify the freshly built, unmodified manifest and its actual binaries.
     manifest, current = qualify(args.xctestrun.parent.parent.parent, args.source_sha)
     receipt = json.loads(args.build_receipt.read_text())
+    archive_digest = receipt.pop("prepared_archive_sha256", None)
+    if not re.fullmatch(r"[0-9a-f]{64}", args.prepared_sha256) or archive_digest != args.prepared_sha256:
+        raise ValueError("Restored products lack the exact producer archive receipt")
     if manifest != args.xctestrun.resolve() or current != receipt:
         raise ValueError("UI built products differ from the qualified source receipt")
     args.log.parent.mkdir(parents=True, exist_ok=True)
@@ -131,12 +172,28 @@ def run(args) -> int:
         raise ValueError("UI result path must be fresh")
     command = test_command(manifest, args.destination, args.result, args.shard)
     print(json.dumps({"source_sha": args.source_sha, "command": command}), flush=True)
-    with args.log.open("w") as log:
-        result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=False)
-    for line in args.log.read_text().splitlines():
-        if re.search(r"Test Case|error:|PASSED|FAILED|Executed", line): print(line)
+    raw_devices = subprocess.run(["xcrun", "simctl", "list", "devices", "available", "--json"],
+                                 check=True, capture_output=True, text=True, timeout=15).stdout
+    family = qualify_device(json.loads(raw_devices), args.destination, args.shard)
+    # Setup and native execution share the original 35m phone / 15m tablet budget,
+    # with 30s reserved for owned cleanup and post-execution qualification.
+    seconds = (870 if family == "iPad" else 2070) - (time.monotonic() - started)
+    if seconds <= 0:
+        raise ValueError("UI admission exhausted the native deadline")
+    setup = shlex.join([sys.executable, str(Path(__file__).with_name("apple_nightly_ui.py")),
+                        "ready-simulator", "--destination", args.destination, "--root", str(args.log.parent / "ui-simulator"),
+                        "--source-sha", args.source_sha]) + "\n" + shlex.join([
+                            "xcrun", "simctl", "install", args.destination.split("id=", 1)[1], current["products"][0]["path"]])
+    plan = {"setup": setup, "pipelines": [{"command": command, "raw": str(args.log),
+             "filter": "Test Case|error:|PASSED|FAILED|Executed"}]}
+    result = subprocess.run([sys.executable, str(Path(__file__).with_name("run-owned-ui.py")),
+                             "--lane", "shard", "--records", str(args.log.parent), "--seconds", str(seconds)],
+                            input=json.dumps(plan), text=True, check=False)
     if result.returncode:
         return result.returncode
+    owner = json.loads((args.log.parent / "ui-owner-shard.json").read_text())
+    if owner.get("eligible_to_continue") is not True or (args.log.parent / "ui-owner-shard.abort").exists():
+        raise ValueError("Native execution lacks clean owned completion")
     values = {}
     for kind in ("summary", "tests"):
         raw = subprocess.run(["xcrun", "xcresulttool", "get", "test-results", kind,
@@ -157,6 +214,7 @@ def main() -> int:
     for name in ("xctestrun", "build-receipt", "result", "log", "receipt"):
         worker.add_argument("--" + name, type=Path, required=True)
     worker.add_argument("--destination", required=True)
+    worker.add_argument("--prepared-sha256", required=True)
     worker.add_argument("--shard", type=int, required=True)
     aggregate = commands.add_parser("verify")
     aggregate.add_argument("--reports", type=Path, required=True)
@@ -172,7 +230,7 @@ def main() -> int:
         args.output.write_text(json.dumps(result, indent=2) + "\n")
         print(f"Verified all {result['shards']} UI shards: {result['passed']} actual passing cases")
         return 0
-    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+    except (OSError, ValueError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
         print(f"UI shard qualification failed: {error}", file=sys.stderr)
         return 1
 
