@@ -4,6 +4,19 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.4.4] - 2026-10-24
+
+### Added
+- Guidance after a successful export helps you export again or set up a schedule.
+- Apple Ads campaign attribution on iPhone and iPad measures which campaigns lead to purchases. Only bounded campaign dimensions are joined to pseudonymous purchase outcomes; health data and purchase events are never sent to Apple Ads. Attribution tokens go directly to Apple and never reach Health.md servers.
+
+### Changed
+- The free plan includes five export actions, shared by manual and scheduled exports.
+- Updated privacy disclosures and localized App Store descriptions explain campaign-to-purchase measurement.
+
+### Fixed
+- Improved export history, connection recovery, and the export file browser.
+
 ## [3.4.3] - 2026-10-07
 
 ### Fixed
