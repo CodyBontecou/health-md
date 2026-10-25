@@ -141,6 +141,7 @@ struct HealthMdApp: App {
     // do not bootstrap/apply profiles or alter legacy tablet settings/authority.
     @StateObject private var iPadHistoryProfileStore = ExportProfileStore()
     @StateObject private var apiExportSettings: APIExportSettings
+    @StateObject private var agentDataGatewaySettings: AgentDataGatewaySettings
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService: SyncService
     @StateObject private var directCLIService: IPhoneDirectCLIService
@@ -171,10 +172,12 @@ struct HealthMdApp: App {
 
         let advancedSettings = AdvancedExportSettings()
         let apiExportSettings = APIExportSettings()
+        let agentDataGatewaySettings = AgentDataGatewaySettings()
         let directWakeManager = IPhoneDirectWakeManager()
         let syncService = SyncService()
         _advancedSettings = StateObject(wrappedValue: advancedSettings)
         _apiExportSettings = StateObject(wrappedValue: apiExportSettings)
+        _agentDataGatewaySettings = StateObject(wrappedValue: agentDataGatewaySettings)
         _directWakeManager = StateObject(wrappedValue: directWakeManager)
         _syncService = StateObject(wrappedValue: syncService)
         _directCLIService = StateObject(wrappedValue: IPhoneDirectCLIService(wakeManager: directWakeManager))
@@ -415,6 +418,7 @@ struct HealthMdApp: App {
             .environmentObject(corpusRecoveryManager)
             .environmentObject(advancedSettings)
             .environmentObject(apiExportSettings)
+            .environmentObject(agentDataGatewaySettings)
             .environmentObject(sharedSetupCoordinator)
             .sheet(isPresented: $showingMyselfClaim) {
                 MyselfClaimView(app: "health.md")

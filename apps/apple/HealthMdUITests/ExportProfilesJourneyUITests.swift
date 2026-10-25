@@ -145,12 +145,11 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         let delete = app.buttons["Delete Profile…"]
         XCTAssertTrue(delete.waitUntilExists(timeout: 5))
         delete.tap()
-        // The detail button also starts with "Delete ". Select the destructive
-        // confirmation's quoted-name prefix instead of tapping the detail again.
-        let confirm = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH %@", "Delete “")
-        ).firstMatch
-        XCTAssertTrue(confirm.waitUntilExists(timeout: 5))
+        // The prefix also matches the background "Delete Profile…" opener.
+        // Require the actual named destructive confirmation, not the first match.
+        let confirm = app.buttons["Delete “Weekly Sleep”"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        XCTAssertTrue(confirm.isHittable)
         confirm.tap()
         XCTAssertTrue(
             app.navigationBars["Export Profiles"].waitUntilExists(timeout: 10),
@@ -339,6 +338,8 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             add(screenshot)
         }
         XCTAssertEqual(copiedResult, .completed, "Copy must expose its persistent accessibility confirmation")
+        RunLoop.current.run(until: Date().addingTimeInterval(4))
+        XCTAssertEqual(copy.value as? String, "Copied")
         snap("12a-copied-profile-id")
 
         // Activate the profile: detail pops and the active banner reflects it.

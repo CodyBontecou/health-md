@@ -4,7 +4,7 @@ description: "Export Apple Health to Obsidian with Health.md: choose a vault, pr
 lead: "Health.md writes selected Apple Health data into your Obsidian vault as Markdown or Bases-ready frontmatter. Choose a folder, preview one day, then export a separate health note or update an existing daily note."
 date: "2026-06-13"
 updated: "2026-10-25"
-verified: "2026-10-22"
+verified: "2026-10-25"
 verified_by: "Codex (agent)"
 verified_method: mixed
 category: "Workflow guide"
@@ -22,7 +22,7 @@ tags:
 <figcaption>Start with Health authorization, a vault destination, an export target, and the date range you want to write.</figcaption>
 </figure>
 
-Use Health.md when you want steps, sleep, heart metrics, or workouts beside your journal and training notes. You select the health data and destination; Health.md does not keep a server copy of your health data.
+Use Health.md when you want steps, sleep, heart metrics, or workouts beside your journal and training notes. You select the health data and destination; this Obsidian folder workflow does not create a Health.md server copy of your health data.
 
 ## Before you start
 

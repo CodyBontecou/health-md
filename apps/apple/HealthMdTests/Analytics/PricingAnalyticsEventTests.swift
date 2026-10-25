@@ -268,7 +268,9 @@ final class PricingAnalyticsEventTests: XCTestCase {
         let englishDescription = try effectiveAppStoreDescription(for: metadataRoot.appendingPathComponent("en-US.json"))
         XCTAssertTrue(englishDescription.contains("automatically collects limited pseudonymous product events"))
         XCTAssertTrue(englishDescription.contains("never include health values, metric names, health dates, or exported files"))
-        XCTAssertTrue(englishDescription.contains("not used for advertising or cross-app tracking"))
+        XCTAssertTrue(englishDescription.contains("not used for ad targeting or cross-app tracking"))
+        XCTAssertTrue(englishDescription.contains("Apple Ads campaign identifiers are linked to purchase outcomes"))
+        XCTAssertTrue(englishDescription.contains("No health data or purchase events are sent to Apple Ads"))
     }
 
     func testAppStoreDescriptionInheritsOmittedFieldsPerLocale() throws {
