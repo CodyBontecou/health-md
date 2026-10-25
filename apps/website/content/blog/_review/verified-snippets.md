@@ -98,3 +98,18 @@ Source: `content/blog/analyze-apple-health-with-claude.md`, Step 2 and its
 local-query alternative. This entry describes the tutorial's chosen workflow,
 not a product-wide capability limit. `test/blog-workflow-privacy.test.mjs`
 checks that scope in the article, ledger, and this entry.
+
+## Sleep CSV summary and interval rows
+
+Apple daily CSV sleep durations use seconds in the production v8 example.
+Compatibility summary rows can omit Timestamp; a timestamped Sleep Stage row
+contains a label plus duration in Value and an ISO-8601 start Timestamp.
+Keep daily totals separate from individual interval rows when calculating.
+Health.md assigns a sleep session to its local start day.
+
+Verified: 2026-10-25
+Source: `apps/apple/HealthMd/Shared/Export/CSVExporter.swift` Sleep block,
+`apps/apple/docs/reference/generated/core/summary-day.csv`, and
+`docs-src/src/content/docs/sleep-date-attribution.md`. The website's
+`test/sleep-export-sample.test.mjs` checks the published excerpt against the
+producer fixture. This is source tracing, not a newly executed device export.
