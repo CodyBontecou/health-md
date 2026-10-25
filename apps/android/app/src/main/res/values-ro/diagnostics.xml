@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Diagnosticare</string>
+    <string name="diagnostics_entry">Inspectează evenimentele tehnice locale și alege ce să partajezi</string>
+    <string name="diagnostics_recording">Înregistrare locală</string>
+    <string name="diagnostics_privacy">Datele de diagnosticare rămân pe acest dispozitiv până le salvezi sau le partajezi. Evenimentele operaționale exclud valorile de sănătate, ID-urile înregistrărilor de sănătate, datele calendaristice solicitate pentru sănătate, căile, adresele de conectare și acreditările. Nu sunt anonime.</string>
+    <string name="diagnostics_enabled">Înregistrează evenimente operaționale</string>
+    <string name="diagnostics_retention">Nivelul de detaliu nu schimbă permisiunea de a colecta conținut de sănătate. Păstrare: până la 7 zile / 20 MiB. Fără încărcări automate.</string>
+    <string name="diagnostics_start_private">Înregistrează context privat timp de 15 minute</string>
+    <string name="diagnostics_stop_private">Oprește înregistrarea privată</string>
+    <string name="diagnostics_private_description">Contextul privat V1 înregistrează numele dispozitivelor conectate, când sunt disponibile. Nu captează conținut de sănătate, acreditări sau text arbitrar de eroare. Segmentele private expiră în 24 de ore la următoarea accesare a aplicației.</string>
+    <string name="diagnostics_private_until">Înregistrarea privată expiră: %1$s</string>
+    <string name="diagnostics_clear">Șterge toate datele de diagnosticare</string>
+    <string name="diagnostics_clear_question">Ștergi evenimentele locale, pachetele pregătite și copiile atașamentelor? Înregistrarea privată se oprește. Fișierele exportate și copiile partajate nu sunt afectate.</string>
+    <string name="diagnostics_select">Selectează evenimente</string>
+    <string name="diagnostics_hour">Ultima oră</string>
+    <string name="diagnostics_day">Ultimele 24 de ore</string>
+    <string name="diagnostics_week">Ultimele 7 zile</string>
+    <string name="diagnostics_operation">UUID operațiune (opțional)</string>
+    <string name="diagnostics_include_private">Include contextul privat înregistrat</string>
+    <string name="diagnostics_search">Caută ID-uri de evenimente sau câmpuri</string>
+    <string name="diagnostics_refresh">Reîmprospătează evenimentele</string>
+    <string name="diagnostics_summary">Evenimente: %1$d · Pierderi în sesiune: %2$d · Nevalide: %3$d · Trunchiat: %4$s</string>
+    <string name="diagnostics_view_limit">Sunt afișate cele mai recente 100 de evenimente potrivite. Pachetul include instantaneul selectat, până la 10.000 de evenimente; orice trunchiere este indicată.</string>
+    <string name="diagnostics_attachments">Atașamente opționale</string>
+    <string name="diagnostics_attachment_description">Adaugă fișiere existente, inclusiv exporturi de sănătate sau capturi de ecran. Octeții originali sunt copiați neschimbați și NU sunt curățați. Sunt incluse numele fișierelor sursă. Nu se fac citiri noi de sănătate. Limită: 50 de fișiere / 100 MiB.</string>
+    <string name="diagnostics_choose">Alege fișiere…</string>
+    <string name="diagnostics_remove">Elimină %1$s</string>
+    <string name="diagnostics_prepare">Pregătește pachetul</string>
+    <string name="diagnostics_review">Pregătește și verifică</string>
+    <string name="diagnostics_frozen">Instantaneu fixat. Evenimente: %1$d. Conținut de sănătate: %2$s. ZIP-ul nu este criptat.</string>
+    <string name="diagnostics_reviewed">Am verificat fișierele pe care vreau să le partajez</string>
+    <string name="diagnostics_share">Partajează ZIP-ul verificat</string>
+    <string name="diagnostics_save">Salvează ZIP-ul verificat</string>
+    <string name="diagnostics_share_question">Partajezi acest pachet de diagnosticare?</string>
+    <string name="diagnostics_share_warning">ZIP-ul nu este criptat. Contextul privat și atașamentele pot expune date de sănătate sau secrete. Postările publice pe GitHub sau Discord pot fi accesibile oricui. Destinația controlează propriile copii; Health.md nu le poate retrage.</string>
+    <string name="diagnostics_share_confirm">Partajează acest pachet</string>
+    <string name="diagnostics_bundle_retention">Pachetele locale expiră în 24 de ore la următoarea accesare a aplicației; se păstrează doar cele mai recente 3. Copiile salvate sau partajate au propria perioadă de păstrare.</string>
+    <string name="diagnostics_preview_truncated">\n\n[Previzualizare trunchiată la 128 KiB. Fișierul original complet rămâne în ZIP.]</string>
+    <string name="diagnostics_failure">Operațiunea de diagnosticare a eșuat. Verifică accesul la fișiere și stocarea locală, apoi pregătește și verifică din nou.</string>
+    <string name="diagnostics_invalid_operation">ID-ul operațiunii trebuie să fie un UUID.</string>
+</resources>

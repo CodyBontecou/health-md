@@ -1,13 +1,10 @@
 # Health.md iOS Feature Documentation Index
 
-This directory is the canonical inventory for documenting Health.md end-to-end. Each feature should eventually have:
+This directory indexes Apple workflow guides. Code, tests, and configuration establish implemented behavior; normative contracts and product policy define the requirements. The table is documentation navigation and editorial planning, not a separate capability or release-status database.
 
-1. a user-facing docs page for the docs site, and
-2. a video outline that can become one episode in the Health.md feature series.
+Update an existing guide when its user workflow changes. Create a new page only when a distinct audience or task needs information not already covered; link the canonical website guide or reference instead of copying it. Use [`_template.md`](./_template.md) when a new guide is warranted.
 
-Cross-platform pairings for every Apple/Android capability live in the repository-root [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md).
-
-Use [`_template.md`](./_template.md) for new feature pages. Use [`video-series.md`](./video-series.md) as the running episode roadmap.
+Cross-platform rationale lives in [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md); machine-readable classifications live in [`product-capabilities.json`](../../../../packages/contracts/product-capabilities.json). Video work is optional and belongs in the explicitly commissioned [`video-series.md`](./video-series.md) roadmap.
 
 ## Technical reference
 
@@ -63,6 +60,7 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Automation | [Mac CLI iPhone export trigger](./cli-mac-iphone-export.md) | Trigger an export from a connected, open iPhone using the Mac app or CLI. | Drafted | Medium | `SyncPayload.swift`, `HealthMdControlServer.swift`, `scripts/healthmd` |
 | Automation | [Manual IP / Tailscale sync](./manual-ip-sync.md) | Connect iPhone to a Mac destination by address when Multipeer discovery cannot cross a Tailscale network. | Drafted | Low | `SyncMessage`, `MacExportJobExecutor` |
 | Automation | [API Endpoint export](./api-endpoint-export.md) | Send selected Apple Health JSON directly from iPhone to a user-configured HTTP(S) endpoint. | Drafted | Medium | `APIExportSettings`, `APIExportClient`, `ExportTabView` |
+| Automation | [Agent Data gateway export](./agent-data-gateway-export.md) | Upload exact exported artifact files from iPhone to a user-configured Agent Data gateway per ingestion protocol v1. | Drafted | Medium | `AgentDataGatewaySettings`, `AgentDataIngestClient`, `AgentDataGatewayExportRunner` |
 | Automation | [CLI distribution](./cli-distribution.md) | Bundle the CLI in the Mac app while also supporting standalone terminal installs. | Drafted | Medium | `HealthMdCLI`, `HealthMd-macOS`, `scripts/healthmd` |
 | Reliability | [Export history and retry](./export-history-retry.md) | Review recent export results and retry failed dates. | Drafted | Medium | `ExportHistory.swift`, `ScheduleSettingsView.swift` |
 | Mac destination | [iPhone → Mac destination](./mac-sync.md) | Write iPhone-prepared v8 exports to Mac through encrypted, bounded, checksum-validated transfer. | Drafted | High | `SyncService.swift`, `ConnectedTransfer.swift` |
@@ -85,13 +83,14 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 11. **Workout Deep Dive: Complete Public Graph + Readable Notes:** [Workout Details](./workout-details.md)
 12. **Use Your Mac as a Local Destination for iPhone Health.md Exports:** [Mac Destination](./mac-sync.md)
 13. **Send Apple Health Data to Your Own API:** [API Endpoint Export](./api-endpoint-export.md)
-14. **Health.md Privacy Architecture: Where Your Data Goes:** [Privacy and Local-First Design](./privacy-local-first.md)
+14. **Upload Export Artifacts to an Agent Data Gateway:** [Agent Data Gateway Export](./agent-data-gateway-export.md)
+15. **Health.md Privacy Architecture: Where Your Data Goes:** [Privacy and Local-First Design](./privacy-local-first.md)
 
 ## Documentation rules
 
 - Prefer user-facing language first; put implementation details at the bottom.
 - Every feature page should include at least one concrete path/example output and link to a complete generated fixture for public data contracts.
 - Never hand-edit files under `docs/reference/generated/`; regenerate them from production definitions.
-- Every feature page should include a video outline, even if the video is low priority.
+- Add a video outline only for commissioned video work; a feature change does not require a new page or video.
 - Call out limitations honestly, especially iOS locked-device behavior and HealthKit permission constraints.
 - When screenshots are captured later, add a `Screenshots needed` checklist to each page.

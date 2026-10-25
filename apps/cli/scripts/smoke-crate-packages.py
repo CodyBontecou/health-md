@@ -34,6 +34,8 @@ REQUIRED = {
         "src/registry.rs",
         "src/service.rs",
         "examples/generate_mcp_catalog.rs",
+        "tests/fixtures/agent-data-v1/grant-explicit.json",
+        "tests/fixtures/agent-data-v1/query-records.json",
     },
     "healthmd-client": {
         "Cargo.toml",
@@ -58,6 +60,9 @@ REQUIRED = {
         "README.md",
         "src/main.rs",
         "src/bin/healthmd-mcp/main.rs",
+        "tests/fixtures/apple-api-export-v2-provider-sidecar.json",
+        "tests/fixtures/apple-api-export-v2-provider-sidecar-v8.json",
+        "tests/fixtures/android-raw-v1-minimal-snapshot.json",
     },
 }
 
@@ -243,24 +248,11 @@ def main() -> int:
         )
         run([str(toolchain_rustc), "--version"], root, msrv_env)
         # A fresh lockfile resolution can select crates that no longer compile on the
-        # package MSRV. Resolve with the MSRV toolchain so rust-version bounds apply,
-        # then pin yoke-derive back to its last release that compiles on Rust 1.85.
+        # package MSRV. Resolve with the MSRV toolchain so rust-version bounds apply.
+        # yoke-derive 0.8.4 declares Rust 1.82 and compiles on 1.85; the former
+        # derive-only downgrade conflicts with its current consumers.
         run(
             [str(toolchain_cargo), "generate-lockfile", "--manifest-path", str(manifest)],
-            root,
-            msrv_env,
-        )
-        run(
-            [
-                str(toolchain_cargo),
-                "update",
-                "--manifest-path",
-                str(manifest),
-                "--package",
-                "yoke-derive",
-                "--precise",
-                "0.8.2",
-            ],
             root,
             msrv_env,
         )

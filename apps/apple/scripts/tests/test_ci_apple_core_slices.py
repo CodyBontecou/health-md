@@ -155,6 +155,12 @@ elif name=='xcodebuild':
                 call = self.recorded("cargo")[-1]
                 self.assertIn("--locked", call["args"])
                 self.assertIn("--release", call["args"])
+                # Host proc-macros are loaded by rustc; stripping them produces
+                # malformed LINKEDIT pools rejected by macOS27 dyld. Keep this
+                # override host-only, preserving the shipped release profile.
+                self.assertEqual([call["args"][i+1] for i, arg in enumerate(call["args"])
+                                  if arg == "--config"],
+                                 ['profile.release.build-override.strip="none"'])
                 self.assertIn("healthmd-core-uniffi", call["args"])
                 self.assertEqual(call["args"][call["args"].index("--target")+1], target)
                 self.assertIsNone(call["env"]["RUSTFLAGS"])

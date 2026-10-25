@@ -8,6 +8,7 @@
     1
   ],
   "connectedCorpusTransferCapabilities" : {
+    "contextHistoryObservationVersion" : 1,
     "partitionTargetBounds" : {
       "maximumBytes" : 67108864,
       "minimumBytes" : 33554432,
@@ -37,13 +38,14 @@
   "supportsDurableConnectedExportRecovery" : true,
   "supportsGranularPayloads" : true,
   "supportsIPhoneExportRequests" : true,
-  "supportsIPhoneInitiatedContextRefresh" : true,
+  "supportsIPhoneInitiatedContextRefresh" : false,
   "supportsJobCancellation" : true,
   "supportsMacDestinationStatus" : true,
   "supportsMacExportJobs" : true,
   "supportsManualIPSync" : true,
   "supportsPartitionedConnectedExports" : true,
   "supportsPerDateExportCompletion" : true,
+  "supportsPhoneContextAutomation" : true,
   "supportsRangeV9Summaries" : false,
   "supportsRequestScopedContextAcquisition" : true,
   "supportsRollupSummaries" : true,

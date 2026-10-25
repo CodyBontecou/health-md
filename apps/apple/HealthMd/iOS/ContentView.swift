@@ -28,6 +28,7 @@ struct ContentView: View {
     @EnvironmentObject var sharedSetupCoordinator: SharedSetupCoordinator
     @EnvironmentObject var advancedSettings: AdvancedExportSettings
     @EnvironmentObject var apiExportSettings: APIExportSettings
+    @EnvironmentObject var agentDataGatewaySettings: AgentDataGatewaySettings
         @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
     @StateObject private var vaultManager = VaultManager()
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
@@ -51,6 +52,16 @@ struct ContentView: View {
     @State private var isExporting = false
     @State private var isTestExportWaitingForCompletion = false
     @State private var isRequestingHealthAuthorization = false
+    @State private var isAssessingHistory = false
+    @State private var hasBegunHistoryAssessment = false
+    @State private var executionHistoryAssessment: HealthHistoryAssessment?
+    @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
+    @State private var historyExecutionWorker = HealthHistoryAssessmentWorker()
+    @State private var historyProfilePublicationObserver = HealthHistoryProfilePublicationObserver()
+    @State private var historyExecutionTask: Task<Void, Never>?
+    @State private var pendingHistoryRequestID: UUID?
+    @State private var activeHistoryRequest: HealthHistoryExportRequest?
+    @State private var pendingScaleRequest: HealthHistoryExportRequest?
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
     @State private var partialExportNotice: PartialExportNotice?
@@ -67,10 +78,11 @@ struct ContentView: View {
     @State private var markdownPreviewTarget: ExportPresentationTarget?
     @State private var exportFolderBrowserTarget: ExportPresentationTarget?
     @State private var browsedFileURL: URL?
-    @State private var showExportFolderBrowser = false
+    @State private var exportFolderBrowserPresentation: ExportFolderBrowserPresentation?
     @State private var showPaywall = false
     @State private var showUpgradePromptPaywall = false
     @State private var presentPaywallAfterUpgradePrompt = false
+    @State private var presentScheduleAfterExportGuidance = false
     @State private var showExportProfiles = false
     @State private var showClinicianReport = false
     @State private var showMarketingMetricSelection = false
@@ -167,6 +179,7 @@ struct ContentView: View {
                             syncService: syncService,
                             advancedSettings: advancedSettings,
                             apiExportSettings: apiExportSettings,
+                            agentDataGatewaySettings: agentDataGatewaySettings,
                             externalIntegrations: ConnectedAppsFeature.isEnabled
                                 ? externalIntegrationManager
                                 : nil,
@@ -175,11 +188,20 @@ struct ContentView: View {
                             endDate: $endDate,
                             dateRangePreset: $dateRangePreset,
                             showsBottomStatus: hasBottomStatus,
+                            exportStatusMessage: $exportStatusMessage,
                             showFolderPicker: $showFolderPicker,
                             presentFirstExportPreview: $presentFirstExportPreview,
                             onFirstExportPreviewDismissed: { handleFirstExportPreviewClosed() },
                             canExport: canExport,
-                            onExportTapped: exportData
+                            onExportTapped: exportData,
+                            historyProfileStore: profileCoordinator?.profileStore,
+                            executionHistoryAssessment: currentExecutionHistoryScope == nil ? nil : executionHistoryAssessment,
+                            executionHistoryScope: currentExecutionHistoryScope,
+                            isAssessingHistory: hasBegunHistoryAssessment,
+                            isDiscoveringExportRange: isAssessingHistory && !hasBegunHistoryAssessment && pendingScaleRequest == nil,
+                            isPreparingExport: Binding(get: { activeHistoryRequest != nil }, set: { _ in }),
+                            onContinueWithoutHistoryVerification: historyContinuationAction,
+                            onCancelHistoryVerification: historyCancellationAction
                         )
                     }
                     .tabItem {
@@ -231,18 +253,14 @@ struct ContentView: View {
                 }
                 .tint(Color.accent)
                 .task { ensureProfileCoordinator() }
-                .onChange(of: exportTargetSelection) { _, newValue in
-                    profileCoordinator?.userSelectedTarget(newValue)
-                }
-                .onChange(of: profileCoordinator?.activeTarget) { _, newValue in
-                    guard let newValue, newValue != exportTargetSelection else { return }
+                .profileDestinationSync(
+                    exportTargetSelection: exportTargetSelection,
+                    profileCoordinator: profileCoordinator,
+                    apiExportSettings: apiExportSettings,
+                    agentDataGatewaySettings: agentDataGatewaySettings,
+                    onTargetSelectionChange: { invalidateExecutionHistory() }
+                ) { newValue in
                     exportTargetSelection = newValue
-                }
-                .onChange(of: apiExportSettings.endpointURLString) { _, _ in
-                    profileCoordinator?.apiEndpointDidChange()
-                }
-                .onChange(of: apiExportSettings.bearerToken) { _, _ in
-                    profileCoordinator?.apiEndpointDidChange()
                 }
                 .onAppear {
                     if directCLIService.pendingPairingLink != nil { selectedTab = .sync }
@@ -285,20 +303,18 @@ struct ContentView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showExportFolderBrowser, onDismiss: finishBrowsingExportFolder) {
-            if let target = exportFolderBrowserTarget {
-                ExportFolderBrowser(
-                    initialDirectoryURL: target.folderURL,
-                    onFileSelected: { url in
-                        browsedFileURL = url
-                        showExportFolderBrowser = false
-                    },
-                    onCancel: {
-                        showExportFolderBrowser = false
-                    }
-                )
-                .ignoresSafeArea()
-            }
+        .sheet(item: $exportFolderBrowserPresentation, onDismiss: finishBrowsingExportFolder) { presentation in
+            ExportFolderBrowser(
+                initialDirectoryURL: presentation.target.folderURL,
+                onFileSelected: { url in
+                    browsedFileURL = url
+                    exportFolderBrowserPresentation = nil
+                },
+                onCancel: {
+                    exportFolderBrowserPresentation = nil
+                }
+            )
+            .ignoresSafeArea()
         }
         .sheet(item: $markdownPreview, onDismiss: releaseMarkdownPreviewAccess) { presentation in
             ExportedMarkdownViewer(target: presentation.target)
@@ -334,7 +350,10 @@ struct ContentView: View {
                 }
             ),
             onDismiss: {
-                if presentPaywallAfterUpgradePrompt {
+                if presentScheduleAfterExportGuidance {
+                    presentScheduleAfterExportGuidance = false
+                    selectedTab = .schedule
+                } else if presentPaywallAfterUpgradePrompt {
                     presentPaywallAfterUpgradePrompt = false
                     showUpgradePromptPaywall = true
                 }
@@ -342,6 +361,12 @@ struct ContentView: View {
         ) {
             ExportUpgradePrompt(
                 milestone: purchaseManager.pendingUpgradePrompt ?? 0,
+                onSchedule: {
+                    let quotaState = purchaseManager.analyticsQuotaState
+                    purchaseManager.consumeUpgradePrompt()
+                    PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
+                    presentScheduleAfterExportGuidance = true
+                },
                 onUpgrade: {
                     let quotaState = purchaseManager.analyticsQuotaState
                     purchaseManager.consumeUpgradePrompt()
@@ -441,6 +466,13 @@ struct ContentView: View {
             }
         }
         #endif
+        .geistDialog(
+            isPresented: scaleConfirmationBinding,
+            title: Text("Confirm Large Export"),
+            message: Text(pendingScaleRequest?.scaleConfirmationMessage ?? ""),
+            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
+            actions: scaleConfirmationActions
+        )
         .geistDialog(
             isPresented: $showDestinationChangedAlert,
             title: Text("Export Folder Changed"),
@@ -558,29 +590,47 @@ struct ContentView: View {
                 if TestMode.noExportFormats {
                     advancedSettings.exportFormats = []
                 }
+                if ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil {
+                    advancedSettings.metricSelection.enabledMetrics = ["steps"]
+                }
                 advancedSettings.archiveExportFiles = TestMode.archiveExports
             }
 
             restoreInteractiveCorpusExportIfNeeded()
             await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
         }
+        .onReceive(advancedSettings.objectWillChange) { _ in invalidateExecutionHistory(reason: "settings_publication") }
+        .onReceive(healthKitManager.objectWillChange) { _ in invalidateExecutionHistory(reason: "health_publication") }
+        .onReceive(apiExportSettings.objectWillChange) { _ in invalidateExecutionHistory(reason: "api_publication") }
+        .onReceive(agentDataGatewaySettings.objectWillChange) { _ in invalidateExecutionHistory(reason: "gateway_publication") }
+        .onChange(of: vaultManager.vaultURL) { _, _ in invalidateExecutionHistory(reason: "vault_url") }
+        // Profile invalidation is still observed, but synchronously through
+        // typed execution inputs in ensureProfileCoordinator, not this store's
+        // broad pre-change/list/timestamp publication (which may be a flush).
+        .onChange(of: selectedTab) { _, _ in invalidateExecutionHistory(reason: "tab") }
         .onChange(of: scenePhase) { _, newPhase in
+            invalidateExecutionHistory()
             guard newPhase == .active else { return }
             restoreInteractiveCorpusExportIfNeeded()
             vaultManager.refreshVaultAccess()
             Task { await refreshDateRangeSelectionForOpening() }
         }
         .onChange(of: dateRangePreset) { _, _ in
+            invalidateExecutionHistory()
             saveDateRangeSelection()
         }
         .onChange(of: startDate) { _, _ in
+            invalidateExecutionHistory()
             saveDateRangeSelection()
         }
         .onChange(of: endDate) { _, _ in
+            invalidateExecutionHistory()
             saveDateRangeSelection()
         }
         .healthMdReleaseNotesSheet()
         .onDisappear {
+            invalidateExecutionHistory()
+            historyProfilePublicationObserver.unbind()
             statusDismissTimer?.invalidate()
             releaseQuickLookAccess()
             releaseMarkdownPreviewAccess()
@@ -717,7 +767,8 @@ struct ContentView: View {
             target: exportTargetSelection,
             hasLocalFolder: vaultManager.vaultURL != nil || vaultManager.requiresVaultReselection,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
-            apiEndpointConfigured: apiExportSettings.isConfigured
+            apiEndpointConfigured: apiExportSettings.isConfigured,
+            agentDataGatewayConfigured: agentDataGatewaySettings.isConfigured
         )
     }
 
@@ -898,7 +949,7 @@ struct ContentView: View {
             switch exportTargetSelection {
             case .localIPhoneFolder: return "folder.fill"
             case .connectedMac: return "desktopcomputer"
-            case .apiEndpoint: return "network"
+            case .apiEndpoint, .agentDataGateway: return "network"
             }
         }
         if partialExportNotice != nil { return "exclamationmark.circle.fill" }
@@ -956,6 +1007,7 @@ struct ContentView: View {
         case .localIPhoneFolder: return String(localized: "Local iPhone Folder")
         case .connectedMac: return String(localized: "Connected Mac")
         case .apiEndpoint: return String(localized: "API Endpoint")
+        case .agentDataGateway: return String(localized: "Agent Data gateway")
         }
     }
 
@@ -1148,7 +1200,7 @@ struct ContentView: View {
 
         browsedFileURL = nil
         exportFolderBrowserTarget = target
-        showExportFolderBrowser = true
+        exportFolderBrowserPresentation = ExportFolderBrowserPresentation(target: target)
     }
 
     private func finishBrowsingExportFolder() {
@@ -1182,6 +1234,7 @@ struct ContentView: View {
         guard let target = exportFolderBrowserTarget else { return }
         vaultManager.stopAccessingExportPresentationTarget(target)
         exportFolderBrowserTarget = nil
+        exportFolderBrowserPresentation = nil
     }
 
     private func presentExportPresentationError(_ message: String) {
@@ -1202,6 +1255,8 @@ struct ContentView: View {
             return .connectedMac
         case .apiEndpoint:
             return .apiEndpoint
+        case .agentDataGateway:
+            return .agentDataGateway
         }
     }
 
@@ -1318,7 +1373,10 @@ struct ContentView: View {
     /// active profile thereafter.
     @discardableResult
     private func ensureProfileCoordinator() -> ExportProfileCoordinator {
-        if let profileCoordinator { return profileCoordinator }
+        if let profileCoordinator {
+            bindHistoryProfilePublications(profileCoordinator.profileStore)
+            return profileCoordinator
+        }
         let coordinator = ExportProfileCoordinator(
             profileStore: ExportProfileStore(),
             destinationStore: ProfileDestinationStore(),
@@ -1339,12 +1397,19 @@ struct ContentView: View {
         }
         #endif
         profileCoordinator = coordinator
+        bindHistoryProfilePublications(coordinator.profileStore)
         // The Shared Setup v2 review flow runs above this view; register the
         // single production instance so its injected confirmation closures
         // can reach the verified rebind paths (weak — no lifetime impact, and
         // a missing registration keeps every confirmation fail-closed).
         SharedSetupV2ExportProfileBridge.register(coordinator)
         return coordinator
+    }
+
+    private func bindHistoryProfilePublications(_ store: ExportProfileStore) {
+        historyProfilePublicationObserver.bind(store) {
+            invalidateExecutionHistory(reason: "profile_semantic_change")
+        }
     }
 
     private func cancelExport() {
@@ -1372,6 +1437,7 @@ struct ContentView: View {
     }
 
     private func exportData() {
+        guard !isAssessingHistory else { return }
         // Persist any in-flight profile edits before freezing the request.
         let profiles = ensureProfileCoordinator()
         profiles.flushEdits()
@@ -1397,8 +1463,9 @@ struct ContentView: View {
             return
         }
 
-        if advancedSettings.dailyNotesOnlyModeEnabled && exportTargetSelection == .apiEndpoint {
-            presentExportConfigurationError("Daily Notes Only requires a Local Folder or Connected Mac destination. Turn it off to export to an API endpoint.")
+        if advancedSettings.dailyNotesOnlyModeEnabled
+            && (exportTargetSelection == .apiEndpoint || exportTargetSelection == .agentDataGateway) {
+            presentExportConfigurationError("Daily Notes Only requires a Local Folder or Connected Mac destination. Turn it off to export to an API endpoint or Agent Data gateway.")
             return
         }
 
@@ -1445,23 +1512,228 @@ struct ContentView: View {
                 presentExportConfigurationError("Configure a valid API endpoint before exporting.")
                 return
             }
+        case .agentDataGateway:
+            guard agentDataGatewaySettings.isConfigured else {
+                presentExportConfigurationError("Configure a valid Agent Data gateway endpoint before exporting.")
+                return
+            }
+            guard advancedSettings.exportFormats.contains(.json) else {
+                presentExportConfigurationError("Select the JSON format before exporting to an Agent Data gateway.")
+                return
+            }
         }
 
-        // In UI test mode, simulate export only after the same configuration
-        // preflight checks that a release build performs.
-        if TestMode.isUITesting {
-            simulateTestExport()
+        prepareInteractiveHistoryExport(selection: interactiveHistorySelection)
+    }
+
+    private var scaleConfirmationBinding: Binding<Bool> {
+        let presentedID = pendingScaleRequest?.id
+        return Binding(get: { presentedID != nil && pendingScaleRequest?.id == presentedID },
+            set: { presented in
+                guard !presented, let presentedID, let request = pendingScaleRequest,
+                      request.id == presentedID else { return }
+                cancelHistoryRequest(request)
+            })
+    }
+
+    private var scaleConfirmationActions: [GeistDialogAction] {
+        guard let request = pendingScaleRequest else { return [] }
+        return [
+            .cancel(accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton) {
+                cancelHistoryRequest(request)
+            },
+            .action("Export Anyway", accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton) {
+                guard pendingScaleRequest?.id == request.id, isCurrentHistoryRequest(request) else { return }
+                pendingScaleRequest = nil
+                assessPreparedHistoryExport(request)
+            }
+        ]
+    }
+
+    private var historyContinuationAction: () -> Void {
+        let presentedRequest = activeHistoryRequest
+        return {
+            guard let presentedRequest else { return }
+            continueWithoutHistoryVerification(presentedRequest)
+        }
+    }
+
+    private var historyCancellationAction: () -> Void {
+        let presentedRequest = activeHistoryRequest
+        return {
+            guard let presentedRequest else { return }
+            cancelHistoryRequest(presentedRequest)
+        }
+    }
+
+    private func cancelHistoryRequest(_ request: HealthHistoryExportRequest) {
+        guard activeHistoryRequest?.id == request.id, pendingHistoryRequestID == request.id else { return }
+        invalidateExecutionHistory()
+    }
+
+    private func isCurrentHistoryRequest(_ request: HealthHistoryExportRequest) -> Bool {
+        activeHistoryRequest?.id == request.id
+            && historyExecutionCoordinator.isCurrent(request, liveSelection: interactiveHistorySelection)
+            && scenePhase == .active && selectedTab == .export
+    }
+
+    private var currentExecutionHistoryScope: HealthHistoryScope? {
+        guard let request = activeHistoryRequest,
+              historyExecutionCoordinator.isCurrent(request, liveSelection: interactiveHistorySelection) else { return nil }
+        return request.selection.scope
+    }
+
+    private func prepareInteractiveHistoryExport(selection: HealthHistoryExecutionSelection) {
+        let request = historyExecutionCoordinator.beginExportRequest(selection: selection)
+        activeHistoryRequest = request
+        pendingHistoryRequestID = request.id
+        executionHistoryAssessment = nil
+        isAssessingHistory = true
+        exportStatusMessage = request.selection.preset == .allTime
+            ? "Checking readable date range…" : "Checking history access…"
+        historyExecutionTask = Task { @MainActor in
+            var handedOff = false
+            defer {
+                if !handedOff && pendingHistoryRequestID == request.id { clearPendingHistoryCheck() }
+            }
+            do {
+                guard let resolved = try await historyExecutionCoordinator.resolveExportRequest(request,
+                    liveSelection: { interactiveHistorySelection }, operation: {
+                        try await NativeExportDateRangeResolver.resolve(request.dateRangeRequest,
+                            using: healthKitManager, currentRequest: {
+                                HealthHistoryExportRequest(id: request.id, selection: interactiveHistorySelection).dateRangeRequest
+                            })
+                    }), isCurrentHistoryRequest(request) else { return }
+                activeHistoryRequest = resolved
+                handedOff = true
+                switch resolved.scaleVerdict {
+                case .proceed:
+                    assessPreparedHistoryExport(resolved)
+                case .confirm:
+                    historyExecutionTask = nil
+                    pendingScaleRequest = resolved
+                    exportStatusMessage = "Confirm the export range to continue."
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard isCurrentHistoryRequest(request) else { return }
+                presentExportConfigurationError(error.localizedDescription)
+            }
+        }
+    }
+
+    private func assessPreparedHistoryExport(_ request: HealthHistoryExportRequest) {
+        guard pendingHistoryRequestID == request.id, isCurrentHistoryRequest(request) else { return }
+        let selection = request.selection
+        hasBegunHistoryAssessment = true
+        exportStatusMessage = "Checking history access…"
+        historyExecutionTask = Task { @MainActor in
+            var awaitingUserDecision = false
+            defer {
+                if !awaitingUserDecision && pendingHistoryRequestID == request.id { clearPendingHistoryCheck() }
+            }
+            let result = await historyExecutionCoordinator.assessExecution(requestID: request.id,
+                worker: historyExecutionWorker,
+                notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: selection.scope),
+                scope: selection.scope, isCurrent: { isCurrentHistoryRequest(request) }, operation: {
+                    await healthKitManager.assessHistoryAccess(scope: selection.scope)
+                })
+            guard pendingHistoryRequestID == request.id, let assessment = result else { return }
+            if assessment.requiresExplicitContinuation {
+                awaitingUserDecision = true
+                historyExecutionTask = nil
+                exportStatusMessage = "History check did not complete. Continue without verification or cancel."
+                return
+            }
+            clearPendingHistoryCheck()
+            executionHistoryAssessment = assessment
+            beginInteractiveCapture(request)
+        }
+    }
+
+    private func clearPendingHistoryCheck() {
+        pendingHistoryRequestID = nil
+        isAssessingHistory = false
+        hasBegunHistoryAssessment = false
+        historyExecutionTask = nil
+    }
+
+    private func invalidateExecutionHistory() {
+        invalidateExecutionHistory(reason: "selection_or_lifecycle")
+    }
+
+    private func invalidateExecutionHistory(reason: String) {
+        activeHistoryRequest = nil
+        pendingScaleRequest = nil
+        historyExecutionCoordinator.invalidate()
+        historyExecutionWorker.cancelLogicalWaiter()
+        executionHistoryAssessment = nil
+        historyExecutionTask?.cancel()
+        if isAssessingHistory {
+            exportStatusMessage = "History check cancelled. Review the selection and export again."
+            #if DEBUG
+            if TestMode.isUITesting { exportStatusMessage += " Synthetic invalidation source: \(reason)." }
+            #endif
+        }
+        clearPendingHistoryCheck()
+    }
+
+    private func continueWithoutHistoryVerification(_ request: HealthHistoryExportRequest) {
+        guard hasBegunHistoryAssessment, activeHistoryRequest?.id == request.id,
+              pendingHistoryRequestID == request.id, isCurrentHistoryRequest(request) else {
             return
         }
+        // Cancel only the logical assessment waiter. The action revision and
+        // physical provider owner survive this explicit continuation.
+        historyExecutionWorker.cancelLogicalWaiter()
+        historyExecutionTask?.cancel()
+        clearPendingHistoryCheck()
+        executionHistoryAssessment = healthKitManager.historyAssessmentNotCompleted(scope: request.selection.scope)
+        beginInteractiveCapture(request)
+    }
 
-        switch exportTargetSelection {
-        case .localIPhoneFolder:
-            exportLocalData()
-        case .connectedMac:
-            exportDataToConnectedMac()
-        case .apiEndpoint:
-            exportDataToAPIEndpoint()
+    private func beginInteractiveCapture(_ request: HealthHistoryExportRequest) {
+        let selection = request.selection
+        guard isCurrentHistoryRequest(request) else { return }
+        guard purchaseManager.canExport else { presentExportPaywall(); return }
+        guard !ensureProfileCoordinator().isActiveProfileExecutionBlocked,
+              canExport, advancedSettings.hasFileDestinationOutput else {
+            presentExportConfigurationError("Export setup changed. Review the destination and settings before exporting.")
+            return
         }
+        if selection.target == .localIPhoneFolder {
+            vaultManager.refreshVaultAccess()
+            guard vaultManager.vaultURL == selection.localDestinationURL,
+                  vaultManager.vaultURL != nil, !vaultManager.requiresVaultReselection else {
+                configurationProtection.performConfigurationChange { showDestinationChangedAlert = true }
+                return
+            }
+        }
+        if TestMode.isUITesting { simulateTestExport(); return }
+        switch selection.target {
+        case .localIPhoneFolder: exportLocalData(selection)
+        case .connectedMac: exportDataToConnectedMac(selection)
+        case .apiEndpoint: exportDataToAPIEndpoint(selection)
+        case .agentDataGateway: exportDataToAgentDataGateway(selection)
+        }
+    }
+
+    private var interactiveHistorySelection: HealthHistoryExecutionSelection {
+        HealthHistoryExecutionSelection(scope: interactiveHistoryScope,
+            settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
+            target: exportTargetSelection, preset: dateRangePreset,
+            localDestinationURL: exportTargetSelection == .localIPhoneFolder ? vaultManager.vaultURL : nil)
+    }
+
+    private var interactiveHistoryScope: HealthHistoryScope {
+        HealthHistoryScope(
+            metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            startDate: startDate, endDate: endDate,
+            timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
+            allAvailable: dateRangePreset == .allTime,
+            profileID: profileCoordinator?.profileStore.activeProfileID, rangeSemantics: .ownerDates
+        )
     }
 
     private func requestHealthAuthorizationForExport() {
@@ -1503,10 +1775,9 @@ struct ContentView: View {
         detail: FailedDateDetail? = nil
     ) {
         errorReason = reason
-        errorMessage = detail?.detailedMessage ?? reason.detailedDescription
-        // Empty Health stores need the existing guided actions immediately.
-        // Other terminal failures remain in the unified status card and expose
-        // these details on demand instead of presenting two result surfaces.
+        errorMessage = reason.alertMessage(detail: detail)
+        // Empty stores use the guided dialog; other failures keep the branch's
+        // single status-card surface until the user opens its Details action.
         showError = reason == .noHealthData
     }
 
@@ -1524,7 +1795,9 @@ struct ContentView: View {
         ExportDateRangeSelectionStore.shared.markInteractiveExportEnded()
     }
 
-    private func exportLocalData() {
+    private func exportLocalData(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
         // Set synchronously before any export work starts so a crash, kill, or
         // force quit mid-export leaves it armed for the next launch's
         // interrupted-restore downgrade. Cleared in the defer below on every
@@ -1543,9 +1816,7 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
-            startDate = dateRange.startDate
-            endDate = dateRange.endDate
+            // Execution bounds belong to the frozen request, not date preferences.
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
             advancedSettings.exportTimeZoneOverride = frozenTimeZone
             var calendar = Calendar(identifier: .gregorian)
@@ -1581,7 +1852,7 @@ struct ContentView: View {
 
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
                 trackSuccessfulExport(
                     targetType: .localFile,
                     startDate: normalizedStartDate,
@@ -1623,7 +1894,7 @@ struct ContentView: View {
                 }
                 startStatusDismissTimer()
 
-                if ReviewManager.shared.recordSuccessfulExport() {
+                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
                     ReviewManager.shared.didRequestReview()
                     requestReview()
                 }
@@ -1671,7 +1942,9 @@ struct ContentView: View {
         }
     }
 
-    private func exportDataToAPIEndpoint() {
+    private func exportDataToAPIEndpoint(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
         guard purchaseManager.canExport else {
             presentExportPaywall()
             return
@@ -1693,9 +1966,7 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
-            startDate = dateRange.startDate
-            endDate = dateRange.endDate
+            // Execution bounds belong to the frozen request, not date preferences.
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
             advancedSettings.exportTimeZoneOverride = frozenTimeZone
             var calendar = Calendar(identifier: .gregorian)
@@ -1743,7 +2014,7 @@ struct ContentView: View {
             )
 
             if result.successCount > 0 {
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
                 trackSuccessfulExport(
                     targetType: .apiEndpoint,
                     startDate: normalizedStartDate,
@@ -1766,7 +2037,7 @@ struct ContentView: View {
                 recordManualExportStatus("API export complete", kind: .success)
                 startStatusDismissTimer()
 
-                if ReviewManager.shared.recordSuccessfulExport() {
+                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
                     ReviewManager.shared.didRequestReview()
                     requestReview()
                 }
@@ -1792,6 +2063,120 @@ struct ContentView: View {
         }
     }
 
+    private func exportDataToAgentDataGateway(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
+        guard purchaseManager.canExport else {
+            presentExportPaywall()
+            return
+        }
+        guard let gatewayDestination = agentDataGatewaySettings.destinationSnapshot else {
+            presentExportConfigurationError("Configure a valid Agent Data gateway endpoint before exporting.")
+            return
+        }
+
+        isExporting = true
+        exportProgress = 0.0
+        exportStatusMessage = "Preparing Agent Data gateway export…"
+        statusDismissTimer?.invalidate()
+
+        exportTask = Task {
+            defer {
+                isExporting = false
+                exportProgress = 0.0
+                exportTask = nil
+            }
+
+            // Execution bounds belong to the frozen request, not date preferences.
+            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = frozenTimeZone
+            let dates = ExportOrchestrator.dateRange(
+                from: dateRange.startDate,
+                to: dateRange.endDate,
+                calendar: calendar
+            )
+            let normalizedStartDate = dates.first ?? dateRange.startDate
+            let normalizedEndDate = dates.last ?? dateRange.endDate
+            let totalDays = dates.count
+            let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil
+
+            let outcome = await AgentDataGatewayExportRunner.export(
+                dates: dates,
+                healthKitManager: healthKitManager,
+                settings: advancedSettings,
+                destination: gatewayDestination,
+                externalIntegrations: externalIntegrations,
+                onProgress: { phase in
+                    switch phase {
+                    case .materializing(_, let processed, let total):
+                        let clampedTotal = max(total, 1)
+                        exportProgress = Double(processed) / Double(clampedTotal) * 0.7
+                        if processed < clampedTotal {
+                            exportStatusMessage = "Preparing export for gateway… (\(processed)/\(clampedTotal))"
+                        } else {
+                            exportStatusMessage = "Uploading to Agent Data gateway…"
+                        }
+                    case .uploading(let processed, let total):
+                        let clampedTotal = max(total, 1)
+                        exportProgress = 0.7 + Double(processed) / Double(clampedTotal) * 0.3
+                        exportStatusMessage = "Uploading artifacts to Agent Data gateway… (\(processed)/\(clampedTotal))"
+                    }
+                }
+            )
+            let result = outcome.export
+
+            ExportOrchestrator.recordResult(
+                result,
+                source: .manual,
+                dateRangeStart: normalizedStartDate,
+                dateRangeEnd: normalizedEndDate,
+                targetLabel: gatewayDestination.displayName,
+                exportTarget: .agentDataGateway
+            )
+
+            if result.successCount > 0 {
+                purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
+                trackSuccessfulExport(
+                    targetType: .agentDataGateway,
+                    startDate: normalizedStartDate,
+                    endDate: normalizedEndDate
+                )
+            }
+
+            if result.wasCancelled {
+                exportStatusMessage = outcome.uploads.eligibleCount == 0
+                    ? "Agent Data gateway export cancelled"
+                    : "Gateway upload stopped — \(outcome.uploads.localizedDescription)"
+                vaultManager.lastExportStatus = exportStatusMessage
+                startStatusDismissTimer()
+            } else if result.isFullSuccess {
+                exportStatusMessage = outcome.uploads.localizedDescription
+                vaultManager.recordSuccessfulExportStatus("Agent Data gateway export complete")
+                startStatusDismissTimer()
+
+                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
+                    ReviewManager.shared.didRequestReview()
+                    requestReview()
+                }
+            } else if result.isPartialSuccess {
+                partialExportNotice = PartialExportNotice(result: result)
+                let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
+                exportStatusMessage = "\(outcome.uploads.localizedDescription). Failed: \(failedDatesStr)"
+                vaultManager.lastExportStatus = "Agent Data gateway partial export"
+            } else {
+                let primaryReason = result.primaryFailureReason ?? .unknown
+                exportStatusMessage = "Agent Data gateway export failed: \(primaryReason.shortDescription)"
+                vaultManager.lastExportStatus = "Agent Data gateway export failed"
+                presentExportFailure(
+                    primaryReason,
+                    detail: result.failedDateDetails.first
+                )
+            }
+        }
+    }
+
     private func apiExportFailureReason(for error: HealthKitManager.HealthKitError) -> ExportFailureReason {
         switch error {
         case .dataProtectedWhileLocked:
@@ -1802,7 +2187,10 @@ struct ContentView: View {
         }
     }
 
-    private func exportDataToConnectedMac() {
+    private func exportDataToConnectedMac(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let startDate = selection.scope.startDate
+        let endDate = selection.scope.endDate
         guard purchaseManager.canExport else {
             presentExportPaywall()
             return
@@ -1827,6 +2215,10 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
 
         exportTask = Task {
+            guard !Task.isCancelled else {
+                finishMacExportPreparationStopped(jobID: jobID, message: "Export cancelled")
+                return
+            }
             externalIntegrationManager.beginExportAction()
             defer { externalIntegrationManager.endExportAction() }
             do {
@@ -1891,7 +2283,9 @@ struct ContentView: View {
                             jobID: jobID,
                             destinationName: destinationName,
                             dateFormatter: dateFormatter,
-                            externalRecordFetcher: externalRecordFetcher
+                            externalRecordFetcher: externalRecordFetcher,
+                            selection: selection,
+                            frozenSettings: advancedSettings
                         )
                     }
                     return
@@ -2045,8 +2439,13 @@ struct ContentView: View {
         jobID: UUID,
         destinationName: String,
         dateFormatter: DateFormatter,
-        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
+        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        selection: HealthHistoryExecutionSelection,
+        frozenSettings: AdvancedExportSettings
     ) async throws {
+        let advancedSettings = frozenSettings
+        let startDate = selection.scope.startDate
+        let endDate = selection.scope.endDate
         let metadata = await MacExportStreamingJobBuilder.metadataForNewOperation(
             startDate: startDate,
             endDate: endDate,
@@ -2532,7 +2931,7 @@ struct ContentView: View {
             )
 
             if result.successCount > 0, !macExportQuotaRecorded {
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: exportResult.isFullSuccess)
                 macExportQuotaRecorded = true
                 trackSuccessfulExport(
                     targetType: .connectedMac,
@@ -2583,7 +2982,7 @@ struct ContentView: View {
             }
             startStatusDismissTimer()
 
-            if ReviewManager.shared.recordSuccessfulExport() {
+            if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
                 ReviewManager.shared.didRequestReview()
                 requestReview()
             }
@@ -2802,7 +3201,7 @@ struct ContentView: View {
                 partialExportNotice = PartialExportNotice(result: exportResult)
                 exportStatusMessage = "Exported 1 file with 1 warning"
                 recordManualExportStatus("Partial export: 1 warning", kind: .warning)
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: false)
             case "fail":
                 exportStatusMessage = "Export failed"
                 recordManualExportStatus("Export failed", kind: .failure)
@@ -2985,6 +3384,7 @@ struct ScheduleTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
+    @EnvironmentObject var agentDataGatewaySettings: AgentDataGatewaySettings
     @Binding var showFolderPicker: Bool
     var profileCoordinator: ExportProfileCoordinator? = nil
 
@@ -2994,6 +3394,7 @@ struct ScheduleTabView: View {
                 vaultManager: vaultManager,
                 advancedSettings: advancedSettings,
                 apiExportSettings: apiExportSettings,
+                agentDataGatewaySettings: agentDataGatewaySettings,
                 showFolderPicker: $showFolderPicker,
                 profileCoordinator: profileCoordinator
             )
@@ -3023,6 +3424,7 @@ struct SettingsTabView: View {
     @State private var showPaywall = false
     @State private var showMyselfClaim = false
     @State private var showExternalIntegrations = false
+    @State private var showDiagnostics = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
     @State private var debugResult: String = ""
@@ -3132,6 +3534,7 @@ struct SettingsTabView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
         .sheet(isPresented: $showExternalIntegrations) {
             ExternalIntegrationsView(manager: externalIntegrationManager)
                 .presentationDetents([.large])
@@ -3279,7 +3682,7 @@ struct SettingsTabView: View {
             SettingsRow(
                 icon: "hand.raised.fill",
                 title: "Privacy Policy",
-                subtitle: "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.",
+                subtitle: "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.",
                 isActive: true,
                 accessibilityHint: "Double tap to open the Health.md privacy policy",
                 action: { UIApplication.shared.open(privacyPolicyURL) }
@@ -3332,6 +3735,17 @@ struct SettingsTabView: View {
                         feedbackReporter.open(.email)
                     }
                 }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "doc.text.magnifyingglass",
+                title: "Diagnostics",
+                subtitle: "Inspect local technical events and choose what to share",
+                isActive: true,
+                accessibilityHint: "Double tap to open Diagnostics",
+                action: { showDiagnostics = true }
             )
 
             SettingsRowDivider()
@@ -3479,4 +3893,38 @@ private struct ExportProfilesSettingsRow: View {
         .environmentObject(SchedulingManager.shared)
         .environmentObject(ExternalIntegrationManager())
         .environmentObject(ConfigurationProtectionManager())
+}
+
+/// Extracted destination-sync modifier chain: keeps the TabView body inside
+/// the compiler's expression type-checking budget while preserving the exact
+/// onChange semantics (target selection, coordinator adoption of endpoint
+/// and gateway edits, and active-target mirroring).
+private extension View {
+    func profileDestinationSync(
+        exportTargetSelection: ExportTargetSelection,
+        profileCoordinator: ExportProfileCoordinator?,
+        apiExportSettings: APIExportSettings,
+        agentDataGatewaySettings: AgentDataGatewaySettings,
+        onTargetSelectionChange: @escaping () -> Void,
+        onActiveTargetChange: @escaping (ExportTargetSelection) -> Void
+    ) -> some View {
+        self
+            .onChange(of: exportTargetSelection) { _, newValue in
+                onTargetSelectionChange()
+                profileCoordinator?.userSelectedTarget(newValue)
+            }
+            .onChange(of: profileCoordinator?.activeTarget) { _, newValue in
+                guard let newValue, newValue != exportTargetSelection else { return }
+                onActiveTargetChange(newValue)
+            }
+            .onChange(of: apiExportSettings.endpointURLString) { _, _ in
+                profileCoordinator?.apiEndpointDidChange()
+            }
+            .onChange(of: apiExportSettings.bearerToken) { _, _ in
+                profileCoordinator?.apiEndpointDidChange()
+            }
+            .onChange(of: agentDataGatewaySettings.endpointURLString) { _, _ in
+                profileCoordinator?.agentDataGatewayDidChange()
+            }
+    }
 }

@@ -407,6 +407,8 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.release_sha || github.sha }}
+          sparse-checkout: /apps/android/scripts/verify-ci-instrumentation-shards.py
+          sparse-checkout-cone-mode: false
       - name: Collect all shard reports without overwriting matching XML paths
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:

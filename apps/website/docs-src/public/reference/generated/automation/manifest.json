@@ -1,5 +1,5 @@
 {
-  "artifact_count" : 32,
+  "artifact_count" : 35,
   "artifacts" : [
     {
       "bytes" : 2529,
@@ -35,6 +35,21 @@
       "bytes" : 7656,
       "path" : "api-export-v2-provider-sidecar.json",
       "sha256" : "94283e6cd273aca0a09d9b4a0ab333f8c77b7113e263df85eaabcaefd2878a4b"
+    },
+    {
+      "bytes" : 1020,
+      "path" : "apple-context-receipt.json",
+      "sha256" : "2bbe5bf1573415fa32e607352ea794be7d95dbc0d49978a3f4447efc3aa715cd"
+    },
+    {
+      "bytes" : 879,
+      "path" : "apple-context-refresh.json",
+      "sha256" : "1094c312f5f3be5f4d375d30bd9586dbf9dafc18ee6894dd8025c3385a38ecf1"
+    },
+    {
+      "bytes" : 878,
+      "path" : "apple-context-status.json",
+      "sha256" : "00919374ffc97ebd98972810eb0605238409723829fa1a3905dddea4c2b933af"
     },
     {
       "bytes" : 363,
@@ -112,14 +127,14 @@
       "sha256" : "b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b"
     },
     {
-      "bytes" : 130127,
+      "bytes" : 136182,
       "path" : "message-fields.md",
-      "sha256" : "4af01c7c7354abf92655475b0828c9995db1872f8a8643d58142e3b9b918ac89"
+      "sha256" : "3ff0fa79ea502393010686b61289116eb8f0cdeb7d6b3b274beb8ce29aa8a4d8"
     },
     {
-      "bytes" : 1685,
+      "bytes" : 1773,
       "path" : "peer-capabilities.json",
-      "sha256" : "38e63c7875a51fb0b9e84088a88878417b1b0f4bb12f1161b156e3d81670df55"
+      "sha256" : "0e2f8666af901c63d72e2950863fc5211e610149d8319f84ff372f257d2beacf"
     },
     {
       "bytes" : 3241,
@@ -178,7 +193,7 @@
   ],
   "generated_group" : "automation",
   "generator" : "HealthMdTests/Documentation/GeneratedAutomationReferenceDocumentation.swift",
-  "hashed_artifact_count" : 31,
-  "sync_message_count" : 40,
+  "hashed_artifact_count" : 34,
+  "sync_message_count" : 41,
   "synthetic_data_only" : true
 }

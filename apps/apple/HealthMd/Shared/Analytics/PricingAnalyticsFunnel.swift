@@ -305,7 +305,7 @@ extension PricingAnalyticsClient {
     }
 
     /// Soft value-moment prompt surfaced after a milestone free export
-    /// (3rd or 7th). The milestone itself is recoverable from the quota state
+    /// (1st or 3rd). The milestone itself is recoverable from the quota state
     /// (`freeExportsUsed`) carried on every value-moment event.
     func trackUpgradePromptShown(quotaState: PricingAnalyticsQuotaState) {
         track(PricingAnalyticsEvent(

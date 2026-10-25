@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.4.4",
+            items: [
+                .list(
+                    title: "Repeat exports and clearer privacy information",
+                    rows: [
+                        .init(
+                            symbolSystemName: "arrow.triangle.2.circlepath",
+                            title: "Your next export",
+                            description: "Guidance after a successful export helps you export again or set up a schedule. The free plan includes five export actions."
+                        ),
+                        .init(
+                            symbolSystemName: "folder",
+                            title: "More dependable exports",
+                            description: "Improved export history, connection recovery, and the export file browser."
+                        ),
+                        .init(
+                            symbolSystemName: "hand.raised",
+                            title: "Apple Ads measurement",
+                            description: "On iPhone and iPad, Apple Ads campaign identifiers help measure which campaigns lead to purchases. Health data and purchase events are never sent to Apple Ads."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.4.3",
             items: [
                 .list(

@@ -478,7 +478,8 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
             currentIOS.negotiateConnectedCorpusTransfer(with: currentMac),
             ConnectedCorpusTransferNegotiation(
                 protocolVersion: ConnectedCorpusTransferCapabilities.currentProtocolVersion,
-                partitionTargetBytes: 48 * 1_024 * 1_024
+                partitionTargetBytes: 48 * 1_024 * 1_024,
+                contextHistoryObservationVersion: 1
             )
         )
 

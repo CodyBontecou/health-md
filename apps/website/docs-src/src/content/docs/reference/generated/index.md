@@ -94,6 +94,9 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 | `automation/agent-query-response.json` | 1490 | `9198944e64b44028ee62f9fc390f7844f6fbcfa06e2303ff1f19974e4a1646f9` | — | [Download](/docs/reference/generated/automation/agent-query-response.json) |
 | `automation/api-export-v1.json` | 2214 | `8a200410fc28852e0ab43b3b57855a4acded031335fd08b56ecc22b704d381ba` | — | [Download](/docs/reference/generated/automation/api-export-v1.json) |
 | `automation/api-export-v2-provider-sidecar.json` | 7656 | `94283e6cd273aca0a09d9b4a0ab333f8c77b7113e263df85eaabcaefd2878a4b` | — | [Download](/docs/reference/generated/automation/api-export-v2-provider-sidecar.json) |
+| `automation/apple-context-receipt.json` | 1020 | `2bbe5bf1573415fa32e607352ea794be7d95dbc0d49978a3f4447efc3aa715cd` | — | [Download](/docs/reference/generated/automation/apple-context-receipt.json) |
+| `automation/apple-context-refresh.json` | 879 | `1094c312f5f3be5f4d375d30bd9586dbf9dafc18ee6894dd8025c3385a38ecf1` | — | [Download](/docs/reference/generated/automation/apple-context-refresh.json) |
+| `automation/apple-context-status.json` | 878 | `00919374ffc97ebd98972810eb0605238409723829fa1a3905dddea4c2b933af` | — | [Download](/docs/reference/generated/automation/apple-context-status.json) |
 | `automation/control-export-response-cancelled.json` | 363 | `75340fe314e9c77cba421c08b632da839123b3b564c17871ce975cd9e835a222` | — | [Download](/docs/reference/generated/automation/control-export-response-cancelled.json) |
 | `automation/control-export-response-failure.json` | 395 | `c9f9fc38cced8f1e19da6ea0b82a96a871aa4d85a03c3ed2140db80bc5e65131` | — | [Download](/docs/reference/generated/automation/control-export-response-failure.json) |
 | `automation/control-export-response-partial-success.json` | 425 | `6adf990e777827755af7ec4346139b73c159c531e8b28278f6a4fe661cfaa0c3` | — | [Download](/docs/reference/generated/automation/control-export-response-partial-success.json) |
@@ -109,9 +112,9 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 | `automation/mac-export-job.json` | 27691 | `eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `automation/mac-export-result-partial.json` | 1034 | `f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `automation/mac-export-result-success.json` | 585 | `b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `automation/manifest.json` | 5848 | `90eafc49c9a81efd3870fe8de52aab513a3eb0d49d71088e1c09a162c89834a6` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `automation/message-fields.md` | 130127 | `4af01c7c7354abf92655475b0828c9995db1872f8a8643d58142e3b9b918ac89` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `automation/peer-capabilities.json` | 1685 | `38e63c7875a51fb0b9e84088a88878417b1b0f4bb12f1161b156e3d81670df55` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `automation/manifest.json` | 6337 | `1943a98769a8a958c17a0806fda0d5bdf57afea2389bf58246237a267bae04c8` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `automation/message-fields.md` | 136182 | `3ff0fa79ea502393010686b61289116eb8f0cdeb7d6b3b274beb8ce29aa8a4d8` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `automation/peer-capabilities.json` | 1773 | `0e2f8666af901c63d72e2950863fc5211e610149d8319f84ff372f257d2beacf` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `automation/raw-result-complete.json` | 3241 | `bbf8f86a366590cae7823d1e6a2134d1ad14e77d539d26a5ee3ab8e2c96eb338` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `automation/raw-result-partial.json` | 5281 | `05979a293411c09f05f40476d893c2335658f9426d96e2fcf9ee4a48927750cb` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `automation/transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |

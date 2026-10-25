@@ -36,12 +36,19 @@ def sdk_major(version: str) -> int:
     return int(match.group(1))
 
 
+def sdk_release(version: str) -> tuple[int, int]:
+    match = re.fullmatch(r"(\d+)(?:\.(\d+))?(?:\.\d+)?", version)
+    if match is None:
+        raise ValueError(f"invalid iOS Simulator SDK version: {version!r}")
+    return int(match[1]), int(match[2] or 0)
+
+
 def select_device(
     payload: dict[str, Any], sdk_version: str, device_family: str = "iPhone"
 ) -> tuple[str, str, tuple[int, int, int]]:
     if device_family not in ("iPhone", "iPad"):
         raise ValueError(f"invalid iOS Simulator device family: {device_family!r}")
-    maximum_major = sdk_major(sdk_version)
+    maximum_release = sdk_release(sdk_version)
     preferred_rank = (
         {name: index for index, name in enumerate(PREFERRED_IPHONES)}
         if device_family == "iPhone"
@@ -55,7 +62,7 @@ def select_device(
 
     for runtime_identifier, devices in devices_by_runtime.items():
         version = runtime_version(runtime_identifier)
-        if version is None or version[0] > maximum_major or not isinstance(devices, list):
+        if version is None or version[:2] > maximum_release or not isinstance(devices, list):
             continue
         for device in devices:
             if not isinstance(device, dict) or device.get("isAvailable") is False:
@@ -80,7 +87,7 @@ def select_device(
 
 def select_ci_ipad(payload: dict[str, Any], sdk_version: str) -> tuple[str, str, tuple[int, int, int]]:
     """Reuse or create an iPad on the newest available compatible runtime."""
-    maximum_major = sdk_major(sdk_version)
+    maximum_release = sdk_release(sdk_version)
     runtimes_payload = json.loads(subprocess.check_output(
         ["xcrun", "simctl", "list", "runtimes", "available", "-j"], text=True
     ))
@@ -93,7 +100,7 @@ def select_ci_ipad(payload: dict[str, Any], sdk_version: str) -> tuple[str, str,
             continue
         identifier = runtime.get("identifier")
         version = runtime_version(identifier) if isinstance(identifier, str) else None
-        if version is not None and version[0] <= maximum_major:
+        if version is not None and version[:2] <= maximum_release:
             candidates.append((version, identifier, runtime))
     if not candidates:
         raise ValueError(f"no available iOS runtime is compatible with SDK {sdk_version}")

@@ -420,3 +420,45 @@ test("accepts family upgrade product purchase events", async () => {
   assert.equal(payload.eventName, "pricing_purchase_finished");
   assert.equal(payload.properties.productId, "com.codybontecou.obsidianhealth.unlock.family.upgrade");
 });
+
+function attributionEvent(extra = {}) {
+  return { installId, eventId: "00000000-0000-4000-8000-000000000701",
+    eventName: "pricing_apple_ads_attribution_resolved",
+    properties: { platform: "ios", appleAdsStatus: "matched", appleAdsCampaignId: 2144165887,
+      appleAdsClaimType: "Click", appleAdsConversionType: "Download", ...extra } };
+}
+
+test("attribution deduplicates by install and retains only bounded campaign dimensions", async () => {
+  const { db, response } = await postEvents(attributionEvent({appleAdsAdGroupId: 42, appleAdsKeywordId: 43}));
+  assert.equal(response.status, 200);
+  assert.equal(db.statements[0].values[0], `dedupe:pricing_apple_ads_attribution_resolved:${installId}`);
+  assert.equal(JSON.parse(db.statements[0].values.at(-1)).properties.appleAdsCampaignId, 2144165887);
+});
+
+test("attribution rejects tokens, invalid IDs, non-iOS data and contradictory unmatched records", async () => {
+  for (const extra of [{token: "secret"}, {appleAdsCampaignId: -1}, {appleAdsCampaignId: 1.5},
+    {appleAdsCampaignId: Number.MAX_SAFE_INTEGER + 1}, {platform: "android"},
+    {appleAdsStatus: "unmatched"}, {appleAdsClaimType: "other"}, {productId: "com.codybontecou.obsidianhealth.unlock"}]) {
+    assert.equal((await postEvents(attributionEvent(extra))).response.status, 400);
+  }
+  const ordinary = attributionEvent(); ordinary.eventName = "pricing_purchase_finished";
+  assert.equal((await postEvents(ordinary)).response.status, 400);
+});
+
+test("unmatched and privacy-redacted matched records remain distinguishable", async () => {
+  for (const appleAdsStatus of ["matched", "unmatched"]) {
+    const event = attributionEvent({appleAdsStatus, appleAdsClaimType: "unknown", appleAdsConversionType: "unknown"});
+    delete event.properties.appleAdsCampaignId;
+    assert.equal((await postEvents(event)).response.status, 200);
+  }
+});
+
+test("start marker accepts the client's experiment defaults and deduplicates per install", async () => {
+  const event = { installId, eventId: "00000000-0000-4000-8000-000000000702",
+    eventName: "pricing_apple_ads_attribution_started", properties: baseProperties() };
+  const { db, response } = await postEvents(event);
+  assert.equal(response.status, 200);
+  assert.equal(db.statements[0].values[0], `dedupe:pricing_apple_ads_attribution_started:${installId}`);
+  event.properties.platform = "android";
+  assert.equal((await postEvents(event)).response.status, 400);
+});
