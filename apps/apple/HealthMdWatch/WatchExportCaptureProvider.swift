@@ -49,10 +49,12 @@ private final class WatchExportQuantityQuery: @unchecked Sendable {
                 }
                 self.continuation = continuation
                 let query = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: predicate, options: .cumulativeSum) { [self] _, statistics, error in
-                    if let error {
+                    do {
+                        let value = try WatchExportHealthKitResult.quantity(
+                            statistics?.sumQuantity()?.doubleValue(for: unit), error: error)
+                        finish(.success(value))
+                    } catch {
                         finish(.failure(error))
-                    } else {
-                        finish(.success(statistics?.sumQuantity()?.doubleValue(for: unit)))
                     }
                 }
                 self.query = query
