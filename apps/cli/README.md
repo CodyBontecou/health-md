@@ -9,9 +9,11 @@ or Android app.
 > protocol v1, Android application protocol v2, and capability-gated iPhone query protocol v3 are
 > implemented with automated Swift↔Rust and Kotlin↔Rust compatibility gates. The owner has
 > physically confirmed iPhone and Android direct pairing/connectivity; the complete retained
-> release matrix is still required before the first qualified stable release. The published alpha.7
-> MCP catalog has 19 tools. Current development source has 21 after adding full-corpus raw-artifact
-> tools; those two tools are unreleased until a later versioned CLI tag says otherwise.
+> release matrix is still required before the first qualified stable release. The published alpha.6
+> MCP catalog has 19 tools. Current development source has 23 after adding full-corpus raw-artifact
+> and agent planning/approval-relay tools; those additions remain unreleased. Native bridge routes
+> and bound execution remain incomplete. See [production readiness](docs/production-readiness.md)
+> for the distinct development, read-only, bundled Mac and frozen CLI 1.0 scopes.
 
 ## How it works
 
@@ -78,12 +80,16 @@ v2 has a 4,096-file limit per generated job. Android raw snapshots retain their 
 contract rather than being converted to HealthKit-shaped data. Use NDJSON for large snapshots;
 in-memory JSON validation is capped at 64 MiB.
 
+iPhone `export --raw` emits canonical `healthmd.health_data` JSON. Bounded host-side
+`extract --format jsonl` is a separate canonical projection, not the Android provider-native
+snapshot product.
+
 ## Mobile compatibility
 
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
 | Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.4.0 (build 202609032318) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full qualification pending |
-| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.4.0 (build 202609032318) / iOS 3.0.3 | Alpha.7: 19-tool local MCP/query; current source: 21 tools with unreleased full-corpus jobs | Connectivity confirmed; full qualification pending |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.4.0 (build 202609032318) / iOS 3.0.3 | Published alpha.6: 19-tool local MCP/query; current development: 23 tools including unreleased full-corpus jobs and planning/approval relay | Connectivity confirmed; full qualification pending |
 | Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.9.0 (`versionCode 38`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Connectivity confirmed; full qualification pending |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 

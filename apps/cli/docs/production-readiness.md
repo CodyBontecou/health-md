@@ -2,9 +2,9 @@
 
 ## Current decision
 
-The latest public standalone release, `healthmd-cli/v0.1.0-alpha.7`, is an explicitly unqualified preview. It is not Health.md CLI 1.0 and no 1.0 date is committed. The bundled Mac MCP helper is a separate production component versioned with the Health.md Mac app; installing or qualifying one topology does not qualify the other.
+The latest public standalone release, `healthmd-cli/v0.1.0-alpha.6`, is an explicitly unqualified preview. Alpha.7 remains an unpublished draft. It is not Health.md CLI 1.0 and no 1.0 date is committed. The bundled Mac MCP helper is a separate production component versioned with the Health.md Mac app; installing or qualifying one topology does not qualify the other.
 
-Published alpha.7 exposes 19 MCP tools. Current development source exposes 23: the 21-tool export/query set plus agent-bridge `healthmd_export_plan` and `healthmd_export_approval`. These two planning/approval-relay tools are not additions to the frozen 1.0 scope below; native bridge setup/routes and bound execution remain incomplete. Documentation, support, and release evidence must name the exact version rather than assigning development tools to alpha.7.
+Published alpha.6 preview has 19 tools. Current development source exposes 23: the 21-tool export/query set plus agent-bridge `healthmd_export_plan` and `healthmd_export_approval`. These two planning/approval-relay tools are not additions to the frozen 1.0 scope below. Native bridge routes remain unwired/unadvertised, with no bound execution; setup and full feature acceptance remain incomplete. The bundled Mac helper has 21 tools in its separate context/refresh surface. Documentation, support, and release evidence must name the exact version rather than assigning development tools to the published preview or draft alpha.7 tag.
 
 `healthmd_capabilities` reports `support_status: preview_unqualified` and `cli_1_0_qualified: false`. `healthmd_doctor` adds the exact CLI version, negotiated application protocol, source app/build/OS and peer-supplied history-authorization metadata when available. An OS version does not establish boundary-API support or full-history access. See [current source history limitations](mobile-compatibility.md#current-source-history-limitations); these fields are evidence, not a self-certification switch.
 

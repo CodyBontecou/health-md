@@ -172,39 +172,41 @@ class HistoryReadinessDocumentationTests(unittest.TestCase):
                 self.assertIn("illustrative", text)
 
 
-class RootFeatureInventoryDocumentationTests(unittest.TestCase):
-    """Static public inventory accounting, not installed capability qualification."""
+class CanonicalCliDocumentationTests(unittest.TestCase):
+    """The root map locates owners; canonical guides retain public boundary checks."""
 
     ROOT = MODULE_PATH.resolve().parents[3]
 
     def test_portable_catalog_counts_do_not_promote_the_bundled_or_public_release(self) -> None:
         inventory = (self.ROOT / "docs/features/feature-inventory.md").read_text(encoding="utf-8")
+        self.assertIn("../../apps/cli/README.md", inventory)
+        self.assertIn("../../apps/cli/docs/architecture.md", inventory)
+        readiness = (self.ROOT / "apps/cli/docs/production-readiness.md").read_text(encoding="utf-8")
         catalog = json.loads(
             (self.ROOT / "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json")
             .read_text(encoding="utf-8")
         )
         self.assertEqual(len(catalog), 23)
-        serve = next(line for line in inventory.splitlines() if line.startswith("| `healthmd mcp serve` /"))
-        self.assertIn(f"current development source has {len(catalog)}", serve)
-        self.assertIn("preview has 19 tools", serve)
-        self.assertIn("13 tools", serve)
-        self.assertIn("frozen CLI 1.0 scope remains 21", serve)
-        row = next(line for line in inventory.splitlines() if line.startswith("| MCP tool catalog"))
-        self.assertIn("portable development: 23; bundled Mac: 21", row)
+        self.assertIn(f"Current development source exposes {len(catalog)}", readiness)
+        self.assertIn("Published alpha.6 preview has 19 tools", readiness)
+        self.assertIn("Alpha.7 remains an unpublished draft", readiness)
+        self.assertIn("the 13-tool read-only catalog", readiness)
+        self.assertIn("the 21-tool local stdio MCP catalog", readiness)
+        self.assertIn("bundled Mac helper has 21 tools", readiness)
         for name in ("healthmd_export_plan", "healthmd_export_approval"):
             self.assertIn(name, {tool["name"] for tool in catalog})
-            self.assertIn(name, row)
-        self.assertIn("unwired/unadvertised", row)
-        self.assertIn("no bound execution", row)
+            self.assertIn(name, readiness)
+        self.assertIn("unwired/unadvertised", readiness)
+        self.assertIn("no bound execution", readiness)
 
     def test_pairing_inventory_distinguishes_universal_and_legacy_selectors(self) -> None:
-        inventory = (self.ROOT / "docs/features/feature-inventory.md").read_text(encoding="utf-8")
-        row = next(line for line in inventory.splitlines() if line.startswith("| `healthmd direct pair` |"))
-        for term in ("selector 3", "20-digit", "legacy Apple selector 1", "Android selector 2"):
+        compatibility = (self.ROOT / "apps/cli/docs/mobile-compatibility.md").read_text(encoding="utf-8")
+        for term in ("selector 3", "20-digit", "Legacy Apple selector 1 (6-digit)",
+                     "Android selector 2 (20-digit)"):
             with self.subTest(term=term):
-                self.assertIn(term, row)
-        self.assertIn("not query v3", row)
-        self.assertIn("no permission", row)
+                self.assertIn(term, compatibility)
+        self.assertIn("independent from iPhone query v3", compatibility)
+        self.assertIn("no permission escalation", compatibility)
 
 
 class RootFeatureParityDocumentationTests(unittest.TestCase):
@@ -269,12 +271,12 @@ class RootFeatureParityDocumentationTests(unittest.TestCase):
             self.assertIn("extract --format jsonl", cells[1])
             self.assertIn("provider-native", cells[4])
             self.assertIn("not iPhone", cells[4])
-        with self.subTest(document="inventory"):
-            cells = self.row(self.ROOT / "docs/features/feature-inventory.md", "NDJSON raw output")
-            self.assertEqual(cells[1], "Android; CLI with Android source")
-            self.assertIn("provider-native", cells[2])
-            self.assertIn("`healthmd.health_data` JSON", cells[2])
-            self.assertIn("extract --format jsonl", cells[2])
+        with self.subTest(document="canonical CLI guide"):
+            guide = (self.ROOT / "apps/cli/README.md").read_text(encoding="utf-8")
+            self.assertIn("Android provider-native JSON/NDJSON raw export", guide)
+            self.assertIn("iPhone `export --raw` emits canonical `healthmd.health_data` JSON", guide)
+            self.assertIn("`extract --format jsonl` is a separate canonical projection", guide)
+            self.assertIn("not the Android provider-native", guide)
         pages = sorted(
             (self.ROOT / "apps/website/docs-src/src/content/docs")
             .glob("**/guides/platform-features.md")

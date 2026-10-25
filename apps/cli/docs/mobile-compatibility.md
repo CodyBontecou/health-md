@@ -86,7 +86,7 @@ Physical release qualification remains pending; source tests do not qualify an i
   alpha.7 source builds send the best-effort nudge by default; its draft has no public archives. Android FCM remains the
   explicit P3 target, so opening Health.md manually unblocks Android in the meantime.
 - Shared pairing selector 3 is independent from iPhone query v3. It adds one 20-digit iOS/Android QR/code without changing application v1/v2 or encrypted transport.
-- Legacy Apple selector 1 and Android selector 2 remain byte-compatible. Android may retry high-entropy selector 2 for an older CLI and never downgrades its application protocol to v1.
+- Legacy Apple selector 1 (6-digit) and Android selector 2 (20-digit) remain byte-compatible. Android may retry high-entropy selector 2 for an older CLI and never downgrades its application protocol to v1. Pairing grants no permission escalation: native health, configuration and destination approvals still apply.
 - An old v1-only iPhone remains usable for supported v1 operations; typed query tools report
   unsupported rather than sending an unknown message.
 - macOS, Linux, and Windows Rust clients use the deployed `macos_cli` wire role. Desktop OS changes
