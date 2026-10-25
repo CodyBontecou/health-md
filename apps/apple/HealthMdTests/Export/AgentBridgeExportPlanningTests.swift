@@ -792,7 +792,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             let issuer = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
             store.querySumResult = { _, _ in XCTFail("Rejected Resume cannot query SDK"); return nil }
             do {
-                try await reconnect.withResumedCaptureContext(resume) { _, _ in XCTFail("Invalid Resume reached native callback") }
+                try await reconnect.transmitResumedTransfer(resume) { _, _ in
+                    XCTFail("Invalid Resume reached native callback"); throw AgentBridgeValidationError.invalidRequest
+                }
                 XCTFail("Expected rejected Resume")
             } catch { XCTAssertNotNil(error as? AgentBridgeValidationError) }
             XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), progress)
@@ -1085,6 +1087,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     func testNativeTransferSenderPublicationFailurePreventsNextPartitionAndFinalize() async throws { try await checkNativeTransferSender("publication") }
 
     func testNativeCompletionRequiresExactHostReceiptsAndPersistsReplay() async throws { try await checkNativeTransferSender("complete") }
+    func testNativeResumeCarriesRetainedPrefixAndConfirmsOriginalCompletionWithoutCapture() async throws { try await checkNativeTransferSender("complete-resume") }
     func testNativeCompletionRejectsChangedInputWithValidCommitKey() async throws { try await checkNativeTransferSender("complete-bad-input") }
     func testNativeCompletionRejectsReorderedReceipts() async throws { try await checkNativeTransferSender("complete-order") }
     func testNativeCompletionRejectsMissingReceipt() async throws { try await checkNativeTransferSender("complete-missing") }
@@ -1110,23 +1113,27 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             store.querySumResult = { _, _ in 123 }
             let original = try await planner.prepareTransferExport(request, manager: manager)
             let completion = mode.hasPrefix("complete")
+            let resumedPrefix = mode == "resume" || mode == "complete-resume"
+            var resumeEnvelope: AgentBridgeResume?
             let originalManifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: original.export.manifestCanonical)
             var hostReceipts = try originalManifest.artifacts.map { try self.nativeHostCommit($0, request: request, manifest: original.export.manifestCanonical, badInput: mode == "complete-bad-input") }
             if mode == "complete-order" { hostReceipts.reverse() }
             if mode == "complete-missing" { hostReceipts.removeLast() }
-            let originalJob = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+            let acceptedBeforeResume = try rig.store.snapshot().acceptedJobs
+            let originalJob = try XCTUnwrap(acceptedBeforeResume?.first)
             let completionDirectory = rig.directory.appendingPathComponent("captures/" + originalJob.requestSHA256.rawValue)
 
-            if mode == "resume" || mode == "rewind" {
+            if resumedPrefix || mode == "rewind" {
                 try await planner.withRetainedCaptureContext(request) { context in
                     _ = try context.begin(); _ = try context.preserveTransferFrontier()
                     _ = try context.recordAcknowledgedTransferPartition(0)
+                    if mode == "complete-resume" { resumeEnvelope = try self.resumeRequest(request, transfer: original, frontier: context.preserveTransferFrontier()) }
                 }
             }
             let key = SymmetricKey(data: Data(repeating: 19, count: 32))
             var responses: [DirectMessage] = []
             for partition in original.partitions {
-                let already = mode == "already" || (mode == "resume" && partition.index == 0) || (mode == "mixed" && partition.index > 0)
+                let already = mode == "already" || (resumedPrefix && partition.index == 0) || (mode == "mixed" && partition.index > 0)
                 responses.append(.transferDisposition(try .init(sessionID: original.session.sessionID,
                     jobID: mode == "bad-disposition" ? UUID() : original.session.jobID, partitionIndex: partition.index,
                     partitionSHA256: partition.sha256, disposition: already ? .alreadyCommitted : .needed)))
@@ -1178,7 +1185,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 }
             }
             defer { rig.captureProtection.onRequire = nil }
-            let fails = (completion && mode != "complete") || mode.hasPrefix("bad-") || ["revoke", "rewind", "publication"].contains(mode)
+            let fails = (completion && !["complete", "complete-resume"].contains(mode)) || mode.hasPrefix("bad-") || ["revoke", "rewind", "publication"].contains(mode)
             do {
                 if mode == "contended" {
                     try await reconnect.transmitTransfer(request, retained: true) { context in
@@ -1191,6 +1198,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                         catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
                         return original
                     }
+                } else if mode == "complete-resume" {
+                    try await reconnect.sendResumedExecutionExport(XCTUnwrap(resumeEnvelope), manager: manager, core: BridgeRenderTamperCore(mode: "forbid"))
                 } else if completion {
                     try await reconnect.sendExecutionExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid"))
                 } else {
@@ -1225,6 +1234,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     _ = try context.begin()
                     XCTAssertEqual(try context.preserveTransferFrontier().committedPartitionCount, Int64(original.partitions.count))
                 }
+            }
+            if mode == "complete-resume" {
+                XCTAssertEqual(try rig.store.snapshot().acceptedJobs, acceptedBeforeResume)
             }
             XCTAssertEqual(messages.first, .transferSession(original.session))
             XCTAssertEqual(Array(messages.dropFirst().prefix(original.export.baseFiles.count)), original.export.baseFiles.map { .fileManifest($0.manifest) })
@@ -1261,8 +1273,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 XCTAssertEqual(try Data(contentsOf: completionDirectory.appendingPathComponent("completion.json")), before)
             }
             if !fails {
-                XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count - (["resume", "mixed"].contains(mode) ? 1 : 0))
-                for (chunk, file) in zip(chunks, original.export.baseFiles.dropFirst(mode == "resume" ? 1 : 0)) { XCTAssertEqual(chunk.sequence, 1); XCTAssertEqual(chunk.data, file.content); XCTAssertEqual(chunk.sha256, file.manifest.sha256) }
+                XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count - (resumedPrefix || mode == "mixed" ? 1 : 0))
+                for (chunk, file) in zip(chunks, original.export.baseFiles.dropFirst(resumedPrefix ? 1 : 0)) { XCTAssertEqual(chunk.sequence, 1); XCTAssertEqual(chunk.data, file.content); XCTAssertEqual(chunk.sha256, file.manifest.sha256) }
                 XCTAssertEqual(wire.receiveCount, responses.count + (completion ? hostReceipts.count : 0))
             }
             if mode == "revoke" { XCTAssertEqual(messages.count, 2 + original.export.baseFiles.count) }

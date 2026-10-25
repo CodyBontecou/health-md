@@ -242,6 +242,16 @@ extension AgentBridgeNativePlanningSession {
         }
     }
 
+    /// The original Execute is recovered exclusively from the signed native job. Retained
+    /// preparation must reuse its captured bytes; Resume cannot cause a fresh SDK capture.
+    func sendResumedExecutionExport(_ resume: AgentBridgeResume, manager: HealthKitManager,
+        acknowledging acknowledgement: DirectTransferPartitionAcknowledgement? = nil,
+        core: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor(profile: .appleHealthDataV8)) async throws {
+        try await transmitResumedTransfer(resume, acknowledging: acknowledgement, confirmCompletion: true) { request, context in
+            try await AgentBridgeNativeExportProducer.prepareTransfer(request: request, manager: manager, context: context, core: core)
+        }
+    }
+
     func prepareTransferExport(_ request: AgentBridgeExecute, manager: HealthKitManager,
         core: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor(profile: .appleHealthDataV8)
     ) async throws -> AgentBridgeNativePreparedTransfer {

@@ -187,6 +187,16 @@ internal suspend fun AgentBridgeNativePlanningSession.sendExecutionExport(reques
     transmitTransfer(request, retained, confirmCompletion = true) { context -> AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer) }
 }
 
+/** The Execute comes only from the signed native job. Retained preparation reuses captured
+ * bytes and cannot turn the Resume envelope into fresh SDK capture authority. */
+internal suspend fun AgentBridgeNativePlanningSession.sendResumedExecutionExport(resume: AgentBridgeResumeRequest,
+    manager: HealthConnectManager, acknowledgement: TransferPartitionAcknowledgement? = null,
+    renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()) {
+    transmitResumedTransfer(resume, acknowledgement, confirmCompletion = true) { request, context ->
+        AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer)
+    }
+}
+
 internal suspend fun AgentBridgeNativePlanningSession.prepareTransferExport(request: AgentBridgeExecuteRequest,
     manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()
 ): AgentBridgeNativePreparedTransfer = withCaptureContext(request) { context ->

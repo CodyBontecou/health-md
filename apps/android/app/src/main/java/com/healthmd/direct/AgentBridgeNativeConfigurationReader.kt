@@ -387,25 +387,42 @@ internal class AgentBridgeNativePlanningSession(
     suspend fun transmitTransfer(request: AgentBridgeExecuteRequest, retained: Boolean, confirmCompletion: Boolean = false,
         prepare: suspend (AgentBridgeNativeCaptureContext) -> AgentBridgeNativePreparedTransfer) {
         val operation: suspend (AgentBridgeNativeCaptureContext) -> Unit = { context ->
-            try {
-                val supplied = prepare(context)
-                if (supplied.export.requestSha256 != context.requestFingerprintForRead() ||
-                    !supplied.export.manifestCanonical.contentEquals(context.preserveManifest()) ||
-                    !supplied.checkpointCanonical.contentEquals(context.preserveTransferPlan()))
-                    throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
-                val export = AgentBridgeNativePreparedExport.make(request, supplied.export.days,
-                    supplied.export.totalByteCount, supplied.export.publicArtifactIDs, supplied.export.manifestCanonical)
-                val transfer = AgentBridgeNativePreparedTransfer.make(request, export, supplied.checkpointCanonical)
-                val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
-                val caller = currentCoroutineContext().job
-                withTransportCancellation(caller, channel) { sendTransferBytes(transfer, context, confirmCompletion) }
-                context.configurationForRead()
-                Unit
-            } catch (failure: Throwable) {
-                context.invalidate(); wireAbandoned = true; runCatching { responseChannel?.close() }; throw failure
-            }
+            sendPreparedTransfer(request, context, confirmCompletion, prepare)
         }
         if (retained) withRetainedCaptureContext(request, operation) else withCaptureContext(request, operation)
+    }
+
+    /** Resume recovers the Execute from signed native storage. Preparation and carriage remain
+     * inside that capture owner, without nesting a second wire-operation guard or accepting a
+     * caller-supplied replacement Execute as recovery authority. */
+    suspend fun transmitResumedTransfer(resume: AgentBridgeResumeRequest,
+        acknowledgement: TransferPartitionAcknowledgement? = null, confirmCompletion: Boolean = false,
+        prepare: suspend (AgentBridgeExecuteRequest, AgentBridgeNativeCaptureContext) -> AgentBridgeNativePreparedTransfer) {
+        withResumedCaptureContext(resume, acknowledgement) { request, context ->
+            sendPreparedTransfer(request, context, confirmCompletion) { prepare(request, it) }
+        }
+    }
+
+    private suspend fun sendPreparedTransfer(request: AgentBridgeExecuteRequest, context: AgentBridgeNativeCaptureContext,
+        confirmCompletion: Boolean,
+        prepare: suspend (AgentBridgeNativeCaptureContext) -> AgentBridgeNativePreparedTransfer) {
+        try {
+            val supplied = prepare(context)
+            if (supplied.export.requestSha256 != context.requestFingerprintForRead() ||
+                !supplied.export.manifestCanonical.contentEquals(context.preserveManifest()) ||
+                !supplied.checkpointCanonical.contentEquals(context.preserveTransferPlan()))
+                throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            val export = AgentBridgeNativePreparedExport.make(request, supplied.export.days,
+                supplied.export.totalByteCount, supplied.export.publicArtifactIDs, supplied.export.manifestCanonical)
+            val transfer = AgentBridgeNativePreparedTransfer.make(request, export, supplied.checkpointCanonical)
+            val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+            val caller = currentCoroutineContext().job
+            withTransportCancellation(caller, channel) { sendTransferBytes(transfer, context, confirmCompletion) }
+            context.configurationForRead()
+            Unit
+        } catch (failure: Throwable) {
+            context.invalidate(); wireAbandoned = true; runCatching { responseChannel?.close() }; throw failure
+        }
     }
 
     private fun sendTransferBytes(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext, confirmCompletion: Boolean) {

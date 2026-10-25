@@ -353,28 +353,50 @@ final class AgentBridgeNativePlanningSession {
         prepare: (AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
     ) async throws {
         let operation: (AgentBridgeNativeCaptureContext) async throws -> Void = { [self] context in
-            do {
-                let supplied = try await prepare(context)
-                guard supplied.export.requestSHA256 == (try context.requestFingerprintForRead()),
-                      supplied.export.manifestCanonical == (try context.preserveManifest()),
-                      supplied.checkpointCanonical == (try context.preserveTransferPlan()) else {
-                    throw AgentBridgeValidationError.bindingChanged
-                }
-                // Rebuild from the exact original request and pinned metadata. A caller-supplied
-                // session, partition table or content descriptor cannot replace retained bytes.
-                let export = try AgentBridgeNativePreparedExport.make(request: request, days: supplied.export.days,
-                    totalByteCount: supplied.export.totalByteCount, publicArtifactIDs: supplied.export.publicArtifactIDs,
-                    manifestCanonical: supplied.export.manifestCanonical)
-                let transfer = try AgentBridgeNativePreparedTransfer.make(request: request, export: export,
-                    checkpointCanonical: supplied.checkpointCanonical)
-                try await sendTransferBytes(transfer, context: context, confirmCompletion: confirmCompletion)
-                _ = try context.configurationForRead()
-            } catch {
-                context.invalidate(); wireAbandoned = true; responseChannel?.cancel(); throw error
-            }
+            try await sendPreparedTransfer(request, context: context, confirmCompletion: confirmCompletion, prepare: prepare)
         }
         if retained { try await withRetainedCaptureContext(request, operation: operation) }
         else { try await withCaptureContext(request, operation: operation) }
+    }
+
+    /// Resume recovers the Execute from signed native storage and keeps preparation/carriage
+    /// inside that same capture owner. Never nest another wire-operation guard or accept a
+    /// caller-supplied replacement Execute as recovery authority.
+    func transmitResumedTransfer(_ resume: AgentBridgeResume,
+        acknowledging acknowledgement: DirectTransferPartitionAcknowledgement? = nil,
+        confirmCompletion: Bool = false,
+        prepare: (AgentBridgeExecute, AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
+    ) async throws {
+        try await withResumedCaptureContext(resume, acknowledging: acknowledgement) { [self] request, context in
+            try await sendPreparedTransfer(request, context: context, confirmCompletion: confirmCompletion) {
+                try await prepare(request, $0)
+            }
+        }
+    }
+
+    private func sendPreparedTransfer(_ request: AgentBridgeExecute, context: AgentBridgeNativeCaptureContext,
+        confirmCompletion: Bool,
+        prepare: (AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
+    ) async throws {
+        do {
+            let supplied = try await prepare(context)
+            guard supplied.export.requestSHA256 == (try context.requestFingerprintForRead()),
+                  supplied.export.manifestCanonical == (try context.preserveManifest()),
+                  supplied.checkpointCanonical == (try context.preserveTransferPlan()) else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            // Rebuild from the exact original request and pinned metadata. A caller-supplied
+            // session, partition table or content descriptor cannot replace retained bytes.
+            let export = try AgentBridgeNativePreparedExport.make(request: request, days: supplied.export.days,
+                totalByteCount: supplied.export.totalByteCount, publicArtifactIDs: supplied.export.publicArtifactIDs,
+                manifestCanonical: supplied.export.manifestCanonical)
+            let transfer = try AgentBridgeNativePreparedTransfer.make(request: request, export: export,
+                checkpointCanonical: supplied.checkpointCanonical)
+            try await sendTransferBytes(transfer, context: context, confirmCompletion: confirmCompletion)
+            _ = try context.configurationForRead()
+        } catch {
+            context.invalidate(); wireAbandoned = true; responseChannel?.cancel(); throw error
+        }
     }
 
     private func sendTransferBytes(_ transfer: AgentBridgeNativePreparedTransfer,

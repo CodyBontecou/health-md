@@ -554,7 +554,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 val stateBytes = Files.readAllBytes(issuer.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
                 coEvery { client.aggregate(any()) } throws IllegalStateException("Rejected Resume cannot query SDK")
                 try {
-                    reconnect.withResumedCaptureContext(resume) { _, _ -> throw AssertionError("Invalid Resume reached native callback") }
+                    reconnect.transmitResumedTransfer(resume) { _, _ -> throw AssertionError("Invalid Resume reached native callback") }
                     throw AssertionError("Expected rejected Resume: $mode")
                 } catch (_: AgentBridgeException) { }
                 assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(progress)
@@ -808,6 +808,7 @@ class AgentBridgeNativeConfigurationReaderTest {
     @Test fun `native transfer sender publication failure prevents next partition and finalize`() = runBlocking { checkNativeTransferSender("publication") }
 
     @Test fun `native completion persists exact host receipts and source confirmation`() = runBlocking { checkNativeTransferSender("complete") }
+    @Test fun `native Resume carries retained prefix and confirms original completion without capture`() = runBlocking { checkNativeTransferSender("complete-resume") }
     @Test fun `native completion rejects changed input with valid commit key`() = runBlocking { checkNativeTransferSender("complete-bad-input") }
     @Test fun `native completion rejects reordered receipts`() = runBlocking { checkNativeTransferSender("complete-order") }
     @Test fun `native completion rejects missing receipt`() = runBlocking { checkNativeTransferSender("complete-missing") }
@@ -833,14 +834,18 @@ class AgentBridgeNativeConfigurationReaderTest {
             val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
             val original = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
             val completion=mode.startsWith("complete")
+            val resumedPrefix = mode == "resume" || mode == "complete-resume"
+            var resumeEnvelope: AgentBridgeResumeRequest? = null
             val manifest=AgentBridgeCodec.decode(original.export.manifestCanonical) as AgentBridgeArtifactManifest
             val hostReceipts=manifest.artifacts.map { nativeHostCommit(it,request,original.export.manifestCanonical,mode=="complete-bad-input") }.toMutableList()
             if(mode=="complete-order")hostReceipts.reverse()
             if(mode=="complete-missing")hostReceipts.removeAt(hostReceipts.lastIndex)
             var completionDirectory:java.nio.file.Path?=null
+            val acceptedBeforeResume = f.store.access { it!!.state.acceptedJobs }
 
-            if (mode == "resume" || mode == "rewind") planner.withRetainedCaptureContext(request) { context ->
+            if (resumedPrefix || mode == "rewind") planner.withRetainedCaptureContext(request) { context ->
                 context.begin(); context.preserveTransferFrontier(); context.recordAcknowledgedTransferPartition(0)
+                if (mode == "complete-resume") resumeEnvelope = resumeRequest(request, original, context.preserveTransferFrontier())
             }
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
             val channel = mockk<DirectSecureChannel>(relaxed = true)
@@ -851,7 +856,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 responses.add(ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode(type, serializer, payload))))
             }
             original.partitions.forEach { partition ->
-                val already = mode == "already" || (mode == "resume" && partition.index == 0L) || (mode == "mixed" && partition.index > 0L)
+                val already = mode == "already" || (resumedPrefix && partition.index == 0L) || (mode == "mixed" && partition.index > 0L)
                 response("transfer_disposition", TransferDisposition.serializer(), TransferDisposition(original.session.sessionId,
                     if (mode == "bad-disposition") java.util.UUID.randomUUID().toString() else original.session.jobId,
                     partition.index, partition.sha256, if (already) TransferDispositionKind.ALREADY_COMMITTED else TransferDispositionKind.NEEDED))
@@ -912,7 +917,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                     publicationInterrupted = true; throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
                 }
             }
-            val fails = (completion && mode!="complete") || mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication")
+            val fails = (completion && mode !in setOf("complete", "complete-resume")) || mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication")
             try {
                 if (mode == "contended") {
                     reconnect.transmitTransfer(request, true) { context ->
@@ -926,7 +931,8 @@ class AgentBridgeNativeConfigurationReaderTest {
                         catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
                         original
                     }
-                } else if(completion)reconnect.sendExecutionExport(request,manager,true,forbidden)
+                } else if (mode == "complete-resume") reconnect.sendResumedExecutionExport(requireNotNull(resumeEnvelope), manager, renderer = forbidden)
+                else if(completion)reconnect.sendExecutionExport(request,manager,true,forbidden)
                 else reconnect.sendTransferExport(request, manager, true, forbidden)
                 if (fails) throw AssertionError("Expected acknowledgement/owner rejection")
             } catch (failure: AgentBridgeException) {
@@ -937,6 +943,9 @@ class AgentBridgeNativeConfigurationReaderTest {
                 verify(atLeast = 1) { channel.close() }
             }
             f.peerContext.onCheck = null
+            if (mode == "complete-resume") {
+                assertThat(f.store.access { it!!.state.acceptedJobs }).isEqualTo(acceptedBeforeResume)
+            }
             if (mode == "mixed") reconnect.withRetainedCaptureContext(request) { context ->
                 context.begin(); assertThat(context.preserveTransferFrontier().committedPartitionCount).isEqualTo(original.partitions.size.toLong())
             }
@@ -973,8 +982,8 @@ class AgentBridgeNativeConfigurationReaderTest {
                 assertThat(Files.exists(directory.resolve("completion.json"))).isFalse()
             }
             if (!fails) {
-                assertThat(chunks.size).isEqualTo(if (mode == "already") 0 else original.partitions.size - if (mode == "resume" || mode == "mixed") 1 else 0)
-                chunks.zip(original.export.baseFiles.drop(if (mode == "resume") 1 else 0)).forEach { (chunk, file) -> assertThat(chunk.second).isEqualTo(file.content) }
+                assertThat(chunks.size).isEqualTo(if (mode == "already") 0 else original.partitions.size - if (resumedPrefix || mode == "mixed") 1 else 0)
+                chunks.zip(original.export.baseFiles.drop(if (resumedPrefix) 1 else 0)).forEach { (chunk, file) -> assertThat(chunk.second).isEqualTo(file.content) }
                 assertThat(responses).isEmpty()
             }
             if (mode == "revoke") assertThat(base.size).isEqualTo(2 + original.export.baseFiles.size)
