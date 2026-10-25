@@ -4,6 +4,7 @@ import com.healthmd.direct.protocol.AgentBridgeErrorCode
 import com.healthmd.direct.protocol.AgentBridgeException
 import java.util.concurrent.locks.ReentrantLock
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.ensureActive
 
 /** Native observer state only. The owner records metadata before scheduling publication; readers
  * reject until that exact observation commits. Does not register SDK events, spawn unowned tasks,
@@ -24,6 +25,7 @@ internal class AgentBridgeNativeCatalogLifecycle {
     private var observedChange = true
     private var stopped = false
     private var exhausted = false
+    private val initialPublication = kotlinx.coroutines.CompletableDeferred<Unit>()
 
     /** One collector per accepted owner; initial state catches events preceding registration. */
     fun claimRefreshEvents(): kotlinx.coroutines.flow.StateFlow<Long?> = synchronized(lock) {
@@ -66,7 +68,29 @@ internal class AgentBridgeNativeCatalogLifecycle {
     /** Actual native notification, including A→B→A coalesced before deferred SDK sampling. */
     fun observeNativeChange() = synchronized(lock) { requireAvailable(); advance() }
 
-    fun stop() = synchronized(lock) { stopped = true; refreshEvents.value = null }
+    fun stop() {
+        synchronized(lock) { stopped = true; refreshEvents.value = null }
+        initialPublication.completeExceptionally(AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED))
+    }
+
+    /** Wait for this exact native owner's first publication attempt. No sampling, storage
+     * opening, owner renewal or retry is triggered by a waiting receiver. */
+    suspend fun awaitInitialPublication(): AgentBridgeNativeCatalogPublication {
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        synchronized(lock) { requireAvailable() }
+        initialPublication.await()
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        return currentPublication()
+    }
+
+    fun failInitialPublication() {
+        initialPublication.completeExceptionally(AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED))
+    }
+
+    fun completeInitialPublication(publication: AgentBridgeNativeCatalogPublication) {
+        if (currentPublication() != publication) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+        initialPublication.complete(Unit)
+    }
 
     fun currentFacts(): AgentBridgeNativePlanningFacts = synchronized(lock) {
         requireAvailable()

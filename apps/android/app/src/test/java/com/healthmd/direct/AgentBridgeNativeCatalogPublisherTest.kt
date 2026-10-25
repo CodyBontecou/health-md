@@ -105,6 +105,78 @@ class AgentBridgeNativeCatalogPublisherTest {
         }
     }
 
+    @Test fun initialReadinessWaitsForColdOwnedPublicationWithoutStartingOrCancelingIt() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); val peer = WorkerPeer(f.peer)
+            val facts = nativeFacts(f); val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+            val owners = kotlinx.coroutines.flow.MutableStateFlow<AgentBridgeNativeCatalogAdmissionOwner?>(null)
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val admission = AgentBridgeNativeCatalogAdmission(scope, owners)
+            val ready = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(3000) { lifecycle.awaitInitialPublication() } }
+            try {
+                assertThat(ready.isCompleted).isFalse()
+                assertThat(peer.checks.get()).isEqualTo(0)
+                val canceled = async(start = CoroutineStart.UNDISPATCHED) { lifecycle.awaitInitialPublication() }
+                canceled.cancelAndJoin()
+                assertThat(canceled.isCancelled).isTrue()
+                owners.value = AgentBridgeNativeCatalogAdmissionOwner(lifecycle) { child ->
+                    AgentBridgeNativeCatalogRefresh(child, lifecycle) {
+                        AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, {
+                            entered.complete(Unit); release.await(); facts
+                        }) { f.store }
+                    }.start()
+                }
+                withTimeout(3000) { entered.await() }
+                assertThat(ready.isCompleted).isFalse()
+                expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.currentPublication() }
+                release.complete(Unit)
+                assertThat(ready.await()).isEqualTo(lifecycle.currentPublication())
+                admission.close()
+                withTimeout(3000) { scope.coroutineContext.job.children.forEach { it.join() } }
+                expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.awaitInitialPublication() }
+            } finally {
+                ready.cancelAndJoin(); admission.close(); scope.cancel(); scope.coroutineContext.job.join()
+            }
+        }
+    }
+
+    @Test fun initialReadinessFailureRejectsWithoutWaitingForAnotherNativeEvent() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.store.initialize(f.native)
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); val peer = WorkerPeer(f.peer)
+            val ready = async(start = CoroutineStart.UNDISPATCHED) {
+                runCatching { withTimeout(3000) { lifecycle.awaitInitialPublication() } }
+            }
+            expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) {
+                AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, {
+                    throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+                }) { throw AssertionError("A failed sample cannot open issuer storage") }
+            }
+            assertThat((ready.await().exceptionOrNull() as AgentBridgeException).code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED)
+            // A later event cannot revive this session's failed initial admission.
+            AgentBridgeNativeCatalogPublisher.refresh(lifecycle, peer, { nativeFacts(f) }) { f.store }
+            expect(AgentBridgeErrorCode.BINDING_CHANGED) { lifecycle.awaitInitialPublication() }
+            lifecycle.stop()
+            expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { lifecycle.awaitInitialPublication() }
+        }
+    }
+
+    @Test fun initialReadinessRejectsNativeSetupFailureBeforePublisherEntry() = runBlocking {
+        val lifecycle = AgentBridgeNativeCatalogLifecycle()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val ready = async(start = CoroutineStart.UNDISPATCHED) {
+            runCatching { withTimeout(3000) { lifecycle.awaitInitialPublication() } }
+        }
+        val controller = AgentBridgeNativeCatalogRefresh(scope, lifecycle) {
+            throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        }
+        try {
+            controller.start()
+            assertThat((ready.await().exceptionOrNull() as AgentBridgeException).code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED)
+        } finally { ready.cancelAndJoin(); controller.close(); scope.cancel(); scope.coroutineContext.job.join() }
+    }
+
     @Test fun admissionPublishesWithOwnedChildAndCloseCancelsIt() = runBlocking {
         AgentBridgeExportPlanningFixture().use { f ->
             f.store.initialize(f.native)
@@ -142,6 +214,9 @@ class AgentBridgeNativeCatalogPublisherTest {
             val owners = kotlinx.coroutines.flow.MutableStateFlow<AgentBridgeNativeCatalogAdmissionOwner?>(null)
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
             val admission = AgentBridgeNativeCatalogAdmission(scope, owners)
+            val oldReady = async(start = CoroutineStart.UNDISPATCHED) {
+                runCatching { withTimeout(3000) { old.awaitInitialPublication() } }
+            }
             try {
                 owners.value = AgentBridgeNativeCatalogAdmissionOwner(old) { child ->
                     AgentBridgeNativeCatalogRefresh(child, old) {
@@ -156,6 +231,8 @@ class AgentBridgeNativeCatalogPublisherTest {
                     }.start()
                 }
                 withTimeout(3000) { ended.await(); published.await() }
+                assertThat((oldReady.await().exceptionOrNull() as AgentBridgeException).code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+                assertThat(current.awaitInitialPublication()).isEqualTo(current.currentPublication())
                 expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { old.beginSample() }
                 assertThat(current.currentFacts()).isEqualTo(facts)
             } finally { admission.close(); scope.cancel(); scope.coroutineContext.job.join() }

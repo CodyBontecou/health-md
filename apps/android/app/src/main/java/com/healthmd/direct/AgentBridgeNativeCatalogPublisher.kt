@@ -35,6 +35,7 @@ internal object AgentBridgeNativeCatalogPublisher {
             return publish(lifecycle, peer, accepted, loadStore)
         } catch (failure: Exception) {
             runCatching { lifecycle.observeNativeChange() }
+            lifecycle.failInitialPublication()
             caller.ensureActive()
             throw failure
         }
@@ -65,9 +66,11 @@ internal object AgentBridgeNativeCatalogPublisher {
             caller.ensureActive()
             if (lifecycle.currentPublication() != publication) fail(AgentBridgeErrorCode.BINDING_CHANGED)
             caller.ensureActive()
+            lifecycle.completeInitialPublication(publication)
             return publication
         } catch (failure: Exception) {
             runCatching { lifecycle.observeNativeChange() } // May have crossed rename/fsync; retain pending.
+            lifecycle.failInitialPublication()
             // The synchronous private store maps unknown exceptions to fixed errors. Preserve actual
             // coroutine cancellation rather than exposing that mapped storage error as its outcome.
             caller.ensureActive()
@@ -93,7 +96,10 @@ internal class AgentBridgeNativeCatalogRefresh(
                 currentCoroutineContext().ensureActive()
                 try { refresh() }
                 catch (failure: CancellationException) { throw failure }
-                catch (_: Exception) { runCatching { lifecycle.observeNativeChange() } }
+                catch (_: Exception) {
+                    runCatching { lifecycle.observeNativeChange() }
+                    lifecycle.failInitialPublication()
+                }
             }
         } finally { lifecycle.stop() }
     }

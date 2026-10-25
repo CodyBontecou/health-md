@@ -25,6 +25,9 @@ nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
     private var observedChange = true
     private var stopped = false
     private var exhausted = false
+    private var initialPublicationFinished = false
+    private var initialPublicationFailure: AgentBridgeValidationError?
+    private var initialPublicationWaiters: [UUID: CheckedContinuation<Void, Error>] = [:]
 
     init() {
         let events = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
@@ -93,7 +96,61 @@ nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
         try lock.withLock { try requireAvailable(); try advance() }
     }
 
-    func stop() { lock.withLock { stopped = true; refreshContinuation.finish() } }
+    func stop() {
+        lock.withLock { stopped = true; refreshContinuation.finish() }
+        finishInitialPublication(.permissionRequired)
+    }
+
+    /// Wait only for the original native controller's first publication attempt. This never
+    /// schedules a sample, opens storage, retries a failed attempt or renews an owner.
+    func awaitInitialPublication() async throws -> AgentBridgeNativeCatalogPublication {
+        try Task.checkCancellation()
+        let id = UUID()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                let result: Result<Void, Error>? = lock.withLock {
+                    if Task.isCancelled { return .failure(CancellationError()) }
+                    do { try requireAvailable() }
+                    catch { return .failure(error) }
+                    if initialPublicationFinished {
+                        if let initialPublicationFailure { return .failure(initialPublicationFailure) }
+                        return .success(())
+                    }
+                    initialPublicationWaiters[id] = continuation
+                    return nil
+                }
+                if let result { continuation.resume(with: result) }
+            }
+        } onCancel: {
+            let continuation = self.lock.withLock { self.initialPublicationWaiters.removeValue(forKey: id) }
+            continuation?.resume(throwing: CancellationError())
+        }
+        try Task.checkCancellation()
+        return try currentPublication()
+    }
+
+    /// Failure ends this admission wait; it cannot turn into an implicit retry loop.
+    func failInitialPublication() { finishInitialPublication(.bindingChanged) }
+
+    func completeInitialPublication(_ publication: AgentBridgeNativeCatalogPublication) throws {
+        guard try currentPublication() == publication else { throw AgentBridgeValidationError.bindingChanged }
+        finishInitialPublication(nil)
+    }
+
+    private func finishInitialPublication(_ failure: AgentBridgeValidationError?) {
+        let waiters = lock.withLock { () -> [CheckedContinuation<Void, Error>] in
+            guard !initialPublicationFinished else { return [] }
+            initialPublicationFinished = true
+            initialPublicationFailure = failure
+            let waiters = Array(initialPublicationWaiters.values)
+            initialPublicationWaiters.removeAll()
+            return waiters
+        }
+        for waiter in waiters {
+            if let failure { waiter.resume(throwing: failure) }
+            else { waiter.resume() }
+        }
+    }
 
     func currentFacts() throws -> AgentBridgeNativePlanningFacts {
         try lock.withLock {

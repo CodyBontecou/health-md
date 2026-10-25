@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 class DirectCliForegroundService : Service() {
     @Inject lateinit var coordinator: DirectCliCoordinator
     @Inject lateinit var healthConnect: com.healthmd.data.health.HealthConnectManager
+    @Inject lateinit var nativeSettingsStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var operation: Job? = null
@@ -118,7 +119,9 @@ class DirectCliForegroundService : Service() {
                         port = intent.getIntExtra(EXTRA_PORT, com.healthmd.direct.protocol.DIRECT_PORT),
                         pairingCode = intent.getStringExtra(EXTRA_PAIRING_CODE).orEmpty(),
                     )
-                    ACTION_CONNECT -> if (servingEpoch != null) coordinator.connectAndServe(servingEpoch)
+                    ACTION_CONNECT -> if (servingEpoch != null) coordinator.connectAndServe(servingEpoch) {
+                        coordinator.agentBridgeNativePlanningSession(applicationContext, nativeSettingsStore)
+                    }
                         else coordinator.connectAndServe() // Preserve legacy serving; no bridge peer without an epoch.
                 }
             } catch (error: CancellationException) {

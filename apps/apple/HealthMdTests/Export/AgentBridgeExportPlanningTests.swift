@@ -3097,12 +3097,108 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertThrowsError(try lifecycle.currentPublication())
     }
 
+    func testInitialReadinessWaitsForColdOwnedPublicationWithoutStartingOrCancelingIt() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), admission = AgentBridgeNativeCatalogAdmission()
+        let facts = try nativeState(), store = rig.store
+        let entered = expectation(description: "native sample suspended"), completed = expectation(description: "original receiver admitted")
+        let gate = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        var result: Result<AgentBridgeNativeCatalogPublication, Error>?
+        let receiver = Task {
+            do { result = .success(try await lifecycle.awaitInitialPublication()) }
+            catch { result = .failure(error) }
+            completed.fulfill()
+        }
+        var controller: AgentBridgeNativeCatalogRefresh?
+        defer { receiver.cancel(); gate.continuation.finish(); admission.replace(with: nil); controller?.stop() }
+        await Task.yield()
+        XCTAssertNil(result)
+        let canceled = Task { try await lifecycle.awaitInitialPublication() }
+        canceled.cancel()
+        do { _ = try await canceled.value; XCTFail("Canceled receiver was admitted") }
+        catch { XCTAssertTrue(error is CancellationError) }
+        admission.configure { original in
+            XCTAssertTrue(original === lifecycle)
+            controller = try AgentBridgeNativeCatalogRefresh(lifecycle: original) {
+                _ = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: original, peer: rig.peer,
+                    existingDirectory: rig.directory, sample: {
+                        entered.fulfill(); for await _ in gate.stream { break }; return facts
+                    }, loadStore: { _ in store })
+            }
+        }
+        admission.replace(with: lifecycle)
+        await fulfillment(of: [entered], timeout: 3)
+        XCTAssertNil(result)
+        XCTAssertThrowsError(try lifecycle.currentPublication())
+        gate.continuation.yield(())
+        await fulfillment(of: [completed], timeout: 3)
+        XCTAssertEqual(try XCTUnwrap(result).get(), try lifecycle.currentPublication())
+        admission.replace(with: nil)
+        do { _ = try await lifecycle.awaitInitialPublication(); XCTFail("Closed owner was admitted") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+    }
+
+    func testInitialReadinessFailureRejectsWithoutWaitingForAnotherNativeEvent() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(), store = rig.store
+        let completed = expectation(description: "failed first sample released receiver")
+        var result: Result<AgentBridgeNativeCatalogPublication, Error>?
+        let receiver = Task {
+            do { result = .success(try await lifecycle.awaitInitialPublication()) }
+            catch { result = .failure(error) }
+            completed.fulfill()
+        }
+        defer { receiver.cancel(); lifecycle.stop() }
+        do {
+            _ = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: lifecycle, peer: rig.peer,
+                existingDirectory: rig.directory, sample: { throw AgentBridgeValidationError.permissionRequired },
+                loadStore: { _ in XCTFail("Failed sample opened issuer storage"); return store })
+            XCTFail("Failed sample returned a publication")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+        await fulfillment(of: [completed], timeout: 3)
+        do { _ = try XCTUnwrap(result).get(); XCTFail("Failed publication admitted receiver") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+        let facts = try nativeState()
+        _ = try await AgentBridgeNativeCatalogPublisher.refresh(lifecycle: lifecycle, peer: rig.peer,
+            existingDirectory: rig.directory, sample: { facts }, loadStore: { _ in store })
+        do { _ = try await lifecycle.awaitInitialPublication(); XCTFail("A later event revived failed admission") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+        lifecycle.stop()
+        do { _ = try await lifecycle.awaitInitialPublication(); XCTFail("Closed failed owner admitted receiver") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+    }
+
+    func testInitialReadinessRejectsNativeSetupFailureBeforePublisherEntry() async throws {
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        let completed = expectation(description: "native setup failure released receiver")
+        var failure: Error?
+        let receiver = Task {
+            do { _ = try await lifecycle.awaitInitialPublication(); XCTFail("Failed setup admitted receiver") }
+            catch { failure = error }
+            completed.fulfill()
+        }
+        let controller = try AgentBridgeNativeCatalogRefresh(lifecycle: lifecycle) {
+            throw AgentBridgeValidationError.permissionRequired
+        }
+        defer { receiver.cancel(); controller.stop() }
+        await fulfillment(of: [completed], timeout: 3)
+        XCTAssertEqual(failure as? AgentBridgeValidationError, .bindingChanged)
+    }
+
     func testNativeAdmissionOwnerReplacementCancelsQueuedIdentityBeforeSampling() async throws {
         let rig = try Rig(); defer { rig.cleanup() }
         let admission = AgentBridgeNativeCatalogAdmission()
         let old = AgentBridgeNativeCatalogLifecycle(), current = AgentBridgeNativeCatalogLifecycle()
         let facts = try nativeState(), store = rig.store
         let published = expectation(description: "only replacement published")
+        let rejected = expectation(description: "old receiver rejected on replacement")
+        var oldFailure: Error?
+        let oldReceiver = Task {
+            do { _ = try await old.awaitInitialPublication(); XCTFail("Replaced owner admitted receiver") }
+            catch { oldFailure = error }
+            rejected.fulfill()
+        }
+        defer { oldReceiver.cancel() }
         var controller: AgentBridgeNativeCatalogRefresh?
         var calls = 0
         admission.configure { original in
@@ -3116,7 +3212,10 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
         admission.replace(with: old)
         admission.replace(with: current)
-        await fulfillment(of: [published], timeout: 3)
+        await fulfillment(of: [published, rejected], timeout: 3)
+        XCTAssertEqual(oldFailure as? AgentBridgeValidationError, .permissionRequired)
+        let currentPublication = try await current.awaitInitialPublication()
+        XCTAssertEqual(currentPublication, try current.currentPublication())
         XCTAssertEqual(calls, 1)
         XCTAssertThrowsError(try old.beginSample())
         XCTAssertEqual(try current.currentFacts(), facts)

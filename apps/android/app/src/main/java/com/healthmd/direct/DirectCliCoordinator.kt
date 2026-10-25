@@ -193,6 +193,7 @@ class DirectCliCoordinator @Inject constructor(
         private val bridgeNegotiation: com.healthmd.direct.protocol.AgentBridgeNegotiation,
         private val transferNegotiation: TransferNegotiation, peerTransferCapabilities: TransferCapabilities) : AgentBridgeExportNativeSessionOwner {
         private val peerTransferCapabilities = AgentBridgeNativeTransferCheckpoint.detachPeerCapabilities(peerTransferCapabilities)
+        val bridgePlanningNegotiated: Boolean get() = bridgeNegotiation.agentExtension
         @Volatile private var revoked = false
         val catalogLifecycle = AgentBridgeNativeCatalogLifecycle()
         private val catalogRefreshLock = Any()
@@ -353,6 +354,13 @@ class DirectCliCoordinator @Inject constructor(
     /** Native composition only. The owner pins the first real repositories and planner for its
      * full lifetime, retaining issued discovery evidence without initializing private authority. */
     internal fun agentBridgeNativePlanningSession(context: android.content.Context,
+        dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>): AgentBridgeNativePlanningSession {
+        val settings = settingsRepository as? com.healthmd.data.settings.SettingsRepositoryImpl
+            ?: throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        return agentBridgeNativePlanningSession(context, dataStore, settings, exportProfileRepository)
+    }
+
+    internal fun agentBridgeNativePlanningSession(context: android.content.Context,
         dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
         settings: com.healthmd.data.settings.SettingsRepositoryImpl,
         profiles: ExportProfileRepository): AgentBridgeNativePlanningSession {
@@ -511,9 +519,11 @@ class DirectCliCoordinator @Inject constructor(
      */
     // Legacy callers still serve exactly as before, but cannot establish a bridge FGS epoch.
     suspend fun connectAndServe() = serveSession(null)
-    internal suspend fun connectAndServe(epoch: AgentBridgeExportServingEpoch) = serveSession(epoch)
+    internal suspend fun connectAndServe(epoch: AgentBridgeExportServingEpoch,
+        planningSession: (() -> AgentBridgeNativePlanningSession)? = null) = serveSession(epoch, planningSession)
 
-    private suspend fun serveSession(epoch: AgentBridgeExportServingEpoch?) = sessionMutex.withLock {
+    private suspend fun serveSession(epoch: AgentBridgeExportServingEpoch?,
+        planningSession: (() -> AgentBridgeNativePlanningSession)? = null) = sessionMutex.withLock {
         val serving = epoch?.let { ServingScope(it, currentCoroutineContext().job).apply {
             // Invalid new-only provenance never changes legacy serving/negotiation behavior.
             revoked = !runCatching { it.requireCurrent(this@DirectCliCoordinator) }.isSuccess
@@ -554,7 +564,7 @@ class DirectCliCoordinator @Inject constructor(
                         )
                         Diagnostics.record(DiagnosticEventID.CONNECTION_CHANGED, Diagnostics.peerFields(connected.listener.displayName) + (DiagnosticField.STATE to DiagnosticValue.Text("connected")))
                         Diagnostics.record(DiagnosticEventID.CAPABILITIES_RECEIVED, mapOf(DiagnosticField.READY to DiagnosticValue.Boolean(true)))
-                        serve(channel, transferNegotiation)
+                        serve(channel, transferNegotiation, planningSession)
                     } finally {
                         protocolAuthority.endOperation()
                         replaceNativeOwner(null)
@@ -660,9 +670,28 @@ class DirectCliCoordinator @Inject constructor(
     private suspend fun serve(
         channel: DirectSecureChannel,
         transferNegotiation: TransferNegotiation,
+        planningSession: (() -> AgentBridgeNativePlanningSession)?,
     ) {
+        val originalOwner = acceptedNativeOwner
+        val planner = if (originalOwner?.bridgePlanningNegotiated == true) {
+            originalOwner.requireCurrent()
+            val factory = planningSession ?: throw com.healthmd.direct.protocol.AgentBridgeException(
+                com.healthmd.direct.protocol.AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+            originalOwner.catalogLifecycle.awaitInitialPublication()
+            originalOwner.requireCurrent()
+            factory().also { originalOwner.requireCurrent(); it.requireCurrent() }
+        } else null
         while (true) {
-            val envelope = channel.receiveV2()
+            // One awaited reader owns this channel. A retained planner never falls back to
+            // the deployed decoder after its original owner is revoked.
+            val envelope = if (planner == null) channel.receiveV2() else {
+                when (val received = planner.receiveAndHandleNext(channel, currentCoroutineContext().job)) {
+                    null -> continue
+                    is com.healthmd.direct.protocol.ReceivedAgentBridgePayload.Base -> received.envelope
+                    else -> throw com.healthmd.direct.protocol.AgentBridgeException(
+                        com.healthmd.direct.protocol.AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+                }
+            }
             when (envelope.type) {
                 "status_request" -> {
                     V2Codec.decodePayload(envelope, StatusRequest.serializer())

@@ -26,6 +26,7 @@ nonisolated enum AgentBridgeNativeCatalogPublisher {
                                      sample: accepted, loadStore: loadStore)
         } catch {
             try? lifecycle.observeNativeChange()
+            lifecycle.failInitialPublication()
             throw error
         }
     }
@@ -57,10 +58,12 @@ nonisolated enum AgentBridgeNativeCatalogPublisher {
                 throw AgentBridgeValidationError.bindingChanged
             }
             try Task.checkCancellation()
+            try lifecycle.completeInitialPublication(publication)
             return publication
         } catch {
             // A failed worker may have crossed rename/fsync; never reopen an older cached plan.
             try? lifecycle.observeNativeChange()
+            lifecycle.failInitialPublication()
             throw error
         }
     }
@@ -85,6 +88,7 @@ final class AgentBridgeNativeCatalogRefresh {
                 do { try await refresh() }
                 catch {
                     try? lifecycle.observeNativeChange()
+                    lifecycle.failInitialPublication()
                     if error is CancellationError || Task.isCancelled { return }
                 }
             }

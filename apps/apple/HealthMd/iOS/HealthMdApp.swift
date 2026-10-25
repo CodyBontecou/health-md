@@ -533,6 +533,11 @@ struct HealthMdApp: App {
                     externalIntegrations: externalIntegrationManager
                 )
                 if !TestMode.suppressesRuntimeServices {
+                    let profiles = iPadHistoryProfileStore
+                    directCLIService.agentBridgePlanningSessionProvider = { [weak directCLIService, profiles] in
+                        guard let directCLIService else { throw AgentBridgeValidationError.permissionRequired }
+                        return try directCLIService.agentBridgeNativePlanningSession(profiles: profiles)
+                    }
                     directCLIService.configureAgentBridgeNativeCatalogRefresh(
                         health: healthKitManager, purchases: PurchaseManager.shared,
                         configurationProtection: configurationProtection)

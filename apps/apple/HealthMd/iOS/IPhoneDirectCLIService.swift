@@ -376,6 +376,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     @Published private(set) var pendingPairingLink: IPhoneDirectCLIPairingLink?
 
     var statusProvider: (() async -> DirectIPhoneStatus)?
+    var agentBridgePlanningSessionProvider: (() throws -> AgentBridgeNativePlanningSession)?
     var exportRequestHandler: ((
         DirectExportRequest,
         DirectPeerBinding,
@@ -1265,9 +1266,25 @@ final class IPhoneDirectCLIService: ObservableObject {
         self.exportConnection = exportConnection
         sessionTask = Task { [weak self] in
             guard let self else { return }
+            var planningReceiver: AgentBridgeNativePlanningSession?
             do {
                 while !Task.isCancelled {
-                    let payload = try await connected.receive()
+                    // Await the original reader inline. A negotiated planning session keeps
+                    // its owner and channel; revocation must never fall back to base decoding.
+                    let payload: DirectSecurePayload
+                    if let planningReceiver {
+                        switch try await planningReceiver.receiveAndHandleNext(on: connected) {
+                        case nil:
+                            lastInboundActivityAt = heartbeatClock.now
+                            heartbeatPingSentAt = nil
+                            continue
+                        case .base(let message): payload = .message(message)
+                        case .binaryTransferFrame(let data): payload = .binaryTransferFrame(data)
+                        case .agent: throw AgentBridgeValidationError.unsupportedCapability
+                        }
+                    } else {
+                        payload = try await connected.receive()
+                    }
                     lastInboundActivityAt = heartbeatClock.now
                     heartbeatPingSentAt = nil
                     guard case .message(let message) = payload else {
@@ -1278,12 +1295,35 @@ final class IPhoneDirectCLIService: ObservableObject {
                           self.channel === connected else {
                         break
                     }
+                    if case .hello = message, planningReceiver != nil {
+                        throw AgentBridgeValidationError.bindingChanged
+                    }
                     try await self.handle(
                         message,
                         on: connected,
                         exportConnection: exportConnection,
                         sessionID: sessionID
                     )
+                    if case .hello(let capabilities) = message,
+                       Self.applicationProtocolVersions.contains(4), capabilities.protocolVersions.contains(4) {
+                        let negotiation = try AgentBridgeNegotiation(
+                            localVersions: Self.applicationProtocolVersions,
+                            remoteVersions: capabilities.protocolVersions,
+                            deployedBaseVersion: HealthMdDirectProtocol.currentVersion)
+                        if negotiation.agentBridgeV4 {
+                            guard let provider = self.agentBridgePlanningSessionProvider else {
+                                throw AgentBridgeValidationError.unsupportedCapability
+                            }
+                            let original = try self.agentBridgeNativePlanningOwner()
+                            _ = try await original.lifecycle.awaitInitialPublication()
+                            try Task.checkCancellation()
+                            let current = try self.agentBridgeNativePlanningOwner()
+                            guard current.lifecycle === original.lifecycle else {
+                                throw AgentBridgeValidationError.permissionRequired
+                            }
+                            planningReceiver = try provider()
+                        }
+                    }
                 }
             } catch {
                 if !Task.isCancelled,
