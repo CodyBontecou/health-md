@@ -74,6 +74,8 @@ final class HealthKitManagerAuthTests: XCTestCase {
         XCTAssertTrue(sut.isAuthorized)
         XCTAssertEqual(sut.authorizationStatus, "Connected")
         XCTAssertTrue(store.authRequested)
+        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty, "Authorization must not await an uncoordinated history query")
+        XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty)
     }
 
     @MainActor
@@ -260,6 +262,8 @@ final class HealthKitManagerAuthTests: XCTestCase {
         XCTAssertTrue(sut.isAuthorized)
         XCTAssertEqual(sut.authorizationStatus, "Connected")
         XCTAssertFalse(store.authRequested)
+        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty)
+        XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty)
     }
 
     @MainActor
@@ -3202,7 +3206,7 @@ final class HealthKitManagerObserverTests: XCTestCase {
     }
 
     @MainActor
-    func test_catalogBackedEarliestDiscoveryDoesNotQualifyAllAvailableWhenHistoryAPIIsUnavailable() async {
+    func test_catalogBackedEarliestDiscoveryDoesNotRunHistoryAuthorizationAssessment() async {
         let store = FakeHealthStore()
         store.historyAuthorizationBoundariesSupported = false
         let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
@@ -3212,7 +3216,9 @@ final class HealthKitManagerObserverTests: XCTestCase {
         let discovery = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps"])
 
         XCTAssertTrue(discovery.isComplete, "Earliest-date queries and authorization-boundary proof are separate gates")
-        XCTAssertEqual(discovery.historyAuthorization.state, .apiUnavailable)
+        XCTAssertEqual(discovery.historyAuthorization.state, .unknown)
+        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty)
+        XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty)
         XCTAssertFalse(discovery.supportsUnqualifiedFullHistoryClaim)
     }
 

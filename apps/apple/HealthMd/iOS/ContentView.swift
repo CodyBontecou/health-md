@@ -2104,16 +2104,10 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
 
         exportTask = Task {
-            guard let dateRange = await effectiveExportDateRange() else {
-                if Task.isCancelled {
-                    finishMacExportPreparationStopped(jobID: jobID, message: exportStatusMessage)
-                } else {
-                    finishMacExportPreparationFailed(jobID: jobID, message: exportStatusMessage)
-                }
+            guard !Task.isCancelled else {
+                finishMacExportPreparationStopped(jobID: jobID, message: "Export cancelled")
                 return
             }
-            startDate = dateRange.startDate
-            endDate = dateRange.endDate
             externalIntegrationManager.beginExportAction()
             defer { externalIntegrationManager.endExportAction() }
             do {

@@ -304,6 +304,91 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         XCTAssertEqual(result?.scope, selection.scope)
     }
 
+    func testResolvedExportRequestKeepsOriginAndExactCaptureScopeWithoutPreferenceWrites() throws {
+        let suite = "HistoryResolvedRequest.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        let origin = HealthHistoryExecutionSelection(scope: scope(allAvailable: true, profile: UUID()),
+            settings: ExportSettingsSnapshot.from(settings), target: .localIPhoneFolder,
+            preset: .allTime, localDestinationURL: URL(fileURLWithPath: "/tmp/history-original"))
+        let before = defaults.persistentDomain(forName: suite) as NSDictionary?
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        let request = coordinator.beginExportRequest(selection: origin)
+        let range = ExportDateRange(startDate: boundary.addingTimeInterval(-86400 * 30),
+                                    endDate: boundary.addingTimeInterval(86400 * 2))
+        let resolved = try XCTUnwrap(request.resolvingAllTime(range))
+        XCTAssertEqual(resolved.id, request.id)
+        XCTAssertEqual(resolved.originatingSelection, origin)
+        XCTAssertNotEqual(resolved.selection, origin, "Equatable must retain the actual capture bounds")
+        XCTAssertEqual(resolved.selection.scope.startDate, range.startDate)
+        XCTAssertEqual(resolved.selection.scope.endDate, range.endDate)
+        XCTAssertEqual(resolved.selection.scope.profileID, origin.scope.profileID)
+        XCTAssertEqual(resolved.selection.scope.metricIDs, origin.scope.metricIDs)
+        XCTAssertEqual(resolved.selection.scope.timeZoneIdentifier, origin.scope.timeZoneIdentifier)
+        XCTAssertEqual(resolved.selection.settings, origin.settings)
+        XCTAssertEqual(resolved.selection.localDestinationURL, origin.localDestinationURL)
+        XCTAssertTrue(coordinator.isCurrent(resolved, liveSelection: origin))
+        XCTAssertEqual(before, defaults.persistentDomain(forName: suite) as NSDictionary?)
+    }
+
+    func testResolvedExportRequestRejectsChangesBeforeConfirmationOrAssessment() async throws {
+        let defaults = UserDefaults(suiteName: "HistoryResolvedChanged")!
+        defer { defaults.removePersistentDomain(forName: "HistoryResolvedChanged") }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        let origin = HealthHistoryExecutionSelection(scope: scope(allAvailable: true),
+            settings: ExportSettingsSnapshot.from(settings), target: .localIPhoneFolder, preset: .allTime,
+            localDestinationURL: URL(fileURLWithPath: "/tmp/history-original"))
+        var altered = origin.settings
+        altered.includeMetadata.toggle()
+        let changed = [
+            HealthHistoryExecutionSelection(scope: origin.scope, settings: altered, target: origin.target, preset: origin.preset, localDestinationURL: origin.localDestinationURL),
+            HealthHistoryExecutionSelection(scope: scope(["heart_rate_avg"], allAvailable: true), settings: origin.settings, target: origin.target, preset: origin.preset, localDestinationURL: origin.localDestinationURL),
+            HealthHistoryExecutionSelection(scope: scope(allAvailable: true, profile: UUID()), settings: origin.settings, target: origin.target, preset: origin.preset, localDestinationURL: origin.localDestinationURL),
+            HealthHistoryExecutionSelection(scope: scope(start: origin.scope.startDate.addingTimeInterval(3600), allAvailable: true),
+                settings: origin.settings, target: origin.target, preset: origin.preset, localDestinationURL: origin.localDestinationURL),
+            HealthHistoryExecutionSelection(scope: HealthHistoryScope(metricIDs: origin.scope.metricIDs,
+                startDate: origin.scope.startDate, endDate: origin.scope.endDate, timeZoneIdentifier: "UTC",
+                allAvailable: true, profileID: origin.scope.profileID, rangeSemantics: origin.scope.rangeSemantics),
+                settings: origin.settings, target: origin.target, preset: origin.preset, localDestinationURL: origin.localDestinationURL),
+            HealthHistoryExecutionSelection(scope: origin.scope, settings: origin.settings, target: origin.target,
+                preset: .custom, localDestinationURL: origin.localDestinationURL),
+            HealthHistoryExecutionSelection(scope: origin.scope, settings: origin.settings, target: .connectedMac, preset: origin.preset, localDestinationURL: origin.localDestinationURL),
+            HealthHistoryExecutionSelection(scope: origin.scope, settings: origin.settings, target: origin.target, preset: origin.preset,
+                localDestinationURL: URL(fileURLWithPath: "/tmp/history-replaced"))
+        ]
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        for live in changed {
+            let request = coordinator.beginExportRequest(selection: origin)
+            let resolved = try XCTUnwrap(request.resolvingAllTime(ExportDateRange(
+                startDate: boundary.addingTimeInterval(-86400 * 30), endDate: boundary)))
+            var calls = 0
+            let assessment = await coordinator.assess(requestID: resolved.id, scope: resolved.selection.scope,
+                isCurrent: { coordinator.isCurrent(resolved, liveSelection: live) }) {
+                    calls += 1
+                    return HealthHistoryAssessment(id: UUID(), assessedAt: self.boundary,
+                        scope: resolved.selection.scope, types: [])
+                }
+            XCTAssertNil(assessment)
+            XCTAssertEqual(calls, 0, "Changed confirmation requests must not begin assessment")
+        }
+    }
+
+    func testResolvedExportRequestRejectsABAAndStaleCancellation() {
+        let defaults = UserDefaults(suiteName: "HistoryResolvedABA")!
+        defer { defaults.removePersistentDomain(forName: "HistoryResolvedABA") }
+        let origin = HealthHistoryExecutionSelection(scope: scope(allAvailable: true),
+            settings: ExportSettingsSnapshot.from(AdvancedExportSettings(userDefaults: defaults)),
+            target: .localIPhoneFolder, preset: .allTime)
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        let old = coordinator.beginExportRequest(selection: origin)
+        coordinator.invalidate() // The UI changed away and back during discovery/confirmation.
+        XCTAssertFalse(coordinator.isCurrent(old, liveSelection: origin))
+        let current = coordinator.beginExportRequest(selection: origin)
+        coordinator.invalidate(old)
+        XCTAssertTrue(coordinator.isCurrent(current, liveSelection: origin))
+    }
+
     func testFrozenCaptureSettingsRetainMetricScopeEngineAuthorityAndCalendar() {
         let defaults = UserDefaults(suiteName: "HistoryFrozenCaptureSettings")!
         let live = AdvancedExportSettings(userDefaults: defaults)

@@ -715,13 +715,11 @@ final class HealthKitManager: ObservableObject {
         )
         if authRequestStatus == .unnecessary {
             markAuthorizationRequested()
-            _ = await refreshHistoryAuthorizationAssessment()
             return .unnecessary
         }
 
         try await store.requestAuth(toShare: [], read: allReadTypes)
         markAuthorizationRequested()
-        _ = await refreshHistoryAuthorizationAssessment()
         return .requested
     }
 
@@ -2618,17 +2616,15 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
-        let historyAuthorization = await assessHistoryAuthorization(
-            forMetricIDs: selectedMetricIDs,
-            publish: true
-        )
+        // Permission-boundary evidence is owned by the bounded preview/capture
+        // worker; readable-date discovery must not wait on that separate API.
         return HealthKitEarliestDataDiscovery(
             earliestDate: earliestDates.min(),
             queriedTypeIdentifiers: Array(Set(queried)).sorted(),
             snapshotOnlyTypeIdentifiers: Array(Set(snapshotOnly)).sorted(),
             failedTypeIdentifiers: Array(Set(failed)).sorted(),
             unresolvedMetricIDs: unresolved.sorted(),
-            historyAuthorization: historyAuthorization
+            historyAuthorization: .unknown
         )
     }
 

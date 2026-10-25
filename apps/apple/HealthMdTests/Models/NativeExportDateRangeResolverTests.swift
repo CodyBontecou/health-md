@@ -26,7 +26,7 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
         XCTAssertEqual(range.startDate, calendar.startOfDay(for: earliestDate))
         XCTAssertEqual(range.endDate, calendar.startOfDay(for: referenceDate))
         XCTAssertEqual(store.queriedEarliestSampleTypeIdentifiers, [stepType.identifier])
-        XCTAssertEqual(store.historyAuthorizationReadTypes, [stepType])
+        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty, "Range discovery does not own a boundary assessment")
     }
 
     func testLimitedUnknownAndUnavailableHistoryPreserveReadableRange() async throws {
