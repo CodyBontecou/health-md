@@ -3,12 +3,12 @@
 This directory records claim checks for blog articles. The site build checks
 structure, links and the sitemap; the ledgers record evidence and its limits.
 
-The Claude and local-export articles remain unpublished drafts. Their dated ledgers
-are historical review material, not current publication approval. Before publishing,
+The local-export article remains an unpublished draft. Its dated ledger
+is historical review material, not current publication approval. Before publishing,
 recheck product behavior, third-party instructions, privacy disclosures and linked
 destinations; record the evidence and restore verification frontmatter only after
-that review. The Google Sheets guide was rechecked and published on 2026-10-25
-using source and official-documentation tracing; its ledger records the unrun UI
+that review. The Google Sheets and Claude guides were rechecked and published on 2026-10-25
+using source and official-documentation tracing; their ledgers record the unrun UI
 walkthrough and verification limits.
 
 ## The rule

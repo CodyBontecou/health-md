@@ -1,42 +1,19 @@
-# Claim ledger: Analyze your Apple Health data with Claude. No terminal, no code.
+# Apple Health to Claude claim verification
 
-Slug: `analyze-apple-health-with-claude`
-Verified: 2026-09-26
-Verified by: Edison (agent)
-Method: mixed
+Verified: 2026-10-25 by Codex (agent), method: traced.
+
+This review supersedes the draft's historical 2026-09-26 ledger. No personal health data was uploaded, authenticated Claude walkthrough run, AI answer generated, or device/visual QA performed for this task. Product claims were traced to source and generated fixtures; upload and provider-policy instructions were checked against current official Anthropic documentation. Publication tests/build check output and links, not Claude accuracy.
 
 ## Claims
 
-- [x] **Health.md iPhone app exports Apple Health as CSV/JSON/Markdown/Obsidian files.**
-  Traced to the `apple-health-export` landing page ("Export Apple Health Data —
-  CSV, JSON, Markdown & Obsidian").
-- [x] **Claude Projects accept uploaded files as persistent project knowledge; CSV is a supported type.**
-  Traced to Anthropic's Projects and file-upload documentation (2026-09-26).
-  Registry: `verified-snippets.md` → "Claude Projects file upload".
-- [x] **A new export requires a new upload; Claude only sees the file you hand it.**
-  Follows from the Project knowledge model (no live file sync; manual re-upload).
-  Conservative wording, no sync capability claimed.
-- [x] **For this file-upload workflow, ChatGPT receives an attached export; the tutorial does not configure a local CLI/MCP connection.**
-  Scope corrected 2026-10-04: this describes the tutorial's selected path,
-  not every ChatGPT integration or Health.md MCP topology. The local CLI/MCP
-  alternative queries the paired phone; returned values follow the agent's
-  storage and model-provider settings. Registry: `verified-snippets.md` →
-  "ChatGPT path is file upload".
-- [x] **The local folder export and deliberate AI upload are separate from the opt-in single-owner cloud pilot.**
-  Traced 2026-10-04 to PR #162's `apps/website/privacy-policy.html` (read-only
-  Scope, Destinations, and Security sections): the pilot retains only
-  intentionally uploaded API exports, has no public signup or automatic
-  device sync, and is not generally available. The tutorial excludes that
-  destination and states that synced folders and AI providers follow their
-  own policies. No pilot or AI upload was executed.
-- [x] **The six example prompts contain no diagnosis or treatment claims.**
-  Reviewed individually 2026-09-26: all ask for patterns, summaries, and
-  correlations, never diagnoses, treatments, or medical advice.
-- [x] **"Claude is not a doctor, and this isn't medical advice" disclaimer is present.**
-  Checked in the post source; rendered in the prompts section.
-- [x] **Internal links resolve.**
-  Covered by the site link checker (`check-site-links.mjs`): `/health-data-for-ai/`,
-  `/blog/query-apple-health-with-claude-or-codex/`, `/docs/guides/connect-agent/`,
-  `/privacy-policy.html`.
-- [x] **No medical advice anywhere in the post.**
-  Full read-through 2026-09-26: the post describes a file-upload workflow only.
+- [x] Manual iPhone folder export supports selected dates, metrics, CSV/JSON, Summary, preview, and a writable Files destination without a Mac. Evidence: `docs-src/src/content/docs/iphone-first-export.md`, `format.md`, `apps/apple/HealthMd/Shared/Export/CSVExporter.swift`, and `JSONExporter.swift`. Five free export actions/lifetime unlock: `paywall.md`. Verified App Store URL: `verified-snippets.md`. No app implementation, pricing or public export contract changed.
+- [x] One daily CSV file uses `Date,Category,Metric,Value,Unit,Timestamp`; Value is mixed-type, and summary rows can omit Timestamp. Quoted commas/newlines must be preserved. Evidence: producer `apps/apple/docs/reference/generated/core/summary-day.csv`, `lossless-day.csv`, `csv-row-contracts.md`, and `CSVExporter.swift`; reusable header registry entry. Daily summaries are not additive with samples or overlapping rollups. The tutorial requires duplicate checks before aggregation.
+- [x] JSON is a nested daily object with date/schema/schema_version, conditional activity/heart/sleep sections and units/time_context metadata. Evidence: `apps/apple/docs/reference/generated/core/summary-day.json`, `JSONExporter.swift`, and generated export format reference. The published copies at `docs-src/public/reference/generated/core/` are producer-backed. Lossless Health Records is Apple-only and unnecessary for this Summary exercise: `docs-src/src/content/docs/format.md`.
+- [x] The fictional CSV sample contains `2026-03-15,Activity,Steps,12500,count` and `2026-03-15,Sleep,Total Duration,27900.0,seconds`. 27900/3600=7.75. The article distinguishes expected fixture values from an actually executed Claude answer. Sleep sessions belong to their local start day: `docs-src/src/content/docs/sleep-date-attribution.md` and the published sleep guide. A single-day sample cannot establish a multi-day trend.
+- [x] Claude supports CSV/JSON attachments, + > Add files or photos, device file selection and drag/drop, checked 2026-10-25: https://support.claude.com/en/articles/8241126-upload-files-to-claude. That document lists different chat/project limits, and https://support.claude.com/en/articles/12111783-create-and-edit-files-with-claude describes computing-environment limits; the guide deliberately links current limits rather than asserting one universal size or file count. No authenticated upload was executed.
+- [x] Projects can provide files/knowledge as reusable context, with visibility/sharing controls; the interface is currently changing in a staged rollout. Evidence checked 2026-10-25: https://support.claude.com/en/articles/9517075-what-are-projects and https://support.claude.com/en/articles/9519177-how-can-i-create-and-manage-projects. The article makes single-chat upload sufficient, Projects optional, and gives no guarantee that an organizer makes data local or anonymous. Registry entry updated with current references.
+- [x] This file-upload workflow manually provides a snapshot; later exports need another upload, and replacement copies must not be summed. This is scoped to the tutorial, not a claim about every Claude integration. For ChatGPT, the tutorial describes an attachment rather than configuring CLI/MCP. Evidence: upload docs above and `verified-snippets.md` ChatGPT path entry. The separate local CLI/MCP path queries a paired iPhone; agent/model settings still govern returned data: `content/blog/query-apple-health-with-claude-or-codex.md` and `docs-src/src/content/docs/guides/connect-agent.md`.
+- [x] Export scope and provider handling are separate. Consumer model-improvement choices, safety review and feedback affect usage; consumer/commercial terms differ. Evidence checked 2026-10-25: https://privacy.claude.com/en/articles/10023580-is-my-data-used-for-model-training, https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training, and https://privacy.claude.com/en/articles/10023548-how-long-do-you-store-my-data. The article avoids a training exclusion, instant deletion, anonymity or local-only promise. Removing a project file does not logically delete text copied into another conversation or downloaded report; readers must inspect those copies and current retention controls.
+- [x] Core folder export has no Health.md server copy by default; synced providers and the AI provider govern their copies. The separate opt-in single-owner pilot retains only API exports intentionally uploaded, has no public signup or automatic device sync, and is not generally available. Evidence: `privacy-policy.html`, reusable core/provider registry entries, `test/blog-workflow-privacy.test.mjs`, and the public privacy checker, which now explicitly audits the Claude slug/revision.
+- [x] Prompts are bounded descriptive analysis requests, not medical recommendations or proven outputs. They require filenames, actual fields/rows, units, errors, duplicate checks, recorded-day counts, missing dates, partial weeks, and explicit arithmetic. They forbid missing-to-zero substitution and require source inspection before using aggregates. The article warns that AI output can be wrong; no causal, diagnostic or treatment claim is made.
+- [x] The existing blog generator provides canonical/social/BlogPosting metadata, index and sitemap inclusion. AI hub, export hub and blog directory link to the article; CSV, setup, formats, sleep, spreadsheets, troubleshooting, local-query and privacy routes already exist. Evidence: changed sources, publication regression, and full built-site checks. The local-export draft remains unpublished, and ledgers are not public output.

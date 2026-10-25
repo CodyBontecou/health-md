@@ -78,13 +78,17 @@ provider's own rules apply, nothing about what those rules are.
 
 ## Claude Projects file upload
 
-Claude Projects accept uploaded files as persistent project knowledge across
-conversations in that Project. CSV is a supported upload type. Adding a new
-export requires a new upload — Claude only sees the files it was given.
+Claude supports CSV and JSON uploads to chats and project files/knowledge.
+Projects can reuse supplied context; the interface is changing during a staged
+rollout. The manual file-upload tutorial provides a snapshot: a new export needs
+a new upload. This does not describe every connector or agent workflow.
 
-Verified: 2026-09-26
-Source: Anthropic's Projects and file-upload documentation (Projects help
-page; file-upload help lists CSV among supported types).
+Verified: 2026-10-25
+Source: Anthropic's current upload and Projects documentation:
+https://support.claude.com/en/articles/8241126-upload-files-to-claude,
+https://support.claude.com/en/articles/9517075-what-are-projects, and
+https://support.claude.com/en/articles/9519177-how-can-i-create-and-manage-projects.
+Instructions are documentation-traced; no authenticated upload was run.
 
 ## ChatGPT path is file upload
 
