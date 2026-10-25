@@ -1,0 +1,124 @@
+.health-connect-page {
+  background: var(--paper);
+}
+
+.health-connect-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 680px) minmax(200px, 240px);
+  align-items: center;
+  gap: 48px;
+}
+
+.health-connect-hero h1 {
+  max-width: 680px;
+  margin-left: 0;
+  font-size: 48px;
+  line-height: 48px;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+  text-wrap: balance;
+  background: linear-gradient(to right, #000000, #666666);
+  background-clip: text;
+  color: transparent;
+}
+
+.health-connect-hero .about-value-prop {
+  max-width: 680px;
+  margin-top: 24px;
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: 0;
+}
+
+.health-connect-page p,
+.health-connect-page li {
+  text-wrap: pretty;
+}
+
+.health-connect-proof {
+  margin-top: 24px;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.health-connect-screen {
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+.health-connect-screen img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+}
+
+.health-connect-screen figcaption {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.health-connect-page .process-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.health-connect-page .about-card,
+.health-connect-page .process-list > div {
+  background: var(--paper);
+  min-width: 0;
+}
+
+.health-connect-benefit h2 {
+  max-width: 680px;
+  font-size: 36px;
+  line-height: 40px;
+  text-wrap: balance;
+}
+
+.health-connect-benefit .word-pending {
+  opacity: 0.35;
+}
+
+.health-connect-benefit span {
+  transition: opacity 800ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.health-connect-page a:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 4px;
+}
+
+@media (max-width: 900px) {
+  .health-connect-hero {
+    gap: 32px;
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 200px);
+  }
+
+  .health-connect-page .process-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .health-connect-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .health-connect-hero h1 {
+    font-size: 36px;
+    line-height: 40px;
+  }
+
+  .health-connect-screen {
+    max-width: 220px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .health-connect-benefit span {
+    transition: none;
+    opacity: 1;
+  }
+}

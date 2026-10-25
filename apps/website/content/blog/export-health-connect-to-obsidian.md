@@ -43,6 +43,8 @@ Obsidian Vault/
 
 If the provider does not expose persistent write access through Android's picker, Health.md cannot safely bypass it. Export to a local folder and let your chosen sync tool move the files instead.
 
+For other destinations and a downloadable Android CSV excerpt, see the [Health Connect export guide](/health-connect-export/).
+
 ## Pick a format
 
 - **Markdown** is readable and works well for one note per day.

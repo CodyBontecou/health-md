@@ -15,6 +15,7 @@ export const publicPrivacyPages = [
   'apple-health-export/index.html',
   'apple-health-to-csv/index.html',
   'health-data-for-ai/index.html',
+  'health-connect-export/index.html',
 ];
 
 // These global promises contradict the optional retained-export pilot. A
