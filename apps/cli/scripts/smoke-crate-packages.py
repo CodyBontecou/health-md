@@ -61,6 +61,7 @@ REQUIRED = {
         "src/main.rs",
         "src/bin/healthmd-mcp/main.rs",
         "tests/fixtures/apple-api-export-v2-provider-sidecar.json",
+        "tests/fixtures/apple-api-export-v2-provider-sidecar-v8.json",
         "tests/fixtures/android-raw-v1-minimal-snapshot.json",
     },
 }
