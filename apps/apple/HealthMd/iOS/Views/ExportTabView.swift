@@ -582,7 +582,6 @@ struct ExportTabView: View {
 
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
         dateRangePreset = preset
-        resumeExportTapWhenAllTimeResolves = false
         allTimeResolutionError = nil
 
         switch preset {
