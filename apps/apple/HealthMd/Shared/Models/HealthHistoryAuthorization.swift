@@ -2,9 +2,9 @@ import Foundation
 
 /// Platform-neutral completeness state for a health-data history scope.
 ///
-/// `full_history` means the source reported no date-window restriction for the
-/// assessed types. It does not override platform privacy: on Apple platforms a
-/// denied read and an unrestricted read can remain indistinguishable.
+/// `full_history` is reserved for affirmative completeness evidence. The
+/// HealthKit boundary API cannot provide it: denied and unrestricted reads
+/// can remain indistinguishable. Omitted boundaries therefore stay unknown.
 nonisolated enum HealthHistoryAuthorizationState: String, Codable, CaseIterable, Sendable {
     case fullHistory = "full_history"
     case limitedHistory = "limited_history"
@@ -66,8 +66,8 @@ nonisolated struct HealthHistoryAuthorizationAssessment: Codable, Equatable, Sen
         boundaries.map(\.earliestAuthorizedSampleDate).min()
     }
 
-    /// True only when the runtime assessment completed, found no limited
-    /// boundary, and covered every selected metric with historical semantics.
+    /// Requires affirmative full-history evidence covering every selected metric.
+    /// An empty HealthKit boundary response never supplies that evidence.
     var supportsUnqualifiedFullHistoryClaim: Bool {
         state == .fullHistory && unassessedMetricIDs.isEmpty
     }

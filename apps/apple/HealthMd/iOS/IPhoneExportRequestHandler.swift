@@ -1,6 +1,7 @@
 #if os(iOS)
 import Combine
 import Foundation
+import HealthMdConnectionCore
 import UIKit
 
 /// Handles Mac-initiated export requests while the iPhone app is open. The Mac
@@ -15,6 +16,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     }
 
     private let automationClient: AppleContextPhoneClient
+    private let historyAdmission = HealthHistoryExportAdmission()
     init(automationClient: AppleContextPhoneClient? = nil) {
         self.automationClient = automationClient ?? .shared
     }
@@ -266,7 +268,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     let discovery = await healthKitManager.discoverEarliestHealthDataDate(
                         enabledMetricIDs: settings.metricSelection.enabledMetrics
                     )
-                    guard discovery.isComplete else {
+                    guard discovery.isQueryComplete else {
                         let unavailable = discovery.unresolvedMetricIDs + discovery.failedTypeIdentifiers
                         syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                             jobID: request.jobID,
@@ -275,22 +277,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         )))
                         return
                     }
-                    guard discovery.historyAuthorization.state != .limitedHistory else {
-                        syncService.send(.iphoneExportRejected(IPhoneExportFailure(
-                            jobID: request.jobID,
-                            reason: .healthKitFetchFailed,
-                            message: "Apple Health access is limited by date. Choose an explicit authorized range or grant full history access before requesting all available history."
-                        )))
-                        return
-                    }
-                    guard discovery.supportsUnqualifiedFullHistoryClaim else {
-                        syncService.send(.iphoneExportRejected(IPhoneExportFailure(
-                            jobID: request.jobID,
-                            reason: .healthKitFetchFailed,
-                            message: "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
-                        )))
-                        return
-                    }
+                    // Preserve main's readable-range resolution. The durable capture
+                    // observation below carries history uncertainty for the exact job.
                     if let earliestDate = discovery.earliestDate {
                         earliestCandidates.append(earliestDate)
                     }
@@ -863,6 +851,16 @@ final class IPhoneExportRequestHandler: ObservableObject {
             guard persisted.exportManifest.mode == mode else {
                 throw ConnectedCorpusOutboundStoreError.requestChanged
             }
+            if persisted.exportManifest.historyObservation != nil {
+                guard let remote = syncService.remoteCapabilities,
+                      let durable = syncService.localCapabilities.negotiateDurableConnectedCorpusTransfer(with: remote),
+                      durable.transfer.contextHistoryObservationVersion == 1,
+                      durable.peerBinding == persisted.session.peerBinding,
+                      persisted.exportManifest.historyObservation?.allAvailable == (request.dateSelection == .allAvailable) else {
+                    throw HealthHistoryExportAdmission.AdmissionError.unsupportedPeer
+                }
+                try persisted.exportManifest.validateHistory(session: persisted.session)
+            }
             exportManifest = persisted.exportManifest
             transferDates = exportManifest.transferDates
             requestedDates = exportManifest.requestedDates
@@ -914,11 +912,14 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 settingsSnapshot = ExportSettingsSnapshot.from(
                     settings,
                     healthSubfolder: healthSubfolder,
-                    calendarTimeZoneIdentifier: automationClient.timeZone(for: request)?.identifier
+                    calendarTimeZoneIdentifier: mode == .encryptedContext && negotiation.contextHistoryObservationVersion == 1
+                        ? (automationClient.timeZone(for: request) ?? settings.exportTimeZoneOverride
+                            ?? dateFormatter.timeZone ?? .current).identifier
+                        : automationClient.timeZone(for: request)?.identifier
                 )
                 requestedTarget = nil
             }
-            exportManifest = ConnectedCorpusExportManifest(
+            var createdManifest = ConnectedCorpusExportManifest(
                 mode: mode,
                 createdAt: createdAt,
                 sourceDeviceName: UIDevice.current.name,
@@ -936,6 +937,32 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 selectedSourceIDs: request.canonicalSelection?.sourceIDs,
                 requestedTarget: requestedTarget
             )
+            if mode == .encryptedContext, includesAppleHealth,
+               let remote = syncService.remoteCapabilities,
+               let durable = syncService.localCapabilities.negotiateDurableConnectedCorpusTransfer(with: remote),
+               durable.transfer.contextHistoryObservationVersion == 1 {
+                let metrics = Set(settingsSnapshot.metricSelection.enabledMetricIDs)
+                if !metrics.isEmpty {
+                    guard captureLease(), let first = requestedDates.first, let last = requestedDates.last,
+                          let identifier = createdManifest.effectiveOriginalCalendarTimeZoneIdentifier else {
+                        throw CancellationError()
+                    }
+                    let scope = HealthHistoryScope(metricIDs: metrics, startDate: first, endDate: last,
+                        timeZoneIdentifier: identifier, allAvailable: request.dateSelection == .allAvailable,
+                        profileID: nil, rangeSemantics: .ownerDates)
+                    createdManifest.historyObservation = try await historyAdmission.observe(
+                        scope: scope, operationID: request.jobID,
+                        requestBindingSHA256: createdManifest.historyRequestBinding(),
+                        peerBinding: DirectPeerBinding(sourceInstallationID: durable.peerBinding.sourceInstallationID,
+                            destinationInstallationID: durable.peerBinding.destinationInstallationID),
+                        notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: scope), operation: {
+                            await healthKitManager.assessHistoryAccess(scope: scope)
+                        })
+                    guard captureLease() else { throw CancellationError() }
+                    try createdManifest.validate()
+                }
+            }
+            exportManifest = createdManifest
         }
         if mode == .encryptedContext {
             #if DEBUG
@@ -977,6 +1004,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 syncService: syncService
             )
         }
+        let contextCaptureSettings = exportManifest.historyObservation == nil
+            ? settings : exportManifest.settingsSnapshot.makeAdvancedExportSettings()
         let produceItem: ConnectedCorpusDurableSender.ItemProducer = { [self] index, date in
             try Task.checkCancellation()
             guard !cancelledRequestIDs.contains(request.jobID),
@@ -1053,8 +1082,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 }
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    detailPolicy: settings.effectiveDetailPolicy,
-                    metricSelection: settings.metricSelection,
+                    detailPolicy: contextCaptureSettings.effectiveDetailPolicy,
+                    metricSelection: contextCaptureSettings.metricSelection,
                     transform: .sanitizeGranular,
                     emptyRecordPolicy: .retain,
                     fetchExternalRecords: scopedExternalFetcher != nil,

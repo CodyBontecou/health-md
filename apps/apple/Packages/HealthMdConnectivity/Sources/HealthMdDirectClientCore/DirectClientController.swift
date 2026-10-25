@@ -333,6 +333,8 @@ public final class DirectClientController: @unchecked Sendable {
                                     destinationInstallationID: identity.installationID
                                   ),
                                   acceptedDatesMatchRequest(value, request: request),
+                                  value.historyObservation == nil
+                                    || localCapabilities.negotiatedExportHistoryObservationVersion(with: peerCapabilities) == 1,
                                   !value.resolvedDateIdentifiers.isEmpty else {
                                 throw DirectClientControllerError.unexpectedExportMessage
                             }
@@ -589,6 +591,8 @@ public final class DirectClientController: @unchecked Sendable {
                                     destinationInstallationID: identity.installationID
                                   ),
                                   acceptedDatesMatchRequest(value, request: request),
+                                  value.historyObservation == nil
+                                    || localCapabilities.negotiatedExportHistoryObservationVersion(with: peerCapabilities) == 1,
                                   !value.resolvedDateIdentifiers.isEmpty else {
                                 throw DirectClientControllerError.unexpectedExportMessage
                             }
@@ -836,7 +840,8 @@ public final class DirectClientController: @unchecked Sendable {
     public var localCapabilities: DirectPeerCapabilities {
         DirectPeerCapabilities(
             platform: .macOSCLI,
-            installationID: identity.installationID
+            installationID: identity.installationID,
+            exportHistoryObservationVersions: [1]
         )
     }
 

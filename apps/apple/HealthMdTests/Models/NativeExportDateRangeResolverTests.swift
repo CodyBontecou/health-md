@@ -29,7 +29,7 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
         XCTAssertEqual(store.historyAuthorizationReadTypes, [stepType])
     }
 
-    func testLimitedUnknownAndUnavailableHistoryRejectAllTime() async throws {
+    func testLimitedUnknownAndUnavailableHistoryPreserveReadableRange() async throws {
         for state in [HealthHistoryAuthorizationState.limitedHistory, .unknown, .apiUnavailable] {
             let store = FakeHealthStore()
             let stepType = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .stepCount))
@@ -42,24 +42,26 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
             case .apiUnavailable:
                 store.historyAuthorizationBoundariesSupported = false
             case .fullHistory:
-                XCTFail("Not a rejection fixture")
+                XCTFail("Not an uncertainty fixture")
             }
 
-            do {
-                _ = try await resolve(makeRequest(), store: store)
-                XCTFail("All Time must reject \(state)")
-            } catch {
-                XCTAssertEqual(error as? Resolver.ResolutionError,
-                               state == .limitedHistory ? .limitedHistory : .unverifiedHistory)
-            }
+            let range = try await resolve(makeRequest(), store: store)
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = timeZone
+            XCTAssertEqual(range.startDate, calendar.startOfDay(for: earliestDate))
+            XCTAssertEqual(range.endDate, calendar.startOfDay(for: referenceDate))
         }
     }
 
-    func testFullHistoryWithUnassessedMetricsStillRejectsAllTime() {
+    func testUnassessedAuthorizationDoesNotBecomeAFullHistoryClaim() throws {
         let discovery = makeDiscovery(unassessedMetricIDs: ["medication_dose_events"])
         XCTAssertTrue(discovery.isComplete)
         XCTAssertFalse(discovery.supportsUnqualifiedFullHistoryClaim)
-        assertRejected(discovery, as: .unverifiedHistory)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let range = try Resolver.allTimeRange(from: discovery, referenceDate: referenceDate, calendar: calendar)
+        XCTAssertEqual(range.startDate, calendar.startOfDay(for: earliestDate))
+        XCTAssertFalse(discovery.supportsUnqualifiedFullHistoryClaim)
     }
 
     func testPartialEarliestDiscoveryCannotExportTheSuccessfulSiblingRange() async throws {
@@ -163,7 +165,7 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
         }
     }
 
-    func testEveryAdmissionRechecksAuthorizationEvenForSavedAllTimeDates() async throws {
+    func testEveryAdmissionRediscoversReadableCoverageEvenForSavedAllTimeDates() async throws {
         let store = FakeHealthStore()
         let stepType = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .stepCount))
         store.earliestSampleDates[stepType.identifier] = earliestDate
@@ -177,14 +179,13 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
             timeZone: request.timeZone
         )
         store.authorizedHistoryBoundaries[stepType.identifier] = referenceDate
-
-        do {
-            _ = try await Resolver.resolve(restored, using: manager, currentRequest: { restored },
-                                           referenceDate: referenceDate)
-            XCTFail("Persisted dates must not bypass current history authorization")
-        } catch {
-            XCTAssertEqual(error as? Resolver.ResolutionError, .limitedHistory)
-        }
+        store.earliestSampleDates[stepType.identifier] = referenceDate
+        let refreshed = try await Resolver.resolve(restored, using: manager, currentRequest: { restored },
+                                                   referenceDate: referenceDate)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        XCTAssertEqual(refreshed.startDate, calendar.startOfDay(for: referenceDate))
+        XCTAssertNotEqual(refreshed.startDate, range.startDate)
         XCTAssertEqual(store.queriedEarliestSampleTypeIdentifiers.count, 2)
     }
 

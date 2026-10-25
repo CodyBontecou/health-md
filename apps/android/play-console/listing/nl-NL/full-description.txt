@@ -42,4 +42,4 @@ PRIVACY EN CONTROLE
 • Toestemmingen kunnen op elk moment in Health Connect worden bekeken of ingetrokken
 • Beperkte eigen analyses voor installatieattributie, onboarding of prijzen bevatten nooit gezondheidsrecords, details van Health Connect-toestemmingen, exportinhoud, accounttekst of bestandspaden
 
-Health.md bevat 10 gratis handmatige exportacties. Een eenmalige aankoop ontgrendelt onbeperkte exports en planning; er is geen abonnement.
+Health.md bevat 5 gratis handmatige exportacties. Een eenmalige aankoop ontgrendelt onbeperkte exports en planning; er is geen abonnement.

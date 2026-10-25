@@ -207,7 +207,7 @@ final class CIQualityGateTests: XCTestCase {
             "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
         )
         XCTAssertTrue(
-            content.contains("ios-ui-shards:\n    name: iOS UI shard ${{ matrix.shard }}\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [0, 1, 2]\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: macos-26\n    timeout-minutes: 60"),
+            content.contains("ios-ui-shards:\n    name: iOS UI shard ${{ matrix.shard }}\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [0, 1, 2, 3]\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
             "The split UI job must allow at least 60 minutes for clean builds"
         )
         XCTAssertEqual(
@@ -239,7 +239,7 @@ final class CIQualityGateTests: XCTestCase {
         let inventory = try XCTUnwrap(runner.components(separatedBy: "SHARDS = (").last?
             .components(separatedBy: "\n)\n").first)
         let lanes = inventory.components(separatedBy: "\n    (").dropFirst()
-        XCTAssertEqual(lanes.count, 3, "PR smoke must use three deterministic UI lanes")
+        XCTAssertEqual(lanes.count, 4, "PR smoke must retain three phone lanes and a tablet lane")
         let selectorPattern = try NSRegularExpression(pattern: #""([A-Za-z]+Tests/test[^"\n]+)""#)
         let selections = lanes.flatMap { lane -> [String] in
             let matches = selectorPattern.matches(in: lane, range: NSRange(lane.startIndex..., in: lane))
@@ -265,14 +265,33 @@ final class CIQualityGateTests: XCTestCase {
             "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
             "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
             "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+            "ExportJourneyUITests/testConfiguredGateway_admitsExportWithoutLocalFolder",
+            "ExportJourneyUITests/testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens",
             "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
             "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
+            "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
+            "HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
+            "HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport",
+            "ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError",
+            "HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
+            "HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot",
         ]
-        XCTAssertEqual(selections.count, 15, "PR smoke must preserve every selected UI regression exactly once")
-        XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the exact historical UI inventory")
-        XCTAssertTrue(content.contains("needs: [changes, ios-ui-shards]"))
+        XCTAssertEqual(selections.count, 24, "PR smoke must preserve twenty phone and four tablet executions")
+        XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the historical UI inventory plus configured gateway admission")
+        XCTAssertTrue(content.contains("needs: [changes, prepare-ui-artifacts, ios-ui-shards]"))
         XCTAssertTrue(content.contains("test \"$SHARDS_RESULT\" = success"))
         XCTAssertTrue(content.contains("python3 apps/apple/scripts/ios_ui_shards.py verify"))
+        XCTAssertTrue(content.contains("--device-family iPad --create-missing"))
+        XCTAssertTrue(content.contains("--prepared-sha256 '${{ needs.prepare-ui-artifacts.outputs.sha256 }}'"))
+        XCTAssertTrue(content.contains("test \"$PREPARE_RESULT\" = success"))
+        XCTAssertTrue(runner.contains("qualify_device(json.loads(raw_devices), args.destination, args.shard)"))
+        XCTAssertTrue(runner.contains("run-owned-ui.py"))
+        XCTAssertTrue(content.contains("Qualify SDK27 compiler before native slice build"))
+        XCTAssertTrue(content.contains("apple-shared-core-v2-"))
+        XCTAssertEqual(content.components(separatedBy: "python3 scripts/compare-history-sdk27-receipts.py").count - 1, 4)
+        let qualifier = try source("scripts/qualify-history-authorization-sdk27.sh")
+        XCTAssertTrue(qualifier.contains("Xcode 27.0\\nBuild version 27A266a"))
+        XCTAssertTrue(qualifier.contains("swiftlang-6.4.0.34.1 clang-2100.3.34.1"))
         let makefile = try String(
             contentsOf: projectDir.appendingPathComponent("Makefile"),
             encoding: .utf8

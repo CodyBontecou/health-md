@@ -90,7 +90,20 @@ final class SyncService: NSObject, ObservableObject {
 
     // MARK: - Published State
 
-    @Published var connectionState: SyncConnectionState = .disconnected
+    @Published var connectionState: SyncConnectionState = .disconnected {
+        didSet {
+            guard oldValue != connectionState else { return }
+            let state: String
+            switch connectionState {
+            case .disconnected: state = "disconnected"
+            case .connecting: state = "connecting"
+            case .connected: state = "connected"
+            }
+            var fields: [DiagnosticField: DiagnosticValue] = [.state: .text(state)]
+            if connectionState != .disconnected { fields[.transport] = .text(activeTransport == .manualIP ? "manual_ip" : "nearby") }
+            DiagnosticRecorder.shared.record(.connectionChanged, fields: fields, unavailable: connectionState == .disconnected ? [.transport] : [])
+        }
+    }
     @Published var connectedPeerName: String?
     @Published var lastError: String?
     @Published private(set) var lastDisconnectWasUserInitiated = false
@@ -120,10 +133,20 @@ final class SyncService: NSObject, ObservableObject {
     }
 
     /// Latest v2 capabilities announced by the connected peer, if any.
-    @Published var remoteCapabilities: SyncPeerCapabilities?
+    @Published var remoteCapabilities: SyncPeerCapabilities? {
+        didSet {
+            if remoteCapabilities != nil {
+                DiagnosticRecorder.shared.record(.capabilitiesReceived, fields: [.ready: .boolean(canExportToConnectedMac)])
+            }
+        }
+    }
 
     /// Latest macOS destination/readiness status announced to iOS.
-    @Published var macDestinationStatus: MacDestinationStatus?
+    @Published var macDestinationStatus: MacDestinationStatus? {
+        didSet {
+            DiagnosticRecorder.shared.record(.destinationChanged, fields: [.ready: .boolean(canExportToConnectedMac)])
+        }
+    }
 
     /// Latest Mac export job response received by iOS.
     @Published private(set) var latestMacExportMessage: SyncMessage?
@@ -421,6 +444,7 @@ final class SyncService: NSObject, ObservableObject {
     /// Start advertising this device as a health data source (iOS).
     func startAdvertising() {
         guard advertiser == nil else { return }
+        DiagnosticRecorder.shared.record(.advertisingStarted)
         logger.info("Starting advertiser")
         let adv = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: nil, serviceType: Self.serviceType)
         adv.delegate = self
@@ -430,6 +454,7 @@ final class SyncService: NSObject, ObservableObject {
 
     /// Stop advertising.
     func stopAdvertising() {
+        DiagnosticRecorder.shared.record(.advertisingStopped)
         logger.info("Stopping advertiser")
         advertiser?.stopAdvertisingPeer()
         advertiser = nil
@@ -440,6 +465,7 @@ final class SyncService: NSObject, ObservableObject {
     /// Start browsing for nearby iPhones (macOS).
     func startBrowsing() {
         guard browser == nil else { return }
+        DiagnosticRecorder.shared.record(.browsingStarted)
         logger.info("Starting browser")
         cancelNearbyConnectionTasks()
         nearbyAttemptPlanner.reset(clearDiscoveredPeers: true)
@@ -454,6 +480,7 @@ final class SyncService: NSObject, ObservableObject {
 
     /// Stop browsing.
     func stopBrowsing() {
+        DiagnosticRecorder.shared.record(.browsingStopped)
         logger.info("Stopping browser")
         nearbyAutomaticConnectionsEnabled = false
         cancelPendingNearbyInvitation()
@@ -502,6 +529,7 @@ final class SyncService: NSObject, ObservableObject {
     }
 
     private func handleNearbyPeerDiscovered(_ peer: MCPeerID) {
+        DiagnosticRecorder.shared.record(.peerDiscovered, fields: DiagnosticRecorder.shared.peerFields(peer.displayName))
         logger.info("Discovered peer: \(peer.displayName)")
         let added = nearbyAttemptPlanner.discover(peer)
         discoveredPeers = nearbyAttemptPlanner.discoveredPeers
@@ -513,6 +541,7 @@ final class SyncService: NSObject, ObservableObject {
     }
 
     private func handleNearbyPeerLost(_ peer: MCPeerID) {
+        DiagnosticRecorder.shared.record(.peerLost, fields: DiagnosticRecorder.shared.peerFields(peer.displayName))
         logger.info("Lost peer: \(peer.displayName)")
         let wasPending = nearbyAttemptPlanner.pendingPeer?.isEqual(peer) == true
         let nextPeer = nearbyAttemptPlanner.lose(peer)
@@ -564,6 +593,7 @@ final class SyncService: NSObject, ObservableObject {
               activeTransport != .manualIP,
               nearbyAttemptPlanner.pendingPeer?.isEqual(peer) == true else { return }
 
+        DiagnosticRecorder.shared.record(.invitationSent, fields: DiagnosticRecorder.shared.peerFields(peer.displayName))
         logger.info("Inviting peer: \(peer.displayName)")
         cancelManualConnection(updatePublicState: false)
         activeTransport = .multipeer
@@ -581,6 +611,9 @@ final class SyncService: NSObject, ObservableObject {
             try? await Task.sleep(nanoseconds: Self.nearbyInvitationFallbackNanoseconds)
             guard !Task.isCancelled, let self,
                   self.nearbyAttemptPlanner.pendingPeer?.isEqual(peer) == true else { return }
+            var fields = DiagnosticRecorder.shared.peerFields(peer.displayName)
+            fields[.durationMs] = .integer(Int64(Self.nearbyInvitationFallbackNanoseconds / 1_000_000))
+            DiagnosticRecorder.shared.record(.invitationTimeout, fields: fields)
             self.logger.warning("Nearby invitation timed out for: \(peer.displayName)")
             self.session.cancelConnectPeer(peer)
             self.handleNearbyInvitationFailure(peer)
@@ -1545,8 +1578,10 @@ final class SyncService: NSObject, ObservableObject {
         if activeTransport == .manualIP {
             do {
                 try sendManualMessage(message)
+                DiagnosticRecorder.shared.record(.messageSent, fields: [.transport: .text("manual_ip")])
                 logger.info("Sent manual IP message: \(message.operationalName, privacy: .public)")
             } catch {
+                DiagnosticRecorder.shared.record(.transportError, fields: DiagnosticRecorder.errorFields(error))
                 logger.error("Failed to send manual IP message: \(error.localizedDescription)")
                 recordLastError("Send failed: \(error.localizedDescription)")
             }
@@ -1564,8 +1599,10 @@ final class SyncService: NSObject, ObservableObject {
         do {
             let data = try encoder.encode(message)
             try session.send(data, toPeers: [peer], with: .reliable)
+            DiagnosticRecorder.shared.record(.messageSent)
             logger.info("Sent message: \(message.operationalName, privacy: .public)")
         } catch {
+            DiagnosticRecorder.shared.record(.transportError, fields: DiagnosticRecorder.errorFields(error))
             logger.error("Failed to send message: \(error.localizedDescription)")
             recordLastError("Send failed: \(error.localizedDescription)")
         }
@@ -1748,6 +1785,7 @@ final class SyncService: NSObject, ObservableObject {
                 // this ordered receive batch. App routers still own hello side effects.
                 remoteCapabilities = capabilities
             }
+            DiagnosticRecorder.shared.record(.messageReceived, fields: [.byteCount: .integer(Int64(data.count))])
             logger.info("Received message: \(message.operationalName, privacy: .public)")
             if let peerID, restoreMultipeerConnectionIfNeeded(from: peerID) {
                 send(.hello(localCapabilities))
@@ -2910,6 +2948,7 @@ extension SyncService: MCNearbyServiceAdvertiserDelegate {
     nonisolated func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID, withContext context: Data?, invitationHandler: @escaping (Bool, MCSession?) -> Void) {
         // Auto-accept invitations from peers using our service type
         Task { @MainActor in
+            DiagnosticRecorder.shared.record(.invitationReceived, fields: DiagnosticRecorder.shared.peerFields(peerID.displayName))
             self.logger.info("Received invitation from: \(peerID.displayName) — auto-accepting")
             invitationHandler(true, self.session)
         }
@@ -2917,6 +2956,7 @@ extension SyncService: MCNearbyServiceAdvertiserDelegate {
 
     nonisolated func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didNotStartAdvertisingPeer error: Error) {
         Task { @MainActor in
+            DiagnosticRecorder.shared.record(.transportError, fields: DiagnosticRecorder.errorFields(error))
             self.logger.error("Failed to start advertising: \(error.localizedDescription)")
             self.lastError = "Advertising failed: \(error.localizedDescription)"
         }
@@ -2944,6 +2984,7 @@ extension SyncService: MCNearbyServiceBrowserDelegate {
     nonisolated func browser(_ browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: Error) {
         Task { @MainActor in
             guard self.browser === browser else { return }
+            DiagnosticRecorder.shared.record(.transportError, fields: DiagnosticRecorder.errorFields(error))
             self.logger.error("Failed to start browsing: \(error.localizedDescription)")
             self.nearbyAutomaticConnectionsEnabled = false
             self.cancelPendingNearbyInvitation()

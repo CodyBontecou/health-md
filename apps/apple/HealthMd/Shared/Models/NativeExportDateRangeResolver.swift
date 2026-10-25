@@ -1,7 +1,9 @@
 import Foundation
 
 /// Admission for native iPhone/iPad exports, including restored selections and
-/// Preview actions. A persisted All Time range is not authorization evidence.
+/// Preview actions. All Time resolves readable query coverage; the capture-time
+/// history assessment records authorization uncertainty separately. Saved dates
+/// never substitute for a fresh discovery of the selected scope.
 @MainActor
 enum NativeExportDateRangeResolver {
     struct Request: Equatable {
@@ -11,18 +13,12 @@ enum NativeExportDateRangeResolver {
     }
 
     enum ResolutionError: LocalizedError, Equatable {
-        case limitedHistory
-        case unverifiedHistory
         case incompleteDiscovery
         case noHealthData
         case selectionChanged
 
         var errorDescription: String? {
             switch self {
-            case .limitedHistory:
-                return "All Time is unavailable because Apple Health history is limited for a selected metric. Earlier data is unknown, not absent. Review Health permissions or choose an explicit date range."
-            case .unverifiedHistory:
-                return "Full Apple Health history could not be verified for every selected metric. All Time requires a supported OS 27+ history assessment. Choose an explicit date range."
             case .incompleteDiscovery:
                 return "The earliest date could not be determined for every selected metric. No All Time export was started. Try again or choose an explicit date range."
             case .noHealthData:
@@ -77,12 +73,9 @@ enum NativeExportDateRangeResolver {
         referenceDate: Date,
         calendar: Calendar
     ) throws -> ExportDateRange {
-        guard discovery.historyAuthorization.supportsUnqualifiedFullHistoryClaim else {
-            throw discovery.historyAuthorization.state == .limitedHistory
-                ? ResolutionError.limitedHistory
-                : ResolutionError.unverifiedHistory
-        }
-        guard discovery.isComplete else {
+        // A completed empty boundary query cannot prove unrestricted access.
+        // Preserve main's all-readable semantics and its separate history evidence.
+        guard discovery.isQueryComplete else {
             throw ResolutionError.incompleteDiscovery
         }
         guard let earliestDate = discovery.earliestDate else {

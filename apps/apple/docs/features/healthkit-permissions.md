@@ -27,21 +27,13 @@ Health.md uses public HealthKit/WorkoutKit APIs only. Normal local exports do no
 
 For many read types, HealthKit intentionally does not tell an app whether access was denied. A denied read can look like a successful query with zero records. Health.md reports the public result and cannot bypass or reliably distinguish that privacy behavior.
 
-On OS 27 and later, builds made with a supported OS 27 HealthKit SDK also call HealthKit's [`earliestAuthorizedSampleDate(for:)`](https://developer.apple.com/documentation/healthkit/hkhealthstore/earliestauthorizedsampledate(for:)) API after authorization and before resolving an all-available request. An older-SDK binary cannot perform this check merely because it runs on a newer OS. The machine-readable history state is one of:
+On OS 27 and later, the production adapter uses HealthKit's [`earliestAuthorizedSampleDate(for:)`](https://developer.apple.com/documentation/healthkit/hkhealthstore/earliestauthorizedsampledate(for:)) API to assess the exact selected types and their dependencies. Returned dates limit sample **end** dates. Omitted types, an empty response, failures, unavailable APIs and unassessed types remain explicit uncertainty; they never prove unrestricted history or a denied read.
 
-- `limited_history`: HealthKit returned at least one per-type earliest readable date. Data before each boundary is unknown, not absent. Health.md warns in the export UI and refuses an unqualified **All Time** / `all_available` completeness claim.
-- `full_history`: HealthKit returned no limited date boundary for the assessed types. By Apple's privacy design, this still does not prove each read permission was granted; a denied type can also be omitted.
-- `unknown`: the boundary check failed or could not cover the requested scope. Health.md rejects `all_available`; an explicit date range remains available.
-- `api_unavailable`: the runtime predates OS 27, the app was built without the supported HealthKit SDK API, or the query is local to the Mac companion. Health.md rejects `all_available` because it cannot verify full-history authorization, but continues explicit-range bounded exports with that limitation reported.
+**All Time** means all readable data in the selected scope. Earliest-date discovery must complete for every selected metric; a partial query cannot supply a successful sibling's range. Discovery freezes the export time zone, rejects changed selections and cancellation, and does not turn failed or empty discovery into Today with an All Time label.
 
-The boundary is evaluated against a sample's end date, so a readable sample can begin before its reported boundary. Health.md never interprets the pre-boundary period as zero or missing-by-proof.
+The separate capture-time assessment binds historical-access evidence to the exact selection and operation. Known limitations and unknown coverage remain visible in native warnings and the existing query/export history extensions. Interactive exports retain the explicit Continue Unverified/Cancel decision for a slow assessment and revalidate readiness before capture. Portable and paired-Mac operations retain their existing request/peer/scope-bound observations and recovery validation. Date discovery itself makes no full-history completeness claim.
 
-Therefore:
-
-- `success` + `record_count: 0` means the query completed empty from the app's perspective;
-- it is not proof the user has no Health data;
-- `failure`, `unsupported`, `skipped`, and `cancelled` remain distinct diagnostics;
-- partial capture is never labeled complete.
+The legacy compatibility assessment reserves `full_history` for affirmative evidence; its boundary-only adapter cannot produce that state. Current native and transport behavior follows the [history assessment implementation](../testing/history-authorization-implementation.md) and [export-history contract](../../../../packages/contracts/export-history/v1/README.md).
 
 ## Separate authorization and capabilities
 
@@ -80,8 +72,8 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 |---|---|---|
 | Ordinary metric missing | Permission off, metric off, no data, or read hidden | Check Health app, selection, and manifest. |
 | Empty query despite known data | HealthKit may be hiding denied read access | Revisit Apple Health permissions; Health.md cannot distinguish denial. |
-| All Time/all-available request rejected as limited | OS 27 reports a user-selected earliest readable date for at least one selected type | Grant full history in Apple Health or choose an explicit date range at or after the displayed boundary. |
-| All Time/all-available request rejected as unverified | The check failed, did not cover every selected metric, or the API is unavailable | Choose an explicit date range. On supported devices, use OS 27+ and rerun authorization so Health.md can reassess the full selected scope. |
+| History warning reports a limited boundary | OS 27 reports an earliest readable sample-end date for a selected type | Review Health access or export the readable scope with its limitation retained. Earlier data remains unknown. |
+| History warning reports unknown or unavailable evidence | The API cannot establish unrestricted history for this selected scope | Review Health access. A slow interactive assessment retains Continue Unverified/Cancel; no result becomes proof of full history. |
 | History state is `api_unavailable` | The runtime or app build cannot call the history-boundary API, or the query is local to Mac | Treat full-history completeness as unverified and use explicit ranges. OS 27 alone is insufficient; the iPhone app must also be built with a supported SDK. |
 | Medication/Vision locked | Unsupported OS or selector incomplete | Use supported OS and complete separate selection. |
 | Clinical record metric unavailable | Clinical Health Records are omitted from this App Store build | Use an ordinary Apple Health metric; clinical access may return in a future reviewed release. |
@@ -98,7 +90,7 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 
 - `HealthKitRecordCatalog` derives standard authorization from reviewed runtime-available descriptors.
 - `HealthKitManager` keeps standard, medication, vision, document, verifiable, and WorkoutKit paths separate; the document/clinical paths are source-gated off in current App Store builds.
-- Native iPhone/iPad **All Time** selection and export admission share `NativeExportDateRangeResolver`. It discovers the earliest date for the selected metrics in the export time zone and requires complete discovery plus a full-history assessment covering that scope. Saved dates, Preview exports, and Connected Mac/API destinations do not bypass the check. Selection changes or cancellation during discovery reject the pending result; explicit ranges do not require this full-history gate. Failed discovery never substitutes Today while retaining the All Time label.
+- Native iPhone/iPad **All Time** range resolution uses `NativeExportDateRangeResolver` for complete selected-query discovery in the frozen time zone. The existing execution-selection coordinator independently assesses and binds history evidence before capture. Saved dates, Preview, Connected Mac and API exports preserve selection identity, ordinary readiness/quota checks and request-bound historical-access evidence.
 - Errors are isolated and safely described without logging clinical content/PHI.
 - macOS does not query HealthKit; iPhone prepares local/API/Connected Mac records.
-- The Xcode project's four configurations map the reviewed SDK 27 major family (`SDK_VERSION_MAJOR=270000`) to `HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION`. Both the production adapter and its support flag use that compile-time gate plus OS 27 runtime availability. SDK 26 builds compile without referencing the absent symbol and report `api_unavailable`, never an empty full-history result. Qualify additional SDK families before adding their mapping; do not infer SDK support from the Swift compiler version or override the gate to make an unsupported build pass.
+- Production history assessment uses the SDK 27-qualified adapter with runtime availability checks. The older compatibility adapter retains its explicit `HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION` SDK-family gate; an unavailable adapter reports uncertainty. Neither path turns an omitted boundary into unrestricted-history proof. Native qualification must use the supported SDK; do not disable that requirement to make an older local SDK pass.

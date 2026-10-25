@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">ডায়াগনস্টিকস</string>
+    <string name="diagnostics_entry">স্থানীয় প্রযুক্তিগত ইভেন্ট দেখুন এবং কী শেয়ার করবেন তা বেছে নিন</string>
+    <string name="diagnostics_recording">স্থানীয় রেকর্ডিং</string>
+    <string name="diagnostics_privacy">সংরক্ষণ বা শেয়ার না করা পর্যন্ত ডায়াগনস্টিকস এই ডিভাইসেই থাকে। অপারেশনাল ইভেন্টে স্বাস্থ্যের মান, স্বাস্থ্য রেকর্ড ID, অনুরোধ করা স্বাস্থ্য ডেটার তারিখ, পাথ, এন্ডপয়েন্ট বা পরিচয় যাচাইয়ের তথ্য থাকে না। এগুলো বেনামী নয়।</string>
+    <string name="diagnostics_enabled">অপারেশনাল ইভেন্ট রেকর্ড করুন</string>
+    <string name="diagnostics_retention">বিস্তারিততার মাত্রা তথ্যের পরিমাণ বদলায়, স্বাস্থ্য বিষয়ক তথ্য সংগ্রহের অনুমতি নয়। সংরক্ষণ: সর্বোচ্চ 7 দিন / 20 MiB। স্বয়ংক্রিয় আপলোড নেই।</string>
+    <string name="diagnostics_start_private">15 মিনিটের জন্য ব্যক্তিগত প্রসঙ্গ রেকর্ড করুন</string>
+    <string name="diagnostics_stop_private">ব্যক্তিগত রেকর্ডিং বন্ধ করুন</string>
+    <string name="diagnostics_private_description">V1 ব্যক্তিগত প্রসঙ্গ উপলভ্য থাকলে সংযুক্ত ডিভাইসের নাম রেকর্ড করে। স্বাস্থ্য ডেটা, পরিচয় যাচাইয়ের তথ্য বা যেকোনো ত্রুটির লেখা ধারণ করে না। ব্যক্তিগত অংশের মেয়াদ 24 ঘণ্টার মধ্যে সীমাবদ্ধ এবং পরেরবার অ্যাপ ব্যবহারের সময় তা কার্যকর হয়।</string>
+    <string name="diagnostics_private_until">ব্যক্তিগত রেকর্ডিংয়ের মেয়াদ শেষ: %1$s</string>
+    <string name="diagnostics_clear">সব ডায়াগনস্টিকস মুছুন</string>
+    <string name="diagnostics_clear_question">স্থানীয় ইভেন্ট, তৈরি বান্ডল এবং সংযুক্তির কপি মুছবেন? এতে ব্যক্তিগত রেকর্ডিং বন্ধ হবে। এক্সপোর্ট করা ফাইল এবং শেয়ার করা কপি অপরিবর্তিত থাকবে।</string>
+    <string name="diagnostics_select">ইভেন্ট নির্বাচন করুন</string>
+    <string name="diagnostics_hour">গত এক ঘণ্টা</string>
+    <string name="diagnostics_day">গত 24 ঘণ্টা</string>
+    <string name="diagnostics_week">গত 7 দিন</string>
+    <string name="diagnostics_operation">অপারেশন UUID (ঐচ্ছিক)</string>
+    <string name="diagnostics_include_private">রেকর্ড করা ব্যক্তিগত প্রসঙ্গ অন্তর্ভুক্ত করুন</string>
+    <string name="diagnostics_search">ইভেন্ট ID বা ফিল্ড খুঁজুন</string>
+    <string name="diagnostics_refresh">ইভেন্ট রিফ্রেশ করুন</string>
+    <string name="diagnostics_summary">ইভেন্ট: %1$d · সেশনে বাদ পড়া: %2$d · অবৈধ: %3$d · সংক্ষিপ্ত করা: %4$s</string>
+    <string name="diagnostics_view_limit">মিলে যাওয়া সাম্প্রতিক 100টি ইভেন্ট দেখানো হচ্ছে। বান্ডলে নির্বাচিত স্ন্যাপশটের সর্বোচ্চ 10,000টি ইভেন্ট থাকে; কোনো অংশ বাদ গেলে তা জানানো হয়।</string>
+    <string name="diagnostics_attachments">ঐচ্ছিক সংযুক্তি</string>
+    <string name="diagnostics_attachment_description">স্বাস্থ্য এক্সপোর্ট বা স্ক্রিনশটসহ বিদ্যমান ফাইল যোগ করুন। মূল বাইট অপরিবর্তিতভাবে কপি হয় এবং সংবেদনশীল তথ্য মোছা হয় না। মূল ফাইলের নাম অন্তর্ভুক্ত থাকে। নতুন করে স্বাস্থ্য ডেটা পড়া হয় না। সীমা: 50টি ফাইল / 100 MiB।</string>
+    <string name="diagnostics_choose">ফাইল বেছে নিন…</string>
+    <string name="diagnostics_remove">%1$s সরান</string>
+    <string name="diagnostics_prepare">বান্ডল তৈরি করুন</string>
+    <string name="diagnostics_review">তৈরি করুন ও পর্যালোচনা করুন</string>
+    <string name="diagnostics_frozen">স্থির স্ন্যাপশট। ইভেন্ট: %1$d। স্বাস্থ্য বিষয়ক তথ্য: %2$s। ZIP এনক্রিপ্ট করা নেই।</string>
+    <string name="diagnostics_reviewed">যে ফাইল শেয়ার করতে চাই তা পর্যালোচনা করেছি</string>
+    <string name="diagnostics_share">পর্যালোচিত ZIP শেয়ার করুন</string>
+    <string name="diagnostics_save">পর্যালোচিত ZIP সংরক্ষণ করুন</string>
+    <string name="diagnostics_share_question">এই ডায়াগনস্টিক বান্ডল শেয়ার করবেন?</string>
+    <string name="diagnostics_share_warning">ZIP এনক্রিপ্ট করা নেই। অন্তর্ভুক্ত ব্যক্তিগত প্রসঙ্গ ও সংযুক্তি স্বাস্থ্য ডেটা বা গোপন তথ্য প্রকাশ করতে পারে। GitHub বা Discord-এর প্রকাশ্য পোস্ট যে কেউ দেখতে পারে। গন্তব্য নিজের কপি নিয়ন্ত্রণ করে; Health.md সেগুলো ফিরিয়ে নিতে পারে না।</string>
+    <string name="diagnostics_share_confirm">এই বান্ডল শেয়ার করুন</string>
+    <string name="diagnostics_bundle_retention">স্থানীয় বান্ডলের মেয়াদ 24 ঘণ্টার মধ্যে সীমাবদ্ধ এবং পরেরবার অ্যাপ ব্যবহারের সময় তা কার্যকর হয়; কেবল সাম্প্রতিক 3টি রাখা হয়। সংরক্ষিত বা শেয়ার করা কপির নিজস্ব সংরক্ষণকাল থাকে।</string>
+    <string name="diagnostics_preview_truncated">\n\n[প্রিভিউ 128 KiB-এ সীমিত। সম্পূর্ণ মূল ফাইল ZIP-এ থেকে যায়।]</string>
+    <string name="diagnostics_failure">ডায়াগনস্টিক অপারেশন ব্যর্থ হয়েছে। ফাইলে প্রবেশাধিকার ও স্থানীয় স্টোরেজ পরীক্ষা করে আবার তৈরি ও পর্যালোচনা করুন।</string>
+    <string name="diagnostics_invalid_operation">অপারেশন ID অবশ্যই UUID হতে হবে।</string>
+</resources>

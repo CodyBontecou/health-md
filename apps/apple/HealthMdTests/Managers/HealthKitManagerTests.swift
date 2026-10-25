@@ -15,7 +15,7 @@ import HealthKit
 
 @MainActor
 private func makeSUT(
-    store: FakeHealthStore = FakeHealthStore(),
+    store: FakeHealthStore? = nil,
     medicationAuthorizationRequested: Bool = false,
     visionAuthorizationRequested: Bool = false,
     healthAuthorizationRequested: Bool = false,
@@ -40,7 +40,9 @@ private func makeSUT(
     if authorizationMigrationCompleted {
         defaults.set(true, forKey: "healthKit.authorizationStateMigrationCompleted")
     }
-    return HealthKitManager(store: store, userDefaults: defaults)
+    // Construct actor-isolated test dependencies inside this MainActor helper,
+    // not in the synchronous caller-side default-argument expression.
+    return HealthKitManager(store: store ?? FakeHealthStore(), userDefaults: defaults)
 }
 
 // MARK: - Authorization & Error Mapping Tests (TODO-4fac60b8)
@@ -3119,9 +3121,21 @@ final class HealthKitManagerObserverTests: XCTestCase {
 
         let assessment = await sut.assessHistoryAuthorization(forMetricIDs: ["steps"])
 
-        XCTAssertEqual(assessment.state, .fullHistory)
+        XCTAssertEqual(assessment.state, .unknown)
         XCTAssertTrue(assessment.message.contains("denied read"))
-        XCTAssertTrue(assessment.supportsUnqualifiedFullHistoryClaim)
+        XCTAssertFalse(assessment.supportsUnqualifiedFullHistoryClaim)
+    }
+
+    @MainActor
+    func test_historyAuthorization_emptySelectionDoesNotProveFullHistory() async {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let assessment = await sut.assessHistoryAuthorization(forMetricIDs: [])
+
+        XCTAssertEqual(assessment.state, .unknown)
+        XCTAssertFalse(assessment.supportsUnqualifiedFullHistoryClaim)
+        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty)
     }
 
     @MainActor
@@ -3234,6 +3248,55 @@ final class HealthKitManagerObserverTests: XCTestCase {
         XCTAssertTrue(discovery.queriedTypeIdentifiers.contains(
             HealthKitRecordCatalog.activitySummaryIdentifier
         ))
+    }
+
+    // These characterize readable-date discovery, not history authorization.
+    // In particular a successful empty query is query-complete, even though
+    // HealthKit may hide denied or older unauthorized data behind that result.
+    @MainActor
+    func test_earliestDiscovery_emptyReadableDataIsQueryComplete() async {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps"])
+
+        XCTAssertNil(discovery.earliestDate)
+        XCTAssertTrue(discovery.isQueryComplete)
+        XCTAssertEqual(discovery.isComplete, discovery.isQueryComplete)
+        XCTAssertEqual(discovery.queriedTypeIdentifiers, [HKQuantityTypeIdentifier.stepCount.rawValue])
+    }
+
+    @MainActor
+    func test_earliestDiscovery_mixedReadableDatesAndEmptyTypeRemainsQueryComplete() async {
+        let store = FakeHealthStore()
+        let readableDate = Date(timeIntervalSince1970: 1_600_000_000)
+        store.earliestSampleDates[HKQuantityTypeIdentifier.stepCount.rawValue] = readableDate
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps", "heart_rate_avg"])
+
+        XCTAssertEqual(discovery.earliestDate, readableDate)
+        XCTAssertTrue(discovery.isQueryComplete)
+        XCTAssertEqual(discovery.queriedTypeIdentifiers, [
+            HKQuantityTypeIdentifier.heartRate.rawValue,
+            HKQuantityTypeIdentifier.stepCount.rawValue,
+        ].sorted())
+    }
+
+    @MainActor
+    func test_earliestDiscovery_failedTypeRetainsReadableSiblingWithoutQueryCompleteness() async {
+        let store = FakeHealthStore()
+        let readableDate = Date(timeIntervalSince1970: 1_600_000_000)
+        store.earliestSampleDates[HKQuantityTypeIdentifier.stepCount.rawValue] = readableDate
+        store.errorsForEarliestSampleDates[HKQuantityTypeIdentifier.heartRate.rawValue] = HealthKitFixtures.genericQueryError
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps", "heart_rate_avg"])
+
+        XCTAssertEqual(discovery.earliestDate, readableDate)
+        XCTAssertFalse(discovery.isQueryComplete)
+        XCTAssertEqual(discovery.failedTypeIdentifiers, [HKQuantityTypeIdentifier.heartRate.rawValue])
+        XCTAssertEqual(discovery.isComplete, discovery.isQueryComplete)
     }
 
     @MainActor

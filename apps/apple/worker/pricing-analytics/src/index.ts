@@ -22,6 +22,8 @@ const BATCH_ENVELOPE_KEYS = new Set(["installId", "events"]);
 const EVENT_KEYS = new Set(["eventId", "id", "installId", "eventName", "properties"]);
 
 const EVENT_NAMES = new Set([
+  "pricing_apple_ads_attribution_started",
+  "pricing_apple_ads_attribution_resolved",
   "pricing_paywall_viewed",
   "pricing_onboarding_started",
   "pricing_onboarding_step_viewed",
@@ -52,6 +54,7 @@ const EVENT_NAMES = new Set([
 ]);
 
 const STRING_PROPERTY_KEYS = new Set([
+  "appleAdsStatus", "appleAdsClaimType", "appleAdsConversionType",
   "experimentId",
   "variantId",
   "appVersion",
@@ -70,6 +73,7 @@ const STRING_PROPERTY_KEYS = new Set([
 ]);
 
 const INTEGER_PROPERTY_KEYS = new Set([
+  "appleAdsCampaignId", "appleAdsAdGroupId", "appleAdsKeywordId",
   "freeExportsUsed",
   "freeExportsRemaining",
   "formatCount",
@@ -338,6 +342,7 @@ function normalizeEvent(event: unknown, batchInstallId: string | undefined): Pri
     throw new Error("properties_must_be_object");
   }
   const properties = normalizeProperties(event.properties ?? {});
+  validateAppleAdsProperties(eventName, properties);
 
   return {
     id: storageEventId(eventId, installId, eventName, properties),
@@ -366,12 +371,42 @@ function normalizeProperties(properties: Record<string, unknown>): PricingProper
   return normalized;
 }
 
+function validateAppleAdsProperties(eventName: string, properties: PricingProperties): void {
+  const keys = Object.keys(properties).filter((key) => key.startsWith("appleAds"));
+  if (eventName === "pricing_apple_ads_attribution_started") {
+    rejectUnknownKeys(properties, new Set(["platform", "appVersion", "buildNumber", "experimentId", "variantId"]), "attribution");
+    if (properties.platform !== "ios") throw new Error("incomplete_attribution");
+    return;
+  }
+  if (eventName !== "pricing_apple_ads_attribution_resolved") {
+    if (keys.length) throw new Error("attribution_properties_require_attribution_event");
+    return;
+  }
+  const allowed = new Set(["platform", "appVersion", "buildNumber",
+    "appleAdsStatus", "appleAdsCampaignId", "appleAdsAdGroupId", "appleAdsKeywordId",
+    "appleAdsClaimType", "appleAdsConversionType"]);
+  rejectUnknownKeys(properties, allowed, "attribution");
+  if (properties.platform !== "ios" || !properties.appleAdsStatus ||
+      !properties.appleAdsClaimType || !properties.appleAdsConversionType) {
+    throw new Error("incomplete_attribution");
+  }
+  if (properties.appleAdsStatus === "unmatched" &&
+      (keys.some((key) => key.endsWith("Id")) || properties.appleAdsClaimType !== "unknown" ||
+       properties.appleAdsConversionType !== "unknown")) {
+    throw new Error("inconsistent_unmatched_attribution");
+  }
+}
+
 function storageEventId(
   eventId: string,
   installId: string,
   eventName: string,
   properties: PricingProperties,
 ): string {
+  if (eventName === "pricing_apple_ads_attribution_resolved" || eventName === "pricing_apple_ads_attribution_started") {
+    return `dedupe:${eventName}:${installId}`;
+  }
+
   if (eventName === "pricing_health_authorization_completed") {
     const authorizationStatus = stringProperty(properties, "authorizationStatus") ?? "unknown";
     return `dedupe:${eventName}:${installId}:${authorizationStatus}`;
@@ -384,6 +419,12 @@ function validateStringProperty(key: string, value: unknown): string {
   if (typeof value !== "string") throw new Error(`invalid_property_type:${key}`);
 
   switch (key) {
+    case "appleAdsStatus":
+      return validateSetValue(key, value, new Set(["matched", "unmatched"]));
+    case "appleAdsClaimType":
+      return validateSetValue(key, value, new Set(["Click", "Impression", "unknown"]));
+    case "appleAdsConversionType":
+      return validateSetValue(key, value, new Set(["Download", "Redownload", "unknown"]));
     case "experimentId":
       return validateKnownIdentifier(key, value, KNOWN_EXPERIMENT_IDS);
     case "variantId":
@@ -423,6 +464,11 @@ function validateStringProperty(key: string, value: unknown): string {
 
 function validateIntegerProperty(key: string, value: unknown): number {
   if (typeof value !== "number" || !Number.isInteger(value)) throw new Error(`invalid_property_type:${key}`);
+
+  if (["appleAdsCampaignId", "appleAdsAdGroupId", "appleAdsKeywordId"].includes(key)) {
+    if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`invalid_property:${key}`);
+    return value;
+  }
 
   if (key === "freeExportsUsed" || key === "freeExportsRemaining") {
     if (value < 0 || value > 10) throw new Error(`invalid_property:${key}`);

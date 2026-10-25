@@ -81,7 +81,7 @@ Alcuni dati non vengono volutamente **trattati come equivalenti** tra piattaform
 
 | Funzione | iPhone / iPad | Mac | Android | Wear OS |
 |---|---|---|---|---|
-| Livello gratuito | ✓ 10 azioni di esportazione manuali o pianificate | — | ✓ 10 azioni di esportazione manuali | — |
+| Livello gratuito | ✓ 5 azioni di esportazione manuali o pianificate | — | ✓ 5 azioni di esportazione manuali | — |
 | Sblocco | ✓ acquisto a vita una tantum (individuale / famiglia) | ◐ stesso sblocco Apple | ✓ acquisto a vita una tantum, pianificazione inclusa | — |
 | Privacy con elaborazione locale | ✓ nessuna copia nel cloud per impostazione predefinita | ✓ | ✓ | △ previsto |
 | Referto per il clinico (un PDF per gli appuntamenti) | ✓ | — | ✓ | — |
