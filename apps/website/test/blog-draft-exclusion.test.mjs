@@ -29,7 +29,7 @@ test('review drafts stay out of generated articles, index and sitemap', async (t
     assert.ok(!sitemap.includes(`/blog/${slug}/`));
     await assert.rejects(access(path.join(outputRoot, 'blog', slug)), { code: 'ENOENT' });
   }
-  for (const publishedSlug of ['apple-health-to-google-sheets', 'analyze-apple-health-with-claude']) {
+  for (const publishedSlug of ['apple-health-to-google-sheets', 'analyze-apple-health-with-claude', 'apple-health-to-chatgpt']) {
     assert.ok(posts.some((post) => post.slug === publishedSlug), `${publishedSlug} is published after review`);
     assert.ok(index.includes(`/blog/${publishedSlug}/`));
     assert.ok(sitemap.includes(`/blog/${publishedSlug}/`));
