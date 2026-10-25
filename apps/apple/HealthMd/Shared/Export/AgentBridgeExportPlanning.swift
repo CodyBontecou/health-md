@@ -235,7 +235,7 @@ final class AgentBridgeExportPlanningService {
         let terminal = try store.finalizeUnclaimedCancellation(request, prepare: { job, previous in
             try self.validateCancellation(request, job: job, intent: previous, authenticatedPeer: authenticatedPeer)
             return .init(version: 2, requestBytes: previous.requestBytes, requestedAt: previous.requestedAt,
-                terminalReceiptBytes: try AgentBridgeV4Codec.encode(job.unclaimedCancellationReceipt()), confirmedAt: self.utc(self.clock.now()))
+                terminalReceiptBytes: try AgentBridgeV4Codec.encode(job.unclaimedCancellationReceipt()), confirmedAt: try self.utc(self.clock.now()))
         }, requireCurrent: { job, intent in
             try self.validateCancellation(request, job: job, intent: intent, authenticatedPeer: authenticatedPeer)
         })
