@@ -77,7 +77,20 @@ class AgentBridgeNativeConfigurationReaderTest {
         every { Looper.myLooper() } returns null // Worker boundary only; not native thread qualification.
         state = initialState()
     }
-    @After fun tearDown() { unmockkStatic(Looper::class); scope.cancel() }
+    @After fun tearDown(): Unit = runBlocking {
+        try {
+            scope.cancel()
+            scope.coroutineContext[Job]?.join()
+        } finally {
+            try {
+                // MockK's global proxy handlers retain recorded calls and their mock arguments.
+                // Release completed fixtures only after their coroutine work has stopped.
+                clearAllMocks()
+            } finally {
+                unmockkStatic(Looper::class)
+            }
+        }
+    }
     private fun reader(store: DataStore<Preferences> = observed) = AgentBridgeNativeConfigurationReader(
         store, settings, profiles, { state }, { AgentBridgeExportTestRegistry.load() })
     private fun reset() { reads = 0; writes = 0 }
@@ -201,8 +214,16 @@ class AgentBridgeNativeConfigurationReaderTest {
             val preferenceReads = reads; val preferenceWrites = writes
             try { operation(f, planner, request, client, manager) }
             finally {
-                assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
-                assertThat(reads).isEqualTo(preferenceReads); assertThat(writes).isEqualTo(preferenceWrites)
+                try {
+                    assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
+                    assertThat(reads).isEqualTo(preferenceReads); assertThat(writes).isEqualTo(preferenceWrites)
+                } finally {
+                    // Each mode owns a complete fixture, including its mock call graph.
+                    // Restore the same class-scoped worker-boundary answers after cleanup.
+                    clearAllMocks()
+                    every { Looper.getMainLooper() } returns main
+                    every { Looper.myLooper() } returns null
+                }
             }
         }
     }
