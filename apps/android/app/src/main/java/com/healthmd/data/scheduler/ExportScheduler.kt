@@ -18,6 +18,7 @@ import com.healthmd.data.drive.GoogleDriveDestinationStore
 import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
@@ -637,6 +638,9 @@ class ExportScheduler @Inject constructor(
             ?.let { googleDriveDestinationStore.find(it) }
             ?.fingerprint
             ?: throw IllegalStateException("Scheduled Google Drive destination is not configured")
+        ExportTarget.AGENT_DATA_GATEWAY ->
+            AgentDataGatewayEndpoint.fingerprint(settings.agentDataGatewayUrl)
+                ?: throw IllegalStateException("Scheduled gateway destination is not configured")
         ExportTarget.DEVICE_FOLDER -> null
     }
 

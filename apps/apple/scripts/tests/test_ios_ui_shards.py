@@ -30,19 +30,29 @@ def summary(index):
 class UiCoverageTests(unittest.TestCase):
     def test_exact_existing_inventory_is_disjoint_and_complete(self):
         actual = [name for lane in shards.SHARDS for name in lane]
-        self.assertEqual(set(actual), set(EXPECTED_TESTS))
-        self.assertEqual(len(actual), 14)
-        self.assertEqual(len(actual), len(set(actual)))
-        self.assertEqual(len(shards.SHARDS), 3)
+        self.assertEqual(set(n for lane in shards.SHARDS[:3] for n in lane), set(EXPECTED_TESTS))
+        self.assertEqual(len(actual), 24)
+        self.assertEqual(len(actual), len(set((shards.device_family(i), n) for i, lane in enumerate(shards.SHARDS) for n in lane)))
+        self.assertEqual(len(shards.SHARDS), 4)
         self.assertTrue(all(shards.SHARDS))
         owners = {}
         for index, lane in enumerate(shards.SHARDS):
             for name in lane:
-                cls = name.split('/')[0]
+                cls = (shards.device_family(index), name.split('/')[0])
                 self.assertEqual(owners.setdefault(cls, index), index, "A stateful UI class was split")
 
+    def test_actual_device_family_is_required_before_native_execution(self):
+        destination = "platform=iOS Simulator,id=" + "1" * 36
+        phone = {"udid": "1" * 36, "isAvailable": True, "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-Synthetic"}
+        self.assertEqual(shards.qualify_device({"devices": {"runtime": [phone]}}, destination, 0), "iPhone")
+        tablet = dict(phone, deviceTypeIdentifier="com.apple.CoreSimulator.SimDeviceType.iPad-Synthetic")
+        self.assertEqual(shards.qualify_device({"devices": {"runtime": [tablet]}}, destination, 3), "iPad")
+        for devices, index in [([phone], 3), ([tablet], 0), ([], 0), ([phone, phone], 0),
+                               ([dict(phone, isAvailable=False)], 0), ([dict(phone, deviceTypeIdentifier="")], 0)]:
+            with self.assertRaises(ValueError): shards.qualify_device({"devices": {"runtime": devices}}, destination, index)
+
     def test_real_result_tree_and_summary_must_agree_with_each_selection(self):
-        for index in range(3):
+        for index in range(len(shards.SHARDS)):
             receipt = shards.qualify_results(tree(index), summary(index), index)
             self.assertEqual(receipt["cases"], sorted(shards.SHARDS[index]))
             self.assertEqual(receipt["passed"], len(shards.SHARDS[index]))
@@ -68,7 +78,7 @@ class UiCoverageTests(unittest.TestCase):
                 shards.qualify_results(tree(0), bad, 0)
 
     def test_run_only_command_preserves_timeouts_and_uses_one_destination(self):
-        for index in range(3):
+        for index in range(len(shards.SHARDS)):
             args = shards.test_command(Path("fresh.xctestrun"), "platform=iOS Simulator,id=PHONE", Path("result.xcresult"), index)
             self.assertEqual(args[:2], ["xcodebuild", "test-without-building"])
             self.assertEqual(args[args.index("-parallel-testing-enabled") + 1], "NO")
@@ -84,7 +94,7 @@ class UiAggregateTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
-        for index in range(3): self.write(index)
+        for index in range(len(shards.SHARDS)): self.write(index)
 
     def write(self, index, **updates):
         folder = self.root / f"ios-ui-12-1-shard-{index}"
@@ -96,13 +106,13 @@ class UiAggregateTests(unittest.TestCase):
         path.write_text(json.dumps(value))
         return path
 
-    def test_all_exact_head_shards_verify_fourteen_passes(self):
+    def test_all_exact_head_device_lanes_verify_twenty_three_passes(self):
         result = shards.verify_shards(self.root, "12", "1", SHA)
-        self.assertEqual(result["passed"], 14)
-        self.assertEqual(result["cases"], sorted(EXPECTED_TESTS))
+        self.assertEqual(result["passed"], 24)
+        self.assertEqual(result["cases"], sorted([{"device_family": shards.device_family(i), "case": n} for i, lane in enumerate(shards.SHARDS) for n in lane], key=lambda x: (x["device_family"], x["case"])))
 
     def test_wrong_head_run_attempt_and_shard_are_rejected(self):
-        for key, value in [("source_sha", "b" * 40), ("run_id", "11"), ("attempt", "2"), ("shard", 2)]:
+        for key, value in [("source_sha", "b" * 40), ("run_id", "11"), ("attempt", "2"), ("shard", 2), ("device_family", "iPad")]:
             with self.subTest(key=key):
                 self.write(0, **{key: value})
                 with self.assertRaises(ValueError): shards.verify_shards(self.root, "12", "1", SHA)

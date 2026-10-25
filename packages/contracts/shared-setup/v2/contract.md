@@ -304,4 +304,19 @@ The baseline pins each complete row and the inventory metadata by SHA-256 of UTF
 
 Do not regenerate this baseline or update its hash to silence a failure. Later reviewed additions must remain append-only and be frozen in a separately versioned additive baseline successor at approval; retain and validate the historical baseline and every previously approved row. This audit amendment changes no public v2 schema, platform extension, export schema, direct-protocol version, capability classification, default writer, or outstanding physical-device/accessibility QA gate.
 
-Drive destination authority is also excluded in the independently versioned native audits [Apple revision 2](apple-profile-field-coverage-v2.json) and [Android revision 2](android-profile-field-coverage-v2.json). These audits retain every earlier classification and do not change the public v2 grammar.
+## Apple source-field audit revision 2
+
+The additive [Apple source-field audit revision 2](apple-profile-field-coverage-v2.json)
+tracks the subsequently introduced local workout table presentation preference without
+rewriting the original [revision 1 audit](apple-profile-field-coverage.json). Revision 2
+still targets the unchanged `healthmd.shared_setup` v2 wire allowlist: the new field is
+`local_only`, persists in native profiles/frozen Mac jobs, and defaults enabled when
+materializing a setup file that cannot represent it. Portable adoption requires a
+separate Android convergence and contract review. Audit revisions do not change the
+public Shared Setup grammar or its frozen artifact fixtures.
+
+## Drive and recovery source-field audit successors
+
+[Apple revision 3](apple-profile-field-coverage-v3.json) retains Drive destination authority and local recovery classifications; [Android revision 3](android-profile-field-coverage-v3.json) retains the corresponding Android exclusions. [Apple revision 4](apple-profile-field-coverage-v4.json) is the additive union with the workout presentation preference from the approved Apple revision 2 audit. Earlier inventory revisions and the public Shared Setup v2 grammar remain unchanged. Drive account/folder identity is device-only and prohibited from portable bundles.
+
+[Android revision 4](android-profile-field-coverage-v4.json) is the additive union of revision 3 with main's four Agent Data gateway field classifications. Gateway endpoint identity and URL bindings remain prohibited local authority; the public Shared Setup v2 allowlist does not acquire a gateway destination kind. Earlier revision rows remain unchanged.

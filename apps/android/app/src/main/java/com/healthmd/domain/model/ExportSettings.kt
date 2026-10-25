@@ -167,6 +167,8 @@ data class ExportSettings(
     val scheduledExportTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
     /** Non-secret endpoint configuration. Authorization credentials are encrypted separately. */
     val apiEndpointUrl: String = "",
+    /** Non-secret Agent Data gateway base URL for [ExportTarget.AGENT_DATA_GATEWAY] exports. */
+    val agentDataGatewayUrl: String = "",
     val subfolder: String = "health",
     val folderOrganization: FolderOrganization = FolderOrganization.FLAT,
     val scheduleEnabled: Boolean = false,

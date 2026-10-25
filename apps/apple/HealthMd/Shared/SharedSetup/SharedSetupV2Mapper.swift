@@ -454,7 +454,7 @@ enum SharedSetupV2Mapper {
             ? .apple : .portable
 
         let destination: SharedSetupV2.Destination
-        if let pendingDestinationIntent {
+        if let pendingDestinationIntent, nativeProfile.target != .agentDataGateway {
             destination = pendingDestinationIntent
         } else {
             switch nativeProfile.target {
@@ -471,6 +471,11 @@ enum SharedSetupV2Mapper {
                 destination = .init(
                     kind: .apiEndpoint,
                     apiEndpoint: endpoint.flatMap { endpointHint($0.endpointURLString) }
+                )
+            case .agentDataGateway:
+                // Gateway destinations cannot be represented by the v2 grammar.
+                throw SharedSetupV2Error.invalid(
+                    "Agent Data gateway profiles do not participate in shared setup bundles."
                 )
             }
         }

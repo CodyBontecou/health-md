@@ -150,7 +150,7 @@ object ExportProfileOverlapDetector {
         currentFolderUri: String?,
     ): String? = when (target) {
         ExportTarget.DEVICE_FOLDER -> (folderUri ?: currentFolderUri)?.let(::normalizedRoot)
-        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE -> null
+        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE, ExportTarget.AGENT_DATA_GATEWAY -> null
     }
 
     private fun renderedRelativePaths(

@@ -615,7 +615,10 @@ final class HealthMdCLITests: XCTestCase {
         XCTAssertFalse(isValidMetricQueryResponse(wrongVersion))
         var missingCursor = response
         missingCursor.removeValue(forKey: "next_cursor")
-        XCTAssertFalse(isValidMetricQueryResponse(missingCursor))
+        XCTAssertTrue(isValidMetricQueryResponse(missingCursor))
+        var malformedCursor = response
+        malformedCursor["next_cursor"] = 42
+        XCTAssertFalse(isValidMetricQueryResponse(malformedCursor))
     }
 
     func testMetricQueryEnvelopeAndPartialExitPolicy() {
@@ -764,6 +767,49 @@ final class HealthMdCLITests: XCTestCase {
         var missingOwnerDate = queryPage(nextCursor: nil, coverageStatus: "available")
         missingOwnerDate["metadata"] = ["requested_scope_status": "partial_success"]
         XCTAssertFalse(metricCoveragePagesAreComplete([missingOwnerDate]))
+    }
+
+    func testTerminalQueryWithoutCursorPreservesHistoryDisclosure() async throws {
+        let warning: [String: Any] = [
+            "code": "history_sample_end_limited",
+            "message": "Earlier history is unknown, not missing."
+        ]
+        var terminal = queryPage(nextCursor: nil, coverageStatus: "complete_empty")
+        terminal.removeValue(forKey: "next_cursor")
+        terminal["limitations"] = [warning]
+        var explicitNull = terminal
+        explicitNull["next_cursor"] = NSNull()
+        XCTAssertTrue(isValidMetricQueryResponse(explicitNull))
+        XCTAssertTrue(isValidMetricQueryResponse(terminal))
+        let body = makeMetricQueryRequestBody(
+            dates: ["type": "exact", "range": [
+                "start_date": "2026-09-01", "end_date": "2026-09-01"
+            ]],
+            metricIDs: ["steps"],
+            detail: .summary
+        )
+        let traversal = try await requestMetricQueryPages(
+            path: "/v1/agent/query",
+            initialBody: body,
+            baseURL: "http://127.0.0.1:1",
+            timeout: 10,
+            allPages: true,
+            progressJSON: false,
+            requestPage: { _ in HTTPResult(statusCode: 200, payload: terminal) }
+        )
+        XCTAssertNil(traversal.failure)
+        XCTAssertTrue(traversal.traversalComplete)
+        XCTAssertEqual(traversal.pages.count, 1)
+        let retained = traversal.pages.first as? [String: Any]
+        let limitations = retained?["limitations"] as? [[String: Any]]
+        XCTAssertEqual(limitations?.first?["code"] as? String, "history_sample_end_limited")
+        XCTAssertEqual(requestedScopeStatus(forQueryPages: traversal.pages), "success")
+
+        var malformed = terminal
+        malformed["next_cursor"] = 42
+        XCTAssertFalse(isValidMetricQueryResponse(malformed))
+        XCTAssertTrue(isValidMetricQueryResponse(queryPage(nextCursor: nil)))
+        XCTAssertTrue(isValidMetricQueryResponse(queryPage(nextCursor: "next-page")))
     }
 
     func testFileExportCanPushMetricAndDetailSelectionToIPhone() throws {

@@ -180,7 +180,7 @@ final class OnboardingJourneyUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(
-            app.staticTexts["Schedule recovery and clearer reminders"].waitForExistence(timeout: 8),
+            app.staticTexts["Repeat exports and clearer privacy information"].waitForExistence(timeout: 8),
             "Returning users should still receive the current release notes for an unseen app version."
         )
     }

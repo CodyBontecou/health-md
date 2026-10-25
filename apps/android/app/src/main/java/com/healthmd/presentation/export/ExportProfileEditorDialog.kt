@@ -51,6 +51,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -105,9 +106,11 @@ fun ExportProfileEditorDialog(
     val endpointValid = draft.target != ExportTarget.API_ENDPOINT ||
         APIExportEndpoint.isConfigured(draft.apiEndpointUrl)
     val driveValid = draft.target != ExportTarget.GOOGLE_DRIVE || !draft.destinationId.isNullOrBlank()
+    val gatewayValid = draft.target != ExportTarget.AGENT_DATA_GATEWAY ||
+        AgentDataGatewayEndpoint.isConfigured(draft.agentDataGatewayUrl)
     val canSave = trimmedName.isNotEmpty() &&
         draft.settings.exportFormats.isNotEmpty() &&
-        endpointValid && driveValid
+        endpointValid && driveValid && gatewayValid
 
     val overlappingNames = overlapPreview(draft.target, draft.folderUri, draft.settings)
 
@@ -155,6 +158,14 @@ fun ExportProfileEditorDialog(
                         text = "Google Drive",
                         selected = draft.target == ExportTarget.GOOGLE_DRIVE,
                         onClick = { draft = draft.copy(target = ExportTarget.GOOGLE_DRIVE) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    EditorChoiceButton(
+                        text = "Agent Data gateway",
+                        selected = draft.target == ExportTarget.AGENT_DATA_GATEWAY,
+                        onClick = { draft = draft.copy(target = ExportTarget.AGENT_DATA_GATEWAY) },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -206,6 +217,21 @@ fun ExportProfileEditorDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = if (driveValid) AppColors.textMuted else AppColors.error,
                     )
+                    ExportTarget.AGENT_DATA_GATEWAY -> {
+                        EditorTextField(
+                            value = draft.agentDataGatewayUrl,
+                            onValueChange = { draft = draft.copy(agentDataGatewayUrl = it) },
+                            label = "Gateway URL",
+                            singleLine = true,
+                        )
+                        if (!gatewayValid) {
+                            Text(
+                                text = "Enter a valid http(s) gateway URL before saving.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.error,
+                            )
+                        }
+                    }
                 }
 
                 EditorSectionLabel("Output")

@@ -413,6 +413,8 @@ private fun destinationLine(profile: ExportProfile): String = when (profile.targ
         "API: ${profile.apiEndpointUrl ?: "not configured"}"
     ExportTarget.GOOGLE_DRIVE ->
         if (profile.destinationId.isNullOrBlank()) "Google Drive: not connected" else "Google Drive"
+    ExportTarget.AGENT_DATA_GATEWAY ->
+        "Gateway: ${profile.agentDataGatewayUrl ?: "not configured"}"
 }
 
 private fun formatsLine(row: ExportProfileRow): String {

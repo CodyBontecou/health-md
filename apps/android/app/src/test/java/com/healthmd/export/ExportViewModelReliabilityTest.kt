@@ -50,6 +50,9 @@ class ExportViewModelReliabilityTest {
         assertThat(state.exportProgressDate).isEqualTo(dates.last())
         assertThat(state.exportedFolderUri).isEqualTo("content://exports")
         assertThat(state.lastResult?.isFullSuccess).isTrue()
+        assertThat(state.postExportMilestone).isEqualTo(1)
+        viewModel.dismissPostExportGuidance()
+        assertThat(viewModel.uiState.value.postExportMilestone).isNull()
 
         assertThat(dependencies.historyRepository.entries).hasSize(1)
         val history = dependencies.historyRepository.entries.single()
@@ -61,7 +64,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failureReason).isNull()
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(1)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(9)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(4)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(1)
     }
 
@@ -85,6 +88,7 @@ class ExportViewModelReliabilityTest {
         assertThat(result?.successCount).isEqualTo(11)
         assertThat(result?.totalCount).isEqualTo(90)
         assertThat(result?.isPartialSuccess).isTrue()
+        assertThat(viewModel.uiState.value.postExportMilestone).isNull()
         assertThat(result?.isFullSuccess).isFalse()
 
         val history = dependencies.historyRepository.entries.single()
@@ -94,7 +98,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failedDateDetails).hasSize(79)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(1)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(9)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(4)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
@@ -125,7 +129,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failedDateDetails).hasSize(2)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(10)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(5)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
@@ -160,7 +164,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.totalCount).isEqualTo(3)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(10)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(5)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 

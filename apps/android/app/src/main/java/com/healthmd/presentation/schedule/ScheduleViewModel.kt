@@ -10,6 +10,7 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.data.drive.GoogleDriveConfiguration
 import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.distribution.DistributionPolicy
@@ -71,6 +72,8 @@ class ScheduleViewModel @Inject constructor(
                         selectedTarget = settings.scheduledExportTarget,
                         apiEndpointUrl = settings.apiEndpointUrl,
                         apiEndpointConfigured = APIExportEndpoint.isConfigured(settings.apiEndpointUrl),
+                        agentDataGatewayUrl = settings.agentDataGatewayUrl,
+                        agentDataGatewayConfigured = AgentDataGatewayEndpoint.isConfigured(settings.agentDataGatewayUrl),
                         hasExportFolder = !combined.folderUri.isNullOrBlank(),
                     )
                 }
@@ -160,8 +163,58 @@ class ScheduleViewModel @Inject constructor(
             }
             return
         }
+        if (enabled && state.selectedTarget == ExportTarget.AGENT_DATA_GATEWAY &&
+            !state.agentDataGatewayConfigured
+        ) {
+            _uiState.update {
+                it.copy(
+                    isEnabled = false,
+                    configurationError = ScheduleUiMessage.Text(R.string.schedule_error_api_required),
+                )
+            }
+            return
+        }
         _uiState.update { it.copy(isEnabled = enabled, configurationError = null) }
         persistAndRescheduleIfNeeded()
+    }
+
+    /** Persists the non-secret gateway base URL and selects the gateway as the scheduled target. */
+    fun saveAgentDataGatewayConfiguration(endpointUrl: String) {
+        viewModelScope.launch {
+            val normalized = AgentDataGatewayEndpoint.normalizedOrNull(endpointUrl)
+            if (normalized == null) {
+                _uiState.update {
+                    it.copy(
+                        configurationError = ScheduleUiMessage.Text(R.string.schedule_error_invalid_api_url),
+                    )
+                }
+                return@launch
+            }
+            try {
+                _uiState.update {
+                    it.copy(
+                        selectedTarget = ExportTarget.AGENT_DATA_GATEWAY,
+                        agentDataGatewayUrl = normalized,
+                        agentDataGatewayConfigured = true,
+                        configurationError = null,
+                    )
+                }
+                settingsRepository.updateExportSettingsAtomically { current ->
+                    current.copy(
+                        agentDataGatewayUrl = normalized,
+                        scheduledExportTarget = ExportTarget.AGENT_DATA_GATEWAY,
+                    )
+                }
+                persistAndRescheduleIfNeeded()
+            } catch (error: Exception) {
+                Timber.e(error, "Could not save gateway schedule configuration")
+                _uiState.update {
+                    it.copy(
+                        configurationError = ScheduleUiMessage.Text(R.string.schedule_error_save_api_settings),
+                    )
+                }
+            }
+        }
     }
 
     fun consumeUpgradeRequest() {
@@ -174,6 +227,7 @@ class ScheduleViewModel @Inject constructor(
                 ExportTarget.DEVICE_FOLDER -> state.hasExportFolder
                 ExportTarget.API_ENDPOINT -> state.apiEndpointConfigured
                 ExportTarget.GOOGLE_DRIVE -> state.googleDriveConfigured
+                ExportTarget.AGENT_DATA_GATEWAY -> state.agentDataGatewayConfigured
             }
             state.copy(
                 selectedTarget = target,
@@ -438,6 +492,8 @@ data class ScheduleUiState(
     val selectedTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
     val apiEndpointUrl: String = "",
     val apiEndpointConfigured: Boolean = false,
+    val agentDataGatewayUrl: String = "",
+    val agentDataGatewayConfigured: Boolean = false,
     val apiAuthorizationConfigured: Boolean = false,
     val apiRequestHeadersConfigured: Boolean = false,
     val hasExportFolder: Boolean = false,

@@ -178,6 +178,7 @@ class GoogleDrivePartialCaptureRecoveryTest {
             FakeSettingsRepository(settings.copy(filenameFormat = "edited-{date}")), mockk(),
             googleDriveDestinationRunner = runner(), googleDriveSelectionStore = selection,
             googleDriveExportOrchestrator = orchestrator(),
+                        agentDataGatewayExportRunner = mockk(),
         )
         viewModel.retry(ExportHistoryEntry(
             timestamp = 1, source = ExportSource.MANUAL, dateRangeStart = first, dateRangeEnd = second,
@@ -222,7 +223,8 @@ class GoogleDrivePartialCaptureRecoveryTest {
         val history = FakeExportHistoryRepository()
         val recovered = ScheduledExportRecoveryManager(
             context, health, FakeExportRepository(), current, history,
-            googleDriveExportOrchestrator = orchestrator(), googleDriveDestinationRunner = runner(),
+            googleDriveExportOrchestrator = orchestrator(),
+                        agentDataGatewayExportRunner = mockk(), googleDriveDestinationRunner = runner(),
             googleDriveSelectionStore = selection, googleDriveDestinationStore = destinations,
             entitlementRepository = FakeBillingRepository(true), distributionPolicy = DistributionPolicy.play(),
         ).recoverPendingDates()
@@ -263,6 +265,7 @@ class GoogleDrivePartialCaptureRecoveryTest {
                         profileRepository = profiles, entryStore = entries, snapshotFactory = snapshots,
                         folderAdoption = mockk(), profileScheduler = Lazy { mockk(relaxed = true) },
                         googleDriveExportOrchestrator = orchestrator(),
+                        agentDataGatewayExportRunner = mockk(),
                         entitlementRepository = FakeBillingRepository(true), distributionPolicy = DistributionPolicy.play(),
                     )
             }).build()

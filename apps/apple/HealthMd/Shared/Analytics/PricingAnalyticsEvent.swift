@@ -11,12 +11,13 @@ import Foundation
 /// - Allowed: experiment/variant IDs, app version/build, platform, paywall
 ///   context, coarse onboarding step, free-export counts, export target type,
 ///   format count, metric/date buckets, purchase product ID, purchase outcome,
-///   authorization status, and coarse error category.
+///   authorization status, coarse error category, and bounded Apple Ads
+///   campaign dimensions on dedicated attribution events.
 /// - Prohibited: health values, Apple Health identifiers, metric names,
 ///   medication or workout details, absolute health dates/timestamps, export
 ///   contents, paths, folder or vault names, peer device names, credentials,
-///   tokens, and user text. Events are not used for advertising or cross-app
-///   tracking.
+///   tokens, and user text. Campaign dimensions measure Apple Ads purchase
+///   conversion without sending product events to advertisers.
 ///
 /// This model is deliberately local and transport-free. Future sinks should
 /// consume `encodedPayload()` and must not add keys outside
@@ -55,6 +56,8 @@ nonisolated struct PricingAnalyticsEvent: Equatable, Sendable {
 }
 
 nonisolated enum PricingAnalyticsEventName: String, CaseIterable, Sendable {
+    case appleAdsAttributionStarted = "pricing_apple_ads_attribution_started"
+    case appleAdsAttributionResolved = "pricing_apple_ads_attribution_resolved"
     case paywallViewed = "pricing_paywall_viewed"
     case onboardingStarted = "pricing_onboarding_started"
     case onboardingStepViewed = "pricing_onboarding_step_viewed"
@@ -158,6 +161,12 @@ nonisolated struct PricingAnalyticsPayload: Equatable, Sendable, Codable {
 }
 
 nonisolated enum PricingAnalyticsPropertyKey: String, CaseIterable, Sendable {
+    case appleAdsStatus
+    case appleAdsCampaignId
+    case appleAdsAdGroupId
+    case appleAdsKeywordId
+    case appleAdsClaimType
+    case appleAdsConversionType
     case experimentId
     case variantId
     case appVersion
@@ -413,6 +422,7 @@ nonisolated enum PricingAnalyticsExportTargetType: String, CaseIterable, Sendabl
     case connectedMac = "connected_mac"
     case apiEndpoint = "api_endpoint"
     case googleDrive = "google_drive"
+    case agentDataGateway = "agent_data_gateway"
     case previewOnly = "preview_only"
 }
 

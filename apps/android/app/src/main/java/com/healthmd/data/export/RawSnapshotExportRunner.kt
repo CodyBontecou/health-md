@@ -2,6 +2,8 @@ package com.healthmd.data.export
 
 import android.content.Context
 import android.net.Uri
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
+import com.healthmd.domain.model.AgentDataArtifactOutcome
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
@@ -25,6 +27,7 @@ import com.healthmd.rawexport.CompletedRawSnapshot
 import com.healthmd.rawexport.ExportMode
 import com.healthmd.rawexport.NoBackupRawExportStorage
 import com.healthmd.rawexport.RawApiHeader
+import com.healthmd.rawexport.RawExportFormat
 import com.healthmd.rawexport.RawExportResult
 import com.healthmd.rawexport.RawHealthRepository
 import com.healthmd.rawexport.RawHealthRepositoryRegistry
@@ -91,6 +94,7 @@ class RawSnapshotExportRunner @Inject constructor(
     private val driveBundleFactory: GeneratedExportBundleFactory,
     private val driveRunner: GoogleDriveDestinationRunner,
     private val driveSelectionStore: GoogleDriveSelectionStore,
+    private val agentDataGatewayClient: AgentDataGatewayUploadClient,
     private val rawRepositoryRegistry: RawHealthRepositoryRegistry = RawHealthRepositoryRegistry.healthConnectOnly(rawRepository),
 ) : RawSnapshotService {
 
@@ -140,6 +144,19 @@ class RawSnapshotExportRunner @Inject constructor(
             captured.copy(requestHeaders = captured.requestHeaders.toList())
         } else null
 
+        // The Agent Data gateway carries no credentials; only the validated base URL and its
+        // one-way destination fingerprint are captured for the run.
+        val gatewayEndpoint = if (target == ExportTarget.AGENT_DATA_GATEWAY) {
+            val normalized = AgentDataGatewayEndpoint.normalizedOrNull(settings.agentDataGatewayUrl)
+                ?: return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT)
+            if (expectedDestinationFingerprint != null &&
+                AgentDataGatewayEndpoint.fingerprint(normalized) != expectedDestinationFingerprint
+            ) {
+                return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT)
+            }
+            normalized
+        } else null
+
         val zone = ZoneId.systemDefault()
         val request = buildRequest(startDate, endDate, zone, settings)
         val runProviders: suspend () -> ExportResult = run@{
@@ -161,6 +178,7 @@ class RawSnapshotExportRunner @Inject constructor(
                         apiConfiguration,
                         frozenGoogleDriveDestinationId,
                         googleDriveProfileId,
+                        gatewayEndpoint,
                     )
                 }
                 results += result
@@ -464,19 +482,17 @@ class RawSnapshotExportRunner @Inject constructor(
         apiConfiguration: APIExportRequestConfiguration?,
         googleDriveDestinationId: String?,
         googleDriveProfileId: String?,
+        gatewayEndpoint: String? = null,
     ): ExportResult = try {
         when (target) {
             ExportTarget.DEVICE_FOLDER -> exportToFolder(providerId, repository, startDate, endDate, request, settings)
             ExportTarget.API_ENDPOINT -> exportToApi(providerId, repository, startDate, request, requireNotNull(apiConfiguration))
             ExportTarget.GOOGLE_DRIVE -> exportToDrive(
-                providerId,
-                repository,
-                startDate,
-                endDate,
-                request,
-                settings,
-                googleDriveDestinationId,
-                googleDriveProfileId,
+                providerId, repository, startDate, endDate, request, settings,
+                googleDriveDestinationId, googleDriveProfileId,
+            )
+            ExportTarget.AGENT_DATA_GATEWAY -> exportToAgentDataGateway(
+                providerId, repository, startDate, endDate, request, requireNotNull(gatewayEndpoint),
             )
         }
     } catch (_: CancellationException) {
@@ -487,6 +503,12 @@ class RawSnapshotExportRunner @Inject constructor(
             target = target,
             reason = if (error.statusCode == null) ExportFailureReason.NETWORK_ERROR else ExportFailureReason.API_REJECTED,
             statusCode = error.statusCode,
+        )
+    } catch (error: AgentDataGatewayException) {
+        failure(
+            date = startDate,
+            target = target,
+            reason = if (error.retryable) ExportFailureReason.NETWORK_ERROR else ExportFailureReason.API_REJECTED,
         )
     } catch (_: SecurityException) {
         failure(startDate, target, ExportFailureReason.ACCESS_DENIED)
@@ -626,6 +648,98 @@ class RawSnapshotExportRunner @Inject constructor(
         } finally {
             // The Drive journal owns an immutable copy before any remote mutation or retry.
             cleanupPrivateArtifact(artifactFile)
+        }
+    }
+
+    /**
+     * Captures the raw snapshot exactly as the folder destination would (same orchestrator,
+     * same bytes), then uploads the complete artifact file to the Agent Data gateway under a
+     * `raw_snapshot` ingestion manifest. Raw artifacts are only ever uploaded `complete`.
+     */
+    private suspend fun exportToAgentDataGateway(
+        providerId: String,
+        repository: RawHealthRepository,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        request: RawSnapshotRequest,
+        gatewayEndpointUrl: String,
+    ): ExportResult {
+        val storage = NoBackupRawExportStorage(context)
+        var raw: RawExportResult? = null
+        try {
+            raw = RawSnapshotExportOrchestrator(context, repository, storage).export(request)
+            if (raw.manifest.status != RawSnapshotStatus.COMPLETE) {
+                return raw.toProductResult(startDate, ExportTarget.AGENT_DATA_GATEWAY)
+            }
+            val artifactFile = File(raw.finalLocation)
+            check(artifactFile.isFile) { "Completed raw snapshot artifact is missing." }
+            val bytes = artifactFile.readBytes()
+            val captureDay = LocalDate.now(ZoneId.of(request.calendarZoneId.orEmpty().ifBlank { ZoneId.systemDefault().id }))
+            val physicalFormat = if (raw.format == RawExportFormat.JSON) {
+                AgentDataIngestManifest.PHYSICAL_FORMAT_JSON
+            } else {
+                AgentDataIngestManifest.PHYSICAL_FORMAT_NDJSON
+            }
+            val mediaType = if (raw.format == RawExportFormat.JSON) {
+                AgentDataIngestManifestBuilder.MEDIA_TYPE_JSON
+            } else {
+                AgentDataIngestManifestBuilder.MEDIA_TYPE_NDJSON
+            }
+            val manifest = AgentDataIngestManifestBuilder.rawSnapshot(
+                captureDay = captureDay,
+                physicalFormat = physicalFormat,
+                bytes = bytes,
+                mediaType = mediaType,
+            )
+            val receipt = agentDataGatewayClient.upload(gatewayEndpointUrl, manifest, bytes)
+            val outcomeState = when (receipt) {
+                is AgentDataUploadReceipt.Accepted -> AgentDataArtifactOutcome.State.ACCEPTED
+                is AgentDataUploadReceipt.Rejected -> AgentDataArtifactOutcome.State.REJECTED
+            }
+            // Folder-destination-relative artifact name (display only; never uploaded).
+            val relativePath = "$RAW_DIRECTORY/healthmd-raw-$providerId-" +
+                "${startDate}_to_${endDate}-schema-v1." +
+                if (raw.format == RawExportFormat.JSON) "json" else "ndjson"
+            return when (receipt) {
+                is AgentDataUploadReceipt.Accepted -> ExportResult(
+                    successCount = 1,
+                    totalCount = 1,
+                    target = ExportTarget.AGENT_DATA_GATEWAY,
+                    httpStatusCode = receipt.httpStatusCode,
+                    exportMode = ExportMode.RAW_SNAPSHOT,
+                    artifactCount = 0,
+                    agentDataOutcomes = listOf(
+                        AgentDataArtifactOutcome(
+                            ownerDate = captureDay,
+                            relativePath = relativePath,
+                            state = outcomeState,
+                        ),
+                    ),
+                )
+                is AgentDataUploadReceipt.Rejected -> ExportResult(
+                    successCount = 0,
+                    totalCount = 1,
+                    failedDateDetails = listOf(
+                        FailedDateDetail(captureDay, ExportFailureReason.API_REJECTED, receipt.code),
+                    ),
+                    target = ExportTarget.AGENT_DATA_GATEWAY,
+                    httpStatusCode = receipt.httpStatusCode,
+                    exportMode = ExportMode.RAW_SNAPSHOT,
+                    artifactCount = 0,
+                    agentDataOutcomes = listOf(
+                        AgentDataArtifactOutcome(
+                            ownerDate = captureDay,
+                            relativePath = relativePath,
+                            state = outcomeState,
+                            rejectionCode = receipt.code,
+                        ),
+                    ),
+                )
+            }
+        } finally {
+            // Raw gateway artifacts are transient no-backup files; upload or not, the private
+            // copy is always cleaned up (a retry captures a fresh snapshot).
+            raw?.finalLocation?.let { location -> cleanupPrivateArtifact(File(location)) }
         }
     }
 

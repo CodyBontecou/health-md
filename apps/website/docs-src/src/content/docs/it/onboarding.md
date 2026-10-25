@@ -15,7 +15,7 @@ La configurazione iniziale appare al primo avvio su iPhone. Spiega il modello lo
 4. **Cartella:** scegliere iCloud Drive, Su iPhone, un vault Obsidian o un altro provider File.
 5. **Pronto:** correggere collegamenti mancanti e aprire l’anteprima della prima esportazione.
 
-Dopo aver chiuso l’anteprima può comparire un’offerta unica e ignorabile. Possono seguire promemoria non bloccanti dopo la 3ª e 7ª esportazione gratuita. Il limite rigido resta 10 azioni completate.
+Dopo la prima esportazione gratuita completata, una guida permette di rivedere una pianificazione giornaliera senza attivarla. Dopo la terza, un’offerta a vita ignorabile mostra due azioni gratuite rimanenti. Il limite è di cinque azioni completate.
 
 Permessi, metriche, cartella, formati, nomi, profili, pianificazione e Mac restano modificabili.
 

@@ -2,6 +2,7 @@ package com.healthmd.data.scheduler
 
 import android.content.Context
 import com.healthmd.R
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
@@ -16,6 +17,7 @@ import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -47,6 +49,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
+    private val agentDataGatewayExportRunner: AgentDataGatewayExportRunner? = null,
     private val rawSnapshotService: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val runCoordinator: ScheduledExportRunCoordinator = ScheduledExportRunCoordinator(),
@@ -308,6 +311,21 @@ class ScheduledExportRecoveryManager @Inject constructor(
                             },
                             target = ExportTarget.GOOGLE_DRIVE,
                         )
+                        ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner?.exportDates(
+                            dates = targetDates,
+                            settings = targetSettings,
+                            expectedDestinationFingerprint = destinationFingerprint,
+                        )
+                            ?: ExportResult(
+                                successCount = 0,
+                                totalCount = targetDates.size,
+                                failedDateDetails = targetDates.map {
+                                    FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR)
+                                },
+                                target = ExportTarget.AGENT_DATA_GATEWAY,
+                            ).also {
+                                Timber.w("Agent Data gateway service unavailable during scheduled recovery")
+                            }
                     }
                 } catch (error: Exception) {
                     Timber.e(error, "Scheduled export recovery failed")
@@ -569,6 +587,13 @@ class ScheduledExportRecoveryManager @Inject constructor(
             return ScheduledExportRecoveryBlocker.API_ENDPOINT_NOT_CONFIGURED
         }
         if (apiGroups.isNotEmpty()) return ScheduledExportRecoveryBlocker.API_ENDPOINT_CHANGED
+        val gatewayGroups = groups.filter { it.first == ExportTarget.AGENT_DATA_GATEWAY }
+        if (gatewayGroups.isNotEmpty() &&
+            !AgentDataGatewayEndpoint.isConfigured(settings.agentDataGatewayUrl)
+        ) {
+            return ScheduledExportRecoveryBlocker.API_ENDPOINT_NOT_CONFIGURED
+        }
+        if (gatewayGroups.isNotEmpty()) return ScheduledExportRecoveryBlocker.API_ENDPOINT_CHANGED
         return null
     }
 
@@ -586,6 +611,9 @@ class ScheduledExportRecoveryManager @Inject constructor(
         ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()
             ?.let { googleDriveDestinationStore.find(it) }
             ?.fingerprint == destinationFingerprint
+        ExportTarget.AGENT_DATA_GATEWAY ->
+            AgentDataGatewayEndpoint.isConfigured(settings.agentDataGatewayUrl) &&
+                destinationFingerprint == AgentDataGatewayEndpoint.fingerprint(settings.agentDataGatewayUrl)
     }
 
     private fun historyEntry(
@@ -612,7 +640,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 else -> result.successCount * settings.selectedExportFormats.size
             }
             ExportTarget.GOOGLE_DRIVE -> result.artifactCount
-            ExportTarget.API_ENDPOINT -> 0
+            ExportTarget.API_ENDPOINT, ExportTarget.AGENT_DATA_GATEWAY -> 0
         },
         warningSummary = result.warningSummary(),
         exportMode = settings.exportMode,
@@ -637,6 +665,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private fun targetLabel(settings: ExportSettings, target: ExportTarget): String = when (target) {
         ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
         ExportTarget.GOOGLE_DRIVE -> "Google Drive"
+        ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
         ExportTarget.DEVICE_FOLDER -> buildString {
             val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
             append(subfolder ?: EXPORT_FOLDER_ROOT_TARGET_LABEL)

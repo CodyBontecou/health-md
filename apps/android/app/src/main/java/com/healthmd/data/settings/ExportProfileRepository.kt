@@ -103,6 +103,7 @@ class ExportProfileRepository @Inject constructor(
         folderDisplayName: String? = null,
         destinationId: String? = null,
         derivedFromProfileId: String? = null,
+        agentDataGatewayUrl: String? = null,
     ): ExportProfile {
         require(ExportProfileRules.isValidName(name)) { "Profile name must not be blank." }
         val newId = UUID.randomUUID().toString()
@@ -137,6 +138,7 @@ class ExportProfileRepository @Inject constructor(
                 settingsSnapshotJson = settingsSnapshotJson,
                 target = target,
                 apiEndpointUrl = apiEndpointUrl?.takeIf { it.isNotBlank() },
+                agentDataGatewayUrl = agentDataGatewayUrl?.takeIf { it.isNotBlank() },
                 folderUri = folderUri?.takeIf { it.isNotBlank() },
                 folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
                 destinationId = destinationId?.takeIf { it.isNotBlank() },
@@ -213,6 +215,7 @@ class ExportProfileRepository @Inject constructor(
         settingsSnapshotJson: String? = null,
         target: ExportTarget? = null,
         apiEndpointUrl: String? = null,
+        agentDataGatewayUrl: String? = null,
     ): Boolean {
         var applied = false
         dataStore.edit { prefs ->
@@ -225,6 +228,7 @@ class ExportProfileRepository @Inject constructor(
                     settingsSnapshotJson = settingsSnapshotJson ?: existing[index].settingsSnapshotJson,
                     target = target ?: existing[index].target,
                     apiEndpointUrl = apiEndpointUrl ?: existing[index].apiEndpointUrl,
+                    agentDataGatewayUrl = agentDataGatewayUrl ?: existing[index].agentDataGatewayUrl,
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )
                 ExportProfilePersistence.writeNative(prefs, decoded, existing.toMutableList().apply { set(index, updated) })
@@ -249,6 +253,7 @@ class ExportProfileRepository @Inject constructor(
         folderUri: String?,
         folderDisplayName: String?,
         destinationId: String? = null,
+        agentDataGatewayUrl: String? = null,
     ): String? {
         if (!ExportProfileRules.isValidName(rawName)) return null
         var storedName: String? = null
@@ -265,19 +270,23 @@ class ExportProfileRepository @Inject constructor(
                     target = target,
                     apiEndpointUrl = when (target) {
                         ExportTarget.API_ENDPOINT -> apiEndpointUrl?.takeIf { it.isNotBlank() }
-                        ExportTarget.DEVICE_FOLDER, ExportTarget.GOOGLE_DRIVE -> null
+                        ExportTarget.DEVICE_FOLDER, ExportTarget.GOOGLE_DRIVE, ExportTarget.AGENT_DATA_GATEWAY -> null
+                    },
+                    agentDataGatewayUrl = when (target) {
+                        ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayUrl?.takeIf { it.isNotBlank() }
+                        ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE -> null
                     },
                     folderUri = when (target) {
                         ExportTarget.DEVICE_FOLDER -> folderUri?.takeIf { it.isNotBlank() }
-                        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE -> null
+                        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE, ExportTarget.AGENT_DATA_GATEWAY -> null
                     },
                     folderDisplayName = when (target) {
                         ExportTarget.DEVICE_FOLDER -> folderDisplayName?.takeIf { it.isNotBlank() }
-                        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE -> null
+                        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE, ExportTarget.AGENT_DATA_GATEWAY -> null
                     },
                     destinationId = when (target) {
                         ExportTarget.GOOGLE_DRIVE -> destinationId?.takeIf { it.isNotBlank() }
-                        ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT -> null
+                        ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT, ExportTarget.AGENT_DATA_GATEWAY -> null
                     },
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )
@@ -556,6 +565,7 @@ class ExportProfileRepository @Inject constructor(
         settingsSnapshotJson: String,
         target: ExportTarget,
         apiEndpointUrl: String? = null,
+        agentDataGatewayUrl: String? = null,
     ): ExportProfile? {
         var migrated: ExportProfile? = null
         dataStore.edit { prefs ->
@@ -569,6 +579,7 @@ class ExportProfileRepository @Inject constructor(
                 nowEpochMillis = System.currentTimeMillis(),
                 newId = { UUID.randomUUID().toString() },
                 apiEndpointUrl = apiEndpointUrl,
+                agentDataGatewayUrl = agentDataGatewayUrl,
             ) ?: return@edit
             if (decoded.blocksDefaultMigration) return@edit
             ExportProfilePersistence.writeNative(prefs, decoded, listOf(profile))

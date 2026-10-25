@@ -850,6 +850,27 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(ExportFailureReason.noHealthData.recoverySuggestion.contains("All Time"))
     }
 
+    func testFailureReason_noDataAlertIncludesDescriptionAndRecovery() {
+        let reason = ExportFailureReason.noHealthData
+        XCTAssertEqual(reason.alertMessage(), "\(reason.detailedDescription)\n\n\(reason.recoverySuggestion)")
+    }
+
+    func testFailureReason_noDataAlertPreservesTechnicalDetailAndRecovery() {
+        let reason = ExportFailureReason.noHealthData
+        let detail = FailedDateDetail(date: Date(), reason: reason, errorDetails: "Synthetic query detail")
+        XCTAssertEqual(reason.alertMessage(detail: detail), "\(detail.detailedMessage)\n\n\(reason.recoverySuggestion)")
+    }
+
+    func testFailureReason_otherAlertsPreserveOriginalDescriptionAndDetail() {
+        for reason in [ExportFailureReason.noVaultSelected, .accessDenied, .healthKitError,
+                       .deviceLocked, .fileWriteError, .backgroundTaskExpired,
+                       .apiEndpointNotConfigured, .unknown] {
+            XCTAssertEqual(reason.alertMessage(), reason.detailedDescription)
+            let detail = FailedDateDetail(date: Date(), reason: reason, errorDetails: "Synthetic failure detail")
+            XCTAssertEqual(reason.alertMessage(detail: detail), detail.detailedMessage)
+        }
+    }
+
     func testFailureReason_detailedDescriptions() {
         for reason in [ExportFailureReason.noVaultSelected, .accessDenied, .noHealthData,
                        .healthKitError, .deviceLocked, .fileWriteError, .backgroundTaskExpired, .unknown] {

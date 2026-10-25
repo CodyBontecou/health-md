@@ -500,6 +500,15 @@ extension SharedSetupV2CoordinatorAdapter {
 /// Immutable value snapshots supplied by the profile/destination/schedule
 /// owners. Construction copies every collection before the pure mapper runs;
 /// the coordinator never opens a destination or reads credentials.
+///
+/// Agent Data gateway profiles never participate in shared setup bundles:
+/// the v2 document's destination grammar (device folder, connected Mac, API
+/// endpoint, preserved cloud intent) has no gateway kind, and the frozen v2
+/// contract must not gain one or approximate gateway intent as another
+/// destination. Construction excludes gateway-targeted profiles and their
+/// scheduled entries / preserved extensions, reporting the excluded count so
+/// callers can surface the exclusion honestly instead of silently dropping
+/// configuration.
 struct SharedSetupV2ExportContext {
     let profiles: [ExportProfile]
     let activeProfileID: UUID?
@@ -507,6 +516,8 @@ struct SharedSetupV2ExportContext {
     let scheduledEntries: [ScheduledExportEntry]
     let preservedAndroidExtensions: [UUID: SharedSetupV2.AndroidExtension]
     let pendingDestinationIntents: [UUID: SharedSetupV2.Destination]
+    /// Gateway-targeted profiles excluded from the bundle by construction.
+    let excludedAgentDataGatewayProfileCount: Int
 
     init(
         profiles: [ExportProfile],
@@ -517,17 +528,26 @@ struct SharedSetupV2ExportContext {
         preservedAndroidExtensions: [UUID: SharedSetupV2.AndroidExtension],
         pendingDestinationIntents: [UUID: SharedSetupV2.Destination] = [:]
     ) {
-        self.profiles = Array(profiles)
-        self.activeProfileID = activeProfileID
+        let includedProfiles = profiles.filter { $0.target != .agentDataGateway }
+        let excludedIDs = Set(profiles.map(\.id)).subtracting(includedProfiles.map(\.id))
+        self.profiles = Array(includedProfiles)
+        self.activeProfileID = activeProfileID.flatMap {
+            excludedIDs.contains($0) ? nil : $0
+        }
         self.destinations = SharedSetupV2DestinationSnapshots(
             vaults: Array(destinationVaults),
             apiEndpoints: Array(destinationAPIEndpoints)
         )
-        self.scheduledEntries = Array(scheduledEntries)
+        self.scheduledEntries = Array(scheduledEntries.filter {
+            !excludedIDs.contains($0.profileID)
+        })
         self.preservedAndroidExtensions = Dictionary(
-            uniqueKeysWithValues: preservedAndroidExtensions.map { ($0.key, $0.value) }
+            uniqueKeysWithValues: preservedAndroidExtensions
+                .filter { !excludedIDs.contains($0.key) }
+                .map { ($0.key, $0.value) }
         )
-        self.pendingDestinationIntents = pendingDestinationIntents
+        self.pendingDestinationIntents = pendingDestinationIntents.filter { !excludedIDs.contains($0.key) }
+        self.excludedAgentDataGatewayProfileCount = excludedIDs.count
     }
 
     @MainActor

@@ -43,7 +43,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     fun ledgerExactlyCoversSerializableAndSupplementalProfileFields() {
         val ledger = ledgerObject()
         assertEquals("healthmd.shared_setup.android_profile_field_coverage", ledger.getValue("schema").jsonPrimitive.content)
-        assertEquals(3, ledger.getValue("schema_version").jsonPrimitive.content.toInt())
+        assertEquals(4, ledger.getValue("schema_version").jsonPrimitive.content.toInt())
 
         val target = ledger.getValue("target_contract").jsonObject
         assertEquals("healthmd.shared_setup", target.getValue("schema").jsonPrimitive.content)
@@ -175,7 +175,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
         while (directory != null) {
             val candidate = File(
                 directory,
-                "packages/contracts/shared-setup/v2/android-profile-field-coverage-v3.json",
+                "packages/contracts/shared-setup/v2/android-profile-field-coverage-v4.json",
             )
             if (candidate.isFile) return candidate
             directory = directory.parentFile

@@ -1,12 +1,16 @@
 package com.healthmd.data.scheduler
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.ForegroundUpdater
 import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
+import com.google.common.util.concurrent.Futures
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.settings.ExportProfileRepository
@@ -85,6 +89,24 @@ class ScheduledProfileExportWorkerCancellationTest {
         assertThat(harness.history.captured.profileName).isEqualTo("Morning API")
         assertThat(harness.history.captured.targetLabel).isEqualTo("https://example.test/health")
         coVerify(exactly = 0) { harness.entryStore.recordSuccess(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { harness.scheduler.reconcile() }
+    }
+
+    @Test
+    fun `denied foreground start still exports and preserves cancellation residual and rearming`() = runTest {
+        val updater = ForegroundUpdater { _, _, _ ->
+            Futures.immediateFailedFuture<Void>(
+                ForegroundServiceStartNotAllowedException("background start denied"),
+            )
+        }
+        val harness = harness(checkpointPersists = true, foregroundUpdater = updater)
+        val workerRun = async { harness.worker.doWork() }
+        harness.exportStarted.await()
+        assertThat(ScheduledExportCancellationCoordinator.requestCancellation(harness.worker.id)).isTrue()
+        assertThat(workerRun.await()).isEqualTo(ListenableWorker.Result.success())
+        assertThat(harness.history.captured.successCount).isEqualTo(1)
+        assertThat(harness.replacementGroups.captured.single().ownerDates)
+            .containsExactly(harness.exportedDates.captured.last())
         coVerify(exactly = 1) { harness.scheduler.reconcile() }
     }
 
@@ -278,6 +300,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             healthRepository = healthRepository,
             exportHistoryRepository = mockk(relaxed = true),
             apiEndpointExportRunner = apiRunner,
+            agentDataGatewayExportRunner = mockk<AgentDataGatewayExportRunner>(relaxed = true),
             profileRepository = profileRepository,
             entryStore = entryStore,
             snapshotFactory = snapshotFactory,
@@ -586,7 +609,10 @@ class ScheduledProfileExportWorkerCancellationTest {
         val history: CapturingSlot<ExportHistoryEntry>,
     )
 
-    private fun harness(checkpointPersists: Boolean): CancellationHarness {
+    private fun harness(
+        checkpointPersists: Boolean,
+        foregroundUpdater: ForegroundUpdater? = null,
+    ): CancellationHarness {
         val profileId = "profile-cancel"
         val entry = ScheduledProfileEntry(
             profileId = profileId,
@@ -670,10 +696,12 @@ class ScheduledProfileExportWorkerCancellationTest {
             healthRepository = healthRepository,
             exportHistoryRepository = historyRepository,
             apiEndpointExportRunner = apiRunner,
+            agentDataGatewayExportRunner = mockk<AgentDataGatewayExportRunner>(relaxed = true),
             profileRepository = profileRepository,
             entryStore = entryStore,
             snapshotFactory = snapshotFactory,
             profileScheduler = scheduler,
+            foregroundUpdater = foregroundUpdater,
         )
         return CancellationHarness(
             worker = worker,
@@ -694,6 +722,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         healthRepository: HealthRepository,
         exportHistoryRepository: ExportHistoryRepository,
         apiEndpointExportRunner: APIEndpointExportRunner,
+        agentDataGatewayExportRunner: AgentDataGatewayExportRunner = mockk(relaxed = true),
         profileRepository: ExportProfileRepository,
         entryStore: ScheduledProfileEntryStore,
         snapshotFactory: ScheduledProfileSnapshotFactory,
@@ -702,6 +731,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         exportRepository: ExportRepository = mockk(relaxed = true),
         folderAdoption: ProfileFolderAdoptionScope = mockk(relaxed = true),
         recoveryGeneration: Long = 0L,
+        foregroundUpdater: ForegroundUpdater? = null,
     ): ScheduledProfileExportWorker {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val factory = object : WorkerFactory() {
@@ -717,6 +747,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 exportRepository = exportRepository,
                 exportHistoryRepository = exportHistoryRepository,
                 apiEndpointExportRunner = apiEndpointExportRunner,
+                agentDataGatewayExportRunner = agentDataGatewayExportRunner,
                 rawSnapshotExportRunner = rawSnapshotExportRunner,
                 profileRepository = profileRepository,
                 entryStore = entryStore,
@@ -736,6 +767,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                     ScheduledProfileExportWorker.INPUT_RECOVERY_GENERATION to recoveryGeneration,
                 ),
             )
+            .apply { foregroundUpdater?.let { setForegroundUpdater(it) } }
             .build()
     }
 

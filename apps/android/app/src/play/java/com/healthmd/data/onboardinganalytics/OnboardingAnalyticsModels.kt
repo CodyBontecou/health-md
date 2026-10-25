@@ -100,9 +100,9 @@ internal object OnboardingAnalyticsPrivacyValidator {
         val remaining = properties.freeExportsRemaining
         return (used == null && remaining == null) ||
             (used != null && remaining != null &&
-                used in 0..FreemiumPolicy.FREE_EXPORT_LIMIT &&
-                remaining in 0..FreemiumPolicy.FREE_EXPORT_LIMIT &&
-                used + remaining == FreemiumPolicy.FREE_EXPORT_LIMIT)
+                used in 0..10 && remaining in 0..10 &&
+                // Retain queued events from the previous ten-action offer after an update.
+                used + remaining in setOf(FreemiumPolicy.FREE_EXPORT_LIMIT, 10))
     }
 
     fun isValid(envelope: OnboardingAnalyticsEnvelope): Boolean =

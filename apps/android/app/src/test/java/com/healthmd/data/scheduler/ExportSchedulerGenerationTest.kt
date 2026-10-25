@@ -742,6 +742,7 @@ class ExportSchedulerGenerationTest {
                 ExportTarget.DEVICE_FOLDER -> null
                 ExportTarget.API_ENDPOINT -> API_FINGERPRINT
                 ExportTarget.GOOGLE_DRIVE -> driveDestination().fingerprint
+                ExportTarget.AGENT_DATA_GATEWAY -> com.healthmd.domain.model.AgentDataGatewayEndpoint.fingerprint(settings.agentDataGatewayUrl)
             },
             zoneId = zone,
             enginePin = null,

@@ -113,6 +113,12 @@ class GoogleDriveExportOrchestrator @Inject constructor(
                 return@forEachIndexed
             }
             val data = try {
+                // Retained uploads can replay without Health Connect access, but every new
+                // owner-date capture (including a residual retry) needs current permission.
+                if (!healthRepository.hasPermissions()) {
+                    failures += FailedDateDetail(date, ExportFailureReason.ACCESS_DENIED)
+                    return@forEachIndexed
+                }
                 healthRepository.fetchHealthDataRange(
                     listOf(date),
                     selection,

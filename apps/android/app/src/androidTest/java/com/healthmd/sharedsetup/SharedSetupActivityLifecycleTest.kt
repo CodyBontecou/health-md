@@ -178,7 +178,8 @@ class SharedSetupActivityLifecycleTest {
 
     private fun waitForText(text: String) {
         compose.waitUntil(timeoutMillis = 15_000) {
-            compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText(text)
+                .fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty()
         }
     }
 }

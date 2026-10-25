@@ -57,6 +57,25 @@ else
     awk '1' "$formula"
   } > "$work/Formula/$filename"
 fi
+# cargo-dist does not emit a formula test. Add a device-free check of the
+# installed binary before styling/sealing; preserve an existing custom test.
+python3 - "$work/Formula/$filename" <<'PYFORMULA'
+import pathlib
+import re
+import sys
+
+formula = pathlib.Path(sys.argv[1])
+text = formula.read_text()
+if not re.search(r"^\s*test do\s*$", text, re.MULTILINE):
+    if not text.endswith("\nend\n"):
+        raise SystemExit("generated formula has no final class terminator")
+    test = ('  test do\n'
+            '    result = JSON.parse(shell_output("#{bin}/healthmd mcp schema healthmd_sleep_sessions"))\n'
+            '    assert_equal "healthmd.mcp_tool_schema", result.fetch("schema")\n'
+            '    assert_equal "healthmd_sleep_sessions", result.fetch("tool").fetch("name")\n'
+            '  end\n')
+    formula.write_text(text[:-4] + "\n" + test + "end\n")
+PYFORMULA
 (
   cd "$work"
   "$brew_executable" style \

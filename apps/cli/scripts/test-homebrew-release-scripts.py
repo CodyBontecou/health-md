@@ -318,17 +318,95 @@ class HomebrewReleaseScriptTests(unittest.TestCase):
         env = self.env.copy()
         env["RUNNER_TEMP"] = str(self.root)
         original = self.formula.read_bytes()
+        normalized = None
         for _ in range(2):
             result = subprocess.run(
                 [str(NORMALIZE), str(self.formula), str(self.artifacts / "sha256.sum")],
                 text=True, capture_output=True, env=env, check=False,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(self.formula.read_bytes(), b"# typed: strict\n\n" + original)
+            current = self.formula.read_bytes()
+            self.assertTrue(current.startswith(b"# typed: strict\n\n" + original[:-4]))
+            if normalized is not None:
+                self.assertEqual(current, normalized)
+            normalized = current
             digest = hashlib.sha256(self.formula.read_bytes()).hexdigest()
             self.assertEqual(
                 (self.artifacts / "sha256.sum").read_text(), f"{digest}  healthmd.rb\n"
             )
+
+    def test_normalization_emits_an_executable_schema_test_once(self) -> None:
+        brew = self.bin / "brew"
+        brew.write_text("#!/bin/sh\nexit 0\n")
+        brew.chmod(0o755)
+        env = self.env.copy()
+        env["RUNNER_TEMP"] = str(self.root)
+        for _ in range(2):
+            result = subprocess.run(
+                [str(NORMALIZE), str(self.formula)],
+                text=True, capture_output=True, env=env, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+        text = self.formula.read_text()
+        self.assertEqual(text.count("  test do\n"), 1)
+        body = text.split("  test do\n", 1)[1].split("  end\n", 1)[0]
+        executable = self.bin / "healthmd"
+        executable.write_text(
+            '#!/bin/sh\n'
+            'test "$*" = "mcp schema healthmd_sleep_sessions" || exit 7\n'
+            'printf "%s\\n" "$SCHEMA_RESPONSE"\n'
+        )
+        executable.chmod(0o755)
+        runner = self.root / "formula-test.rb"
+        runner.write_text(
+            'require "json"\nrequire "pathname"\nrequire "open3"\n'
+            'class GeneratedFormulaTest\n'
+            '  def bin; Pathname.new(ENV.fetch("FORMULA_BIN")); end\n'
+            '  def assert_equal(expected, actual)\n'
+            '    raise "unexpected schema result" unless expected == actual\n'
+            '  end\n'
+            '  def shell_output(command)\n'
+            '    output, status = Open3.capture2(command)\n'
+            '    raise "schema command failed" unless status.success?\n'
+            '    output\n'
+            '  end\n'
+            '  def test_schema\n' + body + '  end\nend\nGeneratedFormulaTest.new.test_schema\n'
+        )
+        env["FORMULA_BIN"] = str(self.bin)
+        for payload, success in [
+            ('{"schema":"healthmd.mcp_tool_schema","tool":{"name":"healthmd_sleep_sessions"}}', True),
+            ('{"schema":"wrong","tool":{"name":"healthmd_sleep_sessions"}}', False),
+            ('{"schema":"healthmd.mcp_tool_schema","tool":{"name":"wrong"}}', False),
+            ('not JSON', False),
+        ]:
+            with self.subTest(payload=payload):
+                env["SCHEMA_RESPONSE"] = payload
+                result = subprocess.run(["ruby", str(runner)], text=True, capture_output=True, env=env)
+                self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
+
+    def test_normalization_preserves_custom_tests_and_rejects_bad_class_end(self) -> None:
+        brew = self.bin / "brew"
+        brew.write_text("#!/bin/sh\nexit 0\n")
+        brew.chmod(0o755)
+        env = self.env.copy()
+        env["RUNNER_TEMP"] = str(self.root)
+        custom = '  test do\n    system "#{bin}/healthmd", "custom-check"\n  end\n'
+        original = self.formula.read_text()
+        self.formula.write_text(original[:-4] + custom + "end\n")
+        result = subprocess.run([str(NORMALIZE), str(self.formula)], text=True, capture_output=True, env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.formula.read_text(), "# typed: strict\n\n" + original[:-4] + custom + "end\n")
+        self.formula.write_text(original[:-4])
+        before = self.formula.read_bytes()
+        manifest_before = (self.artifacts / "sha256.sum").read_bytes()
+        result = subprocess.run(
+            [str(NORMALIZE), str(self.formula), str(self.artifacts / "sha256.sum")],
+            text=True, capture_output=True, env=env,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("no final class terminator", result.stderr)
+        self.assertEqual(self.formula.read_bytes(), before)
+        self.assertEqual((self.artifacts / "sha256.sum").read_bytes(), manifest_before)
 
 
 if __name__ == "__main__":

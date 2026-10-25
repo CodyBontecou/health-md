@@ -42,7 +42,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertEqual(payload.eventName, "pricing_paywall_viewed")
         XCTAssertEqual(
             Set(payload.properties.keys),
-            Set(PricingAnalyticsPropertyKey.allCases),
+            Set(PricingAnalyticsPropertyKey.allCases.filter { !$0.rawValue.hasPrefix("appleAds") }),
             "The encoded model should contain every allowlisted property and no arbitrary keys."
         )
         XCTAssertEqual(payload.properties[.experimentId], .string("pricing_activation_2026_05"))
@@ -268,7 +268,9 @@ final class PricingAnalyticsEventTests: XCTestCase {
         let englishDescription = try effectiveAppStoreDescription(for: metadataRoot.appendingPathComponent("en-US.json"))
         XCTAssertTrue(englishDescription.contains("automatically collects limited pseudonymous product events"))
         XCTAssertTrue(englishDescription.contains("never include health values, metric names, health dates, or exported files"))
-        XCTAssertTrue(englishDescription.contains("not used for advertising or cross-app tracking"))
+        XCTAssertTrue(englishDescription.contains("not used for ad targeting or cross-app tracking"))
+        XCTAssertTrue(englishDescription.contains("Apple Ads campaign identifiers are linked to purchase outcomes"))
+        XCTAssertTrue(englishDescription.contains("No health data or purchase events are sent to Apple Ads"))
     }
 
     func testAppStoreDescriptionInheritsOmittedFieldsPerLocale() throws {
@@ -342,6 +344,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertTrue(declaredTypeNames.contains("NSPrivacyCollectedDataTypeProductInteraction"))
         XCTAssertTrue(declaredTypeNames.contains("NSPrivacyCollectedDataTypePurchaseHistory"))
         XCTAssertTrue(declaredTypeNames.contains("NSPrivacyCollectedDataTypeOtherUsageData"))
+        XCTAssertTrue(declaredTypeNames.contains("NSPrivacyCollectedDataTypeAdvertisingData"))
         XCTAssertTrue(analyticsTypes.allSatisfy { ($0["NSPrivacyCollectedDataTypeTracking"] as? Bool) == false })
         XCTAssertTrue(analyticsTypes.allSatisfy { ($0["NSPrivacyCollectedDataTypeLinked"] as? Bool) == false })
     }

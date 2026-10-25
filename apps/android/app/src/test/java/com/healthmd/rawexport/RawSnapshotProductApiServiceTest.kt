@@ -2,6 +2,7 @@ package com.healthmd.rawexport
 
 import android.content.Context
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.AgentDataGatewayUploadClient
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportRequestConfiguration
 import com.healthmd.data.export.CsvExporter
@@ -145,6 +146,7 @@ class RawSnapshotProductApiServiceTest {
             ),
             driveRunner = driveRunner,
             driveSelectionStore = selection,
+            agentDataGatewayClient = mockk(),
         )
         val settings = ExportSettings(
             exportMode = ExportMode.RAW_SNAPSHOT,
@@ -194,6 +196,7 @@ class RawSnapshotProductApiServiceTest {
             driveBundleFactory = mockk(relaxed = true),
             driveRunner = driveRunner,
             driveSelectionStore = selection,
+            agentDataGatewayClient = mockk(),
         )
         val settings = ExportSettings(
             exportMode = ExportMode.RAW_SNAPSHOT,
@@ -267,6 +270,7 @@ class RawSnapshotProductApiServiceTest {
                 driveBundleFactory = mockk(relaxed = true),
                 driveRunner = mockk(relaxed = true),
                 driveSelectionStore = mockk(relaxed = true),
+                agentDataGatewayClient = AgentDataGatewayUploadClient(client),
             ),
         )
     }

@@ -50,14 +50,14 @@ enum TestMode {
         env("UITEST_PURCHASE_UNLOCKED") == "true"
     }
 
-    /// Number of free exports already consumed (0-10).
+    /// Number of free exports already consumed (0-5).
     static var freeExportsUsed: Int {
         Int(env("UITEST_FREE_EXPORTS_USED") ?? "0") ?? 0
     }
 
-    /// Value-moment milestones (3 or 7) that UI tests want suppressed, so an
+    /// Value-moment milestones (1 or 3) that UI tests want suppressed, so an
     /// unexpected soft prompt cannot obstruct an unrelated flow. Passed as a
-    /// comma-separated list, e.g. `UITEST_SUPPRESSED_UPGRADE_PROMPTS=3,7`.
+    /// comma-separated list, e.g. `UITEST_SUPPRESSED_UPGRADE_PROMPTS=1,3`.
     static var suppressedUpgradePromptMilestones: Set<String> {
         Set((env("UITEST_SUPPRESSED_UPGRADE_PROMPTS") ?? "").split(separator: ",").map(String.init))
     }

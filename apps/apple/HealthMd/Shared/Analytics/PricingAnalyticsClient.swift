@@ -8,10 +8,29 @@
 import Foundation
 
 nonisolated final class PricingAnalyticsClient: @unchecked Sendable {
-    static let shared = PricingAnalyticsClient(
-        transport: PricingAnalyticsTransportFactory.makeDefaultTransport(),
-        retryDelayNanoseconds: PricingAnalyticsClient.defaultRetryDelayForCurrentLaunch
-    )
+    static let shared: PricingAnalyticsClient = {
+        let client = PricingAnalyticsClient(
+            transport: PricingAnalyticsTransportFactory.makeDefaultTransport(),
+            retryDelayNanoseconds: PricingAnalyticsClient.defaultRetryDelayForCurrentLaunch
+        )
+        AppleAdsAttributionCollector.startProduction(start: {
+            client.track(PricingAnalyticsEvent(name: .appleAdsAttributionStarted,
+                properties: PricingAnalyticsProperties(platform: .iOS)))
+        }) { attribution in
+            client.trackAppleAdsAttribution(attribution)
+        }
+        return client
+    }()
+
+    func trackAppleAdsAttribution(_ attribution: AppleAdsAttribution) {
+        guard isEnabled else { return }
+        let payload = PricingAnalyticsPayload(
+            eventName: PricingAnalyticsEventName.appleAdsAttributionResolved.rawValue,
+            properties: attribution.properties
+        ).addingDefaultProperties(appMetadata.encodedProperties())
+        state.enqueue(payload)
+        state.startFlushIfNeeded(transport: transport)
+    }
 
     private static let defaultQueueKey = "pricing.analytics.queue.v1"
     private static let defaultQueueSize = 50

@@ -374,7 +374,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Débloquer Health.md</string>
-    <string name="paywall_subtitle">Vous avez utilisé vos 10 exports gratuits</string>
+    <string name="paywall_subtitle">Vous avez utilisé vos 5 exports gratuits</string>
     <string name="paywall_unlimited_exports">Exports illimités à vie</string>
     <string name="paywall_scheduled_exports">Exports planifiés automatisés</string>
     <string name="paywall_future_features">Toutes les futures fonctionnalités incluses</string>
@@ -786,7 +786,7 @@
     <string name="export_source_shortcut">Raccourci</string>
     <string name="export_source_remote">À distance</string>
     <string name="schedule_unlock_required_title">Débloquer les exportations planifiées</string>
-    <string name="schedule_unlock_required_body">Les exportations manuelles incluent 10 exécutions gratuites. Les exportations automatiques planifiées sont incluses avec le déverrouillage à vie obtenu par un paiement unique.</string>
+    <string name="schedule_unlock_required_body">Les exportations manuelles incluent 5 exécutions gratuites. Les exportations automatiques planifiées sont incluses avec le déverrouillage à vie obtenu par un paiement unique.</string>
     <string name="schedule_unlock_required_short">Déverrouillez Health.md pour activer les exportations planifiées.</string>
     <string name="export_folder_root_label">Dossier d\'exportation</string>
     <string name="history_clear_title">Effacer l\'historique des exportations ?</string>
@@ -1493,4 +1493,32 @@
     <string name="google_drive_error_rate_limited">Google Drive is temporarily unavailable. The retained operation can retry.</string>
     <string name="google_drive_error_checksum_mismatch">Drive could not verify the uploaded bytes.</string>
     <string name="google_drive_error_partial_completion">Some files were verified before the operation stopped. Remaining files are retained for recovery.</string>
+    <string name="export_preview_gateway_destination">Passerelle Agent Data</string>
+    <string name="export_failure_gateway_format_label">Format JSON requis</string>
+    <string name="export_guidance_gateway_format">La passerelle Agent Data charge des exports JSON. Sélectionnez JSON dans Formats, puis réessayez.</string>
+    <string name="agent_data_gateway_dialog_title">Passerelle Agent Data</string>
+    <string name="agent_data_gateway_dialog_description">Chaque fichier exporté est chargé tel quel vers le point de terminaison /v1/ingest de la passerelle.</string>
+    <string name="agent_data_gateway_section_endpoint">Point de terminaison de la passerelle</string>
+    <string name="agent_data_gateway_url_label">URL de la passerelle</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Obligatoire. URL de base de votre passerelle ; Health.md ajoute /v1/ingest. Ne mettez pas de clés d’API ni d’autres secrets dans l’URL.</string>
+    <string name="agent_data_gateway_close_settings">Fermer les paramètres</string>
+    <string name="agent_data_gateway_save_settings">Enregistrer les paramètres</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Entrez une URL %1$s ou %2$s valide sans fragment ni nom d\'utilisateur/mot de passe intégré.</string>
+    <string name="agent_data_gateway_close_content_description">Fermer les réglages de la passerelle</string>
+    <string name="agent_data_gateway_outcomes_title">Chargements de la passerelle</string>
+    <string name="agent_data_gateway_outcome_accepted">Chargé</string>
+    <string name="agent_data_gateway_outcome_rejected">Rejeté : %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Échec du chargement</string>
+    <string name="agent_data_gateway_result_uploaded">Chargé vers la passerelle</string>
+    <string name="export_target_gateway_configured_subtitle">Charger chaque export vers %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Charger les exports vers votre passerelle Agent Data</string>
+    <string name="post_export_first_title">Votre premier export est terminé</string>
+    <string name="post_export_first_body">Configurez des exports quotidiens pour éviter de répéter ces étapes. La programmation nécessite un accès à vie ; les exports manuels utilisent votre quota gratuit.</string>
+    <string name="post_export_third_title">Continuez vos notes de santé</string>
+    <string name="post_export_third_body">Vous avez effectué trois exports. Un achat unique débloque les exports manuels illimités et la programmation. Sans abonnement. Vos fichiers exportés restent à vous.</string>
+    <string name="post_export_schedule_action">Découvrir les exports quotidiens</string>
+    <string name="post_export_upgrade_action">Voir l’accès à vie</string>
+    <string name="post_export_manual_action">Continuer les exports manuels</string>
+    <string name="post_export_continue_free">Continuer gratuitement</string>
 </resources>
