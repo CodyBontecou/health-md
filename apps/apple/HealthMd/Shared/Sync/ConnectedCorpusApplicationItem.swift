@@ -45,11 +45,13 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
 
     static func encode<T: Encodable>(
         _ value: T,
-        kind: ConnectedCorpusItemKind
+        kind: ConnectedCorpusItemKind,
+        stageObserver: ((String) -> Void)? = nil
     ) throws -> ConnectedTransferPreparedFile {
         try Task.checkCancellation()
         let root = try TokenEncoder.encode(value, codingPath: [], depth: 0)
         defer { root.remove() }
+        stageObserver?("token_root_encoded")
         let outputURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
             prefix: "corpus-application-item"
         )
@@ -60,10 +62,13 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             try write(uint16BigEndian(formatVersion), to: output)
             try write(Data([kindByte(kind), 0]), to: output)
             try root.write(to: output)
+            stageObserver?("token_root_copied")
             try Task.checkCancellation()
             try output.synchronize()
             try output.close()
-            return try ConnectedTransferFile.inspect(outputURL)
+            let prepared = try ConnectedTransferFile.inspect(outputURL)
+            stageObserver?("output_inspected")
+            return prepared
         } catch {
             try? FileManager.default.removeItem(at: outputURL)
             throw error
