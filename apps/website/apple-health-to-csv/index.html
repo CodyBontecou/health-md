@@ -58,7 +58,7 @@
             "name": "Which health metrics can I export to CSV?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Any Apple Health categories you authorize — steps, heart rate, HRV, sleep, workouts, and more. You select exactly which metrics each export includes."
+              "text": "Choose from supported Apple Health metrics, including steps, heart rate, HRV, sleep, and workouts. Availability depends on your device, OS, source data, and Health permissions."
             }
           },
           {
@@ -74,7 +74,7 @@
             "name": "Can I open the CSV in Excel or Google Sheets?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. Health.md writes one CSV file per day with a plain header row, so the files open directly in Excel, Google Sheets, Numbers, or any analysis tool."
+              "text": "Yes. Start with Summary for daily totals, export one day, and import the CSV into Excel, Google Sheets, or Numbers. Lossless Health Records adds nested JSON cells for source records; use a CSV-aware tool to preserve those values."
             }
           },
           {
@@ -82,7 +82,7 @@
             "name": "Is it free?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "The app includes 5 free export actions. After that, a one-time lifetime unlock removes the limit — no subscription."
+              "text": "The app includes 5 free export actions. One action can include multiple dates and formats. After that, a one-time lifetime unlock removes the limit — no subscription. The App Store shows your current localized purchase price."
             }
           }
         ]
@@ -114,9 +114,9 @@
       <div class="about-hero-inner">
         <p class="about-eyebrow">Apple Health → CSV</p>
         <h1 id="csv-title">Apple Health to CSV, without the Xcode project.</h1>
-        <p class="about-value-prop"><strong>Pick your metrics and date range in the app, get clean CSV files back — ready for Excel, Google Sheets, or AI analysis.</strong></p>
-        <p class="about-intro">A shipping App Store app. Nothing to build, no scripts to run.</p>
-        <div class="hero-actions" aria-label="Download Health.md">
+        <p class="about-value-prop"><strong>Export selected Apple Health data to CSV for Excel, Google Sheets, or Numbers. Choose metrics and dates, preview the output, and save it to your own folder.</strong></p>
+        <p class="about-intro"><strong>5 free export actions.</strong> Then a one-time lifetime unlock for unlimited exports. No subscription.</p>
+        <div class="hero-actions" role="group" aria-label="Download Health.md">
           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
             <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
           </a>
@@ -124,19 +124,38 @@
       </div>
     </section>
 
-    <div class="about-layout">
+    <div class="about-layout csv-layout">
       <article class="about-content">
         <section class="about-section" id="why-csv">
           <p class="section-kicker">Why CSV</p>
           <h2>The most useful boring format</h2>
-          <p class="section-lede">CSV opens everywhere: Excel, Google Sheets, Numbers, pandas, and every AI assistant that accepts file uploads. For health data, it's the fastest route from your iPhone to a pivot table or a trend analysis.</p>
+          <p class="section-lede">Use daily totals in Excel, Google Sheets, or Numbers to build charts and compare days. Check the exported Unit column before combining metrics. For source-level records with nested values, choose a CSV-aware analysis tool or export JSON.</p>
         </section>
 
         <section class="about-section" id="status-quo">
-          <p class="section-kicker">The usual route</p>
-          <h2>Most CSV tools ask you to build them first</h2>
-          <p class="section-lede">The well-known Apple Health CSV exporters are open-source projects: you clone a repository, open it in Xcode, configure signing, and build it onto your phone — or you run conversion scripts against a manual XML export. That works, but it's a developer workflow for what should be a tap-and-export task.</p>
-          <p>Health.md takes the other approach: the exporter is a finished app. You choose what to export; the app does the rest.</p>
+          <p class="section-kicker">Choose your workflow</p>
+          <h2>Export in an app, or convert an XML archive</h2>
+          <p class="section-lede">Apple Health's built-in export produces an XML archive. Conversion tools and scripts can turn that archive into CSV. Other App Store apps also offer CSV export without building a project.</p>
+          <p>With Health.md, choose your metrics and dates on your iPhone, preview the output, and save it to your own folder. The same export can also write JSON, Markdown, or Obsidian Bases files.</p>
+        </section>
+
+        <section class="about-section" id="choose-format">
+          <p class="section-kicker">Choose a format</p>
+          <h2>CSV for spreadsheets, Markdown for your journal</h2>
+          <p>You can enable more than one format for the same export. Start with the output you will actually use.</p>
+          <div class="format-comparison" role="region" aria-label="Export format comparison" tabindex="0">
+            <table>
+              <caption>Choose your daily export format</caption>
+              <thead><tr><th scope="col">Your goal</th><th scope="col">Format</th><th scope="col">What to expect</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Charts and spreadsheets</th><td>CSV</td><td>Rows of metrics with values and units. Start with Summary for daily totals.</td></tr>
+                <tr><th scope="row">Scripts and source records</th><td>JSON</td><td>Structured daily data; optional Lossless Health Records retains canonical source records when available.</td></tr>
+                <tr><th scope="row">A readable health journal</th><td>Markdown</td><td>Daily notes with headings and selected health metrics.</td></tr>
+                <tr><th scope="row">Obsidian database views</th><td>Obsidian Bases</td><td>Frontmatter properties for filtering and comparing notes in Bases.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Want health data beside your journal? Follow the <a href="/blog/export-apple-health-data-to-obsidian/">Apple Health to Obsidian walkthrough</a>. On Android, use the separate <a href="/blog/export-health-connect-to-obsidian/">Health Connect guide</a>; available metrics and export contracts differ by platform.</p>
         </section>
 
         <section class="about-section" id="how-it-works">
@@ -150,22 +169,42 @@
             </div>
             <div>
               <span>2</span>
-              <h3>Choose a date range</h3>
-              <p>Today, yesterday, your full available history, or a custom start and end date — set per export, with a preview before anything is written.</p>
+              <h3>Start with one day</h3>
+              <p>Choose Summary for daily totals, select one date, and preview the file before writing it. Once the output fits your workflow, export a longer range.</p>
             </div>
             <div>
               <span>3</span>
               <h3>Open it anywhere</h3>
-              <p>Save the CSV to a folder you choose, then open it in Excel, Google Sheets, or attach it to an AI assistant for analysis.</p>
+              <p>Enable CSV, choose a writable folder in Files, and tap Export Data. Review the result, open the folder, and import one generated file into your spreadsheet.</p>
             </div>
           </div>
+        </section>
+
+        <section class="about-section" id="verify-export">
+          <p class="section-kicker">Check your first file</p>
+          <h2>Verify dates, units, and missing data</h2>
+          <ul>
+            <li>Check the Date and Unit columns before combining rows. A distance in meters is not a distance in kilometers.</li>
+            <li>Export Yesterday for an overnight sleep session that started yesterday. Read <a href="/blog/why-sleep-is-in-yesterdays-note/">how sleep dates are assigned</a>.</li>
+            <li>If a metric is missing, check the source data in Apple Health, the selected day, metric selection, and Health permissions. Missing data does not mean zero.</li>
+            <li>If Preview works but writing fails, reselect the destination folder and check that its file provider is available. See the <a href="/docs/folder-vault/">folder troubleshooting guide</a>.</li>
+          </ul>
+          <p>For a screenshot walkthrough of authorization, Preview, and export results, see <a href="/docs/iphone-first-export/">your first iPhone export</a>.</p>
         </section>
 
         <section class="about-section" id="whats-inside">
           <p class="section-kicker">The file itself</p>
           <h2>What's in the CSV</h2>
-          <p class="section-lede">Health.md writes <strong>one CSV file per day</strong> with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code> — plain columns, ISO timestamps, no surprises. Compatibility summary rows omit the timestamp column; timestamped and canonical-record rows include all six fields.</p>
-          <p>Exact row contracts, fixtures, and omission rules are published in the <a href="/docs/format/">export format reference</a>, so what you see in the file is documented — not a black box.</p>
+          <p class="section-lede">Daily exports write <strong>one CSV file per day</strong> with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Compatibility summary rows can omit the final Timestamp field; metadata, timestamped, and canonical-record rows use all six fields.</p>
+          <p id="csv-example-caption"><strong>Synthetic example (selected rows).</strong> These rows come from the production-generated Apple schema v8 reference fixture, not a person's health data. The full file includes more metrics and metadata.</p>
+          <pre class="csv-example" role="region" aria-labelledby="csv-example-caption" tabindex="0"><code class="language-csv">Date,Category,Metric,Value,Unit,Timestamp
+2026-03-15,Metadata,schema,healthmd.health_data,,
+2026-03-15,Metadata,schema_version,8,,
+2026-03-15,Raw HealthKit,Raw Capture Status,not_requested,status,
+2026-03-15,Activity,Steps,12500,count
+2026-03-15,Activity,Walking Running Distance,9500.0,meters</code></pre>
+          <p><a href="/docs/reference/generated/core/summary-day.csv" download>Download the full synthetic CSV</a> to try an import without sharing your own data. Daily aggregates have no single measurement timestamp. In this example, <code>not_requested</code> means the canonical source archive was off, not that the export failed.</p>
+          <p>Lossless Health Records adds canonical JSON objects inside CSV cells. Those cells can contain commas, quotes, and line breaks; use a standard CSV importer rather than splitting on commas. See the <a href="/docs/reference/export-formats/#csv">CSV format reference</a> for the complete row contract and source-record examples.</p>
         </section>
 
         <section class="about-section" id="privacy">
@@ -205,7 +244,7 @@
             </div>
             <div>
               <h3>Which health metrics can I export to CSV?</h3>
-              <p>Any Apple Health categories you authorize — steps, heart rate, HRV, sleep, workouts, and more. You select exactly which metrics each export includes.</p>
+              <p>Choose from supported Apple Health metrics, including steps, heart rate, HRV, sleep, and workouts. Availability depends on your device, OS, source data, and Health permissions.</p>
             </div>
             <div>
               <h3>What date ranges can I export?</h3>
@@ -213,11 +252,11 @@
             </div>
             <div>
               <h3>Can I open the CSV in Excel or Google Sheets?</h3>
-              <p>Yes. Health.md writes one CSV file per day with a plain header row, so the files open directly in Excel, Google Sheets, Numbers, or any analysis tool.</p>
+              <p>Yes. Start with Summary for daily totals, export one day, and import the CSV into Excel, Google Sheets, or Numbers. Lossless Health Records adds nested JSON cells for source records; use a CSV-aware tool to preserve those values.</p>
             </div>
             <div>
               <h3>Is it free?</h3>
-              <p>The app includes 5 free export actions. After that, a one-time lifetime unlock removes the limit — no subscription.</p>
+              <p>The app includes 5 free export actions. One action can include multiple dates and formats. After that, a one-time lifetime unlock removes the limit — no subscription. The App Store shows your current localized purchase price.</p>
             </div>
           </div>
         </section>
