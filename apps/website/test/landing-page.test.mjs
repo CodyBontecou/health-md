@@ -90,7 +90,7 @@ test("landing closes with a localized download decision and compact footer", () 
   const footer = index.slice(index.indexOf('<footer class="site-footer">'));
 
   assert.match(downloadSection, /Take your health data with you\./);
-  assert.match(downloadSection, /Google Play: try 10 exports free, then make one lifetime purchase\. F-Droid: Full Access is included\./);
+  assert.match(downloadSection, /Google Play: try 5 exports free, then make one lifetime purchase\. F-Droid: Full Access is included\./);
   assert.match(downloadSection, /class="download-actions" aria-label="Download Health\.md"/);
   assert.equal((downloadSection.match(/class="hero-store-badge /g) ?? []).length, 3);
   assert.match(downloadSection, /href="https:\/\/apps\.apple\.com\/us\/app\/health-md\/id6757763969"/);
@@ -233,7 +233,7 @@ test("privacy policy uses the landing design and describes the current app surfa
   assert.match(privacyPolicy, /<header class="site-header">/);
   assert.match(privacyPolicy, /<footer class="site-footer">/);
   assert.match(privacyPolicy, /Privacy,<br>in plain language\./);
-  assert.match(privacyPolicy, /Last updated: October 4, 2026/);
+  assert.match(privacyPolicy, /Last updated: 2026-10-24/);
   assert.match(privacyPolicy, /Scheduled Apple exports:[\s\S]*?APNs token/);
   assert.match(privacyPolicy, /Lossless files and direct results may preserve exact timestamps/);
   assert.match(privacyPolicy, /Android medical records \(FHIR\)/);
@@ -255,7 +255,7 @@ test("terms of service uses the legal design and covers the current product mode
   assert.match(terms, /consumer apps for iPhone, iPad, Mac, and Android/);
   assert.match(terms, /command-line and MCP tools where made available/);
   assert.match(terms, /preview, source-build, beta, or compatibility path/);
-  assert.match(terms, /current consumer offer is 10 free exports/);
+  assert.match(terms, /current consumer offer is 5 free exports/);
   assert.match(terms, /It is not a subscription and does not renew/);
   assert.match(terms, /never exposing a local loopback API or its port to another machine/);
   assert.match(terms, /not a medical device, healthcare provider, diagnostic service, treatment, or emergency service/);
@@ -277,9 +277,11 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
   assert.match(privacyPolicy, /pseudonymous rather than anonymous/);
   assert.match(privacyPolicy, /collects these limited product events automatically/);
   assert.match(privacyPolicy, /retained for no more than 13 months/);
-  assert.match(privacyPolicy, /not used for advertising, fingerprinting, or cross-app tracking/);
+  assert.match(privacyPolicy, /not used for ad targeting, fingerprinting, or cross-app tracking/);
   assert.match(privacyPolicy, /never include HealthKit or Health Connect values or identifiers, metric names, health dates/);
   assert.match(privacyPolicy, /health records and exported content cannot be represented in an analytics payload/);
+  assert.match(privacyPolicy, /Apple AdServices resolves an Apple Ads attribution token directly with Apple/);
+  assert.match(privacyPolicy, /Failed lookups remain unknown, not organic/);
   assert.match(privacyPolicy, /credentials or tokens/);
   assert.doesNotMatch(publicCopy, /\bno analytics\b/i);
   assert.doesNotMatch(privacyPolicy, /opt out|turn(?:ing)? (?:it|analytics) off|reset (?:the )?(?:random )?analytics identifier/i);

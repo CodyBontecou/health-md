@@ -39,6 +39,48 @@
   ],
   "capabilities": [
     {
+      "id": "apple.ads-purchase-attribution",
+      "name": "Apple Ads purchase attribution",
+      "classification": "apple_only",
+      "summary": "Measure campaign-to-purchase conversion using AdServices campaign dimensions and pseudonymous install-local purchase outcomes.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Apple AdServices attributes App Store acquisitions on iOS/iPadOS. Google Play Install Referrer is a separate provider and does not expose Apple Ads campaign claims."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/experiments/apple-ads-purchase-attribution.md",
+        "apps/android/docs/onboarding-analytics.md"
+      ]
+    },
+    {
+      "id": "diagnostics.local_bundle",
+      "name": "Local diagnostic events and reviewed bundles",
+      "classification": "shared",
+      "summary": "Inspect bounded privacy-classified technical events, separately opt into recording/sharing peer context, attach any existing original files including health exports, and explicitly review/save/share a frozen local ZIP without automatic uploads or new health reads.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/diagnostics/v1/contract.md",
+        "apps/apple/docs/features/diagnostics.md",
+        "apps/android/docs/features/diagnostics.md",
+        "apps/apple/HealthMdTests/Diagnostics/DiagnosticRecorderTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/diagnostics/DiagnosticStoreTest.kt"
+      ]
+    },
+    {
       "id": "support.local-reporting-fallback",
       "name": "Local reporting fallback",
       "classification": "planned",
@@ -414,6 +456,33 @@
         "apps/apple/HealthMdUITests/ExportProfilesJourneyUITests.swift",
         "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportProfilesScreen.kt",
         "apps/android/app/src/test/java/com/healthmd/presentation/export/ExportProfilesViewModelTest.kt"
+      ]
+    },
+    {
+      "id": "export.agent-data-gateway",
+      "name": "Agent Data gateway export destination",
+      "classification": "shared",
+      "summary": "Upload a profile's exact exported artifacts to a configured self-hosted Agent Data ingestion gateway endpoint per ingestion protocol v1, with health-free per-artifact receipts and bounded retry of transient outcomes.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/agent-data/v1/contract.md",
+        "apps/cli/docs/agent-data.md",
+        "apps/apple/docs/features/agent-data-gateway-export.md",
+        "apps/android/docs/features/agent-data-gateway.md",
+        "apps/apple/HealthMd/Shared/Managers/AgentDataGatewayExportRunner.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/export/AgentDataGatewayExportRunner.kt"
       ]
     },
     {
@@ -915,6 +984,29 @@
         "apps/android/app/src/main/java/com/healthmd/myselfclaim/MyselfClaimScreen.kt",
         "apps/android/app/src/play/java/com/healthmd/data/billing/MyselfClaimPurchase.kt"
       ]
+    },
+    {
+      "id": "purchase.free-export-journey",
+      "name": "Free export allowance and next steps",
+      "classification": "shared",
+      "summary": "Five completed free export actions on iOS/iPadOS and Google Play Android, with dismissible scheduling guidance after the first and a lifetime offer after the third. Existing usage and purchased access are retained. Apple scheduling shares the allowance; Google Play scheduling requires lifetime access. Free macOS companion and F-Droid Full Access are unchanged.",
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Managers/PurchaseManager.swift",
+        "apps/apple/HealthMd/iOS/Views/ExportUpgradePrompt.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/FreemiumPolicy.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportScreen.kt",
+        "apps/apple/docs/features/onboarding.md",
+        "apps/android/docs/features/lifetime-unlock.md"
+      ],
+      "profiles": []
     }
   ]
 }

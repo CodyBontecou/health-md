@@ -62,7 +62,7 @@ Sleep is assigned to the local date on which the session starts. On Tuesday morn
 
 Android schedules use an exact alarm when you grant Alarms & reminders access, with durable WorkManager work as a fallback. Without exact-alarm access, the chosen time is a target rather than a guarantee. Health.md records history and can recover missed dates.
 
-Google Play includes 10 manual export actions before its one-time unlock. The F-Droid build includes unlimited Health Connect export and no billing or Health.md telemetry code. Both channels produce the same Health Connect export outcomes, but switching channels requires uninstalling because their signing keys differ.
+Google Play includes 5 manual export actions before its one-time unlock. The F-Droid build includes unlimited Health Connect export and no billing or Health.md telemetry code. Both channels produce the same Health Connect export outcomes, but switching channels requires uninstalling because their signing keys differ.
 
 After the first successful note, add more metrics, a schedule, or a second profile. Keep the initial workflow small enough that an empty permission, inaccessible folder, or late source sync is easy to diagnose.
 

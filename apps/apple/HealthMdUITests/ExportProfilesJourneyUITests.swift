@@ -145,10 +145,11 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         let delete = app.buttons["Delete Profile…"]
         XCTAssertTrue(delete.waitUntilExists(timeout: 5))
         delete.tap()
-        let confirm = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH 'Delete '")
-        ).firstMatch
-        XCTAssertTrue(confirm.waitUntilExists(timeout: 5))
+        // The prefix also matches the background "Delete Profile…" opener.
+        // Require the actual named destructive confirmation, not the first match.
+        let confirm = app.buttons["Delete “Weekly Sleep”"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        XCTAssertTrue(confirm.isHittable)
         confirm.tap()
         XCTAssertTrue(
             app.navigationBars["Export Profiles"].waitUntilExists(timeout: 10),
@@ -323,7 +324,22 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             for: NSPredicate(format: "value == 'Copied'"),
             evaluatedWith: copy
         )
-        wait(for: [copied], timeout: 5)
+        let copiedResult = XCTWaiter.wait(for: [copied], timeout: 5)
+        if copiedResult != .completed {
+            // Preserve the actual native tree and visible state when an OS accessibility
+            // change separates rendered copy feedback from the button's exposed value.
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "profile-copy-accessibility-tree"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screenshot.name = "profile-copy-confirmation-failure"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+        }
+        XCTAssertEqual(copiedResult, .completed, "Copy must expose its persistent accessibility confirmation")
+        RunLoop.current.run(until: Date().addingTimeInterval(4))
+        XCTAssertEqual(copy.value as? String, "Copied")
         snap("12a-copied-profile-id")
 
         // Activate the profile: detail pops and the active banner reflects it.

@@ -9,8 +9,10 @@ struct iPadScheduleView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @StateObject private var apiExportSettings = APIExportSettings()
+    @StateObject private var agentDataGatewaySettings = AgentDataGatewaySettings()
     @Binding var showFolderPicker: Bool
     @State private var showAPIEndpointSettings = false
+    @State private var showAgentDataGatewaySettings = false
     @State private var showTodayRefreshInfo = false
 
     private var targetBinding: Binding<ExportTargetSelection> {
@@ -350,6 +352,11 @@ struct iPadScheduleView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showAgentDataGatewaySettings) {
+            AgentDataGatewaySettingsSheet(settings: agentDataGatewaySettings)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .geistDialog(
             isPresented: $showTodayRefreshInfo,
             title: Text("Today Refresh"),
@@ -386,14 +393,24 @@ struct iPadScheduleView: View {
             localSubtitle: scheduledLocalTargetSubtitle,
             macSubtitle: scheduledMacTargetSubtitle,
             apiSubtitle: scheduledAPITargetSubtitle,
+            gatewaySubtitle: scheduledAgentDataGatewayTargetSubtitle,
             canExportToConnectedMac: canScheduleToConnectedMac,
             shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             localAccessibilityIdentifier: AccessibilityID.Schedule.localTargetOption,
             macAccessibilityIdentifier: AccessibilityID.Schedule.macTargetOption,
             apiAccessibilityIdentifier: AccessibilityID.Schedule.apiTargetOption,
+            gatewayAccessibilityIdentifier: AccessibilityID.Schedule.agentDataGatewayTargetOption,
             onRequestFolderPicker: { showFolderPicker = true },
-            onOpenAPISettings: { showAPIEndpointSettings = true }
+            onOpenAPISettings: { showAPIEndpointSettings = true },
+            onOpenGatewaySettings: { showAgentDataGatewaySettings = true }
         )
+    }
+
+    private var scheduledAgentDataGatewayTargetSubtitle: String {
+        if agentDataGatewaySettings.isConfigured {
+            return "Scheduled exports upload artifacts to \(agentDataGatewaySettings.displayName). Tap to edit."
+        }
+        return "Scheduled exports upload artifacts to your Agent Data gateway. Tap to configure."
     }
 
     private var scheduledLocalTargetSubtitle: String {

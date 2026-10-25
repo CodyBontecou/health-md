@@ -119,7 +119,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
             from: JSONEncoder().encode(journal)
         )
 
-        XCTAssertEqual(decoded.version, IPhoneDirectFileJournal.currentVersion)
+        XCTAssertEqual(decoded.version, IPhoneDirectFileJournal.derivedOutputReconciliationVersion)
         XCTAssertEqual(decoded.appleExportEnginePin, journal.appleExportEnginePin)
         XCTAssertEqual(decoded.appleExportEnginePin?.engine, .rust)
         XCTAssertEqual(decoded.appleDirectProtocolPin, journal.appleDirectProtocolPin)
@@ -786,7 +786,37 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     }
     #endif
 
-    private func makeJournal() throws -> IPhoneDirectFileJournal {
+    @MainActor
+    func testCapturePlanPreservesOriginalRangeDaysAndRejectsInjectedTransferDay() throws {
+        let journal = try makeJournal(requestEnd: "2027-01-16")
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let ownerDate = calendar.startOfDay(for: journal.requestedDates[0])
+        let nextOwnerDate = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: ownerDate))
+        let originalDates = [ownerDate, nextOwnerDate]
+        // A resumed job may need the original range's summary context even when
+        // only one daily owner date remains. Weekly settings now migrate to range summaries.
+        let metadata = MacExportStreamingJobBuilder.metadata(startDate: ownerDate, endDate: nextOwnerDate,
+            requestedDates: [ownerDate], rollupRequestedDates: originalDates,
+            settings: journal.settingsSnapshot.makeAdvancedExportSettings(), healthSubfolder: journal.healthSubfolder,
+            destinationDisplayName: nil, frozenSettingsSnapshot: journal.settingsSnapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(journal)) as? [String: Any])
+        object["requestedDates"] = [ownerDate.timeIntervalSinceReferenceDate]
+        object["originalRequestedDates"] = originalDates.map(\.timeIntervalSinceReferenceDate)
+        object["transferDates"] = metadata.transferDates.map(\.timeIntervalSinceReferenceDate)
+        object["capturedDays"] = []
+        func decoded() throws -> IPhoneDirectFileJournal {
+            try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: JSONSerialization.data(withJSONObject: object))
+        }
+        XCTAssertTrue(metadata.transferDates.contains { $0 != ownerDate }, "Original range-summary context must be exercised")
+        XCTAssertNoThrow(try decoded().validateCapturePlan())
+        object["transferDates"] = (metadata.transferDates + [ownerDate.addingTimeInterval(86400 * 400)])
+            .map(\.timeIntervalSinceReferenceDate)
+        XCTAssertThrowsError(try decoded().validateCapturePlan())
+    }
+
+    private func makeJournal(requestEnd: String = "2027-01-15") throws -> IPhoneDirectFileJournal {
         let jobID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         let peerBinding = DirectPeerBinding(
             sourceInstallationID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
@@ -796,7 +826,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         let request = DirectExportRequest(
             jobID: jobID,
             createdAt: createdAt,
-            dateSelection: .exact(start: "2027-01-15", end: "2027-01-15"),
+            dateSelection: .exact(start: "2027-01-15", end: requestEnd),
             responseMode: .writeFiles,
             destination: DirectExportDestination(rootPath: "/synthetic")
         )

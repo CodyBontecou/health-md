@@ -9,7 +9,7 @@ Owners: `app/src/main/java/com/healthmd/domain/distribution/DistributionPolicy.k
 | Outcome | Google Play (`play`) | F-Droid (`fdroid`) |
 | --- | --- | --- |
 | Health Connect capture/export | Available | Available |
-| Manual exports | 10 free, then lifetime entitlement | Full access included |
+| Manual exports | 5 free, then lifetime entitlement | Full access included |
 | Scheduling, automation, recovery, Direct CLI export | Requires lifetime entitlement | Included |
 | Billing / purchase / restore | Google Play Billing | Absent |
 | Direct Fitbit/Oura/WHOOP/Withings providers and OAuth | Available when configured | Absent; Health Connect only |

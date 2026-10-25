@@ -16,7 +16,7 @@ description: 设置 Android 版 Health.md，将 Health Connect 数据导出为 M
 <div class="reference-stats">
 <div><strong>106</strong><span>个可选 Health Connect 指标</span></div>
 <div><strong>4</strong><span>种导出格式</span></div>
-<div><strong>10</strong><span>次免费手动导出</span></div>
+<div><strong>5</strong><span>次免费手动导出</span></div>
 <div><strong>0</strong><span>个必需的 Health.md 云账户</span></div>
 </div>
 
@@ -47,7 +47,7 @@ Android 版 Health.md 将 Health Connect 转化为本地优先的健康日志。
 6. 预览输出。
 7. 轻点导出，然后在文件夹或知识库中确认生成的文件。
 
-免费方案包含 10 次手动导出，让您可以在解锁无限导出前测试权限、文件夹访问、格式和 Obsidian 工作流。
+免费方案包含 5 次手动导出，让您可以在解锁无限导出前测试权限、文件夹访问、格式和 Obsidian 工作流。
 
 ## Android 上的目标位置
 
@@ -125,7 +125,7 @@ Health Connect 是默认的本地导出路径。Android 应用还提供健康数
 
 ## 定价与恢复购买
 
-- Android 应用包含 10 次免费手动导出。
+- Android 应用包含 5 次免费手动导出。
 - 通过 Google Play Billing 一次性购买 Full Access，即可解锁无限导出和计划自动化。
 - 无需订阅，也没有周期性收费。
 - Google Play 会在购买前显示当前本地价格。

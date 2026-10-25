@@ -107,7 +107,7 @@ test('published legal pages derive reciprocal metadata and language navigation f
   }
 });
 
-test('unpublished Spanish legal review drafts preserve their prior source text for later revision', async () => {
+test('unpublished Spanish legal drafts preserve review and licensing notices with the current free allowance', async () => {
   const [privacy, terms] = await Promise.all([
     readFile(path.join(ROOT, 'es/privacy-policy.html'), 'utf8'),
     readFile(path.join(ROOT, 'es/terms-of-service.html'), 'utf8'),
@@ -120,7 +120,7 @@ test('unpublished Spanish legal review drafts preserve their prior source text f
   assert.match(terms, /Aviso sobre la traducción/);
   assert.match(terms, /AGPL-3\.0-only/);
   assert.match(terms, /código fuente del sitio web se distribuye bajo la Licencia MIT/);
-  assert.match(terms, /10 exportaciones gratuitas/);
+  assert.match(terms, /5 exportaciones gratuitas/);
   assert.match(terms, /No es una suscripción y no se renueva/);
 });
 

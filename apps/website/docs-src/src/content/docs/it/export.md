@@ -70,7 +70,7 @@ Un profilo salvato congela impostazioni e destinazione per l’esecuzione. Le ri
 
 <div class="callout">
 <strong>Funzionamento dello sblocco.</strong>
-<p style="margin-top:6px;">Sulle piattaforme Apple, la quota gratuita copre 10 azioni di esportazione manuali o pianificate. Full Access elimina il limite e sblocca i flussi verso Mac e Comandi rapidi. Android offre invece 10 azioni manuali gratuite e richiede l’acquisto a vita per la pianificazione. <a href="/it/docs/paywall/">Consulta la pagina Paywall</a> per l’acquisto Apple.</p>
+<p style="margin-top:6px;">Sulle piattaforme Apple, la quota gratuita copre 5 azioni di esportazione manuali o pianificate. Full Access elimina il limite e sblocca i flussi verso Mac e Comandi rapidi. Android offre invece 5 azioni manuali gratuite e richiede l’acquisto a vita per la pianificazione. <a href="/it/docs/paywall/">Consulta la pagina Paywall</a> per l’acquisto Apple.</p>
 </div>
 
 ## Contenuti correlati

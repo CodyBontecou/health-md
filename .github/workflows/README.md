@@ -47,21 +47,31 @@ runs the existing architecture/symbol validator. Exact-source archive and
 XCFramework caches include the active Xcode/SDK fingerprint; nightly uses the
 same complete-artifact key and still validates source/bindings on cache hits.
 
-iOS unit and UI jobs begin booting the selected compatible simulator before
-compilation. They compile only the architecture on which tests actually execute
-and disable the unused compiler index store. The native XCFramework still
+The iOS unit job begins booting its selected compatible simulator before
+compilation. Unit and UI products compile only the execution architecture and
+disable the unused compiler index store. The native XCFramework still
 contains all five previously qualified target architectures. Test results are
 never restored from a cache.
 
-The existing fourteen main/PR UI selectors run across three independent hosted
-lanes. Entire XCTest classes remain together to preserve shared fixture state.
-Each lane builds and qualifies fresh app/runner/test products, executes one
-`test-without-building` invocation, and checks both the authoritative xcresult
-case tree and summary against its exact selection. Missing, duplicate, failed,
-skipped or unexpected cases fail qualification. The stable `iOS UI regressions`
-aggregate requires all three current-run/source receipts, preserving both that
-job name and the final `Apple CI` context. Compile/runtime warning gates, raw
-logs and xcresults remain mandatory. Fail-fast is disabled.
+The fourteen existing phone UI cases plus three history cases run across three
+phone shards; a fourth shard runs four App Review/history cases on iPad. The
+same history method intentionally runs once per device family. Entire XCTest
+classes remain together within a family to preserve shared fixture state.
+One SDK27 preparation job builds fresh app/runner/test products and publishes a
+qualified archive. Every shard verifies the producer archive SHA, exact source
+and current restored binary fingerprints before execution. The selected actual
+simulator must match its required device family. Setup and the single native
+invocation share an owned deadline inside the existing 35-minute phone or
+15-minute iPad step, with cleanup time reserved. Exact SDK27 compiler/signature
+and producer/consumer provenance checks remain mandatory for core and app jobs.
+
+Each shard checks the authoritative xcresult case tree and summary against its
+exact selection. Missing, duplicate within a device family, failed, skipped or
+unexpected cases fail qualification. The stable `iOS UI regressions` aggregate
+requires successful preparation and all four current-run/source receipts for
+21 device-attributed executions. Compile/runtime warning gates (including
+premature StateObject access), raw logs, process ownership records and xcresults
+remain mandatory. Fail-fast is disabled.
 
 These changes trade additional simultaneous runners for a shorter critical
 path; they do not remove test coverage or claim a fixed hosted-runner speedup.

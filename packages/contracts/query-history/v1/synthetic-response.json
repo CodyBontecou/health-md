@@ -1,0 +1,52 @@
+{
+  "schema": "healthmd.query_response",
+  "schema_version": 1,
+  "items": [],
+  "packet": null,
+  "coverage": {"status": "complete_empty", "days_considered": 1, "days_with_values": 0, "missing": []},
+  "sources": [],
+  "evidence": [],
+  "limitations": [],
+  "next_cursor": null,
+  "metadata": {
+    "existing_metadata": "retained",
+    "history_assessment": {
+      "schema": "healthmd.history_assessment",
+      "schema_version": 1,
+      "assessment_id": "00000000-0000-4000-8000-000000000003",
+      "capture_id": "00000000-0000-4000-8000-000000000004",
+      "observed_at": "2026-01-01T00:00:00.123456789Z",
+      "capture_completed_at": "2026-01-01T00:00:01.765432100Z",
+      "evidence_method": "synthetic_ui_fixture",
+      "producer": "Health.md",
+      "platform": "apple_healthkit",
+      "calendar_identifier": "gregorian",
+      "time_zone_identifier": "America/Los_Angeles",
+      "boundary_semantics": "sample_end_instant",
+      "boundary_equality_physically_verified": false,
+      "logical_metrics": {"type": "explicit", "metric_ids": ["steps"]},
+      "resolved_metric_ids": ["steps"],
+      "logical_sources": {"type": "all_available"},
+      "resolved_source_ids": ["apple_health", "healthmd_summary"],
+      "resolved_provider_ids": [],
+      "logical_dates": {"type": "all_available"},
+      "resolved_owner_dates": {
+        "count": 1,
+        "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "first": "2026-01-01",
+        "last": "2026-01-01"
+      },
+      "types": [{
+        "type_id": "HKQuantityTypeIdentifierStepCount",
+        "direct_metric_ids": ["steps"],
+        "dependency_metric_ids": [],
+        "dependency_reasons": [],
+        "outcome": "unknown",
+        "intersection": "unknown"
+      }],
+      "dataset_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+      "trusted_peer_installation_id": "00000000-0000-4000-8000-000000000001",
+      "source_installation_id": "00000000-0000-4000-8000-000000000002"
+    }
+  }
+}

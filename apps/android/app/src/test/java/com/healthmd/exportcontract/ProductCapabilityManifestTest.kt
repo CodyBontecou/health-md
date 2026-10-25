@@ -119,6 +119,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+            "purchase.free-export-journey",
             "account.myself_lifetime_claim",
             "export.daily-files",
             "export.sleep-summary",
@@ -131,6 +132,7 @@ class ProductCapabilityManifestTest {
             "export.completed-workouts",
             "export.mobility-and-performance",
             "export.profiles",
+            "export.agent-data-gateway",
             "export.scheduled-today-refresh",
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
@@ -139,9 +141,12 @@ class ProductCapabilityManifestTest {
             "direct-cli.shared-qr-pairing",
             "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
+            "direct.full_public_authorized_corpus",
+            "diagnostics.local_bundle",
         )
 
         val appleCapabilities = setOf(
+            "apple.ads-purchase-attribution",
             "apple.lossless-healthkit-archive",
             "apple.medication-dose-events",
             "apple.state-of-mind",

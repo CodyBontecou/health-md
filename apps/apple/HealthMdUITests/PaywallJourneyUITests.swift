@@ -20,7 +20,7 @@ final class PaywallJourneyUITests: XCTestCase {
         // Check either the label or the element text contains the remaining count
         let text = freeLabel.label
         XCTAssertTrue(
-            text.contains("9") || text.contains("free export"),
+            text.contains("4"),
             "Should show free exports remaining, got: \(text)"
         )
     }
@@ -46,7 +46,7 @@ final class PaywallJourneyUITests: XCTestCase {
             healthAuthorized: true,
             vaultSelected: true,
             purchaseUnlocked: true,
-            freeExportsUsed: 10,
+            freeExportsUsed: 5,
             analyticsTransport: "offline",
             remoteConfig: "offline"
         )
@@ -62,8 +62,8 @@ final class PaywallJourneyUITests: XCTestCase {
     // MARK: - Paywall Gating
 
     func testPaywallShown_whenQuotaExhausted() throws {
-        // Set up with all 10 free exports used, NOT unlocked
-        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 10)
+        // Set up with all 5 free exports used, NOT unlocked
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 5)
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -84,7 +84,7 @@ final class PaywallJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             vaultSelected: true,
-            freeExportsUsed: 10,
+            freeExportsUsed: 5,
             analyticsTransport: "offline",
             remoteConfig: "offline"
         )
@@ -102,7 +102,7 @@ final class PaywallJourneyUITests: XCTestCase {
     }
 
     func testPaywallDismiss_closesPaywall() throws {
-        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 10)
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 5)
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -130,8 +130,8 @@ final class PaywallJourneyUITests: XCTestCase {
     // MARK: - Export Allowed With Remaining Quota
 
     func testExportAllowed_whenFreeQuotaRemains() throws {
-        // 9 exports used, 1 remaining
-        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 9)
+        // 4 exports used, 1 remaining
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 4)
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -160,7 +160,7 @@ final class PaywallJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             vaultSelected: true,
-            freeExportsUsed: 9,
+            freeExportsUsed: 4,
             analyticsTransport: "offline",
             remoteConfig: "offline"
         )
@@ -174,4 +174,77 @@ final class PaywallJourneyUITests: XCTestCase {
         XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Export should succeed with analytics offline")
         XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists, "Paywall should not appear while quota remains")
     }
+    func testFirstExportOffersSchedulingWithoutOpeningPaywall() throws {
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 0)
+        app.launchEnvironment["UITEST_SUPPRESSED_UPGRADE_PROMPTS"] = ""
+        app.launch()
+        let export = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(export.waitForExistence(timeout: 5))
+        export.tap()
+        let schedule = app.buttons["upgradePrompt.scheduleButton"]
+        XCTAssertTrue(schedule.waitForExistence(timeout: 10))
+        let firstCapture = XCTAttachment(screenshot: app.screenshot())
+        firstCapture.name = "First export scheduling guidance"
+        firstCapture.lifetime = .keepAlways
+        add(firstCapture)
+        XCTAssertTrue(app.staticTexts["upgradePrompt.remaining"].label.contains("4"))
+        schedule.tap()
+        XCTAssertTrue(app.switches["schedule.enableToggle"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
+    }
+
+    func testThirdExportOffersLifetimeWithTwoRemainingAndCanContinueFree() throws {
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 2)
+        app.launchEnvironment["UITEST_SUPPRESSED_UPGRADE_PROMPTS"] = ""
+        app.launch()
+        let export = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(export.waitForExistence(timeout: 5))
+        export.tap()
+        let upgrade = app.buttons["upgradePrompt.upgradeButton"]
+        XCTAssertTrue(upgrade.waitForExistence(timeout: 10))
+        let thirdCapture = XCTAttachment(screenshot: app.screenshot())
+        thirdCapture.name = "Third export lifetime offer"
+        thirdCapture.lifetime = .keepAlways
+        add(thirdCapture)
+        XCTAssertTrue(app.staticTexts["upgradePrompt.remaining"].label.contains("2"))
+        app.buttons["upgradePrompt.notNowButton"].tap()
+        XCTAssertTrue(export.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts[UITestLaunchHelper.Export.freeExportsLabel].label.contains("2"))
+        XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
+    }
+
+    func testThirdExportLifetimeActionOpensReviewablePaywall() throws {
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 2)
+        app.launchEnvironment["UITEST_SUPPRESSED_UPGRADE_PROMPTS"] = ""
+        app.launch()
+        let export = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(export.waitForExistence(timeout: 5))
+        export.tap()
+        let upgrade = app.buttons["upgradePrompt.upgradeButton"]
+        XCTAssertTrue(upgrade.waitForExistence(timeout: 10))
+        upgrade.tap()
+        XCTAssertTrue(app.staticTexts[UITestLaunchHelper.Paywall.title].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts[UITestLaunchHelper.Paywall.subtitle].label.contains("3 of your 5"))
+    }
+
+    func testThirdExportGuidanceSupportsDarkModeAndLargeText() throws {
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 2)
+        app.launchEnvironment["UITEST_SUPPRESSED_UPGRADE_PROMPTS"] = ""
+        app.launchArguments += ["-AppleInterfaceStyle", "Dark", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"]
+        app.launch()
+        let export = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(export.waitForExistence(timeout: 5))
+        export.tap()
+        let upgrade = app.buttons["upgradePrompt.upgradeButton"]
+        XCTAssertTrue(upgrade.waitForExistence(timeout: 10))
+        if !upgrade.isHittable { app.swipeUp() }
+        XCTAssertTrue(upgrade.isHittable)
+        let capture = XCTAttachment(screenshot: app.screenshot())
+        capture.name = "Third export dark large text"
+        capture.lifetime = .keepAlways
+        add(capture)
+        upgrade.tap()
+        XCTAssertTrue(app.staticTexts[UITestLaunchHelper.Paywall.title].waitForExistence(timeout: 5))
+    }
+
 }

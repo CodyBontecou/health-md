@@ -81,7 +81,7 @@ Certaines données ne sont volontairement **pas traitées comme équivalentes** 
 
 | Fonctionnalité | iPhone / iPad | Mac | Android | Wear OS |
 |---|---|---|---|---|
-| Offre gratuite | ✓ 10 actions d’export manuelles ou planifiées | — | ✓ 10 actions d’export manuelles | — |
+| Offre gratuite | ✓ 5 actions d’export manuelles ou planifiées | — | ✓ 5 actions d’export manuelles | — |
 | Déverrouillage | ✓ achat à vie unique (individuel / familial) | ◐ même déverrouillage Apple | ✓ achat à vie unique, planification incluse | — |
 | Confidentialité à traitement local | ✓ aucune copie cloud par défaut | ✓ | ✓ | △ prévu |
 | Rapport clinicien (un PDF pour les rendez-vous) | ✓ | — | ✓ | — |
