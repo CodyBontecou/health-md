@@ -158,6 +158,7 @@ coverage: prepare-healthmd-core-rust
 	xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
+	  $(MACOS_DERIVED_DATA_FLAGS) \
 	  -destination '$(MACOS_DEST)' \
 	  $(if $(MACOS_DERIVED_DATA_DIR),,-derivedDataPath "$(DERIVED_DATA_PATH)") \
 	  -enableCodeCoverage YES \

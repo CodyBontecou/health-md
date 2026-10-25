@@ -42,4 +42,4 @@ CONFIDENȚIALITATE ȘI CONTROL
 • Permisiunile pot fi consultate sau revocate oricând în Health Connect
 • Atribuirea limitată, proprie, a instalării și analiza integrării inițiale sau a prețurilor nu includ niciodată dosare medicale, detalii despre permisiunile Health Connect, conținut exportat, textul contului sau căi de fișiere
 
-Health.md include 10 acțiuni gratuite de export manual. O achiziție unică deblochează exporturi nelimitate și programarea; nu există abonament.
+Health.md include 5 acțiuni gratuite de export manual. O achiziție unică deblochează exporturi nelimitate și programarea; nu există abonament.

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">डायग्नोस्टिक्स</string>
+    <string name="diagnostics_entry">स्थानीय तकनीकी घटनाएँ देखें और चुनें कि क्या साझा करना है</string>
+    <string name="diagnostics_recording">स्थानीय रिकॉर्डिंग</string>
+    <string name="diagnostics_privacy">डायग्नोस्टिक्स सहेजने या साझा करने तक इसी डिवाइस पर रहते हैं। परिचालन घटनाओं में स्वास्थ्य मान, स्वास्थ्य रिकॉर्ड ID, अनुरोधित स्वास्थ्य डेटा की तारीखें, पथ, एंडपॉइंट और क्रेडेंशियल शामिल नहीं होते। ये अनाम नहीं हैं।</string>
+    <string name="diagnostics_enabled">परिचालन घटनाएँ रिकॉर्ड करें</string>
+    <string name="diagnostics_retention">विस्तार का स्तर विवरण बदलता है, स्वास्थ्य सामग्री एकत्र करने की अनुमति नहीं। प्रतिधारण: अधिकतम 7 दिन / 20 MiB। कोई स्वचालित अपलोड नहीं।</string>
+    <string name="diagnostics_start_private">निजी संदर्भ 15 मिनट के लिए रिकॉर्ड करें</string>
+    <string name="diagnostics_stop_private">निजी रिकॉर्डिंग रोकें</string>
+    <string name="diagnostics_private_description">V1 निजी संदर्भ उपलब्ध होने पर जुड़े डिवाइसों के नाम रिकॉर्ड करता है। यह स्वास्थ्य सामग्री, क्रेडेंशियल या मनमाना त्रुटि पाठ रिकॉर्ड नहीं करता। निजी खंड 24 घंटे के भीतर की समय-सीमा के अनुसार ऐप के अगले उपयोग पर समाप्त होते हैं।</string>
+    <string name="diagnostics_private_until">निजी रिकॉर्डिंग समाप्त होगी: %1$s</string>
+    <string name="diagnostics_clear">सभी डायग्नोस्टिक्स मिटाएँ</string>
+    <string name="diagnostics_clear_question">स्थानीय घटनाएँ, तैयार बंडल और अटैचमेंट की प्रतियाँ मिटाएँ? इससे निजी रिकॉर्डिंग रुक जाएगी। निर्यात की गई फ़ाइलें और साझा प्रतियाँ प्रभावित नहीं होंगी।</string>
+    <string name="diagnostics_select">घटनाएँ चुनें</string>
+    <string name="diagnostics_hour">पिछला घंटा</string>
+    <string name="diagnostics_day">पिछले 24 घंटे</string>
+    <string name="diagnostics_week">पिछले 7 दिन</string>
+    <string name="diagnostics_operation">ऑपरेशन UUID (वैकल्पिक)</string>
+    <string name="diagnostics_include_private">रिकॉर्ड किया गया निजी संदर्भ शामिल करें</string>
+    <string name="diagnostics_search">घटना ID या फ़ील्ड खोजें</string>
+    <string name="diagnostics_refresh">घटनाएँ रीफ़्रेश करें</string>
+    <string name="diagnostics_summary">घटनाएँ: %1$d · सत्र में छूटी: %2$d · अमान्य: %3$d · सीमित किया गया: %4$s</string>
+    <string name="diagnostics_view_limit">मिलती-जुलती नवीनतम 100 घटनाएँ दिखाई जा रही हैं। बंडल में चुना गया स्नैपशॉट, अधिकतम 10,000 घटनाएँ शामिल होती हैं; कोई कटौती स्पष्ट की जाती है।</string>
+    <string name="diagnostics_attachments">वैकल्पिक अटैचमेंट</string>
+    <string name="diagnostics_attachment_description">स्वास्थ्य निर्यात या स्क्रीनशॉट सहित मौजूदा फ़ाइलें जोड़ें। मूल बाइट बिना बदलाव कॉपी किए जाते हैं और संवेदनशील सामग्री हटाई नहीं जाती। मूल फ़ाइलों के नाम शामिल होते हैं। स्वास्थ्य डेटा दोबारा नहीं पढ़ा जाता। सीमा: 50 फ़ाइलें / 100 MiB।</string>
+    <string name="diagnostics_choose">फ़ाइलें चुनें…</string>
+    <string name="diagnostics_remove">%1$s हटाएँ</string>
+    <string name="diagnostics_prepare">बंडल तैयार करें</string>
+    <string name="diagnostics_review">तैयार करें और समीक्षा करें</string>
+    <string name="diagnostics_frozen">स्थिर स्नैपशॉट। घटनाएँ: %1$d। स्वास्थ्य सामग्री: %2$s। ZIP एन्क्रिप्टेड नहीं है।</string>
+    <string name="diagnostics_reviewed">मैंने साझा की जाने वाली फ़ाइलों की समीक्षा कर ली है</string>
+    <string name="diagnostics_share">समीक्षित ZIP साझा करें</string>
+    <string name="diagnostics_save">समीक्षित ZIP सहेजें</string>
+    <string name="diagnostics_share_question">यह डायग्नोस्टिक बंडल साझा करें?</string>
+    <string name="diagnostics_share_warning">ZIP एन्क्रिप्टेड नहीं है। शामिल निजी संदर्भ और अटैचमेंट स्वास्थ्य डेटा या गोपनीय जानकारी उजागर कर सकते हैं। GitHub या Discord की सार्वजनिक पोस्ट कोई भी देख सकता है। गंतव्य अपनी प्रतियों को नियंत्रित करता है; Health.md उन्हें वापस नहीं ले सकता।</string>
+    <string name="diagnostics_share_confirm">यह बंडल साझा करें</string>
+    <string name="diagnostics_bundle_retention">स्थानीय बंडल 24 घंटे के भीतर की समय-सीमा के अनुसार ऐप के अगले उपयोग पर समाप्त होते हैं; केवल नवीनतम 3 रखे जाते हैं। सहेजी या साझा की गई प्रतियों की अपनी प्रतिधारण अवधि होती है।</string>
+    <string name="diagnostics_preview_truncated">\n\n[पूर्वावलोकन 128 KiB तक सीमित है। पूरी मूल फ़ाइल ZIP में बनी रहती है।]</string>
+    <string name="diagnostics_failure">डायग्नोस्टिक ऑपरेशन विफल हुआ। फ़ाइल एक्सेस और स्थानीय स्टोरेज जाँचें, फिर दोबारा तैयार करके समीक्षा करें।</string>
+    <string name="diagnostics_invalid_operation">ऑपरेशन ID एक UUID होना चाहिए।</string>
+</resources>

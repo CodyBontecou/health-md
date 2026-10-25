@@ -2,7 +2,7 @@
 
 > Compact agent index for installing, operating, and integrating the standalone Health.md CLI and portable MCP server.
 
-The standalone CLI is a public preview for macOS, Linux, and Windows. Health data is read on the paired phone and transferred directly to the requesting computer. Health.md does not provide a health-data cloud. Follow the linked Markdown sources for authoritative prose and examples.
+The standalone CLI is a public preview for macOS, Linux, and Windows. Health data is read on the paired phone and transferred directly to the requesting computer. This direct phone CLI workflow does not require a Health.md cloud account or create a Health.md server copy. The separate, optional single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it; it has no public signup and no automatic device sync. Separately authorized read-only cloud MCP calls query retained exports, not the paired phone. Agent hosts and model providers may retain or process returned values under their own policies. See https://healthmd.app/privacy-policy.html#retention for quota, revision retention, asynchronous deletion, and unbacked storage risks. Follow the linked Markdown sources for authoritative prose and examples.
 
 ## Start here
 

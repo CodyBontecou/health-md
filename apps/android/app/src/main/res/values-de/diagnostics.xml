@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Diagnose</string>
+    <string name="diagnostics_entry">Lokale technische Ereignisse prüfen und auswählen, was geteilt werden soll</string>
+    <string name="diagnostics_recording">Lokale Aufzeichnung</string>
+    <string name="diagnostics_privacy">Diagnosedaten bleiben auf diesem Gerät, bis du sie speicherst oder teilst. Betriebsereignisse enthalten keine Gesundheitswerte, Gesundheitsdatensatz-IDs, angefragten Datumsangaben zu Gesundheitsdaten, Pfade, Endpunkte oder Zugangsdaten. Sie sind nicht anonym.</string>
+    <string name="diagnostics_enabled">Betriebsereignisse aufzeichnen</string>
+    <string name="diagnostics_retention">Die Protokollstufe ändert den Detailgrad, nicht die Erlaubnis zum Erfassen von Gesundheitsinhalten. Aufbewahrung: bis zu 7 Tage / 20 MiB. Keine automatischen Uploads.</string>
+    <string name="diagnostics_start_private">Privaten Kontext 15 Minuten aufzeichnen</string>
+    <string name="diagnostics_stop_private">Private Aufzeichnung beenden</string>
+    <string name="diagnostics_private_description">Privater Kontext in V1 erfasst verfügbare Namen verbundener Geräte. Gesundheitsinhalte, Zugangsdaten und beliebiger Fehlertext werden nicht erfasst. Private Segmente verfallen nach spätestens 24 Stunden beim nächsten App-Zugriff.</string>
+    <string name="diagnostics_private_until">Private Aufzeichnung endet: %1$s</string>
+    <string name="diagnostics_clear">Alle Diagnosedaten löschen</string>
+    <string name="diagnostics_clear_question">Lokale Ereignisse, vorbereitete Pakete und Anhangkopien löschen? Dies beendet die private Aufzeichnung. Exportierte Dateien und geteilte Kopien bleiben erhalten.</string>
+    <string name="diagnostics_select">Ereignisse auswählen</string>
+    <string name="diagnostics_hour">Letzte Stunde</string>
+    <string name="diagnostics_day">Letzte 24 Stunden</string>
+    <string name="diagnostics_week">Letzte 7 Tage</string>
+    <string name="diagnostics_operation">Vorgangs-UUID (optional)</string>
+    <string name="diagnostics_include_private">Aufgezeichneten privaten Kontext einschließen</string>
+    <string name="diagnostics_search">Ereignis-IDs oder Felder durchsuchen</string>
+    <string name="diagnostics_refresh">Ereignisse aktualisieren</string>
+    <string name="diagnostics_summary">Ereignisse: %1$d · Sitzungsverluste: %2$d · Ungültig: %3$d · Gekürzt: %4$s</string>
+    <string name="diagnostics_view_limit">Die neuesten 100 passenden Ereignisse werden angezeigt. Das Paket enthält die ausgewählte Momentaufnahme mit bis zu 10.000 Ereignissen; Kürzungen werden angegeben.</string>
+    <string name="diagnostics_attachments">Optionale Anhänge</string>
+    <string name="diagnostics_attachment_description">Vorhandene Dateien hinzufügen, auch Gesundheitsexporte oder Bildschirmfotos. Originalbytes werden unverändert kopiert und NICHT bereinigt. Quelldateinamen werden eingeschlossen. Es werden keine neuen Gesundheitsdaten gelesen. Grenze: 50 Dateien / 100 MiB.</string>
+    <string name="diagnostics_choose">Dateien auswählen…</string>
+    <string name="diagnostics_remove">%1$s entfernen</string>
+    <string name="diagnostics_prepare">Paket vorbereiten</string>
+    <string name="diagnostics_review">Vorbereiten und prüfen</string>
+    <string name="diagnostics_frozen">Eingefrorene Momentaufnahme. Ereignisse: %1$d. Gesundheitsinhalte: %2$s. ZIP ist nicht verschlüsselt.</string>
+    <string name="diagnostics_reviewed">Ich habe die Dateien geprüft, die ich teilen möchte</string>
+    <string name="diagnostics_share">Geprüfte ZIP teilen</string>
+    <string name="diagnostics_save">Geprüfte ZIP speichern</string>
+    <string name="diagnostics_share_question">Dieses Diagnosepaket teilen?</string>
+    <string name="diagnostics_share_warning">Die ZIP ist nicht verschlüsselt. Privater Kontext und Anhänge können Gesundheitsdaten oder Geheimnisse offenlegen. Öffentliche GitHub-/Discord-Beiträge können für alle zugänglich sein. Das Ziel verwaltet seine eigenen Kopien; Health.md kann sie nicht zurückrufen.</string>
+    <string name="diagnostics_share_confirm">Dieses Paket teilen</string>
+    <string name="diagnostics_bundle_retention">Lokale Pakete verfallen innerhalb von 24 Stunden beim nächsten App-Zugriff; nur die neuesten 3 werden aufbewahrt. Gespeicherte oder geteilte Kopien haben eigene Aufbewahrungsfristen.</string>
+    <string name="diagnostics_preview_truncated">\n\n[Vorschau auf 128 KiB gekürzt. Die vollständige Originaldatei bleibt in der ZIP.]</string>
+    <string name="diagnostics_failure">Diagnosevorgang fehlgeschlagen. Dateizugriff und lokalen Speicher prüfen, dann erneut vorbereiten und prüfen.</string>
+    <string name="diagnostics_invalid_operation">Die Vorgangs-ID muss eine UUID sein.</string>
+</resources>

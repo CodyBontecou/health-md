@@ -5,7 +5,7 @@ description: Configurez Health.md for Android et exportez les données Health Co
 
 <div class="docs-hero">
   <p class="docs-eyebrow">De Health Connect aux fichiers privés</p>
-  <p>Health.md for Android lit Health Connect sur l’appareil et écrit des fichiers Markdown, Obsidian Bases, JSON ou CSV dans les dossiers de votre choix. Aucun compte Health.md, aucun cloud de données de santé et aucun abonnement.</p>
+  <p>Health.md for Android lit Health Connect sur l’appareil et écrit des fichiers Markdown, Obsidian Bases, JSON ou CSV dans les dossiers de votre choix. Ce flux d’export vers un dossier ne nécessite aucun compte Health.md, aucun cloud de données de santé ni abonnement.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Disponible sur Google Play</a>
     <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">Disponible sur F-Droid</a>
@@ -16,7 +16,7 @@ description: Configurez Health.md for Android et exportez les données Health Co
 <div class="reference-stats">
 <div><strong>106</strong><span>métriques Health Connect sélectionnables</span></div>
 <div><strong>4</strong><span>formats d’export</span></div>
-<div><strong>10</strong><span>actions gratuites d’export manuel</span></div>
+<div><strong>5</strong><span>actions gratuites d’export manuel</span></div>
 <div><strong>0</strong><span>compte cloud Health.md requis</span></div>
 </div>
 
@@ -47,7 +47,7 @@ Health.md for Android transforme les données Health Connect en journal de sant�
 6. Prévisualisez le résultat.
 7. Lancez l’export et vérifiez les fichiers générés dans votre dossier ou votre coffre.
 
-L’offre gratuite comprend 10 actions d’export manuel, ce qui vous permet de tester les autorisations, l’accès au dossier, les formats et votre flux de travail Obsidian avant de débloquer les exports illimités.
+L’offre gratuite comprend 5 actions d’export manuel, ce qui vous permet de tester les autorisations, l’accès au dossier, les formats et votre flux de travail Obsidian avant de débloquer les exports illimités.
 
 ## Destinations sur Android
 
@@ -125,7 +125,7 @@ Les pas quotidiens utilisent les limites exactes du jour local avec fuseau horai
 
 ## Tarification et restauration
 
-- L’application Android comprend 10 actions gratuites d’export manuel.
+- L’application Android comprend 5 actions gratuites d’export manuel.
 - Les exports illimités et l’automatisation planifiée se débloquent par un achat à vie unique avec Google Play Billing.
 - Il n’y a ni abonnement ni frais récurrents.
 - Google Play affiche le prix local en vigueur avant l’achat.
@@ -139,12 +139,14 @@ Health.md for Android traite les données en priorité sur l’appareil :
 
 - Les enregistrements Health Connect sont lus sur votre appareil Android.
 - Les exports sont écrits directement dans les dossiers de votre choix.
-- Health.md n’exploite pas de service cloud pour les données de santé.
+- Par défaut, les exports vers un dossier et les requêtes directes sur l’appareil ne créent pas de copie sur les serveurs Health.md.
 - Les paramètres et l’historique des exports restent sur l’appareil.
 - La facturation est gérée par Google Play.
 - Les dossiers associés à un fournisseur se synchronisent selon les conditions propres à ce fournisseur.
 
 Pour la configuration locale la plus stricte, effectuez des exports manuels vers un dossier local de l’appareil et laissez désactivés les exports planifiés et la synchronisation avec un fournisseur.
+
+Le pilote Health.md Cloud, distinct et facultatif, est réservé à un seul propriétaire et conserve uniquement les exports API envoyés volontairement. Il n’y a pas d’inscription publique ni de synchronisation automatique des appareils ; ce flux de dossiers n’envoie rien au pilote. La [politique de confidentialité](/privacy-policy.html) décrit la conservation, la suppression, le quota et les risques de perte sans sauvegarde.
 
 ## Documentation associée
 
@@ -156,4 +158,4 @@ Pour la configuration locale la plus stricte, effectuez des exports manuels vers
   <a href="/fr/docs/visualizations-roadmap/"><span>Obsidian</span>Comment les fichiers JSON et Markdown exportés alimentent les visualisations Health.md.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Dernière mise à jour : 2026-08-31</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Dernière mise à jour : 2026-10-04</p>

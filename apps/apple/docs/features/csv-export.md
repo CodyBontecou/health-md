@@ -11,7 +11,7 @@
 
 CSV export writes one spreadsheet-friendly `.csv` file per date. Schema v8 uses a six-name header, adds canonical JSON rows when **Lossless Health Records** is on, and retains typed WHOOP scalars/records under provider-prefixed categories when present. For compatibility, many aggregate rows serialize five fields by omitting the trailing empty `Timestamp`; metadata, canonical, diagnostic, and timestamped rows commonly serialize all six. Consumers must accept both row widths.
 
-CSV is lossless because each source object is carried as canonical JSON in the `Value` cell, not flattened into a fragile set of columns. Use it in Numbers, Excel, Google Sheets, DuckDB, or scripts that support RFC 4180 CSV. Use JSON when nested object traversal is more convenient.
+With Lossless Health Records enabled, CSV preserves each captured canonical source object as JSON in the `Value` cell rather than flattening it into a fragile set of columns. Capture completeness still depends on selection, authorization and supported APIs. Use it in Numbers, Excel, Google Sheets, DuckDB, or scripts that support RFC 4180 CSV. Use JSON when nested object traversal is more convenient.
 
 ## Setup
 
@@ -27,7 +27,7 @@ The complete generated CSV files and exhaustive row contract are in [Export form
 ```csv
 Date,Category,Metric,Value,Unit,Timestamp
 2026-07-15,Metadata,schema,healthmd.health_data,,
-2026-07-15,Metadata,schema_version,7,,
+2026-07-15,Metadata,schema_version,8,,
 2026-07-15,Raw HealthKit,Raw Capture Status,complete,status,
 2026-07-15,Raw HealthKit,Archive Manifest,"{""capture_status"":""complete"",...}",json,2026-07-15T07:00:00.000000000Z
 2026-07-15,Raw HealthKit,Raw HealthKit Record,"{""original_uuid"":""..."",...}",json,2026-07-15T15:04:12.125000000Z

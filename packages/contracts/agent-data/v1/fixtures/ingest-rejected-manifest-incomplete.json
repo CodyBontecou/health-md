@@ -1,0 +1,6 @@
+{
+  "schema": "healthmd.agent_ingest_response",
+  "schema_version": 1,
+  "outcome": "rejected",
+  "rejection": { "code": "manifest_incomplete" }
+}

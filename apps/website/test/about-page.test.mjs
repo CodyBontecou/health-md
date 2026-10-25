@@ -51,7 +51,7 @@ test('about page implements the service, differentiation, audience, team, and op
   for (const namedAlternative of ['Guava', 'FitnessSyncer', 'Apple', 'Health Auto Export', 'QS Access', 'Google Health Connect']) {
     assert.match(differences, new RegExp(namedAlternative.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
-  assert.match(differences, /10 free export actions/);
+  assert.match(differences, /5 free export actions/);
   assert.match(differences, /AGPL-3\.0-only/);
 
   assert.match(audience, /<h2>Who uses Health\.md<\/h2>/);

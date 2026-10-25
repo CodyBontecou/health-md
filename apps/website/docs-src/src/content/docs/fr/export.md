@@ -63,7 +63,7 @@ Un profil enregistré fige ses réglages et sa destination pour l’exécution. 
 
 ## Barre d’onglets
 <p>Les quatre onglets au bas de l’écran — Export, Planification, Synchronisation, Réglages — couvrent toute l’app. Tout le reste se trouve à un ou deux niveaux dans Réglages.</p>
-<div class="callout"><strong>Comportement du déverrouillage.</strong><p style="margin-top:6px;">Sur les plateformes Apple, l’allocation gratuite couvre 10 actions d’exportation manuelles ou planifiées. Full Access supprime cette limite et déverrouille les flux vers Mac ainsi que Raccourcis. Android offre plutôt 10 actions manuelles gratuites et exige l’achat à vie pour la planification. <a href="/fr/docs/paywall/">Consultez la page Paywall</a> pour l’achat Apple.</p></div>
+<div class="callout"><strong>Comportement du déverrouillage.</strong><p style="margin-top:6px;">Sur les plateformes Apple, l’allocation gratuite couvre 5 actions d’exportation manuelles ou planifiées. Full Access supprime cette limite et déverrouille les flux vers Mac ainsi que Raccourcis. Android offre plutôt 5 actions manuelles gratuites et exige l’achat à vie pour la planification. <a href="/fr/docs/paywall/">Consultez la page Paywall</a> pour l’achat Apple.</p></div>
 
 ## Pages associées
 <div class="related">

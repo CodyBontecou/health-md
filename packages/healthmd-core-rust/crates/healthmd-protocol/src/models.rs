@@ -137,6 +137,12 @@ pub struct ExportAccepted {
         skip_serializing_if = "Option::is_none"
     )]
     pub resolved_canonical_selection: Option<CanonicalSelection>,
+    #[serde(
+        rename = "historyObservation",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub history_observation: Option<crate::history::ExportHistoryObservation>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

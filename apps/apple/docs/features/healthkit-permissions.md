@@ -27,12 +27,11 @@ Health.md uses public HealthKit/WorkoutKit APIs only. Normal local exports do no
 
 For many read types, HealthKit intentionally does not tell an app whether access was denied. A denied read can look like a successful query with zero records. Health.md reports the public result and cannot bypass or reliably distinguish that privacy behavior.
 
-On OS 27 and later, builds made with a supported OS 27 HealthKit SDK also call HealthKit's [`earliestAuthorizedSampleDate(for:)`](https://developer.apple.com/documentation/healthkit/hkhealthstore/earliestauthorizedsampledate(for:)) API after authorization and before resolving an all-available request. An older-SDK binary cannot perform this check merely because it runs on a newer OS. The machine-readable history state is one of:
+On OS 27 and later, the supported HealthKit API can report an earliest authorized sample end date for selected types. A reported date describes a boundary; an omitted entry does not prove unrestricted access and can also occur for denied access or limited access without a known date.
 
-- `limited_history`: HealthKit returned at least one per-type earliest readable date. Data before each boundary is unknown, not absent. Health.md warns in the export UI and refuses an unqualified **All Time** / `all_available` completeness claim.
-- `full_history`: HealthKit returned no limited date boundary for the assessed types. By Apple's privacy design, this still does not prove each read permission was granted; a denied type can also be omitted.
-- `unknown`: the boundary check failed or could not cover the requested scope. Health.md rejects `all_available`; an explicit date range remains available.
-- `api_unavailable`: the runtime predates OS 27, the app was built without the supported HealthKit SDK API, or the query is local to the Mac companion. Health.md rejects `all_available` because it cannot verify full-history authorization, but continues explicit-range bounded exports with that limitation reported.
+The current scoped assessment keeps `limited`, `not_assessed_or_denied`, `api_unavailable`, and `not_completed` distinct. It binds the selected metrics, dates, timezone, profile and request lifetime. Interactive execution rechecks that scope and requires an explicit Continue or Cancel if the assessment does not complete. Query and durable-export paths return their own scoped evidence when negotiated. **All Time** / `all_available` acquires currently readable data; it never certifies that unreadable earlier records do not exist.
+
+The legacy `healthmd.history_authorization` v1 representation remains decodable. Historical `full_history` tags are compatibility data, not authorization proof; newly assessed omitted boundaries report `unknown`. A scope-free status response reports unverified history. Legacy all-data sync without bound history provenance requires an explicit date range or a scoped export path.
 
 The boundary is evaluated against a sample's end date, so a readable sample can begin before its reported boundary. Health.md never interprets the pre-boundary period as zero or missing-by-proof.
 
@@ -66,7 +65,7 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 
 ## Tips
 
-- When a run reports missing data, the export result sheet explains exactly which requested health types were not authorized (Export Permission Guidance) and names them, so you can fix the gap in Apple Health settings instead of guessing.
+- When an export reports authorization-not-determined errors, Export Permission Guidance identifies the affected types where possible and offers Request Access. It cannot identify privacy-hidden read denials from successful empty queries.
 
 - Grant only categories you want Health.md to read.
 - Opt into medications and vision prescriptions deliberately.
@@ -80,9 +79,9 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 |---|---|---|
 | Ordinary metric missing | Permission off, metric off, no data, or read hidden | Check Health app, selection, and manifest. |
 | Empty query despite known data | HealthKit may be hiding denied read access | Revisit Apple Health permissions; Health.md cannot distinguish denial. |
-| All Time/all-available request rejected as limited | OS 27 reports a user-selected earliest readable date for at least one selected type | Grant full history in Apple Health or choose an explicit date range at or after the displayed boundary. |
-| All Time/all-available request rejected as unverified | The check failed, did not cover every selected metric, or the API is unavailable | Choose an explicit date range. On supported devices, use OS 27+ and rerun authorization so Health.md can reassess the full selected scope. |
-| History state is `api_unavailable` | The runtime or app build cannot call the history-boundary API, or the query is local to Mac | Treat full-history completeness as unverified and use explicit ranges. OS 27 alone is insufficient; the iPhone app must also be built with a supported SDK. |
+| History disclosure reports a limited boundary | OS 27 reported an earliest readable sample end date | Earlier data remains unknown; review permissions or select an explicit date range. |
+| History assessment did not complete | The provider failed, timed out or could not cover the selected scope | Review the current selection, then explicitly Continue without verification or Cancel. No sample is read merely because a logical waiter expired. |
+| History state is `api_unavailable` | The runtime or app build cannot call the history-boundary API, or the query is local to Mac | Treat full-history completeness as unverified. Runtime and build support are separate; no omitted boundary proves full read access. |
 | Medication/Vision locked | Unsupported OS or selector incomplete | Use supported OS and complete separate selection. |
 | Clinical record metric unavailable | Clinical Health Records are omitted from this App Store build | Use an ordinary Apple Health metric; clinical access may return in a future reviewed release. |
 | Archive partial | One requested branch failed/skipped/unsupported/cancelled | Inspect manifest and retry recoverable paths. |
@@ -92,7 +91,7 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 
 - **Suggested title:** Understand Apple Health Permissions and Empty Results
 - **Hook:** “A missing sample can mean no data, no selection, or a privacy-hidden denial.”
-- **Demo flow:** ordinary authorization, metric selection, medication/vision/document flows, and manifest outcomes.
+- **Demo flow:** ordinary authorization, metric selection, available medication/vision selectors, and manifest outcomes; explain that clinical/document authorization requires a separately qualified clinical build, not the default build.
 
 ## Implementation notes
 
@@ -100,4 +99,4 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 - `HealthKitManager` keeps standard, medication, vision, document, verifiable, and WorkoutKit paths separate; the document/clinical paths are source-gated off in current App Store builds.
 - Errors are isolated and safely described without logging clinical content/PHI.
 - macOS does not query HealthKit; iPhone prepares local/API/Connected Mac records.
-- The Xcode project's four configurations map the reviewed SDK 27 major family (`SDK_VERSION_MAJOR=270000`) to `HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION`. Both the production adapter and its support flag use that compile-time gate plus OS 27 runtime availability. SDK 26 builds compile without referencing the absent symbol and report `api_unavailable`, never an empty full-history result. Qualify additional SDK families before adding their mapping; do not infer SDK support from the Swift compiler version or override the gate to make an unsupported build pass.
+- The current scoped adapter requires actual SDK 27 compilation and supported runtime qualification. The older compatibility adapter's SDK-family flag does not prove that every app source compiles against SDK 26. Local SDK 26.5 cannot qualify the current scoped API; do not infer support from the compiler version or override gates to make an unsupported build pass.

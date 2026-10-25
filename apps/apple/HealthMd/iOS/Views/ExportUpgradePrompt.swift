@@ -1,93 +1,98 @@
 import SwiftUI
+import StoreKit
 
-/// Soft, non-blocking upgrade prompt surfaced after the 3rd and 7th free
-/// exports ("value moments"). Unlike the hard quota block, dismissing is
-/// free-form: the user keeps their remaining free exports either way.
-///
-/// The milestone is carried by `PurchaseManager.pendingUpgradePrompt` and the
-/// analytics quota state (`freeExportsUsed`) on every value-moment event.
+/// Guidance after the first completed free export, followed by a dismissible
+/// lifetime offer after the third. Opening scheduling never enables a schedule.
 struct ExportUpgradePrompt: View {
     let milestone: Int
+    let onSchedule: () -> Void
     let onUpgrade: () -> Void
     let onDismiss: () -> Void
 
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var didTrackShown = false
 
-    private var remaining: Int {
-        max(0, PurchaseManager.freeExportLimit - milestone)
-    }
+    private var isFirstExport: Bool { milestone == 1 }
+    private var remaining: Int { purchaseManager.freeExportsRemaining }
 
     var body: some View {
-        VStack(spacing: Spacing.s6) {
-            Image(systemName: "sparkles")
-                .font(Typography.scaled(size: 28, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
-                .accessibilityHidden(true)
+        ScrollView {
+            VStack(spacing: Spacing.s6) {
+                Image(systemName: isFirstExport ? "checkmark.circle" : "calendar.badge.clock")
+                    .font(Typography.scaled(size: 28, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityHidden(true)
 
-            VStack(spacing: Spacing.s2) {
-                Text(title)
-                    .font(Typography.heading20())
-                    .foregroundStyle(Color.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier(AccessibilityID.UpgradePrompt.title)
+                VStack(spacing: Spacing.s2) {
+                    Text(isFirstExport ? "Your First Export Is Complete" : "Keep Your Health Notes Going")
+                        .font(Typography.heading20())
+                        .foregroundStyle(Color.textPrimary)
+                        .accessibilityIdentifier(AccessibilityID.UpgradePrompt.title)
 
-                Text(subtitle)
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            VStack(spacing: Spacing.s2) {
-                Button {
-                    onUpgrade()
-                } label: {
-                    Text("Unlock Unlimited Exports")
-                        .font(Typography.headline())
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier(AccessibilityID.UpgradePrompt.upgrade)
-
-                Button {
-                    onDismiss()
-                } label: {
-                    Text(notNowTitle)
+                    Text(isFirstExport
+                         ? "Make your next export easier. Choose a daily schedule to keep saving new health notes without repeating these steps."
+                         : "You've completed three exports. Unlock once to keep exporting manually or on a schedule, without limits.")
                         .font(Typography.body())
+                        .foregroundStyle(Color.textSecondary)
+
+                    if isFirstExport {
+                        Text("Scheduled runs use the same free allowance. You review the settings before turning them on.")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    } else {
+                        if let price = purchaseManager.product?.displayPrice {
+                            Text("Lifetime access: \(price)")
+                                .font(Typography.headline())
+                                .foregroundStyle(Color.textPrimary)
+                        }
+                        Text("One purchase. No subscription. Your exported files stay yours.")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.textSecondary)
-                .accessibilityIdentifier(AccessibilityID.UpgradePrompt.notNow)
+                .multilineTextAlignment(.center)
+
+                VStack(spacing: Spacing.s2) {
+                    Button(action: isFirstExport ? onSchedule : onUpgrade) {
+                        Text(isFirstExport ? "Set Up Daily Exports" : "See Lifetime Access")
+                            .font(Typography.headline())
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier(isFirstExport
+                        ? AccessibilityID.UpgradePrompt.schedule
+                        : AccessibilityID.UpgradePrompt.upgrade)
+
+                    Button(action: onDismiss) {
+                        Text(isFirstExport ? "Keep Exporting Manually" : "Continue Free")
+                            .font(Typography.body())
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.textSecondary)
+                    .accessibilityIdentifier(AccessibilityID.UpgradePrompt.notNow)
+
+                    Text("\(remaining) free exports remaining")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textSecondary)
+                        .accessibilityIdentifier("upgradePrompt.remaining")
+                }
             }
+            .padding(Spacing.s6)
+            .frame(maxWidth: .infinity)
         }
-        .padding(Spacing.s6)
-        .frame(maxWidth: .infinity)
         .background(Color.bgPrimary)
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .onAppear {
             guard !didTrackShown else { return }
             didTrackShown = true
             PricingAnalyticsClient.shared.trackUpgradePromptShown(
-                quotaState: PurchaseManager.shared.analyticsQuotaState
+                quotaState: purchaseManager.analyticsQuotaState
             )
         }
-    }
-
-    private var title: String {
-        milestone < PurchaseManager.freeExportLimit / 2
-            ? "Your Health Archive Is Working"
-            : "Keep the Streak Going"
-    }
-
-    private var subtitle: String {
-        let limit = PurchaseManager.freeExportLimit
-        if remaining > limit / 2 {
-            return "You've saved \(milestone) of \(limit) free exports. Unlock once to keep your health journal going forever — including scheduled runs."
+        .task {
+            if !isFirstExport { await purchaseManager.loadProductsIfNeeded() }
         }
-        return "\(remaining) free export\(remaining == 1 ? "" : "s") left. Unlock unlimited private exports before your archive pauses."
-    }
-
-    private var notNowTitle: String {
-        remaining > 0 ? "Not Now" : "Maybe Later"
     }
 }

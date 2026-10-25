@@ -5,7 +5,7 @@ description: Configure o Health.md para Android, exporte dados do Health Connect
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Do Health Connect para arquivos privados</p>
-  <p>O Health.md para Android lê o Health Connect no dispositivo e grava Markdown, Obsidian Bases, JSON ou CSV nas pastas que você escolher. Sem conta do Health.md, sem nuvem de dados de saúde e sem assinatura.</p>
+  <p>O Health.md para Android lê o Health Connect no dispositivo e grava Markdown, Obsidian Bases, JSON ou CSV nas pastas que você escolher. Este fluxo de exportação para pastas não exige conta do Health.md, nuvem de dados de saúde nem assinatura.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Baixar no Google Play</a>
     <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">Baixar no F-Droid</a>
@@ -16,7 +16,7 @@ description: Configure o Health.md para Android, exporte dados do Health Connect
 <div class="reference-stats">
 <div><strong>106</strong><span>métricas selecionáveis do Health Connect</span></div>
 <div><strong>4</strong><span>formatos de exportação</span></div>
-<div><strong>10</strong><span>ações gratuitas de exportação manual</span></div>
+<div><strong>5</strong><span>ações gratuitas de exportação manual</span></div>
 <div><strong>0</strong><span>contas obrigatórias na nuvem do Health.md</span></div>
 </div>
 
@@ -47,7 +47,7 @@ O Health.md para Android transforma o Health Connect em um diário de saúde que
 6. Visualize a saída.
 7. Toque em exportar e verifique os arquivos gerados na sua pasta ou no seu cofre.
 
-O plano gratuito inclui 10 ações de exportação manual para você testar permissões, acesso à pasta, formatos e seu fluxo no Obsidian antes de desbloquear exportações ilimitadas.
+O plano gratuito inclui 5 ações de exportação manual para você testar permissões, acesso à pasta, formatos e seu fluxo no Obsidian antes de desbloquear exportações ilimitadas.
 
 ## Destinos no Android
 
@@ -125,7 +125,7 @@ Os totais usam os limites exatos do dia local com fuso. O Health.md recorta e di
 
 ## Preços e restauração
 
-- O app para Android inclui 10 ações gratuitas de exportação manual.
+- O app para Android inclui 5 ações gratuitas de exportação manual.
 - Exportações ilimitadas e automação agendada são desbloqueadas por uma compra única e vitalícia pelo Google Play Billing.
 - Não há assinatura nem cobrança recorrente.
 - O Google Play mostra o preço local vigente antes da compra.
@@ -139,12 +139,14 @@ O Health.md para Android prioriza o armazenamento local:
 
 - Os registros do Health Connect são lidos no seu dispositivo Android.
 - As exportações são gravadas diretamente nas pastas que você escolher.
-- O Health.md não opera um serviço de nuvem para dados de saúde.
+- Por padrão, exportações para pastas e consultas diretas ao dispositivo não criam uma cópia nos servidores do Health.md.
 - As configurações e o histórico de exportações permanecem no dispositivo.
 - A cobrança é processada pelo Google Play.
 - Pastas vinculadas a provedores são sincronizadas de acordo com os termos de cada provedor.
 
 Para manter tudo o mais local possível, faça exportações manuais para uma pasta local do dispositivo e mantenha desativadas as exportações agendadas e a sincronização por provedores.
+
+O piloto separado e opcional do Health.md Cloud é restrito a um único proprietário e guarda apenas exportações de API enviadas intencionalmente. Não há cadastro público nem sincronização automática de dispositivos; este fluxo de pastas não envia dados ao piloto. A [política de privacidade](/privacy-policy.html) descreve retenção, exclusão, cota e riscos de perda sem backup.
 
 ## Documentação relacionada
 
@@ -156,4 +158,4 @@ Para manter tudo o mais local possível, faça exportações manuais para uma pa
   <a href="/pt-br/docs/visualizations-roadmap/"><span>Obsidian</span>Como JSON e Markdown exportados alimentam as visualizações do Health.md.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Última atualização: 31/08/2026</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Última atualização: 04/10/2026</p>

@@ -42,4 +42,4 @@ CONFIDENTIALITÉ ET CONTRÔLE
 • Les autorisations peuvent être vérifiées ou révoquées à tout moment dans Health Connect
 • Les analyses internes limitées sur l’attribution des installations, l’intégration ou les tarifs n’incluent jamais de dossiers de santé, de détails sur les autorisations Health Connect, de contenu exporté, de texte de compte ni de chemins de fichiers
 
-Health.md comprend 10 actions d’export manuel gratuites. Un achat unique débloque les exports illimités et leur planification ; il n’y a aucun abonnement.
+Health.md comprend 5 actions d’export manuel gratuites. Un achat unique débloque les exports illimités et leur planification ; il n’y a aucun abonnement.

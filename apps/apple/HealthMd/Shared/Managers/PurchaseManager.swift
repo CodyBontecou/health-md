@@ -25,7 +25,7 @@ final class PurchaseManager: ObservableObject {
     static let familyProductID = HealthMdPurchaseOption.family.productID
     static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
-    static let freeExportLimit = 10
+    static let freeExportLimit = 5
     static let grandfatherCutoffDate = Date.distantPast
 
     @Published private(set) var isUnlocked = true
@@ -51,7 +51,7 @@ final class PurchaseManager: ObservableObject {
     func setUnlockedProductID(_ productID: String?) {}
     func setLegacyUser(_ value: Bool) { isLegacyUser = value }
     func setFreeExportsUsed(_ count: Int) {}
-    func recordExportUse() {}
+    func recordExportUse(offerGuidance: Bool = true) {}
     func recordExportUse(jobID: UUID) throws {}
     func loadProductsIfNeeded(force: Bool = false) async {}
     func purchase(
@@ -155,11 +155,11 @@ final class PurchaseManager: ObservableObject {
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
 
     /// Number of free export actions before a purchase is required.
-    static let freeExportLimit = 10
+    static let freeExportLimit = 5
 
     /// Free-export counts after which a soft, non-blocking upgrade prompt is
     /// surfaced ("value moments"). Distinct from the hard quota block.
-    static let upgradePromptMilestones: Set<Int> = [3, 7]
+    static let upgradePromptMilestones: Set<Int> = [1, 3]
 
     /// Single grandfather cutoff: anyone with `originalPurchaseDate` strictly
     /// before this is granted free access. Covers all earlier cohorts in one
@@ -196,6 +196,7 @@ final class PurchaseManager: ObservableObject {
             if isUnlocked && !oldValue {
                 keychain.writeInt(key: freeExportsUsedKey, value: 0)
                 keychain.writeString(key: durableExportUseIDsKey, value: "")
+                pendingUpgradePrompt = nil
             }
         }
     }
@@ -215,8 +216,8 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Soft Value Moments
 
-    /// Non-nil when a milestone free export (3rd or 7th) just completed and a
-    /// soft upgrade prompt should be presented. Observed by the iOS and iPad
+    /// Non-nil after the first (schedule guidance) or third (lifetime offer)
+    /// completed free export. Observed by the iOS and iPad
     /// UIs; App Intent / background exports simply leave it set until the
     /// next foreground visit.
     @Published private(set) var pendingUpgradePrompt: Int? = nil
@@ -232,12 +233,14 @@ final class PurchaseManager: ObservableObject {
     // Keep the original Keychain key name so existing direct-export usage and
     // newly recorded scheduled jobs share one durable, migration-free ledger.
     private let durableExportUseIDsKey          = "directExportUseIDs"
+    private var uiTestExportUses = 0
     private let serverVerifiedLegacyKey        = "serverVerifiedLegacy"
     private let serverVerificationAttemptedKey = "serverVerificationAttempted"
 
     /// Total number of free export actions the user has consumed.
     var freeExportsUsed: Int {
-        keychain.readInt(key: freeExportsUsedKey) + durableExportUseIDs.count
+        if TestMode.isUITesting { return TestMode.freeExportsUsed + uiTestExportUses }
+        return keychain.readInt(key: freeExportsUsedKey) + durableExportUseIDs.count
     }
 
     private var durableExportUseIDs: Set<String> {
@@ -250,9 +253,6 @@ final class PurchaseManager: ObservableObject {
 
     /// How many free exports remain before a purchase is required.
     var freeExportsRemaining: Int {
-        if TestMode.isUITesting {
-            return max(0, Self.freeExportLimit - TestMode.freeExportsUsed)
-        }
         return max(0, Self.freeExportLimit - freeExportsUsed)
     }
 
@@ -264,7 +264,7 @@ final class PurchaseManager: ObservableObject {
     /// True when the user may perform an export (unlocked or within free quota).
     var canExport: Bool {
         if TestMode.isUITesting {
-            return TestMode.purchaseUnlocked || TestMode.freeExportsUsed < Self.freeExportLimit
+            return TestMode.purchaseUnlocked || freeExportsUsed < Self.freeExportLimit
         }
         return isUnlocked || canExportFree
     }
@@ -393,7 +393,7 @@ final class PurchaseManager: ObservableObject {
     }
 
     var analyticsQuotaState: PricingAnalyticsQuotaState {
-        let used = TestMode.isUITesting ? TestMode.freeExportsUsed : freeExportsUsed
+        let used = freeExportsUsed
         return PricingAnalyticsQuotaState(
             freeExportsUsed: used,
             freeExportsRemaining: freeExportsRemaining
@@ -1030,15 +1030,20 @@ final class PurchaseManager: ObservableObject {
     /// Call once per successful export action or scheduled occurrence,
     /// regardless of how many dates or files were written.
     /// No-op when the user is already unlocked.
-    func recordExportUse() {
+    func recordExportUse(offerGuidance: Bool = true) {
         guard !isUnlocked, freeExportsUsed < Self.freeExportLimit else { return }
-        keychain.writeInt(
-            key: freeExportsUsedKey,
-            value: keychain.readInt(key: freeExportsUsedKey) + 1
-        )
+        if TestMode.isUITesting {
+            guard !TestMode.purchaseUnlocked else { return }
+            uiTestExportUses += 1
+        } else {
+            keychain.writeInt(
+                key: freeExportsUsedKey,
+                value: keychain.readInt(key: freeExportsUsedKey) + 1
+            )
+        }
         objectWillChange.send()
         analytics.trackFreeExportUsed(quotaState: analyticsQuotaState)
-        evaluateUpgradePrompt()
+        if offerGuidance { evaluateUpgradePrompt() }
     }
 
     /// Records one durable export operation exactly once by job identity.
@@ -1071,23 +1076,21 @@ final class PurchaseManager: ObservableObject {
 
     private func evaluateUpgradePrompt() {
         guard !isUnlocked, pendingUpgradePrompt == nil else { return }
-        let used = TestMode.isUITesting ? TestMode.freeExportsUsed : freeExportsUsed
+        let used = freeExportsUsed
         guard Self.upgradePromptMilestones.contains(used), !upgradePromptAlreadyShown(used) else { return }
         pendingUpgradePrompt = used
     }
 
     private func upgradePromptAlreadyShown(_ milestone: Int) -> Bool {
-        if TestMode.isUITesting { return false }
-        var shown = Set(UserDefaults.standard.stringArray(forKey: upgradePromptShownDefaultsKey) ?? [])
-        shown.formUnion(TestMode.suppressedUpgradePromptMilestones)
-        return shown.contains(String(milestone))
+        if TestMode.isUITesting {
+            return TestMode.suppressedUpgradePromptMilestones.contains(String(milestone))
+        }
+        return defaults.bool(forKey: "\(upgradePromptShownDefaultsKey).\(milestone)")
     }
 
     private func markUpgradePromptShown(_ milestone: Int) {
         guard !TestMode.isUITesting else { return }
-        var shown = Set(UserDefaults.standard.stringArray(forKey: upgradePromptShownDefaultsKey) ?? [])
-        shown.insert(String(milestone))
-        UserDefaults.standard.set(Array(shown).sorted(), forKey: upgradePromptShownDefaultsKey)
+        defaults.set(true, forKey: "\(upgradePromptShownDefaultsKey).\(milestone)")
     }
 
     // MARK: - Transaction Listener

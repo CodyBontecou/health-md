@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import UIKit
 import os.log
 
@@ -32,13 +33,31 @@ struct iPadContentView: View {
     @State private var errorMessage = ""
     @State private var errorReason: ExportFailureReason?
     @State private var exportTask: Task<Void, Never>?
+    let historyProfileStore: ExportProfileStore?
+    @State private var historyProfileID: UUID?
+    @State private var executionHistoryAssessment: HealthHistoryAssessment?
+    @State private var lastHistorySelection: HealthHistoryExecutionSelection?
+    @State private var isAssessingHistory = false
+    @State private var hasBegunHistoryAssessment = false
+    @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
+    @State private var historyExecutionTask: Task<Void, Never>?
+    @State private var pendingHistorySelection: HealthHistoryExecutionSelection?
+    @State private var pendingHistoryRequestID: UUID?
+    @State private var activeHistoryRequest: HealthHistoryExportRequest?
+    @State private var pendingScaleRequest: HealthHistoryExportRequest?
+    // Two tablet-root slots (preview/execution), each retaining at most one
+    // physical SDK owner. This is NOT a global UI/query HealthKit budget.
+    @State private var historyPreviewWorker = HealthHistoryAssessmentWorker()
+    @State private var historyExecutionWorker = HealthHistoryAssessmentWorker()
     @State private var showPaywall = false
     @State private var showUpgradePromptPaywall = false
     @State private var presentPaywallAfterUpgradePrompt = false
+    @State private var presentScheduleAfterExportGuidance = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
-    init() {
+    init(historyProfileStore: ExportProfileStore? = nil) {
+        self.historyProfileStore = historyProfileStore
         let savedDateRange = Self.initialDateRangeSelection()
         _startDate = State(initialValue: savedDateRange.startDate)
         _endDate = State(initialValue: savedDateRange.endDate)
@@ -121,9 +140,18 @@ struct iPadContentView: View {
                             exportStatusMessage: $exportStatusMessage,
                             showFolderPicker: $showFolderPicker,
                             presentFirstExportPreview: $presentFirstExportPreview,
-                            canExport: canExport,
+                            canExport: canExport && !isAssessingHistory,
                             onCancelExport: cancelExport,
-                            onExportTapped: exportData
+                            onExportTapped: exportData,
+                            historyProfileID: historyProfileID,
+                            executionHistoryAssessment: currentExecutionHistoryScope == nil ? nil : executionHistoryAssessment,
+                            executionHistoryScope: currentExecutionHistoryScope,
+                            isAssessingHistory: hasBegunHistoryAssessment,
+                            isDiscoveringExportRange: isAssessingHistory && !hasBegunHistoryAssessment && pendingScaleRequest == nil,
+                            isPreparingExport: Binding(get: { activeHistoryRequest != nil }, set: { _ in }),
+                            historyPreviewWorker: historyPreviewWorker,
+                            onContinueWithoutHistoryVerification: historyContinuationAction,
+                            onCancelHistoryVerification: historyCancellationAction
                         )
                     case .schedule:
                         iPadScheduleView(
@@ -185,7 +213,10 @@ struct iPadContentView: View {
                     }
                 ),
                 onDismiss: {
-                    if presentPaywallAfterUpgradePrompt {
+                    if presentScheduleAfterExportGuidance {
+                        presentScheduleAfterExportGuidance = false
+                        selectedTab = .schedule
+                    } else if presentPaywallAfterUpgradePrompt {
                         presentPaywallAfterUpgradePrompt = false
                         showUpgradePromptPaywall = true
                     }
@@ -193,6 +224,12 @@ struct iPadContentView: View {
             ) {
                 ExportUpgradePrompt(
                     milestone: purchaseManager.pendingUpgradePrompt ?? 0,
+                    onSchedule: {
+                        let quotaState = purchaseManager.analyticsQuotaState
+                        purchaseManager.consumeUpgradePrompt()
+                        PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
+                        presentScheduleAfterExportGuidance = true
+                    },
                     onUpgrade: {
                         let quotaState = purchaseManager.analyticsQuotaState
                         purchaseManager.consumeUpgradePrompt()
@@ -211,6 +248,13 @@ struct iPadContentView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
+            .geistDialog(
+                isPresented: scaleConfirmationBinding,
+                title: Text("Confirm Large Export"),
+                message: Text(pendingScaleRequest?.scaleConfirmationMessage ?? ""),
+                messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
+                actions: scaleConfirmationActions
+            )
             .geistDialog(
                 isPresented: $showDestinationChangedAlert,
                 title: Text("Export Folder Changed"),
@@ -254,6 +298,7 @@ struct iPadContentView: View {
             .healthMdReleaseNotesSheet()
             .keepsScreenAwake(while: isExporting)
             .task {
+                refreshHistoryProfileIdentity()
                 if TestMode.isUITesting {
                     if TestMode.vaultSelected {
                         vaultManager.setTestVault()
@@ -271,9 +316,25 @@ struct iPadContentView: View {
                 }
                 await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
             }
+            .onChange(of: vaultManager.vaultURL) { _, _ in invalidateExecutionHistory() }
+            .onChange(of: selectedTab) { _, _ in invalidateExecutionHistory() }
+            .onChange(of: interactiveHistorySelection) { _, current in invalidateIfHistorySelectionChanged(current) }
+            .onChange(of: healthKitManager.isAuthorized) { _, _ in invalidateExecutionHistory() }
+            .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { _ in
+                refreshHistoryProfileIdentity()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+                // Other canonical-store instances do not publish through our
+                // store. Filter by fresh valid identity, not unrelated writes.
+                refreshHistoryProfileIdentity()
+            }
+            .onDisappear { invalidateExecutionHistory(); historyPreviewWorker.cancelLogicalWaiter() }
             .onChange(of: scenePhase) { _, newPhase in
+                invalidateExecutionHistory()
+                historyPreviewWorker.cancelLogicalWaiter()
                 guard newPhase == .active else { return }
                 vaultManager.refreshVaultAccess()
+                refreshHistoryProfileIdentity()
                 Task { await refreshDateRangeSelectionForOpening() }
             }
             .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
@@ -460,7 +521,217 @@ struct iPadContentView: View {
     // MARK: - Export
 
     private func cancelExport() {
+        invalidateExecutionHistory()
         exportTask?.cancel()
+    }
+
+    private var interactiveHistorySelection: HealthHistoryExecutionSelection {
+        // Body/onChange evaluation uses cached presentation state only.
+        makeHistorySelection(profileID: historyProfileID)
+    }
+
+    private func freshInteractiveHistorySelection() -> HealthHistoryExecutionSelection {
+        makeHistorySelection(profileID: HealthHistoryCanonicalProfileIdentity.read())
+    }
+
+    private func refreshHistoryProfileIdentity() {
+        let current = HealthHistoryCanonicalProfileIdentity.read()
+        guard current != historyProfileID else { return }
+        historyProfileID = current
+        invalidateIfHistorySelectionChanged(makeHistorySelection(profileID: current))
+    }
+
+    private func invalidateIfHistorySelectionChanged(_ current: HealthHistoryExecutionSelection) {
+        if let pending = pendingHistorySelection, pending != current { invalidateExecutionHistory() }
+        else if let captured = lastHistorySelection, captured != current { invalidateExecutionHistory() }
+    }
+
+    private func makeHistorySelection(profileID: UUID?) -> HealthHistoryExecutionSelection {
+        let scope = HealthHistoryScope(metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            startDate: startDate, endDate: endDate,
+            timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
+            allAvailable: dateRangePreset == .allTime,
+            profileID: profileID, rangeSemantics: .ownerDates)
+        return HealthHistoryExecutionSelection(scope: scope,
+            settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
+            target: .localIPhoneFolder, preset: dateRangePreset, localDestinationURL: vaultManager.vaultURL)
+    }
+
+    private var scaleConfirmationBinding: Binding<Bool> {
+        let presentedID = pendingScaleRequest?.id
+        return Binding(get: { presentedID != nil && pendingScaleRequest?.id == presentedID },
+            set: { presented in
+                guard !presented, let presentedID, let request = pendingScaleRequest,
+                      request.id == presentedID else { return }
+                cancelHistoryRequest(request)
+            })
+    }
+
+    private var scaleConfirmationActions: [GeistDialogAction] {
+        guard let request = pendingScaleRequest else { return [] }
+        return [
+            .cancel(accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton) {
+                cancelHistoryRequest(request)
+            },
+            .action("Export Anyway", accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton) {
+                guard pendingScaleRequest?.id == request.id, isCurrentHistoryRequest(request) else { return }
+                pendingScaleRequest = nil
+                assessPreparedHistoryExport(request)
+            }
+        ]
+    }
+
+    private var historyContinuationAction: () -> Void {
+        let presentedRequest = activeHistoryRequest
+        return {
+            guard let presentedRequest else { return }
+            continueWithoutHistoryVerification(presentedRequest)
+        }
+    }
+
+    private var historyCancellationAction: () -> Void {
+        let presentedRequest = activeHistoryRequest
+        return {
+            guard let presentedRequest else { return }
+            cancelHistoryRequest(presentedRequest)
+        }
+    }
+
+    private func cancelHistoryRequest(_ request: HealthHistoryExportRequest) {
+        guard activeHistoryRequest?.id == request.id, pendingHistoryRequestID == request.id else { return }
+        invalidateExecutionHistory()
+    }
+
+    private func isCurrentHistoryRequest(_ request: HealthHistoryExportRequest) -> Bool {
+        activeHistoryRequest?.id == request.id
+            && historyExecutionCoordinator.isCurrent(request, liveSelection: freshInteractiveHistorySelection())
+            && scenePhase == .active && selectedTab == .export
+    }
+
+    private var currentExecutionHistoryScope: HealthHistoryScope? {
+        guard let request = activeHistoryRequest,
+              historyExecutionCoordinator.isCurrent(request, liveSelection: interactiveHistorySelection) else { return nil }
+        return request.selection.scope
+    }
+
+    private func prepareInteractiveHistoryExport(selection: HealthHistoryExecutionSelection) {
+        let request = historyExecutionCoordinator.beginExportRequest(selection: selection)
+        activeHistoryRequest = request
+        pendingHistorySelection = request.originatingSelection
+        pendingHistoryRequestID = request.id
+        executionHistoryAssessment = nil
+        isAssessingHistory = true
+        exportStatusMessage = request.selection.preset == .allTime
+            ? "Checking readable date range…" : "Checking history access…"
+        historyExecutionTask = Task { @MainActor in
+            var handedOff = false
+            defer {
+                if !handedOff && pendingHistoryRequestID == request.id { clearPendingHistoryCheck() }
+            }
+            do {
+                guard let resolved = try await historyExecutionCoordinator.resolveExportRequest(request,
+                    liveSelection: { freshInteractiveHistorySelection() }, operation: {
+                        try await NativeExportDateRangeResolver.resolve(request.dateRangeRequest,
+                            using: healthKitManager, currentRequest: {
+                                HealthHistoryExportRequest(id: request.id, selection: freshInteractiveHistorySelection()).dateRangeRequest
+                            })
+                    }), isCurrentHistoryRequest(request) else { return }
+                activeHistoryRequest = resolved
+                handedOff = true
+                switch resolved.scaleVerdict {
+                case .proceed:
+                    assessPreparedHistoryExport(resolved)
+                case .confirm:
+                    historyExecutionTask = nil
+                    pendingScaleRequest = resolved
+                    exportStatusMessage = "Confirm the export range to continue."
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard isCurrentHistoryRequest(request) else { return }
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
+    }
+
+    private func assessPreparedHistoryExport(_ request: HealthHistoryExportRequest) {
+        guard pendingHistoryRequestID == request.id, isCurrentHistoryRequest(request) else { return }
+        let selection = request.selection
+        hasBegunHistoryAssessment = true
+        exportStatusMessage = "Checking history access…"
+        historyExecutionTask = Task { @MainActor in
+            var awaitingUserDecision = false
+            defer {
+                if !awaitingUserDecision && pendingHistoryRequestID == request.id { clearPendingHistoryCheck() }
+            }
+            let result = await historyExecutionCoordinator.assessExecution(requestID: request.id,
+                worker: historyExecutionWorker,
+                notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: selection.scope),
+                scope: selection.scope, isCurrent: { isCurrentHistoryRequest(request) }, operation: {
+                    await healthKitManager.assessHistoryAccess(scope: selection.scope)
+                })
+            guard pendingHistoryRequestID == request.id, let assessment = result else { return }
+            if assessment.requiresExplicitContinuation {
+                awaitingUserDecision = true
+                historyExecutionTask = nil
+                exportStatusMessage = "History check did not complete. Continue without verification or cancel."
+                return
+            }
+            clearPendingHistoryCheck()
+            executionHistoryAssessment = assessment
+            beginInteractiveCapture(request)
+        }
+    }
+
+    private func clearPendingHistoryCheck() {
+        pendingHistorySelection = nil
+        pendingHistoryRequestID = nil
+        isAssessingHistory = false
+        hasBegunHistoryAssessment = false
+        historyExecutionTask = nil
+    }
+
+    private func invalidateExecutionHistory() {
+        activeHistoryRequest = nil
+        pendingScaleRequest = nil
+        historyExecutionCoordinator.invalidate()
+        historyExecutionWorker.cancelLogicalWaiter()
+        historyExecutionTask?.cancel()
+        executionHistoryAssessment = nil
+        lastHistorySelection = nil
+        if isAssessingHistory { exportStatusMessage = "History check cancelled. Review the selection and export again." }
+        clearPendingHistoryCheck()
+    }
+
+    private func continueWithoutHistoryVerification(_ request: HealthHistoryExportRequest) {
+        guard hasBegunHistoryAssessment, activeHistoryRequest?.id == request.id,
+              pendingHistoryRequestID == request.id, isCurrentHistoryRequest(request) else {
+            return
+        }
+        // Cancel only the logical assessment waiter. The action revision and
+        // physical provider owner survive this explicit continuation.
+        historyExecutionWorker.cancelLogicalWaiter()
+        historyExecutionTask?.cancel()
+        clearPendingHistoryCheck()
+        executionHistoryAssessment = healthKitManager.historyAssessmentNotCompleted(scope: request.selection.scope)
+        beginInteractiveCapture(request)
+    }
+
+    private func beginInteractiveCapture(_ request: HealthHistoryExportRequest) {
+        let selection = request.selection
+        guard isCurrentHistoryRequest(request), canExport,
+              scenePhase == .active, selectedTab == .export else { return }
+        guard purchaseManager.canExport else { presentExportPaywall(); return }
+        vaultManager.refreshVaultAccess()
+        guard vaultManager.vaultURL == selection.localDestinationURL,
+              vaultManager.vaultURL != nil, !vaultManager.requiresVaultReselection else {
+            configurationProtection.performConfigurationChange { showDestinationChangedAlert = true }
+            return
+        }
+        lastHistorySelection = request.originatingSelection
+        captureExportData(selection)
     }
 
     private func presentExportFailure(
@@ -468,11 +739,12 @@ struct iPadContentView: View {
         detail: FailedDateDetail? = nil
     ) {
         errorReason = reason
-        errorMessage = detail?.detailedMessage ?? reason.detailedDescription
+        errorMessage = reason.alertMessage(detail: detail)
         showError = true
     }
 
     private func exportData() {
+        guard !isAssessingHistory, !isExporting else { return }
         vaultManager.refreshVaultAccess()
         if vaultManager.requiresVaultReselection {
             configurationProtection.performConfigurationChange {
@@ -501,6 +773,12 @@ struct iPadContentView: View {
             return
         }
 
+        refreshHistoryProfileIdentity()
+        prepareInteractiveHistoryExport(selection: freshInteractiveHistorySelection())
+    }
+
+    private func captureExportData(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
         // Set synchronously before any export work starts so a crash, kill, or
         // force quit mid-export arms the interrupted marker for the next
         // launch's downgrade. Cleared in the defer below on every terminal
@@ -519,11 +797,8 @@ struct iPadContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
-            startDate = dateRange.startDate
-            endDate = dateRange.endDate
-            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
-            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
+            let frozenTimeZone = TimeZone(identifier: selection.scope.timeZoneIdentifier) ?? .current
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = frozenTimeZone
             let dates = ExportOrchestrator.dateRange(
@@ -537,6 +812,7 @@ struct iPadContentView: View {
                 healthKitManager: healthKitManager,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
+                captureCalendar: calendar,
                 onProgress: { current, total, dateStr in
                     exportStatusMessage = "Exporting \(dateStr)… (\(current)/\(total))"
                     exportProgress = Double(current) / Double(total)
@@ -555,7 +831,7 @@ struct iPadContentView: View {
 
             // Count this as one export action against the free quota.
             if result.successCount > 0 {
-                purchaseManager.recordExportUse()
+                purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
                 trackSuccessfulExport(
                     startDate: normalizedStartDate,
                     endDate: normalizedEndDate

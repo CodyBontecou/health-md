@@ -211,6 +211,12 @@ pub struct PeerCapabilities {
     pub query: Option<DirectQueryCapabilities>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wake: Option<WakeCapabilities>,
+    #[serde(
+        rename = "exportHistoryObservationVersions",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub export_history_observation_versions: Option<Vec<i32>>,
 }
 
 impl PeerCapabilities {
@@ -229,6 +235,7 @@ impl PeerCapabilities {
             transfer: TransferCapabilities::default(),
             query: None,
             wake: Some(WakeCapabilities { supported: true }),
+            export_history_observation_versions: None,
         }
     }
 
@@ -243,6 +250,34 @@ impl PeerCapabilities {
         ];
         capabilities.query = Some(DirectQueryCapabilities::current());
         capabilities
+    }
+
+    /// Advertise Apple observations only after pairing has established the source platform.
+    /// Unknown/new peers keep the source-neutral hello, including strict Android readers.
+    #[must_use]
+    pub fn portable_cli_for_source(
+        installation_id: SwiftUuid,
+        source_platform: Option<PeerPlatform>,
+    ) -> Self {
+        let mut capabilities = Self::portable_cli_all_versions(installation_id);
+        if source_platform == Some(PeerPlatform::Ios) {
+            capabilities.export_history_observation_versions = Some(vec![1]);
+        }
+        capabilities
+    }
+
+    /// Only the independently implemented v1 is eligible; future-only peers are unverified.
+    #[must_use]
+    pub fn negotiated_export_history_observation_version(&self, peer: &Self) -> Option<i32> {
+        (self
+            .export_history_observation_versions
+            .as_ref()
+            .is_some_and(|versions| versions.contains(&1))
+            && peer
+                .export_history_observation_versions
+                .as_ref()
+                .is_some_and(|versions| versions.contains(&1)))
+        .then_some(1)
     }
 
     #[must_use]
@@ -482,6 +517,34 @@ pub enum DirectMessage {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn history_negotiation_requires_bilateral_implemented_version() {
+        let versions = [
+            None,
+            Some(vec![]),
+            Some(vec![1]),
+            Some(vec![2]),
+            Some(vec![1, 2]),
+        ];
+        for local in &versions {
+            for remote in &versions {
+                let mut left = super::PeerCapabilities::portable_cli(crate::encoding::SwiftUuid(
+                    uuid::Uuid::nil(),
+                ));
+                let mut right = left.clone();
+                left.export_history_observation_versions = local.clone();
+                right.export_history_observation_versions = remote.clone();
+                let expected = (local.as_ref().is_some_and(|v| v.contains(&1))
+                    && remote.as_ref().is_some_and(|v| v.contains(&1)))
+                .then_some(1);
+                assert_eq!(
+                    left.negotiated_export_history_observation_version(&right),
+                    expected
+                );
+            }
+        }
+    }
+
     use super::*;
     use uuid::Uuid;
 
@@ -502,6 +565,36 @@ mod tests {
             value["pairingRequest"]["_0"]
                 .get("trustedVerifier")
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn current_cli_negotiates_observations_without_changing_legacy_capabilities() {
+        let id = SwiftUuid(Uuid::nil());
+        let legacy = PeerCapabilities::portable_cli(id);
+        let current = PeerCapabilities::portable_cli_for_source(id, Some(PeerPlatform::Ios));
+        assert_eq!(legacy.export_history_observation_versions, None);
+        for platform in [None, Some(PeerPlatform::Android)] {
+            let neutral = PeerCapabilities::portable_cli_for_source(id, platform);
+            assert!(
+                serde_json::to_value(neutral)
+                    .unwrap()
+                    .get("exportHistoryObservationVersions")
+                    .is_none()
+            );
+        }
+        assert_eq!(
+            PeerCapabilities::portable_cli_all_versions(id).export_history_observation_versions,
+            None
+        );
+        assert_eq!(current.export_history_observation_versions, Some(vec![1]));
+        assert_eq!(
+            current.negotiated_export_history_observation_version(&legacy),
+            None
+        );
+        assert_eq!(
+            current.negotiated_export_history_observation_version(&current),
+            Some(1)
         );
     }
 

@@ -1,0 +1,51 @@
+name: History Query Portable Check
+
+on:
+  push:
+    branches: [fix/audit-172]
+    paths:
+      - 'apps/cli/**'
+      - 'packages/contracts/query-history/**'
+      - '.github/workflows/history-query-portable-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/cli
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: rustfmt,clippy
+      - name: Preserve hosted formatting correction without changing tested source
+        run: |
+          git rev-parse HEAD HEAD^{tree}
+          for crate in healthmd-client healthmd-cli healthmd-mcp; do
+            cmp ../../packages/contracts/query-history/v1/synthetic-response.json "crates/$crate/src/test-fixtures/history-assessment-v1.json"
+          done
+          cargo fmt --all
+          git diff --binary -- crates > "$RUNNER_TEMP/history-query-rustfmt.patch"
+          git restore -- crates
+          git rev-parse HEAD HEAD^{tree}
+          git diff --exit-code -- crates
+      - uses: actions/upload-artifact@v4
+        with:
+          name: history-query-rustfmt-${{ github.sha }}
+          path: ${{ runner.temp }}/history-query-rustfmt.patch
+          retention-days: 7
+      - name: Formatting gate on original source
+        run: cargo fmt --all --check
+      - name: Registered portable workspace tests on original source
+        if: ${{ !cancelled() }}
+        run: cargo test --workspace --all-targets --all-features --locked -j2
+      - name: Strict original-source Clippy
+        if: ${{ !cancelled() }}
+        run: cargo clippy --workspace --all-targets --all-features --locked -j2 -- -D warnings
