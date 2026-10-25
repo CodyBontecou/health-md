@@ -38,7 +38,7 @@ struct HealthHistoryDisclosureContent: View {
                 Text("History access details")
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, Spacing.s2)
-                    .frame(minHeight: 44, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
             }
             .accessibilityIdentifier("export.historyWarning.details")
