@@ -9,6 +9,7 @@
 pub mod crypto;
 pub mod encoding;
 pub mod foundation;
+pub mod history;
 pub mod models;
 pub mod time;
 pub mod transfer;

@@ -69,8 +69,12 @@ class AndroidRecoveryCoverageTests(unittest.TestCase):
                 validate.validate_android_recovery_coverage(root, Path(handle.name))
 
     def test_baseline_row_cannot_be_reclassified(self) -> None:
-        base = json.loads((ROOT / self.payload["base_inventory"]["path"]).read_text())
-        self.reject(lambda p: p.update(fields=[dict(base["fields"][0], disposition="prohibited", contract_path=None)]))
+        historical = ROOT / "packages/contracts/portability-inventory/android-agent-recovery/v1/historical-base.json"
+        base = json.loads(historical.read_text())
+        payload = copy.deepcopy(self.payload)
+        payload["fields"] = [dict(base["fields"][0], disposition="prohibited", contract_path=None)]
+        with self.assertRaisesRegex(validate.ContractValidationError, "unique, ordered additions to the frozen ledger"):
+            self.check(payload)
 
 
 if __name__ == "__main__":

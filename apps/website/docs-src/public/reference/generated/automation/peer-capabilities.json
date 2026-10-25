@@ -8,6 +8,7 @@
     1
   ],
   "connectedCorpusTransferCapabilities" : {
+    "contextHistoryObservationVersion" : 1,
     "partitionTargetBounds" : {
       "maximumBytes" : 67108864,
       "minimumBytes" : 33554432,
@@ -44,6 +45,7 @@
   "supportsManualIPSync" : true,
   "supportsPartitionedConnectedExports" : true,
   "supportsPerDateExportCompletion" : true,
+  "supportsPhoneContextAutomation" : true,
   "supportsRangeV9Summaries" : false,
   "supportsRequestScopedContextAcquisition" : true,
   "supportsRollupSummaries" : true,

@@ -14,6 +14,9 @@ pub mod file_receiver;
 pub mod generated_files;
 mod generated_path;
 pub mod handshake;
+pub mod history;
+#[cfg(test)]
+mod history_tests;
 pub mod job;
 mod limits;
 pub mod markdown;

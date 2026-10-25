@@ -123,7 +123,7 @@ impl HealthMdSession {
     }
 
     pub fn list_resources(&self) -> Vec<Value> {
-        if !self.ui_enabled() {
+        if !self.ui_enabled() || self.application.profile().is_data() {
             return Vec::new();
         }
         let mut resources = vec![apps::resource_declaration()];
@@ -142,7 +142,7 @@ impl HealthMdSession {
     ///
     /// Returns method-not-found unless UI support was negotiated and `uri` is fixed.
     pub fn read_resource(&self, uri: &str) -> Result<Value, ApplicationError> {
-        if self.ui_enabled() && uri == apps::RESOURCE_URI {
+        if self.ui_enabled() && !self.application.profile().is_data() && uri == apps::RESOURCE_URI {
             return Ok(apps::resource_content());
         }
         if self.ui_enabled()
@@ -160,6 +160,7 @@ impl HealthMdSession {
         match self.application.profile() {
             SurfaceProfile::LocalReadOnly => "Use this local read-only Health.md surface for readiness and typed queries only. Pair the iPhone outside this MCP session with `healthmd direct pair`; pairing and file-export tools are unavailable here. Keep Health.md foreground on the paired iPhone. Prefer healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Queries use only the authenticated direct iPhone channel; no Health.md cloud or Mac app is required.".to_owned(),
             SurfaceProfile::RemoteReadOnly => "Use this remote read-only Health.md surface for readiness and typed queries only. Pairing and file-export tools are unavailable; the server operator must pair its iPhone source outside MCP. Keep Health.md foreground on the paired iPhone. Prefer healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Every query is live; there is no synchronized health-data corpus or fallback.".to_owned(),
+            SurfaceProfile::DataReadOnly => "Use this read-only Health.md Agent Data surface to discover and retrieve only records permitted by the configured metric, source, date/time, detail-level, and bulk-download grant. Start with healthmd_data_catalog, then use healthmd_data_records. Health.md filters and pages stored exports but does not interpret them or modify their source.".to_owned(),
             SurfaceProfile::LocalDirect => self
                 .application
                 .operations

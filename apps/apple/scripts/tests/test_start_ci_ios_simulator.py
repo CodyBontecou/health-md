@@ -16,7 +16,7 @@ class EarlyBootTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         shutil.copy(SCRIPT, self.root)
-        for helper in ("apple_nightly_ui.py", "validate_ios_ui_xctestrun.py"):
+        for helper in ("apple_nightly_ui.py", "validate_ios_ui_xctestrun.py", "ui_test_document_fixture.py"):
             shutil.copy(SCRIPT.parent / helper, self.root)
         select = self.root / "select-ios-simulator.sh"
         select.write_text("#!/bin/sh\nprintf '%s\\n' 'platform=iOS Simulator,id=11111111-1111-1111-1111-111111111111'\n")

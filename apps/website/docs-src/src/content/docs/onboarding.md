@@ -15,7 +15,7 @@ Onboarding appears the first time you open Health.md on iPhone. It explains the 
 4. **Folder:** choose iCloud Drive, On My iPhone, an Obsidian vault, or another Files provider.
 5. **Ready:** repair missing connections and open the first export preview.
 
-After that preview closes, an eligible locked user may see one dismissible offer. Non-blocking reminders may also appear after the 3rd and 7th free exports. The hard limit remains 10 completed actions.
+After that preview closes, an eligible locked user may see one dismissible offer. After the first completed free export, a dismissible guide offers to review a daily schedule. After the third, a Lifetime offer shows two free actions remaining. The hard limit is five completed actions.
 
 Permissions, metrics, folder, formats, names, profiles, scheduling, and Mac connectivity can all be changed later.
 

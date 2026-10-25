@@ -57,7 +57,7 @@ def classify(path: str, scope: str) -> str:
     name = parts[-1].lower()
     if scope == "local-agent":
         return "local-agent-state"
-    if name in {"agents.md", "claude.md", "skill.md"} or "/AgentSkills/" in path:
+    if parts[-1] in {"AGENTS.md", "CLAUDE.md", "SKILL.md"} or "/AgentSkills/" in path:
         return "agent-instructions"
     if name.startswith(("license", "attribution")):
         return "legal"
@@ -115,6 +115,8 @@ def markdown_links(text: str):
 
 
 def missing_link(root: Path, document: Path, target: str) -> str | None:
+    root = root.resolve()
+    document = document.resolve()
     # Absolute routes are checked by the component's built-site validator, not
     # interpreted as filesystem paths. External/custom-scheme links are not fetched.
     parsed = urlsplit(target)
@@ -130,8 +132,17 @@ def missing_link(root: Path, document: Path, target: str) -> str | None:
         return "outside-repository"
     if resolved.exists():
         return None
-    if "apps/website/docs-src/src/content/docs" in document.as_posix() and not resolved.suffix:
+    content_root = root / "apps/website/docs-src/src/content/docs"
+    if content_root in document.parents and not resolved.suffix:
         if any(candidate.exists() for candidate in [resolved.with_suffix(".md"), resolved.with_suffix(".mdx"), resolved / "index.md", resolved / "index.mdx"]):
+            return None
+    # The website stages source Markdown alternatives next to public assets.
+    # A byte-identical raw reference mirror can therefore link to ../index.md
+    # even though its target is owned by content/docs, not public/reference.
+    public_root = root / "apps/website/docs-src/public"
+    if public_root in document.parents and public_root in resolved.parents and resolved.suffix.lower() == ".md":
+        alternative = content_root / resolved.relative_to(public_root)
+        if alternative.is_file():
             return None
     return label
 
@@ -217,7 +228,7 @@ def build_report(root: Path) -> dict:
     return {"format_version": 1,
             "limitations": ["Categories and signals are heuristics, not semantic review or deletion recommendations.",
                             "Backlinks infer literal path references; dynamic paths and external consumers require investigation.",
-                            "Filesystem links only: anchors, absolute website routes, MDX, and external URLs need component checks.",
+                            "Simple inline/reference-definition filesystem links only: anchors, absolute website routes, MDX, and external URLs need component checks.",
                             "Ignored .pi/.scratch Markdown is inventoried separately; dependencies/build output are excluded."],
             "summary": {"files": len(rows), "scopes": dict(Counter(row["scope"] for row in rows.values())),
                         "categories": dict(Counter(row["category"] for row in rows.values())),

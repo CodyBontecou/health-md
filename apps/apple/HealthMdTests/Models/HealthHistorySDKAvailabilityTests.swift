@@ -4,11 +4,13 @@ import XCTest
 
 @MainActor
 final class HealthHistorySDKAvailabilityTests: XCTestCase {
-    func testAdapterRejectsBoundaryReadsWithoutSDKSupport() async throws {
+    func testAdapterReportsAvailabilityAndRejectsUnsupportedBoundaryReads() async throws {
         let adapter = SystemHealthStoreAdapter()
         let type = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .stepCount))
 
-        XCTAssertFalse(adapter.supportsHistoryAuthorizationBoundaries)
+        XCTAssertEqual(adapter.supportsHistoryAuthorizationBoundaries, expectedBoundarySupport)
+        // Availability coverage must not read the host's real HealthKit grants.
+        guard !expectedBoundarySupport else { return }
         do {
             _ = try await adapter.earliestAuthorizedSampleDates(for: [type])
             XCTFail("Expected unsupported history-boundary assessment")
@@ -69,9 +71,12 @@ final class HealthHistorySDKAvailabilityTests: XCTestCase {
         XCTAssertEqual((receipt["boundaries"] as? [Any])?.count, 0)
     }
 
-    func testEmptyBoundaryRequestAlsoFailsClosed() async {
+    func testUnsupportedEmptyBoundaryRequestAlsoFailsClosed() async {
+        let adapter = SystemHealthStoreAdapter()
+        XCTAssertEqual(adapter.supportsHistoryAuthorizationBoundaries, expectedBoundarySupport)
+        guard !expectedBoundarySupport else { return }
         do {
-            _ = try await SystemHealthStoreAdapter().earliestAuthorizedSampleDates(for: [])
+            _ = try await adapter.earliestAuthorizedSampleDates(for: [])
             XCTFail("An empty request must not fabricate an unrestricted boundary result")
         } catch {
             XCTAssertEqual((error as NSError).domain, "HealthMd.HealthKitCapability")
@@ -92,11 +97,12 @@ final class HealthHistorySDKAvailabilityTests: XCTestCase {
         }
     }
 
-    func testAllAvailableRequiresBothCompleteDiscoveryAndCompleteAssessment() {
+    func testLegacyFullHistoryAssessmentCannotCertifyReadableDiscovery() {
         let unrestricted = HealthHistoryAuthorizationAssessment(
             state: .fullHistory, message: "Synthetic supported unrestricted assessment."
         )
-        XCTAssertTrue(makeDiscovery(assessment: unrestricted).supportsUnqualifiedFullHistoryClaim)
+        XCTAssertTrue(makeDiscovery(assessment: unrestricted).isComplete)
+        XCTAssertFalse(makeDiscovery(assessment: unrestricted).supportsUnqualifiedFullHistoryClaim)
         XCTAssertFalse(makeDiscovery(
             assessment: unrestricted, failedTypeIdentifiers: ["synthetic-failed-type"]
         ).supportsUnqualifiedFullHistoryClaim)
@@ -111,7 +117,7 @@ final class HealthHistorySDKAvailabilityTests: XCTestCase {
         XCTAssertFalse(makeDiscovery(assessment: unassessed).supportsUnqualifiedFullHistoryClaim)
     }
 
-    func testSupportedFakeKeepsFullLimitedAndFailedAssessmentsDistinct() async throws {
+    func testSupportedFakeKeepsOmittedLimitedAndFailedBoundariesDistinct() async throws {
         let store = FakeHealthStore()
         let suite = "HealthHistorySDKAvailabilityTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -119,10 +125,10 @@ final class HealthHistorySDKAvailabilityTests: XCTestCase {
         let manager = HealthKitManager(store: store, userDefaults: defaults)
         let type = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .stepCount))
 
-        let unrestricted = await manager.assessHistoryAuthorization(forMetricIDs: ["steps"])
-        XCTAssertEqual(unrestricted.state, .fullHistory)
-        XCTAssertTrue(unrestricted.supportsUnqualifiedFullHistoryClaim)
-        XCTAssertTrue(unrestricted.message.contains("denied read"))
+        let omitted = await manager.assessHistoryAuthorization(forMetricIDs: ["steps"])
+        XCTAssertEqual(omitted.state, .unknown)
+        XCTAssertFalse(omitted.supportsUnqualifiedFullHistoryClaim)
+        XCTAssertTrue(omitted.message.contains("denied read"))
 
         store.authorizedHistoryBoundaries[type.identifier] = Date(timeIntervalSince1970: 0)
         let limited = await manager.assessHistoryAuthorization(forMetricIDs: ["steps"])
@@ -137,6 +143,15 @@ final class HealthHistorySDKAvailabilityTests: XCTestCase {
         XCTAssertEqual(failed.state, .unknown)
         XCTAssertFalse(failed.supportsUnqualifiedFullHistoryClaim)
         XCTAssertEqual(failed.message, "HealthKit could not report the selected history authorization boundary.")
+    }
+
+    private var expectedBoundarySupport: Bool {
+        #if !os(macOS) && HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION
+        if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
+            return true
+        }
+        #endif
+        return false
     }
 
     private func makeDiscovery(

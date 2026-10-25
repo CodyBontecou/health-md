@@ -2,6 +2,7 @@
 
 pub mod agent_planning;
 pub mod backend;
+pub mod data;
 pub mod limits;
 pub mod model;
 pub mod normalize;
@@ -13,8 +14,15 @@ pub use agent_planning::{
     AgentPlanInput, agent_approval_from_bytes, agent_plan_from_bytes, agent_rpc_bytes_valid,
 };
 pub use backend::{
-    BackendCapabilities, BackendError, CallContext, CallerIdentity, CallerMode, HealthDataBackend,
-    PairingStartResult, ProgressUpdate, QueryDetailLevel, QueryPageRequest,
+    ArtifactStore, ArtifactStoreBackend, BackendCapabilities, BackendError, CallContext,
+    CallerIdentity, CallerMode, HealthDataBackend, PairingStartResult, ProgressUpdate,
+    QueryDetailLevel, QueryPageRequest,
+};
+pub use data::{
+    AGENT_DATA_GRANT_SCHEMA, AGENT_DATA_QUERY_SCHEMA, AGENT_DATA_SCHEMA_VERSION,
+    AGENT_QUERY_RESPONSE_SCHEMA, AgentDataDateSelection, AgentDataDetailLevel, AgentDataGrant,
+    AgentDataMetricSelection, AgentDataOperation, AgentDataPage, AgentDataQueryRequest,
+    AgentDataRecordScope, AgentDataSourceSelection, AgentDataTimeSelection,
 };
 pub use limits::OperationLimits;
 pub use model::SurfaceProfile;

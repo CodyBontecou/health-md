@@ -136,6 +136,7 @@ public struct DirectResponseArtifact: Codable, Equatable, Sendable {
     public let sha256: String
     public let dateRangeStart: String
     public let dateRangeEnd: String
+    public let historyObservationSHA256: String?
     public let totalDays: Int
 
     public init(
@@ -144,13 +145,15 @@ public struct DirectResponseArtifact: Codable, Equatable, Sendable {
         sha256: String,
         dateRangeStart: String,
         dateRangeEnd: String,
-        totalDays: Int
+        totalDays: Int,
+        historyObservationSHA256: String? = nil
     ) throws {
         guard !relativePath.isEmpty,
               !relativePath.contains("/"),
               byteCount >= 0,
               sha256.isHealthMdSHA256,
-              totalDays >= 0 else {
+              totalDays >= 0,
+              historyObservationSHA256.map({ $0.isHealthMdSHA256 }) ?? true else {
             throw DirectClientStorageError.invalidJob
         }
         self.relativePath = relativePath
@@ -159,6 +162,7 @@ public struct DirectResponseArtifact: Codable, Equatable, Sendable {
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
         self.totalDays = totalDays
+        self.historyObservationSHA256 = historyObservationSHA256
     }
 }
 
@@ -353,7 +357,8 @@ public actor DirectJobStore {
               record.committedPartitions >= 0,
               record.committedBytes >= 0,
               record.processedDays >= 0,
-              record.totalDays.map({ $0 >= record.processedDays }) ?? true else {
+              record.totalDays.map({ $0 >= record.processedDays }) ?? true,
+              record.responseArtifact?.historyObservationSHA256.map({ $0.isHealthMdSHA256 }) ?? true else {
             throw DirectClientStorageError.invalidJob
         }
     }
@@ -410,4 +415,12 @@ extension JSONDecoder {
         decoder.dateDecodingStrategy = .iso8601
         return decoder
     }
+}
+
+/// Private artifact pin; the observation grammar contains only fixed keys and integral/string values.
+func directHistoryObservationDigest(_ observation: ExportHistoryObservation?) throws -> String? {
+    guard let observation else { return nil }
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+    return DirectTransferFile.sha256Hex(try encoder.encode(observation))
 }

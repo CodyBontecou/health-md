@@ -1,6 +1,10 @@
 package com.healthmd.direct
 
 import android.os.Build
+import com.healthmd.diagnostics.Diagnostics
+import com.healthmd.diagnostics.DiagnosticEventID
+import com.healthmd.diagnostics.DiagnosticField
+import com.healthmd.diagnostics.DiagnosticValue
 import com.healthmd.BuildConfig
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
@@ -450,6 +454,7 @@ class DirectCliCoordinator @Inject constructor(
             "The shared pairing code must be twenty digits."
         }
         _state.value = DirectCliConnectionState.Pairing
+        Diagnostics.record(DiagnosticEventID.CONNECTION_CHANGED, mapOf(DiagnosticField.STATE to DiagnosticValue.Text("pairing"), DiagnosticField.TRANSPORT to DiagnosticValue.Text("manual_ip")))
         protocolAuthority.assertCompatible()
         fun connect(pairingProtocolVersion: Int) = DirectClient.connect(
             host = host,
@@ -481,6 +486,7 @@ class DirectCliCoordinator @Inject constructor(
                 negotiate(channel)
                 currentCoroutineContext().ensureActive()
                 trustStore.save(connected.listener, host, port)
+                Diagnostics.record(DiagnosticEventID.CONNECTION_CHANGED, Diagnostics.peerFields(connected.listener.displayName) + (DiagnosticField.STATE to DiagnosticValue.Text("completed")))
                 _state.value = DirectCliConnectionState.Completed(
                     DirectCliCompletion.Paired(connected.listener.displayName),
                 )
@@ -522,6 +528,7 @@ class DirectCliCoordinator @Inject constructor(
         var firstAttempt = true
         while (true) {
             _state.value = DirectCliConnectionState.WaitingForCli
+            Diagnostics.record(DiagnosticEventID.CONNECTION_CHANGED, mapOf(DiagnosticField.STATE to DiagnosticValue.Text("connecting"), DiagnosticField.TRANSPORT to DiagnosticValue.Text("manual_ip")))
             if (!firstAttempt) {
                 delay(backoffMillis)
                 backoffMillis =
@@ -545,6 +552,8 @@ class DirectCliCoordinator @Inject constructor(
                         _state.value = DirectCliConnectionState.Connected(
                             connected.listener.displayName,
                         )
+                        Diagnostics.record(DiagnosticEventID.CONNECTION_CHANGED, Diagnostics.peerFields(connected.listener.displayName) + (DiagnosticField.STATE to DiagnosticValue.Text("connected")))
+                        Diagnostics.record(DiagnosticEventID.CAPABILITIES_RECEIVED, mapOf(DiagnosticField.READY to DiagnosticValue.Boolean(true)))
                         serve(channel, transferNegotiation)
                     } finally {
                         protocolAuthority.endOperation()
@@ -565,6 +574,7 @@ class DirectCliCoordinator @Inject constructor(
                 throw error
             } catch (error: Throwable) {
                 currentCoroutineContext().ensureActive()
+                Diagnostics.record(DiagnosticEventID.TRANSPORT_ERROR, Diagnostics.errorFields(error))
                 consecutiveFailures++
                 if (consecutiveFailures > MAXIMUM_CONSECUTIVE_RECONNECT_FAILURES) {
                     if (servedSinceInterruption) {
@@ -602,6 +612,7 @@ class DirectCliCoordinator @Inject constructor(
 
     fun reportFailure(reason: DirectCliFailure) {
         _state.value = DirectCliConnectionState.Failed(reason)
+        Diagnostics.record(DiagnosticEventID.CONNECTION_CHANGED, mapOf(DiagnosticField.STATE to DiagnosticValue.Text("failed")))
     }
 
     fun resetSession() {
@@ -611,6 +622,7 @@ class DirectCliCoordinator @Inject constructor(
     }
 
     fun reportDisconnected() {
+        Diagnostics.record(DiagnosticEventID.CONNECTION_CHANGED, mapOf(DiagnosticField.STATE to DiagnosticValue.Text("disconnected")))
         if (_state.value !is DirectCliConnectionState.Completed &&
             _state.value !is DirectCliConnectionState.Failed
         ) {

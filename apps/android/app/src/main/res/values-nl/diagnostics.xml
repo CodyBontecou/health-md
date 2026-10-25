@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Diagnostiek</string>
+    <string name="diagnostics_entry">Bekijk lokale technische gebeurtenissen en kies wat je wilt delen</string>
+    <string name="diagnostics_recording">Lokale registratie</string>
+    <string name="diagnostics_privacy">Diagnostiek blijft op dit apparaat totdat je de gegevens opslaat of deelt. Operationele gebeurtenissen bevatten geen gezondheidswaarden, gezondheidsrecord-ID’s, opgevraagde gezondheidsdatums, paden, eindpunten of inloggegevens. Ze zijn niet anoniem.</string>
+    <string name="diagnostics_enabled">Operationele gebeurtenissen registreren</string>
+    <string name="diagnostics_retention">Het logniveau verandert de details, niet de toestemming om gezondheidsinhoud te verzamelen. Bewaring: maximaal 7 dagen / 20 MiB. Geen automatische uploads.</string>
+    <string name="diagnostics_start_private">Privécontext 15 minuten registreren</string>
+    <string name="diagnostics_stop_private">Privéregistratie stoppen</string>
+    <string name="diagnostics_private_description">Privécontext V1 registreert beschikbare namen van verbonden apparaten. Gezondheidsinhoud, inloggegevens en willekeurige fouttekst worden niet vastgelegd. Privésegmenten verlopen binnen 24 uur bij de volgende toegang tot de app.</string>
+    <string name="diagnostics_private_until">Privéregistratie verloopt: %1$s</string>
+    <string name="diagnostics_clear">Alle diagnostiek wissen</string>
+    <string name="diagnostics_clear_question">Lokale gebeurtenissen, voorbereide bundels en bijlagekopieën verwijderen? Dit stopt privéregistratie. Geëxporteerde bestanden en gedeelde kopieën blijven behouden.</string>
+    <string name="diagnostics_select">Gebeurtenissen selecteren</string>
+    <string name="diagnostics_hour">Afgelopen uur</string>
+    <string name="diagnostics_day">Afgelopen 24 uur</string>
+    <string name="diagnostics_week">Afgelopen 7 dagen</string>
+    <string name="diagnostics_operation">Bewerkings-UUID (optioneel)</string>
+    <string name="diagnostics_include_private">Geregistreerde privécontext opnemen</string>
+    <string name="diagnostics_search">Gebeurtenis-ID’s of velden doorzoeken</string>
+    <string name="diagnostics_refresh">Gebeurtenissen vernieuwen</string>
+    <string name="diagnostics_summary">Gebeurtenissen: %1$d · Sessieverlies: %2$d · Ongeldig: %3$d · Ingekort: %4$s</string>
+    <string name="diagnostics_view_limit">De nieuwste 100 overeenkomende gebeurtenissen worden getoond. De bundel bevat de geselecteerde momentopname, maximaal 10.000 gebeurtenissen; inkortingen worden vermeld.</string>
+    <string name="diagnostics_attachments">Optionele bijlagen</string>
+    <string name="diagnostics_attachment_description">Voeg bestaande bestanden toe, waaronder gezondheidsexports of schermafbeeldingen. Originele bytes worden ongewijzigd gekopieerd en NIET opgeschoond. Bronbestandsnamen worden opgenomen. Er worden geen nieuwe gezondheidsgegevens gelezen. Limiet: 50 bestanden / 100 MiB.</string>
+    <string name="diagnostics_choose">Bestanden kiezen…</string>
+    <string name="diagnostics_remove">%1$s verwijderen</string>
+    <string name="diagnostics_prepare">Bundel voorbereiden</string>
+    <string name="diagnostics_review">Voorbereiden en controleren</string>
+    <string name="diagnostics_frozen">Vaste momentopname. Gebeurtenissen: %1$d. Gezondheidsinhoud: %2$s. ZIP is niet versleuteld.</string>
+    <string name="diagnostics_reviewed">Ik heb de bestanden gecontroleerd die ik wil delen</string>
+    <string name="diagnostics_share">Gecontroleerde ZIP delen</string>
+    <string name="diagnostics_save">Gecontroleerde ZIP opslaan</string>
+    <string name="diagnostics_share_question">Deze diagnostische bundel delen?</string>
+    <string name="diagnostics_share_warning">De ZIP is niet versleuteld. Privécontext en bijlagen kunnen gezondheidsgegevens of geheimen blootleggen. Openbare GitHub- of Discord-berichten kunnen voor iedereen toegankelijk zijn. De bestemming beheert haar eigen kopieën; Health.md kan die niet terughalen.</string>
+    <string name="diagnostics_share_confirm">Deze bundel delen</string>
+    <string name="diagnostics_bundle_retention">Lokale bundels verlopen binnen 24 uur bij de volgende toegang tot de app; alleen de nieuwste 3 blijven bewaard. Opgeslagen of gedeelde kopieën hebben hun eigen bewaartermijn.</string>
+    <string name="diagnostics_preview_truncated">\n\n[Voorbeeld ingekort tot 128 KiB. Het volledige originele bestand blijft in de ZIP.]</string>
+    <string name="diagnostics_failure">De diagnostische bewerking is mislukt. Controleer bestandstoegang en lokale opslag en bereid de bundel opnieuw voor om te controleren.</string>
+    <string name="diagnostics_invalid_operation">De bewerkings-ID moet een UUID zijn.</string>
+</resources>

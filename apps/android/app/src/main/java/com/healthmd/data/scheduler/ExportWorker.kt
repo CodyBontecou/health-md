@@ -15,7 +15,13 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.healthmd.HealthMdApplication
+import com.healthmd.diagnostics.Diagnostics
+import com.healthmd.diagnostics.diagnosticOutcome
+import com.healthmd.diagnostics.DiagnosticEventID
+import com.healthmd.diagnostics.DiagnosticField
+import com.healthmd.diagnostics.DiagnosticValue
 import com.healthmd.R
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
@@ -33,6 +39,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
@@ -65,6 +72,7 @@ class ExportWorker @AssistedInject constructor(
     private val settingsRepository: SettingsRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner,
+    private val agentDataGatewayExportRunner: AgentDataGatewayExportRunner,
     private val rawSnapshotExportRunner: RawSnapshotService,
     private val apiCredentialStore: APIExportCredentialStore,
     private val runCoordinator: ScheduledExportRunCoordinator,
@@ -77,13 +85,21 @@ class ExportWorker @AssistedInject constructor(
 
     private var attemptAPIAuthorityJson: String? = null
 
-    override suspend fun doWork(): Result = try {
-        if (ScheduledExportOccurrence.fromWorkData(inputData) != null) {
-            setForeground(getForegroundInfo())
+    override suspend fun doWork(): Result {
+        val identity = mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString()), DiagnosticField.TRIGGER to DiagnosticValue.Text("background_task"))
+        Diagnostics.record(DiagnosticEventID.ATTEMPT_STARTED, identity)
+        return try {
+            val result = if (ScheduledExportOccurrence.fromWorkData(inputData) != null) {
+                withScheduledExportForeground(getForegroundInfo()) { doWorkManaged() }
+            } else {
+                doWorkManaged()
+            }
+            Diagnostics.record(DiagnosticEventID.WORKER_RESULT, identity + (DiagnosticField.REASON to DiagnosticValue.Text(result.diagnosticOutcome())))
+            result
+        } finally {
+            Diagnostics.record(DiagnosticEventID.ATTEMPT_FINISHED, identity)
+            ScheduledExportCancellationCoordinator.finish(id)
         }
-        doWorkManaged()
-    } finally {
-        ScheduledExportCancellationCoordinator.finish(id)
     }
 
     private suspend fun doWorkManaged(): Result {
@@ -249,13 +265,17 @@ class ExportWorker @AssistedInject constructor(
         if (persistedSettings.scheduledExportTarget != capturedTarget) return Result.success()
 
         // Validate current credential/destination plumbing before restoring frozen output choices.
-        val currentFingerprint = if (capturedTarget == ExportTarget.API_ENDPOINT) {
-            runCatchingCancellable { apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl) }
-                .getOrNull()
-        } else null
+        val currentFingerprint = when (capturedTarget) {
+            ExportTarget.API_ENDPOINT -> runCatchingCancellable {
+                apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl)
+            }.getOrNull()
+            ExportTarget.AGENT_DATA_GATEWAY ->
+                AgentDataGatewayEndpoint.fingerprint(persistedSettings.agentDataGatewayUrl)
+            ExportTarget.DEVICE_FOLDER -> null
+        }
         val capturedFingerprint = capturedOccurrence.configuration.destinationFingerprint
         if (
-            capturedTarget == ExportTarget.API_ENDPOINT &&
+            (capturedTarget == ExportTarget.API_ENDPOINT || capturedTarget == ExportTarget.AGENT_DATA_GATEWAY) &&
             (capturedFingerprint == null || capturedFingerprint != currentFingerprint)
         ) {
             // A newer schedule points at a different authority. Never send or silently succeed.
@@ -548,6 +568,11 @@ class ExportWorker @AssistedInject constructor(
                             expectedDestinationFingerprint = destinationFingerprint,
                             durableOperationId = durableApiOperationId,
                             durableSettingsSnapshotJson = capturedSnapshotJson,
+                        )
+                        ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner.exportDates(
+                            dates = dates,
+                            settings = settings.copy(exportTarget = ExportTarget.AGENT_DATA_GATEWAY),
+                            expectedDestinationFingerprint = destinationFingerprint,
                         )
                     }
                 }
@@ -897,6 +922,8 @@ class ExportWorker @AssistedInject constructor(
     private fun targetLabel(settings: ExportSettings, date: LocalDate): String =
         if (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT) {
             APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+        } else if (settings.scheduledExportTarget == ExportTarget.AGENT_DATA_GATEWAY) {
+            AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
         } else buildString {
             val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
             append(subfolder ?: EXPORT_FOLDER_ROOT_TARGET_LABEL)
@@ -965,7 +992,16 @@ class ExportWorker @AssistedInject constructor(
         } else {
             SCHEDULE_RESULT_NOTIFICATION_ID
         }
-        manager.notify(notificationId, notification)
+        try {
+            manager.notify(notificationId, notification)
+            Diagnostics.record(DiagnosticEventID.NOTIFICATION_REQUESTED, mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString())))
+        } catch (error: RuntimeException) {
+            Diagnostics.record(
+                DiagnosticEventID.NOTIFICATION_FAILED,
+                Diagnostics.errorFields(error) + (DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString())),
+            )
+            throw error
+        }
     }
 
     private fun canPostNotifications(): Boolean {
@@ -1002,6 +1038,7 @@ class ExportWorker @AssistedInject constructor(
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.cancel(EXPORT_RESULT_NOTIFICATION_ID)
             manager.cancel(SCHEDULE_RESULT_NOTIFICATION_ID)
+            Diagnostics.record(DiagnosticEventID.NOTIFICATION_CANCELLED)
         }
     }
 }

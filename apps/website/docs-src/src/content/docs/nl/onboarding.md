@@ -15,7 +15,7 @@ De onboarding verschijnt wanneer je Health.md voor het eerst op iPhone opent. Ze
 4. **Map:** iCloud Drive, Op mijn iPhone, een Obsidian-vault of andere Bestanden-provider kiezen.
 5. **Gereed:** ontbrekende verbindingen herstellen en de eerste exportpreview openen.
 
-Na het sluiten van die preview kan een eenmalig wegklikbaar aanbod verschijnen. Na de 3e en 7e gratis export kunnen vrijblijvende herinneringen volgen. De harde limiet blijft 10 voltooide acties.
+Na de eerste voltooide gratis export biedt een gids aan een dagelijks schema te bekijken zonder het in te schakelen. Na de derde toont een wegklikbaar aanbod voor levenslange toegang twee resterende gratis acties. De limiet is vijf voltooide acties.
 
 Machtigingen, meetwaarden, map, formaten, namen, profielen, planning en Mac-koppeling blijven aanpasbaar.
 

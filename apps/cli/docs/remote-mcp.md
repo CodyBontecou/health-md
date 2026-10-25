@@ -2,8 +2,7 @@
 
 ## Status and product boundary
 
-Health.md does not operate or provide a synchronized health-data corpus. It does not upload, retain,
-or back up users' health data for later MCP queries.
+The portable CLI does not provide a synchronized health-data corpus or retain data for later typed MCP queries. Complete local mode does retain private durable export/job spools.
 
 The default CLI exposes both complete and least-privilege local MCP over newline-delimited JSON-RPC
 on stdio. Source builds may also enable a read-only Streamable HTTP transport for development or a
@@ -11,7 +10,7 @@ deliberately configured single-owner direct relay:
 
 | Mode | Transport | Data source | Retained health data |
 |---|---|---|---|
-| Complete local | `healthmd mcp serve` over stdio | Paired foreground iPhone over the encrypted direct protocol | None |
+| Complete local | `healthmd mcp serve` over stdio | Paired foreground iPhone for typed queries; iPhone or Android for raw jobs | Private durable export/job spools; no typed-query corpus |
 | Read-only local | `healthmd mcp serve-read-only` over stdio | The same paired foreground iPhone | None |
 | Remote relay | MCP Streamable HTTP at `/mcp` | The same paired foreground iPhone | None |
 

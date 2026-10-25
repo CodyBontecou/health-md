@@ -22,6 +22,8 @@ data class ExportProfile(
     val target: ExportTarget,
     /** Non-secret endpoint URL binding when [target] is [ExportTarget.API_ENDPOINT]. */
     val apiEndpointUrl: String? = null,
+    /** Non-secret gateway base-URL binding when [target] is [ExportTarget.AGENT_DATA_GATEWAY]. */
+    val agentDataGatewayUrl: String? = null,
     /** Persisted SAF tree-URI binding when [target] is [ExportTarget.DEVICE_FOLDER]. Null keeps
      * the currently selected device folder (the migration default binds it instead of leaving
      * this null, mirroring the iOS folder-vault binding). */
@@ -123,6 +125,7 @@ object ExportProfileRules {
         nowEpochMillis: Long,
         newId: () -> String,
         apiEndpointUrl: String? = null,
+        agentDataGatewayUrl: String? = null,
     ): ExportProfile? {
         if (existing.isNotEmpty()) return null
         return ExportProfile(
@@ -131,6 +134,7 @@ object ExportProfileRules {
             settingsSnapshotJson = snapshotJson,
             target = target,
             apiEndpointUrl = apiEndpointUrl,
+            agentDataGatewayUrl = agentDataGatewayUrl,
             isMigrationDefault = true,
             createdAtEpochMillis = nowEpochMillis,
             updatedAtEpochMillis = nowEpochMillis,

@@ -1,6 +1,7 @@
 {
   "available_capability_ids_by_platform": {
     "android": [
+      "diagnostics.local_bundle",
       "export.daily-files",
       "export.sleep-summary",
       "export.activity-basics",
@@ -12,6 +13,7 @@
       "export.completed-workouts",
       "export.mobility-and-performance",
       "export.profiles",
+      "export.agent-data-gateway",
       "export.scheduled-today-refresh",
       "automation.discard-pending-recovery",
       "automation.cancel-active-export",
@@ -26,9 +28,12 @@
       "direct.full_public_authorized_corpus",
       "direct.cli_agent_wake",
       "core.shared-rust-metric-registry",
-      "account.myself_lifetime_claim"
+      "account.myself_lifetime_claim",
+      "purchase.free-export-journey"
     ],
     "apple": [
+      "apple.ads-purchase-attribution",
+      "diagnostics.local_bundle",
       "support.local-reporting-fallback",
       "export.daily-files",
       "export.range-summary",
@@ -46,6 +51,7 @@
       "apple.wrist-temperature",
       "export.mobility-and-performance",
       "export.profiles",
+      "export.agent-data-gateway",
       "export.scheduled-today-refresh",
       "automation.discard-pending-recovery",
       "automation.api-recovery-authority",
@@ -60,10 +66,13 @@
       "direct.cli_agent_push_wake",
       "authorization.history-window-detection",
       "core.shared-rust-metric-registry",
-      "account.myself_lifetime_claim"
+      "account.myself_lifetime_claim",
+      "purchase.free-export-journey"
     ]
   },
   "known_capability_ids": [
+    "apple.ads-purchase-attribution",
+    "diagnostics.local_bundle",
     "support.local-reporting-fallback",
     "export.daily-files",
     "cloud.opt-in-export-receiver",
@@ -83,6 +92,7 @@
     "apple.wrist-temperature",
     "export.mobility-and-performance",
     "export.profiles",
+    "export.agent-data-gateway",
     "export.scheduled-today-refresh",
     "automation.discard-pending-recovery",
     "automation.api-recovery-authority",
@@ -118,10 +128,11 @@
     "agent.native-schedule-destination-controls",
     "agent.export.zip-packaging",
     "agent.export.profile-dictionary",
-    "account.myself_lifetime_claim"
+    "account.myself_lifetime_claim",
+    "purchase.free-export-journey"
   ],
   "schema": "healthmd.capability_index",
   "schema_version": 1,
   "source_inventory_path": "packages/contracts/product-capabilities.json",
-  "source_inventory_sha256": "039af2f2619918b7d236a5454702d772fa48398d6a800f91988225559e424ff7"
+  "source_inventory_sha256": "19363b9089e469a2d3ba2a0df9d97ab7f7477ee873224751830ff7d0948fe173"
 }

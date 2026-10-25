@@ -259,7 +259,10 @@ class RawSnapshotRecoveryAuthorityTest {
                 RawApiUploadResult(202, null)
             }
         }
-        fun runner() = RawSnapshotExportRunner(context, repository, apiClient, credentials, settingsRepository)
+        fun runner() = RawSnapshotExportRunner(
+            context, repository, apiClient, credentials, settingsRepository,
+            agentDataGatewayClient = mockk(),
+        )
     }
 
     private class Repository : RawHealthRepository {

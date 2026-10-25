@@ -8,6 +8,8 @@ import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.healthmd.R
+import com.healthmd.diagnostics.Diagnostics
+import com.healthmd.diagnostics.DiagnosticSharing
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.distribution.DistributionRuntime
 import com.healthmd.data.scheduler.ExportWorker
@@ -51,6 +53,8 @@ class HealthMdApplication : Application(), Configuration.Provider {
         resourceNightMode = resources.configuration.uiMode and
             AndroidConfiguration.UI_MODE_NIGHT_MASK
         initializeLogging()
+        Diagnostics.initialize(this)
+        DiagnosticSharing.sweep(this)
         ExportAwakeCoordinator.shared.initialize(this)
         createNotificationChannels()
         distributionRuntime.initialize()

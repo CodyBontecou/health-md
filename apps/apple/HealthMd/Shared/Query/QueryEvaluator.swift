@@ -291,9 +291,30 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
   func evaluateBounded(
     _ request: HealthMdQueryRequest,
     evidenceScope: HealthMdEvidenceScope? = nil,
-    generatedAt: Date = Date()
+    generatedAt: Date = Date(),
+    responseMetadata: [String: HealthMdJSONValue] = [:],
+    responseLimitations: [HealthMdLimitation] = []
   ) throws -> HealthMdQueryResponse {
-    let response = try evaluate(request, evidenceScope: evidenceScope, generatedAt: generatedAt)
+    let evaluated = try evaluate(request, evidenceScope: evidenceScope, generatedAt: generatedAt)
+    var metadata = evaluated.metadata ?? [:]
+    // Existing metadata is retained. Callers may add independent query-response
+    // evidence, never factual packet metadata or capture/coverage statuses.
+    for (key, value) in responseMetadata {
+      guard metadata[key] == nil || metadata[key] == value else {
+        throw HealthMdQueryContractError.scopeViolation("query_response_metadata")
+      }
+      metadata[key] = value
+    }
+    let response = HealthMdQueryResponse(items: evaluated.items, packet: evaluated.packet,
+      coverage: evaluated.coverage, sources: evaluated.sources, evidence: evaluated.evidence,
+      nextCursor: evaluated.nextCursor,
+      limitations: uniqueLimitations(responseLimitations + evaluated.limitations),
+      metadata: metadata.isEmpty ? evaluated.metadata : metadata)
+    guard Set(responseLimitations).isSubset(of: Set(response.limitations)) else {
+      // Required disclosure must not disappear behind the existing 64-entry
+      // envelope bound. Fail truthfully rather than silently stripping it.
+      throw HealthMdQueryContractError.singleItemExceedsPageBytes
+    }
     if try HealthMdQueryCanonicalSerializer.data(for: response).count <= request.page.maxBytes {
       return response
     }
@@ -355,7 +376,7 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
           count < packet.facts.count
           ? try makeCursor(offset: offset + count, fingerprint: fingerprint)
           : response.nextCursor
-        return HealthMdQueryResponse(
+        let candidate = HealthMdQueryResponse(
           items: [],
           packet: boundedPacket,
           coverage: response.coverage,
@@ -363,9 +384,13 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
           evidence: responseEvidence(
             items: [], packet: boundedPacket, index: selectedEvidenceIndex),
           nextCursor: nextCursor,
-          limitations: limitations,
+          limitations: uniqueLimitations(response.limitations + limitations),
           metadata: response.metadata
         )
+        guard Set(responseLimitations).isSubset(of: Set(candidate.limitations)) else {
+          throw HealthMdQueryContractError.singleItemExceedsPageBytes
+        }
+        return candidate
       }
     }
 

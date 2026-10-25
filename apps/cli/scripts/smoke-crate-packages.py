@@ -34,6 +34,8 @@ REQUIRED = {
         "src/registry.rs",
         "src/service.rs",
         "examples/generate_mcp_catalog.rs",
+        "tests/fixtures/agent-data-v1/grant-explicit.json",
+        "tests/fixtures/agent-data-v1/query-records.json",
     },
     "healthmd-client": {
         "Cargo.toml",
@@ -58,6 +60,9 @@ REQUIRED = {
         "README.md",
         "src/main.rs",
         "src/bin/healthmd-mcp/main.rs",
+        "tests/fixtures/apple-api-export-v2-provider-sidecar.json",
+        "tests/fixtures/apple-api-export-v2-provider-sidecar-v8.json",
+        "tests/fixtures/android-raw-v1-minimal-snapshot.json",
     },
 }
 

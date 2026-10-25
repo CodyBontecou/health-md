@@ -5,7 +5,7 @@ description: 设置 Android 版 Health.md，将 Health Connect 数据导出为 M
 
 <div class="docs-hero">
   <p class="docs-eyebrow">从 Health Connect 到私有文件</p>
-  <p>Android 版 Health.md 在设备上读取 Health Connect，并将 Markdown、Obsidian Bases、JSON 或 CSV 写入您选择的文件夹。无需 Health.md 账户，不使用健康数据云服务，也无需订阅。</p>
+  <p>Android 版 Health.md 在设备上读取 Health Connect，并将 Markdown、Obsidian Bases、JSON 或 CSV 写入您选择的文件夹。此文件夹导出流程无需 Health.md 账户或健康数据云服务，也无需订阅。</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">前往 Google Play 获取</a>
     <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">前往 F-Droid 获取</a>
@@ -16,7 +16,7 @@ description: 设置 Android 版 Health.md，将 Health Connect 数据导出为 M
 <div class="reference-stats">
 <div><strong>106</strong><span>个可选 Health Connect 指标</span></div>
 <div><strong>4</strong><span>种导出格式</span></div>
-<div><strong>10</strong><span>次免费手动导出</span></div>
+<div><strong>5</strong><span>次免费手动导出</span></div>
 <div><strong>0</strong><span>个必需的 Health.md 云账户</span></div>
 </div>
 
@@ -47,7 +47,7 @@ Android 版 Health.md 将 Health Connect 转化为本地优先的健康日志。
 6. 预览输出。
 7. 轻点导出，然后在文件夹或知识库中确认生成的文件。
 
-免费方案包含 10 次手动导出，让您可以在解锁无限导出前测试权限、文件夹访问、格式和 Obsidian 工作流。
+免费方案包含 5 次手动导出，让您可以在解锁无限导出前测试权限、文件夹访问、格式和 Obsidian 工作流。
 
 ## Android 上的目标位置
 
@@ -125,7 +125,7 @@ Health Connect 是默认的本地导出路径。Android 应用还提供健康数
 
 ## 定价与恢复购买
 
-- Android 应用包含 10 次免费手动导出。
+- Android 应用包含 5 次免费手动导出。
 - 通过 Google Play Billing 一次性购买 Full Access，即可解锁无限导出和计划自动化。
 - 无需订阅，也没有周期性收费。
 - Google Play 会在购买前显示当前本地价格。
@@ -139,12 +139,14 @@ Android 版 Health.md 采用本地优先模式：
 
 - Health Connect 记录在您的 Android 设备上读取。
 - 导出文件直接写入您选择的文件夹。
-- Health.md 不运行健康数据云服务。
+- 默认情况下，文件夹导出和设备直接查询不会在 Health.md 服务器上创建副本。
 - 设置和导出历史保留在设备上。
 - 付款由 Google Play 处理。
 - 由提供方管理的文件夹会按照相应提供方的条款同步。
 
 如需最严格的本地设置，请手动导出到本地设备文件夹，并关闭计划导出和由提供方管理的同步。
+
+另行提供的可选 Health.md Cloud 试点仅供单一所有者使用，只保留主动上传的 API 导出。不开放公众注册，不自动同步设备；此文件夹流程不会上传至该试点。保留、删除、容量配额和无备份导致的丢失风险见[隐私政策](/privacy-policy.html)。
 
 ## 相关文档
 
@@ -156,4 +158,4 @@ Android 版 Health.md 采用本地优先模式：
   <a href="/zh-hans/docs/visualizations-roadmap/"><span>Obsidian</span>导出的 JSON 和 Markdown 如何驱动 Health.md 可视化。</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">最后更新于 2026-08-31</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">最后更新于 2026-10-04</p>

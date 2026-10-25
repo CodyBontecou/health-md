@@ -1,12 +1,16 @@
 package com.healthmd.data.scheduler
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.ForegroundUpdater
 import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
+import com.google.common.util.concurrent.Futures
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportRequestConfiguration
@@ -136,6 +140,26 @@ class ExportWorkerGenerationTest {
         val result = worker.doWork()
 
         assertThat(result).isEqualTo(ListenableWorker.Result.success())
+        coVerify(exactly = 0) { apiRunner.exportDates(any(), any()) }
+    }
+
+    @Test
+    fun deniedForegroundStartStillReachesExactAdmissionGuard() = runTest {
+        val captured = occurrence(ExportTarget.API_ENDPOINT, "generation-denied")
+        val stateStore = mockk<ScheduledExportStateStore>(relaxed = true)
+        every { stateStore.isGenerationMigrationComplete() } returns true
+        val apiRunner = mockk<APIEndpointExportRunner>(relaxed = true)
+        val worker = worker(
+            occurrence = captured, stateStore = stateStore, apiRunner = apiRunner,
+            admissionMatches = false,
+            foregroundUpdater = ForegroundUpdater { _, _, _ ->
+                Futures.immediateFailedFuture<Void>(
+                    ForegroundServiceStartNotAllowedException("background start denied"),
+                )
+            },
+        )
+        assertThat(worker.doWork()).isEqualTo(ListenableWorker.Result.success())
+        verify(atLeast = 1) { stateStore.matchesAdmission(any(), any(), any()) }
         coVerify(exactly = 0) { apiRunner.exportDates(any(), any()) }
     }
 
@@ -592,6 +616,7 @@ class ExportWorkerGenerationTest {
         exportScheduler: ExportScheduler = mockk(relaxed = true),
         exportHistoryRepository: ExportHistoryRepository = mockk(relaxed = true),
         runAttemptCount: Int = 0,
+        foregroundUpdater: ForegroundUpdater? = null,
     ): ExportWorker {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val admission = occurrence.generation?.let {
@@ -628,6 +653,7 @@ class ExportWorkerGenerationTest {
                 settingsRepository = settingsRepository,
                 exportHistoryRepository = exportHistoryRepository,
                 apiEndpointExportRunner = apiRunner,
+                agentDataGatewayExportRunner = mockk<AgentDataGatewayExportRunner>(relaxed = true),
                 rawSnapshotExportRunner = mockk<RawSnapshotService>(relaxed = true),
                 apiCredentialStore = apiCredentialStore,
                 runCoordinator = runCoordinator,
@@ -642,6 +668,7 @@ class ExportWorkerGenerationTest {
             .setWorkerFactory(factory)
             .setInputData(admission?.inputData ?: occurrence.toWorkData())
             .setRunAttemptCount(runAttemptCount)
+        foregroundUpdater?.let { builder.setForegroundUpdater(it) }
         admission?.let { builder.setId(it.workRequestId) }
         return builder.build()
     }

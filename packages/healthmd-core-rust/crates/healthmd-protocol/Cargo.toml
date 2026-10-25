@@ -15,6 +15,7 @@ publish = ["crates-io"]
 base64.workspace = true
 chacha20poly1305.workspace = true
 chrono.workspace = true
+chrono-tz.workspace = true
 getrandom.workspace = true
 hmac.workspace = true
 rand.workspace = true

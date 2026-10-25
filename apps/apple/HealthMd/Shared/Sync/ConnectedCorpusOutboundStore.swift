@@ -1,4 +1,5 @@
 import Foundation
+import HealthMdConnectionCore
 
 /// Origin of a durable iPhone corpus export. The value is persisted so an app
 /// relaunch can restore the right product behavior without retaining closures.
@@ -33,6 +34,10 @@ enum ConnectedCorpusOutboundState: String, Codable, Equatable, Sendable {
 /// Mac and are represented here by their digest-chain frontier.
 struct ConnectedCorpusOutboundJournal: Codable, Equatable, Sendable {
     static let currentVersion = 2
+    static let historyObservationVersion = 3
+    static func version(for manifest: ConnectedCorpusExportManifest) -> Int {
+        manifest.historyObservation == nil ? currentVersion : historyObservationVersion
+    }
 
     struct Item: Codable, Equatable, Sendable {
         let itemID: UUID
@@ -229,6 +234,7 @@ final class ConnectedCorpusOutboundStore {
         expiresAt: Date? = nil
     ) throws -> ConnectedCorpusOutboundJournal {
         try manifest.validate()
+        try manifest.validateHistory(session: session)
         guard macRequest.map({ $0.jobID == session.jobID }) ?? true,
               session.protocolVersion >= 2,
               session.peerBinding != nil,
@@ -271,6 +277,7 @@ final class ConnectedCorpusOutboundStore {
             completionRecorded: false,
             updatedAt: timestamp
         )
+        journal.version = ConnectedCorpusOutboundJournal.version(for: manifest)
         try validate(journal)
         try persist(&journal)
         return journal
@@ -283,11 +290,14 @@ final class ConnectedCorpusOutboundStore {
         var journal: ConnectedCorpusOutboundJournal
         do {
             journal = try decoder.decode(ConnectedCorpusOutboundJournal.self, from: data)
-            guard (1...ConnectedCorpusOutboundJournal.currentVersion).contains(journal.version) else {
+            guard (1...ConnectedCorpusOutboundJournal.historyObservationVersion).contains(journal.version),
+                  (journal.version == ConnectedCorpusOutboundJournal.historyObservationVersion)
+                    == (journal.exportManifest.historyObservation != nil) else {
                 throw ConnectedCorpusOutboundStoreError.invalidJournal
             }
-            let requiresMigration = journal.version < ConnectedCorpusOutboundJournal.currentVersion
-            journal.version = ConnectedCorpusOutboundJournal.currentVersion
+            let expectedVersion = ConnectedCorpusOutboundJournal.version(for: journal.exportManifest)
+            let requiresMigration = journal.version != expectedVersion
+            journal.version = expectedVersion
             try validate(journal)
             try validateFiles(journal)
             if requiresMigration { try persist(&journal) }
@@ -654,7 +664,7 @@ final class ConnectedCorpusOutboundStore {
     }
 
     private func validate(_ journal: ConnectedCorpusOutboundJournal) throws {
-        guard journal.version == ConnectedCorpusOutboundJournal.currentVersion,
+        guard journal.version == ConnectedCorpusOutboundJournal.version(for: journal.exportManifest),
               journal.macRequest.map({ $0.jobID == journal.session.jobID }) ?? true,
               journal.session.protocolVersion >= 2,
               ConnectedCorpusTransferCapabilities.current.protocolVersions.contains(
@@ -695,6 +705,13 @@ final class ConnectedCorpusOutboundStore {
             throw ConnectedCorpusOutboundStoreError.invalidJournal
         }
         try journal.exportManifest.validate()
+        try journal.exportManifest.validateHistory(session: journal.session)
+        if let request = journal.macRequest, let observation = journal.exportManifest.historyObservation {
+            guard request.responseMode == .contextStore,
+                  observation.allAvailable == (request.dateSelection == .allAvailable) else {
+                throw ConnectedCorpusOutboundStoreError.invalidJournal
+            }
+        }
         if journal.state == .completed {
             guard journal.items.isEmpty,
                   journal.pendingPartition == nil,

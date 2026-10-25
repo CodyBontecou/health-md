@@ -1,9 +1,14 @@
 #if os(macOS)
 import CryptoKit
 import Foundation
+import HealthMdConnectionCore
 
 nonisolated private enum EncryptedQueryExecutionContext {
-    @TaskLocal static var evidenceScope: HealthMdEvidenceScope?
+    struct Context: Sendable {
+        let evidenceScope: HealthMdEvidenceScope
+        let request: HealthMdQueryRequest
+    }
+    @TaskLocal static var context: Context?
 }
 
 /// Bounded-memory production query execution over the encrypted one-day-per-blob store.
@@ -28,7 +33,7 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
     /// A missing task-local scope is a programming error, but still fails closed
     /// rather than inheriting permissions from another re-entrant actor task.
     private var evidenceScope: HealthMdEvidenceScope {
-        EncryptedQueryExecutionContext.evidenceScope
+        EncryptedQueryExecutionContext.context?.evidenceScope
             ?? HealthMdEvidenceScope(allowedMetricIDs: [])
     }
 
@@ -362,7 +367,7 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
         detailLevel: HealthMdQueryDetailLevel,
         evidenceScope: HealthMdEvidenceScope
     ) async throws -> HealthMdQueryResponse {
-        try await EncryptedQueryExecutionContext.$evidenceScope.withValue(evidenceScope) {
+        try await EncryptedQueryExecutionContext.$context.withValue(.init(evidenceScope: evidenceScope, request: request)) {
             try validate(request, detailLevel: detailLevel)
             let snapshot = try await store.snapshot()
             let fingerprint = try requestFingerprint(request, detailLevel: detailLevel)
@@ -2068,9 +2073,81 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
         _ snapshot: HealthContextStoreSnapshot,
         at index: Int
     ) async throws -> HealthMdCompactContextDay {
-        let day = try await store.loadDay(from: snapshot, at: index)
+        let context = try await store.loadContext(from: snapshot, at: index)
+        let day = context.day
         didLoadDay(day.ownerDate)
-        return day
+        guard let request = EncryptedQueryExecutionContext.context?.request else { return day }
+        let disclosures = historyLimitations(context.historyProvenance, request: request)
+        guard !disclosures.isEmpty else { return day }
+        return HealthMdCompactContextDay(ownerDate: day.ownerDate, intervalStart: day.intervalStart,
+            intervalEnd: day.intervalEnd, calendarTimeZone: day.calendarTimeZone, source: day.source,
+            status: day.status, metrics: day.metrics, workouts: day.workouts, sleepSessions: day.sleepSessions,
+            evidence: day.evidence, limitations: sortedLimitations(Set(day.limitations + disclosures)),
+            schema: day.schema, schemaVersion: day.schemaVersion)
+    }
+
+    /// Fixed messages keep packet metadata bounded across arbitrarily many
+    /// imported operations. Only request/grant-selected Apple scopes participate;
+    /// original observations and unrelated metric names never leak into a packet.
+    private func historyLimitations(_ provenance: [HealthContextHistoryProvenance],
+                                    request: HealthMdQueryRequest) -> [HealthMdLimitation] {
+        let appleSources: Set<String> = [HealthMdEvidenceSourceIDs.appleHealth, HealthMdEvidenceSourceIDs.healthMdSummary]
+        if let allowed = evidenceScope.allowedSourceIDs, allowed.isDisjoint(with: appleSources) { return [] }
+        switch request.sources {
+        case .allAvailable: break
+        case .explicit(let ids, _):
+            guard !Set(ids).isDisjoint(with: appleSources) else { return [] }
+        }
+        var selected: Set<String>
+        switch request.metrics {
+        case .allAvailable: selected = evidenceScope.allowedMetricIDs
+        case .explicit(let ids): selected = Set(ids).intersection(evidenceScope.allowedMetricIDs)
+        }
+        switch request.operation {
+        case .workoutListing, .workoutSleepAlignment:
+            if evidenceScope.allowsWorkouts { selected.insert("workouts") }
+        case .derivePacket(let kind, _):
+            if kind == .training, evidenceScope.allowsWorkouts { selected.insert("workouts") }
+        default: break
+        }
+        guard !selected.isEmpty else { return [] }
+        var covered = Set<String>()
+        var outcomes = Set<String>()
+        for entry in provenance {
+            let applicable = Set(entry.metricIDs).intersection(selected)
+            guard !applicable.isEmpty else { continue }
+            covered.formUnion(applicable)
+            for row in entry.observation.types
+                where !Set(row.directMetricIDs + row.dependencyMetricIDs).isDisjoint(with: applicable) {
+                outcomes.insert(row.outcome)
+            }
+        }
+        var result: [HealthMdLimitation] = []
+        if !covered.isEmpty {
+            result.append(.init(code: "history_admission_observation",
+                message: "Historical access evidence belongs to the acquisition of this stored data. It is not current permission or certification of full history."))
+        }
+        if outcomes.contains("limited") {
+            result.append(.init(code: "history_sample_end_limited",
+                message: "Some selected Apple types had a sample-end history boundary at acquisition. Earlier history is unknown, not missing; readable records and original timestamps remain included."))
+        }
+        if !selected.isSubset(of: covered) || outcomes.contains("unknown") {
+            result.append(.init(code: "history_access_unverified",
+                message: "Selected Apple historical access could not be established for this stored data. Empty records and completed acquisition do not establish full history."))
+        }
+        if outcomes.contains("api_unavailable") {
+            result.append(.init(code: "history_assessment_api_unavailable",
+                message: "The history-assessment API was unavailable for selected Apple types when this data was acquired."))
+        }
+        if outcomes.contains("assessment_failed") {
+            result.append(.init(code: "history_assessment_failed",
+                message: "Historical access assessment failed for selected Apple types when this data was acquired."))
+        }
+        if outcomes.contains("unassessed") {
+            result.append(.init(code: "history_assessment_unassessed",
+                message: "Historical access was not assessed for some selected Apple types when this data was acquired."))
+        }
+        return result
     }
 
     // MARK: - Paging and opaque cursors

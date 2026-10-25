@@ -2184,15 +2184,14 @@ final class VaultManager: ObservableObject {
         _ url: URL,
         healthSubfolder: String
     ) throws {
-        let standardized = url.standardizedFileURL
         let containerRoots = [
             FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
             FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
             FileManager.default.temporaryDirectory
-        ].compactMap { $0?.standardizedFileURL.path }
-        guard containerRoots.contains(where: {
-            standardized.path == $0 || standardized.path.hasPrefix($0 + "/")
-        }) else {
+        ].compactMap { $0 }
+        // iOS can expose the same container through /var and /private/var.
+        // Compare resolved path components while retaining the root boundary.
+        guard let standardized = AppContainerStagingRoot.validated(url, allowedRoots: containerRoots) else {
             throw ExportError.accessDenied
         }
         try FileManager.default.createDirectory(
@@ -2210,7 +2209,18 @@ final class VaultManager: ObservableObject {
 
     /// Set a fake vault for UI testing — avoids real bookmark/security-scoped access.
     func setTestVault() {
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("TestVault")
+        var root = FileManager.default.temporaryDirectory
+        #if DEBUG && targetEnvironment(simulator)
+        if TestMode.isUITesting,
+           ProcessInfo.processInfo.environment["UITEST_BROWSABLE_VAULT"] == "true" {
+            precondition(Bundle.main.object(forInfoDictionaryKey: "HealthMdUITestBrowsableDocuments") as? Bool == true)
+            guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                preconditionFailure("Missing synthetic UI-test document directory")
+            }
+            root = documents
+        }
+        #endif
+        let tempDir = root.appendingPathComponent("TestVault", isDirectory: true)
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         vaultURL = tempDir
         vaultName = "TestVault"

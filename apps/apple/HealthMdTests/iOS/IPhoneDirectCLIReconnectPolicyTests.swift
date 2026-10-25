@@ -51,6 +51,24 @@ final class IPhoneDirectCLIReconnectPolicyTests: XCTestCase {
         )
     }
 
+    func testManualCodeTrustCommitDoesNotRequireAScannedQRReceipt() {
+        let context = IPhoneDirectCLIPairingTrustContext(scannedAt: nil)
+        XCTAssertEqual(context, .manualCode)
+        XCTAssertTrue(context.permitsCommit())
+    }
+
+    func testScannedTrustCommitKeepsItsCapturedExpiryAfterPendingStateClears() throws {
+        var pendingScannedAt: Date? = Date(timeIntervalSinceReferenceDate: 1_000)
+        let receivedAt = try XCTUnwrap(pendingScannedAt)
+        let context = IPhoneDirectCLIPairingTrustContext(scannedAt: pendingScannedAt)
+        pendingScannedAt = nil
+        XCTAssertNil(pendingScannedAt)
+        XCTAssertTrue(context.permitsCommit(now: receivedAt.addingTimeInterval(1)))
+        XCTAssertFalse(context.permitsCommit(now: receivedAt.addingTimeInterval(
+            DirectPairingSecurity.pairingCodeLifetime
+        )))
+    }
+
     func testInterruptedPairingRestoresSettingsUnlessNewTrustCommitted() {
         let previousID = UUID()
         let previousPairedAt = Date(timeIntervalSinceReferenceDate: 200)

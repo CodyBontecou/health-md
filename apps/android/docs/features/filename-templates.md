@@ -9,7 +9,7 @@
 
 ## What it does
 
-Controls the name of every exported file with date placeholders. The default is simply `{date}`, producing `2026-05-12.md`. Compose placeholders with fixed text to build names like `health-{year}-{month}.md` or `{year}_Q{quarter}`.
+Controls the name of every exported file with date placeholders. The default is simply `{date}`, producing `2026-05-12.md`. Compose placeholders with fixed text to build names like `health-{year}-{month}.md` or `{year}_{quarter}`.
 
 ## Who it is for
 
@@ -68,7 +68,7 @@ Health/
 | Problem | Likely cause | Fix |
 |---|---|---|
 | Literal `{date}` in the filename | Typo in the placeholder | Use exactly `{date}` with braces |
-| Files overwrite each other | Template has no date placeholder (for example fixed text only) | Include `{date}` or `{day}` so each day is unique |
+| Files overwrite each other | Template has no date placeholder (for example fixed text only) | Include `{date}` or `{year}-{month}-{day}` so dates remain distinct across months and years |
 | Names show unexpected language | `{weekday}`/`{monthName}` use device locale | Use numeric placeholders instead |
 
 ## Video outline

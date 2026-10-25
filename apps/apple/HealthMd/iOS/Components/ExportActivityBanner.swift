@@ -277,4 +277,56 @@ struct ExportActivityBanner: View {
         }
     }
 }
+
+struct ManualExportActivityBanner: View {
+    let target: ExportTargetSelection
+    let progress: Double
+    let message: String
+    let onCancel: () -> Void
+
+    var body: some View {
+        ExportActivityBanner(
+            title: String(localized: "Export in Progress"),
+            systemImage: systemImage,
+            tint: Color.accent,
+            sourceLabel: String(localized: "iPhone"),
+            targetLabel: targetLabel,
+            message: message.isEmpty ? String(localized: "Exporting") : message,
+            progress: progress,
+            showsIndeterminateProgress: false,
+            progressAccessibilityLabel: String(localized: "Export progress"),
+            details: [],
+            trailingText: nil,
+            accessibilityIdentifier: AccessibilityID.Export.activityBanner,
+            action: ExportActivityBannerAction(
+                title: String(localized: "Stop Export"),
+                systemImage: "stop.fill",
+                accessibilityIdentifier: AccessibilityID.Export.cancelExportButton,
+                perform: onCancel
+            )
+        )
+    }
+
+    private var targetLabel: String {
+        switch target {
+        case .localIPhoneFolder:
+            return String(localized: "Local iPhone Folder")
+        case .connectedMac:
+            return String(localized: "Connected Mac")
+        case .apiEndpoint:
+            return String(localized: "API Endpoint")
+        case .agentDataGateway:
+            return String(localized: "Agent Data gateway")
+        }
+    }
+
+    private var systemImage: String {
+        switch target {
+        case .localIPhoneFolder: return "folder.fill"
+        case .connectedMac: return "desktopcomputer"
+        case .apiEndpoint: return "network"
+        case .agentDataGateway: return "arrow.up.and.down.and.arrow.left.and.right"
+        }
+    }
+}
 #endif

@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.settings.SettingsRepositoryImpl
 import com.healthmd.domain.repository.NativeExportEligibilitySettings
+import com.healthmd.domain.billing.FreemiumPolicy
 import io.mockk.mockk
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
@@ -41,12 +42,12 @@ class AgentBridgeNativeExportEligibilityTest {
         val changes = AtomicInteger()
         val native = observe(settings.onEach { reads.incrementAndGet() }, billing) { changes.incrementAndGet() }
         assertThat(native.current()).isFalse()
-        settings.value = NativeExportEligibilitySettings(false, 9)
+        settings.value = NativeExportEligibilitySettings(false, FreemiumPolicy.FREE_EXPORT_LIMIT - 1)
         await { native.current() }
         val before = reads.get()
         repeat(100) { assertThat(native.current()).isTrue() }
         assertThat(reads.get()).isEqualTo(before)
-        settings.value = NativeExportEligibilitySettings(false, 10)
+        settings.value = NativeExportEligibilitySettings(false, FreemiumPolicy.FREE_EXPORT_LIMIT)
         await { !native.current() }
         billing.value = true
         await { native.current() }

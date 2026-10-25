@@ -3789,6 +3789,15 @@ def validate_android_recovery_coverage(root: Path, path: Path) -> None:
         fail(f"{context}: rows must be unique, ordered additions to the frozen ledger")
 
 
+def validate_diagnostics_fixture(root: Path, path: Path) -> None:
+    from diagnostics.validate import validate_fixture
+
+    try:
+        validate_fixture(root, path, validate_json_schema_subset, ContractValidationError)
+    except (OSError, ValueError, KeyError, AssertionError) as error:
+        fail(f"diagnostics: {error}")
+
+
 def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
     manifest_path = root / "packages/contracts/manifest.json"
     manifest = require_exact_keys(
@@ -3917,6 +3926,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     fail(f"{fixture_context}: unknown healthmd.direct.android fixture file")
             elif identifier in {"healthmd.agent_bridge", "healthmd.source_query", "healthmd.direct.agent-bridge"}:
                 validate_agent_bridge_asset(root, fixture_path)
+            elif identifier == "healthmd.diagnostics":
+                validate_diagnostics_fixture(root, fixture_path)
             elif identifier == "healthmd.semantic_input":
                 if fixture_path.name == "range-profile-revision-v2.json":
                     validate_semantic_range_capability_fixture(fixture_path)

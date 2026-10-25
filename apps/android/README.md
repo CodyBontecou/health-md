@@ -23,7 +23,7 @@ Both variants use the same application ID (`com.healthmd.android`), version, Hea
 
 | Capability | Google Play | F-Droid |
 | --- | --- | --- |
-| Access model | 10 free manual exports, then one-time Play purchase | Full access included; no purchase or restore UI |
+| Access model | 5 free manual exports, then one-time Play purchase | Full access included; no purchase or restore UI |
 | Health sources | Health Connect plus optional direct Fitbit, Oura, WHOOP, and Withings providers | Health Connect only |
 | Wear OS companion | Deferred; not in the current Play release | Unavailable |
 | Review, attribution, onboarding telemetry | Play review and bounded first-party telemetry are available/configuration-gated | Not compiled in; no Health.md telemetry or telemetry identity/state |
@@ -147,7 +147,7 @@ cloud service. See [Android desktop destination strategy](docs/android-desktop-d
 
 ## Access and pricing
 
-The **Google Play build** includes 10 free manual export actions. Unlimited manual exports, scheduling, automation, recovery, and Direct CLI export are unlocked with a one-time lifetime purchase through Google Play Billing. No subscription. The free counter tracks export actions, not files.
+The **Google Play build** includes 5 free manual export actions. Unlimited manual exports, scheduling, automation, recovery, and Direct CLI export are unlocked with a one-time lifetime purchase through Google Play Billing. No subscription. The free counter tracks export actions, not files.
 
 The **F-Droid build** includes full access with no payment, counter, paywall, purchase, or restore flow. This channel difference does not change export bytes or public protocols.
 

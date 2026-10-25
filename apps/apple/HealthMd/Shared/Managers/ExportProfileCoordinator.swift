@@ -59,6 +59,7 @@ final class ExportProfileCoordinator: ObservableObject {
     private let settings: AdvancedExportSettings
     private let vaultManager: VaultManager
     private let apiExportSettings: APIExportSettings
+    private let agentDataGatewaySettings: AgentDataGatewaySettings
     private let now: () -> Date
     private let sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate
     private let sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction
@@ -85,6 +86,7 @@ final class ExportProfileCoordinator: ObservableObject {
         apiExportSettings: APIExportSettings,
         initialTarget: ExportTargetSelection,
         now: @escaping () -> Date = { Date() },
+        agentDataGatewaySettings: AgentDataGatewaySettings? = nil,
         sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate? = nil,
         sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction? = nil
     ) {
@@ -94,6 +96,7 @@ final class ExportProfileCoordinator: ObservableObject {
         self.settings = settings
         self.vaultManager = vaultManager
         self.apiExportSettings = apiExportSettings
+        self.agentDataGatewaySettings = agentDataGatewaySettings ?? AgentDataGatewaySettings()
         self.now = now
         self.sharedSetupV2ExecutionGate = sharedSetupV2ExecutionGate
             ?? SharedSetupV2ExecutionGate()
@@ -129,6 +132,7 @@ final class ExportProfileCoordinator: ObservableObject {
             folderVaultID = destination.id
         }
 
+        var bootstrapAgentDataGatewayBinding: UUID?
         var apiEndpointID: UUID?
         let trimmedURL = apiExportSettings.endpointURLString
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -142,12 +146,32 @@ final class ExportProfileCoordinator: ObservableObject {
             apiEndpointID = endpoint.id
         }
 
+        // The gateway destination carries no credential in v1; migration
+        // binds the live single-gateway state when one exists. The binding is
+        // native store state (the ExportProfile payload is unchanged).
+        let trimmedGatewayURL = agentDataGatewaySettings.endpointURLString
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedGatewayURL.isEmpty {
+            let gateway = destinationStore.upsertAgentDataGateway(
+                name: String(localized: "Default Gateway", comment: "Name of the Agent Data gateway migrated from existing settings"),
+                endpointURLString: trimmedGatewayURL
+            )
+            bootstrapAgentDataGatewayBinding = gateway.id
+        }
+
         let didCreate = profileStore.migrateDefaultProfileIfNeeded(
             settings: liveSettingsSnapshot,
             target: initialTarget,
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID
         )
+        if didCreate, let bootstrapAgentDataGatewayBinding,
+           let defaultProfileID = profileStore.activeProfileID {
+            destinationStore.setAgentDataGatewayBinding(
+                profileID: defaultProfileID,
+                gatewayID: bootstrapAgentDataGatewayBinding
+            )
+        }
 
         // Phase 3: an enabled legacy schedule becomes the Default profile's
         // scheduled entry exactly once, then the legacy schedule is disabled
@@ -195,6 +219,7 @@ final class ExportProfileCoordinator: ObservableObject {
             adoptVaultDestination(for: profile)
         }
         adoptAPIEndpoint(for: profile)
+        adoptAgentDataGateway(for: profile)
         observeEdits()
         return true
     }
@@ -232,6 +257,12 @@ final class ExportProfileCoordinator: ObservableObject {
               let endpoint = destinationStore.apiEndpoint(id: bindingID) else { return }
         apiExportSettings.endpointURLString = endpoint.endpointURLString
         apiExportSettings.bearerToken = destinationStore.token(for: endpoint.id) ?? ""
+    }
+
+    private func adoptAgentDataGateway(for profile: ExportProfile) {
+        guard let bindingID = destinationStore.agentDataGatewayBinding(profileID: profile.id),
+              let gateway = destinationStore.agentDataGateway(id: bindingID) else { return }
+        agentDataGatewaySettings.endpointURLString = gateway.endpointURLString
     }
 
     // MARK: - Edit flush
@@ -462,6 +493,53 @@ final class ExportProfileCoordinator: ObservableObject {
         profileStore.setAPIEndpointBinding(profileID: activeID, endpointID: endpoint.id)
     }
 
+    /// Imports a newly configured Agent Data gateway into the shared
+    /// destination store for the profile editor — without touching the live
+    /// shared gateway settings. Re-entering an already-saved URL reuses its
+    /// gateway row. Returns the gateway id for the editor draft's binding;
+    /// the binding only reaches live state when saving an active profile
+    /// adopts it.
+    @discardableResult
+    func importAgentDataGatewaySelection(
+        name: String,
+        endpointURLString: String
+    ) -> UUID? {
+        let trimmedURL = endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedURL.isEmpty else { return nil }
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Upsert overwrites the row's name, so an empty form name must fall
+        // back to the existing row's name (then the URL) rather than blank it.
+        let existing = destinationStore.agentDataGateway(id: destinationStore.agentDataGateways.first {
+            $0.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare(trimmedURL) == .orderedSame
+        }?.id)?.name
+        let resolvedName = !trimmedName.isEmpty
+            ? trimmedName
+            : (existing ?? trimmedURL)
+        let gateway = destinationStore.upsertAgentDataGateway(
+            name: resolvedName,
+            endpointURLString: trimmedURL
+        )
+        return gateway.id
+    }
+
+    /// Called when Agent Data gateway settings change while a profile is
+    /// active. Upserts the gateway and binds it to the active profile.
+    func agentDataGatewayDidChange() {
+        guard let activeID = profileStore.activeProfileID,
+              !isProfileExecutionBlocked(activeID) else { return }
+
+        let trimmedURL = agentDataGatewaySettings.endpointURLString
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedURL.isEmpty else { return }
+
+        let gateway = destinationStore.upsertAgentDataGateway(
+            name: trimmedURL,
+            endpointURLString: trimmedURL
+        )
+        destinationStore.setAgentDataGatewayBinding(profileID: activeID, gatewayID: gateway.id)
+    }
+
     // MARK: - Profile management
 
     /// Creates a new profile from the flushed live settings with an explicit
@@ -473,6 +551,7 @@ final class ExportProfileCoordinator: ObservableObject {
         name: String,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
+        agentDataGatewayID: UUID? = nil,
         settings newSettings: ExportSettingsSnapshot? = nil
     ) -> ExportProfile? {
         flushEdits()
@@ -485,6 +564,14 @@ final class ExportProfileCoordinator: ObservableObject {
             folderVaultID: folderVaultID,
             apiEndpointID: source.apiEndpointID
         ) else { return nil }
+        if target == .agentDataGateway {
+            let resolvedGatewayID = agentDataGatewayID
+                ?? destinationStore.agentDataGatewayBinding(profileID: source.id)
+            destinationStore.setAgentDataGatewayBinding(
+                profileID: created.id,
+                gatewayID: resolvedGatewayID
+            )
+        }
         activate(profileID: created.id, adoptVault: folderVaultID != nil)
         return created
     }
@@ -554,6 +641,13 @@ final class ExportProfileCoordinator: ObservableObject {
             folderVaultID: source.folderVaultID,
             apiEndpointID: source.apiEndpointID
         ) else { return nil }
+        if source.target == .agentDataGateway,
+           let bindingID = destinationStore.agentDataGatewayBinding(profileID: source.id) {
+            destinationStore.setAgentDataGatewayBinding(
+                profileID: copy.id,
+                gatewayID: bindingID
+            )
+        }
         activate(profileID: copy.id, adoptVault: false)
         return copy
     }
@@ -564,7 +658,14 @@ final class ExportProfileCoordinator: ObservableObject {
     @discardableResult
     func duplicateProfile(id: UUID) -> ExportProfile? {
         guard !isProfileExecutionBlocked(id) else { return nil }
-        return profileStore.duplicate(id: id)
+        guard let copy = profileStore.duplicate(id: id) else { return nil }
+        if let bindingID = destinationStore.agentDataGatewayBinding(profileID: id) {
+            destinationStore.setAgentDataGatewayBinding(
+                profileID: copy.id,
+                gatewayID: bindingID
+            )
+        }
+        return copy
     }
 
     /// Deletes a profile (forbidden for the last remaining profile by the
@@ -631,6 +732,7 @@ final class ExportProfileCoordinator: ObservableObject {
         target: ExportTargetSelection,
         folderVaultID: UUID?,
         apiEndpointID: UUID?,
+        agentDataGatewayID: UUID? = nil,
         settings newSettings: ExportSettingsSnapshot
     ) -> ExportProfile? {
         guard profileStore.profile(id: id) != nil else { return nil }
@@ -644,6 +746,10 @@ final class ExportProfileCoordinator: ObservableObject {
         _ = profileStore.setAPIEndpointBinding(
             profileID: id,
             endpointID: target == .apiEndpoint ? apiEndpointID : nil
+        )
+        destinationStore.setAgentDataGatewayBinding(
+            profileID: id,
+            gatewayID: target == .agentDataGateway ? agentDataGatewayID : nil
         )
         _ = profileStore.updateSettings(id: id, settings: newSettings)
 
@@ -663,6 +769,9 @@ final class ExportProfileCoordinator: ObservableObject {
         }
         if apiEndpointID != nil {
             adoptAPIEndpoint(for: updated)
+        }
+        if agentDataGatewayID != nil {
+            adoptAgentDataGateway(for: updated)
         }
         observeEdits()
         return updated
@@ -721,7 +830,8 @@ final class ExportProfileCoordinator: ObservableObject {
                 ?? vaultManager.pathForDisplay
         case .connectedMac:
             return ExportProfileOverlapDetector.connectedMacRootKey
-        case .apiEndpoint:
+        case .apiEndpoint, .agentDataGateway:
+            // Upload destinations never write local files.
             return nil
         }
     }

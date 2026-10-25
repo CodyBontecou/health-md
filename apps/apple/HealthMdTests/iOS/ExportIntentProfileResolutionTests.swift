@@ -103,6 +103,56 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         _ = profile
     }
 
+    /// Issue #173 must add a separate context action, not reinterpret an
+    /// ordinary file-export Shortcut when its profile selects a remote target.
+    func testRemoteProfileShortcutStillUsesLocalPipelineAndFileQuota() async throws {
+        for target in [ExportTargetSelection.connectedMac, .apiEndpoint] {
+            let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+            let profile = store.add(
+                name: "Remote-\(target.rawValue)",
+                settings: makeSettings(filenameFormat: "remote-{date}"),
+                target: target
+            )
+            let recorder = ProfileRunRecorder()
+            let outcome = await ExportIntentRunner.run(
+                dates: [Date()],
+                profileName: profile.name,
+                dependencies: recorder.makeDependencies(defaults: defaults)
+            )
+
+            guard case .success = outcome else {
+                return XCTFail("expected local export success, got \(outcome)")
+            }
+            XCTAssertEqual(recorder.seenFilenameFormats, ["remote-{date}"])
+            XCTAssertEqual(recorder.historyTargetLabels, ["iPhone: TestVault"])
+            XCTAssertEqual(recorder.exportUseCount, 1, "ordinary exports are not context/quota-exempt")
+            XCTAssertTrue(recorder.restored)
+            let reloaded = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+            XCTAssertEqual(reloaded.profile(named: profile.name), profile, "do not mutate the saved remote profile")
+        }
+    }
+
+    func testRemoteProfileShortcutDoesNotBypassFileQuota() async {
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        let profile = store.add(name: "Mac", settings: makeSnapshot(), target: .connectedMac)
+        let recorder = ProfileRunRecorder()
+        var dependencies = recorder.makeDependencies(defaults: defaults)
+        dependencies.canExport = { false }
+        ProfileResolutionRetainer.retained.append(dependencies)
+
+        let outcome = await ExportIntentRunner.run(
+            dates: [Date()], profileName: profile.name, dependencies: dependencies
+        )
+
+        guard case .paywall = outcome else {
+            return XCTFail("expected ordinary file-export quota gate, got \(outcome)")
+        }
+        XCTAssertTrue(recorder.seenFilenameFormats.isEmpty)
+        XCTAssertTrue(recorder.historyTargetLabels.isEmpty)
+        XCTAssertEqual(recorder.exportUseCount, 0)
+        XCTAssertTrue(recorder.restored)
+    }
+
     func testProfileNotFoundShortCircuitsBeforeVaultAccess() async {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         store.add(name: "Daily", settings: makeSnapshot(), target: .localIPhoneFolder)
@@ -181,6 +231,8 @@ private final class ProfileRunRecorder {
     var restored = false
     var seenFilenameFormats: [String] = []
     var historyProfileNames: [String?] = []
+    var historyTargetLabels: [String?] = []
+    var exportUseCount = 0
 
     func makeDependencies(defaults: UserDefaults) -> ExportIntentRunner.Dependencies {
         let dependencies = ExportIntentRunner.Dependencies(
@@ -211,10 +263,11 @@ private final class ProfileRunRecorder {
                     failedDateDetails: []
                 )
             },
-            recordResult: { [weak self] _, _, _, _, _, profileName in
+            recordResult: { [weak self] _, _, _, _, targetLabel, profileName in
                 self?.historyProfileNames.append(profileName)
+                self?.historyTargetLabels.append(targetLabel)
             },
-            recordExportUse: {},
+            recordExportUse: { [weak self] in self?.exportUseCount += 1 },
             trackExportSucceeded: { _ in },
             updateScheduleLastExport: {},
             pendingExportStore: InMemoryPendingExportStore(),

@@ -161,7 +161,7 @@ impl DirectMobileBackend {
             )
             .await
             .map_err(|error| backend_error(&error, Some(job_id)))?;
-        Ok(raw_export_success(
+        let mut receipt = raw_export_success(
             job_id,
             "ios",
             "apple_health",
@@ -171,7 +171,9 @@ impl DirectMobileBackend {
                 BackendError::new("healthmd_integrity_error", "Invalid raw artifact size.")
             })?,
             &result.artifact.sha256,
-        ))
+        );
+        attach_history_observation(&mut receipt, result.artifact.history_observation.as_ref());
+        Ok(receipt)
     }
 
     /// The shared wake-window object with enrollment reported truthfully for the configured
@@ -968,7 +970,7 @@ fn export_success(payload: &FileReceiptPayload) -> Value {
         .iter()
         .take(MAXIMUM_RECEIPT_PATHS)
         .collect();
-    json!({
+    let mut receipt = json!({
         "job_id": payload.job_id,
         "status": payload.status,
         "message": "Health.md generated and verified the requested files from the iPhone.",
@@ -983,7 +985,12 @@ fn export_success(payload: &FileReceiptPayload) -> Value {
         "failed_date_identifiers": failed_dates,
         "failed_date_identifier_count": payload.failed_date_identifiers.len(),
         "failed_date_identifiers_truncated": payload.failed_date_identifiers.len() > MAXIMUM_RECEIPT_PATHS
-    })
+    });
+    attach_history_observation(&mut receipt, payload.history_observation.as_ref());
+    if let Some(sidecar) = &payload.history_sidecar {
+        receipt["history_sidecar"] = json!(sidecar);
+    }
+    receipt
 }
 
 /// The byte-compatible iPhone request projection, separate from transport and
@@ -1049,7 +1056,7 @@ fn durable_raw_export_success(
     job_id: Uuid,
     artifact: &healthmd_client::direct::DurableRawArtifact,
 ) -> Value {
-    raw_export_success(
+    let mut receipt = raw_export_success(
         job_id,
         match artifact.platform {
             RawArtifactPlatform::Ios => "ios",
@@ -1060,7 +1067,18 @@ fn durable_raw_export_success(
         &artifact.status,
         artifact.byte_count,
         &artifact.sha256,
-    )
+    );
+    attach_history_observation(&mut receipt, artifact.history_observation.as_ref());
+    receipt
+}
+
+fn attach_history_observation(
+    receipt: &mut Value,
+    observation: Option<&healthmd_protocol::history::ExportHistoryObservation>,
+) {
+    if let Some(observation) = observation {
+        receipt["history_observation"] = json!(observation);
+    }
 }
 
 fn normalized_raw_status(status: &str) -> &str {
@@ -1076,6 +1094,7 @@ fn attach_raw_artifact_metadata(
     receipt: &mut Value,
     artifact: &healthmd_client::direct::DurableRawArtifact,
 ) {
+    attach_history_observation(receipt, artifact.history_observation.as_ref());
     receipt["status"] = json!(normalized_raw_status(&artifact.status));
     receipt["scope"] = json!("all_public_authorized");
     receipt["artifact"] = json!({
@@ -1384,6 +1403,35 @@ mod tests {
     use healthmd_client::direct::WakeEnrollment;
 
     #[test]
+    fn file_receipt_preserves_optional_frozen_history() {
+        let mut value = json!({"job_id":Uuid::new_v4(), "status":"success",
+            "destination_path":"/synthetic/vault", "files_written":1,"total_bytes":5,
+            "relative_paths":["daily.md"],"success_count":1,"total_count":1,"failed_date_identifiers":[]});
+        let legacy: FileReceiptPayload = serde_json::from_value(value.clone()).unwrap();
+        assert!(export_success(&legacy).get("history_observation").is_none());
+        value["history_observation"] = json!({
+            "schema":"healthmd.export_history_observation", "schema_version":1,
+            "observation_id":Uuid::new_v4(), "operation_id":value["job_id"],
+            "observed_at":"2026-10-23T12:00:00.000000000Z",
+            "request_binding_sha256":"a".repeat(64), "source_id":"apple.healthkit",
+            "time_zone_identifier":"UTC", "metric_ids":["steps"],
+            "requested_start":"2026-01-01T00:00:00.000000000Z",
+            "requested_end":"2026-01-01T00:00:00.000000000Z",
+            "all_available":false, "range_semantics":"owner_dates",
+            "evidence_method":"healthkit_earliest_authorized_sample_date",
+            "types":[{"type_id":"HKQuantityTypeIdentifierStepCount", "direct_metric_ids":["steps"],
+                "dependency_metric_ids":[], "dependency_reasons":[], "outcome":"unknown"}]
+        });
+        value["history_sidecar"] = json!({"relative_path":".healthmd/history-observations/synthetic.json", "byte_count":123, "sha256":"b".repeat(64)});
+        let observed: FileReceiptPayload = serde_json::from_value(value.clone()).unwrap();
+        let receipt = export_success(&observed);
+        assert_eq!(receipt["history_observation"], value["history_observation"]);
+        assert_eq!(receipt["history_sidecar"], value["history_sidecar"]);
+        assert_eq!(receipt["files_written"], 1);
+        assert_eq!(receipt["status"], "success");
+    }
+
+    #[test]
     fn explicit_mcp_wake_override_is_bounded_and_can_disable_waiting() {
         let options = ServeOptions {
             device_id: None,
@@ -1522,6 +1570,8 @@ mod tests {
             success_count: 1,
             total_count: 2,
             failed_date_identifiers: vec!["synthetic-day".into()],
+            history_observation: None,
+            history_sidecar: None,
         });
         assert_eq!(value["status"], "partial_success");
         assert_eq!(value["failed_date_identifier_count"], 1);

@@ -1,11 +1,10 @@
 # Health.md for Android Feature Documentation Index
 
-This directory is the canonical inventory for documenting Health.md for Android end-to-end, mirroring the Apple feature index at `apps/apple/docs/features/index.md`. Each feature should eventually have:
+This directory indexes Android workflow guides. Code, tests, and configuration establish implemented behavior; normative contracts and product policy define the requirements. The table is documentation navigation and editorial planning, not a separate capability or release-status database.
 
-1. a user-facing docs page here (use [`_template.md`](./_template.md)), and
-2. a video outline that can become one episode in the feature series.
+Update an existing guide when its user workflow changes. Create a new page only when a distinct audience or task needs information not already covered; link the canonical website guide or reference instead of copying it. Use [`_template.md`](./_template.md) when a new guide is warranted. Video outlines are optional, for commissioned video work.
 
-Deep machine contracts live in [`docs/export-contract/`](../export-contract/) and are linked from each page rather than duplicated. Product-wide cross-platform status lives in the repository-root [`docs/features/feature-inventory.md`](../../../../docs/features/feature-inventory.md), and the per-capability Apple↔Android pairing lives in [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md).
+Deep machine contracts live in [`docs/export-contract/`](../export-contract/) and are linked rather than duplicated. The repository-root [`documentation map`](../../../../docs/features/feature-inventory.md) points to each component's canonical owners. Cross-platform rationale lives in [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md); machine-readable classifications live in [`product-capabilities.json`](../../../../packages/contracts/product-capabilities.json).
 
 ## Draft status
 
@@ -19,7 +18,7 @@ All new pages below are first-pass drafts written from source. The next editoria
 | Setup | [Health Connect permissions](./health-connect-permissions.md) | Grant only the categories you want exported, with a rationale screen for review. | Draft | High | `presentation/HealthPermissionsRationaleActivity.kt`, `data/health/` |
 | Setup | [Folder destination](./folder-destination.md) | Pick any SAF folder: local, Obsidian vault, Drive, OneDrive, Syncthing, or another provider. | Draft | High | `data/storage/`, Export screen folder UI |
 | Setup | [Share My Setup](./share-my-setup.md) | Move export preferences between devices in one reviewed, transactional `.healthmdconfig` file — no health data or credentials. | Needs QA | Medium | `sharedsetup/` |
-| Export | [Manual export](./manual-export.md) | Export one day or a range on demand; 10 free actions before unlock. | Draft | High | `presentation/export/ExportScreen.kt` |
+| Export | [Manual export](./manual-export.md) | Export one day or a range on demand; 5 free actions before unlock. | Draft | High | `presentation/export/ExportScreen.kt` |
 | Export | [Metric selection](./metric-selection.md) | Choose from 106 Health Connect metrics with search and category toggles. | Draft | High | `presentation/metrics/MetricSelectionScreen.kt` |
 | Export | [Export preview](./export-preview.md) | Inspect generated output before writing to your folder. | Draft | Medium | `presentation/export/` preview components |
 | Export | [Export profiles](./export-profiles.md) | Save named configurations with independent settings, destinations, and schedules. | Draft | Medium | `presentation/export/ExportProfilesScreen.kt` |
@@ -42,11 +41,12 @@ All new pages below are first-pass drafts written from source. The next editoria
 | Automation | [Automation intents](./automation-intents.md) | Trigger exports from Tasker or adb; launcher shortcuts. | Draft | Medium | `automation/AutomationReceiver.kt`, [`android-automation-intents`](../android-automation-intents.md) |
 | Automation | [Export history and retry](./export-history-retry.md) | Review recent runs and retry failed dates from Room-backed history. | Draft | Medium | `data/history/`, `presentation/history/HistoryScreen.kt` |
 | Automation | [API endpoint export](./api-endpoint-export.md) | Send the `healthmd.api_export` envelope to your HTTP(S) endpoint with encrypted auth. | Draft | Medium | `data/export/API*`, [`api-endpoint-export`](../api-endpoint-export.md) |
+| Automation | [Agent Data gateway export](./agent-data-gateway.md) | Upload each exported artifact file unchanged to an ingestion gateway (`POST /v1/ingest`, protocol v1). | Draft | Medium | `data/export/AgentData*`, [`agent-data contract`](../../../../packages/contracts/agent-data/v1/contract.md) |
 | Devices | [Direct CLI](./direct-cli.md) | Pair with the standalone `healthmd` CLI over LAN or Tailscale for computer-side exports. | Draft | Medium | `presentation/directcli/`, [`android-desktop-destination`](../android-desktop-destination.md) |
 | Devices | [Home-screen widgets](./widgets.md) | Glance widgets: Health Summary, Activity, Heart Range, Sleep. | Existing | Medium | `widget/` |
 | Devices | [Wear OS companion](./wear-os.md) | Tiles and complications; phone stays authoritative. | Needs QA (unreleased) | Low | [`wear-os.md`](./wear-os.md) + runbook [`wear-os-implementation.md`](./wear-os-implementation.md) |
 | Reports | [Clinician report](./clinician-report.md) | Turn a date range into one accessible PDF to share with a clinician. | Draft | Medium | `presentation/clinicianreport/` |
-| Purchase | [Lifetime unlock](./lifetime-unlock.md) | 10 free manual export actions; one-time lifetime unlock, no subscription. | Draft | Medium | `presentation/paywall/`, `data/billing/` |
+| Purchase | [Lifetime unlock](./lifetime-unlock.md) | 5 free manual export actions; one-time lifetime unlock, no subscription. | Draft | Medium | `presentation/paywall/`, `data/billing/` |
 | Privacy | [Local-first privacy](./privacy-local-first.md) | No Health.md health-data cloud; every destination is user-directed. | Draft | High | README privacy sections, private spools |
 
 ## Suggested video series order
@@ -58,9 +58,10 @@ All new pages below are first-pass drafts written from source. The next editoria
 5. **Automate with Scheduled Exports:** [Scheduled exports](./scheduled-exports.md)
 6. **Trigger Exports from Tasker:** [Automation intents](./automation-intents.md)
 7. **Send Health Data to Your Own API:** [API endpoint export](./api-endpoint-export.md)
-8. **Pair Your Phone with Your Computer's CLI:** [Direct CLI](./direct-cli.md)
-9. **Archive Everything, Losslessly:** [Raw API snapshots](./raw-snapshots.md)
-10. **One PDF for Your Next Appointment:** [Clinician report](./clinician-report.md)
+8. **Upload Artifacts to an Agent Data Gateway:** [Agent Data gateway export](./agent-data-gateway.md)
+9. **Pair Your Phone with Your Computer's CLI:** [Direct CLI](./direct-cli.md)
+10. **Archive Everything, Losslessly:** [Raw API snapshots](./raw-snapshots.md)
+11. **One PDF for Your Next Appointment:** [Clinician report](./clinician-report.md)
 
 ## Documentation rules
 
@@ -68,5 +69,5 @@ All new pages below are first-pass drafts written from source. The next editoria
 - Never fabricate parity with Apple: if Health Connect cannot express something HealthKit can (or vice versa), say so explicitly and keep identities distinct (for example, HRV RMSSD here is not HealthKit SDNN).
 - Link machine contracts under `docs/export-contract/` instead of restating field lists.
 - Call out Android realities honestly: exact-alarm permission trade-offs, SAF provider quirks, lock-screen widget redaction limits.
-- Every feature page should include a video outline, even if the video is low priority.
-- Update this index and the root [`feature-inventory.md`](../../../../docs/features/feature-inventory.md) when a feature is added.
+- Add a video outline only for commissioned video work; a feature change does not require a new page or video.
+- Update this index when guide navigation changes. Update the root documentation map only when a canonical owner or documentation location changes.
