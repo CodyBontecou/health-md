@@ -217,21 +217,41 @@ final class AgentBridgeExportPlanningService {
         let request = try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: bytes)
         try authenticatedPeer.requireCurrent()
         try requirePeer(request.peer, authenticatedPeer)
-        func validate(_ job: AgentBridgeExportAcceptedJob, _ intent: AgentBridgeExportCancellationIntent) throws {
-            try authenticatedPeer.requireCurrent()
-            try requirePeer(request.peer, authenticatedPeer)
-            let now = try utc(clock.now())
-            guard job.acceptedAt.rawValue <= now.rawValue, now.rawValue < job.expiresAt.rawValue else {
-                throw AgentBridgeValidationError.planExpired
-            }
-            try intent.validate(job: job)
-            guard try intent.request() == request else { throw AgentBridgeValidationError.bindingChanged }
-        }
         return try store.recordCancellationIntent(request, prepare: { _, job in
             let intent = AgentBridgeExportCancellationIntent(version: 1, requestBytes: bytes, requestedAt: try self.utc(self.clock.now()))
-            try validate(job, intent)
+            try self.validateCancellation(request, job: job, intent: intent, authenticatedPeer: authenticatedPeer)
             return intent
-        }, requireCurrent: { _, job, intent in try validate(job, intent) })
+        }, requireCurrent: { _, job, intent in
+            try self.validateCancellation(request, job: job, intent: intent, authenticatedPeer: authenticatedPeer)
+        })
+    }
+
+    /// Only an issuer-locked absence of both capture reservation and spool can produce this
+    /// zero-capture terminal confirmation. Other jobs remain pending for retained-spool handling.
+    func finalizeUnclaimedCancellation(_ supplied: AgentBridgeCancel,
+        authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeExecutionReceipt {
+        let request = try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: AgentBridgeV4Codec.encode(supplied))
+        try authenticatedPeer.requireCurrent(); try requirePeer(request.peer, authenticatedPeer)
+        let terminal = try store.finalizeUnclaimedCancellation(request, prepare: { job, previous in
+            try self.validateCancellation(request, job: job, intent: previous, authenticatedPeer: authenticatedPeer)
+            return .init(version: 2, requestBytes: previous.requestBytes, requestedAt: previous.requestedAt,
+                terminalReceiptBytes: try AgentBridgeV4Codec.encode(job.unclaimedCancellationReceipt()), confirmedAt: self.utc(self.clock.now()))
+        }, requireCurrent: { job, intent in
+            try self.validateCancellation(request, job: job, intent: intent, authenticatedPeer: authenticatedPeer)
+        })
+        guard let receipt = try terminal.terminalReceipt() else { throw AgentBridgeValidationError.bindingChanged }
+        return receipt
+    }
+
+    private func validateCancellation(_ request: AgentBridgeCancel, job: AgentBridgeExportAcceptedJob,
+        intent: AgentBridgeExportCancellationIntent, authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws {
+        try authenticatedPeer.requireCurrent(); try requirePeer(request.peer, authenticatedPeer)
+        let now = try utc(clock.now())
+        guard job.acceptedAt.rawValue <= now.rawValue, now.rawValue < job.expiresAt.rawValue else {
+            throw AgentBridgeValidationError.planExpired
+        }
+        try intent.validate(job: job)
+        guard try intent.request() == request else { throw AgentBridgeValidationError.bindingChanged }
     }
 
     /// Single durable reservation only. The reservation does not authorize SDK reads, supply a

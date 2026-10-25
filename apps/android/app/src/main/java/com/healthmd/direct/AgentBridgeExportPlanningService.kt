@@ -149,18 +149,11 @@ internal class AgentBridgeExportPlanningService(
         val request = AgentBridgeCodec.decode(bytes) as AgentBridgeCancelRequest
         val expected = peer(authenticated, request.peer)
         var selected: Pair<AgentBridgeExportAcceptedJob, AgentBridgeExportCancellationIntent>? = null
-        fun validate(job: AgentBridgeExportAcceptedJob, intent: AgentBridgeExportCancellationIntent) {
-            peer(authenticated, expected)
-            val instant = now()
-            require(instant >= Instant.parse(job.acceptedAt) && instant < Instant.parse(job.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
-            intent.validate(job)
-            require(intent.request() == request, AgentBridgeErrorCode.BINDING_CHANGED)
-        }
         return store.access(fence = { transaction ->
             val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
             val result = selected ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
             require(result.first in tx.state.acceptedJobs.orEmpty() && result.second in tx.state.cancellationIntents.orEmpty(), AgentBridgeErrorCode.BINDING_CHANGED)
-            validate(result.first, result.second)
+            validateCancellation(authenticated, expected, request, result.first, result.second)
         }) { transaction ->
             val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
             val job = tx.state.acceptedJobs?.singleOrNull { it.requestSha256 == request.requestSha256 }
@@ -168,7 +161,7 @@ internal class AgentBridgeExportPlanningService(
             val intents = tx.state.cancellationIntents.orEmpty()
             val previous = intents.singleOrNull { it.request().requestSha256 == job.requestSha256 }
             val intent = previous ?: AgentBridgeExportCancellationIntent(1, bytes.decodeToString(), now().toString())
-            validate(job, intent)
+            validateCancellation(authenticated, expected, request, job, intent)
             if (previous == null) {
                 require(intents.size < 16, AgentBridgeErrorCode.BUSY)
                 tx.state = tx.state.copy(version = 5, cancellationIntents = intents + intent)
@@ -176,6 +169,52 @@ internal class AgentBridgeExportPlanningService(
             selected = job to intent
             intent
         }
+    }
+
+    /** Confirm only an issuer-locked absence of capture reservation and spool. Captured jobs
+     * remain pending until retained-spool handling can prove their actual frontier/completion. */
+    fun finalizeUnclaimedCancellation(authenticated: AgentBridgeExportAuthenticatedPeer,
+        supplied: AgentBridgeCancelRequest): AgentBridgeExecutionReceipt {
+        val request = AgentBridgeCodec.decode(AgentBridgeCodec.encode(supplied)) as AgentBridgeCancelRequest
+        val expected = peer(authenticated, request.peer)
+        var selected: Pair<AgentBridgeExportAcceptedJob, AgentBridgeExportCancellationIntent>? = null
+        fun unclaimed(tx: AgentBridgeExportAuthorityTransaction, job: AgentBridgeExportAcceptedJob) {
+            require(tx.state.captureClaims.orEmpty().none { it.requestSha256 == job.requestSha256 }, AgentBridgeErrorCode.BUSY)
+            store.requireNoCaptureSpool(job)
+        }
+        val terminal = store.access(fence = { transaction ->
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val result = selected ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            require(result.first in tx.state.acceptedJobs.orEmpty() && result.second in tx.state.cancellationIntents.orEmpty(), AgentBridgeErrorCode.BINDING_CHANGED)
+            validateCancellation(authenticated, expected, request, result.first, result.second)
+            unclaimed(tx, result.first) // Recheck local absence AFTER delaying native callbacks.
+        }) { transaction ->
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val job = tx.state.acceptedJobs?.singleOrNull { it.requestSha256 == request.requestSha256 }
+                ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            val intents = tx.state.cancellationIntents.orEmpty()
+            val index = intents.indexOfFirst { it.request() == request }
+            require(index >= 0, AgentBridgeErrorCode.BINDING_CHANGED)
+            val previous = intents[index]
+            validateCancellation(authenticated, expected, request, job, previous)
+            unclaimed(tx, job)
+            val result = if (previous.version == 2) previous else previous.copy(version = 2,
+                terminalReceiptCanonical = AgentBridgeCodec.encode(job.unclaimedCancellationReceipt()).decodeToString(), confirmedAt = now().toString())
+            validateCancellation(authenticated, expected, request, job, result)
+            if (result != previous) tx.state = tx.state.copy(cancellationIntents = intents.mapIndexed { i, value -> if (i == index) result else value })
+            selected = job to result
+            result
+        }
+        return terminal.terminalReceipt() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+    }
+
+    private fun validateCancellation(authenticated: AgentBridgeExportAuthenticatedPeer, expected: AgentBridgePeer,
+        request: AgentBridgeCancelRequest, job: AgentBridgeExportAcceptedJob, intent: AgentBridgeExportCancellationIntent) {
+        peer(authenticated, expected)
+        val instant = now()
+        require(instant >= Instant.parse(job.acceptedAt) && instant < Instant.parse(job.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
+        intent.validate(job)
+        require(intent.request() == request, AgentBridgeErrorCode.BINDING_CHANGED)
     }
 
     /** Single durable reservation; not SDK read authority, a preserved spool or capture completion.

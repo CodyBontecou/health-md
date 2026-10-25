@@ -85,6 +85,15 @@ nonisolated struct AgentBridgeExportAcceptedJob: Codable, Equatable {
             jobId: request.jobId, manifestSha256: absent, requestSha256: requestSHA256,
             sourceAcknowledged: false, status: .accepted)
     }
+    /// Confirmation for an issuer-locked proof that no capture claim or spool exists.
+    /// Callers must establish that proof; this value alone is never cancellation authority.
+    func unclaimedCancellationReceipt() throws -> AgentBridgeExecutionReceipt {
+        let accepted = try acceptedReceipt()
+        return .init(artifactCount: 0, binding: accepted.binding, committedPartitionCount: 0,
+            expiresAt: accepted.expiresAt, frontierSha256: accepted.frontierSha256,
+            jobId: accepted.jobId, manifestSha256: accepted.manifestSha256, requestSha256: accepted.requestSha256,
+            sourceAcknowledged: true, status: .cancelled)
+    }
     func validate() throws {
         let value = try request()
         let formatter = ISO8601DateFormatter()
@@ -117,11 +126,21 @@ nonisolated struct AgentBridgeExportCancellationIntent: Codable, Equatable {
     let version: Int
     let requestBytes: Data
     let requestedAt: AgentBridgeUTC
+    let terminalReceiptBytes: Data?
+    let confirmedAt: AgentBridgeUTC?
 
+    init(version: Int, requestBytes: Data, requestedAt: AgentBridgeUTC,
+         terminalReceiptBytes: Data? = nil, confirmedAt: AgentBridgeUTC? = nil) {
+        self.version = version; self.requestBytes = requestBytes; self.requestedAt = requestedAt
+        self.terminalReceiptBytes = terminalReceiptBytes; self.confirmedAt = confirmedAt
+    }
+    func terminalReceipt() throws -> AgentBridgeExecutionReceipt? {
+        try terminalReceiptBytes.map { try AgentBridgeV4Codec.decode(AgentBridgeExecutionReceipt.self, from: $0) }
+    }
     func request() throws -> AgentBridgeCancel { try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: requestBytes) }
     func validate(job: AgentBridgeExportAcceptedJob) throws {
         let cancel = try request(), original = try job.request()
-        guard version == 1, requestBytes.count <= 48 * 1024,
+        guard [1, 2].contains(version), requestBytes.count <= 48 * 1024,
               try AgentBridgeV4Codec.encode(cancel) == requestBytes,
               cancel.peer == original.plan.intent.peer, cancel.jobId == original.jobId,
               cancel.requestSha256 == job.requestSHA256,
@@ -129,6 +148,14 @@ nonisolated struct AgentBridgeExportCancellationIntent: Codable, Equatable {
               cancel.authorityId == original.plan.authorityReferences.native.authorityId,
               requestedAt.rawValue >= job.acceptedAt.rawValue, requestedAt.rawValue < job.expiresAt.rawValue else {
             throw AgentBridgeValidationError.bindingChanged
+        }
+        if version == 1 {
+            guard terminalReceiptBytes == nil, confirmedAt == nil else { throw AgentBridgeValidationError.bindingChanged }
+        } else {
+            guard let bytes = terminalReceiptBytes, bytes.count <= 48 * 1024, let confirmedAt,
+                  confirmedAt.rawValue >= requestedAt.rawValue, confirmedAt.rawValue < job.expiresAt.rawValue,
+                  let receipt = try terminalReceipt(), try AgentBridgeV4Codec.encode(receipt) == bytes,
+                  receipt == (try job.unclaimedCancellationReceipt()) else { throw AgentBridgeValidationError.bindingChanged }
         }
     }
 }
@@ -405,6 +432,78 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         }
     }
 
+    /// Confirm only the zero-capture case under the issuer lock. Captured jobs require a
+    /// separate retained-spool proof; a stop intent or missing worker is insufficient.
+    func finalizeUnclaimedCancellation(_ request: AgentBridgeCancel,
+        prepare: (AgentBridgeExportAcceptedJob, AgentBridgeExportCancellationIntent) throws -> AgentBridgeExportCancellationIntent,
+        requireCurrent: (AgentBridgeExportAcceptedJob, AgentBridgeExportCancellationIntent) throws -> Void
+    ) throws -> AgentBridgeExportCancellationIntent {
+        var selected: (AgentBridgeExportAcceptedJob, AgentBridgeExportCancellationIntent)?
+        func requireUnclaimed(_ state: AgentBridgeExportAuthoritySnapshot, _ job: AgentBridgeExportAcceptedJob) throws {
+            guard state.captureClaims?.contains(where: { $0.requestSHA256 == job.requestSHA256 }) != true else {
+                throw AgentBridgeValidationError.busy
+            }
+            try requireNoCaptureSpool(job)
+        }
+        return try transaction(beforeCommit: { state in
+            guard let selected, state.acceptedJobs?.contains(selected.0) == true,
+                  state.cancellationIntents?.contains(selected.1) == true else { throw AgentBridgeValidationError.bindingChanged }
+            try requireCurrent(selected.0, selected.1)
+            try requireUnclaimed(state, selected.0) // Local proof follows delaying native callbacks.
+        }) { state in
+            guard let job = state.acceptedJobs?.first(where: { $0.requestSHA256 == request.requestSha256 }),
+                  var intents = state.cancellationIntents,
+                  let index = try intents.firstIndex(where: { try $0.request() == request }) else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            let previous = intents[index]
+            try requireUnclaimed(state, job)
+            if previous.version == 2 {
+                try requireCurrent(job, previous)
+                selected = (job, previous)
+                return (previous, false)
+            }
+            let terminal = try prepare(job, previous)
+            guard terminal.version == 2, try terminal.request() == request,
+                  terminal.requestedAt == previous.requestedAt else { throw AgentBridgeValidationError.bindingChanged }
+            try terminal.validate(job: job)
+            try requireCurrent(job, terminal)
+            intents[index] = terminal
+            state.cancellationIntents = intents
+            selected = (job, terminal)
+            return (terminal, true)
+        }
+    }
+
+    /// Refuse unknown/orphan capture state rather than deleting it or inferring no capture.
+    private func requireNoCaptureSpool(_ job: AgentBridgeExportAcceptedJob) throws {
+        try job.validate(); try requireCurrentRoot()
+        var named = stat()
+        if fstatat(rootFD, "captures", &named, AT_SYMLINK_NOFOLLOW) != 0 {
+            guard errno == ENOENT else { throw AgentBridgeValidationError.bindingChanged }
+            try requireCurrentRoot()
+            return
+        }
+        let captures = try AgentBridgeExportPrivateFiles.openDirectory(directory.appendingPathComponent("captures"), privateLeaf: true)
+        defer { close(captures) }
+        func requireOriginalParent() throws {
+            var opened = stat(), current = stat()
+            guard fstat(captures, &opened) == 0,
+                  fstatat(rootFD, "captures", &current, AT_SYMLINK_NOFOLLOW) == 0,
+                  opened.st_dev == current.st_dev, opened.st_ino == current.st_ino,
+                  current.st_mode & S_IFMT == S_IFDIR, opened.st_uid == geteuid(), current.st_uid == geteuid(),
+                  opened.st_mode & 0o7777 == 0o700, current.st_mode & 0o7777 == 0o700 else { throw AgentBridgeValidationError.bindingChanged }
+            try requireCurrentRoot()
+        }
+        try requireOriginalParent()
+        var leaf = stat()
+        if fstatat(captures, job.requestSHA256.rawValue, &leaf, AT_SYMLINK_NOFOLLOW) == 0 {
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
+        guard errno == ENOENT else { throw AgentBridgeValidationError.bindingChanged }
+        try requireOriginalParent()
+    }
+
     /// Reserve once under the original issuer lock. A claimed-but-interrupted job is never
     /// reclaimed here; only future immutable spool recovery may continue it without recapture.
     func claimCapture(requestBytes: Data,
@@ -667,6 +766,11 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
                     throw AgentBridgeValidationError.bindingChanged
                 }
                 try intent.validate(job: job)
+                if intent.version == 2 {
+                    guard state.captureClaims?.contains(where: { $0.requestSHA256 == job.requestSHA256 }) != true else {
+                        throw AgentBridgeValidationError.bindingChanged
+                    }
+                }
             }
         }
         guard Set(state.decisions.map(\.planID)).count == state.decisions.count else { throw AgentBridgeValidationError.bindingChanged }

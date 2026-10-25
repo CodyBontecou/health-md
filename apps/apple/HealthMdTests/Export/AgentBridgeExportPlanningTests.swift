@@ -48,6 +48,65 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             requestSha256: AgentBridgeDigest(AgentBridgeV4Codec.sha256(AgentBridgeV4Codec.encode(request))))
     }
 
+    func testUnclaimedCancellationConfirmsOriginalJobAndReplaysWithoutRenewal() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig), job = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer).job
+        let cancel = try cancellationRequest(request)
+        _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer); rig.reader.calls = []
+        let receipt = try rig.service.finalizeUnclaimedCancellation(cancel, authenticatedPeer: rig.peer)
+        XCTAssertEqual(receipt.status, .cancelled); XCTAssertTrue(receipt.sourceAcknowledged)
+        XCTAssertEqual(receipt, try job.unclaimedCancellationReceipt())
+        let file = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        rig.clock.advance(seconds: 1)
+        let restarted = try rig.restartedService()
+        XCTAssertEqual(try restarted.finalizeUnclaimedCancellation(cancel, authenticatedPeer: rig.peer), receipt)
+        XCTAssertEqual(try restarted.requestCancellation(cancel, authenticatedPeer: rig.peer).terminalReceipt(), receipt)
+        XCTAssertThrowsError(try restarted.claimCapture(request, authenticatedPeer: rig.peer)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
+        XCTAssertEqual(try Data(contentsOf: file), before)
+        XCTAssertEqual(try rig.store.snapshot().acceptedJobs, [job]); XCTAssertNil(try rig.store.snapshot().captureClaims)
+        XCTAssertTrue(rig.reader.calls.isEmpty)
+    }
+
+    func testUnclaimedCancellationRefusesCaptureClaimsOrUnknownSpoolWithoutDeletingIt() throws {
+        for mode in ["claim", "orphan", "symlink", "missing_intent"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig), job = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer).job
+            if mode == "claim" { _ = try rig.service.claimCapture(request, authenticatedPeer: rig.peer) }
+            let cancel = try cancellationRequest(request)
+            if mode != "missing_intent" { _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer) }
+            let captures = rig.directory.appendingPathComponent("captures"), outside = rig.parent.appendingPathComponent("synthetic-unrelated")
+            if mode == "orphan" {
+                try FileManager.default.createDirectory(at: captures.appendingPathComponent(job.requestSHA256.rawValue), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+                try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: captures.path)
+            }
+            if mode == "symlink" {
+                try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: false)
+                try Data("synthetic".utf8).write(to: outside.appendingPathComponent("sentinel"))
+                try FileManager.default.createSymbolicLink(at: captures, withDestinationURL: outside)
+            }
+            let file = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            let expected: AgentBridgeValidationError = mode == "claim" ? .busy : mode == "orphan" ? .spoolMissingRestartRequired : .bindingChanged
+            XCTAssertThrowsError(try rig.service.finalizeUnclaimedCancellation(cancel, authenticatedPeer: rig.peer)) { XCTAssertEqual($0 as? AgentBridgeValidationError, expected, mode) }
+            XCTAssertEqual(try Data(contentsOf: file), before)
+            if mode == "orphan" { XCTAssertTrue(FileManager.default.fileExists(atPath: captures.appendingPathComponent(job.requestSHA256.rawValue).path)) }
+            if mode == "symlink" { XCTAssertEqual(try Data(contentsOf: outside.appendingPathComponent("sentinel")), Data("synthetic".utf8)) }
+        }
+    }
+
+    func testUnclaimedCancellationRejectsExpiryAndDelayedAuthenticationBeforeConfirmation() throws {
+        for mode in ["expired", "delayed_key", "delayed_trust"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig); _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            let cancel = try cancellationRequest(request); _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer)
+            let file = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            if mode == "expired" { rig.clock.advance(seconds: 604800) }
+            else { rig.keys.onNextLoad { if mode == "delayed_key" { rig.clock.advance(seconds: 604800) } else { rig.session.revoke() } } }
+            let expected: AgentBridgeValidationError = mode == "delayed_trust" ? .permissionRequired : .planExpired
+            XCTAssertThrowsError(try rig.service.finalizeUnclaimedCancellation(cancel, authenticatedPeer: rig.peer)) { XCTAssertEqual($0 as? AgentBridgeValidationError, expected, mode) }
+            XCTAssertEqual(try Data(contentsOf: file), before)
+        }
+    }
+
     func testCancellationIntentPersistsIdempotentlyAndFencesReadsAcrossRestart() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try executionRequest(rig)
@@ -125,11 +184,12 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
 
     func testCancellationIntentRejectsForgedSignedShapeAndVersionWithoutRepair() throws {
-        for mode in ["version", "empty", "duplicate", "missing_job", "authority", "expiry", "unknown"] {
+        for mode in ["version", "empty", "duplicate", "missing_job", "authority", "expiry", "unknown", "terminal_status", "terminal_ack", "terminal_count", "terminal_job", "terminal_missing_time", "accepted_job_version"] {
             let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
             let request = try executionRequest(rig)
             let job = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer).job
             _ = try rig.service.requestCancellation(cancellationRequest(request), authenticatedPeer: rig.peer)
+            if mode.hasPrefix("terminal_") { _ = try rig.service.finalizeUnclaimedCancellation(cancellationRequest(request), authenticatedPeer: rig.peer) }
             let file = rig.directory.appendingPathComponent("state.json")
             var root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
             var state = try XCTUnwrap(root["state"] as? [String: Any])
@@ -140,14 +200,28 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             case "empty": state["cancellationIntents"] = [] as [[String: Any]]
             case "duplicate": state["cancellationIntents"] = [intent, intent]
             case "missing_job": state["acceptedJobs"] = [] as [[String: Any]]
+            case "accepted_job_version":
+                var jobs = try XCTUnwrap(state["acceptedJobs"] as? [[String: Any]])
+                jobs[0]["version"] = 2; state["acceptedJobs"] = jobs
             case "authority":
                 var cancel = try XCTUnwrap(JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(cancellationRequest(request))) as? [String: Any])
                 cancel["authority_id"] = try id(99).rawValue
                 intent["requestBytes"] = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: cancel)).base64EncodedString()
             case "expiry": intent["requestedAt"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(job.expiresAt), options: .fragmentsAllowed)
-            default: intent["unexpected"] = true
+            case "unknown": intent["unexpected"] = true
+            case "terminal_missing_time": intent.removeValue(forKey: "confirmedAt")
+            default:
+                let bytes = try XCTUnwrap(Data(base64Encoded: XCTUnwrap(intent["terminalReceiptBytes"] as? String)))
+                var receipt = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+                switch mode {
+                case "terminal_status": receipt["status"] = "complete"
+                case "terminal_ack": receipt["source_acknowledged"] = false
+                case "terminal_count": receipt["artifact_count"] = 1
+                default: receipt["job_id"] = try id(99).rawValue
+                }
+                intent["terminalReceiptBytes"] = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: receipt)).base64EncodedString()
             }
-            if ["authority", "expiry", "unknown"].contains(mode) { state["cancellationIntents"] = [intent] }
+            if ["authority", "expiry", "unknown"].contains(mode) || mode.hasPrefix("terminal_") { state["cancellationIntents"] = [intent] }
             let canonical = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: state))
             let key = try XCTUnwrap(rig.keys.key)
             let mac = Data(HMAC<SHA256>.authenticationCode(for: Data("HealthMd.AgentBridge.NativeExportAuthorityStore.v1\0".utf8) + canonical, using: key))

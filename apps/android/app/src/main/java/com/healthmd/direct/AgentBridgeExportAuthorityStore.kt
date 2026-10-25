@@ -258,6 +258,29 @@ internal class AgentBridgeExportAuthorityStore private constructor(
             attributes = { path, directory -> attributes(path, directory).fileKey()!! })
     }
 
+    /** Called only inside an issuer transaction after verifying no capture reservation. Never
+     * follow a captures-parent symlink or treat permission failure as an absent spool. */
+    internal fun requireNoCaptureSpool(job: AgentBridgeExportAcceptedJob) = safe {
+        job.validate(); checkParent()
+        val rootIdentity = attributes(root, true).fileKey()
+        fun requireOriginalRoot() {
+            checkParent()
+            demand(attributes(root, true).fileKey() == rootIdentity &&
+                (observedRootIdentity == null || observedRootIdentity == rootIdentity))
+        }
+        requireOriginalRoot()
+        val captures = root.resolve("captures")
+        val parentIdentity = try { attributes(captures, true).fileKey() }
+            catch (_: java.nio.file.NoSuchFileException) { requireOriginalRoot(); return@safe }
+        val leaf = captures.resolve(job.requestSha256)
+        try {
+            Files.readAttributes(leaf, PosixFileAttributes::class.java, NOFOLLOW_LINKS)
+            fail(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+        } catch (_: java.nio.file.NoSuchFileException) { /* Exact absence, not an access error. */ }
+        demand(attributes(captures, true).fileKey() == parentIdentity)
+        requireOriginalRoot()
+    }
+
     private fun key(): SecretKey = try {
         val key = keys.loadExisting() ?: fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)
         // Hardware-backed keys may not expose encoded bytes. Ask the provider, never serialize it.
@@ -373,6 +396,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
                 val job = state.acceptedJobs?.singleOrNull { it.requestSha256 == cancel.requestSha256 }
                     ?: fail(AgentBridgeErrorCode.BINDING_CHANGED)
                 intent.validate(job)
+                if (intent.version == 2) demand(state.captureClaims.orEmpty().none { it.requestSha256 == job.requestSha256 })
                 cancel.requestSha256
             }
             demand(requests.distinct().size == requests.size)
@@ -706,19 +730,35 @@ internal object AgentBridgeExportNativeSetupConsent {
 
 /** A signed stop request, not a terminal cancellation receipt. Survives controller restart
  * so a pending cancellation can never silently reopen native capture or immutable Resume. */
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable
 internal data class AgentBridgeExportCancellationIntent(val version: Int, val requestCanonical: String,
-    val requestedAt: String) {
+    val requestedAt: String,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val terminalReceiptCanonical: String? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val confirmedAt: String? = null) {
+    fun terminalReceipt() = terminalReceiptCanonical?.let { AgentBridgeCodec.decode(it.toByteArray()) as AgentBridgeExecutionReceipt }
     fun request() = AgentBridgeCodec.decode(requestCanonical.toByteArray()) as AgentBridgeCancelRequest
     fun validate(job: AgentBridgeExportAcceptedJob) {
         val cancel = request(); val original = job.request(); val plan = original.plan as AgentBridgeGeneratedPlan
-        require(version == 1 && requestCanonical.toByteArray().size <= 48 * 1024 &&
+        require(version in 1..2 && requestCanonical.toByteArray().size <= 48 * 1024 &&
             AgentBridgeCodec.encode(cancel).decodeToString() == requestCanonical &&
             cancel.peer == plan.intent.peer && cancel.jobId == original.jobId && cancel.requestSha256 == job.requestSha256 &&
             cancel.approvalId == original.approval.approvalId && cancel.authorityId == plan.authorityReferences.native.authorityId)
         val at = Instant.parse(requestedAt)
         require(requestedAt.length == 20 && requestedAt == at.toString() && at.nano == 0 &&
             at >= Instant.parse(job.acceptedAt) && at < Instant.parse(job.expiresAt))
+        if (version == 1) {
+            require(terminalReceiptCanonical == null && confirmedAt == null)
+        } else {
+            val bytes = requireNotNull(terminalReceiptCanonical).toByteArray()
+            val confirmed = Instant.parse(requireNotNull(confirmedAt))
+            require(confirmedAt.length == 20 && confirmedAt == confirmed.toString() && confirmed.nano == 0 &&
+                confirmed >= at && confirmed < Instant.parse(job.expiresAt) && bytes.size <= 48 * 1024)
+            val receipt = requireNotNull(terminalReceipt())
+            require(AgentBridgeCodec.encode(receipt).contentEquals(bytes) && receipt == job.unclaimedCancellationReceipt())
+        }
     }
 }
 
@@ -738,6 +778,8 @@ internal data class AgentBridgeExportAcceptedJob(val version: Int, val requestCa
             schema = "healthmd.agent_execution_receipt", schemaVersion = 1,
             sourceAcknowledged = false, status = AgentBridgeExecutionReceiptStatus.ACCEPTED)
     }
+    /** A value only; the issuer must prove no capture claim/spool before confirming it. */
+    fun unclaimedCancellationReceipt() = acceptedReceipt().copy(sourceAcknowledged = true, status = AgentBridgeExecutionReceiptStatus.CANCELLED)
     fun validate() {
         val request = request(); val plan = request.plan as AgentBridgeGeneratedPlan
         require(version == 1 && requestCanonical.toByteArray().size <= 48 * 1024 && resolutionCanonical.toByteArray().size <= 48 * 1024)
