@@ -773,6 +773,7 @@ class SchedulingManager: ObservableObject {
         // the user without a recovery notification.
         exportNotificationScheduler.cancelArmedPendingExportNotification(id: request.id)
 
+        DiagnosticRecorder.shared.record(.triggerReceived, fields: [.operationId: .text(request.id.uuidString.lowercased()), .trigger: .text(trigger == .notificationTap ? "notification" : "app_open")])
         logger.info("Draining pending scheduled export request \(request.id.uuidString)")
         let target = scheduledTarget(for: request)
         // Phase 3: profile requests run against their profile's destinations;
@@ -1328,6 +1329,16 @@ class SchedulingManager: ObservableObject {
                 )
             }
             return APIExportSettings().displayName
+        case .agentDataGateway:
+            if let gateway = scheduledDestinationStore.agentDataGateway(
+                id: scheduledDestinationStore.agentDataGatewayBinding(profileID: profile?.id)
+            ) {
+                return AgentDataGatewayEndpoint.redactedDescription(
+                    gateway.endpointURLString,
+                    fallback: ExportTargetSelection.agentDataGateway.title
+                )
+            }
+            return AgentDataGatewayEndpoint.displayName("")
         case .connectedMac:
             return scheduledSyncService?.macDestinationStatus?.destinationDisplayName
                 ?? scheduledSyncService?.connectedPeerName
@@ -1434,6 +1445,18 @@ class SchedulingManager: ObservableObject {
                 calendarTimeZone: calendarTimeZone,
                 surface: .apiEndpoint
             )
+        case .agentDataGateway:
+            // The gateway materializes artifacts exactly as a folder
+            // destination does over its staging root before uploading, so its
+            // snapshot surface matches the local-folder range surface.
+            let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
+                && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
+            return await ExportSettingsSnapshot.forNewAppleOperation(
+                settings,
+                calendarTimeZone: calendarTimeZone,
+                surface: .localVaultRangeWithoutSideEffects,
+                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
+            )
         case .connectedMac:
             let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
                 && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
@@ -1516,6 +1539,10 @@ class SchedulingManager: ObservableObject {
         notificationOperationID: UUID?,
         resolvedAPIDestination: APIExportDestinationSnapshot?
     ) async -> ExportOrchestrator.ExportResult {
+        var diagnosticFields: [DiagnosticField: DiagnosticValue] = [.dayCount: .integer(Int64(dates.count))]
+        if let quotaJobID { diagnosticFields[.operationId] = .text(quotaJobID.uuidString.lowercased()) }
+        DiagnosticRecorder.shared.record(.attemptStarted, fields: diagnosticFields)
+        defer { DiagnosticRecorder.shared.record(.attemptFinished, fields: diagnosticFields) }
         if target == .localIPhoneFolder,
            let blockedResult = scheduledLocalDestinationPreflight?(dates) {
             return blockedResult
@@ -1553,6 +1580,12 @@ class SchedulingManager: ObservableObject {
                     notificationOperationID: notificationOperationID,
                     destination: resolvedAPIDestination
                 )
+            case .agentDataGateway:
+                result = await performBackgroundAgentDataGatewayExport(
+                    dates: dates,
+                    settingsSnapshot: settingsSnapshot,
+                    notificationOperationID: notificationOperationID
+                )
             case .connectedMac:
                 result = await performBackgroundConnectedMacExport(
                     dates: dates,
@@ -1565,6 +1598,8 @@ class SchedulingManager: ObservableObject {
             }
         }
 
+        diagnosticFields[.reason] = .text(result.didCompleteAllRequestedDates ? "success" : (result.successCount > 0 ? "partial" : "failure"))
+        DiagnosticRecorder.shared.record(.exportResult, fields: diagnosticFields)
         recordScheduledExportQuotaUseIfNeeded(for: result, jobID: quotaJobID)
         return result
     }
@@ -1618,6 +1653,56 @@ class SchedulingManager: ObservableObject {
                 )
             }
         )
+    }
+
+    @MainActor
+    private func performBackgroundAgentDataGatewayExport(
+        dates: [Date],
+        settingsSnapshot: ExportSettingsSnapshot?,
+        notificationOperationID: UUID?
+    ) async -> ExportOrchestrator.ExportResult {
+        let settings = settingsSnapshot?.makeAdvancedExportSettings() ?? AdvancedExportSettings()
+        let gatewaySettings = AgentDataGatewaySettings()
+        guard let destination = gatewaySettings.destinationSnapshot else {
+            return scheduledFailureResult(
+                dates: dates,
+                reason: .apiEndpointNotConfigured,
+                message: "Configure a valid Agent Data gateway endpoint before exporting."
+            )
+        }
+        let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled
+            ? scheduledExternalIntegrations
+            : nil
+
+        logger.info("Starting scheduled Agent Data gateway export")
+        let outcome = await AgentDataGatewayExportRunner.export(
+            dates: dates,
+            healthKitManager: HealthKitManager.shared,
+            settings: settings,
+            destination: destination,
+            externalIntegrations: externalIntegrations,
+            onProgress: { [weak self] phase in
+                switch phase {
+                case .materializing(_, let processed, let total):
+                    self?.updateNotificationExportActivity(
+                        operationID: notificationOperationID,
+                        phase: .capturing,
+                        processedDays: processed,
+                        totalDays: total,
+                        message: "Preparing export artifacts for the Agent Data gateway…"
+                    )
+                case .uploading(let processed, let total):
+                    self?.updateNotificationExportActivity(
+                        operationID: notificationOperationID,
+                        phase: .transferring,
+                        processedDays: processed,
+                        totalDays: total,
+                        message: "Uploading artifacts to the Agent Data gateway…"
+                    )
+                }
+            }
+        )
+        return outcome.export
     }
 
     @MainActor
@@ -2741,6 +2826,12 @@ class SchedulingManager: ObservableObject {
         }
         // API destinations are resolved as immutable values, never adopted into global
         // URL/Keychain settings. Concurrent profiles cannot redirect each other's uploads.
+        if let profile,
+           let gatewayID = destinationStore.agentDataGatewayBinding(profileID: profile.id),
+           let gateway = destinationStore.agentDataGateway(id: gatewayID) {
+            let gatewaySettings = AgentDataGatewaySettings()
+            gatewaySettings.endpointURLString = gateway.endpointURLString
+        }
     }
 
     /// Per-profile occurrence in-flight key. Unlike the legacy fire-minute
@@ -2872,6 +2963,7 @@ class SchedulingManager: ObservableObject {
 
         onExpirationArmed({ [weak self] in
             guard let self else { return }
+            DiagnosticRecorder.shared.record(.backgroundExpired, fields: [.trigger: .text("background_task")])
             self.logger.warning("Background task expired")
             Task { @MainActor in
                 await self.sendExportNotification(success: false, daysExported: 0, failureReason: .backgroundTaskExpired)

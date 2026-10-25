@@ -6,6 +6,7 @@ import WidgetKit
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        DiagnosticRecorder.shared.record(.appStarted)
         UNUserNotificationCenter.current().delegate = self
         // RFC-0005 P2: the worker's wake notification carries this category. Tapping it is the
         // user-presence surface — the app foregrounds, the direct service reconnects, and the
@@ -22,6 +23,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        DiagnosticRecorder.shared.record(.nativeLifecycle, fields: [.nativeCallback: .text("ios_application_did_become_active")])
         if !TestMode.suppressesRuntimeServices {
             Task { @MainActor in
                 await SchedulingManager.shared.waitForScheduledExportDependencies()
@@ -53,6 +55,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler(.noData)
             return
         }
+        DiagnosticRecorder.shared.record(.triggerReceived, fields: [.trigger: .text("silent_push")])
         let fireDate = scheduledExportFireDate(from: userInfo)
         let kind = scheduledExportKind(from: userInfo)
         Task { @MainActor in
@@ -105,6 +108,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let pendingExportPayload = PendingExportNotificationPayload(userInfo: request.content.userInfo)
 
         if let pendingExportPayload = pendingExportPayload {
+            DiagnosticRecorder.shared.record(.notificationTapped, fields: [.operationId: .text(pendingExportPayload.requestID.uuidString.lowercased()), .trigger: .text("notification")])
             Task { @MainActor in
                 await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
@@ -133,7 +137,11 @@ struct HealthMdApp: App {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var advancedSettings: AdvancedExportSettings
+    // Read/observe canonical persisted profile identity on the tablet route;
+    // do not bootstrap/apply profiles or alter legacy tablet settings/authority.
+    @StateObject private var iPadHistoryProfileStore = ExportProfileStore()
     @StateObject private var apiExportSettings: APIExportSettings
+    @StateObject private var agentDataGatewaySettings: AgentDataGatewaySettings
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService: SyncService
     @StateObject private var directCLIService: IPhoneDirectCLIService
@@ -164,10 +172,12 @@ struct HealthMdApp: App {
 
         let advancedSettings = AdvancedExportSettings()
         let apiExportSettings = APIExportSettings()
+        let agentDataGatewaySettings = AgentDataGatewaySettings()
         let directWakeManager = IPhoneDirectWakeManager()
         let syncService = SyncService()
         _advancedSettings = StateObject(wrappedValue: advancedSettings)
         _apiExportSettings = StateObject(wrappedValue: apiExportSettings)
+        _agentDataGatewaySettings = StateObject(wrappedValue: agentDataGatewaySettings)
         _directWakeManager = StateObject(wrappedValue: directWakeManager)
         _syncService = StateObject(wrappedValue: syncService)
         _directCLIService = StateObject(wrappedValue: IPhoneDirectCLIService(wakeManager: directWakeManager))
@@ -248,7 +258,7 @@ struct HealthMdApp: App {
         #endif
 
         if TestMode.isUITesting {
-            configureTestMode()
+            configureTestMode(syncService: syncService)
             return
         }
 
@@ -329,7 +339,7 @@ struct HealthMdApp: App {
 
     /// Configure deterministic test state from launch environment variables.
     /// Skips all real HealthKit, StoreKit, and network interactions.
-    private func configureTestMode() {
+    private func configureTestMode(syncService: SyncService) {
         // UI tests reuse the installed app between methods, so establish the
         // requested launch state instead of inheriting an earlier journey.
         UserDefaults.standard.set(TestMode.hasCompletedOnboarding, forKey: "hasCompletedOnboarding")
@@ -364,10 +374,11 @@ struct HealthMdApp: App {
             forKey: SharedSetupV2ProfileTransaction.undoKey
         )
 
-        // All managers are @MainActor — set state in Task.
+        // Capture the existing sync service and use the canonical singletons,
+        // not StateObject wrappers whose scene storage may not be installed yet.
         Task { @MainActor in
             // HealthKit: set authorization state without showing dialogs
-            healthKitManager.isAuthorized = TestMode.healthAuthorized
+            HealthKitManager.shared.isAuthorized = TestMode.healthAuthorized
             UserDefaults.standard.set(ExportTargetSelection.localIPhoneFolder.rawValue, forKey: ExportTargetSelection.storageKey)
 
             // Purchase: set unlock/quota state without StoreKit
@@ -381,6 +392,7 @@ struct HealthMdApp: App {
 
             // Schedule: set enabled state
             if TestMode.scheduleEnabled {
+                let schedulingManager = SchedulingManager.shared
                 var schedule = schedulingManager.schedule
                 schedule.isEnabled = true
                 schedulingManager.schedule = schedule
@@ -392,7 +404,7 @@ struct HealthMdApp: App {
         WindowGroup {
             Group {
                 if UIDevice.current.userInterfaceIdiom == .pad {
-                    iPadContentView()
+                    iPadContentView(historyProfileStore: iPadHistoryProfileStore)
                 } else {
                     ContentView()
                 }
@@ -406,6 +418,7 @@ struct HealthMdApp: App {
             .environmentObject(corpusRecoveryManager)
             .environmentObject(advancedSettings)
             .environmentObject(apiExportSettings)
+            .environmentObject(agentDataGatewaySettings)
             .environmentObject(sharedSetupCoordinator)
             .sheet(isPresented: $showingMyselfClaim) {
                 MyselfClaimView(app: "health.md")
@@ -525,11 +538,13 @@ struct HealthMdApp: App {
                 directCLIService.cancelHandler = { jobID in
                     IPhoneDirectExportCoordinator.shared.cancelWithReceipt(jobID: jobID)
                 }
-                directCLIService.queryRequestHandler = { request, channel, protocolAuthority in
+                directCLIService.queryRequestHandler = { [weak directCLIService] request, channel, protocolAuthority in
+                    guard let sourceInstallationID = directCLIService?.querySourceInstallationID else { return }
                     await IPhoneDirectQueryCoordinator.shared.handle(
                         request,
                         channel: channel,
                         protocolAuthority: protocolAuthority,
+                        sourceInstallationID: sourceInstallationID,
                         healthKitManager: healthKitManager
                     )
                 }
@@ -616,6 +631,18 @@ struct HealthMdApp: App {
                 directCLIService.rejectExternalPairingLink()
             }
             .onAppear { hasInstalledSharedSetupURLHandler = true }
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                // UIScene apps need scene facts: UIApplication delegate callbacks
+                // alone do not reliably observe their foreground transitions.
+                let callback: String
+                switch phase {
+                case .active: callback = "ios_scene_phase_active"
+                case .inactive: callback = "ios_scene_phase_inactive"
+                case .background: callback = "ios_scene_phase_background"
+                @unknown default: return
+                }
+                DiagnosticRecorder.shared.record(.nativeLifecycle, fields: [.nativeCallback: .text(callback)])
+            }
             .onChange(of: scenePhase) { _, phase in
                 guard !TestMode.suppressesRuntimeServices else { return }
                 switch phase {
@@ -656,7 +683,12 @@ struct HealthMdApp: App {
     // MARK: - Sync Message Handling (iOS side)
 
     private func setupSyncMessageHandler() {
+        AppleContextPhoneClient.shared.install(syncService)
         syncService.onMessageReceived = { message in
+            if case .appleContext(let contextMessage) = message {
+                AppleContextPhoneClient.shared.receive(contextMessage)
+                return
+            }
             // Validate Mac accounting synchronously at the app ingress. The
             // asynchronous router receives a typed validated/rejected input, so
             // no raw result can cancel waiters or reach event subscribers first.
@@ -668,6 +700,7 @@ struct HealthMdApp: App {
             }
             Task { @MainActor in
                 switch message {
+                case .appleContext: break // persisted synchronously at ingress
                 case .requestData(let dates):
                     self.syncService.isSyncing = true
                     await HealthKitQueryExecutionController.withController {

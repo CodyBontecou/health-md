@@ -71,6 +71,7 @@ enum UITestLaunchHelper {
     }
 
     enum Export {
+        static let contentScroll = "export.content.scroll"
         static let exportButton = "export.exportButton"
         static let previewButton = "export.previewButton"
         static let cancelExportButton = "export.cancelButton"
@@ -215,6 +216,7 @@ enum UITestLaunchHelper {
             "UITEST_MAC_EXPORT_STATUS": macExportStatus,
             "UITEST_MAC_DESTINATION_PATH": macDestinationPath,
             "UITEST_SHOW_POST_ONBOARDING_PAYWALL": showsPostOnboardingPaywall ? "true" : "false",
+            "UITEST_SUPPRESSED_UPGRADE_PROMPTS": "1,3",
         ]
         if let exportResult {
             app.launchEnvironment["UITEST_EXPORT_RESULT"] = exportResult

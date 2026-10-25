@@ -460,6 +460,7 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
+        captureCalendar: Calendar? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
         let context: AppleSleepCaptureContext
@@ -476,6 +477,7 @@ struct ExportOrchestrator {
                     vaultManager: vaultManager,
                     settings: settings,
                     externalIntegrations: externalIntegrations,
+                    captureCalendar: captureCalendar,
                     onProgress: onProgress
                 )
             }
@@ -488,6 +490,7 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?,
+        captureCalendar: Calendar?,
         onProgress: ((Int, Int, String) -> Void)?
     ) async -> ExportResult {
         let awakeActivityID = UUID()
@@ -626,7 +629,8 @@ struct ExportOrchestrator {
                     for: date,
                     detailPolicy: frozenOperationSettings.effectiveDetailPolicy,
                     metricSelection: frozenOperationSettings.metricSelection,
-                    timeZone: sourceTimeZone
+                    timeZone: sourceTimeZone,
+                    captureCalendar: captureCalendar
                 )
                 let externalRecords: [ExternalDailyRecord]
                 if healthData.hasAnyData,

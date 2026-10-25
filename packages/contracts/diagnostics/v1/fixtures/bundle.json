@@ -1,0 +1,31 @@
+{
+  "provenance": "Reviewed hand-authored synthetic manifest/inventory vector; illustrative UTF-8 contents and digests are verified by the contract gate. Native ZIP composers have separate original-byte and frozen-artifact tests. No user data.",
+  "manifest": {
+    "schema": "healthmd.diagnostic_bundle",
+    "schema_version": 1,
+    "generated_at": "2026-10-07T00:00:00.000Z",
+    "platform": "android",
+    "app_version": "0.0.0-fixture",
+    "app_build": "0",
+    "os_version": "synthetic",
+    "include_private_context": false,
+    "contains_private_context": true,
+    "health_content": "possible",
+    "event_count": 0,
+    "session_dropped_event_count": 0,
+    "invalid_event_count": 0,
+    "truncated": false,
+    "files": [
+      { "path": "README.txt", "byte_count": 74, "sha256": "1c0e26d14b7867f914f9bc7c9da970f1aa188d82542fcecb970351023d76bd12", "privacy": "operational", "original_name_truncated": false },
+      { "path": "events.jsonl", "byte_count": 0, "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "privacy": "operational", "original_name_truncated": false },
+      { "path": "events.txt", "byte_count": 0, "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "privacy": "operational", "original_name_truncated": false },
+      { "path": "attachments/attachment-1.txt", "byte_count": 25, "sha256": "87513d7a717e290cd2d2b0c022b5f11ac495ff9b02b49c42f0403ad38045ce1f", "privacy": "user_attachment", "original_name": "synthetic-user-file.txt", "original_name_truncated": false }
+    ]
+  },
+  "file_contents": {
+    "README.txt": "Synthetic diagnostic bundle fixture. Not user data. ZIP is not encrypted.\n",
+    "events.jsonl": "",
+    "events.txt": "",
+    "attachments/attachment-1.txt": "EXPLICIT_USER_ATTACHMENT\n"
+  }
+}

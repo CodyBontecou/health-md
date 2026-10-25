@@ -366,7 +366,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md freischalten</string>
-    <string name="paywall_subtitle">Sie haben Ihre 10 kostenlosen Exporte aufgebraucht</string>
+    <string name="paywall_subtitle">Sie haben Ihre 5 kostenlosen Exporte aufgebraucht</string>
     <string name="paywall_unlimited_exports">Unbegrenzte Exporte, für immer</string>
     <string name="paywall_scheduled_exports">Automatische Exporte nach Zeitplan</string>
     <string name="paywall_future_features">Alle zukünftigen Funktionen enthalten</string>
@@ -780,7 +780,7 @@
     <string name="export_source_shortcut">Verknüpfung</string>
     <string name="export_source_remote">Remote</string>
     <string name="schedule_unlock_required_title">Geplante Exporte freischalten</string>
-    <string name="schedule_unlock_required_body">Manuelle Exporte umfassen 10 kostenlose Durchläufe. Automatische geplante Exporte sind in der einmaligen lebenslangen Freischaltung enthalten.</string>
+    <string name="schedule_unlock_required_body">Manuelle Exporte umfassen 5 kostenlose Durchläufe. Automatische geplante Exporte sind in der einmaligen lebenslangen Freischaltung enthalten.</string>
     <string name="schedule_unlock_required_short">Schalten Sie Health.md frei, um geplante Exporte zu aktivieren.</string>
     <string name="export_folder_root_label">Exportordner</string>
     <string name="history_clear_title">Exportverlauf löschen?</string>
@@ -1428,4 +1428,32 @@
     <string name="myself_claim_store_unavailable">Google Play konnte deinen Kauf nicht abrufen. Prüfe Verbindung und Google Play-Konto und versuche es erneut.</string>
     <string name="myself_claim_verification_failed">Dein Kauf konnte nicht geprüft werden. Prüfe die Verbindung und versuche es erneut. Falls das Problem bleibt, kontaktiere den Support. Es wurde kein Zugang beansprucht.</string>
     <string name="myself_claim_browser_unavailable">Der Browser konnte nicht geöffnet werden. Aktiviere einen Browser und prüfe den Kauf erneut.</string>
+    <string name="export_preview_gateway_destination">Agent-Data-Gateway</string>
+    <string name="export_failure_gateway_format_label">JSON-Format erforderlich</string>
+    <string name="export_guidance_gateway_format">Das Agent-Data-Gateway lädt JSON-Exporte hoch. Wählen Sie unter „Formate“ JSON und versuchen Sie es erneut.</string>
+    <string name="agent_data_gateway_dialog_title">Agent-Data-Gateway</string>
+    <string name="agent_data_gateway_dialog_description">Jede exportierte Datei wird unverändert an den Endpunkt /v1/ingest des Gateways hochgeladen.</string>
+    <string name="agent_data_gateway_section_endpoint">Gateway-Endpunkt</string>
+    <string name="agent_data_gateway_url_label">Gateway-URL</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Erforderlich. Basis-URL Ihres Gateways; Health.md hängt /v1/ingest an. Halten Sie API-Schlüssel und andere Geheimnisse aus der URL heraus.</string>
+    <string name="agent_data_gateway_close_settings">Einstellungen schließen</string>
+    <string name="agent_data_gateway_save_settings">Einstellungen speichern</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Geben Sie eine gültige %1$s- oder %2$s-URL ohne Fragment oder eingebetteten Benutzernamen/Passwort ein.</string>
+    <string name="agent_data_gateway_close_content_description">Gateway-Einstellungen schließen</string>
+    <string name="agent_data_gateway_outcomes_title">Gateway-Uploads</string>
+    <string name="agent_data_gateway_outcome_accepted">Hochgeladen</string>
+    <string name="agent_data_gateway_outcome_rejected">Abgelehnt: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Upload fehlgeschlagen</string>
+    <string name="agent_data_gateway_result_uploaded">Zum Gateway hochgeladen</string>
+    <string name="export_target_gateway_configured_subtitle">Jeden Export an %1$s hochladen</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Exporte zu Ihrem Agent-Data-Gateway hochladen</string>
+    <string name="post_export_first_title">Dein erster Export ist abgeschlossen</string>
+    <string name="post_export_first_body">Richte tägliche Exporte ein, damit du diese Schritte nicht wiederholen musst. Zeitpläne erfordern lebenslangen Zugriff; manuelle Exporte bleiben im kostenlosen Kontingent.</string>
+    <string name="post_export_third_title">Führe deine Gesundheitsnotizen weiter</string>
+    <string name="post_export_third_body">Du hast drei Exporte abgeschlossen. Ein einmaliger Kauf schaltet unbegrenzte manuelle Exporte und Zeitpläne frei. Kein Abo. Deine exportierten Dateien bleiben deine.</string>
+    <string name="post_export_schedule_action">Tägliche Exporte ansehen</string>
+    <string name="post_export_upgrade_action">Lebenslangen Zugriff ansehen</string>
+    <string name="post_export_manual_action">Weiter manuell exportieren</string>
+    <string name="post_export_continue_free">Kostenlos fortfahren</string>
 </resources>

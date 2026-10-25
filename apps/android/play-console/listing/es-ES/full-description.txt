@@ -42,4 +42,4 @@ PRIVACIDAD Y CONTROL
 • Los permisos pueden revisarse o revocarse en Health Connect en cualquier momento
 • Los análisis limitados y propios sobre atribución de instalaciones, incorporación o precios nunca incluyen historiales de salud, detalles de permisos de Health Connect, contenido exportado, texto de cuentas ni rutas de archivo
 
-Health.md incluye 10 acciones de exportación manual gratuitas. Una compra única desbloquea exportaciones ilimitadas y programación; no hay suscripción.
+Health.md incluye 5 acciones de exportación manual gratuitas. Una compra única desbloquea exportaciones ilimitadas y programación; no hay suscripción.

@@ -2,6 +2,7 @@ package com.healthmd.domain.exportengine
 
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.BulletStyle
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.CustomFrontmatterField
@@ -73,6 +74,8 @@ data class AndroidExportSettingsSnapshot(
     val exportTarget: ExportTarget,
     val scheduledExportTarget: ExportTarget,
     val apiEndpointIdentitySha256: String? = null,
+    /** One-way gateway URL identity when the scheduled target is the Agent Data gateway. */
+    val agentDataGatewayIdentitySha256: String? = null,
     val subfolder: String,
     val folderOrganization: FolderOrganization,
     val enginePin: ExportEnginePin? = null,
@@ -93,6 +96,14 @@ data class AndroidExportSettingsSnapshot(
         if (
             scheduledExportTarget == ExportTarget.API_ENDPOINT &&
             APIExportEndpoint.fingerprint(current.apiEndpointUrl) != apiEndpointIdentitySha256
+        ) {
+            throw AndroidExportSettingsSnapshotException(
+                AndroidExportSettingsSnapshotError.DESTINATION_MISMATCH,
+            )
+        }
+        if (
+            scheduledExportTarget == ExportTarget.AGENT_DATA_GATEWAY &&
+            AgentDataGatewayEndpoint.fingerprint(current.agentDataGatewayUrl) != agentDataGatewayIdentitySha256
         ) {
             throw AndroidExportSettingsSnapshotException(
                 AndroidExportSettingsSnapshotError.DESTINATION_MISMATCH,
@@ -170,6 +181,13 @@ data class AndroidExportSettingsSnapshot(
                     settings.scheduledExportTarget == ExportTarget.API_ENDPOINT
                 ) {
                     APIExportEndpoint.fingerprint(settings.apiEndpointUrl)
+                } else {
+                    null
+                },
+                agentDataGatewayIdentitySha256 = if (
+                    settings.scheduledExportTarget == ExportTarget.AGENT_DATA_GATEWAY
+                ) {
+                    AgentDataGatewayEndpoint.fingerprint(settings.agentDataGatewayUrl)
                 } else {
                     null
                 },
@@ -437,6 +455,10 @@ object AndroidExportSettingsSnapshotCodec {
         when (snapshot.scheduledExportTarget) {
             ExportTarget.DEVICE_FOLDER -> if (snapshot.apiEndpointIdentitySha256 != null) return false
             ExportTarget.API_ENDPOINT -> if (!snapshot.apiEndpointIdentitySha256.isLowercaseSha256()) return false
+            ExportTarget.AGENT_DATA_GATEWAY -> {
+                if (!snapshot.agentDataGatewayIdentitySha256.isLowercaseSha256()) return false
+                if (snapshot.apiEndpointIdentitySha256 != null) return false
+            }
         }
         true
     }.getOrDefault(false)
@@ -467,7 +489,6 @@ private fun AndroidExportSettingsSnapshot.expectedOperationProfile(): AndroidExp
     } else {
         formatCustomization.compatibilitySchemaProfile.toAndroidExportProfile()
     }
-
 private fun CompatibilitySchemaProfile.toAndroidExportProfile(): AndroidExportProfile = when (this) {
     CompatibilitySchemaProfile.IOS_V4_FROZEN -> AndroidExportProfile.android_frozen_v4
     CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5 -> AndroidExportProfile.android_analytical_v5

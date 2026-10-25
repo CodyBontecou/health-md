@@ -1,4 +1,5 @@
 import Foundation
+import HealthMdConnectionCore
 
 /// Origin of a durable iPhone corpus export. The value is persisted so an app
 /// relaunch can restore the right product behavior without retaining closures.
@@ -33,6 +34,10 @@ enum ConnectedCorpusOutboundState: String, Codable, Equatable, Sendable {
 /// Mac and are represented here by their digest-chain frontier.
 struct ConnectedCorpusOutboundJournal: Codable, Equatable, Sendable {
     static let currentVersion = 2
+    static let historyObservationVersion = 3
+    static func version(for manifest: ConnectedCorpusExportManifest) -> Int {
+        manifest.historyObservation == nil ? currentVersion : historyObservationVersion
+    }
 
     struct Item: Codable, Equatable, Sendable {
         let itemID: UUID
@@ -459,6 +464,7 @@ private final class ConnectedCorpusOutboundNamespaceStore {
         defer { transaction.close() }
 
         try manifest.validate()
+        try manifest.validateHistory(session: session)
         guard macRequest.map({ $0.jobID == session.jobID }) ?? true,
               session.protocolVersion >= 2,
               session.peerBinding != nil,
@@ -501,6 +507,7 @@ private final class ConnectedCorpusOutboundNamespaceStore {
             completionRecorded: false,
             updatedAt: timestamp
         )
+        journal.version = ConnectedCorpusOutboundJournal.version(for: manifest)
         try validate(journal)
         try persist(&journal, freshAdmission: true)
         return journal
@@ -521,10 +528,12 @@ private final class ConnectedCorpusOutboundNamespaceStore {
                     attributes: protectedAttributes(permissions: 0o600), directorySync: directorySync,
                     legacyCompletionIdentity: { $0.jobID }, isSupported: { saved in
                         guard saved.jobID == jobID,
-                              (1...ConnectedCorpusOutboundJournal.currentVersion).contains(saved.version) else { return false }
+                              (1...ConnectedCorpusOutboundJournal.historyObservationVersion).contains(saved.version),
+                              (saved.version == ConnectedCorpusOutboundJournal.historyObservationVersion)
+                                == (saved.exportManifest.historyObservation != nil) else { return false }
                         do {
                             var current = saved
-                            current.version = ConnectedCorpusOutboundJournal.currentVersion
+                            current.version = ConnectedCorpusOutboundJournal.version(for: current.exportManifest)
                             try self.validate(current)
                             try self.validateFiles(current)
                             return true
@@ -535,8 +544,9 @@ private final class ConnectedCorpusOutboundNamespaceStore {
                     }) else { return nil }
             checkpoints[jobID] = saved.checkpoint
             journal = saved.journal
-            let requiresMigration = journal.version < ConnectedCorpusOutboundJournal.currentVersion
-            journal.version = ConnectedCorpusOutboundJournal.currentVersion
+            let expectedVersion = ConnectedCorpusOutboundJournal.version(for: journal.exportManifest)
+            let requiresMigration = journal.version != expectedVersion
+            journal.version = expectedVersion
             if requiresMigration { try persist(&journal) }
         } catch {
             if let failure = (validationFailure ?? error) as? ConnectedCorpusOutboundStoreError { throw failure }
@@ -960,7 +970,7 @@ private final class ConnectedCorpusOutboundNamespaceStore {
     }
 
     private func validate(_ journal: ConnectedCorpusOutboundJournal) throws {
-        guard journal.version == ConnectedCorpusOutboundJournal.currentVersion,
+        guard journal.version == ConnectedCorpusOutboundJournal.version(for: journal.exportManifest),
               journal.macRequest.map({ $0.jobID == journal.session.jobID }) ?? true,
               journal.session.protocolVersion >= 2,
               ConnectedCorpusTransferCapabilities.current.protocolVersions.contains(
@@ -1003,6 +1013,13 @@ private final class ConnectedCorpusOutboundNamespaceStore {
         try journal.exportManifest.validate()
         guard try Self.namespace(for: journal.exportManifest) == namespace else {
             throw ConnectedCorpusOutboundStoreError.invalidJournal
+        }
+        try journal.exportManifest.validateHistory(session: journal.session)
+        if let request = journal.macRequest, let observation = journal.exportManifest.historyObservation {
+            guard request.responseMode == .contextStore,
+                  observation.allAvailable == (request.dateSelection == .allAvailable) else {
+                throw ConnectedCorpusOutboundStoreError.invalidJournal
+            }
         }
         if journal.state == .completed {
             guard journal.items.isEmpty,
@@ -1122,9 +1139,14 @@ private final class ConnectedCorpusOutboundNamespaceStore {
             try validateCachedGeneration(jobID: jobID)
             guard let journal: ConnectedCorpusOutboundJournal = try AppleExportJournalRecovery.load(
                 at: journalURL(jobID: jobID), fileManager: fileManager, decoder: decoder,
-                isSupported: { $0.jobID == jobID && (1...ConnectedCorpusOutboundJournal.currentVersion).contains($0.version) }) else { return nil }
+                isSupported: { saved in
+                    saved.jobID == jobID
+                        && (1...ConnectedCorpusOutboundJournal.historyObservationVersion).contains(saved.version)
+                        && (saved.version == ConnectedCorpusOutboundJournal.historyObservationVersion)
+                            == (saved.exportManifest.historyObservation != nil)
+                }) else { return nil }
             var current = journal
-            current.version = ConnectedCorpusOutboundJournal.currentVersion
+            current.version = ConnectedCorpusOutboundJournal.version(for: current.exportManifest)
             try validate(current)
             return journal
         } catch let error as ConnectedCorpusOutboundStoreError { throw error }

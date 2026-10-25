@@ -11,7 +11,7 @@
 
 Scheduled Exports run recent Apple Health exports daily, weekly, or on a custom calendar cadence using the same iPhone settings as Manual Export, including formats, metrics, paths, write mode, and **Data Detail**. Custom schedules can repeat every N days, weeks, or months, covering patterns such as every other day or monthly. Targets are iPhone Folder, API Endpoint, or an already-open/connected Mac.
 
-Scheduling is available on the free plan. A scheduled request that exports at least one date consumes one of the same 10 free export actions used by manual, Shortcut, and direct exports, regardless of how many dates or files the request contains. Retries of that same durable request do not consume another use. Full Access removes the shared limit.
+Scheduling is available on the free plan. A scheduled request that exports at least one date consumes one of the same 5 free export actions used by manual, Shortcut, and direct exports, regardless of how many dates or files the request contains. Retries of that same durable request do not consume another use. Full Access removes the shared limit.
 
 Data Detail defaults to Summary for new installs. Detailed Time-Series adds selected samples without the canonical archive; Lossless Health Records adds both and can be large, so enable it intentionally and start with a short lookback.
 
@@ -105,7 +105,7 @@ Connected Mac schedules require an open, compatible, ready Mac to begin; they do
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Schedule did not complete | iOS delay, lock protection, target unavailable, or free quota exhausted | Unlock/tap the recovery notification or open the app to drain pending work. If all 10 free exports are used, unlock Full Access to resume. |
+| Schedule did not complete | iOS delay, lock protection, target unavailable, or free quota exhausted | Unlock/tap the recovery notification or open the app to drain pending work. If all 5 free exports are used, unlock Full Access to resume. |
 | File exists but archive is partial | One source branch failed/cancelled/skipped/unsupported | Inspect manifest/diagnostics; retry if recoverable. |
 | No archive | Lossless off or legacy peer | Review Export setting and update peers. |
 | Mac schedule fails | Mac closed/not ready/incompatible | Open/update Mac, select folder, retry pending/history. |

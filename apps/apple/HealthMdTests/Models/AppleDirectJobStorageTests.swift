@@ -262,12 +262,25 @@ final class AppleDirectJobStorageTests: XCTestCase {
 
     func testActualSuccessorExpiryRetainsUnknownIncompleteAndAmbiguousJobs() async throws {
         for files in [false, true] {
-            for invalid in ["missing-owner", "bad-owner", "version", "identity", "clock", "capture", "renderer", "protocol", "fingerprint", "transfer", "missing-journal", "corrupt", "symlink", "duplicate", "unexpired"] {
+            for invalid in ["missing-owner", "bad-owner", "version", "missing-history", "rebound-history", "pre-successor", "identity", "clock", "capture", "renderer", "protocol", "fingerprint", "transfer", "missing-journal", "corrupt", "symlink", "duplicate", "unexpired"] {
                 let storage = try fixture()
                 let id = UUID()
                 let encoded = try await cancellationJournal(jobID: id, files: files)
                 var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
                 if invalid == "version" { object["version"] = 999 }
+                if invalid == "missing-history" {
+                    object["version"] = files ? IPhoneDirectFileJournal.historyObservationVersion : 4
+                }
+                if invalid == "rebound-history" {
+                    object["version"] = files ? IPhoneDirectFileJournal.historyObservationVersion : 4
+                    var accepted = try XCTUnwrap(object["accepted"] as? [String: Any])
+                    let observation = try XCTUnwrap(makeObservedContextTestFixture().manifest.historyObservation)
+                    accepted["historyObservation"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(observation))
+                    object["accepted"] = accepted
+                }
+                if invalid == "pre-successor" {
+                    object["version"] = files ? IPhoneDirectFileJournal.immutableRangeRequestVersion : 2
+                }
                 if invalid == "identity" {
                     var accepted = try XCTUnwrap(object["accepted"] as? [String: Any])
                     accepted["jobID"] = UUID().uuidString
@@ -379,7 +392,8 @@ final class AppleDirectJobStorageTests: XCTestCase {
             object["session"] = try JSONSerialization.jsonObject(with: encoder.encode(session))
             object["days"] = []
         }
-        object["version"] = files ? IPhoneDirectFileJournal.currentVersion : 3
+        // This fixture has no history observation and retains its original successor grammar.
+        object["version"] = files ? IPhoneDirectFileJournal.derivedOutputReconciliationVersion : 3
         return try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
     }
     #endif

@@ -657,7 +657,7 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
             let request = DirectQueryRequest(requestID: UUID(), createdAt: Date(timeIntervalSince1970: 0),
                 detailLevel: .summary, query: .object([:]))
             await IPhoneDirectQueryCoordinator.shared.handle(request, channel: channel,
-                protocolAuthority: selected, healthKitManager: HealthKitManager())
+                protocolAuthority: selected, sourceInstallationID: UUID(), healthKitManager: HealthKitManager())
             XCTAssertEqual(core.canonicalMessageCalls, selectedRust ? 1 : 0,
                 "The rejection must retain its admitted engine, not the later session mode")
             XCTAssertEqual(transport.packetCount, 1)
@@ -739,8 +739,19 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
         let channel = DirectSecureChannel(packetConnection: transport, sessionKey: key,
             peerInstallationID: UUID(), peerDisplayName: "synthetic", messageCanonicalizer: session)
         let original = IPhoneDirectExportConnection(channel: channel)
+        let local = DirectPeerCapabilities(platform: .iOS, installationID: UUID(),
+            exportHistoryObservationVersions: [1])
+        let remote = DirectPeerCapabilities(platform: .macOS, installationID: UUID(),
+            exportHistoryObservationVersions: [1])
+        original.configureExportHistoryObservation(local: local, remote: remote)
         let retained = original.retainingProtocolAuthority(session)
         XCTAssertTrue(retained.channel === original.channel)
+        XCTAssertEqual(retained.exportHistoryObservationVersion, 1)
+        original.configureExportHistoryObservation(local: local,
+            remote: DirectPeerCapabilities(platform: .macOS, installationID: remote.installationID))
+        XCTAssertNil(original.exportHistoryObservationVersion)
+        XCTAssertEqual(retained.exportHistoryObservationVersion, 1,
+            "A retained operation must preserve its negotiated history admission version")
         session.beginBootstrap()
         core.failCanonicalization = true
         do {

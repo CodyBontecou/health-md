@@ -1,5 +1,7 @@
 package com.healthmd.presentation.navigation
 
+import com.healthmd.presentation.diagnostics.DiagnosticsScreen
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -182,6 +184,7 @@ fun HealthMdNavigation(
             SubRoutes.CLINICIAN_REPORT,
             SubRoutes.DIRECT_CLI,
             SubRoutes.SHARED_SETUP,
+            SubRoutes.DIAGNOSTICS,
             SubRoutes.EXPORT_PROFILES,
         )
     } else {
@@ -279,6 +282,12 @@ fun HealthMdNavigation(
                         }
                     },
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
+                    onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) { launchSingleTop = true } },
+                    onNavigateToUpgrade = {
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                        }
+                    },
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
@@ -307,6 +316,7 @@ fun HealthMdNavigation(
                     onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
                     onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
                     onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
+                    onNavigateToDiagnostics = { navController.navigate(SubRoutes.DIAGNOSTICS) },
                 )
             }
 
@@ -317,6 +327,9 @@ fun HealthMdNavigation(
             }
 
             // Sub-screens
+            composable(SubRoutes.DIAGNOSTICS) {
+                DiagnosticsScreen(onBack = { navController.popBackStack() })
+            }
             composable(SubRoutes.EXPORT_PROFILES) {
                 ExportProfilesScreen(onBack = { navController.popBackStack() })
             }

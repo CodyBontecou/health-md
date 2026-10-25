@@ -79,16 +79,16 @@ final class PurchaseManagerTests: XCTestCase {
 
     // MARK: - Free Export Quota
 
-    func testFreeExportsRemaining_defaultIsTen() {
+    func testFreeExportsRemaining_defaultIsFive() {
         let manager = makeManager()
-        XCTAssertEqual(PurchaseManager.freeExportLimit, 10)
-        XCTAssertEqual(manager.freeExportsRemaining, 10)
+        XCTAssertEqual(PurchaseManager.freeExportLimit, 5)
+        XCTAssertEqual(manager.freeExportsRemaining, 5)
     }
 
     func testRecordExportUse_decrementsRemaining() {
         let manager = makeManager()
         manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsRemaining, 9)
+        XCTAssertEqual(manager.freeExportsRemaining, 4)
     }
 
     func testRecordExportUse_tracksFreeExportUsageAfterIncrement() async {
@@ -101,7 +101,7 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(payloads.count, 1)
         XCTAssertEqual(payloads.first?.eventName, "pricing_free_export_used")
         XCTAssertEqual(payloads.first?.properties[.freeExportsUsed], .int(1))
-        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(9))
+        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(4))
     }
 
     func testDurableRecordExportUseIsIdempotentByJobID() throws {
@@ -110,12 +110,12 @@ final class PurchaseManagerTests: XCTestCase {
         try manager.recordExportUse(jobID: first)
         try manager.recordExportUse(jobID: first)
         XCTAssertEqual(manager.freeExportsUsed, 1)
-        XCTAssertEqual(manager.freeExportsRemaining, 9)
+        XCTAssertEqual(manager.freeExportsRemaining, 4)
 
         try manager.recordExportUse(jobID: UUID())
         manager.recordExportUse()
         XCTAssertEqual(manager.freeExportsUsed, 3)
-        XCTAssertEqual(manager.freeExportsRemaining, 7)
+        XCTAssertEqual(manager.freeExportsRemaining, 2)
     }
 
     func testOwnedDirectCompletionRetriesQuotaFailureAndRejectsReplacement() throws {
@@ -270,10 +270,68 @@ final class PurchaseManagerTests: XCTestCase {
         let manager = makeManager()
         manager.recordExportUse()
         manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsRemaining, 8)
+        XCTAssertEqual(manager.freeExportsRemaining, 3)
 
         manager.resetFreeExports()
-        XCTAssertEqual(manager.freeExportsRemaining, 10)
+        XCTAssertEqual(manager.freeExportsRemaining, 5)
+    }
+
+    func testGuidanceAppearsAfterFirstAndThirdExportsOnly() {
+        let manager = makeManager()
+        manager.recordExportUse()
+        XCTAssertEqual(manager.pendingUpgradePrompt, 1)
+        manager.consumeUpgradePrompt()
+        manager.recordExportUse()
+        XCTAssertNil(manager.pendingUpgradePrompt)
+        manager.recordExportUse()
+        XCTAssertEqual(manager.pendingUpgradePrompt, 3)
+        XCTAssertEqual(manager.freeExportsRemaining, 2)
+        manager.consumeUpgradePrompt()
+        manager.recordExportUse()
+        manager.recordExportUse()
+        XCTAssertNil(manager.pendingUpgradePrompt)
+        XCTAssertFalse(manager.canExport)
+    }
+
+    func testGuidanceDismissalPersistsAndDoesNotConsumeAnotherExport() {
+        let manager = makeManager()
+        manager.recordExportUse()
+        manager.consumeUpgradePrompt()
+        XCTAssertEqual(manager.freeExportsUsed, 1)
+        XCTAssertEqual(manager.freeExportsRemaining, 4)
+        XCTAssertTrue(defaults.bool(forKey: "pricing.upgradePrompt.shown.v1.1"))
+        let relaunched = makeManager()
+        relaunched.setFreeExportsUsed(0)
+        relaunched.recordExportUse()
+        XCTAssertNil(relaunched.pendingUpgradePrompt)
+    }
+
+    func testExistingTenActionUsageStaysExhaustedWithoutReset() {
+        let manager = makeManager()
+        manager.setFreeExportsUsed(8)
+        XCTAssertEqual(manager.freeExportsUsed, 8)
+        XCTAssertEqual(manager.freeExportsRemaining, 0)
+        XCTAssertFalse(manager.canExport)
+        manager.recordExportUse()
+        XCTAssertEqual(manager.freeExportsUsed, 8)
+        XCTAssertNil(manager.pendingUpgradePrompt)
+    }
+
+    func testPartialWorkCanConsumeAnActionWithoutObscuringDiagnostics() {
+        let manager = makeManager()
+        manager.recordExportUse(offerGuidance: false)
+        XCTAssertEqual(manager.freeExportsUsed, 1)
+        XCTAssertEqual(manager.freeExportsRemaining, 4)
+        XCTAssertNil(manager.pendingUpgradePrompt)
+    }
+
+    func testUnlockDismissesPendingGuidance() {
+        let manager = makeManager()
+        manager.recordExportUse()
+        XCTAssertEqual(manager.pendingUpgradePrompt, 1)
+        manager.setUnlocked(true)
+        XCTAssertNil(manager.pendingUpgradePrompt)
+        XCTAssertTrue(manager.canExport)
     }
 
     // MARK: - canExport
@@ -497,7 +555,7 @@ final class PurchaseManagerTests: XCTestCase {
 
         manager.setUnlocked(true)
         XCTAssertEqual(manager.freeExportsUsed, 0, "Quota should reset on false→true transition")
-        XCTAssertEqual(manager.freeExportsRemaining, 10)
+        XCTAssertEqual(manager.freeExportsRemaining, 5)
     }
 
     func testUnlockTransition_doesNotResetWhenAlreadyUnlocked() {

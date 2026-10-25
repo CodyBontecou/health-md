@@ -1019,7 +1019,8 @@ final class HealthMdMCPServerTests: XCTestCase {
     }
 
     func testCancelledNotificationDetachesInFlightExportWaiter() async throws {
-        let client = MCPHTTPClientSlowFake()
+        let started = expectation(description: "Export HTTP waiter started")
+        let client = MCPHTTPClientSlowFake(onStart: { started.fulfill() })
         let server = HealthMdMCPServer(
             configuration: try HealthMdMCPConfiguration(),
             httpClient: client
@@ -1034,12 +1035,9 @@ final class HealthMdMCPServerTests: XCTestCase {
         let call = Task {
             await server.handle(line: callLine)
         }
-        for _ in 0..<1_000 {
-            if await client.didStart() { break }
-            await Task.yield()
-        }
-        let didStart = await client.didStart()
-        XCTAssertTrue(didStart)
+        // Wait for the actual request boundary instead of counting scheduler
+        // yields, which can finish before the export task starts under load.
+        await fulfillment(of: [started], timeout: 5)
         let notification = try jsonLine([
             "jsonrpc": "2.0", "method": "notifications/cancelled",
             "params": ["requestId": "export-wait", "reason": "host cancelled"]
@@ -1123,8 +1121,10 @@ final class HealthMdMCPServerTests: XCTestCase {
 }
 
 private actor MCPHTTPClientSlowFake: HealthMdMCPHTTPClient {
-    private var started = false
     private var jobID: String?
+    private let onStart: @Sendable () -> Void
+
+    init(onStart: @escaping @Sendable () -> Void) { self.onStart = onStart }
 
     func send(
         method: String,
@@ -1132,11 +1132,11 @@ private actor MCPHTTPClientSlowFake: HealthMdMCPHTTPClient {
         body: Data?,
         headers: [String: String]
     ) async throws -> HealthMdMCPHTTPResponse {
-        started = true
         if let body,
            let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any] {
             jobID = object["job_id"] as? String
         }
+        onStart()
         try await Task.sleep(for: .seconds(30))
         return HealthMdMCPHTTPResponse(
             statusCode: 200,
@@ -1144,7 +1144,6 @@ private actor MCPHTTPClientSlowFake: HealthMdMCPHTTPClient {
         )
     }
 
-    func didStart() -> Bool { started }
     func startedJobID() -> String? { jobID }
 }
 

@@ -25,6 +25,6 @@ FLEXIBLE FORMATTING
 • Export as Markdown, CSV, JSON, or Obsidian Bases YAML
 
 PRIVACY
-Health.md does not store your health data on Health.md servers. Processing happens on your devices, and exports go only to destinations you choose. Health.md automatically collects limited pseudonymous product events using a random app-install ID to understand onboarding and purchase flows. These events never include health values, metric names, health dates, or exported files and are not used for advertising or cross-app tracking.
+Health.md does not store your health data on Health.md servers. Processing happens on your devices, and exports go only to destinations you choose. Health.md automatically collects limited pseudonymous product events using a random app-install ID to understand onboarding and purchase flows. These events never include health values, metric names, health dates, or exported files and are not used for ad targeting or cross-app tracking. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.
 
 Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

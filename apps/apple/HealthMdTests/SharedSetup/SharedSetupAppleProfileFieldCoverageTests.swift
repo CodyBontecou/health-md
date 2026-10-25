@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import XCTest
 @testable import HealthMd
@@ -55,7 +56,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let ledger = try loadLedger()
 
         XCTAssertEqual(ledger.schema, "healthmd.shared_setup.apple_profile_field_coverage")
-        XCTAssertEqual(ledger.schemaVersion, 1)
+        XCTAssertEqual(ledger.schemaVersion, 2)
         XCTAssertEqual(ledger.targetContract.schema, "healthmd.shared_setup")
         XCTAssertEqual(ledger.targetContract.schemaVersion, 2)
         XCTAssertEqual(Set(ledger.fieldKinds), Set(FieldKind.allCases))
@@ -152,10 +153,63 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         }
     }
 
+    func testMinuteRefreshAuditPreservesHistoricalV2AndLocalPersistenceBoundary() throws {
+        let historical = try Data(contentsOf: ledgerURL())
+        XCTAssertEqual(
+            SHA256.hash(data: historical).map { String(format: "%02x", $0) }.joined(),
+            "35cc4677943f23372991792d48250d9e0871443e4bd2d686966aa03d12e0de8f"
+        )
+        let rows = Self.minuteRefreshPersistenceFields
+        XCTAssertEqual(Set(rows.map(\.field)), [
+            "todayRefreshIntervalMinutes", "todayRefreshPersistenceVersion", "todayRefreshRequestedV2",
+        ])
+        for row in rows {
+            XCTAssertEqual(row.sourceType, "ScheduledExportEntry")
+            XCTAssertEqual(row.serializedKey, row.field)
+            XCTAssertNil(row.contractPath, "Local minute persistence must not claim frozen Shared Setup v2 authority")
+            if row.field == "todayRefreshIntervalMinutes" {
+                XCTAssertEqual(row.fieldKind, .stored)
+                XCTAssertEqual(row.disposition, .localOnly)
+            } else {
+                XCTAssertEqual(row.fieldKind, .encodedOnly)
+                XCTAssertEqual(row.disposition, .prohibited)
+            }
+        }
+    }
+
+    // Native minute scheduling adds no authority to frozen Shared Setup v2.
+    // Audit its exact persistence fields alongside the unchanged historical ledger.
+    private static let minuteRefreshPersistenceFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "ScheduledExportEntry", field: "todayRefreshIntervalMinutes",
+            fieldKind: .stored, serializedKey: "todayRefreshIntervalMinutes",
+            disposition: .localOnly, contractPath: nil,
+            reason: "Native 30/60-minute cadence is not represented by the frozen v2 hour-only schedule grammar."
+        ),
+        .init(
+            sourceType: "ScheduledExportEntry", field: "todayRefreshPersistenceVersion",
+            fieldKind: .encodedOnly, serializedKey: "todayRefreshPersistenceVersion",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Native decoder migration marker must not become portable schedule intent or activation authority."
+        ),
+        .init(
+            sourceType: "ScheduledExportEntry", field: "todayRefreshRequestedV2",
+            fieldKind: .encodedOnly, serializedKey: "todayRefreshRequestedV2",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Native consent-preserving minute persistence marker must not activate an imported Shared Setup schedule."
+        ),
+    ]
+
     private func loadLedger() throws -> CoverageLedger {
-        try JSONDecoder().decode(
+        let historical = try JSONDecoder().decode(
             CoverageLedger.self,
             from: Data(contentsOf: try ledgerURL())
+        )
+        return CoverageLedger(
+            schema: historical.schema, schemaVersion: historical.schemaVersion,
+            targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
+            dispositions: historical.dispositions,
+            fields: historical.fields + Self.minuteRefreshPersistenceFields
         )
     }
 
@@ -163,7 +217,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while directory.path != "/" {
             let candidate = directory.appendingPathComponent(
-                "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json"
+                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
             )
             if FileManager.default.fileExists(atPath: candidate.path) {
                 return candidate
@@ -223,6 +277,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         markdown.sectionHeaderLevel = 3
         markdown.useEmoji = true
         markdown.includeSummary = false
+        markdown.includeWorkoutDetailsAndMetadata = false
         markdown.bulletStyle = .plus
 
         let formatCustomization = FormatCustomizationSnapshot(
@@ -588,6 +643,6 @@ private enum CoverageTestError: LocalizedError {
     case ledgerNotFound
 
     var errorDescription: String? {
-        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage.json"
+        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
     }
 }

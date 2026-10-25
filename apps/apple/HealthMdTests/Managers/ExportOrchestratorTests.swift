@@ -702,7 +702,10 @@ final class ExportOrchestratorTests: XCTestCase {
             }
         )
 
-        XCTAssertEqual(result.successCount, 3)
+        let failures = result.failedDateDetails.map {
+            "\($0.reason): \($0.errorDetails ?? "no details")"
+        }.joined(separator: "; ")
+        XCTAssertEqual(result.successCount, 3, failures)
         XCTAssertTrue(result.didCompleteAllRequestedDates)
         // Cooperative yields between days must not change onProgress delivery:
         // one call per day plus the terminal completion call.

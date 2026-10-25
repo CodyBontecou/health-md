@@ -14,6 +14,7 @@ enum AccessibilityID {
 
     // MARK: - Export Tab
     enum Export {
+        static let contentScroll = "export.content.scroll"
         static let exportButton = "export.exportButton"
         static let previewButton = "export.previewButton"
         static let cancelExportButton = "export.cancelButton"
@@ -23,6 +24,7 @@ enum AccessibilityID {
         static let localTargetOption = "export.target.local"
         static let macTargetOption = "export.target.mac"
         static let apiTargetOption = "export.target.api"
+        static let agentDataGatewayTargetOption = "export.target.agentDataGateway"
         static let datePresetTodayButton = "export.dateRange.preset.today"
         static let datePresetYesterdayButton = "export.dateRange.preset.yesterday"
         static let datePresetAllTimeButton = "export.dateRange.preset.allTime"
@@ -122,6 +124,7 @@ enum AccessibilityID {
 
     // MARK: - Value Moment Prompt
     enum UpgradePrompt {
+        static let schedule = "upgradePrompt.scheduleButton"
         static let upgrade = "upgradePrompt.upgradeButton"
         static let notNow = "upgradePrompt.notNowButton"
         static let title = "upgradePrompt.title"
@@ -140,6 +143,7 @@ enum AccessibilityID {
         static let localTargetOption = "schedule.target.local"
         static let macTargetOption = "schedule.target.mac"
         static let apiTargetOption = "schedule.target.api"
+        static let agentDataGatewayTargetOption = "schedule.target.agentDataGateway"
     }
 
     // MARK: - Sync

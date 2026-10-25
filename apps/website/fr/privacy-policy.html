@@ -9,7 +9,7 @@
   <link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html">
   <link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html">
   <link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html">
-  <meta name="robots" content="index,follow">
+  <meta name="robots" content="noindex,follow">
   <meta name="theme-color" content="#fafaf8">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
@@ -47,7 +47,7 @@
       <div class="legal-hero-inner">
         <p class="legal-eyebrow">Mentions légales · Confidentialité</p>
         <h1 id="privacy-title">La confidentialité,<br>en termes clairs.</h1>
-        <p class="legal-updated">Dernière mise à jour : 6 août 2026</p>
+        <p class="legal-updated">Dernière mise à jour: 2026-10-24</p>
         <p class="legal-lede">Health.md transfère des données de santé sensibles sans créer de cloud Health.md pour ces données. Votre appareil lit les dossiers que vous autorisez, et vous choisissez la destination de chaque export ou réponse directe.</p>
 
         <div class="legal-promise" role="list" aria-label="Principes de confidentialité">
@@ -101,7 +101,7 @@
           <p>Elle ne remplace pas les conditions de confidentialité d’Apple, de Google, d’un fournisseur de santé, d’un fournisseur de fichiers ou de synchronisation, de l’exploitant d’une API, d’un outil d’IA ou de toute autre destination que vous choisissez. Lorsque vous demandez l’envoi de données à l’un de ces services, ses conditions et votre configuration régissent la copie qu’il reçoit.</p>
           <div class="policy-note">
             <p><strong>La version simple :</strong> Health.md ne collecte ni ne stocke de données de santé sur les serveurs de Health.md. Les données de santé sont traitées sur vos appareils et envoyées uniquement aux destinations ou clients que vous choisissez.</p>
-            <p>Nous collectons automatiquement des données internes limitées d’analyse du produit et des campagnes. Ces systèmes sont pseudonymes, ne contiennent aucun dossier de santé ni export et ne sont pas utilisés à des fins publicitaires.</p>
+            <p>Nous collectons automatiquement des données internes limitées d’analyse du produit et des campagnes. Ces systèmes sont pseudonymes, ne contiennent aucun dossier de santé ni export et servent à mesurer le produit et les campagnes.</p>
           </div>
           <div class="policy-note">
             <p><strong>Avis de traduction :</strong> Cette version française est fournie pour votre commodité. En cas de divergence, la <a href="../privacy-policy.html" hreflang="en">version anglaise</a> fait foi uniquement dans la mesure permise par la législation applicable, sans limiter les droits impératifs des consommateurs.</p>
@@ -165,12 +165,13 @@
           <p>Selon la plateforme et l’événement, une charge utile acceptée peut contenir un UUID aléatoire d’installation de l’application, un UUID aléatoire d’événement, le nom de l’événement, la version de l’application, le numéro de build, la plateforme, l’expérience ou la variante, l’étape d’intégration ou son abandon explicite, un nombre plafonné d’exports gratuits, la catégorie de destination de l’export, le nombre de formats, des tranches générales du nombre de métriques et de la durée de la plage de dates, le contexte du paywall, l’identifiant du produit, le résultat de l’achat ou de la restauration et une catégorie générale d’autorisation ou d’erreur.</p>
           <p>L’UUID d’installation persiste pendant cette installation de l’application ; les données sont donc <strong>pseudonymes et non anonymes</strong>. Il est généré aléatoirement et n’est pas dérivé de votre nom, compte, identifiant de santé, identifiant matériel de l’appareil, Android ID ou Advertising ID.</p>
           <p>Les données d’analyse du produit <strong>ne comprennent jamais de valeurs ou d’identifiants HealthKit ou Health Connect, de noms de métriques ni de dates de santé</strong>, de médicaments, d’entraînements, de contenu exporté, de résultats de requêtes saisies, de noms de dossiers ou de coffres, de chemins de fichiers, de noms de pairs ou d’appareils, de données de compte, de prix, <strong>d’identifiants ou de jetons</strong>, de texte saisi par l’utilisateur, de référents bruts, de chaînes User-Agent complètes ni d’adresses IP stockées. Les événements, propriétés et valeurs de propriétés inconnus sont rejetés. Les listes de champs autorisés du client public et du Worker sont conçues de sorte que <strong>les dossiers de santé et le contenu exporté ne puissent pas être représentés dans une charge utile d’analyse</strong>.</p>
-          <p>Ces événements ne sont utilisés ni à des fins publicitaires, ni pour la création d’empreintes numériques, ni pour le suivi entre applications ; ils ne sont ni vendus ni communiqués à des annonceurs. Les lignes validées sont conservées pendant 13 mois au maximum, puis supprimées automatiquement lors du nettoyage quotidien. Cloudflare continue de traiter les informations de connexion ordinaires conformément à ses propres conditions.</p>
+          <p>Ces événements ne sont utilisés ni pour le ciblage publicitaire, ni pour la création d’empreintes numériques, ni pour le suivi entre applications ; ils ne sont ni vendus ni communiqués à des annonceurs. Les lignes validées sont conservées pendant 13 mois au maximum, puis supprimées automatiquement lors du nettoyage quotidien. Cloudflare continue de traiter les informations de connexion ordinaires conformément à ses propres conditions.</p>
         </section>
 
         <section id="campaigns">
           <h2>Attribution interne des campagnes</h2>
           <p>Health.md utilise des liens courts internes, tels que <code>healthmd.app/v/yt-csv-001</code>, pour mesurer les performances globales des campagnes sans SDK d’attribution tiers.</p>
+          <p>Sur iPhone et iPad, AdServices résout l’attribution Apple Ads directement auprès d’Apple. Le jeton temporaire n’est jamais stocké ni envoyé à Health.md. Seuls les identifiants de campagne, groupe et mot-clé, le statut, clic ou impression et téléchargement ou retéléchargement sont liés à l’identifiant aléatoire d’installation et aux résultats d’achat. Aucun IDFA ni SDK tiers d’attribution n’est utilisé. Aucune donnée de santé ni événement d’achat n’est envoyé à Apple Ads. Un échec reste inconnu, et non organique.</p>
           <ul>
             <li>Le service de redirection peut enregistrer le jeton et l’identifiant lisible de la campagne, la plateforme et l’angle du contenu, une catégorie générale de destination ou de client, le nom d’hôte référent lorsqu’il est fourni, un code pays général et l’heure.</li>
             <li>La ligne de clic stockée ne comprend ni adresse IP, ni chaîne User-Agent complète, ni cookie, ni identifiant de requête Cloudflare, ni empreinte numérique.</li>

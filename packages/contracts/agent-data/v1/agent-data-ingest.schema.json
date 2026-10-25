@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/agent-data/v1/agent-data-ingest.schema.json",
+  "title": "Health.md Agent Data Ingest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "artifact_kind",
+    "platform",
+    "artifact_schema",
+    "artifact_schema_version",
+    "owner_date",
+    "physical_format",
+    "media_type",
+    "byte_count",
+    "sha256",
+    "completeness"
+  ],
+  "properties": {
+    "schema": { "const": "healthmd.agent_data_ingest" },
+    "schema_version": { "const": 1 },
+    "artifact_kind": {
+      "enum": ["health_data_daily", "external_provider_daily", "raw_snapshot", "raw_changes"]
+    },
+    "platform": { "enum": ["apple", "android"] },
+    "artifact_schema": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "artifact_schema_version": { "type": "integer", "minimum": 1 },
+    "owner_date": { "type": "string", "format": "date" },
+    "physical_format": { "enum": ["json", "ndjson"] },
+    "media_type": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "byte_count": { "type": "integer", "minimum": 1, "maximum": 67108864 },
+    "sha256": { "$ref": "#/$defs/digest" },
+    "record_count": { "type": "integer", "minimum": 1 },
+    "completeness": { "$ref": "#/$defs/completeness" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["artifact_kind"],
+        "properties": {
+          "artifact_kind": { "enum": ["raw_snapshot", "raw_changes"] }
+        }
+      },
+      "then": {
+        "required": ["completeness"],
+        "properties": {
+          "completeness": {
+            "required": ["type"],
+            "properties": { "type": { "const": "complete" } }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "completeness": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "complete" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "finalized", "covered_owner_dates"],
+          "properties": {
+            "type": { "const": "partial" },
+            "finalized": { "const": true },
+            "covered_owner_dates": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 400,
+              "uniqueItems": true,
+              "items": { "type": "string", "format": "date" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

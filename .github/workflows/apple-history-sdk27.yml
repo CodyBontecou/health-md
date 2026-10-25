@@ -1,0 +1,56 @@
+name: Apple history SDK27 qualification
+
+on:
+  push:
+    branches: [fix/audit-172]
+    paths: ['.github/workflows/apple-history-sdk27.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-declaration:
+    # Standard public-repository preview runner; never xlarge/paid fallback.
+    runs-on: xcode-27
+    timeout-minutes: 10
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v6
+      - name: Required public signature and back-deployment probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          receipt=history-sdk27-receipt.txt
+          {
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "TREE=$(git rev-parse HEAD^{tree})"
+            echo "ImageOS=${ImageOS:-unknown} ImageVersion=${ImageVersion:-unknown}"
+            echo "DEVELOPER_DIR=$DEVELOPER_DIR"
+            uname -a
+            sw_vers
+            xcodebuild -version
+            xcrun swiftc --version
+            xcodebuild -showsdks
+          } | tee "$receipt"
+          for sdk in iphonesimulator iphoneos macosx; do
+            sdk_path=$(xcrun --sdk "$sdk" --show-sdk-path)
+            sdk_version=$(xcrun --sdk "$sdk" --show-sdk-version)
+            case "$sdk" in
+              iphonesimulator) target=arm64-apple-ios17.0-simulator ;;
+              iphoneos) target=arm64-apple-ios17.0 ;;
+              macosx) target=arm64-apple-macosx14.0 ;;
+            esac
+            echo "SDK=$sdk VERSION=$sdk_version PATH=$sdk_path TARGET=$target" | tee -a "$receipt"
+            xcrun --sdk "$sdk" swiftc -typecheck -sdk "$sdk_path" -target "$target" \
+              apps/apple/scripts/fixtures/HealthHistoryAuthorizationSDKProbe.swift 2>&1 | tee -a "$receipt"
+            echo "PASS public declaration: $sdk (compilation only, no runtime authorization)" | tee -a "$receipt"
+          done
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: history-sdk27-receipt
+          path: history-sdk27-receipt.txt
+          if-no-files-found: error
+          retention-days: 1

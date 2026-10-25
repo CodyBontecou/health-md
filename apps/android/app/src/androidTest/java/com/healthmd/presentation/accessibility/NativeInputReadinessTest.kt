@@ -65,6 +65,44 @@ class NativeInputReadinessTest : AccessibilityTestHarness(AccessibilityDisplayCa
     }
 
     @Test
+    fun fixtureRemovalDisposesItsNativeModalAndRestoresHostFocusBeforeActivityTeardown() {
+        var modalOwner: View? = null
+        var disposals = 0
+        setContent {
+            // Deliberately leave the modal open, as callback-only component fixtures can do.
+            ComposeDialog(onDismissRequest = {}) {
+                val view = LocalView.current
+                DisposableEffect(view) {
+                    modalOwner = view.rootView
+                    onDispose { modalOwner = null; disposals++ }
+                }
+                Text("Synthetic fixture teardown", Modifier.testTag(INITIAL_MODAL))
+            }
+        }
+        compose.onNodeWithTag(INITIAL_MODAL).assertIsDisplayed()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.runOnUiThread {
+                modalOwner?.hasWindowFocus() == true &&
+                    !compose.activity.window.decorView.hasWindowFocus()
+            }
+        }
+        clearFixtureAndAwaitNativeHost()
+        compose.onNodeWithTag(INITIAL_MODAL).assertDoesNotExist()
+        assertTrue("Fixture disposal removes its native window exactly once", compose.runOnUiThread {
+            modalOwner == null && disposals == 1
+        })
+        assertTrue("The live host regains native focus before activity teardown", compose.runOnUiThread {
+            compose.activity.window.decorView.hasWindowFocus()
+        })
+        clearFixtureAndAwaitNativeHost()
+        assertTrue("Repeated cleanup leaves the modal disposed once", compose.runOnUiThread { disposals == 1 })
+        assertThrows(IllegalStateException::class.java) {
+            setContent { Text("Forbidden replacement fixture") }
+        }
+        compose.onNodeWithText("Forbidden replacement fixture").assertDoesNotExist()
+    }
+
+    @Test
     fun fixturePublicationPreservesTheSingleContentContract() {
         setContent { Text("First synthetic fixture") }
         assertThrows(IllegalStateException::class.java) {

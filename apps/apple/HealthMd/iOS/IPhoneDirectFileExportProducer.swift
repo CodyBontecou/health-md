@@ -101,7 +101,8 @@ final class IPhoneDirectFileExportProducer {
         protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?,
-        didAcquireOwnership: (AppleExportJournalCheckpoint) throws -> HealthKitQueryExecutionController
+        didAcquireOwnership: (AppleExportJournalCheckpoint) throws -> HealthKitQueryExecutionController,
+        historyAdmission: HealthHistoryExportAdmission
     ) async throws -> Bool {
         #if DEBUG
         let jobPerformanceSpan = ExportPerformanceInstrumentation.beginSpan(
@@ -131,6 +132,25 @@ final class IPhoneDirectFileExportProducer {
             throw IPhoneDirectFileProducerError.cancelled
         }
         try enforceBlockedProfileGate(for: request)
+        let historyObservationVersion = channel.exportHistoryObservationVersion
+        let persistedJournal = try loadJournal(jobID: request.jobID)
+        if let persisted = persistedJournal {
+            guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version) else {
+                throw IPhoneDirectFileProducerError.requestChanged
+            }
+            try HealthHistoryExportAdmission.validateResume(request: request, accepted: persisted.accepted,
+                session: persisted.session, historyRequired: persisted.version >= IPhoneDirectFileJournal.historyObservationVersion,
+                negotiatedVersion: historyObservationVersion)
+            guard persisted.accepted.historyObservation == nil
+                    || persisted.originalCalendarTimeZoneIdentifier == persisted.settingsSnapshot.calendarTimeZoneIdentifier else {
+                throw HealthHistoryExportAdmission.AdmissionError.invalidCheckpoint
+            }
+            try HealthHistoryExportAdmission.validateCaptureScope(request: request, accepted: persisted.accepted,
+                metricIDs: persisted.settingsSnapshot.metricSelection.enabledMetricIDs,
+                requestedDates: persisted.requestedDates, originalDates: persisted.originalRequestedDates,
+                timeZoneIdentifier: persisted.originalCalendarTimeZoneIdentifier)
+            if persisted.accepted.historyObservation != nil { try persisted.validateCapturePlan() }
+        }
         // The profile gate must run before even beginning an external-provider
         // export action; a blocked durable resume performs no health-data work.
         externalIntegrations?.beginExportAction()
@@ -140,7 +160,7 @@ final class IPhoneDirectFileExportProducer {
         let journal: IPhoneDirectFileJournal
         var incomingProtocolLease: IPhoneDirectIncomingProtocolLease?
         defer { incomingProtocolLease?.close() }
-        if let persisted = try loadJournal(jobID: request.jobID) {
+        if let persisted = persistedJournal {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version),
                   persisted.request == request,
                   persisted.accepted.peerBinding == peerBinding,
@@ -174,7 +194,9 @@ final class IPhoneDirectFileExportProducer {
                     protocolPin: protocolPin,
                     protocolAuthority: operationAuthority,
                     healthKitManager: healthKitManager,
-                    connectedProviderCount: externalIntegrations?.connectedProviderCount ?? 0
+                    connectedProviderCount: externalIntegrations?.connectedProviderCount ?? 0,
+                    historyObservationVersion: historyObservationVersion,
+                    historyAdmission: historyAdmission
                 )
             }
             try checkCancellation(request.jobID)
@@ -349,7 +371,9 @@ final class IPhoneDirectFileExportProducer {
         protocolPin: AppleDirectProtocolPin?,
         protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager,
-        connectedProviderCount: Int
+        connectedProviderCount: Int,
+        historyObservationVersion: Int?,
+        historyAdmission: HealthHistoryExportAdmission
     ) async throws -> IPhoneDirectFileJournal {
         let sourceTimeZone = TimeZone.current
         let resolvedSelection = try resolveSelection(request.canonicalSelection)
@@ -401,6 +425,26 @@ final class IPhoneDirectFileExportProducer {
             destinationDisplayName: request.destination.map { URL(fileURLWithPath: $0.rootPath).lastPathComponent },
             operationSurface: operationSurface
         )
+        let metrics = Set(metadata.settingsSnapshot.metricSelection.enabledMetricIDs)
+        let fingerprint = try protocolAuthority.requestFingerprint(request)
+        let observation: ExportHistoryObservation?
+        if historyObservationVersion == 1, !metrics.isEmpty {
+            let scope = try HealthHistoryExportAdmission.scope(for: request, resolvedDates: metadata.requestedDates,
+                metricIDs: metrics, timeZone: sourceTimeZone)
+            observation = try await historyAdmission.observe(scope: scope, operationID: request.jobID,
+                requestBindingSHA256: fingerprint.sha256, peerBinding: peerBinding,
+                notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: scope), operation: {
+                    await healthKitManager.assessHistoryAccess(scope: scope)
+                })
+        } else {
+            observation = nil
+        }
+        let captureSelection = resolvedSelection.map {
+            DirectCanonicalSelection(metricIDs: $0.metricIDs, sourceIDs: $0.sourceIDs,
+                objectPaths: $0.objectPaths, fieldPointers: $0.fieldPointers,
+                detailLevel: $0.detailLevel == .lossless ? .lossless : .summary)
+        } ?? (observation == nil ? nil : DirectCanonicalSelection(metricIDs: metrics.sorted(),
+            sourceIDs: ["apple_health"], detailLevel: settings.effectiveDetailPolicy.includesCanonicalArchive ? .lossless : .summary))
         let identifiers = requestedDates.map(
             Self.sourceDateFormatter(timeZone: sourceTimeZone).string(from:)
         )
@@ -411,26 +455,19 @@ final class IPhoneDirectFileExportProducer {
             resolvedDateIdentifiers: identifiers,
             sourceDeviceName: UIDevice.current.name,
             sourceTimeZoneIdentifier: sourceTimeZone.identifier,
-            resolvedCanonicalSelection: resolvedSelection.map {
-                DirectCanonicalSelection(
-                    metricIDs: $0.metricIDs,
-                    sourceIDs: $0.sourceIDs,
-                    objectPaths: $0.objectPaths,
-                    fieldPointers: $0.fieldPointers,
-                    detailLevel: $0.detailLevel == .lossless ? .lossless : .summary
-                )
-            }
+            resolvedCanonicalSelection: captureSelection,
+            historyObservation: observation
         )
         let session = try DirectTransferSession(
             sessionID: UUID(),
             jobID: request.jobID,
-            requestFingerprint: try protocolAuthority.requestFingerprint(request),
+            requestFingerprint: fingerprint,
             peerBinding: peerBinding,
             partitionTargetBytes: negotiation.partitionTargetBytes,
             createdAt: Date()
         )
         return IPhoneDirectFileJournal(
-            version: IPhoneDirectFileJournal.currentVersion,
+            version: observation == nil ? IPhoneDirectFileJournal.derivedOutputReconciliationVersion : IPhoneDirectFileJournal.historyObservationVersion,
             request: request,
             accepted: accepted,
             session: session,
@@ -1530,7 +1567,7 @@ final class IPhoneDirectFileExportProducer {
                 enabledMetricIDs: settings.metricSelection.enabledMetrics,
                 timeZone: sourceTimeZone
             )
-            guard discovery.isComplete else {
+            guard discovery.isQueryComplete else {
                 throw IPhoneDirectFileProducerError.invalidRequest(
                     "The iPhone could not prove complete earliest-date coverage."
                 )

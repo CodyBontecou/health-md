@@ -114,7 +114,8 @@ struct IPhoneDirectGeneratedFile: Codable, Equatable {
 /// Durable state for generated-file direct exports only. Raw and canonical direct journals retain
 /// their independent models. V1 is fully legacy, v2 may carry an export-engine pin, v3 may
 /// carry a direct-protocol pin, v4 stores captured days as bounded application-item streams, v5
-/// freezes original range authority, and v6 persists terminal derived-output reconciliation.
+/// freezes original range authority, v6 persists terminal derived-output reconciliation,
+/// and v7 retains immutable admission-time history evidence.
 struct IPhoneDirectFileJournal: Codable {
     static let legacyVersion = 1
     static let exportEnginePinVersion = 2
@@ -122,7 +123,8 @@ struct IPhoneDirectFileJournal: Codable {
     static let fileBackedCaptureVersion = 4
     static let immutableRangeRequestVersion = 5
     static let derivedOutputReconciliationVersion = 6
-    static let currentVersion = derivedOutputReconciliationVersion
+    static let historyObservationVersion = 7
+    static let currentVersion = historyObservationVersion
 
     var checkpoint = AppleExportJournalCheckpoint()
 
@@ -160,12 +162,42 @@ struct IPhoneDirectFileJournal: Codable {
     var completionRecorded: Bool
     var updatedAt: Date
 
+    @MainActor
+    func validateCapturePlan() throws {
+        guard let first = originalRequestedDates.first, let last = originalRequestedDates.last,
+              let identifier = originalCalendarTimeZoneIdentifier,
+              let timeZone = TimeZone(identifier: identifier) else {
+            throw HealthHistoryExportAdmission.AdmissionError.invalidCheckpoint
+        }
+        let metadata = MacExportStreamingJobBuilder.metadata(startDate: first, endDate: last,
+            requestedDates: requestedDates, rollupRequestedDates: originalRequestedDates,
+            settings: settingsSnapshot.makeAdvancedExportSettings(), healthSubfolder: healthSubfolder,
+            destinationDisplayName: nil, frozenSettingsSnapshot: settingsSnapshot)
+        guard metadata.requestedDates == requestedDates,
+              metadata.originalRequestedDates == originalRequestedDates,
+              metadata.transferDates == transferDates, capturedDays.count <= transferDates.count else {
+            throw HealthHistoryExportAdmission.AdmissionError.invalidCheckpoint
+        }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        let requested = Set(requestedDates)
+        for (day, date) in zip(capturedDays, transferDates) {
+            guard day.sourceDate == date, day.sourceDateIdentifier == formatter.string(from: date),
+                  day.isRequestedDate == requested.contains(date) else {
+                throw HealthHistoryExportAdmission.AdmissionError.invalidCheckpoint
+            }
+        }
+    }
+
     static func isSupportedVersion(_ version: Int) -> Bool {
         version >= legacyVersion && version <= currentVersion
     }
 
     init(
-        version: Int = currentVersion,
+        version: Int? = nil,
         request: DirectExportRequest,
         accepted: DirectExportAccepted,
         session: DirectTransferSession,
@@ -189,15 +221,17 @@ struct IPhoneDirectFileJournal: Codable {
         completionRecorded: Bool,
         updatedAt: Date
     ) {
-        self.version = version
+        let resolvedVersion = version ?? (accepted.historyObservation == nil
+            ? Self.derivedOutputReconciliationVersion : Self.historyObservationVersion)
+        self.version = resolvedVersion
         self.request = request
         self.accepted = accepted
         self.session = session
         self.settingsSnapshot = settingsSnapshot
-        self.appleExportEnginePin = version >= Self.exportEnginePinVersion
+        self.appleExportEnginePin = resolvedVersion >= Self.exportEnginePinVersion
             ? (appleExportEnginePin ?? settingsSnapshot.appleExportEnginePin)
             : nil
-        self.appleDirectProtocolPin = version >= Self.directProtocolPinVersion
+        self.appleDirectProtocolPin = resolvedVersion >= Self.directProtocolPinVersion
             ? appleDirectProtocolPin
             : nil
         self.healthSubfolder = healthSubfolder

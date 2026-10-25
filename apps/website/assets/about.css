@@ -127,6 +127,15 @@
   padding: 86px 0 124px;
 }
 
+.csv-layout {
+  grid-template-columns: minmax(0, 820px);
+  justify-content: center;
+}
+
+.csv-layout .process-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .about-toc {
   max-height: calc(100svh - 64px);
   align-self: start;
@@ -237,6 +246,73 @@
   color: #3e3159;
   font-family: var(--font-mono);
   font-size: 0.86em;
+}
+
+.csv-layout p code {
+  overflow-wrap: anywhere;
+}
+
+.csv-layout .format-comparison {
+  max-width: 100%;
+  margin: 22px 0;
+  overflow-x: auto;
+}
+
+.csv-layout .format-comparison:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 3px;
+}
+
+.csv-layout .format-comparison table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.csv-layout .format-comparison caption {
+  margin-bottom: 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.csv-layout .format-comparison th,
+.csv-layout .format-comparison td {
+  padding: 12px;
+  border: 1px solid var(--about-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.csv-layout .format-comparison thead {
+  background: var(--about-soft);
+}
+
+.about-section .csv-example {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 20px;
+  overflow-x: auto;
+  border: 1px solid var(--about-line);
+  border-radius: 12px;
+  background: var(--about-soft);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.about-section .csv-example:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 3px;
+}
+
+.about-section .csv-example code {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
 }
 
 .about-card-grid {
@@ -502,6 +578,10 @@
   .about-card-grid,
   .team-story-grid,
   .process-list {
+    grid-template-columns: 1fr;
+  }
+
+  .csv-layout .process-list {
     grid-template-columns: 1fr;
   }
 

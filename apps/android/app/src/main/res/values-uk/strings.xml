@@ -296,7 +296,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Розблокувати Health.md</string>
-    <string name="paywall_subtitle">Ви використали 10 безплатних експортів</string>
+    <string name="paywall_subtitle">Ви використали 5 безплатних експортів</string>
     <string name="paywall_unlimited_exports">Необмежені експорти назавжди</string>
     <string name="paywall_scheduled_exports">Автоматизовані заплановані експорти</string>
     <string name="paywall_future_features">Усі майбутні функції включені</string>
@@ -804,7 +804,7 @@
     <string name="export_source_shortcut">Ярлик</string>
     <string name="export_source_remote">Віддалений запуск</string>
     <string name="schedule_unlock_required_title">Розблокувати запланований експорт</string>
-    <string name="schedule_unlock_required_body">Ручний експорт включає 10 безкоштовних запусків. Автоматичний запланований експорт включено в одноразове довічне розблокування.</string>
+    <string name="schedule_unlock_required_body">Ручний експорт включає 5 безкоштовних запусків. Автоматичний запланований експорт включено в одноразове довічне розблокування.</string>
     <string name="schedule_unlock_required_short">Розблокуйте Health.md, щоб увімкнути запланований експорт.</string>
     <string name="export_folder_root_label">Папка експорту</string>
     <string name="history_clear_title">Очистити історію експорту?</string>
@@ -1530,4 +1530,32 @@
     <string name="myself_claim_store_unavailable">Google Play не вдалося отримати покупку. Перевірте підключення й обліковий запис Google Play та повторіть спробу.</string>
     <string name="myself_claim_verification_failed">Не вдалося перевірити покупку. Перевірте підключення й повторіть спробу. Якщо помилка залишається, зверніться до підтримки. Доступ не надано.</string>
     <string name="myself_claim_browser_unavailable">Не вдалося відкрити браузер. Увімкніть браузер і знову перевірте покупку.</string>
+    <string name="export_preview_gateway_destination">Шлюз Agent Data</string>
+    <string name="export_failure_gateway_format_label">Потрібен формат JSON</string>
+    <string name="export_guidance_gateway_format">Шлюз Agent Data завантажує експорт у форматі JSON. Виберіть JSON у розділі «Формати» та повторіть спробу.</string>
+    <string name="agent_data_gateway_dialog_title">Шлюз Agent Data</string>
+    <string name="agent_data_gateway_dialog_description">Кожен експортований файл завантажується без змін до кінцевої точки /v1/ingest шлюзу.</string>
+    <string name="agent_data_gateway_section_endpoint">Кінцева точка шлюзу</string>
+    <string name="agent_data_gateway_url_label">URL-адреса шлюзу</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Обов’язково. Базова URL-адреса вашого шлюзу; Health.md додає /v1/ingest. Не розміщуйте API-ключі та інші секрети в URL-адресі.</string>
+    <string name="agent_data_gateway_close_settings">Закрити налаштування</string>
+    <string name="agent_data_gateway_save_settings">Зберегти налаштування</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Введіть дійсну URL-адресу %1$s або %2$s без фрагмента та вбудованого імені користувача чи пароля.</string>
+    <string name="agent_data_gateway_close_content_description">Закрити налаштування шлюзу</string>
+    <string name="agent_data_gateway_outcomes_title">Завантаження шлюзу</string>
+    <string name="agent_data_gateway_outcome_accepted">Завантажено</string>
+    <string name="agent_data_gateway_outcome_rejected">Відхилено: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Не вдалося завантажити</string>
+    <string name="agent_data_gateway_result_uploaded">Завантажено на шлюз</string>
+    <string name="export_target_gateway_configured_subtitle">Завантажувати кожен експорт на %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Завантажуйте експорт на ваш шлюз Agent Data</string>
+    <string name="post_export_first_title">Перший експорт завершено</string>
+    <string name="post_export_first_body">Налаштуйте щоденний експорт, щоб не повторювати ці кроки. Розклад потребує довічного доступу; ручний експорт використовує безплатний ліміт.</string>
+    <string name="post_export_third_title">Продовжуйте нотатки про здоров’я</string>
+    <string name="post_export_third_body">Ви виконали три експорти. Одна покупка відкриває необмежений ручний експорт і розклад. Без підписки. Експортовані файли залишаються вашими.</string>
+    <string name="post_export_schedule_action">Переглянути щоденний експорт</string>
+    <string name="post_export_upgrade_action">Переглянути довічний доступ</string>
+    <string name="post_export_manual_action">Продовжити ручний експорт</string>
+    <string name="post_export_continue_free">Продовжити безплатно</string>
 </resources>

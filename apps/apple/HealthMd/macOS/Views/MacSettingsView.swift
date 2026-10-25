@@ -157,6 +157,7 @@ struct MacGeneralSettingsView: View {
     @StateObject private var feedbackReporter = FeedbackReporter()
     @State private var showClearConfirmation = false
     @State private var showEncryptedContextDeleteConfirmation = false
+    @State private var showDiagnostics = false
     @State private var showRetentionConfirmation = false
     @State private var retentionBoundary = Date()
     private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
@@ -295,7 +296,7 @@ struct MacGeneralSettingsView: View {
                     .font(BrandTypography.bodyMedium())
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.")
+                Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -324,7 +325,14 @@ struct MacGeneralSettingsView: View {
             } header: {
                 BrandLabel("Feedback")
             }
+            Section {
+                Button("Diagnostics", systemImage: "doc.text.magnifyingglass") { showDiagnostics = true }
+                    .accessibilityIdentifier("diagnostics.entry")
+                Text("Inspect local technical events and choose what to share. No automatic uploads.")
+                    .font(BrandTypography.caption()).foregroundStyle(Color.textSecondary)
+            }
         }
+        .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
         .formStyle(.grouped)
         .feedbackFailureSheet($feedbackReporter.failure)
         .geistDialog(
@@ -802,7 +810,7 @@ struct MacFormatSettingsTab: View {
                 BrandLabel("Display Formats")
             }
 
-            if advancedSettings.exportFormats.contains(.markdown) {
+            if advancedSettings.exportFormats.contains(.markdown) || advancedSettings.dailyNoteInjection.injectMarkdownSections {
                 Section {
                     Picker("Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
                         ForEach(MarkdownTemplateStyle.allCases, id: \.self) { s in
@@ -829,6 +837,11 @@ struct MacFormatSettingsTab: View {
                         .tint(Color.accent)
                     Toggle("Include Summary", isOn: $advancedSettings.formatCustomization.markdownTemplate.includeSummary)
                         .tint(Color.accent)
+                    Toggle("Workout Details and Metadata", isOn: $advancedSettings.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata)
+                        .tint(Color.accent)
+                    Text("Turn off to omit these two tables from Markdown exports and daily notes while keeping readable workout summaries. Structured data and source capture are unchanged.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
                 } header: {
                     BrandLabel("Markdown Template")
                 }

@@ -291,7 +291,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Deblocați Health.md</string>
-    <string name="paywall_subtitle">Ați folosit cele 10 exporturi gratuite</string>
+    <string name="paywall_subtitle">Ați folosit cele 5 exporturi gratuite</string>
     <string name="paywall_unlimited_exports">Exporturi nelimitate, pentru totdeauna</string>
     <string name="paywall_scheduled_exports">Exporturi programate automatizate</string>
     <string name="paywall_future_features">Toate caracteristicile viitoare incluse</string>
@@ -792,7 +792,7 @@
     <string name="export_source_shortcut">Comandă rapidă</string>
     <string name="export_source_remote">La distanță</string>
     <string name="schedule_unlock_required_title">Deblocați exporturile programate</string>
-    <string name="schedule_unlock_required_body">Exporturile manuale includ 10 rulări gratuite. Exporturile automate programate sunt incluse cu deblocarea unică pe viață.</string>
+    <string name="schedule_unlock_required_body">Exporturile manuale includ 5 rulări gratuite. Exporturile automate programate sunt incluse cu deblocarea unică pe viață.</string>
     <string name="schedule_unlock_required_short">Deblocați Health.md pentru a activa exporturile programate.</string>
     <string name="export_folder_root_label">Dosar de export</string>
     <string name="history_clear_title">Ștergeți istoricul exporturilor?</string>
@@ -1476,4 +1476,32 @@
     <string name="myself_claim_store_unavailable">Google Play nu a putut prelua achiziția. Verifică conexiunea și contul Google Play, apoi reîncearcă.</string>
     <string name="myself_claim_verification_failed">Achiziția nu a putut fi verificată. Verifică conexiunea și reîncearcă. Dacă problema persistă, contactează asistența; nu s-a acordat acces.</string>
     <string name="myself_claim_browser_unavailable">Browserul nu a putut fi deschis. Activează un browser și verifică din nou achiziția.</string>
+    <string name="export_preview_gateway_destination">Gateway Agent Data</string>
+    <string name="export_failure_gateway_format_label">Format JSON obligatoriu</string>
+    <string name="export_guidance_gateway_format">Gateway-ul Agent Data încarcă exporturi JSON. Selectați JSON la Formate și încercați din nou.</string>
+    <string name="agent_data_gateway_dialog_title">Gateway Agent Data</string>
+    <string name="agent_data_gateway_dialog_description">Fiecare fișier exportat este încărcat neschimbat către punctul final /v1/ingest al gateway-ului.</string>
+    <string name="agent_data_gateway_section_endpoint">Punct final al gateway-ului</string>
+    <string name="agent_data_gateway_url_label">URL al gateway-ului</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Obligatoriu. URL-ul de bază al gateway-ului; Health.md adaugă /v1/ingest. Păstrați cheile API și alte secrete în afara URL-ului.</string>
+    <string name="agent_data_gateway_close_settings">Închideți setările</string>
+    <string name="agent_data_gateway_save_settings">Salvați setările</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Introduceți o adresă URL validă %1$s sau %2$s fără un fragment sau un nume de utilizator/parolă încorporat.</string>
+    <string name="agent_data_gateway_close_content_description">Închide setările gateway-ului</string>
+    <string name="agent_data_gateway_outcomes_title">Încărcări gateway</string>
+    <string name="agent_data_gateway_outcome_accepted">Încărcat</string>
+    <string name="agent_data_gateway_outcome_rejected">Respins: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Încărcarea a eșuat</string>
+    <string name="agent_data_gateway_result_uploaded">Încărcat către gateway</string>
+    <string name="export_target_gateway_configured_subtitle">Încărcați fiecare export către %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Încărcați exporturile în gateway-ul dumneavoastră Agent Data</string>
+    <string name="post_export_first_title">Primul export este finalizat</string>
+    <string name="post_export_first_body">Configurează exporturi zilnice pentru a nu repeta acești pași. Programarea necesită acces pe viață; exporturile manuale folosesc cota gratuită.</string>
+    <string name="post_export_third_title">Continuă notițele de sănătate</string>
+    <string name="post_export_third_body">Ai finalizat trei exporturi. O singură achiziție deblochează exporturi manuale nelimitate și programarea. Fără abonament. Fișierele exportate rămân ale tale.</string>
+    <string name="post_export_schedule_action">Explorează exporturile zilnice</string>
+    <string name="post_export_upgrade_action">Vezi accesul pe viață</string>
+    <string name="post_export_manual_action">Continuă exporturile manuale</string>
+    <string name="post_export_continue_free">Continuă gratuit</string>
 </resources>
