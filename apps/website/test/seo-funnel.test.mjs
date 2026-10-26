@@ -42,6 +42,7 @@ test('browser emits only bounded actions and never changes navigation or sends U
     assert.equal(request.url, '/v1/web-events');
     assert.equal(request.settings.keepalive, true);
     assert.equal(request.settings.credentials, 'omit');
+    assert.equal(request.settings.mode, 'cors', 'preserve Origin with the no-referrer policy');
     assert.equal(request.settings.referrerPolicy, 'no-referrer');
     assert.doesNotMatch(request.settings.body, /private|secret|patient|https:|google\.com/);
     assert.equal(validFunnelEvent(request.data), true);

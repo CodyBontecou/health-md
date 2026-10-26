@@ -58,7 +58,9 @@ export function startFunnel(win) {
     // Keep navigation native; no retry, cookies, referrer URL, storage or visitor ID.
     try {
       win.fetch(FUNNEL_ENDPOINT, {
-        method: 'POST', mode: 'same-origin', credentials: 'omit', keepalive: true,
+        // CORS mode preserves Origin under no-referrer in Fetch-compliant browsers.
+        // The URL remains same-origin; the collector rejects cross-origin requests.
+        method: 'POST', mode: 'cors', credentials: 'omit', keepalive: true,
         referrerPolicy: 'no-referrer', headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
       }).catch(function () {});
