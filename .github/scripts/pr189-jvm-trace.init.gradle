@@ -1,0 +1,13 @@
+import org.gradle.api.tasks.testing.Test
+
+// Temporary diagnostic branch only. No test caching, heap, parallelism or assertions change.
+allprojects {
+    tasks.withType(Test).configureEach {
+        beforeTest { descriptor ->
+            logger.lifecycle("[DEBUG-pr189-jvm-oct26] START ${System.currentTimeMillis()} ${descriptor.className}.${descriptor.name}")
+        }
+        afterTest { descriptor, result ->
+            logger.lifecycle("[DEBUG-pr189-jvm-oct26] END ${System.currentTimeMillis()} ${descriptor.className}.${descriptor.name} result=${result.resultType} elapsedMs=${result.endTime - result.startTime}")
+        }
+    }
+}
