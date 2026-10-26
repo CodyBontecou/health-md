@@ -882,7 +882,8 @@ nonisolated enum AgentBridgeExportPrivateFiles {
         guard fstat(fd, &info) == 0 else { throw AgentBridgeValidationError.bindingChanged }
         return .init(device: info.st_dev, inode: info.st_ino)
     }
-    static func openDirectory(_ url: URL, privateLeaf: Bool) throws -> Int32 {
+    static func openDirectory(_ url: URL, privateLeaf: Bool,
+                              missingLeafError: AgentBridgeValidationError = .bindingChanged) throws -> Int32 {
         guard url.isFileURL, url.path.hasPrefix("/"), !url.path.contains("\0") else { throw AgentBridgeValidationError.unsafePath }
         let components = url.path.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
         guard !components.isEmpty, !components.contains("."), !components.contains("..") else { throw AgentBridgeValidationError.unsafePath }
@@ -891,7 +892,12 @@ nonisolated enum AgentBridgeExportPrivateFiles {
         do {
             for (index, component) in components.enumerated() {
                 let next = openat(fd, component, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW)
-                guard next >= 0 else { throw AgentBridgeValidationError.bindingChanged }
+                guard next >= 0 else {
+                    // Only the requested absent leaf may use the caller's recovery classification.
+                    // Missing ancestors, unsafe paths and ownership/protection failures stay fenced.
+                    if index == components.count - 1, errno == ENOENT { throw missingLeafError }
+                    throw AgentBridgeValidationError.bindingChanged
+                }
                 close(fd); fd = next
                 var info = stat()
                 guard fstat(fd, &info) == 0, (info.st_mode & S_IFMT) == S_IFDIR,

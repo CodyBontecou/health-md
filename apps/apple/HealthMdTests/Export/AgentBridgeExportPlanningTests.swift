@@ -3061,6 +3061,37 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testPrivateDirectoryMissingLeafClassificationPreservesAncestorAndUnsafeLeafFailures() throws {
+        let rig = try Rig(); defer { rig.cleanup() }
+        let missing = rig.directory.appendingPathComponent("absent", isDirectory: true)
+        XCTAssertThrowsError(try AgentBridgeExportPrivateFiles.openDirectory(missing, privateLeaf: true)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        XCTAssertThrowsError(try AgentBridgeExportPrivateFiles.openDirectory(missing, privateLeaf: true,
+            missingLeafError: .spoolMissingRestartRequired)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .spoolMissingRestartRequired)
+        }
+        let missingAncestor = missing.appendingPathComponent("job", isDirectory: true)
+        XCTAssertThrowsError(try AgentBridgeExportPrivateFiles.openDirectory(missingAncestor, privateLeaf: true,
+            missingLeafError: .spoolMissingRestartRequired)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        let unsafe = rig.directory.appendingPathComponent("unsafe", isDirectory: true)
+        try FileManager.default.createDirectory(at: unsafe, withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o755])
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: unsafe.path)
+        XCTAssertThrowsError(try AgentBridgeExportPrivateFiles.openDirectory(unsafe, privateLeaf: true,
+            missingLeafError: .spoolMissingRestartRequired)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+        let alias = rig.directory.appendingPathComponent("alias", isDirectory: true)
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: unsafe)
+        XCTAssertThrowsError(try AgentBridgeExportPrivateFiles.openDirectory(alias, privateLeaf: true,
+            missingLeafError: .spoolMissingRestartRequired)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+        }
+    }
+
     func testNativeReceiveCannotAcknowledgeForeignExpiredStoppedBusyOrMissingRetainedCancellation() async throws {
         for mode in ["foreign", "expired", "stopped", "busy", "missing"] {
             let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()

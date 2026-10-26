@@ -97,12 +97,12 @@ final class AgentBridgeNativeCaptureSpool {
             identities = [try AgentBridgeExportPrivateFiles.identity(issuerFD)]
             try check()
             if create { try mkdir(issuerFD, "captures", exclusive: false) }
-            capturesFD = try AgentBridgeExportPrivateFiles.openDirectory(captures, privateLeaf: true)
+            capturesFD = try AgentBridgeExportPrivateFiles.openDirectory(captures, privateLeaf: true, missingLeafError: .spoolMissingRestartRequired)
             try fileProtection.requireCompleteProtection(capturesFD)
             identities.append(try AgentBridgeExportPrivateFiles.identity(capturesFD))
             try check()
             if create { try mkdir(capturesFD, reservation.job.requestSHA256.rawValue, exclusive: true) }
-            directoryFD = try AgentBridgeExportPrivateFiles.openDirectory(directory, privateLeaf: true)
+            directoryFD = try AgentBridgeExportPrivateFiles.openDirectory(directory, privateLeaf: true, missingLeafError: .spoolMissingRestartRequired)
             try fileProtection.requireCompleteProtection(directoryFD)
             identities.append(try AgentBridgeExportPrivateFiles.identity(directoryFD))
             try check()
