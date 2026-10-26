@@ -1,0 +1,85 @@
+--- a/apps/apple/HealthMd/Shared/Sync/ConnectedCorpusApplicationItem.swift
++++ b/apps/apple/HealthMd/Shared/Sync/ConnectedCorpusApplicationItem.swift
+@@ -18,6 +18,20 @@
+     /// tiny temporary files. Individual nodes remain capped at 256 KiB.
+     private static let inlineGraphBytes = 16 * 1_024 * 1_024
+ 
++    // DEBUG-pr189-rss-oct26: temporary diagnostic branch only; never merge.
++    private static func traceMemory(_ stage: String) {
++        var info = task_vm_info_data_t()
++        var count = mach_msg_type_number_t(
++            MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size
++        )
++        let result = withUnsafeMutablePointer(to: &info) { pointer in
++            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
++                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
++            }
++        }
++        print("[DEBUG-pr189-rss-oct26] stage=\(stage) status=\(result) footprint=\(info.phys_footprint) resident=\(info.resident_size)")
++    }
++
+     enum CodecError: Error, Equatable {
+         case invalidHeader
+         case invalidKind
+@@ -48,7 +62,9 @@
+         kind: ConnectedCorpusItemKind
+     ) throws -> ConnectedTransferPreparedFile {
+         try Task.checkCancellation()
++        traceMemory("before-root")
+         let root = try TokenEncoder.encode(value, codingPath: [], depth: 0)
++        traceMemory("after-root")
+         defer { root.remove() }
+         let outputURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+             prefix: "corpus-application-item"
+@@ -60,10 +76,14 @@
+             try write(uint16BigEndian(formatVersion), to: output)
+             try write(Data([kindByte(kind), 0]), to: output)
+             try root.write(to: output)
++            traceMemory("after-root-copy")
+             try Task.checkCancellation()
+             try output.synchronize()
+             try output.close()
+-            return try ConnectedTransferFile.inspect(outputURL)
++            traceMemory("before-inspect")
++            let inspected = try ConnectedTransferFile.inspect(outputURL)
++            traceMemory("after-inspect")
++            return inspected
+         } catch {
+             try? FileManager.default.removeItem(at: outputURL)
+             throw error
+@@ -1040,10 +1060,12 @@
+         ) throws -> TemporaryNode {
+             guard depth <= maximumDepth else { throw CodecError.excessiveDepth }
+             let encoder = TokenEncoder(codingPath: codingPath, depth: depth)
++            if T.self == Data.self { traceMemory("before-data-date-cast") }
+             if let date = value as? Date {
+                 encoder.storage = .scalar(.date(date))
+             } else if let data = value as? Data {
+                 encoder.storage = .scalar(.data(data))
++                if T.self == Data.self { traceMemory("after-data-cast") }
+             } else if let blob = value as? HealthKitFileBackedBlob {
+                 encoder.storage = .scalar(.fileBackedData(blob))
+             } else if let file = value as? FileBackedUTF8String {
+@@ -1066,10 +1088,12 @@
+                 depth: depth,
+                 inlineBudget: inlineBudget
+             )
++            if T.self == Data.self { traceMemory("before-data-date-cast") }
+             if let date = value as? Date {
+                 encoder.storage = .scalar(.date(date))
+             } else if let data = value as? Data {
+                 encoder.storage = .scalar(.data(data))
++                if T.self == Data.self { traceMemory("after-data-cast") }
+             } else if let blob = value as? HealthKitFileBackedBlob {
+                 encoder.storage = .scalar(.fileBackedData(blob))
+             } else if let file = value as? FileBackedUTF8String {
+--- a/apps/apple/HealthMdTests/Sync/ConnectedCorpusPartitionFileTests.swift
++++ b/apps/apple/HealthMdTests/Sync/ConnectedCorpusPartitionFileTests.swift
+@@ -449,6 +449,7 @@
+         )
+         encodeSampler.stop()
+         defer { file.remove() }
++        print("[DEBUG-pr189-rss-oct26] test-baseline=\(encodeBaseline) test-peak=\(encodeSampler.peakBytes)")
+         let encodeOverhead = encodeSampler.peakBytes > encodeBaseline
+             ? encodeSampler.peakBytes - encodeBaseline : 0
+         XCTAssertLessThan(
