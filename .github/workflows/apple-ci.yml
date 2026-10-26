@@ -74,8 +74,10 @@ jobs:
         timeout-minutes: 25
         run: |
           make build-macos-tests CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/stop-diagnostic-derived MACOS_CODE_COVERAGE=YES
-      - name: Run exact owning Stop cases and corrected packet count
-        timeout-minutes: 10
+      - name: Run exact owning Stop cases and immutable-record controls
+        # Five cases retain their original 120-second default; leave room for
+        # restart/teardown after failures without changing qualification gates.
+        timeout-minutes: 12
         run: |
           set -euo pipefail
           mkdir -p build/logs
@@ -87,6 +89,8 @@ jobs:
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 120 \
             -maximum-test-execution-time-allowance 300 \
+            -only-testing:HealthMdTests/AgentBridgeExportPlanningTests/testAcceptedJobPureReusePreservesDurableIdentityAndRejectsChangedFields \
+            -only-testing:HealthMdTests/AgentBridgeExportPlanningTests/testWarmedAcceptedJobNeverCachesLiveStopExpiryOrPeerAuthority \
             -only-testing:HealthMdTests/AgentBridgeExportPlanningTests/testNativeResumedTransferConfirmsExactRetainedSourceStop \
             -only-testing:HealthMdTests/AgentBridgeExportPlanningTests/testNativeTransferConfirmsSourceStopAtEachACKAndHostCommitWithoutAnotherReader \
             -only-testing:HealthMdTests/AgentBridgeExportPlanningTests/testNativeTransferSenderConsumesKeepalivesBeforeEveryACKAndHostCommit \
