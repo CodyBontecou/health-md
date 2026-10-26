@@ -233,12 +233,84 @@ pub struct HostPendingCancellation<'s, 'h, 'trust> {
     owner: HostAcceptedExecution<'s, 'h, 'trust>,
     request: v4::CancelRequest,
 }
+/// Authenticated and durably recorded source Stop evidence. Native completion wins unchanged;
+/// this does not verify destination contents or authorize any new execution.
+pub struct SourceStopConfirmation {
+    receipt: ExecutionReceipt,
+}
+impl SourceStopConfirmation {
+    #[must_use]
+    pub fn receipt(&self) -> &ExecutionReceipt {
+        &self.receipt
+    }
+}
+
 impl HostPendingCancellation<'_, '_, '_> {
     /// Exact requested Stop; transmission does not prove source acknowledgement.
     #[must_use]
     pub fn request(&self) -> &v4::CancelRequest {
         &self.request
     }
+    /// Receive and durably validate the source's exact terminal Stop receipt.
+    /// Unsolicited transfer/manifest traffic is not skipped or treated as confirmation.
+    /// # Errors
+    /// Interruption, timeout, stale trust/key/evidence, invalid receipt or failed publication
+    /// leaves no returned terminal proof. This preserves the source's original status.
+    pub async fn wait_source_confirmation(self) -> Result<SourceStopConfirmation, ClientError> {
+        let cancellation = self.owner.bridge.cancellation.clone();
+        let timeout = self.owner.bridge.timeout;
+        tokio::select! {biased;
+            ()=cancellation.cancelled()=>Err(ClientError::WaitCancelled),
+            result=tokio::time::timeout(timeout,Box::pin(self.wait_source_confirmation_inner()))=>{
+                result.map_err(|_| ClientError::TimedOut)?
+            }
+        }
+    }
+    async fn wait_source_confirmation_inner(
+        mut self,
+    ) -> Result<SourceStopConfirmation, ClientError> {
+        let trust = self.owner.bridge.trust_fence;
+        let expected = &self.owner.bridge.expected_trust;
+        let selected = self.owner.bridge.requested_device;
+        let cancellation = &self.owner.bridge.cancellation;
+        let fence = || async {
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            trust.require_current(selected, expected).await?;
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            Ok(())
+        };
+        self.owner
+            .admission
+            .require_stop_current(self.owner.clock, fence)
+            .await?;
+        let message = self
+            .owner
+            .bridge
+            .channel
+            .receive_v4(self.owner.bridge.negotiation)
+            .await?
+            .message;
+        self.owner
+            .admission
+            .require_stop_current(self.owner.clock, fence)
+            .await?;
+        let Message::ExecutionReceipt(receipt) = message else {
+            return Err(ClientError::UnexpectedMessage);
+        };
+        self.owner
+            .admission
+            .persist_source_confirmation(&receipt, self.owner.clock, cancellation, fence)
+            .await?;
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
+        }
+        Ok(SourceStopConfirmation { receipt: *receipt })
+    }
+
     /// Original acceptance evidence, which remains distinct from terminal confirmation.
     #[must_use]
     pub fn acceptance(&self) -> &ExecutionReceipt {

@@ -315,6 +315,7 @@ impl PlanningSource for BridgeSession<'_> {
 mod execution;
 pub use execution::{
     HostAcceptedExecution, HostExecution, HostPendingCancellation, ReceivedArtifacts,
+    SourceStopConfirmation,
 };
 
 #[cfg(all(test, unix))]

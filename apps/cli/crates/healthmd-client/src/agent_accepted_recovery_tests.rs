@@ -71,44 +71,17 @@ fn rewrite(path: &std::path::Path, change: impl FnOnce(&mut serde_json::Value)) 
 }
 #[allow(clippy::too_many_lines)]
 async fn check(platform: PeerPlatform, case: Case) {
-    let (_temporary, client, saved, peer) = stored_pair(platform).await;
-    let (store, output) = enroll(&client.layout.root, &peer, &now()).await;
-    let clock = AdvancingClock::new();
-    let planner = HostPlanner::new(store.clone());
-    let mut native = NativeFake::new(peer.clone(), now());
-    let plan = planner
-        .plan(&mut native, input(&peer), &clock)
-        .await
-        .unwrap();
-    store
-        .record_local_decision(2, &plan.plan_id, &clock, &ExplicitFakeLocalConsent)
-        .await
-        .unwrap();
-    native.store_exact_native_decision(); // Explicit synthetic local native consent, never caller JSON.
-    let approval = planner
-        .relay_approval(
-            &mut native,
-            ApprovalRequest {
-                schema: ApprovalRequestSchema::HealthmdAgentApprovalRequest,
-                schema_version: 1,
-                plan_id: plan.plan_id.clone(),
-                request_id: id(21),
-                binding: approval_binding(&plan),
-            },
-            &clock,
-        )
-        .await
-        .unwrap();
-    let request = ExecuteRequest {
-        schema: ExecuteRequestSchema::HealthmdAgentExecuteRequest,
-        schema_version: 1,
-        plan,
-        approval,
-        request_id: id(22),
-        job_id: id(20),
-        idempotency_key: id(19),
-    };
-    let accepted = synthetic_binding(&request, platform).accepted;
+    let AcceptedFixture {
+        _temporary,
+        client,
+        saved,
+        peer,
+        store,
+        output,
+        clock,
+        request,
+        accepted,
+    } = Box::pin(accepted_fixture(platform)).await;
     let mut admission =
         OutputAdmission::reserve(&store, &request, &clock, || async { Ok(output.clone()) })
             .await

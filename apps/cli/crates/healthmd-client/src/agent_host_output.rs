@@ -171,6 +171,7 @@ pub(crate) struct OutputAdmission {
     started_at: UtcTimestamp,
     accepted: Option<ExecutionReceipt>,
     cancellation: Option<v4::CancelRequest>,
+    source_confirmed: bool,
     attempt_name: String,
     attempt_bytes: Vec<u8>,
 }
@@ -235,6 +236,7 @@ impl OutputAdmission {
             &attempt.started_at,
             Some(accepted),
             attempt.cancellation_request.as_ref(),
+            None,
             &key,
         )?;
         let expected: SignedExecutionAttempt = private_json::decode(&expected)?;
@@ -253,6 +255,7 @@ impl OutputAdmission {
             started_at: attempt.started_at,
             accepted: attempt.accepted_receipt,
             cancellation: attempt.cancellation_request,
+            source_confirmed: false,
             attempt_name,
             attempt_bytes,
         };
@@ -296,7 +299,7 @@ impl OutputAdmission {
         let started_at = clock.now();
         started_at.validate_shape()?;
         let attempt_bytes =
-            execution_attempt_bytes(&store.host, request, &started_at, None, None, &key)?;
+            execution_attempt_bytes(&store.host, request, &started_at, None, None, None, &key)?;
         let attempt_name = format!("attempt-{}.json", request.job_id.0);
         private::publish(&dir, &attempt_name, &attempt_bytes, true, || async {
             fence().await?;
@@ -314,6 +317,7 @@ impl OutputAdmission {
             started_at,
             accepted: None,
             cancellation: None,
+            source_confirmed: false,
             attempt_name,
             attempt_bytes,
         };
@@ -343,6 +347,7 @@ impl OutputAdmission {
             &self.request,
             &self.started_at,
             Some(accepted),
+            None,
             None,
             &self.key,
         )?;
@@ -403,6 +408,9 @@ impl OutputAdmission {
         Fut: std::future::Future<Output = Result<(), ClientError>>,
     {
         self.require_stop_current(clock, fence).await?;
+        if self.source_confirmed {
+            return Err(Error::BindingChanged.into());
+        }
         if let Some(request) = &self.cancellation {
             // A retained pending replay is identical evidence, not a new attempt or write.
             return Ok(request.clone());
@@ -414,22 +422,10 @@ impl OutputAdmission {
             &self.started_at,
             self.accepted.as_ref(),
             Some(&request),
+            None,
             &self.key,
         )?;
-        let (entries, _, retained) = scan_output_usage(&self.dir)?;
-        // Atomic replacement still needs one temporary entry. A retained owner
-        // cannot borrow the fresh admission's old reservation after other jobs ran.
-        if entries >= 8192 {
-            return Err(ClientError::AgentStoreFull);
-        }
-        if retained
-            .saturating_sub(self.attempt_bytes.len() as u64)
-            .checked_add(bytes.len() as u64)
-            .is_none_or(|n| n > crate::limits::MAXIMUM_RETAINED_STORAGE_BYTES)
-        {
-            return Err(ClientError::AgentStoreFull);
-        }
-        crate::limits::ensure_available_space(&self.store.path, bytes.len() as u64)?;
+        self.reserve_attempt_replacement(bytes.len())?;
         private::publish(&self.dir, &self.attempt_name, &bytes, false, || async {
             self.require_stop_current(clock, fence).await
         })
@@ -438,6 +434,71 @@ impl OutputAdmission {
         self.cancellation = Some(request.clone());
         self.require_stop_current(clock, fence).await?;
         Ok(request)
+    }
+    fn reserve_attempt_replacement(&self, new_length: usize) -> Result<(), ClientError> {
+        let (entries, _, retained) = scan_output_usage(&self.dir)?;
+        // Atomic replacement still needs one temporary entry. A retained owner
+        // cannot borrow the fresh admission's old reservation after other jobs ran.
+        if entries >= 8192 {
+            return Err(ClientError::AgentStoreFull);
+        }
+        if retained
+            .saturating_sub(self.attempt_bytes.len() as u64)
+            .checked_add(new_length as u64)
+            .is_none_or(|n| n > crate::limits::MAXIMUM_RETAINED_STORAGE_BYTES)
+        {
+            return Err(ClientError::AgentStoreFull);
+        }
+        crate::limits::ensure_available_space(&self.store.path, new_length as u64)?;
+        Ok(())
+    }
+    /// Save exact source evidence only; it does not verify any host destination contents.
+    pub async fn persist_source_confirmation<F, Fut>(
+        &mut self,
+        receipt: &ExecutionReceipt,
+        clock: &dyn PlanningClock,
+        cancellation: &tokio_util::sync::CancellationToken,
+        fence: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut + Copy,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        self.require_stop_current(clock, fence).await?;
+        if self.source_confirmed {
+            return Err(Error::BindingChanged.into());
+        }
+        let accepted = self.accepted.as_ref().ok_or(Error::BindingChanged)?;
+        let cancel = self.cancellation.as_ref().ok_or(Error::BindingChanged)?;
+        validate_source_stop_receipt(&self.request, accepted, receipt)?;
+        let confirmed_at = clock.now();
+        confirmed_at.validate_shape()?;
+        if confirmed_at < self.started_at || confirmed_at >= accepted.expires_at {
+            return Err(Error::BindingChanged.into());
+        }
+        let bytes = execution_attempt_bytes(
+            &self.store.host,
+            &self.request,
+            &self.started_at,
+            Some(accepted),
+            Some(cancel),
+            Some((receipt, &confirmed_at)),
+            &self.key,
+        )?;
+        self.reserve_attempt_replacement(bytes.len())?;
+        private::publish(&self.dir, &self.attempt_name, &bytes, false, || async {
+            self.require_stop_current(clock, fence).await?;
+            // A protected-key callback can suspend after the trust/cancellation fence.
+            // The final rename must still observe local cancellation at that boundary.
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            Ok(())
+        })
+        .await?;
+        self.attempt_bytes = bytes;
+        self.source_confirmed = true;
+        self.require_stop_current(clock, fence).await
     }
     pub fn require_current(&self) -> Result<(), ClientError> {
         self.store.directory()?;
@@ -478,16 +539,17 @@ fn execution_cancel_request(request: &ExecuteRequest) -> Result<v4::CancelReques
 
 // Version 1 remains the immutable pre-send intent. Version 2 additionally binds the
 // original authenticated acceptance. Version 3 adds exact pending cancellation intent;
-// no version is a terminal receipt or new permission to produce output.
+// version 4 adds authenticated source confirmation, never host-output permission.
 fn execution_attempt_bytes(
     host: &ControlUuid,
     request: &ExecuteRequest,
     started_at: &UtcTimestamp,
     accepted: Option<&ExecutionReceipt>,
     cancellation: Option<&v4::CancelRequest>,
+    source_confirmation: Option<(&ExecutionReceipt, &UtcTimestamp)>,
     key: &SecretBox<[u8; 32]>,
 ) -> Result<Vec<u8>, ClientError> {
-    let mut attempt = serde_json::json!({"schema":"healthmd.agent_host_execution_attempt","schema_version":if cancellation.is_some() {3} else if accepted.is_some() {2} else {1},
+    let mut attempt = serde_json::json!({"schema":"healthmd.agent_host_execution_attempt","schema_version":if source_confirmation.is_some() {4} else if cancellation.is_some() {3} else if accepted.is_some() {2} else {1},
         "host":host,"request":request,"request_sha256":v4::document_digest(request)?,"started_at":started_at});
     if let Some(accepted) = accepted {
         attempt["accepted_receipt"] =
@@ -500,9 +562,19 @@ fn execution_attempt_bytes(
         attempt["cancellation_request"] =
             serde_json::to_value(request).map_err(private::unavailable)?;
     }
+    if let Some((receipt, confirmed_at)) = source_confirmation {
+        if accepted.is_none() || cancellation.is_none() {
+            return Err(Error::BindingChanged.into());
+        }
+        attempt["source_receipt"] = serde_json::to_value(receipt).map_err(private::unavailable)?;
+        attempt["source_confirmed_at"] =
+            serde_json::to_value(confirmed_at).map_err(private::unavailable)?;
+    }
     let mut signer =
         Hmac::<Sha256>::new_from_slice(key.expose_secret()).map_err(private::unavailable)?;
-    signer.update(if cancellation.is_some() {
+    signer.update(if source_confirmation.is_some() {
+        b"HealthMd.AgentBridge.HostExecutionAttempt.v4\0"
+    } else if cancellation.is_some() {
         b"HealthMd.AgentBridge.HostExecutionAttempt.v3\0"
     } else if accepted.is_some() {
         b"HealthMd.AgentBridge.HostExecutionAttempt.v2\0"
@@ -519,6 +591,42 @@ fn execution_attempt_bytes(
         return Err(ClientError::AgentStoreFull);
     }
     Ok(bytes)
+}
+
+fn validate_source_stop_receipt(
+    request: &ExecuteRequest,
+    accepted: &ExecutionReceipt,
+    receipt: &ExecutionReceipt,
+) -> Result<(), ClientError> {
+    v4::validate_execution_receipt(receipt)?;
+    let no_manifest = receipt.manifest_sha256.0 == "0".repeat(64);
+    let no_frontier = receipt.frontier_sha256.0 == "0".repeat(64);
+    // The zero digests denote absent public state, not an empty completed manifest.
+    if (no_manifest
+        && (receipt.status != v4::ExecutionReceiptStatus::Cancelled
+            || receipt.artifact_count != 0
+            || receipt.committed_partition_count != 0
+            || !no_frontier))
+        || (!no_manifest && no_frontier)
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    if receipt.binding != v4::approval_binding(&request.plan)
+        || receipt.job_id != request.job_id
+        || receipt.request_sha256 != v4::document_digest(request)?
+        || receipt.expires_at != accepted.expires_at
+        || !receipt.source_acknowledged
+        || !matches!(
+            receipt.status,
+            v4::ExecutionReceiptStatus::Cancelled
+                | v4::ExecutionReceiptStatus::Complete
+                | v4::ExecutionReceiptStatus::CompleteEmpty
+                | v4::ExecutionReceiptStatus::Partial
+        )
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    Ok(())
 }
 
 fn validate_accepted(
