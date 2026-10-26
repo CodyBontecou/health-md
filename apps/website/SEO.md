@@ -78,6 +78,93 @@ for the separate campaign infrastructure. This tool does not verify its producti
 tokens or install reporting. Index coverage and Google-selected canonicals also
 require a separate Search Console inspection before visualization consolidation.
 
+## Website action counters
+
+The existing analytics gate loads `assets/seo-funnel.js` only when it explicitly
+returns `track: true`. A failed/denied gate, preview host, Do Not Track, or Global
+Privacy Control disables collection. Downloads and store navigation always use
+their original links; analytics never waits, retries, or prevents navigation.
+
+`assets/funnel-contract.js` owns the fixed page, locale, action, target, placement,
+and source vocabulary shared by the browser and campaign Worker. It currently
+covers the homepage (all ten locales), export/CSV/Android/AI hubs, the guides hub,
+Obsidian workflows, and the named spreadsheet, metric, PDF, and AI acquisition
+guides. Other pages, including account and health-data routes, are excluded.
+Add genuine acquisition pages to that owner rather than sending arbitrary URLs.
+
+The events are:
+
+- `page_view`: one per tracked document after the gate permits analytics.
+- `csv_sample_download`: activation of an allowlisted CSV sample link.
+- `starter_vault_download`: activation of the public starter ZIP link.
+- `store_click`: activation of a Health.md App Store, Google Play, or F-Droid link.
+
+Each event contains only version, page ID, locale, action, target ID, placement
+(`hero`, `body`, `header`, `footer`, or `final`), and an immediate-referrer category.
+`search_referral` means a recognized search hostname, not verified organic traffic;
+tagged campaigns use `campaign`. Internal navigation uses `internal` and does not
+inherit a prior acquisition source. No cookies, browser storage, visitor/session
+IDs, health data, link text, file contents, raw referrers, query strings, or URL paths
+are transmitted. Fetch omits credentials and the Referer header. Normal network
+delivery still exposes ordinary connection metadata to the infrastructure.
+
+`POST /v1/web-events` is served by the existing attribution Worker. It requires a
+same-origin production request, rejects extra fields and bodies over 1 KiB, and
+honors DNT/GPC headers. It increments daily UTC counters in `web_funnel_daily`,
+without per-event rows, client timestamps, or request metadata. The existing daily
+cron removes counters at the 13-month cutoff and rate windows after 24 hours.
+A separate aggregate limit permits 600 valid attempts per minute; each document
+sends at most 100 events. Invalid/failed requests never affect download behavior.
+
+This is a public, best-effort measurement endpoint, not authenticated evidence.
+Same-origin headers and throttling reduce accidental/drive-by abuse but can be
+spoofed by non-browser clients. Blocking, a slow gate, navigation, offline operation,
+and rate limits can cause undercounts. Repeated clicks count repeatedly. Counts
+are not unique users, completed downloads, installs, purchases, or a linked journey
+from sample to store. Do not use these counters for billing or security decisions.
+
+### Read the funnel
+
+From `apps/website`, with Wrangler signed in to the owning Cloudflare account:
+
+```bash
+npm run seo:funnel -- --remote --days 28
+```
+
+The JSON report groups by page, locale, and source and includes views, both
+download actions, clicks by store, and actions per 100 page views. A missing
+denominator produces `null`, not zero. Repeated actions can produce a rate above
+100. Dates include today and the preceding 27 UTC calendar days; use `--days 1`
+for today or up to 90 days. `--local` explicitly selects a local D1 database.
+Search Console supplies the separate query/impression/click side of the funnel;
+these anonymous counters cannot join individual search clicks or store installs.
+
+For CTA placement detail, use the existing owner's authenticated D1 tooling:
+
+```bash
+cd cloudflare/attribution-worker
+wrangler d1 execute healthmd-campaigns --remote --command "SELECT page, action, target, placement, SUM(count) AS actions FROM web_funnel_daily WHERE day >= date('now', '-27 days') GROUP BY page, action, target, placement ORDER BY actions DESC"
+```
+
+### Rollout order
+
+Deploy only reviewed, committed source. The collector and migration must precede
+the website so that the browser can reach the endpoint:
+
+```bash
+cd apps/website/cloudflare/attribution-worker
+wrangler d1 migrations apply healthmd-campaigns --remote
+wrangler deploy
+```
+
+Then publish the website through its normal main-branch deployment. Migration
+`0003_web_funnel.sql` is additive and preserves existing campaign/install data.
+It must be present before the new cron handler runs. Check the authenticated report
+and actual HTTP responses before calling collection operational; adding source
+alone does not establish a live collector or baseline. Avoid synthetic production
+events: verify valid collection locally, and use rejected payloads/privacy-signal
+requests for production smoke checks without incrementing counters.
+
 ## Visualization canonical URLs
 
 Each chart uses its existing category plus `theme-colors` route as the search

@@ -1,5 +1,10 @@
 # Health.md short-form attribution on Cloudflare
 
+The same Worker also serves the bounded website action collector. Its schema,
+reporting command, privacy limits, and migration/deployment order are maintained in
+[SEO measurement](SEO.md#website-action-counters). Website counters remain separate
+from campaign redirect clicks and attributed installs.
+
 This repo is set up for first-party campaign shortlinks on Cloudflare:
 
 ```text
