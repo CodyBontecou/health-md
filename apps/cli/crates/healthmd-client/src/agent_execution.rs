@@ -93,7 +93,7 @@ impl<'trust> BridgeSession<'trust> {
         store
             .require_output_current(&request, None, clock, fence)
             .await?;
-        let admission = OutputAdmission::reserve(store, &request, clock, || async {
+        let mut admission = OutputAdmission::reserve(store, &request, clock, || async {
             store
                 .require_output_current(&request, None, clock, fence)
                 .await
@@ -118,9 +118,12 @@ impl<'trust> BridgeSession<'trust> {
         else {
             return Err(ClientError::UnexpectedMessage);
         };
-        validate_accepted(&request, &accepted, clock)?;
-        store
-            .require_output_current(&request, Some(&accepted.expires_at), clock, fence)
+        admission
+            .persist_accepted(&accepted, clock, || async {
+                store
+                    .require_output_current(&request, Some(&accepted.expires_at), clock, fence)
+                    .await
+            })
             .await?;
         let received = self.channel.receive_v4(self.negotiation).await?.message;
         fence().await?;
@@ -162,29 +165,6 @@ fn execution_response(message: Message, request: &ControlUuid) -> Result<Message
         return Err(ClientError::AgentRejected(rejection.code));
     }
     Ok(message)
-}
-fn validate_accepted(
-    request: &ExecuteRequest,
-    accepted: &ExecutionReceipt,
-    clock: &dyn PlanningClock,
-) -> Result<(), ClientError> {
-    v4::validate_execution_receipt(accepted)?;
-    let now = clock.now();
-    if accepted.binding != approval_binding(&request.plan)
-        || accepted.job_id != request.job_id
-        || accepted.request_sha256 != document_digest(request)?
-        || accepted.status != ExecutionReceiptStatus::Accepted
-        || accepted.source_acknowledged
-        || accepted.artifact_count != 0
-        || accepted.committed_partition_count != 0
-        || accepted.frontier_sha256.0 != "0".repeat(64)
-        || accepted.manifest_sha256.0 != "0".repeat(64)
-        || accepted.expires_at <= now
-        || accepted.expires_at.seconds()? > now.seconds()?.saturating_add(604_800)
-    {
-        return Err(Error::BindingChanged.into());
-    }
-    Ok(())
 }
 impl HostExecution<'_, '_, '_> {
     async fn require_current(&self) -> Result<PathBuf, ClientError> {

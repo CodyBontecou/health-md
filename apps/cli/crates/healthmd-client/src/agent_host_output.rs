@@ -147,6 +147,8 @@ pub(crate) struct OutputAdmission {
     lock: File,
     key: SecretBox<[u8; 32]>,
     request: ExecuteRequest,
+    started_at: UtcTimestamp,
+    accepted: Option<ExecutionReceipt>,
     attempt_name: String,
     attempt_bytes: Vec<u8>,
 }
@@ -179,21 +181,7 @@ impl OutputAdmission {
         crate::limits::ensure_available_space(&store.path, 2 * MAX_OUTPUT_BYTES as u64)?;
         let started_at = clock.now();
         started_at.validate_shape()?;
-        let attempt = serde_json::json!({"schema":"healthmd.agent_host_execution_attempt","schema_version":1,
-            "host":store.host,"request":request,"request_sha256":v4::document_digest(request)?,"started_at":started_at});
-        let mut signer =
-            Hmac::<Sha256>::new_from_slice(key.expose_secret()).map_err(private::unavailable)?;
-        signer.update(b"HealthMd.AgentBridge.HostExecutionAttempt.v1\0");
-        signer.update(&private_json::encode(&attempt)?);
-        let mut mac = String::with_capacity(64);
-        for byte in signer.finalize().into_bytes() {
-            write!(&mut mac, "{byte:02x}").map_err(private::unavailable)?;
-        }
-        let attempt_bytes =
-            private_json::encode(&serde_json::json!({"attempt":attempt,"mac":mac}))?;
-        if attempt_bytes.len() > MAX_OUTPUT_BYTES {
-            return Err(ClientError::AgentStoreFull);
-        }
+        let attempt_bytes = execution_attempt_bytes(&store.host, request, &started_at, None, &key)?;
         let attempt_name = format!("attempt-{}.json", request.job_id.0);
         private::publish(&dir, &attempt_name, &attempt_bytes, true, || async {
             fence().await?;
@@ -208,11 +196,51 @@ impl OutputAdmission {
             lock,
             key,
             request: request.clone(),
+            started_at,
+            accepted: None,
             attempt_name,
             attempt_bytes,
         };
         admission.require_current()?;
         Ok(admission)
+    }
+    /// Accepted source evidence is durable before any manifest wait. This is not a terminal
+    /// receipt, transfer frontier or new permission, and never renews the original lifetime.
+    pub async fn persist_accepted<F, Fut>(
+        &mut self,
+        accepted: &ExecutionReceipt,
+        clock: &dyn PlanningClock,
+        mut fence: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<PathBuf, ClientError>>,
+    {
+        validate_accepted(&self.request, accepted, clock)?;
+        if self.accepted.is_some() {
+            return Err(Error::BindingChanged.into());
+        }
+        fence().await?;
+        self.require_current()?;
+        let bytes = execution_attempt_bytes(
+            &self.store.host,
+            &self.request,
+            &self.started_at,
+            Some(accepted),
+            &self.key,
+        )?;
+        private::publish(&self.dir, &self.attempt_name, &bytes, false, || async {
+            fence().await?;
+            validate_accepted(&self.request, accepted, clock)?;
+            self.require_current()
+        })
+        .await?;
+        self.attempt_bytes = bytes;
+        self.accepted = Some(accepted.clone());
+        fence().await?;
+        validate_accepted(&self.request, accepted, clock)?;
+        // The local exact-byte/root/held-lock proof follows every delaying callback.
+        self.require_current()
     }
     pub fn require_current(&self) -> Result<(), ClientError> {
         self.store.directory()?;
@@ -227,13 +255,70 @@ impl OutputAdmission {
     }
     pub fn bind(self, binding: &NativeBinding) -> Result<OutputTransaction, ClientError> {
         self.require_current()?;
-        if self.request != binding.request {
+        if self.request != binding.request || self.accepted.as_ref() != Some(&binding.accepted) {
             return Err(Error::BindingChanged.into());
         }
         OutputTransaction::load_locked(&self.store, binding, self.dir, self.lock, self.key)
     }
 }
 
+// Version 1 remains the immutable pre-send intent. Version 2 additionally binds the
+// original authenticated acceptance; older attempt-only owners cannot treat it as output.
+fn execution_attempt_bytes(
+    host: &ControlUuid,
+    request: &ExecuteRequest,
+    started_at: &UtcTimestamp,
+    accepted: Option<&ExecutionReceipt>,
+    key: &SecretBox<[u8; 32]>,
+) -> Result<Vec<u8>, ClientError> {
+    let mut attempt = serde_json::json!({"schema":"healthmd.agent_host_execution_attempt","schema_version":if accepted.is_some() {2} else {1},
+        "host":host,"request":request,"request_sha256":v4::document_digest(request)?,"started_at":started_at});
+    if let Some(accepted) = accepted {
+        attempt["accepted_receipt"] =
+            serde_json::to_value(accepted).map_err(private::unavailable)?;
+    }
+    let mut signer =
+        Hmac::<Sha256>::new_from_slice(key.expose_secret()).map_err(private::unavailable)?;
+    signer.update(if accepted.is_some() {
+        b"HealthMd.AgentBridge.HostExecutionAttempt.v2\0"
+    } else {
+        b"HealthMd.AgentBridge.HostExecutionAttempt.v1\0"
+    });
+    signer.update(&private_json::encode(&attempt)?);
+    let mut mac = String::with_capacity(64);
+    for byte in signer.finalize().into_bytes() {
+        write!(&mut mac, "{byte:02x}").map_err(private::unavailable)?;
+    }
+    let bytes = private_json::encode(&serde_json::json!({"attempt":attempt,"mac":mac}))?;
+    if bytes.len() > MAX_OUTPUT_BYTES {
+        return Err(ClientError::AgentStoreFull);
+    }
+    Ok(bytes)
+}
+
+fn validate_accepted(
+    request: &ExecuteRequest,
+    accepted: &ExecutionReceipt,
+    clock: &dyn PlanningClock,
+) -> Result<(), ClientError> {
+    v4::validate_execution_receipt(accepted)?;
+    let now = clock.now();
+    if accepted.binding != v4::approval_binding(&request.plan)
+        || accepted.job_id != request.job_id
+        || accepted.request_sha256 != v4::document_digest(request)?
+        || accepted.status != v4::ExecutionReceiptStatus::Accepted
+        || accepted.source_acknowledged
+        || accepted.artifact_count != 0
+        || accepted.committed_partition_count != 0
+        || accepted.frontier_sha256.0 != "0".repeat(64)
+        || accepted.manifest_sha256.0 != "0".repeat(64)
+        || accepted.expires_at <= now
+        || accepted.expires_at.seconds()? > now.seconds()?.saturating_add(604_800)
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    Ok(())
+}
 pub(crate) struct OutputTransaction {
     store: HostAuthorityStore,
     dir: cap_std::fs::Dir,

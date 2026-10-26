@@ -1,6 +1,8 @@
 //! Authenticated synthetic native execution; no phone APIs or real health data.
 use super::*;
 use crate::agent_bridge::CurrentBridgeTrust;
+use crate::agent_planning::PlanningClock as _;
+use hmac::Mac as _;
 use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _};
 use std::sync::{
     Mutex,
@@ -87,6 +89,9 @@ enum OutputCase {
     TransferBeforeSend,
     RestoredJournalBeforeSend,
     ConcurrentAdmission,
+    AcceptedBeforeManifest,
+    AcceptedJournalCorrupt,
+    AcceptedJournalDelete,
     NativeRejection,
     WrongRejectionID,
     EditDuringCommitFence,
@@ -150,7 +155,6 @@ fn synthetic_binding(
     }
 }
 fn signed_restored_journal(request: &ExecuteRequest, platform: PeerPlatform) -> Vec<u8> {
-    use hmac::Mac as _;
     let journal = serde_json::json!({"version":1,"host":request.plan.intent.peer.host_installation_id,
         "binding":synthetic_binding(request,platform),"plans":[]});
     let mut signer = hmac::Hmac::<sha2::Sha256>::new_from_slice(&[41; 32]).unwrap();
@@ -215,7 +219,7 @@ async fn output_peer(
     platform: PeerPlatform,
     case: OutputCase,
     mut release: oneshot::Receiver<()>,
-    admission_gate: Option<(oneshot::Sender<()>, oneshot::Receiver<()>)>,
+    mut admission_gate: Option<(oneshot::Sender<()>, oneshot::Receiver<()>)>,
 ) {
     let (mut channel, negotiation) = output_channel(port, saved, &peer, platform).await;
     let mut native = NativeFake::new(peer.clone(), now());
@@ -246,9 +250,11 @@ async fn output_peer(
                     ),
                     "freshness rejection must precede complete Execute delivery"
                 );
-                if let Some((ready, resume)) = admission_gate {
-                    ready.send(()).unwrap();
-                    resume.await.unwrap();
+                if case == OutputCase::ConcurrentAdmission {
+                    if let Some((ready, resume)) = admission_gate.take() {
+                        ready.send(()).unwrap();
+                        resume.await.unwrap();
+                    }
                 }
                 assert_eq!(native.issued.as_ref(), Some(&request.plan));
                 assert_eq!(request.approval.binding, approval_binding(&request.plan));
@@ -291,6 +297,12 @@ async fn output_peer(
                 if case == OutputCase::WrongAccepted {
                     let _ = release.await;
                     return;
+                }
+                if case == OutputCase::AcceptedBeforeManifest {
+                    if let Some((ready, resume)) = admission_gate.take() {
+                        ready.send(()).unwrap();
+                        resume.await.unwrap();
+                    }
                 }
                 let mut manifest = if let OutputCase::Transfer(transfer_case) = case {
                     transfer_tests::binding(&request, platform, transfer_case).manifest
@@ -366,7 +378,11 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
     let (release, wait) = oneshot::channel();
     let (admission_ready, ready) = oneshot::channel();
     let (resume, await_resume) = oneshot::channel();
-    let gate = (case == OutputCase::ConcurrentAdmission).then_some((admission_ready, await_resume));
+    let gate = matches!(
+        case,
+        OutputCase::ConcurrentAdmission | OutputCase::AcceptedBeforeManifest
+    )
+    .then_some((admission_ready, await_resume));
     let source = tokio::spawn(output_peer(
         port,
         saved,
@@ -457,9 +473,38 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
             std::fs::set_permissions(journal, std::fs::Permissions::from_mode(0o600)).unwrap();
         });
     }
+    if matches!(
+        case,
+        OutputCase::AcceptedJournalCorrupt | OutputCase::AcceptedJournalDelete
+    ) {
+        let path = client
+            .layout
+            .root
+            .join("agent-host-v1")
+            .join(format!("attempt-{}.json", request.job_id.0));
+        let observed = path.clone();
+        adversarial_trust.arm_when(
+            move || {
+                std::fs::read(&observed)
+                    .ok()
+                    .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+                    .is_some_and(|value| value["attempt"].get("accepted_receipt").is_some())
+            },
+            move || {
+                if case == OutputCase::AcceptedJournalDelete {
+                    std::fs::remove_file(path).unwrap();
+                } else {
+                    std::fs::write(path, b"synthetic corrupt acceptance").unwrap();
+                }
+            },
+        );
+    }
     let retry_request = request.clone();
     let host_authority = request.plan.authority_references.host.authority_id.clone();
-    let result = if case == OutputCase::ConcurrentAdmission {
+    let result = if matches!(
+        case,
+        OutputCase::ConcurrentAdmission | OutputCase::AcceptedBeforeManifest
+    ) {
         let (result, ()) = tokio::join!(
             Box::pin(bridge.begin_execution(&store, request, &clock)),
             async {
@@ -469,6 +514,51 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
                     .root
                     .join("agent-host-v1")
                     .join(format!("attempt-{}.json", retry_request.job_id.0));
+                if case == OutputCase::AcceptedBeforeManifest {
+                    let attempt = tokio::time::timeout(Duration::from_secs(5), async {
+                        loop {
+                            let bytes = std::fs::read(&path).unwrap();
+                            let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                            if value["attempt"].get("accepted_receipt").is_some() {
+                                break value;
+                            }
+                            tokio::time::sleep(Duration::from_millis(10)).await;
+                        }
+                    })
+                    .await
+                    .expect("Source acceptance must be durable while the manifest is blocked");
+                    let record = &attempt["attempt"];
+                    assert_eq!(record["schema_version"], 2);
+                    assert_eq!(
+                        record["request"],
+                        serde_json::to_value(&retry_request).unwrap()
+                    );
+                    assert_eq!(
+                        record["accepted_receipt"],
+                        serde_json::to_value(synthetic_binding(&retry_request, platform).accepted)
+                            .unwrap()
+                    );
+                    assert_eq!(
+                        record["started_at"],
+                        serde_json::to_value(clock.now()).unwrap()
+                    );
+                    assert!(
+                        !path
+                            .with_file_name(format!("output-{}.json", retry_request.job_id.0))
+                            .exists()
+                    );
+                    assert_eq!(
+                        std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+                        0o600
+                    );
+                    let mut signer = hmac::Hmac::<sha2::Sha256>::new_from_slice(&[41; 32]).unwrap();
+                    signer.update(b"HealthMd.AgentBridge.HostExecutionAttempt.v2\0");
+                    signer.update(&canonical_json(record).unwrap());
+                    assert_eq!(
+                        attempt["mac"],
+                        format!("{:x}", signer.finalize().into_bytes())
+                    );
+                }
                 let before = std::fs::read(&path).unwrap();
                 let competing = crate::agent_host::output::OutputAdmission::reserve(
                     &store,
@@ -489,6 +579,8 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
     if matches!(
         case,
         OutputCase::WrongAccepted
+            | OutputCase::AcceptedJournalCorrupt
+            | OutputCase::AcceptedJournalDelete
             | OutputCase::WrongManifest
             | OutputCase::OmittedPath
             | OutputCase::ReorderedPaths
@@ -537,6 +629,42 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
                 attempt["attempt"]["request"],
                 serde_json::to_value(&retry_request).unwrap()
             );
+            if matches!(
+                case,
+                OutputCase::WrongAccepted
+                    | OutputCase::NativeRejection
+                    | OutputCase::WrongRejectionID
+            ) {
+                assert_eq!(attempt["attempt"]["schema_version"], 1);
+                assert!(attempt["attempt"].get("accepted_receipt").is_none());
+            } else {
+                assert_eq!(attempt["attempt"]["schema_version"], 2);
+                assert_eq!(
+                    attempt["attempt"]["accepted_receipt"],
+                    serde_json::to_value(synthetic_binding(&retry_request, platform).accepted)
+                        .unwrap()
+                );
+            }
+            assert!(
+                !issuer
+                    .join(format!("output-{}.json", retry_request.job_id.0))
+                    .exists()
+            );
+        }
+        if matches!(
+            case,
+            OutputCase::AcceptedJournalCorrupt | OutputCase::AcceptedJournalDelete
+        ) {
+            let issuer = client.layout.root.join("agent-host-v1");
+            let path = issuer.join(format!("attempt-{}.json", retry_request.job_id.0));
+            if case == OutputCase::AcceptedJournalDelete {
+                assert!(!path.exists());
+            } else {
+                assert_eq!(
+                    std::fs::read(path).unwrap(),
+                    b"synthetic corrupt acceptance"
+                );
+            }
             assert!(
                 !issuer
                     .join(format!("output-{}.json", retry_request.job_id.0))
@@ -1156,6 +1284,29 @@ async fn authenticated_output_admission_rejects_full_store_and_journal_appearing
 async fn authenticated_output_admission_serializes_competing_original_attempts() {
     for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
         Box::pin(check_output_case(platform, OutputCase::ConcurrentAdmission)).await;
+    }
+}
+
+#[tokio::test]
+async fn authenticated_acceptance_is_durable_before_manifest_read() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        Box::pin(check_output_case(
+            platform,
+            OutputCase::AcceptedBeforeManifest,
+        ))
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn authenticated_acceptance_rejects_final_callback_corruption_without_repair() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for case in [
+            OutputCase::AcceptedJournalCorrupt,
+            OutputCase::AcceptedJournalDelete,
+        ] {
+            Box::pin(check_output_case(platform, case)).await;
+        }
     }
 }
 
