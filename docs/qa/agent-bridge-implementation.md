@@ -1477,3 +1477,10 @@ Stop checks the current original peer, protected key, directory, held lock, exac
 ### Native immutable accepted-record reuse
 
 An Apple accepted-job value may reuse its decoded Execute and completed structural validation. This bounded cache belongs to that immutable record; copies share it, while newly decoded or constructed records start fresh. It does not enter Codable fields or equality, and it stores no key, time, live grant, file evidence or SDK authorization. Protected-key, signed-file, peer, expiry and retained-spool checks still run at their existing boundaries. A warmed valid record cannot authorize a stop after peer revocation or expiry.
+
+
+### Retained accepted Stop request
+
+A fresh authenticated session can request Stop by local job ID from an existing signed pre-manifest attempt. Recovery reads only canonical, MAC-verified v2 accepted or v3 pending evidence, retains the original request/start/acceptance/expiry and acquires the existing output lock without creating one. An existing pending request is transmitted again without rewriting its bytes. Expired planning or a revoked export delegation does not renew authority or prevent this exact accepted-owner Stop.
+
+Missing, unsafe, ambiguous, wrongly bound or expired evidence rejects without repair. A pre-send v1 intent cannot become acceptance, and later output/transfer/completion state requires its separate recovery path. This API sends only bound Cancel on the selected authenticated channel; it performs no Execute, Resume, recapture or destination write. Its result remains pending: terminal receipt handling and the remaining installed execution/physical acceptance gates are still required.

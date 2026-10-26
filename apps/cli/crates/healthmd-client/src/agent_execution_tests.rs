@@ -1739,3 +1739,6 @@ async fn host_cancel_send_rejects_key_removal_or_rotation_in_payload_fence() {
         }
     }
 }
+
+#[path = "agent_accepted_recovery_tests.rs"]
+mod accepted_recovery_tests;

@@ -141,6 +141,27 @@ impl ValidateShape for SignedJournal {
     }
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct SavedExecutionAttempt {
+    schema: String,
+    schema_version: u64,
+    host: ControlUuid,
+    request: ExecuteRequest,
+    request_sha256: Digest,
+    started_at: UtcTimestamp,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    accepted_receipt: Option<ExecutionReceipt>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cancellation_request: Option<v4::CancelRequest>,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct SignedExecutionAttempt {
+    attempt: SavedExecutionAttempt,
+    mac: Digest,
+}
+
 pub(crate) struct OutputAdmission {
     store: HostAuthorityStore,
     dir: cap_std::fs::Dir,
@@ -154,6 +175,98 @@ pub(crate) struct OutputAdmission {
     attempt_bytes: Vec<u8>,
 }
 impl OutputAdmission {
+    /// Existing pre-manifest evidence only. Never create a missing lock, attempt, output
+    /// journal or accepted receipt, and never promote a pre-send intent into acceptance.
+    pub async fn open_retained_accepted(
+        store: &HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<Self, ClientError> {
+        job.validate_shape()?;
+        let key = key_bytes(&store.protected_key.load_existing(&store.host).await?)?;
+        let dir = store.directory()?;
+        let lock = private::open_private(&dir, OUTPUT_LOCK, true, false)?;
+        lock.try_lock_exclusive()
+            .map_err(|_| ClientError::AgentStoreBusy)?;
+        require_absent_job(&dir, job, false)?;
+        let attempt_name = format!("attempt-{}.json", job.0);
+        let attempt_bytes = private::read_private(&dir, &attempt_name, MAX_OUTPUT_BYTES)?;
+        let saved: SignedExecutionAttempt = private_json::decode(&attempt_bytes)?;
+        saved.mac.validate_shape()?;
+        let attempt = saved.attempt;
+        attempt.request.validate_shape()?;
+        attempt.started_at.validate_shape()?;
+        let now = clock.now();
+        now.validate_shape()?;
+        let accepted = attempt
+            .accepted_receipt
+            .as_ref()
+            .ok_or(ClientError::AgentAuthorityUnavailable)?;
+        validate_accepted(&attempt.request, accepted, clock)?;
+        if attempt.schema != "healthmd.agent_host_execution_attempt"
+            || attempt.host != store.host
+            || attempt.request.job_id != *job
+            || attempt.request.plan.intent.peer.host_installation_id != store.host
+            || attempt.request_sha256 != v4::document_digest(&attempt.request)?
+            || attempt.request.approval.binding != v4::approval_binding(&attempt.request.plan)
+            || attempt.request.approval.authority_id
+                != attempt
+                    .request
+                    .plan
+                    .authority_references
+                    .native
+                    .authority_id
+            || attempt.started_at > now
+            || !matches!(
+                (attempt.schema_version, &attempt.cancellation_request),
+                (2, None) | (3, Some(_))
+            )
+        {
+            return Err(ClientError::AgentAuthorityUnavailable);
+        }
+        if let Some(cancel) = &attempt.cancellation_request {
+            if *cancel != execution_cancel_request(&attempt.request)? {
+                return Err(ClientError::AgentAuthorityUnavailable);
+            }
+        }
+        let expected = execution_attempt_bytes(
+            &store.host,
+            &attempt.request,
+            &attempt.started_at,
+            Some(accepted),
+            attempt.cancellation_request.as_ref(),
+            &key,
+        )?;
+        let expected: SignedExecutionAttempt = private_json::decode(&expected)?;
+        if !healthmd_protocol::crypto::constant_time_equal(
+            saved.mac.0.as_bytes(),
+            expected.mac.0.as_bytes(),
+        ) {
+            return Err(ClientError::AgentAuthorityUnavailable);
+        }
+        let admission = Self {
+            store: store.clone(),
+            dir,
+            lock,
+            key,
+            request: attempt.request,
+            started_at: attempt.started_at,
+            accepted: attempt.accepted_receipt,
+            cancellation: attempt.cancellation_request,
+            attempt_name,
+            attempt_bytes,
+        };
+        admission.require_current()?;
+        Ok(admission)
+    }
+    pub fn accepted_binding(&self) -> Result<(ExecuteRequest, ExecutionReceipt), ClientError> {
+        Ok((
+            self.request.clone(),
+            self.accepted
+                .clone()
+                .ok_or(ClientError::AgentAuthorityUnavailable)?,
+        ))
+    }
     pub async fn reserve<F, Fut>(
         store: &HostAuthorityStore,
         request: &ExecuteRequest,
@@ -290,19 +403,11 @@ impl OutputAdmission {
         Fut: std::future::Future<Output = Result<(), ClientError>>,
     {
         self.require_stop_current(clock, fence).await?;
-        if self.cancellation.is_some() {
-            return Err(Error::BindingChanged.into());
+        if let Some(request) = &self.cancellation {
+            // A retained pending replay is identical evidence, not a new attempt or write.
+            return Ok(request.clone());
         }
-        let request = v4::CancelRequest {
-            schema: v4::CancelRequestSchema::HealthmdAgentCancelRequest,
-            schema_version: 1,
-            approval_id: self.request.approval.approval_id.clone(),
-            authority_id: self.request.approval.authority_id.clone(),
-            job_id: self.request.job_id.clone(),
-            peer: self.request.plan.intent.peer.clone(),
-            request_sha256: v4::document_digest(&self.request)?,
-        };
-        request.validate_shape()?;
+        let request = execution_cancel_request(&self.request)?;
         let bytes = execution_attempt_bytes(
             &self.store.host,
             &self.request,
@@ -311,6 +416,20 @@ impl OutputAdmission {
             Some(&request),
             &self.key,
         )?;
+        let (entries, _, retained) = scan_output_usage(&self.dir)?;
+        // Atomic replacement still needs one temporary entry. A retained owner
+        // cannot borrow the fresh admission's old reservation after other jobs ran.
+        if entries >= 8192 {
+            return Err(ClientError::AgentStoreFull);
+        }
+        if retained
+            .saturating_sub(self.attempt_bytes.len() as u64)
+            .checked_add(bytes.len() as u64)
+            .is_none_or(|n| n > crate::limits::MAXIMUM_RETAINED_STORAGE_BYTES)
+        {
+            return Err(ClientError::AgentStoreFull);
+        }
+        crate::limits::ensure_available_space(&self.store.path, bytes.len() as u64)?;
         private::publish(&self.dir, &self.attempt_name, &bytes, false, || async {
             self.require_stop_current(clock, fence).await
         })
@@ -341,6 +460,20 @@ impl OutputAdmission {
         }
         OutputTransaction::load_locked(&self.store, binding, self.dir, self.lock, self.key)
     }
+}
+
+fn execution_cancel_request(request: &ExecuteRequest) -> Result<v4::CancelRequest, ClientError> {
+    let cancel = v4::CancelRequest {
+        schema: v4::CancelRequestSchema::HealthmdAgentCancelRequest,
+        schema_version: 1,
+        approval_id: request.approval.approval_id.clone(),
+        authority_id: request.approval.authority_id.clone(),
+        job_id: request.job_id.clone(),
+        peer: request.plan.intent.peer.clone(),
+        request_sha256: v4::document_digest(request)?,
+    };
+    cancel.validate_shape()?;
+    Ok(cancel)
 }
 
 // Version 1 remains the immutable pre-send intent. Version 2 additionally binds the

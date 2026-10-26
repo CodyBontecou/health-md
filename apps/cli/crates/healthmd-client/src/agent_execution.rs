@@ -108,6 +108,54 @@ impl<'trust> BridgeSession<'trust> {
         }
     }
 
+    /// Recover a signed accepted attempt that has no manifest/output journal, and request Stop
+    /// on this fresh authenticated owner. Caller-supplied receipt/request facts are never used.
+    /// Existing pending intent is replayed without rewriting it. This returns pending only.
+    /// # Errors
+    /// Missing/unsafe/ambiguous evidence, old pre-send intent, changed peer/key/trust, expiry,
+    /// an active owner, or later output/transfer state reject without reconstruction.
+    pub async fn request_retained_accepted_cancellation<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostPendingCancellation<'s, 'h, 'trust>, ClientError> {
+        let cancellation = self.cancellation.clone();
+        let timeout = self.timeout;
+        tokio::select! {
+            biased;
+            () = cancellation.cancelled() => Err(ClientError::WaitCancelled),
+            result = tokio::time::timeout(timeout, Box::pin(self.request_retained_accepted_cancellation_inner(store, job, clock))) => {
+                result.map_err(|_| ClientError::TimedOut)?
+            }
+        }
+    }
+    async fn request_retained_accepted_cancellation_inner<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostPendingCancellation<'s, 'h, 'trust>, ClientError> {
+        if self.send_interrupted {
+            return Err(Error::BindingChanged.into());
+        }
+        self.send_interrupted = true;
+        let admission = OutputAdmission::open_retained_accepted(store, job, clock).await?;
+        let (request, accepted) = admission.accepted_binding()?;
+        if self.peer != request.plan.intent.peer {
+            return Err(Error::BindingChanged.into());
+        }
+        let owner = HostAcceptedExecution {
+            bridge: self,
+            store,
+            clock,
+            request,
+            accepted,
+            admission,
+        };
+        Box::pin(owner.request_cancellation_inner()).await
+    }
+
     async fn begin_accepted_execution_inner<'s, 'h>(
         &'s mut self,
         store: &'h HostAuthorityStore,
