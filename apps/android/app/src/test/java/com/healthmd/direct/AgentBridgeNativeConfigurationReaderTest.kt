@@ -803,6 +803,11 @@ class AgentBridgeNativeConfigurationReaderTest {
     }
     @Test fun `native transfer sender checks owner after receive before further writes`() = runBlocking { checkNativeTransferSender("revoke") }
 
+    @Test fun `native transfer sender consumes keepalives before every ACK and host commit`() = runBlocking { checkNativeTransferSender("complete-keepalive") }
+    @Test fun `native transfer keepalive receive cannot bypass owner revocation`() = runBlocking { checkNativeTransferSender("keepalive-revoke") }
+    @Test fun `native transfer rejects nonempty keepalive payloads`() = runBlocking { for (type in listOf("ping", "pong")) checkNativeTransferSender("bad-keepalive-$type") }
+    @Test fun `native transfer pong write cannot bypass owner revocation`() = runBlocking { checkNativeTransferSender("keepalive-write-revoke") }
+
     @Test fun `native transfer sender resumes exact prefix without replaying bytes`() = runBlocking { checkNativeTransferSender("resume") }
     @Test fun `native transfer sender rejects host rewind of recorded prefix`() = runBlocking { checkNativeTransferSender("rewind") }
     @Test fun `native stop during SDK read discards late value and journals invalidated owner`() = runBlocking {
@@ -878,6 +883,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 coVerify(exactly = 2) { client.aggregate(any()) }
                 return@withNativeExportPreparation
             }
+            val keepalive = mode.contains("keepalive")
             val completion=mode.startsWith("complete")
             val resumedPrefix = mode == "resume" || mode == "complete-resume"
             var resumeEnvelope: AgentBridgeResumeRequest? = null
@@ -897,7 +903,12 @@ class AgentBridgeNativeConfigurationReaderTest {
             val agent = mutableListOf<AgentBridgeMessage>(); val base = mutableListOf<ReceivedEnvelope>()
             val chunks = mutableListOf<Pair<String, ByteArray>>()
             val responses = java.util.ArrayDeque<ReceivedAgentBridgePayload>()
+            fun keepalives() {
+                if (keepalive) for (type in listOf("ping", "pong")) responses.add(
+                    ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode(type, JsonObject.serializer(), buildJsonObject { if (mode == "bad-keepalive-$type") put("unexpected", 1) }))))
+            }
             fun <T> response(type: String, serializer: kotlinx.serialization.SerializationStrategy<T>, payload: T) {
+                keepalives()
                 responses.add(ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode(type, serializer, payload))))
             }
             original.partitions.forEach { partition ->
@@ -916,11 +927,13 @@ class AgentBridgeNativeConfigurationReaderTest {
             response("transfer_final_acknowledgement", TransferFinalAcknowledgement.serializer(), TransferFinalAcknowledgement(
                 original.session.sessionId, original.session.jobId, true, original.partitions.size.toLong(),
                 original.export.totalByteCount.toLong() + if (mode == "bad-final") 1 else 0, original.partitions.last().sha256))
-            if(completion)hostReceipts.forEach { responses += ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("commit_receipt",it)) }
+            if(completion)hostReceipts.forEach { keepalives(); responses += ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("commit_receipt",it)) }
+            val expectedPongs = if (keepalive) responses.count { (it as? ReceivedAgentBridgePayload.Base)?.envelope?.type == "ping" } else 0
             every { channel.sendAgentBridge(any(), any(), any()) } answers {
                 thirdArg<() -> Unit>()(); agent += firstArg<AgentBridgeMessage>(); thirdArg<() -> Unit>()()
             }
             every { channel.sendV2ForAgentBridge(any(), any<kotlinx.serialization.SerializationStrategy<Any>>(), any<Any>(), any(), any()) } answers {
+                if (mode == "keepalive-write-revoke" && firstArg<String>() == "pong") lifecycle.stop()
                 if(firstArg<String>()=="completion_confirmed") {
                     if(mode=="complete-revoke")lifecycle.stop()
                     if(mode=="complete-corrupt")Files.write(requireNotNull(completionDirectory).resolve("host-commit-${manifest.artifacts.first().artifactId}.json"),"corrupt".toByteArray())
@@ -941,7 +954,7 @@ class AgentBridgeNativeConfigurationReaderTest {
             every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
                 secondArg<() -> Unit>()()
                 val result = responses.pollFirst() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
-                if (mode == "revoke") lifecycle.stop()
+                if (mode == "revoke" || mode == "keepalive-revoke") lifecycle.stop()
                 secondArg<() -> Unit>()(); result
             }
             var finalNativeRead: (() -> Unit)? = null
@@ -962,7 +975,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                     publicationInterrupted = true; throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
                 }
             }
-            val fails = (completion && mode !in setOf("complete", "complete-resume")) || mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication")
+            val fails = (completion && mode !in setOf("complete", "complete-resume", "complete-keepalive")) || mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication", "keepalive-revoke", "keepalive-write-revoke")
             try {
                 if (mode == "contended") {
                     reconnect.transmitTransfer(request, true) { context ->
@@ -988,6 +1001,10 @@ class AgentBridgeNativeConfigurationReaderTest {
                 verify(atLeast = 1) { channel.close() }
             }
             f.peerContext.onCheck = null
+            if (keepalive) {
+                assertThat(base.count { it.type == "pong" }).isEqualTo(if (mode == "bad-keepalive-pong") 1 else if (fails) 0 else expectedPongs)
+                if (!fails) { assertThat(responses).isEmpty(); verify(exactly = 0) { channel.close() } }
+            }
             if (mode == "complete-resume") {
                 assertThat(f.store.access { it!!.state.acceptedJobs }).isEqualTo(acceptedBeforeResume)
             }

@@ -421,6 +421,13 @@ public final class DirectSecureChannel: @unchecked Sendable {
                         if root["protocol_version"] != nil { result = .agent(try negotiation.decode(canonical)) }
                         else {
                             guard root.count == 1 else { throw DirectChannelError.decodeFailed }
+                            // Synthesized Codable drops unknown inner members for empty enum
+                            // cases. Check the original object before keepalive dispatch loses it.
+                            for name in ["ping", "pong"] where root[name] != nil {
+                                guard let payload = root[name] as? [String: Any], payload.isEmpty else {
+                                    throw DirectChannelError.decodeFailed
+                                }
+                            }
                             result = .base(try decoder.decode(DirectMessage.self, from: messageCanonicalizer.canonicalizeDirectMessage(canonical)))
                         }
                     }

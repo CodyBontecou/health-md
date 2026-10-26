@@ -30,6 +30,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
 
 /** Native lifecycle state, never a wire DTO or a permission issuer. Its publisher records
  * advertised capability/readiness changes in signed issuer storage before offering v4. */
@@ -470,7 +471,7 @@ internal class AgentBridgeNativePlanningSession(
         fun <T> send(type: String, serializer: kotlinx.serialization.SerializationStrategy<T>, payload: T) =
             channel.sendV2ForAgentBridge(type, serializer, payload, negotiation, validate)
         fun <T> receive(type: String, serializer: kotlinx.serialization.DeserializationStrategy<T>): T {
-            val envelope = (channel.receiveAllowingAgentBridge(negotiation, validate) as? ReceivedAgentBridgePayload.Base)?.envelope ?: invalid()
+            val envelope = (receiveTransferPayload(context) as? ReceivedAgentBridgePayload.Base)?.envelope ?: invalid()
             if (envelope.type != type) invalid()
             return V2Codec.decodePayload(envelope, serializer)
         }
@@ -515,14 +516,33 @@ internal class AgentBridgeNativePlanningSession(
         if (confirmCompletion) confirmTransferCompletion(transfer, context)
     }
 
-    private fun confirmTransferCompletion(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext) {
+    /** Consume keepalives on the same transfer reader without changing any ACK frontier.
+     * The existing read/owner fences apply to both base ACKs and v4 host commits. */
+    private fun receiveTransferPayload(context: AgentBridgeNativeCaptureContext): ReceivedAgentBridgePayload {
         val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val validate = { context.configurationForRead(); Unit }
+        while (true) {
+            val payload = channel.receiveAllowingAgentBridge(negotiation, validate)
+            val envelope = (payload as? ReceivedAgentBridgePayload.Base)?.envelope
+            when (envelope?.type) {
+                "ping" -> {
+                    if (envelope.payload.isNotEmpty()) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                    channel.sendV2ForAgentBridge("pong", JsonObject.serializer(), JsonObject(emptyMap()), negotiation, validate)
+                }
+                "pong" -> if (envelope.payload.isNotEmpty()) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                else -> return payload
+            }
+        }
+    }
+
+    private fun confirmTransferCompletion(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext) {
+        val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val manifest = AgentBridgeCodec.decode(transfer.export.manifestCanonical) as? AgentBridgeArtifactManifest
             ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
         for (artifact in manifest.artifacts) {
-            val message = (channel.receiveAllowingAgentBridge(negotiation, validate) as? ReceivedAgentBridgePayload.Agent)?.message
+            val message = (receiveTransferPayload(context) as? ReceivedAgentBridgePayload.Agent)?.message
                 ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
             val receipt = message.payload as? AgentBridgeCommitReceipt ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
             if (message.type != "commit_receipt" || receipt.artifactId != artifact.artifactId) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)

@@ -110,6 +110,7 @@ final class AgentBridgeNativePlanningSession {
     private let captureProtection: any AgentBridgeNativeCaptureProtecting
     private var wireAbandoned = false
     private var wireOperationActive = false
+    private(set) var lastInboundActivityAt: ContinuousClock.Instant?
 
     /// The issuer transaction and lifecycle must agree on the exact signed publication, including
     /// revision. Equal facts alone cannot identify an event that returned to the same state.
@@ -264,6 +265,7 @@ final class AgentBridgeNativePlanningSession {
                 try await MainActor.run { try requireOwnerCurrent() }
                 try Task.checkCancellation()
             }
+            lastInboundActivityAt = ContinuousClock().now
             if case .agent(let request) = received {
                 try await handleAndSendOwned(negotiation.encode(request))
                 return nil
@@ -454,7 +456,7 @@ final class AgentBridgeNativePlanningSession {
             try await channel.sendBaseForAgentBridge(message, negotiation: negotiation, authorize: validate)
         }
         func receive() async throws -> DirectMessage {
-            guard case .base(let message) = try await channel.receiveAllowingAgentBridge(negotiation: negotiation, authorize: validate) else {
+            guard case .base(let message) = try await receiveTransferPayload(context: context) else {
                 throw AgentBridgeValidationError.bindingChanged
             }
             return message
@@ -507,13 +509,35 @@ final class AgentBridgeNativePlanningSession {
         if confirmCompletion { try await confirmTransferCompletion(transfer, context: context) }
     }
 
+    /// The transfer's existing reader consumes keepalives without advancing any ACK frontier.
+    /// Both base ACKs and v4 host commits retain the same native read/owner fences.
+    private func receiveTransferPayload(context: AgentBridgeNativeCaptureContext) async throws -> AgentBridgeSecurePayload {
+        guard let channel = responseChannel, let negotiation = responseNegotiation else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        let validate: @Sendable () async throws -> Void = {
+            try Task.checkCancellation()
+            try await MainActor.run { _ = try context.configurationForRead() }
+            try Task.checkCancellation()
+        }
+        while true {
+            let payload = try await channel.receiveAllowingAgentBridge(negotiation: negotiation, authorize: validate)
+            lastInboundActivityAt = ContinuousClock().now
+            switch payload {
+            case .base(.ping):
+                try await channel.sendBaseForAgentBridge(.pong, negotiation: negotiation, authorize: validate)
+            case .base(.pong): break
+            default: return payload
+            }
+        }
+    }
+
     private func confirmTransferCompletion(_ transfer: AgentBridgeNativePreparedTransfer,
         context: AgentBridgeNativeCaptureContext) async throws {
         guard let channel = responseChannel, let negotiation = responseNegotiation else { throw AgentBridgeValidationError.unsupportedCapability }
-        let validate: @Sendable () async throws -> Void = { try await MainActor.run { _ = try context.configurationForRead() } }
         let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: transfer.export.manifestCanonical)
         for artifact in manifest.artifacts {
-            guard case .agent(let envelope) = try await channel.receiveAllowingAgentBridge(negotiation: negotiation, authorize: validate),
+            guard case .agent(let envelope) = try await receiveTransferPayload(context: context),
                   case .commit(let receipt) = envelope.payload, receipt.artifactId == artifact.artifactId else { throw AgentBridgeValidationError.bindingChanged }
             try context.recordHostCommit(receipt)
         }

@@ -1506,6 +1506,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     func testNativeTransferSenderRechecksOwnerAfterReceiveBeforeAnyFurtherWrite() async throws {
         try await checkNativeTransferSender("revoke")
     }
+    func testNativeTransferSenderConsumesKeepalivesBeforeEveryACKAndHostCommit() async throws { try await checkNativeTransferSender("complete-keepalive") }
+    func testNativeTransferKeepaliveReceiveCannotBypassOwnerRevocation() async throws { try await checkNativeTransferSender("keepalive-revoke") }
+    func testNativeTransferPongWriteCannotBypassOwnerRevocation() async throws { try await checkNativeTransferSender("keepalive-write-revoke") }
     func testNativeTransferSenderResumesExactPrefixWithoutReplayingBytes() async throws { try await checkNativeTransferSender("resume") }
     func testNativeTransferSenderRejectsHostRewindOfRecordedPrefix() async throws { try await checkNativeTransferSender("rewind") }
     func testNativeCapturedCancellationRefusesManifestWithoutRetainedFrontier() async throws { try await checkNativeTransferSender("cancel-no-frontier") }
@@ -1555,6 +1558,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 XCTAssertEqual(try Data(contentsOf: file), before); XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
                 return
             }
+            let keepalive = mode.contains("keepalive")
             let completion = mode.hasPrefix("complete")
             let resumedPrefix = mode == "resume" || mode == "complete-resume"
             var resumeEnvelope: AgentBridgeResume?
@@ -1592,11 +1596,20 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 jobID: original.session.jobID, accepted: true, totalPartitions: original.partitions.count,
                 totalBytes: Int64(original.export.totalByteCount) + (mode == "bad-final" ? 1 : 0),
                 finalPartitionSHA256: original.partitions.last?.sha256)))
-            var inbound = try responses.enumerated().map { try nativeResponsePacket(JSONEncoder().encode($0.element), sequence: UInt64($0.offset), key: key) }
-            if completion {
-                for (index,receipt) in hostReceipts.enumerated() { inbound.append(try nativeResponsePacket(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .commit(receipt))), sequence: UInt64(responses.count + index), key: key)) }
+            var incoming = try responses.map { try JSONEncoder().encode($0) }
+            if completion { incoming += try hostReceipts.map { try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .commit($0))) } }
+            let expectedPongs = keepalive ? incoming.count : 0
+            if keepalive {
+                incoming = try incoming.flatMap { [try JSONEncoder().encode(DirectMessage.ping), try JSONEncoder().encode(DirectMessage.pong), $0] }
             }
+            let inbound = try incoming.enumerated().map { try nativeResponsePacket($0.element, sequence: UInt64($0.offset), key: key) }
+            let writeState = NativeTransferWriteState()
             let wire = NativePlanningResponsePackets(beforeWrite: {
+                // The first pong follows manifest, session, file manifests and transfer-open.
+                await MainActor.run {
+                    if mode == "keepalive-write-revoke", writeState.count == 3 + original.export.baseFiles.count { rig.session.revoke() }
+                    writeState.count += 1
+                }
                 if completion { try await MainActor.run {
                     if FileManager.default.fileExists(atPath: completionDirectory.appendingPathComponent("completion.json").path) {
                         if mode == "complete-revoke" { rig.session.revoke() }
@@ -1604,7 +1617,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     }
                 } }
             }, inbound: inbound, beforeReceive: {
-                if mode == "revoke" { await MainActor.run { rig.session.revoke() } }
+                if mode == "revoke" || mode == "keepalive-revoke" { await MainActor.run { rig.session.revoke() } }
             })
             let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
             _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
@@ -1628,7 +1641,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 }
             }
             defer { rig.captureProtection.onRequire = nil }
-            let fails = (completion && !["complete", "complete-resume"].contains(mode)) || mode.hasPrefix("bad-") || ["revoke", "rewind", "publication"].contains(mode)
+            let fails = (completion && !["complete", "complete-resume", "complete-keepalive"].contains(mode)) || mode.hasPrefix("bad-") || ["revoke", "rewind", "publication", "keepalive-revoke", "keepalive-write-revoke"].contains(mode)
             do {
                 if mode == "contended" {
                     try await reconnect.transmitTransfer(request, retained: true) { context in
@@ -1671,6 +1684,10 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 } else if DirectTransferBinaryFrame.isBinaryFrame(bytes) {
                     chunks.append(try DirectTransferBinaryFrame.decode(bytes).chunk)
                 } else { messages.append(try decoder.decode(DirectMessage.self, from: bytes)) }
+            }
+            if keepalive {
+                XCTAssertEqual(messages.filter { $0 == .pong }.count, fails ? 0 : expectedPongs)
+                if !fails { XCTAssertNotNil(reconnect.lastInboundActivityAt); _ = try reconnect.requireCurrent() }
             }
             if mode == "mixed" {
                 try await reconnect.withRetainedCaptureContext(request) { context in
@@ -5497,6 +5514,8 @@ private final class Rig {
 }
 
 /// Actual channel encryption/gates with a synthetic native write boundary. No pairing or consent proof.
+@MainActor private final class NativeTransferWriteState { var count = 0 }
+
 nonisolated private final class NativePlanningResponsePackets: DirectGuardedPacketTransport, @unchecked Sendable {
     private let lock = NSLock()
     private var stored: [ManualIPSyncPacket] = []

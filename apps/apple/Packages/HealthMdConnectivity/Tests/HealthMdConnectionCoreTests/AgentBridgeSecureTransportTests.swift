@@ -135,6 +135,23 @@ final class AgentBridgeSecureTransportTests: XCTestCase {
         }
     }
 
+    func testKeepaliveRejectsNonemptyOrNonobjectPayloadBeforeReturning() async throws {
+        for name in ["ping", "pong"] {
+            for value in [#"{"unexpected":1}"#, "null", "[]", "1", #""unexpected""#] {
+                let pair = try await pair(); defer { pair.close() }
+                let bytes = Data("{\"\(name)\":\(value)}".utf8)
+                try await pair.client.send(encrypted(bytes, sequence: 0, key: pair.key))
+                let fence = WireFence()
+                do {
+                    _ = try await pair.receiver.receiveAllowingAgentBridge(negotiation: negotiation()) { try fence.requireCurrent() }
+                    XCTFail("Malformed keepalive returned")
+                } catch { }
+                XCTAssertTrue(pair.receiver.isLocallyTerminal)
+                XCTAssertEqual(fence.checks, 1)
+            }
+        }
+    }
+
     func testBridgeStillRejectsReplayedAuthenticatedSequence() async throws {
         let pair = try await pair(); defer { pair.close() }
         let expected = try request(), neg = try negotiation()

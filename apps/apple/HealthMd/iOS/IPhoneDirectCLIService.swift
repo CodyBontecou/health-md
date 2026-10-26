@@ -1068,6 +1068,11 @@ final class IPhoneDirectCLIService: ObservableObject {
     private func evaluateIdleHeartbeat(
         now: ContinuousClock.Instant
     ) -> IPhoneDirectCLIIdleHeartbeatPolicy.Action {
+        if let inbound = agentBridgePlanner?.lastInboundActivityAt,
+           lastInboundActivityAt.map({ $0 < inbound }) ?? true {
+            lastInboundActivityAt = inbound
+            heartbeatPingSentAt = nil
+        }
         guard let lastInboundActivityAt else { return .none }
         return heartbeatPolicy.action(
             lastInboundAt: lastInboundActivityAt,
