@@ -39,6 +39,8 @@ Selecting **only Resting Heart Rate** does not request the general heart-rate sa
 
 Heart rate in **beats per minute (bpm)** is distinct from heart rate variability in **milliseconds (ms)**. Health.md's Apple HRV path reads HealthKit's **SDNN** type; do not silently label it RMSSD or merge it with a different HRV measure. Apple documents [SDNN HRV](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/heartratevariabilitysdnn) and the separate [resting heart-rate type](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/restingheartrate).
 
+For a focused walkthrough of SDNN daily averages and timestamped readings, use the [Apple Health HRV export guide](/blog/export-apple-health-hrv/).
+
 ## 1. Authorize and preview a known day
 
 1. Confirm the records you want are present in Apple Health on this iPhone. Let the watch or source app finish writing its data before exporting.
