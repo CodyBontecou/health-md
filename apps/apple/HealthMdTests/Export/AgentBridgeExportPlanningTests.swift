@@ -1879,7 +1879,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             if !fails {
                 XCTAssertEqual(chunks.count, mode == "already" ? 0 : original.partitions.count - (resumedPrefix || mode == "mixed" ? 1 : 0))
                 for (chunk, file) in zip(chunks, original.export.baseFiles.dropFirst(resumedPrefix ? 1 : 0)) { XCTAssertEqual(chunk.sequence, 1); XCTAssertEqual(chunk.data, file.content); XCTAssertEqual(chunk.sha256, file.manifest.sha256) }
-                XCTAssertEqual(wire.receiveCount, responses.count + (completion ? hostReceipts.count : 0))
+                XCTAssertEqual(wire.receiveCount, inbound.count)
             }
             if mode == "revoke" { XCTAssertEqual(messages.count, 2 + original.export.baseFiles.count) }
             if mode == "rewind" { XCTAssertTrue(chunks.isEmpty) }
