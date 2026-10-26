@@ -351,52 +351,74 @@ async fn retained_output_fixture(platform: PeerPlatform) -> AcceptedFixture {
     fixture
 }
 
+#[derive(Clone, Copy, Debug)]
+enum StopEvidence {
+    Pending,
+    Confirmed,
+}
+
 #[tokio::test]
-async fn retained_output_rejects_pending_stop_after_signed_journal_rollback() {
+async fn retained_output_rejects_stop_evidence_after_signed_journal_rollback() {
     use crate::agent_host::output::OutputTransaction;
     use std::os::unix::fs::PermissionsExt as _;
 
     for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
-        let fixture = Box::pin(retained_output_fixture(platform)).await;
-        // The normal accepted attempt and its exact signed output are compatible.
-        drop(
-            OutputTransaction::open_retained(&fixture.store, &fixture.request.job_id)
-                .await
-                .unwrap(),
-        );
-        let issuer = fixture.client.layout.root.join("agent-host-v1");
-        let path = issuer.join(format!("output-{}.json", fixture.request.job_id.0));
-        let output_bytes = std::fs::read(&path).unwrap();
-        std::fs::remove_file(&path).unwrap();
-        let mut admission = OutputAdmission::open_retained_accepted(
-            &fixture.store,
-            &fixture.request.job_id,
-            &fixture.clock,
-        )
-        .await
-        .unwrap();
-        admission
-            .persist_cancellation(&fixture.clock, || async { Ok(()) })
+        for evidence in [StopEvidence::Pending, StopEvidence::Confirmed] {
+            let fixture = Box::pin(retained_output_fixture(platform)).await;
+            // The normal accepted attempt and its exact signed output are compatible.
+            drop(
+                OutputTransaction::open_retained(&fixture.store, &fixture.request.job_id)
+                    .await
+                    .unwrap(),
+            );
+            let issuer = fixture.client.layout.root.join("agent-host-v1");
+            let path = issuer.join(format!("output-{}.json", fixture.request.job_id.0));
+            let output_bytes = std::fs::read(&path).unwrap();
+            std::fs::remove_file(&path).unwrap();
+            let mut admission = OutputAdmission::open_retained_accepted(
+                &fixture.store,
+                &fixture.request.job_id,
+                &fixture.clock,
+            )
             .await
             .unwrap();
-        drop(admission);
-        // Restore a previously valid later-state record beside the genuine pending Stop.
-        // Neither MAC is forged: recovery must detect the contradictory lifecycle evidence.
-        std::fs::write(&path, output_bytes).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
-        let before = inventory(&issuer);
-        assert!(
-            OutputTransaction::open_retained(&fixture.store, &fixture.request.job_id)
+            admission
+                .persist_cancellation(&fixture.clock, || async { Ok(()) })
                 .await
-                .is_err(),
-            "pending Stop must prevent retained output from becoming an execution owner"
-        );
-        assert_eq!(
-            inventory(&issuer),
-            before,
-            "rejection must not repair journals"
-        );
-        assert!(std::fs::read_dir(&fixture.output).unwrap().next().is_none());
+                .unwrap();
+            if matches!(evidence, StopEvidence::Confirmed) {
+                let mut receipt = fixture.accepted.clone();
+                receipt.status = ExecutionReceiptStatus::Cancelled;
+                receipt.source_acknowledged = true;
+                admission
+                    .persist_source_confirmation(
+                        &receipt,
+                        &fixture.clock,
+                        &tokio_util::sync::CancellationToken::new(),
+                        || async { Ok(()) },
+                    )
+                    .await
+                    .unwrap();
+            }
+            drop(admission);
+            // Restore a previously valid later-state record beside genuine signed Stop evidence.
+            // Neither MAC is forged: recovery must detect the contradictory lifecycle evidence.
+            std::fs::write(&path, output_bytes).unwrap();
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+            let before = inventory(&issuer);
+            assert!(
+                OutputTransaction::open_retained(&fixture.store, &fixture.request.job_id)
+                    .await
+                    .is_err(),
+                "{evidence:?} Stop must prevent retained output from becoming an execution owner"
+            );
+            assert_eq!(
+                inventory(&issuer),
+                before,
+                "rejection must not repair journals"
+            );
+            assert!(std::fs::read_dir(&fixture.output).unwrap().next().is_none());
+        }
     }
 }
 
