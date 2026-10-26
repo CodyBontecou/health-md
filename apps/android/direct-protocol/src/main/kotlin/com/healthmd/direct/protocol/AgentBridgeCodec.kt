@@ -148,7 +148,9 @@ object AgentBridgeCodec {
         }
     }
 
-    internal fun canonical(value: JsonElement): ByteArray = canonicalString(value).toByteArray(Charsets.UTF_8)
+    internal fun canonical(value: JsonElement): ByteArray = buildString {
+        appendCanonical(value, this)
+    }.toByteArray(Charsets.UTF_8)
 
     private fun boundedCanonical(value: JsonElement): ByteArray {
         val bytes = canonical(value)
@@ -157,12 +159,30 @@ object AgentBridgeCodec {
         return bytes
     }
 
-    private fun canonicalString(value: JsonElement): String = when (value) {
-        JsonNull -> "null"
-        is JsonObject -> value.entries.sortedWith { a, b -> compareCodePoints(a.key, b.key) }
-            .joinToString(",", "{", "}") { (key, child) -> quote(key) + ":" + canonicalString(child) }
-        is JsonArray -> value.joinToString(",", "[", "]") { canonicalString(it) }
-        is JsonPrimitive -> if (value.isString) quote(value.content) else value.content
+    // Append nested values into one buffer instead of materializing every subtree as a String.
+    private fun appendCanonical(value: JsonElement, output: StringBuilder) {
+        when (value) {
+            JsonNull -> output.append("null")
+            is JsonObject -> {
+                output.append('{')
+                value.entries.sortedWith { a, b -> compareCodePoints(a.key, b.key) }
+                    .forEachIndexed { index, (key, child) ->
+                        if (index > 0) output.append(',')
+                        output.append(quote(key)).append(':')
+                        appendCanonical(child, output)
+                    }
+                output.append('}')
+            }
+            is JsonArray -> {
+                output.append('[')
+                value.forEachIndexed { index, child ->
+                    if (index > 0) output.append(',')
+                    appendCanonical(child, output)
+                }
+                output.append(']')
+            }
+            is JsonPrimitive -> output.append(if (value.isString) quote(value.content) else value.content)
+        }
     }
 
     internal fun compareCodePoints(a: String, b: String): Int {
