@@ -313,7 +313,7 @@ impl PlanningSource for BridgeSession<'_> {
 
 #[path = "agent_execution.rs"]
 mod execution;
-pub use execution::{HostExecution, ReceivedArtifacts};
+pub use execution::{HostAcceptedExecution, HostExecution, ReceivedArtifacts};
 
 #[cfg(all(test, unix))]
 impl BridgeSession<'_> {

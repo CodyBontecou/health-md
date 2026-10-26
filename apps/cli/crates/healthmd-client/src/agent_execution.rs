@@ -22,6 +22,18 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Original authenticated owner after durable acceptance and before the manifest.
+/// Dropping this owner abandons the channel; it never means source cancellation.
+/// Its private fields cannot be replaced with caller-provided receipt metadata.
+pub struct HostAcceptedExecution<'s, 'h, 'trust> {
+    bridge: &'s mut BridgeSession<'trust>,
+    store: &'h HostAuthorityStore,
+    clock: &'h dyn PlanningClock,
+    request: ExecuteRequest,
+    accepted: ExecutionReceipt,
+    admission: OutputAdmission,
+}
+
 /// Borrowed original session plus immutable authenticated acceptance/manifest. Caller JSON
 /// cannot construct this owner, replace its peer, or install a receipt as permission.
 pub struct HostExecution<'s, 'h, 'trust> {
@@ -71,6 +83,37 @@ impl<'trust> BridgeSession<'trust> {
         request: ExecuteRequest,
         clock: &'h dyn PlanningClock,
     ) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
+        let accepted = Box::pin(self.begin_accepted_execution_inner(store, request, clock)).await?;
+        Box::pin(accepted.wait_manifest_inner()).await
+    }
+
+    /// Send Execute and return its original owner once acceptance is durably journaled.
+    /// The manifest may still be pending; acceptance is never terminal confirmation.
+    /// # Errors
+    /// Missing approval, stale authority, invalid acceptance, or interruption reject.
+    pub async fn begin_accepted_execution<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        request: ExecuteRequest,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostAcceptedExecution<'s, 'h, 'trust>, ClientError> {
+        let cancellation = self.cancellation.clone();
+        let timeout = self.timeout;
+        tokio::select! {
+            biased;
+            () = cancellation.cancelled() => Err(ClientError::WaitCancelled),
+            result = tokio::time::timeout(timeout, Box::pin(self.begin_accepted_execution_inner(store, request, clock))) => {
+                result.map_err(|_| ClientError::TimedOut)?
+            }
+        }
+    }
+
+    async fn begin_accepted_execution_inner<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        request: ExecuteRequest,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostAcceptedExecution<'s, 'h, 'trust>, ClientError> {
         request.validate_shape()?;
         if self.send_interrupted || self.peer != request.plan.intent.peer {
             return Err(Error::BindingChanged.into());
@@ -125,24 +168,91 @@ impl<'trust> BridgeSession<'trust> {
                     .await
             })
             .await?;
-        let received = self.channel.receive_v4(self.negotiation).await?.message;
-        fence().await?;
+        Ok(HostAcceptedExecution {
+            bridge: self,
+            store,
+            clock,
+            request,
+            accepted: *accepted,
+            admission,
+        })
+    }
+}
+
+impl<'s, 'h, 'trust> HostAcceptedExecution<'s, 'h, 'trust> {
+    /// Source acceptance evidence only; this is not a terminal execution receipt.
+    #[must_use]
+    pub fn acceptance(&self) -> &ExecutionReceipt {
+        &self.accepted
+    }
+
+    /// Receive the original manifest and convert this sole owner into a transfer owner.
+    /// # Errors
+    /// Local interruption, stale authority, journal drift or invalid manifest reject.
+    pub async fn wait_manifest(self) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
+        let cancellation = self.bridge.cancellation.clone();
+        let timeout = self.bridge.timeout;
+        tokio::select! {
+            biased;
+            () = cancellation.cancelled() => Err(ClientError::WaitCancelled),
+            result = tokio::time::timeout(timeout, Box::pin(self.wait_manifest_inner())) => {
+                result.map_err(|_| ClientError::TimedOut)?
+            }
+        }
+    }
+
+    async fn require_current(&self) -> Result<(), ClientError> {
+        if self.bridge.peer != self.request.plan.intent.peer {
+            return Err(Error::BindingChanged.into());
+        }
+        self.store
+            .require_output_current(
+                &self.request,
+                Some(&self.accepted.expires_at),
+                self.clock,
+                || async {
+                    if self.bridge.cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    self.bridge
+                        .trust_fence
+                        .require_current(self.bridge.requested_device, &self.bridge.expected_trust)
+                        .await?;
+                    if self.bridge.cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    Ok(())
+                },
+            )
+            .await?;
+        self.admission.require_current()
+    }
+
+    async fn wait_manifest_inner(self) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
+        self.require_current().await?;
+        let received = self
+            .bridge
+            .channel
+            .receive_v4(self.bridge.negotiation)
+            .await?
+            .message;
+        self.require_current().await?;
         let Message::ArtifactManifest(manifest) =
-            execution_response(received, &request.request_id)?
+            execution_response(received, &self.request.request_id)?
         else {
             return Err(ClientError::UnexpectedMessage);
         };
         let binding = NativeBinding {
-            request,
-            accepted: *accepted,
+            request: self.request,
+            accepted: self.accepted,
             manifest: *manifest,
         };
         binding.validate()?;
-        self.send_interrupted = false;
+        self.bridge.send_interrupted = false;
         let execution = HostExecution {
-            bridge: self,
-            store,
-            clock,
+            bridge: self.bridge,
+            store: self.store,
+            clock: self.clock,
             binding,
             transfer_started: false,
             resumed: None,
@@ -151,7 +261,7 @@ impl<'trust> BridgeSession<'trust> {
             transfer_guard: None,
             final_output: None,
         };
-        let mut transaction = admission.bind(&execution.binding)?;
+        let mut transaction = self.admission.bind(&execution.binding)?;
         transaction.save(|| execution.require_current()).await?;
         execution.require_current().await?;
         Ok(execution)

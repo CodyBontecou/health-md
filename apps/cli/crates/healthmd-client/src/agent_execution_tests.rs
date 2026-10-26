@@ -90,6 +90,10 @@ enum OutputCase {
     RestoredJournalBeforeSend,
     ConcurrentAdmission,
     AcceptedBeforeManifest,
+    ExplicitAcceptedBeforeManifest,
+    DropAcceptedBeforeManifest,
+    AcceptedOwnerJournalDrift,
+    AcceptedOwnerRevokedTrust,
     AcceptedJournalCorrupt,
     AcceptedJournalDelete,
     NativeRejection,
@@ -298,7 +302,14 @@ async fn output_peer(
                     let _ = release.await;
                     return;
                 }
-                if case == OutputCase::AcceptedBeforeManifest {
+                if matches!(
+                    case,
+                    OutputCase::AcceptedBeforeManifest
+                        | OutputCase::ExplicitAcceptedBeforeManifest
+                        | OutputCase::DropAcceptedBeforeManifest
+                        | OutputCase::AcceptedOwnerJournalDrift
+                        | OutputCase::AcceptedOwnerRevokedTrust
+                ) {
                     if let Some((ready, resume)) = admission_gate.take() {
                         ready.send(()).unwrap();
                         resume.await.unwrap();
@@ -380,7 +391,12 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
     let (resume, await_resume) = oneshot::channel();
     let gate = matches!(
         case,
-        OutputCase::ConcurrentAdmission | OutputCase::AcceptedBeforeManifest
+        OutputCase::ConcurrentAdmission
+            | OutputCase::AcceptedBeforeManifest
+            | OutputCase::ExplicitAcceptedBeforeManifest
+            | OutputCase::DropAcceptedBeforeManifest
+            | OutputCase::AcceptedOwnerJournalDrift
+            | OutputCase::AcceptedOwnerRevokedTrust
     )
     .then_some((admission_ready, await_resume));
     let source = tokio::spawn(output_peer(
@@ -502,6 +518,101 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
     let retry_request = request.clone();
     let host_authority = request.plan.authority_references.host.authority_id.clone();
     let result = if matches!(
+        case,
+        OutputCase::ExplicitAcceptedBeforeManifest
+            | OutputCase::DropAcceptedBeforeManifest
+            | OutputCase::AcceptedOwnerJournalDrift
+            | OutputCase::AcceptedOwnerRevokedTrust
+    ) {
+        let accepted = tokio::time::timeout(
+            Duration::from_secs(5),
+            Box::pin(bridge.begin_accepted_execution(&store, request, &clock)),
+        )
+        .await
+        .expect("Acceptance must return while the source manifest is blocked")
+        .unwrap();
+        ready.await.unwrap();
+        assert_eq!(
+            accepted.acceptance(),
+            &synthetic_binding(&retry_request, platform).accepted
+        );
+        let path = client
+            .layout
+            .root
+            .join("agent-host-v1")
+            .join(format!("attempt-{}.json", retry_request.job_id.0));
+        let before = std::fs::read(&path).unwrap();
+        let record: serde_json::Value = serde_json::from_slice(&before).unwrap();
+        assert_eq!(record["attempt"]["schema_version"], 2);
+        assert_eq!(
+            record["attempt"]["accepted_receipt"],
+            serde_json::to_value(accepted.acceptance()).unwrap()
+        );
+        assert!(
+            !path
+                .with_file_name(format!("output-{}.json", retry_request.job_id.0))
+                .exists()
+        );
+        assert!(matches!(
+            crate::agent_host::output::OutputAdmission::reserve(
+                &store,
+                &retry_request,
+                &clock,
+                || async { Ok(output.clone()) }
+            )
+            .await,
+            Err(ClientError::AgentStoreBusy)
+        ));
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        if matches!(
+            case,
+            OutputCase::AcceptedOwnerJournalDrift | OutputCase::AcceptedOwnerRevokedTrust
+        ) {
+            if case == OutputCase::AcceptedOwnerJournalDrift {
+                std::fs::write(&path, b"synthetic changed acceptance").unwrap();
+            } else {
+                client
+                    .trust_store
+                    .save(&TrustState::empty(client.identity.installation_id))
+                    .await
+                    .unwrap();
+            }
+            let retained = std::fs::read(&path).unwrap();
+            assert!(
+                tokio::time::timeout(Duration::from_secs(5), Box::pin(accepted.wait_manifest()))
+                    .await
+                    .expect("Stale acceptance must reject before waiting for a blocked manifest")
+                    .is_err()
+            );
+            assert!(bridge.discover().await.is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), retained);
+            assert!(
+                !path
+                    .with_file_name(format!("output-{}.json", retry_request.job_id.0))
+                    .exists()
+            );
+            let _ = resume.send(());
+            let _ = release.send(());
+            source.await.unwrap();
+            return;
+        }
+        if case == OutputCase::DropAcceptedBeforeManifest {
+            drop(accepted);
+            assert!(bridge.discover().await.is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+            assert!(
+                !path
+                    .with_file_name(format!("output-{}.json", retry_request.job_id.0))
+                    .exists()
+            );
+            let _ = resume.send(());
+            let _ = release.send(());
+            source.await.unwrap();
+            return;
+        }
+        resume.send(()).unwrap();
+        accepted.wait_manifest().await
+    } else if matches!(
         case,
         OutputCase::ConcurrentAdmission | OutputCase::AcceptedBeforeManifest
     ) {
@@ -1328,3 +1439,37 @@ async fn authenticated_output_admission_rejects_retained_transfer_before_execute
 
 #[path = "agent_resume_tests.rs"]
 mod resume_tests;
+
+#[tokio::test]
+async fn explicit_accepted_owner_returns_before_manifest_and_holds_original_admission() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        Box::pin(check_output_case(
+            platform,
+            OutputCase::ExplicitAcceptedBeforeManifest,
+        ))
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn dropping_accepted_owner_abandons_channel_without_terminal_or_output_claim() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        Box::pin(check_output_case(
+            platform,
+            OutputCase::DropAcceptedBeforeManifest,
+        ))
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn accepted_owner_rejects_journal_drift_and_revocation_before_manifest_wait() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for case in [
+            OutputCase::AcceptedOwnerJournalDrift,
+            OutputCase::AcceptedOwnerRevokedTrust,
+        ] {
+            Box::pin(check_output_case(platform, case)).await;
+        }
+    }
+}
