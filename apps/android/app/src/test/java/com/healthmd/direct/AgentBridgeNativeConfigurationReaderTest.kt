@@ -808,6 +808,41 @@ class AgentBridgeNativeConfigurationReaderTest {
     @Test fun `native transfer rejects nonempty keepalive payloads`() = runBlocking { for (type in listOf("ping", "pong")) checkNativeTransferSender("bad-keepalive-$type") }
     @Test fun `native transfer pong write cannot bypass owner revocation`() = runBlocking { checkNativeTransferSender("keepalive-write-revoke") }
 
+    @Test fun `native transfer confirms source stop at each ACK and host commit without another reader`() = runBlocking {
+        for (stage in listOf("disposition", "chunk", "partition", "final", "host")) checkNativeTransferSender("stop-$stage")
+    }
+    @Test fun `native transfer source stop survives unavailable read configuration`() = runBlocking { checkNativeTransferSender("stop-read-revoked") }
+    @Test fun `native resumed transfer confirms exact retained source stop`() = runBlocking { checkNativeTransferSender("stop-resume") }
+    @Test fun `native transfer source stop preserves existing completion`() = runBlocking { checkNativeTransferSender("stop-complete") }
+    @Test fun `native transfer source stop rejects a foreign job and abandons owner`() = runBlocking { checkNativeTransferSender("stop-foreign") }
+    @Test fun `native transfer ordinary cancelled errors cannot impersonate a confirmed source stop`() = runBlocking {
+        for (taskError in listOf(false, true)) withNativeExportPreparation { f, planner, request, client, manager ->
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } returns values
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val reconnect = ownedPlanner(f, lifecycle, channel)
+            try {
+                reconnect.transmitTransfer(request, true) { context ->
+                    context.begin()
+                    if (taskError) throw kotlinx.coroutines.CancellationException("synthetic caller error")
+                    throw AgentBridgeException(AgentBridgeErrorCode.CANCELLED)
+                }
+                throw AssertionError("Ordinary cancellation returned success")
+            } catch (failure: Throwable) {
+                if (taskError) assertThat(failure).isInstanceOf(kotlinx.coroutines.CancellationException::class.java)
+                else assertThat((failure as AgentBridgeException).code).isEqualTo(AgentBridgeErrorCode.CANCELLED)
+            }
+            verify(atLeast = 1) { channel.close() }
+            verify(exactly = 0) { channel.sendAgentBridge(any(), any(), any()) }
+            assertThat(currentCoroutineContext().job.isActive).isTrue()
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+    @Test fun `native transfer source stop write failure abandons owner without confirmed proof`() = runBlocking { checkNativeTransferSender("stop-write-failure") }
+
     @Test fun `native transfer sender resumes exact prefix without replaying bytes`() = runBlocking { checkNativeTransferSender("resume") }
     @Test fun `native transfer sender rejects host rewind of recorded prefix`() = runBlocking { checkNativeTransferSender("rewind") }
     @Test fun `native stop during SDK read discards late value and journals invalidated owner`() = runBlocking {
@@ -883,9 +918,10 @@ class AgentBridgeNativeConfigurationReaderTest {
                 coVerify(exactly = 2) { client.aggregate(any()) }
                 return@withNativeExportPreparation
             }
+            val stopTransfer = mode.startsWith("stop-")
             val keepalive = mode.contains("keepalive")
-            val completion=mode.startsWith("complete")
-            val resumedPrefix = mode == "resume" || mode == "complete-resume"
+            val completion=mode.startsWith("complete") || mode == "stop-host"
+            val resumedPrefix = mode == "resume" || mode == "complete-resume" || mode == "stop-resume"
             var resumeEnvelope: AgentBridgeResumeRequest? = null
             val manifest=AgentBridgeCodec.decode(original.export.manifestCanonical) as AgentBridgeArtifactManifest
             val hostReceipts=manifest.artifacts.map { nativeHostCommit(it,request,original.export.manifestCanonical,mode=="complete-bad-input") }.toMutableList()
@@ -896,7 +932,14 @@ class AgentBridgeNativeConfigurationReaderTest {
 
             if (resumedPrefix || mode == "rewind") planner.withRetainedCaptureContext(request) { context ->
                 context.begin(); context.preserveTransferFrontier(); context.recordAcknowledgedTransferPartition(0)
-                if (mode == "complete-resume") resumeEnvelope = resumeRequest(request, original, context.preserveTransferFrontier())
+                if (mode == "complete-resume" || mode == "stop-resume") resumeEnvelope = resumeRequest(request, original, context.preserveTransferFrontier())
+            }
+            var priorCompletion: AgentBridgeExecutionReceipt? = null
+            if (mode == "stop-complete") planner.withRetainedCaptureContext(request) { context ->
+                context.begin(); context.preserveTransferFrontier()
+                original.partitions.forEach { context.recordAcknowledgedTransferPartition(it.index) }
+                hostReceipts.forEach { context.recordHostCommit(it) }
+                priorCompletion = context.preserveCompletion()
             }
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
             val channel = mockk<DirectSecureChannel>(relaxed = true)
@@ -929,8 +972,34 @@ class AgentBridgeNativeConfigurationReaderTest {
                 original.export.totalByteCount.toLong() + if (mode == "bad-final") 1 else 0, original.partitions.last().sha256))
             if(completion)hostReceipts.forEach { keepalives(); responses += ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("commit_receipt",it)) }
             val expectedPongs = if (keepalive) responses.count { (it as? ReceivedAgentBridgePayload.Base)?.envelope?.type == "ping" } else 0
+            val plan = request.plan as AgentBridgeGeneratedPlan
+            val stopRequest = AgentBridgeCancelRequest(request.approval.approvalId, plan.authorityReferences.native.authorityId,
+                if (mode == "stop-foreign") java.util.UUID.randomUUID().toString() else request.jobId, plan.intent.peer,
+                original.export.requestSha256, "healthmd.agent_cancel_request", 1)
+            if (stopTransfer) {
+                val target = when (mode) {
+                    "stop-chunk" -> "transfer_chunk_acknowledgement"
+                    "stop-partition" -> "transfer_partition_acknowledgement"
+                    "stop-final" -> "transfer_final_acknowledgement"
+                    "stop-host" -> "commit_receipt"
+                    else -> "transfer_disposition"
+                }
+                val pending = responses.toMutableList()
+                val index = pending.indexOfFirst { when (it) {
+                    is ReceivedAgentBridgePayload.Base -> it.envelope.type == target
+                    is ReceivedAgentBridgePayload.Agent -> it.message.type == target
+                    else -> false
+                } }
+                check(index >= 0)
+                pending.add(index, ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("cancel_request", stopRequest)))
+                responses.clear(); responses.addAll(pending)
+            }
+            var stopReceived = false
+            var finalNativeRead: (() -> Unit)? = null
             every { channel.sendAgentBridge(any(), any(), any()) } answers {
-                thirdArg<() -> Unit>()(); agent += firstArg<AgentBridgeMessage>(); thirdArg<() -> Unit>()()
+                thirdArg<() -> Unit>()()
+                if (mode == "stop-write-failure" && firstArg<AgentBridgeMessage>().type == "execution_receipt") throw java.io.IOException("synthetic stop write failure")
+                agent += firstArg<AgentBridgeMessage>(); thirdArg<() -> Unit>()()
             }
             every { channel.sendV2ForAgentBridge(any(), any<kotlinx.serialization.SerializationStrategy<Any>>(), any<Any>(), any(), any()) } answers {
                 if (mode == "keepalive-write-revoke" && firstArg<String>() == "pong") lifecycle.stop()
@@ -955,10 +1024,13 @@ class AgentBridgeNativeConfigurationReaderTest {
                 secondArg<() -> Unit>()()
                 val result = responses.pollFirst() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
                 if (mode == "revoke" || mode == "keepalive-revoke") lifecycle.stop()
+                if ((result as? ReceivedAgentBridgePayload.Agent)?.message?.type == "cancel_request") stopReceived = true
                 secondArg<() -> Unit>()(); result
             }
-            var finalNativeRead: (() -> Unit)? = null
-            val reconnect = ownedPlanner(f, lifecycle, channel, beforeNativeRead = { finalNativeRead?.invoke() })
+            val reconnect = ownedPlanner(f, lifecycle, channel, beforeNativeRead = {
+                if (mode == "stop-read-revoked" && stopReceived) throw AssertionError("Source stop reentered unavailable read configuration")
+                finalNativeRead?.invoke()
+            })
             val job = f.store.access { it!!.state.acceptedJobs!!.single() }
             val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256)
             completionDirectory=directory
@@ -974,6 +1046,45 @@ class AgentBridgeNativeConfigurationReaderTest {
                 if (!publicationInterrupted && count == 1L) {
                     publicationInterrupted = true; throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
                 }
+            }
+            if (stopTransfer) {
+                var stopped = false
+                var failure: Throwable? = null
+                try {
+                    if (mode == "stop-resume") reconnect.sendResumedExecutionExport(requireNotNull(resumeEnvelope), manager, renderer = forbidden)
+                    else if (completion) reconnect.sendExecutionExport(request, manager, true, forbidden)
+                    else reconnect.sendTransferExport(request, manager, true, forbidden)
+                } catch (caught: Throwable) { failure = caught; stopped = (caught as? AgentBridgeException)?.code == AgentBridgeErrorCode.CANCELLED }
+                assertThat(stopReceived).isTrue()
+                val unsafe = mode == "stop-foreign" || mode == "stop-write-failure"
+                if (unsafe) {
+                    assertThat(failure).isNotNull(); verify(atLeast = 1) { channel.close() }
+                    assertThat(agent.none { it.type == "execution_receipt" }).isTrue()
+                    val writes = agent.size + base.size + chunks.size
+                    try { reconnect.sendTransferExport(request, manager, true, forbidden); throw AssertionError("Abandoned owner revived") }
+                    catch (_: AgentBridgeException) { assertThat(agent.size + base.size + chunks.size).isEqualTo(writes) }
+                    if (mode == "stop-foreign") assertThat(f.store.access { it!!.state.cancellationIntents.orEmpty() }).isEmpty()
+                } else {
+                    if (mode == "stop-complete") { assertThat(failure).isNull(); assertThat(stopped).isFalse() }
+                    else { assertThat(stopped).isTrue(); assertThat(currentCoroutineContext().job.isActive).isTrue() }
+                    val receipt = agent.last().payload as AgentBridgeExecutionReceipt
+                    assertThat(receipt.sourceAcknowledged).isTrue()
+                    assertThat(receipt.requestSha256).isEqualTo(original.export.requestSha256)
+                    assertThat(receipt.status).isEqualTo(if (priorCompletion != null) priorCompletion!!.status else AgentBridgeExecutionReceiptStatus.CANCELLED)
+                    val expectedCount = if (mode == "stop-resume") 1 else if (mode in listOf("stop-complete", "stop-final", "stop-host")) original.partitions.size else 0
+                    assertThat(receipt.committedPartitionCount).isEqualTo(expectedCount)
+                    if (priorCompletion != null) assertThat(receipt).isEqualTo(priorCompletion)
+                    verify(exactly = 0) { channel.close() }
+                    val stateFile = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+                    val beforeReplay = Files.readAllBytes(stateFile)
+                    val pendingReads = responses.size
+                    reconnect.handleAndSend(AgentBridgeCodec.encodeEnvelope(AgentBridgeMessage("cancel_request", stopRequest), nativeNegotiation()), currentCoroutineContext().job)
+                    assertThat(agent.last().payload).isEqualTo(receipt)
+                    assertThat(Files.readAllBytes(stateFile)).isEqualTo(beforeReplay)
+                    assertThat(responses.size).isEqualTo(pendingReads)
+                }
+                coVerify(exactly = 2) { client.aggregate(any()) }
+                return@withNativeExportPreparation
             }
             val fails = (completion && mode !in setOf("complete", "complete-resume", "complete-keepalive")) || mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication", "keepalive-revoke", "keepalive-write-revoke")
             try {
