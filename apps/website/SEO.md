@@ -78,8 +78,30 @@ for the separate campaign infrastructure. This tool does not verify its producti
 tokens or install reporting. Index coverage and Google-selected canonicals also
 require a separate Search Console inspection before visualization consolidation.
 
+## Visualization canonical URLs
+
+Each chart uses its existing category plus `theme-colors` route as the search
+representative. Palette and all-data preview routes retain their exact share URLs,
+rendering and copyable blocks. Their HTML canonical and structured-data URL point
+to the representative; the customizer keeps that canonical when the palette or
+data filter changes. Only representatives appear in the visualization sitemap block.
+No variant is redirected, blocked in robots.txt or given a `noindex` directive.
+
+Visualization `lastmod` is omitted until a reliable per-page source modification
+date is available. Do not substitute the build date. Before changing representative
+paths, inspect actual Search Console page performance and sampled Google-selected
+canonicals; preserve relevant existing paths. Canonical declarations are preferences,
+and neither index selection nor improved traffic is guaranteed.
+
+After generator changes, run `npm run visualizations:seo:source` to synchronize
+the checked-in previews and sitemap, then `npm test` and `npm run build:ci`.
+The regression test checks every generated variant, sitemap membership, source
+artifact parity and the customizer's canonical versus share URL behavior.
+
 ## API references
 
 - [Accessible sites and permission levels](https://developers.google.com/webmaster-tools/v1/sites/list)
 - [Search Analytics requests, dimensions and pagination](https://developers.google.com/webmaster-tools/v1/searchanalytics/query)
 - [Data limitations and daily extraction guidance](https://developers.google.com/webmaster-tools/v1/how-tos/all-your-data)
+
+- [Google canonical consolidation guidance](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls)
