@@ -1,46 +1,38 @@
 ---
-title: "Programación"
-description: "Ejecuta exportaciones automáticamente con cadencias diarias, semanales o de calendario personalizadas. iOS usa tareas en segundo plano y una notificación local de recuperación cuando los datos protegidos no están disponibles."
+title: "Programar exportaciones de Apple Health y resolver ejecuciones omitidas"
+description: "Verifica una exportación programada, entiende los días completos y recupera fechas pendientes. La hora de iOS no está garantizada; Reintentar usa los ajustes actuales."
 ---
 
-## La pestaña Programar
-<p>Es una pantalla de estado, no un panel de ajustes. Te muestra de un vistazo:</p>
-<ul>
-<li>Si la programación está activada o desactivada</li>
-<li>La próxima ejecución programada, si existe</li>
-<li>El resultado de la última ejecución</li>
-</ul>
-<p>Un botón, <em>Configurar programación</em> o <em>Gestionar programación</em>, abre la vista de detalles.</p>
+Esta página describe la programación en iPhone. Android tiene otros permisos en segundo plano y requisitos de compra; consulta [Automatización en Android](/es/docs/android/).
 
-## Ajustes de programación
-<div class="options">
-<div class="option"><strong>Activar exportaciones programadas</strong><p>Interruptor principal en la parte superior. Cuando está desactivado, no hay ejecuciones en segundo plano ni notificaciones.</p></div>
-<div class="option"><strong>Frecuencia</strong><p>Diaria, semanal o personalizada. Las programaciones personalizadas se repiten cada N días, semanas o meses desde una fecha inicial. El intervalo retrospectivo determina cuántos días completos incluye cada ejecución.</p></div>
-<div class="option"><strong>Hora</strong><p>Hora y minuto. iOS lo trata como una indicación, no como una garantía; consulta el aviso de limitaciones más abajo.</p></div>
-</div>
+## Verifica la primera exportación programada
 
-## Historial de exportaciones
-<p>La lista en la parte inferior de la pantalla Programar registra cada ejecución programada con su resultado. Toca una fila para ver los detalles. Las ejecuciones fallidas incluyen un botón <em>Reintentar</em> que vuelve a ejecutar ese intervalo con los ajustes y el destino configurados actualmente, y luego registra una nueva fila del historial.</p>
+1. Activa el perfil previsto. Revisa métricas, formatos, nivel de detalle, modo de escritura y destino. Exporta manualmente un día completo y comprueba el archivo guardado o el resultado del endpoint antes de automatizar.
+2. Abre Programar y Configurar programación o Gestionar programación. Actívala, elige Diaria, Semanal o Personalizada, establece la hora y empieza con un día completo de retrospectiva. Permite las notificaciones si quieres recordatorios locales de recuperación.
+3. Comprueba el estado, la próxima ejecución y el último resultado. Tras un intento, revisa el historial y el destino real; una fecha futura o una notificación no demuestra que se hayan escrito datos.
+4. Revisa fechas, unidades, cobertura y datos ausentes. Un archivo guardado no demuestra por sí solo una captura completa.
 
-## Cómo funciona realmente la programación en iOS
-<div class="doc-diagram">
-  <div class="flow-steps" aria-label="Flujo de respaldo de exportación programada">
-    <span><strong>1. Hora objetivo</strong>Health.md pide a iOS que active la app cerca de la hora que elegiste.</span>
-    <span><strong>2. Intento en segundo plano</strong>Si el dispositivo está disponible, iOS ejecuta una tarea de actualización en segundo plano.</span>
-    <span><strong>3. Respaldo si está bloqueado</strong>Si HealthKit no está disponible, Health.md publica una notificación.</span>
-    <span><strong>4. Toca para terminar</strong>Al abrir la notificación, la app puede leer HealthKit y exportar.</span>
-  </div>
-</div>
+En Apple, una solicitud programada que exporta al menos una fecha comparte las cinco acciones gratuitas con las exportaciones manuales y otras acciones contabilizadas. Full Access elimina ese límite compartido. Consulta [Desbloqueo y compras](/es/docs/paywall/).
 
-<div class="callout">
-<strong>Limitaciones de iOS que conviene conocer.</strong>
-<p style="margin-top:6px;">Los datos de HealthKit no se pueden leer mientras el dispositivo está bloqueado. Las exportaciones programadas se ejecutan mediante <code>BGAppRefreshTask</code>, que iOS programa de forma oportunista según los patrones de uso: la hora configurada es un objetivo, no un contrato. Como respaldo, la app publica una notificación local a la hora programada si el dispositivo está bloqueado; tócala para ejecutar la exportación.</p>
-</div>
-<ul>
-<li>La hora programada es aproximada. iOS puede ejecutar la tarea antes, después u omitirla si el dispositivo está sin batería o desconectado.</li>
-<li>Las exportaciones programadas funcionan mejor cuando el teléfono suele estar conectado y desbloqueado aproximadamente a la misma hora cada día.</li>
-<li>Si la exportación falla porque el dispositivo estaba bloqueado, toca la notificación; eso ejecuta la exportación con acceso a HealthKit.</li>
-</ul>
+## Entiende el intervalo de días completos
+
+Las frecuencias diaria, semanal y personalizada pueden tener un intervalo retrospectivo. La personalizada se repite cada N días, semanas o meses desde la fecha inicial. Cada nueva ejecución vuelve a exportar todo el intervalo de días completos, incluso fechas exportadas antes. Tres días incluyen ayer y los dos días anteriores; si la ejecución se retrasa, el intervalo sigue anclado al día programado.
+
+La actualización de hoy es independiente y no sustituye ese intervalo. Revisa rutas y modo de escritura antes de solapar exportaciones; no sumes instantáneas diarias repetidas como mediciones nuevas.
+
+## Elige la recuperación correcta
+
+- **Recuperación programada pendiente:** desbloquea el iPhone, abre Health.md y revisa el intento pendiente. Conserva las fechas exactas sin resolver, los ajustes guardados y el destino. Los días completados siguen completados; recuperar no amplía el intervalo.
+- **Reintentar desde el historial:** inicia otra ejecución para ese intervalo con los ajustes y el destino actuales y crea una nueva fila. Comprueba la configuración activa antes de pulsar Reintentar. No equivale a reanudar un intento pendiente congelado.
+- **Destino cambiado o inaccesible:** restablece el acceso o revisa el perfil pendiente. Una recuperación API anterior del iPhone no debe adoptar silenciosamente otro endpoint o credencial. No inicies reintentos nuevos repetidamente mientras el original siga pendiente.
+
+Consulta las reglas de recuperación, identidad y destino en [Perfiles de exportación](/es/docs/export-profiles/).
+
+## Qué garantiza iOS y qué no
+
+La hora elegida es un objetivo, no una hora de finalización garantizada. iOS controla la ejecución en segundo plano y el bloqueo puede impedir leer HealthKit. Las solicitudes y notificaciones silenciosas no evitan esa protección.
+
+Los avisos locales requieren permiso y no garantizan la entrega a la hora objetivo. Si llega uno, desbloquea el dispositivo y ábrelo para intentar recuperar. Si no llega, abre Health.md y revisa pendientes e historial. Comprueba el resultado: una alerta o el tiempo transcurrido no demuestran el éxito.
 
 ## Control programático
 <p>Puedes activar o desactivar la programación desde Shortcuts con el intent <em>Turn Scheduled Export On or Off</em>. <a href="/es/docs/shortcuts/">Consulta Shortcuts</a> para ver ejemplos.</p>
