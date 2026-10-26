@@ -109,6 +109,7 @@
       "exportGuide": "Choose an export workflow",
       "csvGuide": "Export to CSV",
       "obsidianGuide": "Add health data to Obsidian",
+      "starterVault": "Try the free starter vault",
       "androidGuide": "Export from Health Connect",
       "scheduleGuide": "Set up scheduled exports",
       "aiGuide": "Choose an AI workflow"

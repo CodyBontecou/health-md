@@ -43,6 +43,7 @@ function sanitizeRenderedMarkdown(html) {
       '*': ['class', 'id', 'role', 'title'],
       a: ['href', 'rel', 'target'],
       audio: ['controls', 'preload', 'src'],
+      div: ['aria-label', 'tabindex'],
       img: ['alt', 'decoding', 'height', 'loading', 'sizes', 'src', 'srcset', 'width'],
       source: ['src', 'srcset', 'type'],
       video: ['controls', 'height', 'poster', 'preload', 'src', 'width'],
