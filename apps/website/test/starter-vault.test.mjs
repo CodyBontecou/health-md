@@ -102,6 +102,40 @@ test('committed archive is reproducible and the existing blog exposes its downlo
   assert.match(blog, /fixed sample snapshots/);
 });
 
+test('public starter previews match the generated daily notes and weekly review', async () => {
+  const post = await fs.readFile(path.join(ROOT, 'content/blog/export-apple-health-data-to-obsidian.md'), 'utf8');
+  const cards = [...post.matchAll(/<section class="starter-preview-card">([\s\S]*?)<\/section>/g)].map(match => match[1]);
+  const daily = cards.find(card => card.includes('One daily note'));
+  assert.ok(daily, 'daily preview exists');
+  const date = daily.match(/From Health\/(\d{4}-\d{2}-\d{2})\.md/)?.[1];
+  assert.ok(date, 'daily preview identifies its source file');
+  const day = matter(text(`Health/${date}.md`)).data;
+  assert.ok(daily.includes(`<dt>Steps</dt><dd>${day.steps.toLocaleString('en-US')}</dd>`));
+  assert.ok(daily.includes(`<dt>Sleep</dt><dd>${day.sleep_total_hours} hours</dd>`));
+  assert.ok(daily.includes(`<dt>Resting heart rate</dt><dd>${day.resting_heart_rate} bpm</dd>`));
+
+  const displayed = [...post.matchAll(/^\| (\d{4}-\d{2}-\d{2}) \| (\d+) \| ([\d.]+) \| (\d+) \|$/gm)];
+  assert.equal(displayed.length, 3, 'all visible log rows are checked');
+  for (const [, sourceDate, steps, sleep, heart] of displayed) {
+    const source = matter(text(`Health/${sourceDate}.md`)).data;
+    assert.equal(Number(steps), source.steps, `${sourceDate}: steps`);
+    assert.equal(Number(sleep), source.sleep_total_hours, `${sourceDate}: sleep hours`);
+    assert.equal(Number(heart), source.resting_heart_rate, `${sourceDate}: heart rate`);
+  }
+
+  const weekly = cards.find(card => card.includes('A completed weekly review'));
+  assert.ok(weekly, 'weekly preview exists');
+  const { data: range } = matter(text('Reviews/2026-10-19 Weekly review.md'));
+  const start = range.week_start.toISOString().slice(0, 10);
+  const end = range.week_end.toISOString().slice(0, 10);
+  const days = DAYS.filter(day => day.date >= start && day.date <= end);
+  const steps = summarize(days, 'steps'), sleep = summarize(days, 'sleep_total_hours');
+  assert.ok(weekly.includes(`<strong>${steps.sum.toLocaleString('en-US')} steps</strong>`));
+  assert.ok(weekly.includes(`<strong>${sleep.average.toFixed(2)} hours</strong>`));
+  assert.equal(steps.count, sleep.count, 'shared coverage claim requires equal observation counts');
+  assert.ok(weekly.includes(`${steps.count} of ${days.length} days observed`));
+});
+
 test('external plugin can parse all samples and resolve chart metrics without filling missing values', {
   skip: !process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO && 'Set HEALTHMD_OBSIDIAN_PLUGIN_REPO to verify against the external consumer',
 }, async () => {
