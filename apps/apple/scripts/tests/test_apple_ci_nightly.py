@@ -61,8 +61,9 @@ class NightlyWorkflowTests(unittest.TestCase):
         suite = step(self.mac, "Run macOS unit tests with coverage")
         self.assertIn("timeout-minutes: 45", suite)
         self.assertNotIn("continue-on-error", suite)
-        makefile = (REPO / "apps/apple/Makefile").read_text()
-        coverage = makefile.split("\ncoverage:", 1)[1].split("\ncoverage-report:", 1)[0]
+        coverage = subprocess.run(
+            ["make", "-n", "coverage", "CORE_RUST_PREPARE=:", "TEST_FILTER="],
+            cwd=REPO / "apps/apple", check=True, capture_output=True, text=True).stdout
         self.assertIn("-scheme HealthMd-Tests-macOS", coverage)
         self.assertIn("-enableCodeCoverage YES", coverage)
         self.assertNotIn("-only-testing", coverage)
