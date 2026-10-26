@@ -3,7 +3,7 @@ title: "How to export Apple Health data to Obsidian."
 description: "Export Apple Health to Obsidian with Health.md: choose a vault, preview one day, and merge health metrics into daily notes or query frontmatter in Bases."
 lead: "Health.md writes selected Apple Health data into your Obsidian vault as Markdown or Bases-ready frontmatter. Choose a folder, preview one day, then export a separate health note or update an existing daily note."
 date: "2026-06-13"
-updated: "2026-10-25"
+updated: "2026-10-26"
 verified: "2026-10-25"
 verified_by: "Codex (agent)"
 verified_method: mixed
@@ -23,6 +23,14 @@ tags:
 </figure>
 
 Use Health.md when you want steps, sleep, heart metrics, or workouts beside your journal and training notes. You select the health data and destination; this Obsidian folder workflow does not create a Health.md server copy of your health data.
+
+## Try a free starter vault first
+
+[Download the free Obsidian starter vault](/assets/downloads/healthmd-obsidian-starter.zip) to explore the workflow before connecting any health data. It includes 28 fictional daily notes, three chart snapshots, a sortable Bases log, a completed weekly review, and reusable review and reflection templates. No purchase or community plugin is needed to explore it.
+
+Unzip the download, choose **Open folder as vault** in Obsidian, and select **Health.md Starter**. Start with **Start here**. Use Obsidian 1.12 or later; enable the built-in Bases plugin for the log. The chart images are fixed sample snapshots. An included guide explains optional interactive charts using the separately installed Health.md Visualizations plugin.
+
+All sample measurements and journal entries are made up. When you are ready for your own data, follow the vault's **Use your own data** guide to keep the fictional files separate from real exports. The starter is free; the Health.md exporter has its own [trial and purchase terms](/about/#key-facts).
 
 ## Before you start
 

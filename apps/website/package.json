@@ -7,6 +7,8 @@
     "build": "npm run docs:install && npm run build:ci",
     "build:ci": "npm run three:bundle && npm run i18n:check && npm run docs:build && node scripts/build-site.mjs && npm run visualizations:seo && npm run site:check",
     "blog:build": "node scripts/build-blog.mjs --output dist",
+    "starter-vault:build": "node scripts/build-starter-vault.mjs",
+    "starter-vault:check": "node scripts/build-starter-vault.mjs --check",
     "test": "node --test",
     "three:bundle": "node scripts/build-three-hero.mjs",
     "site:check": "node scripts/check-site-links.mjs && node scripts/check-built-locales.mjs && node scripts/check-agent-surfaces.mjs && node scripts/check-public-privacy.mjs",
