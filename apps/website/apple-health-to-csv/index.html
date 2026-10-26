@@ -27,6 +27,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/app-icon/icon_180x180.png">
   <link rel="stylesheet" href="/assets/landing.css">
   <link rel="stylesheet" href="/assets/about.css">
+  <link rel="stylesheet" href="/assets/export-proof.css">
 
   <script type="application/ld+json">
   {
@@ -91,7 +92,7 @@
   }
   </script>
 </head>
-<body class="about-page">
+<body class="about-page csv-page">
   <a class="skip-link" href="#csv-content">Skip to CSV guide</a>
 
   <header class="site-header">
@@ -111,7 +112,8 @@
 
   <main class="about-main" id="csv-content">
     <section class="about-hero" aria-labelledby="csv-title">
-      <div class="about-hero-inner">
+      <div class="about-hero-inner csv-hero-grid">
+        <div class="csv-hero-copy">
         <p class="about-eyebrow">Apple Health → CSV</p>
         <h1 id="csv-title">Export Apple Health to CSV</h1>
         <p class="about-value-prop"><strong>Export selected Apple Health data to CSV for Excel, Google Sheets, or Numbers. Choose metrics and dates, preview the output, and save it to your own folder.</strong></p>
@@ -121,6 +123,27 @@
             <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
           </a>
         </div>
+        <p class="csv-jump-link"><a href="#how-it-works">Follow your first CSV export <span aria-hidden="true">↓</span></a></p>
+        </div>
+        <aside class="csv-sample-card" aria-labelledby="sample-title">
+          <p class="section-kicker">Try the output first</p>
+          <h2 id="sample-title">A file you can open today.</h2>
+          <p>Selected rows from our synthetic daily export. All values are fictional.</p>
+          <div class="csv-file-label"><span aria-hidden="true">▤</span> summary-day.csv <span>March 15, 2026</span></div>
+          <div class="csv-table-wrap" role="region" aria-label="Selected synthetic CSV rows" tabindex="0">
+            <table>
+              <caption>Three rows from the downloadable sample</caption>
+              <thead><tr><th scope="col">Metric</th><th scope="col">Value</th><th scope="col">Unit</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Steps</th><td>12500</td><td>count</td></tr>
+                <tr><th scope="row">Walking Running Distance</th><td>9500.0</td><td>meters</td></tr>
+                <tr><th scope="row">Total Duration (sleep)</th><td>27900.0</td><td>seconds</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <a class="proof-button" href="/docs/reference/generated/core/summary-day.csv" download>Download sample CSV <span aria-hidden="true">↓</span></a>
+          <p class="csv-sample-note">No app or health permissions needed. The full CSV includes category, date, metadata, and timestamp fields. <a href="#whats-inside">See the row format</a>.</p>
+        </aside>
       </div>
     </section>
 
@@ -160,7 +183,8 @@
 
         <section class="about-section" id="how-it-works">
           <p class="section-kicker">How it works</p>
-          <h2>Metrics, dates, export</h2>
+          <h2>Your first CSV, from selection to saved file</h2>
+          <p class="section-lede">Start with one date you can check in Apple Health. Follow the <a href="/docs/iphone-first-export/">first-export screenshot walkthrough</a> if you are setting up Health permissions or a destination for the first time.</p>
           <figure class="guide-screen">
             <img src="/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-formats-and-daily-notes.png" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md export settings with a date range and switches for Markdown, Obsidian Bases, JSON, and CSV.">
             <figcaption>The CSV switch is in Export Formats. This screenshot shows it off; enable CSV for your spreadsheet export. Your metric count and available options may differ.</figcaption>
@@ -181,6 +205,11 @@
               <h3>Open it anywhere</h3>
               <p>Enable CSV, choose a writable folder in Files, and tap Export Data. Review the result, open the folder, and import one generated file into your spreadsheet.</p>
             </div>
+          </div>
+          <div class="csv-result-check">
+            <h3>Find the file you just saved</h3>
+            <p>After Export Data finishes, review the written, skipped, or failed files. Open <strong>Files → Browse</strong> and the folder you selected in Health.md. Find the CSV for your chosen date; daily exports write separate files for separate dates.</p>
+            <p>A successful Preview checks the output, not the file write. If the folder is empty, check the export result and <a href="/docs/folder-vault/">reselect a writable destination</a> before trying again.</p>
           </div>
         </section>
 
@@ -260,6 +289,14 @@
               <p>CSV row contracts, fixtures, and the full export reference. <a href="/docs/format/">Export format reference</a></p>
             </div>
           </div>
+        </section>
+
+        <section class="about-section csv-final-action" aria-labelledby="csv-next-title">
+          <p class="section-kicker">Make it your own</p>
+          <h2 id="csv-next-title">Open a sample. Export one day.</h2>
+          <p>Once the sample fits your spreadsheet, use Health.md to export your own selected metrics. Start with one day, verify the values, then choose a longer range.</p>
+          <a class="proof-button" href="https://apps.apple.com/us/app/health-md/id6757763969">Try a CSV export on iPhone <span aria-hidden="true">↗</span></a>
+          <p>5 free export actions, then one lifetime purchase. Prefer a journal? <a href="/blog/export-apple-health-data-to-obsidian/#starter-vault">Explore the free Obsidian starter vault</a>.</p>
         </section>
 
         <section class="about-section faq-section" id="frequently-asked-questions">
