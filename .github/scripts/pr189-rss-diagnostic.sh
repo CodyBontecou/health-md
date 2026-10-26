@@ -22,7 +22,7 @@ run_cases() {
       -derivedDataPath build/pr189-rss-derived \
       -destination "platform=macOS,arch=$(uname -m)" \
       -enableCodeCoverage YES \
-      -only-testing:HealthMdTests/ConnectedCorpusPartitionFileTests \
+      -only-testing:HealthMdTests/ConnectedCorpusPartitionFileTests/testStreamableDecoderMapsLargeProductionHealthDayDataWithoutItemSizedRSSCopy \
       -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
       -maximum-test-execution-time-allowance 300 \
       CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
@@ -36,6 +36,7 @@ run_cases() {
     echo "$phase iteration=$iteration exit=$status" | tee -a "$out/outcomes.txt"
   done
 }
+# Isolate the original production-model case before earlier class tests can warm allocators.
 run_cases original
 git apply --check ../../.github/scripts/pr189-rss-diagnostic.patch
 git apply ../../.github/scripts/pr189-rss-diagnostic.patch
