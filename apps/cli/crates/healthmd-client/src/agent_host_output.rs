@@ -149,6 +149,7 @@ pub(crate) struct OutputAdmission {
     request: ExecuteRequest,
     started_at: UtcTimestamp,
     accepted: Option<ExecutionReceipt>,
+    cancellation: Option<v4::CancelRequest>,
     attempt_name: String,
     attempt_bytes: Vec<u8>,
 }
@@ -181,7 +182,8 @@ impl OutputAdmission {
         crate::limits::ensure_available_space(&store.path, 2 * MAX_OUTPUT_BYTES as u64)?;
         let started_at = clock.now();
         started_at.validate_shape()?;
-        let attempt_bytes = execution_attempt_bytes(&store.host, request, &started_at, None, &key)?;
+        let attempt_bytes =
+            execution_attempt_bytes(&store.host, request, &started_at, None, None, &key)?;
         let attempt_name = format!("attempt-{}.json", request.job_id.0);
         private::publish(&dir, &attempt_name, &attempt_bytes, true, || async {
             fence().await?;
@@ -198,6 +200,7 @@ impl OutputAdmission {
             request: request.clone(),
             started_at,
             accepted: None,
+            cancellation: None,
             attempt_name,
             attempt_bytes,
         };
@@ -227,6 +230,7 @@ impl OutputAdmission {
             &self.request,
             &self.started_at,
             Some(accepted),
+            None,
             &self.key,
         )?;
         private::publish(&self.dir, &self.attempt_name, &bytes, false, || async {
@@ -242,6 +246,80 @@ impl OutputAdmission {
         // The local exact-byte/root/held-lock proof follows every delaying callback.
         self.require_current()
     }
+    /// Stop needs the exact original accepted owner/key/trust, not renewed export permission.
+    pub async fn require_stop_current<F, Fut>(
+        &self,
+        clock: &dyn PlanningClock,
+        mut fence: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        let accepted = self.accepted.as_ref().ok_or(Error::BindingChanged)?;
+        validate_accepted(&self.request, accepted, clock)?;
+        self.require_current()?;
+        fence().await?;
+        // Key loss/rotation in the delaying trust callback must reject this very
+        // pre-write fence, not merely a later post-transmission check.
+        let key = key_bytes(
+            &self
+                .store
+                .protected_key
+                .load_existing(&self.store.host)
+                .await?,
+        )?;
+        if !healthmd_protocol::crypto::constant_time_equal(
+            key.expose_secret(),
+            self.key.expose_secret(),
+        ) {
+            return Err(ClientError::AgentAuthorityUnavailable);
+        }
+        validate_accepted(&self.request, accepted, clock)?;
+        self.require_current()
+    }
+
+    /// Save pending intent before transmission; never authorizes recapture or terminal output.
+    pub async fn persist_cancellation<F, Fut>(
+        &mut self,
+        clock: &dyn PlanningClock,
+        fence: F,
+    ) -> Result<v4::CancelRequest, ClientError>
+    where
+        F: FnMut() -> Fut + Copy,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        self.require_stop_current(clock, fence).await?;
+        if self.cancellation.is_some() {
+            return Err(Error::BindingChanged.into());
+        }
+        let request = v4::CancelRequest {
+            schema: v4::CancelRequestSchema::HealthmdAgentCancelRequest,
+            schema_version: 1,
+            approval_id: self.request.approval.approval_id.clone(),
+            authority_id: self.request.approval.authority_id.clone(),
+            job_id: self.request.job_id.clone(),
+            peer: self.request.plan.intent.peer.clone(),
+            request_sha256: v4::document_digest(&self.request)?,
+        };
+        request.validate_shape()?;
+        let bytes = execution_attempt_bytes(
+            &self.store.host,
+            &self.request,
+            &self.started_at,
+            self.accepted.as_ref(),
+            Some(&request),
+            &self.key,
+        )?;
+        private::publish(&self.dir, &self.attempt_name, &bytes, false, || async {
+            self.require_stop_current(clock, fence).await
+        })
+        .await?;
+        self.attempt_bytes = bytes;
+        self.cancellation = Some(request.clone());
+        self.require_stop_current(clock, fence).await?;
+        Ok(request)
+    }
     pub fn require_current(&self) -> Result<(), ClientError> {
         self.store.directory()?;
         private::require_named_file(&self.dir, OUTPUT_LOCK, &self.lock)?;
@@ -255,7 +333,10 @@ impl OutputAdmission {
     }
     pub fn bind(self, binding: &NativeBinding) -> Result<OutputTransaction, ClientError> {
         self.require_current()?;
-        if self.request != binding.request || self.accepted.as_ref() != Some(&binding.accepted) {
+        if self.cancellation.is_some()
+            || self.request != binding.request
+            || self.accepted.as_ref() != Some(&binding.accepted)
+        {
             return Err(Error::BindingChanged.into());
         }
         OutputTransaction::load_locked(&self.store, binding, self.dir, self.lock, self.key)
@@ -263,23 +344,34 @@ impl OutputAdmission {
 }
 
 // Version 1 remains the immutable pre-send intent. Version 2 additionally binds the
-// original authenticated acceptance; older attempt-only owners cannot treat it as output.
+// original authenticated acceptance. Version 3 adds exact pending cancellation intent;
+// no version is a terminal receipt or new permission to produce output.
 fn execution_attempt_bytes(
     host: &ControlUuid,
     request: &ExecuteRequest,
     started_at: &UtcTimestamp,
     accepted: Option<&ExecutionReceipt>,
+    cancellation: Option<&v4::CancelRequest>,
     key: &SecretBox<[u8; 32]>,
 ) -> Result<Vec<u8>, ClientError> {
-    let mut attempt = serde_json::json!({"schema":"healthmd.agent_host_execution_attempt","schema_version":if accepted.is_some() {2} else {1},
+    let mut attempt = serde_json::json!({"schema":"healthmd.agent_host_execution_attempt","schema_version":if cancellation.is_some() {3} else if accepted.is_some() {2} else {1},
         "host":host,"request":request,"request_sha256":v4::document_digest(request)?,"started_at":started_at});
     if let Some(accepted) = accepted {
         attempt["accepted_receipt"] =
             serde_json::to_value(accepted).map_err(private::unavailable)?;
     }
+    if let Some(request) = cancellation {
+        if accepted.is_none() {
+            return Err(Error::BindingChanged.into());
+        }
+        attempt["cancellation_request"] =
+            serde_json::to_value(request).map_err(private::unavailable)?;
+    }
     let mut signer =
         Hmac::<Sha256>::new_from_slice(key.expose_secret()).map_err(private::unavailable)?;
-    signer.update(if accepted.is_some() {
+    signer.update(if cancellation.is_some() {
+        b"HealthMd.AgentBridge.HostExecutionAttempt.v3\0"
+    } else if accepted.is_some() {
         b"HealthMd.AgentBridge.HostExecutionAttempt.v2\0"
     } else {
         b"HealthMd.AgentBridge.HostExecutionAttempt.v1\0"

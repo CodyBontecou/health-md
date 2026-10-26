@@ -5,12 +5,30 @@ use crate::agent_planning::PlanningClock as _;
 use hmac::Mac as _;
 use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _};
 use std::sync::{
-    Mutex,
+    Arc, Mutex,
     atomic::{AtomicUsize, Ordering},
 };
 
 #[path = "agent_transfer_tests.rs"]
 mod transfer_tests;
+struct MutableOutputKey(AtomicUsize);
+#[async_trait::async_trait]
+impl crate::agent_host::ProtectedHostKey for MutableOutputKey {
+    async fn load_existing(
+        &self,
+        host: &ControlUuid,
+    ) -> Result<crate::agent_host::ProtectedHostSecret, ClientError> {
+        use base64::Engine as _;
+        match self.0.load(Ordering::SeqCst) {
+            1 => Err(ClientError::AgentAuthorityUnavailable),
+            2 => Ok(crate::agent_host::ProtectedHostSecret::from(
+                base64::engine::general_purpose::STANDARD.encode([42; 32]),
+            )),
+            _ => crate::agent_host::ProtectedHostKey::load_existing(&FakeProtectedKey, host).await,
+        }
+    }
+}
+
 struct AdversarialOutputTrust<'a> {
     inner: &'a dyn CurrentBridgeTrust,
     remaining: AtomicUsize,
@@ -94,6 +112,12 @@ enum OutputCase {
     DropAcceptedBeforeManifest,
     AcceptedOwnerJournalDrift,
     AcceptedOwnerRevokedTrust,
+    HostCancelPending,
+    HostCancelRevokedGrant,
+    HostCancelCorruptPending,
+    HostCancelRevokedTrust,
+    HostCancelKeyRemovedAtSend,
+    HostCancelKeyRotatedAtSend,
     AcceptedJournalCorrupt,
     AcceptedJournalDelete,
     NativeRejection,
@@ -304,6 +328,51 @@ async fn output_peer(
                 }
                 if matches!(
                     case,
+                    OutputCase::HostCancelPending
+                        | OutputCase::HostCancelRevokedGrant
+                        | OutputCase::HostCancelCorruptPending
+                        | OutputCase::HostCancelRevokedTrust
+                        | OutputCase::HostCancelKeyRemovedAtSend
+                        | OutputCase::HostCancelKeyRotatedAtSend
+                ) {
+                    if let Some((ready, _resume)) = admission_gate.take() {
+                        ready.send(()).unwrap();
+                    }
+                    if matches!(
+                        case,
+                        OutputCase::HostCancelPending | OutputCase::HostCancelRevokedGrant
+                    ) {
+                        let Message::CancelRequest(cancel) =
+                            channel.receive_v4(negotiation).await.unwrap().message
+                        else {
+                            panic!("exact original Cancel required before any manifest");
+                        };
+                        assert_eq!(cancel.approval_id, request.approval.approval_id);
+                        assert_eq!(cancel.authority_id, request.approval.authority_id);
+                        assert_eq!(cancel.job_id, request.job_id);
+                        assert_eq!(cancel.peer, request.plan.intent.peer);
+                        assert_eq!(cancel.request_sha256, document_digest(&request).unwrap());
+                        let _ = release.await;
+                    } else {
+                        tokio::select! {
+                            biased;
+                            packet = channel.receive_v4(negotiation) => panic!("unverified Cancel crossed wire: {}", packet.is_ok()),
+                            _ = release => {}
+                        }
+                        assert!(
+                            tokio::time::timeout(
+                                Duration::from_millis(100),
+                                channel.receive_v4(negotiation)
+                            )
+                            .await
+                            .is_err(),
+                            "failed intent/trust proof must send zero frames"
+                        );
+                    }
+                    return;
+                }
+                if matches!(
+                    case,
                     OutputCase::AcceptedBeforeManifest
                         | OutputCase::ExplicitAcceptedBeforeManifest
                         | OutputCase::DropAcceptedBeforeManifest
@@ -383,7 +452,21 @@ async fn output_peer(
 #[allow(clippy::too_many_lines)]
 async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
     let (_temporary, client, saved, peer) = stored_pair(platform).await;
-    let (store, output) = enroll(&client.layout.root, &peer, &now()).await;
+    let mutable_key = Arc::new(MutableOutputKey(AtomicUsize::new(0)));
+    let (store, output) = if matches!(
+        case,
+        OutputCase::HostCancelKeyRemovedAtSend | OutputCase::HostCancelKeyRotatedAtSend
+    ) {
+        enroll_with_key(
+            &client.layout.root,
+            &peer,
+            delegation(&peer, AuthorityReferenceIssuer::AuthorizedHost, &now()),
+            mutable_key.clone(),
+        )
+        .await
+    } else {
+        enroll(&client.layout.root, &peer, &now()).await
+    };
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
     let (release, wait) = oneshot::channel();
@@ -397,6 +480,12 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
             | OutputCase::DropAcceptedBeforeManifest
             | OutputCase::AcceptedOwnerJournalDrift
             | OutputCase::AcceptedOwnerRevokedTrust
+            | OutputCase::HostCancelPending
+            | OutputCase::HostCancelRevokedGrant
+            | OutputCase::HostCancelCorruptPending
+            | OutputCase::HostCancelRevokedTrust
+            | OutputCase::HostCancelKeyRemovedAtSend
+            | OutputCase::HostCancelKeyRotatedAtSend
     )
     .then_some((admission_ready, await_resume));
     let source = tokio::spawn(output_peer(
@@ -517,6 +606,157 @@ async fn check_output_case(platform: PeerPlatform, case: OutputCase) {
     }
     let retry_request = request.clone();
     let host_authority = request.plan.authority_references.host.authority_id.clone();
+    if matches!(
+        case,
+        OutputCase::HostCancelPending
+            | OutputCase::HostCancelRevokedGrant
+            | OutputCase::HostCancelCorruptPending
+            | OutputCase::HostCancelRevokedTrust
+            | OutputCase::HostCancelKeyRemovedAtSend
+            | OutputCase::HostCancelKeyRotatedAtSend
+    ) {
+        let owner = Box::pin(bridge.begin_accepted_execution(&store, request, &clock))
+            .await
+            .unwrap();
+        ready.await.unwrap();
+        let path = client
+            .layout
+            .root
+            .join("agent-host-v1")
+            .join(format!("attempt-{}.json", retry_request.job_id.0));
+        let original = std::fs::read(&path).unwrap();
+        if case == OutputCase::HostCancelRevokedGrant {
+            store
+                .revoke_local(store.revision().await.unwrap(), &host_authority)
+                .await
+                .unwrap();
+        } else if case == OutputCase::HostCancelRevokedTrust {
+            client
+                .trust_store
+                .save(&TrustState::empty(client.identity.installation_id))
+                .await
+                .unwrap();
+        } else if matches!(
+            case,
+            OutputCase::HostCancelKeyRemovedAtSend | OutputCase::HostCancelKeyRotatedAtSend
+        ) {
+            let observe = path.clone();
+            let key = mutable_key.clone();
+            let calls = AtomicUsize::new(0);
+            adversarial_trust.arm_when(
+                move || {
+                    let pending = std::fs::read(&observe)
+                        .ok()
+                        .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+                        .is_some_and(|v| v["attempt"].get("cancellation_request").is_some());
+                    // Readback is first, length-prefix authorization second; mutate
+                    // the current protected key in the payload pre-write callback.
+                    pending && calls.fetch_add(1, Ordering::SeqCst) == 2
+                },
+                move || {
+                    key.0.store(
+                        if case == OutputCase::HostCancelKeyRemovedAtSend {
+                            1
+                        } else {
+                            2
+                        },
+                        Ordering::SeqCst,
+                    );
+                },
+            );
+        } else if case == OutputCase::HostCancelCorruptPending {
+            let observe = path.clone();
+            let corrupt = path.clone();
+            adversarial_trust.arm_when(
+                move || {
+                    std::fs::read(&observe)
+                        .ok()
+                        .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+                        .is_some_and(|v| v["attempt"].get("cancellation_request").is_some())
+                },
+                move || {
+                    std::fs::write(corrupt, b"synthetic corrupted stop intent").unwrap();
+                },
+            );
+        }
+        let pending = owner.request_cancellation().await;
+        if matches!(
+            case,
+            OutputCase::HostCancelPending | OutputCase::HostCancelRevokedGrant
+        ) {
+            let pending = pending.unwrap();
+            assert_eq!(
+                pending.acceptance(),
+                &synthetic_binding(&retry_request, platform).accepted
+            );
+            assert_eq!(pending.request().job_id, retry_request.job_id);
+            let bytes = std::fs::read(&path).unwrap();
+            let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(value["attempt"]["schema_version"], 3);
+            assert_eq!(
+                value["attempt"]["cancellation_request"],
+                serde_json::to_value(pending.request()).unwrap()
+            );
+            assert_eq!(
+                value["attempt"]["accepted_receipt"],
+                serde_json::to_value(pending.acceptance()).unwrap()
+            );
+            assert_eq!(
+                value["attempt"]["started_at"],
+                serde_json::to_value(clock.now()).unwrap()
+            );
+            let mut mac = hmac::Hmac::<sha2::Sha256>::new_from_slice(&[41; 32]).unwrap();
+            mac.update(b"HealthMd.AgentBridge.HostExecutionAttempt.v3\0");
+            mac.update(&canonical_json(&value["attempt"]).unwrap());
+            assert_eq!(value["mac"], format!("{:x}", mac.finalize().into_bytes()));
+            assert_eq!(
+                std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+            assert!(matches!(
+                crate::agent_host::output::OutputAdmission::reserve(
+                    &store,
+                    &retry_request,
+                    &clock,
+                    || async { Ok(output.clone()) }
+                )
+                .await,
+                Err(ClientError::AgentStoreBusy)
+            ));
+            drop(pending);
+            assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        } else {
+            assert!(pending.is_err());
+            if case == OutputCase::HostCancelRevokedTrust {
+                assert_eq!(std::fs::read(&path).unwrap(), original);
+            } else if case == OutputCase::HostCancelCorruptPending {
+                assert_eq!(
+                    std::fs::read(&path).unwrap(),
+                    b"synthetic corrupted stop intent"
+                );
+            } else {
+                assert!(adversarial_trust.action.lock().unwrap().is_none());
+                let value: serde_json::Value =
+                    serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+                assert_eq!(value["attempt"]["schema_version"], 3);
+                assert!(value["attempt"].get("cancellation_request").is_some());
+            }
+        }
+        assert!(
+            !path
+                .with_file_name(format!("output-{}.json", retry_request.job_id.0))
+                .exists()
+        );
+        assert!(
+            !path
+                .with_file_name(format!("completion-{}.json", retry_request.job_id.0))
+                .exists()
+        );
+        assert!(bridge.discover().await.is_err());
+        let _ = release.send(());
+        source.await.unwrap();
+        return;
+    }
     let result = if matches!(
         case,
         OutputCase::ExplicitAcceptedBeforeManifest
@@ -1468,6 +1708,32 @@ async fn accepted_owner_rejects_journal_drift_and_revocation_before_manifest_wai
         for case in [
             OutputCase::AcceptedOwnerJournalDrift,
             OutputCase::AcceptedOwnerRevokedTrust,
+        ] {
+            Box::pin(check_output_case(platform, case)).await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn host_cancel_send_persists_bound_pending_intent_without_terminal_claim() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for case in [
+            OutputCase::HostCancelPending,
+            OutputCase::HostCancelRevokedGrant,
+            OutputCase::HostCancelCorruptPending,
+            OutputCase::HostCancelRevokedTrust,
+        ] {
+            Box::pin(check_output_case(platform, case)).await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn host_cancel_send_rejects_key_removal_or_rotation_in_payload_fence() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for case in [
+            OutputCase::HostCancelKeyRemovedAtSend,
+            OutputCase::HostCancelKeyRotatedAtSend,
         ] {
             Box::pin(check_output_case(platform, case)).await;
         }

@@ -179,6 +179,25 @@ impl<'trust> BridgeSession<'trust> {
     }
 }
 
+/// A durably requested Stop on the original channel. This owner carries no terminal proof.
+/// Dropping it or losing the channel leaves the signed pending intent in place.
+pub struct HostPendingCancellation<'s, 'h, 'trust> {
+    owner: HostAcceptedExecution<'s, 'h, 'trust>,
+    request: v4::CancelRequest,
+}
+impl HostPendingCancellation<'_, '_, '_> {
+    /// Exact requested Stop; transmission does not prove source acknowledgement.
+    #[must_use]
+    pub fn request(&self) -> &v4::CancelRequest {
+        &self.request
+    }
+    /// Original acceptance evidence, which remains distinct from terminal confirmation.
+    #[must_use]
+    pub fn acceptance(&self) -> &ExecutionReceipt {
+        self.owner.acceptance()
+    }
+}
+
 impl<'s, 'h, 'trust> HostAcceptedExecution<'s, 'h, 'trust> {
     /// Source acceptance evidence only; this is not a terminal execution receipt.
     #[must_use]
@@ -199,6 +218,76 @@ impl<'s, 'h, 'trust> HostAcceptedExecution<'s, 'h, 'trust> {
                 result.map_err(|_| ClientError::TimedOut)?
             }
         }
+    }
+
+    /// Durably request Stop and send its exact binding on this original authenticated channel.
+    /// A successful return means pending only, never source-confirmed cancellation.
+    /// # Errors
+    /// Local cancellation, expiry, stale trust/key/journal, or send failure retain no terminal claim.
+    pub async fn request_cancellation(
+        self,
+    ) -> Result<HostPendingCancellation<'s, 'h, 'trust>, ClientError> {
+        let cancellation = self.bridge.cancellation.clone();
+        let timeout = self.bridge.timeout;
+        tokio::select! {
+            biased;
+            () = cancellation.cancelled() => Err(ClientError::WaitCancelled),
+            result = tokio::time::timeout(timeout, Box::pin(self.request_cancellation_inner())) => {
+                result.map_err(|_| ClientError::TimedOut)?
+            }
+        }
+    }
+
+    async fn request_cancellation_inner(
+        mut self,
+    ) -> Result<HostPendingCancellation<'s, 'h, 'trust>, ClientError> {
+        if self.bridge.peer != self.request.plan.intent.peer {
+            return Err(Error::BindingChanged.into());
+        }
+        let trust = self.bridge.trust_fence;
+        let expected = &self.bridge.expected_trust;
+        let selected = self.bridge.requested_device;
+        let cancellation = &self.bridge.cancellation;
+        let fence = || async {
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            trust.require_current(selected, expected).await?;
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            Ok(())
+        };
+        let request = self
+            .admission
+            .persist_cancellation(self.clock, fence)
+            .await?;
+        self.bridge
+            .channel
+            .send_v4_guarded(
+                &Envelope::new(Message::CancelRequest(Box::new(request.clone()))),
+                self.bridge.negotiation,
+                || async {
+                    self.admission
+                        .require_stop_current(self.clock, fence)
+                        .await?;
+                    if cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    Ok(())
+                },
+            )
+            .await?;
+        self.admission
+            .require_stop_current(self.clock, fence)
+            .await?;
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
+        }
+        Ok(HostPendingCancellation {
+            owner: self,
+            request,
+        })
     }
 
     async fn require_current(&self) -> Result<(), ClientError> {
