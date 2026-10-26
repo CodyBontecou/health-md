@@ -202,7 +202,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 stopRequest: {
                     let stop = try rig.service.captureStopRequest(reservation, authenticatedPeer: rig.peer)
                     if mode == "foreign" {
-                        return AgentBridgeCancel(approvalId: stop.approvalId, authorityId: stop.authorityId, jobId: try self.id(99), peer: stop.peer, requestSha256: stop.requestSha256)
+                        return AgentBridgeCancel(approvalId: stop.approvalId, authorityId: stop.authorityId, jobId: try id(99), peer: stop.peer, requestSha256: stop.requestSha256)
                     }
                     return stop
                 }) { _ = try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer) }

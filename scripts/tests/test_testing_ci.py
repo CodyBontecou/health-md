@@ -159,6 +159,20 @@ class CIOrchestrationTests(unittest.TestCase):
                     if step.get("uses", "").startswith("android-actions/setup-android@"):
                         self.assertEqual(step.get("with", {}).get("packages"), "platform-tools")
 
+    def test_practice_browser_cache_is_bound_to_pinned_system_library_abi(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/practice-ci.yml").read_text())["jobs"]
+        validate = jobs["validate"]
+        self.assertEqual(validate["runs-on"], "ubuntu-24.04")
+        cache = next(step["with"] for step in validate["steps"]
+                     if step.get("uses", "").startswith("actions/cache@"))
+        self.assertEqual(cache["path"], "~/.cache/ms-playwright")
+        self.assertEqual(cache["key"], "practice-playwright-ubuntu24-${{ runner.arch }}-${{ hashFiles('apps/practice/package-lock.json') }}")
+        self.assertEqual(cache["restore-keys"], "practice-playwright-ubuntu24-${{ runner.arch }}-")
+        commands = [step.get("run", "") for step in validate["steps"]]
+        self.assertIn("npx playwright install --with-deps chromium firefox webkit", commands)
+        self.assertIn("npm run check:ci", commands)
+        self.assertFalse(any(step.get("continue-on-error") for step in validate["steps"]))
+
     def test_apple_nightly_runs_one_coverage_enabled_macos_suite(self):
         jobs = yaml.safe_load((ROOT / ".github/workflows/apple-nightly.yml").read_text())["jobs"]
         commands = [step.get("run", "") for step in jobs["extended-macos"]["steps"]]

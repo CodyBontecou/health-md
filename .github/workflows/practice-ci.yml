@@ -69,7 +69,8 @@ jobs:
   validate:
     needs: changes
     if: ${{ needs.changes.outputs.run == 'true' }}
-    runs-on: ubuntu-latest
+    # Cached browser binaries must match the system-library ABI of this image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     defaults:
       run:
@@ -94,8 +95,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: practice-playwright-${{ runner.os }}-${{ hashFiles('apps/practice/package-lock.json') }}
-          restore-keys: practice-playwright-${{ runner.os }}-
+          key: practice-playwright-ubuntu24-${{ runner.arch }}-${{ hashFiles('apps/practice/package-lock.json') }}
+          restore-keys: practice-playwright-ubuntu24-${{ runner.arch }}-
 
       - name: Install exact Playwright browser engines and system dependencies
         run: npx playwright install --with-deps chromium firefox webkit
