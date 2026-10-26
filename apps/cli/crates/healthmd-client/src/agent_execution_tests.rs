@@ -1808,3 +1808,6 @@ mod accepted_recovery_tests;
 
 #[path = "agent_stop_confirmation_tests.rs"]
 mod stop_confirmation_tests;
+
+#[path = "agent_confirmation_history_tests.rs"]
+mod confirmation_history_tests;

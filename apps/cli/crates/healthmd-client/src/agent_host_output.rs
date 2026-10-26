@@ -19,6 +19,9 @@ const MAX_OUTPUT_BYTES: usize = private_json::MAX_BYTES;
 #[path = "agent_completion_evidence.rs"]
 mod completion;
 pub(crate) use completion::CompletionEvidence;
+#[path = "agent_source_confirmation.rs"]
+mod source_confirmation;
+pub(crate) use source_confirmation::read_source_confirmation;
 
 #[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]

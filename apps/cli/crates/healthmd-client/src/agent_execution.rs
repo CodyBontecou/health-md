@@ -238,6 +238,22 @@ pub struct HostPendingCancellation<'s, 'h, 'trust> {
 pub struct SourceStopConfirmation {
     receipt: ExecutionReceipt,
 }
+impl HostAuthorityStore {
+    /// Inspect authenticated historical source Stop evidence without a source connection.
+    /// Expiry is checked at the original observation time; this grants no live authority,
+    /// verifies no destination contents and never sends or renews any execution control.
+    /// # Errors
+    /// Missing, pending, unsafe, corrupt, wrongly bound or future-dated evidence, lost/rotated
+    /// protected key, active output ownership or changed files reject without repair.
+    pub async fn retained_source_stop_confirmation(
+        &self,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<SourceStopConfirmation, ClientError> {
+        let receipt = crate::agent_host::output::read_source_confirmation(self, job, clock).await?;
+        Ok(SourceStopConfirmation { receipt })
+    }
+}
 impl SourceStopConfirmation {
     #[must_use]
     pub fn receipt(&self) -> &ExecutionReceipt {

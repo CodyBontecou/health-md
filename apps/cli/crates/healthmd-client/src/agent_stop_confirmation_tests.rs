@@ -239,6 +239,17 @@ async fn check(platform: PeerPlatform, case: Case) {
     if case.succeeds() {
         let confirmed = result.unwrap();
         assert_eq!(confirmed.receipt(), &expected);
+        let historical = store
+            .retained_source_stop_confirmation(&request.job_id, clock.as_ref())
+            .await
+            .unwrap();
+        assert_eq!(historical.receipt(), &expected);
+        clock.advance_to(604_801);
+        let expired_history = store
+            .retained_source_stop_confirmation(&request.job_id, clock.as_ref())
+            .await
+            .unwrap();
+        assert_eq!(expired_history.receipt(), &expected);
         let value: serde_json::Value =
             serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
         assert_eq!(value["attempt"]["schema_version"], 4);

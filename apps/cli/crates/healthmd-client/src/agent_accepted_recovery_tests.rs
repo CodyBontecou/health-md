@@ -41,7 +41,7 @@ impl Case {
         )
     }
 }
-fn inventory(path: &std::path::Path) -> BTreeMap<String, Vec<u8>> {
+pub(super) fn inventory(path: &std::path::Path) -> BTreeMap<String, Vec<u8>> {
     std::fs::read_dir(path)
         .unwrap()
         .map(|entry| {
