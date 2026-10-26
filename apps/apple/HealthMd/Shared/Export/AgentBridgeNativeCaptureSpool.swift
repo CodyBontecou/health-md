@@ -58,6 +58,10 @@ final class AgentBridgeNativeCaptureSpool {
     private let key: SymmetricKey
     private let fileProtection: any AgentBridgeNativeCaptureProtecting
     private let fence: @MainActor () throws -> Void
+    private let stopRequest: (@MainActor () throws -> AgentBridgeCancel)?
+    private var initializing = true
+    private var recordingStop = false
+    private var inspectingCancellation = false
     private let issuer: URL
     private let captures: URL
     private let directory: URL
@@ -78,8 +82,9 @@ final class AgentBridgeNativeCaptureSpool {
 
     init(issuer: URL, reservation: AgentBridgeExportCaptureReservation, key: SymmetricKey, create: Bool,
          fileProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection(),
+         stopRequest: (@MainActor () throws -> AgentBridgeCancel)? = nil,
          fence: @escaping @MainActor () throws -> Void) throws {
-        self.issuer = issuer; self.reservation = reservation; self.key = key; self.fileProtection = fileProtection; self.fence = fence
+        self.issuer = issuer; self.reservation = reservation; self.key = key; self.fileProtection = fileProtection; self.fence = fence; self.stopRequest = stopRequest
         captures = issuer.appendingPathComponent("captures", isDirectory: true)
         directory = captures.appendingPathComponent(reservation.job.requestSHA256.rawValue, isDirectory: true)
         do {
@@ -87,7 +92,7 @@ final class AgentBridgeNativeCaptureSpool {
             guard reservation.claim.version == 1, reservation.claim.requestSHA256 == reservation.job.requestSHA256,
                   reservation.claim.claimedAt.rawValue >= reservation.job.acceptedAt.rawValue,
                   reservation.claim.claimedAt.rawValue < reservation.job.expiresAt.rawValue else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
-            try fence()
+            try authorityFence()
             issuerFD = try AgentBridgeExportPrivateFiles.openDirectory(issuer, privateLeaf: true)
             identities = [try AgentBridgeExportPrivateFiles.identity(issuerFD)]
             try check()
@@ -114,7 +119,7 @@ final class AgentBridgeNativeCaptureSpool {
             guard try fileSize("lock") == 0 else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
             try check()
             for name in try Self.entries(directoryFD) {
-                guard name == "lock" || name == "header.json" || name == "progress.json" || name == "manifest.json" || name == "transfer.json" || name == "partition-awaiting-ack.json" || name == "completion.json" || Self.hostCommitName(name) || Self.dayName(name) || Self.pendingName(name) else {
+                guard name == "lock" || name == "header.json" || name == "progress.json" || name == "manifest.json" || name == "transfer.json" || name == "partition-awaiting-ack.json" || name == "completion.json" || name == "capture-stop.json" || Self.hostCommitName(name) || Self.dayName(name) || Self.pendingName(name) else {
                     throw AgentBridgeValidationError.spoolMissingRestartRequired
                 }
                 storedBytes += try fileSize(name)
@@ -129,6 +134,7 @@ final class AgentBridgeNativeCaptureSpool {
             }
             try validateStoredProgress()
             try check()
+            initializing = false
         } catch { close(); throw Self.safe(error) }
     }
     deinit { Darwin.close(lockFD); Darwin.close(directoryFD); Darwin.close(capturesFD); Darwin.close(issuerFD) }
@@ -605,6 +611,8 @@ final class AgentBridgeNativeCaptureSpool {
     private var cancellationEvidence: [String: ProtectedFileEvidence]?
 
     func inspectCancellationCheckpoint() throws -> CancellationCheckpoint {
+        let previous = inspectingCancellation; inspectingCancellation = true
+        defer { inspectingCancellation = previous }
         do {
             try check()
             collectingFileEvidence = [:]
@@ -619,7 +627,7 @@ final class AgentBridgeNativeCaptureSpool {
             // validateStoredProgress has authenticated any existing completion and its commits.
             // Do not call preserveCompletion: absence must never become a new completion here.
             let completion = try exists("completion.json") ? manifest.map { try completionCandidate(state, manifest: $0) } : nil
-            let checkpoint = CancellationCheckpoint(capturedDayCount: state.captures.count,
+            let checkpoint = CancellationCheckpoint(capturedDayCount: try state.captures.filter { try exists("day-\($0).json") }.count,
                 artifactCount: manifest?.artifacts.count, manifestSHA256: state.manifestSHA256,
                 frontier: frontier, completion: completion)
             let evidence = collectingFileEvidence ?? [:]
@@ -777,21 +785,80 @@ final class AgentBridgeNativeCaptureSpool {
               claimID: reservation.claim.claimID.rawValue, expiresAt: reservation.job.expiresAt.rawValue,
               kind: kind, day: day, payload: payload)
     }
-    private func validateStoredProgress() throws {
+    /// Failure-only owner journal. This records that the native context has invalidated all
+    /// further reads; it does not claim recall of SDK work or create a captured result/frontier.
+    func preserveCaptureStop() throws {
+        guard !closed, !recordingStop, let stopRequest else { throw AgentBridgeValidationError.permissionRequired }
+        recordingStop = true; defer { recordingStop = false }
+        do {
+            try check()
+            let request = try stopRequest()
+            try requireBoundStopRequest(request)
+            collectingFileEvidence = [:]
+            defer { collectingFileEvidence = nil }
+            guard try read("header.json") == record(kind: "job", day: nil) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            try validateStoredProgress(allowInterruptedCapture: true)
+            let evidence = collectingFileEvidence ?? [:]; collectingFileEvidence = nil
+            let stopped = try record(kind: "capture_stop", day: nil, payload: AgentBridgeV4Codec.encode(request))
+            if try exists("capture-stop.json") {
+                guard try read("capture-stop.json") == stopped else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                try check(); try requireProtectedEvidence(evidence)
+            } else { try publish("capture-stop.json", record: stopped, evidenceBeforePublication: evidence) }
+            _ = try inspectCancellationCheckpoint() // Fresh exact evidence after all native callbacks.
+        } catch { throw Self.safe(error) }
+    }
+    private func requireBoundStopRequest(_ request: AgentBridgeCancel) throws {
+        let original = try reservation.job.request()
+        guard request.peer == original.plan.intent.peer, request.jobId == original.jobId,
+              request.requestSha256 == reservation.job.requestSHA256, request.approvalId == original.approval.approvalId,
+              request.authorityId == original.plan.authorityReferences.native.authorityId else { throw AgentBridgeValidationError.bindingChanged }
+    }
+    private func checkedCaptureStop() throws -> AgentBridgeCancel? {
+        guard try exists("capture-stop.json") else { return nil }
+        let value = try read("capture-stop.json")
+        let request = try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: value.payload)
+        try requireBoundStopRequest(request)
+        guard value.kind == "capture_stop", value.day == nil,
+              try AgentBridgeV4Codec.encode(request) == value.payload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+        return request
+    }
+    private func authorityFence() throws {
+        if recordingStop {
+            guard let stopRequest else { throw AgentBridgeValidationError.permissionRequired }
+            try requireBoundStopRequest(stopRequest())
+        } else { try fence() }
+        if !initializing, !recordingStop, !inspectingCancellation, try exists("capture-stop.json") {
+            throw AgentBridgeValidationError.permissionRequired
+        }
+    }
+    private func validateStoredProgress(allowInterruptedCapture: Bool = false) throws {
         let (_, state) = try progress()
         let days = state.captures
         var expected: Set<String> = ["lock", "header.json", "progress.json"]
+        let stopped = try checkedCaptureStop() != nil
+        if stopped { expected.insert("capture-stop.json") }
+        let mayLackPayload = (stopped || allowInterruptedCapture) && state.manifestSHA256 == nil && state.transferSHA256 == nil
         for day in days {
             let started = "started-\(day).json", captured = "day-\(day).json"
-            expected.insert(started); expected.insert(captured)
+            expected.insert(started)
             guard try read(started) == record(kind: "started", day: day) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            if try !exists(captured) {
+                guard mayLackPayload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                continue
+            }
+            expected.insert(captured)
             let value = try read(captured)
             guard value.kind == "captured", value.day == day, !value.payload.isEmpty else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         }
         for day in state.artifacts {
-            expected.insert("artifact-started-\(day).json"); expected.insert("artifact-\(day).json")
+            expected.insert("artifact-started-\(day).json")
             guard days.contains(day), !state.engine.isEmpty,
                   try read("artifact-started-\(day).json") == record(kind: "artifact-started", day: day) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            if try !exists("artifact-\(day).json") {
+                guard mayLackPayload else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                continue
+            }
+            expected.insert("artifact-\(day).json")
             let value = try read("artifact-\(day).json")
             guard value.kind == "artifact", value.day == day, !value.payload.isEmpty else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
         }
@@ -890,7 +957,7 @@ final class AgentBridgeNativeCaptureSpool {
     }
     private func check() throws {
         try pins()
-        try fence()
+        try authorityFence()
         // Final tail contains only local identity checks, never another native SDK callback.
         try pins(includeProtection: false)
     }
@@ -918,7 +985,7 @@ final class AgentBridgeNativeCaptureSpool {
         defer { Darwin.close(fd) }
         let expected = try AgentBridgeExportPrivateFiles.identity(fd)
         try fileProtection.requireCompleteProtection(fd)
-        try fence(); try pins(includeProtection: false)
+        try authorityFence(); try pins(includeProtection: false)
         guard try AgentBridgeExportPrivateFiles.identity(fd) == expected else { throw AgentBridgeValidationError.bindingChanged }
         try AgentBridgeExportPrivateFiles.checkPath(directoryFD, name, fd: fd)
         var value = stat()
@@ -949,7 +1016,7 @@ final class AgentBridgeNativeCaptureSpool {
         let bytes = try AgentBridgeExportPrivateFiles.read(directoryFD, name, maximumBytes: maximumBytes) { fd in
             try fileProtection.requireCompleteProtection(fd)
             protectedIdentity = try AgentBridgeExportPrivateFiles.identity(fd)
-            try fence(); try pins(includeProtection: false)
+            try authorityFence(); try pins(includeProtection: false)
         }
         if collectingFileEvidence != nil {
             guard let identity = protectedIdentity else { throw AgentBridgeValidationError.bindingChanged }

@@ -104,6 +104,84 @@ class AgentBridgeExportPlanningBoundaryTest {
         }
     }
 
+    @Test fun invalidatedCaptureStopJournalPreservesAmbiguityWithoutRestoringReads() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = executionRequest(f); f.service.acceptExecution(f.peerContext, request)
+            val reservation = f.service.claimCapture(f.peerContext, request)
+            val root = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+            val directory = root.resolve("captures").resolve(reservation.job.requestSha256)
+            val spool = f.store.openCaptureSpool(reservation, true,
+                stopRequest = { f.service.captureStopRequest(f.peerContext, reservation) }) {
+                f.service.captureReadConfiguration(f.peerContext, reservation); Unit
+            }
+            try {
+                assertThat(spool.loadOrBegin("2026-03-08")).isNull()
+                val before = Files.list(directory).use { paths -> paths.toList().associate { it.fileName.toString() to AgentBridgeCodec.sha256(Files.readAllBytes(it)) } }
+                f.service.requestCancellation(f.peerContext, cancellationRequest(request)); f.configuration.calls = 0
+                spool.preserveCaptureStop()
+                val stopped = Files.readAllBytes(directory.resolve("capture-stop.json"))
+                spool.preserveCaptureStop()
+                assertThat(Files.readAllBytes(directory.resolve("capture-stop.json"))).isEqualTo(stopped)
+                for ((name, hash) in before) assertThat(AgentBridgeCodec.sha256(Files.readAllBytes(directory.resolve(name)))).isEqualTo(hash)
+                assertThat(Files.exists(directory.resolve("day-2026-03-08.json"))).isFalse()
+                f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { spool.commit("2026-03-08", "late".toByteArray()) }
+                assertThat(f.configuration.calls).isEqualTo(0)
+            } finally { spool.close() }
+            // Even a raw metadata reader cannot turn a signed stop into SDK/capture access.
+            f.store.openCaptureSpool(reservation, false) { }.use { retained ->
+                val checkpoint = retained.inspectCancellationCheckpoint()
+                assertThat(checkpoint.capturedDayCount).isEqualTo(0)
+                f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { retained.loadOrBegin("2026-03-08") }
+            }
+            val receipt = f.restart().finalizeCapturedCancellation(f.peerContext, cancellationRequest(request))
+            assertThat(receipt.status).isEqualTo(AgentBridgeExecutionReceiptStatus.CANCELLED)
+            assertThat(receipt.sourceAcknowledged).isTrue(); assertThat(receipt.artifactCount).isEqualTo(0)
+            assertThat(receipt.expiresAt).isEqualTo(reservation.job.expiresAt)
+            assertThat(f.configuration.calls).isEqualTo(0)
+        }
+    }
+
+    @Test fun captureStopJournalRejectsMissingAuthorityCorruptionAndPublicationRaces() {
+        for (mode in listOf("no_intent", "foreign", "expired_key", "trust", "bad_stop", "header", "publication")) {
+            AgentBridgeExportPlanningFixture().use { f ->
+                val request = executionRequest(f); f.service.acceptExecution(f.peerContext, request)
+                val reservation = f.service.claimCapture(f.peerContext, request)
+                val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(reservation.job.requestSha256)
+                val spool = f.store.openCaptureSpool(reservation, true, stopRequest = {
+                    val stop = f.service.captureStopRequest(f.peerContext, reservation)
+                    if (mode == "foreign") stop.copy(jobId = AgentBridgeExportPlanningFixture.id(99)) else stop
+                }) { f.service.captureReadConfiguration(f.peerContext, reservation); Unit }
+                try {
+                    assertThat(spool.loadOrBegin("2026-03-08")).isNull()
+                    if (mode != "no_intent") f.service.requestCancellation(f.peerContext, cancellationRequest(request))
+                    if (mode == "bad_stop") {
+                        Files.write(directory.resolve("capture-stop.json"), "unsigned".toByteArray())
+                        Files.setPosixFilePermissions(directory.resolve("capture-stop.json"), java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"))
+                    }
+                    if (mode == "header") Files.write(directory.resolve("header.json"), "bad".toByteArray())
+                    if (mode == "expired_key") f.keys.onLoad = { f.keys.onLoad = null; f.clock.now = f.clock.now.plusSeconds(604800) }
+                    if (mode == "trust") f.keys.onLoad = { f.keys.onLoad = null; f.peerContext.trusted = false }
+                    var changed = false
+                    if (mode == "publication") f.peerContext.onCheck = {
+                        val pending = Files.list(directory).use { paths -> paths.anyMatch { it.fileName.toString().startsWith("pending-") } }
+                        if (!changed && pending) { changed = true; Files.write(directory.resolve("header.json"), "changed".toByteArray()) }
+                    }
+                    val code = when (mode) {
+                        "no_intent", "foreign" -> AgentBridgeErrorCode.BINDING_CHANGED
+                        "expired_key" -> AgentBridgeErrorCode.PLAN_EXPIRED
+                        "trust" -> AgentBridgeErrorCode.PERMISSION_REQUIRED
+                        else -> AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED
+                    }
+                    f.expect(code) { spool.preserveCaptureStop() }
+                    if (mode == "publication") assertThat(changed).isTrue()
+                    if (mode == "bad_stop") assertThat(Files.readAllBytes(directory.resolve("capture-stop.json"))).isEqualTo("unsigned".toByteArray())
+                    else assertThat(Files.exists(directory.resolve("capture-stop.json"))).isFalse()
+                    assertThat(Files.exists(directory.resolve("day-2026-03-08.json"))).isFalse()
+                } finally { f.peerContext.onCheck = null; spool.close() }
+            }
+        }
+    }
+
     @Test fun capturedCancellationPreservesPrivateBytesAndReplaysWithoutRenewalOrReadRights() {
         AgentBridgeExportPlanningFixture().use { f ->
             val request = executionRequest(f)

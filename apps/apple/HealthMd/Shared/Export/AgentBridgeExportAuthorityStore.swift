@@ -266,11 +266,15 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     @MainActor
     func openCaptureSpool(_ reservation: AgentBridgeExportCaptureReservation, create: Bool,
                           fileProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection(),
+                          stopRequest: (@MainActor () throws -> AgentBridgeCancel)? = nil,
                           fence: @escaping @MainActor () throws -> Void) throws -> AgentBridgeNativeCaptureSpool {
         try requireCurrentRoot(); try fence(); try requireCurrentRoot()
         let key = try Self.existingKey(keys)
         try requireCurrentRoot(); try fence(); try requireCurrentRoot()
-        return try AgentBridgeNativeCaptureSpool(issuer: directory, reservation: reservation, key: key, create: create, fileProtection: fileProtection) { [self] in
+        return try AgentBridgeNativeCaptureSpool(issuer: directory, reservation: reservation, key: key, create: create,
+            fileProtection: fileProtection, stopRequest: stopRequest.map { stop in
+                { @MainActor [self] in try requireCurrentRoot(); let request = try stop(); try requireCurrentRoot(); return request }
+            }) { [self] in
             try requireCurrentRoot(); try fence(); try requireCurrentRoot()
         }
     }

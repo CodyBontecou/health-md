@@ -333,7 +333,8 @@ final class AgentBridgeNativePlanningSession {
                     try cancellation.requireActive(); try Task.checkCancellation()
                     return result
                 }
-                let spool = try store.openCaptureSpool(reservation, create: !retained, fileProtection: captureProtection) { _ = try validate() }
+                let spool = try store.openCaptureSpool(reservation, create: !retained, fileProtection: captureProtection,
+                    stopRequest: { [self] in try service.captureStopRequest(reservation, authenticatedPeer: peer) }) { _ = try validate() }
                 let context = AgentBridgeNativeCaptureContext(spool: spool, transferNegotiation: responseTransferNegotiation, peerTransferCapabilities: responsePeerTransferCapabilities, read: validate)
                 defer { context.close() }
                 let result = try await operation(context)
@@ -577,7 +578,7 @@ final class AgentBridgeNativeCaptureContext {
             guard resolution.requestedDays.contains(day) else { throw AgentBridgeValidationError.invalidRequest }
             guard claimedDays.insert(day.rawValue).inserted else { throw AgentBridgeValidationError.busy }
             return .init(resolution: resolution, retainedPayload: try spool.loadOrBegin(day))
-        } catch { close(); throw error }
+        } catch { invalidate(); throw error }
     }
     func commitDay(_ day: AgentBridgeDate, payload: Data) throws {
         do {
@@ -585,7 +586,7 @@ final class AgentBridgeNativeCaptureContext {
             guard claimedDays.contains(day.rawValue) else { throw AgentBridgeValidationError.permissionRequired }
             try spool.commit(day, payload: payload)
             _ = try configurationForRead()
-        } catch { close(); throw error }
+        } catch { invalidate(); throw error }
     }
     func retainedArtifact(_ day: AgentBridgeDate) throws -> AgentBridgeNativeCaptureSpool.ArtifactCheckpoint? {
         do {
@@ -682,7 +683,14 @@ final class AgentBridgeNativeCaptureContext {
         return spool.acceptedRequestSHA256
     }
     /// Monotonic denial only: a caught SDK/result failure cannot revive the operation.
-    func invalidate() { close() }
+    func invalidate() {
+        guard !closed else { return }
+        closed = true; read = nil; claimedDays.removeAll()
+        // Cleanup failure cannot manufacture a terminal stop. Without its signed journal the
+        // restarted control path continues to reject ambiguous capture state.
+        try? spool.preserveCaptureStop()
+        spool.close()
+    }
     func configurationForRead() throws -> AgentBridgeRequestSettingsResolution {
         guard started, !closed, let read else { throw AgentBridgeValidationError.permissionRequired }
         do {
@@ -690,7 +698,7 @@ final class AgentBridgeNativeCaptureContext {
             guard !closed else { throw AgentBridgeValidationError.permissionRequired }
             try spool.requireCompletionIfPreserved()
             return result
-        } catch { close(); throw error }
+        } catch { invalidate(); throw error }
     }
     fileprivate func close() { closed = true; read = nil; claimedDays.removeAll(); spool.close() }
 }

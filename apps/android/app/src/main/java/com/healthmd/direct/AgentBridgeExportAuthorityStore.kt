@@ -248,14 +248,16 @@ internal class AgentBridgeExportAuthorityStore private constructor(
     /** Supplemental native capture storage. No default paths, key creation or missing-ledger
      * recovery. The original owner fences every operation against this exact signed reservation. */
     internal fun openCaptureSpool(reservation: AgentBridgeExportCaptureReservation, create: Boolean,
-        fence: () -> Unit): AgentBridgeNativeCaptureSpool = safe {
+        stopRequest: (() -> AgentBridgeCancelRequest)? = null, fence: () -> Unit): AgentBridgeNativeCaptureSpool = safe {
         checkParent(); val identity = attributes(root, true).fileKey(); fence(); checkParent()
         demand(attributes(root, true).fileKey() == identity)
         val protectedKey = key()
         fence(); checkParent(); demand(attributes(root, true).fileKey() == identity)
         AgentBridgeNativeCaptureSpool(root, reservation, protectedKey, create,
             check = { checkParent(); demand(attributes(root, true).fileKey() == identity); fence(); checkParent(); demand(attributes(root, true).fileKey() == identity) },
-            attributes = { path, directory -> attributes(path, directory).fileKey()!! })
+            attributes = { path, directory -> attributes(path, directory).fileKey()!! },
+            stopRequest = stopRequest?.let { stop -> { checkParent(); demand(attributes(root, true).fileKey() == identity);
+                val request = stop(); checkParent(); demand(attributes(root, true).fileKey() == identity); request } })
     }
 
     /** Called only inside an issuer transaction after verifying no capture reservation. Never

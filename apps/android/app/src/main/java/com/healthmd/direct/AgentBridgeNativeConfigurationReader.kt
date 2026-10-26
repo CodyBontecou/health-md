@@ -371,7 +371,8 @@ internal class AgentBridgeNativePlanningSession(
                     captureReadConfiguration(reservation, caller).also { caller.ensureActive() }
                 } catch (failure: Throwable) { caller.ensureActive(); throw failure }
             }
-            val spool = store.openCaptureSpool(reservation, !retained) { validate(); Unit }
+            val spool = store.openCaptureSpool(reservation, !retained,
+                stopRequest = { service.captureStopRequest(peer, reservation) }) { validate(); Unit }
             val context = AgentBridgeNativeCaptureContext(spool, responseTransferNegotiation, responsePeerTransferCapabilities, validate)
             return try {
                 val result = operation(context)
@@ -608,7 +609,7 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
                 if (!claimedDays.add(day)) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
             }
             return AgentBridgeNativeCaptureDayInput(resolution, spool.loadOrBegin(day))
-        } catch (failure: Throwable) { close(); throw failure }
+        } catch (failure: Throwable) { invalidate(); throw failure }
     }
     fun commitDay(day: String, payload: ByteArray) {
         try {
@@ -616,7 +617,7 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
             synchronized(lock) { if (day !in claimedDays) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
             spool.commit(day, payload)
             configurationForRead()
-        } catch (failure: Throwable) { close(); throw failure }
+        } catch (failure: Throwable) { invalidate(); throw failure }
     }
     fun retainedArtifact(day: String): AgentBridgeNativeCaptureSpool.ArtifactCheckpoint? {
         try {
@@ -709,7 +710,14 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
         return spool.acceptedRequestSha256
     }
     /** Monotonic denial so catching an SDK/result failure cannot revive the operation. */
-    internal fun invalidate() { close() }
+    internal fun invalidate() {
+        val invalidate = synchronized(lock) {
+            if (closed) false else { closed = true; read = null; claimedDays.clear(); true }
+        }
+        if (!invalidate) return
+        // Failure to record a stop leaves ambiguous recovery rejected, never acknowledged.
+        try { runCatching { spool.preserveCaptureStop() } } finally { spool.close() }
+    }
     fun configurationForRead(): AgentBridgeRequestSettingsResolution {
         val callback = synchronized(lock) {
             if (!started || closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
@@ -720,7 +728,7 @@ internal class AgentBridgeNativeCaptureContext internal constructor(private val 
             synchronized(lock) { if (closed) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
             spool.requireCompletionIfPreserved()
             result
-        } catch (failure: Throwable) { close(); throw failure }
+        } catch (failure: Throwable) { invalidate(); throw failure }
     }
     internal fun close() { synchronized(lock) { closed = true; read = null; claimedDays.clear(); spool.close() } }
 }

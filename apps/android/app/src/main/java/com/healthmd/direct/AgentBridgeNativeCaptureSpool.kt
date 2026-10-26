@@ -31,6 +31,7 @@ internal class AgentBridgeNativeCaptureSpool(
     create: Boolean,
     private val check: () -> Unit,
     private val attributes: (Path, Boolean) -> Any,
+    private val stopRequest: (() -> AgentBridgeCancelRequest)? = null,
 ) : AutoCloseable {
     @Serializable private data class Record(val version: Int, val requestSha256: String,
         val resolutionSha256: String, val claimId: String, val expiresAt: String,
@@ -63,6 +64,9 @@ internal class AgentBridgeNativeCaptureSpool(
     private var lockIdentity: Any? = null
     private var storedBytes = 0L
     private var closed = false
+    private var initializing = true
+    private var recordingStop = false
+    private var inspectingCancellation = false
     private data class ProtectedFileEvidence(val count: Int, val sha256: String, val identity: Any)
     private var collectingFileEvidence: MutableMap<String, ProtectedFileEvidence>? = null
     private var resumeEvidence: Map<String, ProtectedFileEvidence>? = null
@@ -104,7 +108,7 @@ internal class AgentBridgeNativeCaptureSpool(
                 for (path in stream) {
                     if (++count > 16450) fail(AgentBridgeErrorCode.QUERY_BUDGET_EXCEEDED)
                     val name = path.fileName.toString()
-                    if (name !in setOf("lock", "header.json", "progress.json", "manifest.json", "transfer.json", "partition-awaiting-ack.json", "completion.json") && !HOST_COMMIT_NAME.matches(name) && !DAY_NAME.matches(name) && !PENDING_NAME.matches(name)) fail()
+                    if (name !in setOf("lock", "header.json", "progress.json", "manifest.json", "transfer.json", "partition-awaiting-ack.json", "completion.json", "capture-stop.json") && !HOST_COMMIT_NAME.matches(name) && !DAY_NAME.matches(name) && !PENDING_NAME.matches(name)) fail()
                     attributes(path, false)
                     val size = Files.size(path)
                     if (size !in 0..(if (name == "manifest.json") MANIFEST_LIMIT else if (name == "transfer.json") AgentBridgeNativeTransferCheckpoint.MAXIMUM_BYTES else RECORD_LIMIT).toLong()) fail()
@@ -121,6 +125,7 @@ internal class AgentBridgeNativeCaptureSpool(
             }
             validateStoredProgress()
             guard()
+            initializing = false
         } catch (error: Exception) { close(); throw safe(error) }
     }
     val acceptedRequestSha256: String get() = reservation.job.requestSha256
@@ -491,9 +496,10 @@ internal class AgentBridgeNativeCaptureSpool(
     private var cancellationEvidence: Map<String, ProtectedFileEvidence>? = null
 
     @Synchronized fun inspectCancellationCheckpoint(): CancellationCheckpoint = safeCall {
-        guard()
-        collectingFileEvidence = mutableMapOf()
+        val previous = inspectingCancellation; inspectingCancellation = true
         try {
+            guard()
+            collectingFileEvidence = mutableMapOf()
             if (read("header.json") != record("job", null)) fail()
             validateStoredProgress()
             val state = progress().second
@@ -502,13 +508,13 @@ internal class AgentBridgeNativeCaptureSpool(
             // Validation already checked the original completion and host commits, if present.
             // preserveCompletion is deliberately not called: missing completion stays missing.
             val completion = if (exists("completion.json")) completionCandidate(state, manifest ?: fail()) else null
-            val checkpoint = CancellationCheckpoint(state.captures.size, manifest?.artifacts?.size,
+            val checkpoint = CancellationCheckpoint(state.captures.count { exists("day-$it.json") }, manifest?.artifacts?.size,
                 state.manifestSHA256, frontier?.committedPartitionCount, frontier?.sha256, completion)
             val evidence = collectingFileEvidence!!.toMap()
             guard(); requireProtectedEvidence(evidence)
             cancellationCheckpoint = checkpoint; cancellationEvidence = evidence
             checkpoint
-        } finally { collectingFileEvidence = null }
+        } finally { collectingFileEvidence = null; inspectingCancellation = previous }
     }
     /** Local-only publication tail: no SDK/native callback, repair or file creation. */
     @Synchronized fun requireCancellationCheckpoint(checkpoint: CancellationCheckpoint) = safeCall {
@@ -620,20 +626,66 @@ internal class AgentBridgeNativeCaptureSpool(
     private fun record(kind: String, day: String?, payload: String = "") = Record(1, reservation.job.requestSha256,
         AgentBridgeCodec.sha256(reservation.job.resolutionCanonical.toByteArray()), reservation.claim.claimId,
         reservation.job.expiresAt, kind, day, payload)
-    private fun validateStoredProgress() {
+    /** Failure-only invalidated-owner journal, never an SDK result or transfer frontier. */
+    @Synchronized fun preserveCaptureStop() = safeCall {
+        if (closed || recordingStop || stopRequest == null) fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        recordingStop = true
+        try {
+            guard()
+            val request = stopRequest.invoke()
+            requireBoundStopRequest(request)
+            collectingFileEvidence = mutableMapOf()
+            if (read("header.json") != record("job", null)) fail()
+            validateStoredProgress(allowInterruptedCapture = true)
+            val evidence = collectingFileEvidence!!.toMap(); collectingFileEvidence = null
+            val stopped = record("capture_stop", null, Base64.getEncoder().encodeToString(AgentBridgeCodec.encode(request)))
+            if (exists("capture-stop.json")) {
+                if (read("capture-stop.json") != stopped) fail()
+                guard(); requireProtectedEvidence(evidence)
+            } else publish("capture-stop.json", stopped, evidenceBeforePublication = evidence)
+            inspectCancellationCheckpoint() // Fresh exact evidence after all native callbacks.
+            Unit
+        } finally { collectingFileEvidence = null; recordingStop = false }
+    }
+    private fun requireBoundStopRequest(request: AgentBridgeCancelRequest) {
+        val original = reservation.job.request(); val plan = original.plan as AgentBridgeGeneratedPlan
+        if (request.peer != plan.intent.peer || request.jobId != original.jobId || request.requestSha256 != reservation.job.requestSha256 ||
+            request.approvalId != original.approval.approvalId || request.authorityId != plan.authorityReferences.native.authorityId) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+    }
+    private fun checkedCaptureStop(): AgentBridgeCancelRequest? {
+        if (!exists("capture-stop.json")) return null
+        val value = read("capture-stop.json")
+        val request = AgentBridgeCodec.decode(Base64.getDecoder().decode(value.payload)) as? AgentBridgeCancelRequest ?: fail()
+        requireBoundStopRequest(request)
+        if (value.kind != "capture_stop" || value.day != null ||
+            Base64.getEncoder().encodeToString(AgentBridgeCodec.encode(request)) != value.payload) fail()
+        return request
+    }
+    private fun authorityFence() {
+        if (recordingStop) requireBoundStopRequest(stopRequest?.invoke() ?: fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)) else check()
+        if (!initializing && !recordingStop && !inspectingCancellation && exists("capture-stop.json")) fail(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+    }
+    private fun validateStoredProgress(allowInterruptedCapture: Boolean = false) {
         val (_, state) = progress()
         val days = state.captures
         val expected = mutableSetOf("lock", "header.json", "progress.json")
+        val stopped = checkedCaptureStop() != null
+        if (stopped) expected += "capture-stop.json"
+        val mayLackPayload = (stopped || allowInterruptedCapture) && state.manifestSHA256 == null && state.transferSHA256 == null
         for (day in days) {
             val started = "started-$day.json"; val captured = "day-$day.json"
-            expected += started; expected += captured
+            expected += started
             if (read(started) != record("started", day)) fail()
+            if (!exists(captured)) { if (!mayLackPayload) fail(); continue }
+            expected += captured
             val value = read(captured)
             if (value.kind != "captured" || value.day != day || value.payload.isEmpty()) fail()
         }
         for (day in state.artifacts) {
-            expected += "artifact-started-$day.json"; expected += "artifact-$day.json"
+            expected += "artifact-started-$day.json"
             if (day !in days || state.engine.isEmpty() || read("artifact-started-$day.json") != record("artifact-started", day)) fail()
+            if (!exists("artifact-$day.json")) { if (!mayLackPayload) fail(); continue }
+            expected += "artifact-$day.json"
             val value = read("artifact-$day.json")
             if (value.kind != "artifact" || value.day != day || value.payload.isEmpty()) fail()
         }
@@ -725,7 +777,7 @@ internal class AgentBridgeNativeCaptureSpool(
         listOf(issuer, captures, directory).take(identities.size).forEachIndexed { index, path -> if (attributes(path, true) != identities[index]) fail(AgentBridgeErrorCode.BINDING_CHANGED) }
         lockIdentity?.let { if (attributes(directory.resolve("lock"), false) != it) fail(AgentBridgeErrorCode.BINDING_CHANGED) }
     }
-    private fun guard() { pins(); check(); pins() }
+    private fun guard() { pins(); authorityFence(); pins() }
     private fun exists(name: String): Boolean = present(directory.resolve(name))
     private fun present(path: Path): Boolean = try {
         Files.readAttributes(path, java.nio.file.attribute.BasicFileAttributes::class.java, NOFOLLOW_LINKS); true

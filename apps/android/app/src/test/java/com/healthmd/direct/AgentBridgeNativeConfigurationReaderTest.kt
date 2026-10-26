@@ -805,6 +805,31 @@ class AgentBridgeNativeConfigurationReaderTest {
 
     @Test fun `native transfer sender resumes exact prefix without replaying bytes`() = runBlocking { checkNativeTransferSender("resume") }
     @Test fun `native transfer sender rejects host rewind of recorded prefix`() = runBlocking { checkNativeTransferSender("rewind") }
+    @Test fun `native stop during SDK read discards late value and journals invalidated owner`() = runBlocking {
+        withNativeExportPreparation { f, planner, request, client, manager ->
+            val plan = request.plan as AgentBridgeGeneratedPlan
+            val cancel = AgentBridgeCancelRequest(request.approval.approvalId, plan.authorityReferences.native.authorityId,
+                request.jobId, plan.intent.peer, AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)), "healthmd.agent_cancel_request", 1)
+            val value = mockk<AggregationResult>(); every { value[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } coAnswers {
+                f.service.requestCancellation(f.peerContext, cancel)
+                value
+            }
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            try { planner.prepareExport(request, manager, journalRenderer(resolution)); throw AssertionError("Late SDK value must not escape") }
+            catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.PERMISSION_REQUIRED) }
+            val job = f.store.access { it!!.state.acceptedJobs!!.single() }
+            val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256)
+            val names = Files.list(directory).use { paths -> paths.map { it.fileName.toString() }.toList() }
+            assertThat(names).contains("capture-stop.json"); assertThat(names.none { it.startsWith("day-") }).isTrue()
+            coVerify(exactly = 1) { client.aggregate(any()) }
+            val receipt = f.restart().finalizeCapturedCancellation(f.peerContext, cancel)
+            assertThat(receipt.status).isEqualTo(AgentBridgeExecutionReceiptStatus.CANCELLED)
+            assertThat(receipt.sourceAcknowledged).isTrue(); assertThat(receipt.artifactCount).isEqualTo(0)
+            coVerify(exactly = 1) { client.aggregate(any()) }
+        }
+    }
+
     @Test fun `native captured cancellation refuses manifest without retained frontier`() = runBlocking { checkNativeTransferSender("cancel-no-frontier") }
 
     @Test fun `native transfer sender publication failure prevents next partition and finalize`() = runBlocking { checkNativeTransferSender("publication") }

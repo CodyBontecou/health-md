@@ -261,6 +261,28 @@ internal class AgentBridgeExportPlanningService(
         }
     }
 
+    /** Failure-only metadata authority, never configuration/SDK access or grant restoration. */
+    fun captureStopRequest(authenticated: AgentBridgeExportAuthenticatedPeer,
+        reservation: AgentBridgeExportCaptureReservation): AgentBridgeCancelRequest {
+        val expected = peer(authenticated, (reservation.job.request().plan as AgentBridgeGeneratedPlan).intent.peer)
+        var selected: AgentBridgeCancelRequest? = null
+        fun validate(state: AgentBridgeExportLedger): AgentBridgeCancelRequest {
+            require(reservation.job in state.acceptedJobs.orEmpty() && reservation.claim in state.captureClaims.orEmpty(), AgentBridgeErrorCode.BINDING_CHANGED)
+            val intent = state.cancellationIntents?.singleOrNull { it.request().requestSha256 == reservation.job.requestSha256 && it.version == 1 }
+                ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            val request = intent.request()
+            validateCancellation(authenticated, expected, request, reservation.job, intent)
+            return request
+        }
+        return store.access(fence = { transaction ->
+            val state = transaction?.state ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            require(selected == validate(state), AgentBridgeErrorCode.BINDING_CHANGED)
+        }) { transaction ->
+            val state = transaction?.state ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            validate(state).also { selected = it }
+        }
+    }
+
     private fun validateCancellation(authenticated: AgentBridgeExportAuthenticatedPeer, expected: AgentBridgePeer,
         request: AgentBridgeCancelRequest, job: AgentBridgeExportAcceptedJob, intent: AgentBridgeExportCancellationIntent) {
         peer(authenticated, expected)

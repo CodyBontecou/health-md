@@ -156,6 +156,111 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testInvalidatedCaptureStopJournalPreservesAmbiguityWithoutRestoringReads() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig); _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+        let directory = rig.directory.appendingPathComponent("captures/" + reservation.job.requestSHA256.rawValue)
+        let spool = try rig.store.openCaptureSpool(reservation, create: true, fileProtection: rig.captureProtection,
+            stopRequest: { try rig.service.captureStopRequest(reservation, authenticatedPeer: rig.peer) }) {
+            _ = try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer)
+        }
+        do {
+            XCTAssertNil(try spool.loadOrBegin(AgentBridgeDate("2026-03-08")))
+            let before = try Dictionary(uniqueKeysWithValues: FileManager.default.contentsOfDirectory(atPath: directory.path).map { ($0, try Data(contentsOf: directory.appendingPathComponent($0))) })
+            _ = try rig.service.requestCancellation(cancellationRequest(request), authenticatedPeer: rig.peer); rig.reader.calls = []
+            try spool.preserveCaptureStop()
+            let stopped = try Data(contentsOf: directory.appendingPathComponent("capture-stop.json"))
+            try spool.preserveCaptureStop()
+            XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("capture-stop.json")), stopped)
+            for (name, bytes) in before { XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent(name)), bytes) }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("day-2026-03-08.json").path))
+            XCTAssertThrowsError(try spool.commit(AgentBridgeDate("2026-03-08"), payload: Data("late".utf8))) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+            }
+            XCTAssertTrue(rig.reader.calls.isEmpty)
+        } catch { spool.close(); throw error }; spool.close()
+        let retained = try rig.store.openCaptureSpool(reservation, create: false, fileProtection: rig.captureProtection) {}
+        do {
+            XCTAssertEqual(try retained.inspectCancellationCheckpoint().capturedDayCount, 0)
+            XCTAssertThrowsError(try retained.loadOrBegin(AgentBridgeDate("2026-03-08"))) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+            }
+        } catch { retained.close(); throw error }; retained.close()
+        let receipt = try rig.restartedService().finalizeCapturedCancellation(cancellationRequest(request), authenticatedPeer: rig.peer, fileProtection: rig.captureProtection)
+        XCTAssertEqual(receipt.status, .cancelled); XCTAssertTrue(receipt.sourceAcknowledged); XCTAssertEqual(receipt.artifactCount, 0)
+        XCTAssertEqual(receipt.expiresAt, reservation.job.expiresAt); XCTAssertTrue(rig.reader.calls.isEmpty)
+    }
+
+    func testCaptureStopJournalRejectsMissingAuthorityCorruptionAndPublicationRaces() throws {
+        for mode in ["no_intent", "foreign", "expired_key", "trust", "bad_stop", "header", "publication", "protection"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig); _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+            let directory = rig.directory.appendingPathComponent("captures/" + reservation.job.requestSHA256.rawValue)
+            let spool = try rig.store.openCaptureSpool(reservation, create: true, fileProtection: rig.captureProtection,
+                stopRequest: {
+                    let stop = try rig.service.captureStopRequest(reservation, authenticatedPeer: rig.peer)
+                    if mode == "foreign" {
+                        return AgentBridgeCancel(approvalId: stop.approvalId, authorityId: stop.authorityId, jobId: try self.id(99), peer: stop.peer, requestSha256: stop.requestSha256)
+                    }
+                    return stop
+                }) { _ = try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer) }
+            defer { rig.captureProtection.onRequire = nil; spool.close() }
+            XCTAssertNil(try spool.loadOrBegin(AgentBridgeDate("2026-03-08")))
+            if mode != "no_intent" { _ = try rig.service.requestCancellation(cancellationRequest(request), authenticatedPeer: rig.peer) }
+            let stopped = directory.appendingPathComponent("capture-stop.json")
+            if mode == "bad_stop" {
+                try Data("unsigned".utf8).write(to: stopped)
+                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: stopped.path)
+                let fd = Darwin.open(stopped.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+                XCTAssertGreaterThanOrEqual(fd, 0)
+                try rig.captureProtection.applyCompleteProtection(fd); Darwin.close(fd)
+            }
+            if mode == "header" { try Data("bad".utf8).write(to: directory.appendingPathComponent("header.json")) }
+            if mode == "expired_key" { rig.keys.onNextLoad { rig.clock.advance(seconds: 604800) } }
+            if mode == "trust" { rig.keys.onNextLoad { rig.session.revoke() } }
+            if mode == "protection" { rig.captureProtection.denied = true }
+            var changed = false
+            if mode == "publication" {
+                rig.captureProtection.onRequire = { _ in
+                    let pending = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).contains {
+                        $0.lastPathComponent.hasPrefix("pending-") && ((try? FileManager.default.attributesOfItem(atPath: $0.path)[.size] as? Int) ?? 0) > 0
+                    }
+                    if !changed && pending { changed = true; try Data("changed".utf8).write(to: directory.appendingPathComponent("header.json")) }
+                }
+            }
+            let expected: AgentBridgeValidationError = ["no_intent", "foreign"].contains(mode) ? .bindingChanged :
+                mode == "expired_key" ? .planExpired : ["trust", "protection"].contains(mode) ? .permissionRequired : .spoolMissingRestartRequired
+            XCTAssertThrowsError(try spool.preserveCaptureStop()) { XCTAssertEqual($0 as? AgentBridgeValidationError, expected, mode) }
+            if mode == "publication" { XCTAssertTrue(changed) }
+            if mode == "bad_stop" { XCTAssertEqual(try Data(contentsOf: stopped), Data("unsigned".utf8)) }
+            else { XCTAssertFalse(FileManager.default.fileExists(atPath: stopped.path), mode) }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("day-2026-03-08.json").path))
+        }
+    }
+
+    func testNativeStopDuringSDKReadDiscardsLateValueAndJournalsTheInvalidatedOwner() async throws {
+        try await withNativeExportPreparation { rig, planner, request, store, manager in
+            let cancel = try self.cancellationRequest(request)
+            store.querySumResult = { _, _ in
+                do { _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer) }
+                catch { XCTFail("synthetic stop must persist: \(error)") }
+                return 123
+            }
+            do { _ = try await planner.prepareExport(request, manager: manager); XCTFail("late SDK value must not escape") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
+            let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+            let directory = rig.directory.appendingPathComponent("captures/" + job.requestSHA256.rawValue)
+            let names = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+            XCTAssertTrue(names.contains("capture-stop.json")); XCTAssertFalse(names.contains { $0.hasPrefix("day-") })
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+            let receipt = try rig.restartedService().finalizeCapturedCancellation(cancel, authenticatedPeer: rig.peer, fileProtection: rig.captureProtection)
+            XCTAssertEqual(receipt.status, .cancelled); XCTAssertTrue(receipt.sourceAcknowledged); XCTAssertEqual(receipt.artifactCount, 0)
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 1)
+        }
+    }
+
     func testCapturedCancellationPreservesPrivateBytesAndReplaysWithoutRenewalOrReadRights() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try executionRequest(rig); _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)

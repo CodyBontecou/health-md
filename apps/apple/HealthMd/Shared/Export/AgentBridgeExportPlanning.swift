@@ -278,6 +278,26 @@ final class AgentBridgeExportPlanningService {
         return receipt
     }
 
+    /// Failure-only capture cleanup authority. Never resolves settings or restores a read grant.
+    func captureStopRequest(_ reservation: AgentBridgeExportCaptureReservation,
+        authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeCancel {
+        func validate(_ state: AgentBridgeExportAuthoritySnapshot) throws -> AgentBridgeCancel {
+            guard state.acceptedJobs?.contains(reservation.job) == true,
+                  state.captureClaims?.contains(reservation.claim) == true,
+                  let intent = try state.cancellationIntents?.first(where: { try $0.request().requestSha256 == reservation.job.requestSHA256 }),
+                  intent.version == 1 else { throw AgentBridgeValidationError.bindingChanged }
+            let request = try intent.request()
+            try self.validateCancellation(request, job: reservation.job, intent: intent, authenticatedPeer: authenticatedPeer)
+            return request
+        }
+        try authenticatedPeer.requireCurrent()
+        let original = try store.inspectCurrent(validate)
+        try authenticatedPeer.requireCurrent()
+        let current = try store.inspectCurrent(validate)
+        guard current == original else { throw AgentBridgeValidationError.bindingChanged }
+        return current
+    }
+
     private func validateCancellation(_ request: AgentBridgeCancel, job: AgentBridgeExportAcceptedJob,
         intent: AgentBridgeExportCancellationIntent, authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws {
         try authenticatedPeer.requireCurrent(); try requirePeer(request.peer, authenticatedPeer)
