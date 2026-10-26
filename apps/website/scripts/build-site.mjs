@@ -7,6 +7,7 @@ import { buildBlog } from './build-blog.mjs';
 import { buildLocalizedLanding } from './build-localized-pages.mjs';
 import { buildLocalizedLegalPages } from './build-localized-legal-pages.mjs';
 import { localizeSitemapFile } from './build-localized-sitemap.mjs';
+import { buildStarterVault } from './build-starter-vault.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = path.join(ROOT, 'dist');
@@ -18,6 +19,7 @@ const STATIC_FILES = [
   'robots.txt',
 ];
 
+await buildStarterVault({ check: true });
 await fs.rm(OUTPUT, { recursive: true, force: true });
 await fs.mkdir(OUTPUT, { recursive: true });
 
