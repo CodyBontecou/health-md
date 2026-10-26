@@ -142,6 +142,51 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testAcceptedJobPureReusePreservesDurableIdentityAndRejectsChangedFields() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        let acceptance = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+        let job = acceptance.job
+        let before = try AgentBridgeV4Codec.canonicalize(JSONEncoder().encode(job))
+        for _ in 0..<4 { XCTAssertEqual(try job.request(), request); try job.validate() }
+        let copy = job
+        XCTAssertEqual(try copy.request(), request); try copy.validate()
+        XCTAssertEqual(try AgentBridgeV4Codec.canonicalize(JSONEncoder().encode(copy)), before)
+        let restored = try JSONDecoder().decode(AgentBridgeExportAcceptedJob.self, from: before)
+        XCTAssertEqual(restored, job); try restored.validate()
+        XCTAssertEqual(try restored.request(), request)
+        let changed = AgentBridgeExportAcceptedJob(version: job.version, requestBytes: job.requestBytes,
+            requestSHA256: try digest("f"), nativeResolution: job.nativeResolution,
+            acceptedAt: job.acceptedAt, expiresAt: job.expiresAt)
+        XCTAssertNotEqual(changed, job); XCTAssertEqual(try changed.request(), request)
+        XCTAssertThrowsError(try changed.validate()); XCTAssertThrowsError(try changed.validate())
+        let malformed = AgentBridgeExportAcceptedJob(version: job.version, requestBytes: Data("invalid".utf8),
+            requestSHA256: job.requestSHA256, nativeResolution: job.nativeResolution,
+            acceptedAt: job.acceptedAt, expiresAt: job.expiresAt)
+        XCTAssertThrowsError(try malformed.request()); XCTAssertThrowsError(try malformed.validate())
+    }
+
+    func testWarmedAcceptedJobNeverCachesLiveStopExpiryOrPeerAuthority() throws {
+        for expired in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            let cancel = try cancellationRequest(request)
+            _ = try rig.service.requestCancellation(cancel, authenticatedPeer: rig.peer)
+            let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+            for _ in 0..<4 { _ = try job.request(); try job.validate() }
+            let stateFile = rig.directory.appendingPathComponent("state.json")
+            let before = try Data(contentsOf: stateFile)
+            if expired { rig.clock.advance(seconds: 604800) } else { rig.session.revoke() }
+            // Structural validity is immutable; current time/trust remain separate mandatory fences.
+            try job.validate()
+            XCTAssertThrowsError(try rig.service.finalizeUnclaimedCancellation(cancel, authenticatedPeer: rig.peer)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, expired ? .planExpired : .permissionRequired)
+            }
+            XCTAssertEqual(try Data(contentsOf: stateFile), before)
+        }
+    }
+
     func testUnclaimedCancellationRejectsExpiryAndDelayedAuthenticationBeforeConfirmation() throws {
         for mode in ["expired", "delayed_key", "delayed_trust"] {
             let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
