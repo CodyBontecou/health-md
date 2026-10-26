@@ -1457,3 +1457,8 @@ The earlier local full run remains interrupted evidence. LLDB caught NSApplicati
 Authorized disposable API35 arm64 emulator controls separately passed3 native-input tests with the display asleep before ActivityScenario launch,75 accessibility shard0 tests with stock display controls, and75 with hosted animation/software-keyboard controls. Neither reproduced the separate hosted Linux x86_64 focus failure, so no speculative wake-order harness change was made. The disposable emulator was cleanly stopped and removed, reclaiming1831002112bytes; other devices were untouched. Logs and receipts remain in primary ignored `.pi/pr-finish/189-focus-*`.
 
 This increment changes internal computation only. It adds no wire field, schema/version, export fixture, native advertisement or rollout promotion. Native ACK-prelude/new-channel Resume dispatch and transmission, installed CLI/MCP orchestration, remaining output products, killed production-native recovery and full synthetic physical acceptance remain required. Keep the feature draft and extension4/rollout gates closed. No real health data, physical-device QA, deployment, release or feature merge ran.
+
+
+### Native immutable accepted-record reuse
+
+An Apple accepted-job value may reuse its decoded Execute and completed structural validation. This bounded cache belongs to that immutable record; copies share it, while newly decoded or constructed records start fresh. It does not enter Codable fields or equality, and it stores no key, time, live grant, file evidence or SDK authorization. Protected-key, signed-file, peer, expiry and retained-spool checks still run at their existing boundaries. A warmed valid record cannot authorize a stop after peer revocation or expiry.
