@@ -243,7 +243,20 @@ final class ExportJourneyUITests: XCTestCase {
         let pickerDismissed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: openFolder
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [pickerDismissed], timeout: 10), .completed)
+        let dismissal = XCTWaiter.wait(for: [pickerDismissed], timeout: 10)
+        if dismissal != .completed {
+            // Preserve the external Files extension's final AX state. Earlier
+            // snapshots precede Open and the app-only recording omits that UI.
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "Synthetic folder picker after Open timeout"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let action = XCTAttachment(string: openFolder.debugDescription)
+            action.name = "Synthetic folder picker Open query after timeout"
+            action.lifetime = .keepAlways
+            add(action)
+        }
+        XCTAssertEqual(dismissal, .completed)
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))

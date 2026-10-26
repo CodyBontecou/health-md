@@ -609,6 +609,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     // MARK: - Earliest source-date discovery
 
     func queryEarliestSampleDate(sampleType: HKSampleType) async throws -> Date? {
+        #if DEBUG
+        if TestMode.isUITesting,
+           ProcessInfo.processInfo.environment["UITEST_EARLIEST_SAMPLE_DATE"] == "failure" {
+            // Separate readable-range query failure from the history-boundary fixture.
+            // An authorized simulator query is not a deterministic synthetic outcome.
+            throw CocoaError(.coderReadCorrupt)
+        }
+        #endif
         let predicate = HKSamplePredicate.sample(type: sampleType, predicate: nil)
         let descriptor = HKSampleQueryDescriptor(
             predicates: [predicate],
