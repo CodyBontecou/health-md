@@ -151,14 +151,20 @@ internal class AgentBridgeExportTestConfiguration : AgentBridgeExportPlanningCon
     }
 }
 internal object AgentBridgeExportTestRegistry {
-    fun load(): CoreMetricRegistrySnapshot {
+    // This checked-in registry is fixed for the test process. Keep only its private JSON tree;
+    // load still creates independent generated snapshots and metric lists for every reader.
+    private val root: JsonObject by lazy {
+
         var directory: File? = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
         var file: File? = null
         while (directory != null && file == null) {
             val candidate = File(directory, "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json")
             if (candidate.isFile) file = candidate else directory = directory.parentFile
         }
-        val root = Json.parseToJsonElement(requireNotNull(file).readText()).jsonObject
+        Json.parseToJsonElement(requireNotNull(file).readText()).jsonObject
+    }
+
+    fun load(): CoreMetricRegistrySnapshot {
         val profile = root.getValue("profiles").jsonArray.map { it.jsonObject }.single { it.getValue("id").jsonPrimitive.content == "android_frozen_v4" }
         val metrics = root.getValue("metrics").jsonArray.mapNotNull { element ->
             val row = element.jsonObject
