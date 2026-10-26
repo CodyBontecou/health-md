@@ -231,16 +231,21 @@ final class AgentBridgeNativePlanningSession {
         guard let responseChannel, let negotiation = responseNegotiation else {
             throw AgentBridgeValidationError.unsupportedCapability
         }
+        print("Test Case [STOP-DIAG] owner-begin uptime=\(ProcessInfo.processInfo.systemUptime)")
         try Task.checkCancellation(); try requireOwnerCurrent()
         _ = try service.requestCancellation(request, authenticatedPeer: peer)
+        print("Test Case [STOP-DIAG] intent-persisted uptime=\(ProcessInfo.processInfo.systemUptime)")
         let receipt = try service.finalizeCancellation(request, authenticatedPeer: peer, fileProtection: captureProtection)
+        print("Test Case [STOP-DIAG] first-finalizer-returned uptime=\(ProcessInfo.processInfo.systemUptime)")
         let validate: @Sendable () async throws -> Void = { [self] in
             try Task.checkCancellation()
             try await MainActor.run {
                 try requireOwnerCurrent()
+                print("Test Case [STOP-DIAG] validator-finalizer-begin uptime=\(ProcessInfo.processInfo.systemUptime)")
                 guard try service.finalizeCancellation(request, authenticatedPeer: peer, fileProtection: captureProtection) == receipt else {
                     throw AgentBridgeValidationError.bindingChanged
                 }
+                print("Test Case [STOP-DIAG] validator-finalizer-returned uptime=\(ProcessInfo.processInfo.systemUptime)")
                 // No callback follows the finalizer's exact signed/retained-file proof.
                 try lifecycle.requireActiveOwner()
                 guard !wireAbandoned else { throw AgentBridgeValidationError.permissionRequired }
@@ -248,8 +253,11 @@ final class AgentBridgeNativePlanningSession {
             try Task.checkCancellation()
         }
         try await validate()
+        print("Test Case [STOP-DIAG] send-begin uptime=\(ProcessInfo.processInfo.systemUptime)")
         try await responseChannel.sendAgentBridge(.init(payload: .receipt(receipt)), negotiation: negotiation, authorize: validate)
+        print("Test Case [STOP-DIAG] send-returned uptime=\(ProcessInfo.processInfo.systemUptime)")
         try await validate()
+        print("Test Case [STOP-DIAG] owner-return uptime=\(ProcessInfo.processInfo.systemUptime)")
         return receipt
     }
 

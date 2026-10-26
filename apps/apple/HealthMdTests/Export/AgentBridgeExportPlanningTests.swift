@@ -1575,9 +1575,12 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
 
     private func checkNativeTransferSender(_ mode: String) async throws {
+        print("Test Case [STOP-DIAG] fixture-begin mode=\(mode) uptime=\(ProcessInfo.processInfo.systemUptime)")
         try await withNativeExportPreparation { rig, planner, request, store, manager in
+            print("Test Case [STOP-DIAG] fixture-issuer-ready mode=\(mode) uptime=\(ProcessInfo.processInfo.systemUptime)")
             store.querySumResult = { _, _ in 123 }
             let original = try await planner.prepareTransferExport(request, manager: manager)
+            print("Test Case [STOP-DIAG] fixture-original-prepared mode=\(mode) uptime=\(ProcessInfo.processInfo.systemUptime)")
             if mode == "cancel-no-frontier" {
                 let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
                 let directory = rig.directory.appendingPathComponent("captures/" + job.requestSHA256.rawValue)
@@ -1624,6 +1627,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     priorCompletion = try context.preserveCompletion()
                 }
             }
+            print("Test Case [STOP-DIAG] fixture-retained-prefix-ready mode=\(mode) uptime=\(ProcessInfo.processInfo.systemUptime)")
             let key = SymmetricKey(data: Data(repeating: 19, count: 32))
             var responses: [DirectMessage] = []
             for partition in original.partitions {
@@ -1721,12 +1725,14 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             }
             defer { rig.captureProtection.onRequire = nil }
             if stopTransfer {
+                print("Test Case [STOP-DIAG] fixture-stop-send-begin mode=\(mode) uptime=\(ProcessInfo.processInfo.systemUptime)")
                 var failure: Error?
                 do {
                     if mode == "stop-resume" { try await reconnect.sendResumedExecutionExport(XCTUnwrap(resumeEnvelope), manager: manager, core: BridgeRenderTamperCore(mode: "forbid")) }
                     else if completion { try await reconnect.sendExecutionExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid")) }
                     else { try await reconnect.sendTransferExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid")) }
                 } catch { failure = error }
+                print("Test Case [STOP-DIAG] fixture-stop-send-returned mode=\(mode) uptime=\(ProcessInfo.processInfo.systemUptime)")
                 XCTAssertTrue(stopState.received)
                 let unsafe = ["stop-foreign", "stop-write-failure"].contains(mode)
                 func receipts() throws -> [AgentBridgeExecutionReceipt] {
@@ -1756,7 +1762,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     XCTAssertFalse(channel.isLocallyTerminal)
                     let stateFile = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
                     let pendingReads = wire.receiveCount
+                    print("Test Case [STOP-DIAG] fixture-replay-begin mode=\(mode) uptime=\(ProcessInfo.processInfo.systemUptime)")
                     try await reconnect.handleAndSend(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(stop))))
+                    print("Test Case [STOP-DIAG] fixture-replay-returned mode=\(mode) uptime=\(ProcessInfo.processInfo.systemUptime)")
                     XCTAssertEqual(try receipts().last, receipt); XCTAssertEqual(try Data(contentsOf: stateFile), before)
                     XCTAssertEqual(wire.receiveCount, pendingReads)
                 }
