@@ -243,6 +243,23 @@ final class AgentBridgeExportPlanningService {
         return receipt
     }
 
+    /// Select from signed retained ownership, never a remote flag or missing-spool fallback.
+    /// The selected finalizer independently validates the exact original job and pending stop.
+    func finalizeCancellation(_ supplied: AgentBridgeCancel,
+        authenticatedPeer: AgentBridgeExportAuthenticatedPeer,
+        fileProtection: any AgentBridgeNativeCaptureProtecting = AgentBridgeSystemNativeCaptureProtection()
+    ) throws -> AgentBridgeExecutionReceipt {
+        let request = try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: AgentBridgeV4Codec.encode(supplied))
+        try authenticatedPeer.requireCurrent(); try requirePeer(request.peer, authenticatedPeer)
+        let captured = try store.inspectCurrent { state in
+            state.captureClaims?.contains { $0.requestSHA256 == request.requestSha256 } == true
+        }
+        if captured {
+            return try finalizeCapturedCancellation(request, authenticatedPeer: authenticatedPeer, fileProtection: fileProtection)
+        }
+        return try finalizeUnclaimedCancellation(request, authenticatedPeer: authenticatedPeer)
+    }
+
     /// Stop-only recovery: no settings resolution, SDK read, recapture, or grant restoration.
     /// The nonblocking original spool lock proves no capture owner still holds this resource.
     func finalizeCapturedCancellation(_ supplied: AgentBridgeCancel,

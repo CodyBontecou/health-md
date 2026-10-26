@@ -154,9 +154,16 @@ final class AgentBridgeNativePlanningSession {
 
     @discardableResult
     func requireCurrent() throws -> AgentBridgeNativeCatalogPublication {
+        try requireOwnerCurrent()
+        return try lifecycle.currentPublication()
+    }
+
+    /// Transport/stop authority only; no current catalog, settings or SDK read permission.
+    private func requireOwnerCurrent() throws {
         guard !wireAbandoned else { throw AgentBridgeValidationError.permissionRequired }
         try peer.requireCurrent()
-        return try lifecycle.currentPublication()
+        try lifecycle.requireActiveOwner()
+        guard !wireAbandoned else { throw AgentBridgeValidationError.permissionRequired }
     }
 
     func handle(_ bytes: Data) throws -> Data {
@@ -166,7 +173,7 @@ final class AgentBridgeNativePlanningSession {
         return result
     }
 
-    /// Native response composition only; does not advertise or install the extension route.
+    /// Responses on the original negotiated owner; no additional capability is advertised.
     /// The owner supplies its channel ONCE at construction, never from a request/call argument.
     /// Keep the publication admitted before planning across every bounded native write and return.
     func handleAndSend(_ bytes: Data) async throws {
@@ -180,6 +187,12 @@ final class AgentBridgeNativePlanningSession {
         }
         do {
             try Task.checkCancellation()
+            let incoming = try negotiation.decode(bytes)
+            if case .cancel(let request) = incoming.payload {
+                guard try negotiation.encode(incoming) == bytes else { throw AgentBridgeValidationError.invalidRequest }
+                try await sendRetainedCancellation(request)
+                return
+            }
             let publication = try requireCurrent()
             let response = try negotiation.decode(handle(bytes))
             try await responseChannel.sendAgentBridge(response, negotiation: negotiation) { [self] in
@@ -204,9 +217,37 @@ final class AgentBridgeNativePlanningSession {
         }
     }
 
+    /// Called under the original wire-operation guard. A capture worker cannot still own
+    /// this session; the finalizer also refuses an independently held retained-spool lock.
+    private func sendRetainedCancellation(_ request: AgentBridgeCancel) async throws {
+        guard let responseChannel, let negotiation = responseNegotiation else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        try Task.checkCancellation(); try requireOwnerCurrent()
+        _ = try service.requestCancellation(request, authenticatedPeer: peer)
+        let receipt = try service.finalizeCancellation(request, authenticatedPeer: peer, fileProtection: captureProtection)
+        let validate: @Sendable () async throws -> Void = { [self] in
+            try Task.checkCancellation()
+            try await MainActor.run {
+                try requireOwnerCurrent()
+                guard try service.finalizeCancellation(request, authenticatedPeer: peer, fileProtection: captureProtection) == receipt else {
+                    throw AgentBridgeValidationError.bindingChanged
+                }
+                // No callback follows the finalizer's exact signed/retained-file proof.
+                try lifecycle.requireActiveOwner()
+                guard !wireAbandoned else { throw AgentBridgeValidationError.permissionRequired }
+            }
+            try Task.checkCancellation()
+        }
+        try await validate()
+        try await responseChannel.sendAgentBridge(.init(payload: .receipt(receipt)), negotiation: negotiation, authorize: validate)
+        try await validate()
+    }
+
     /// One native receive iteration. Bridge requests use this SAME original planner; deployed
     /// base messages and binary frames are returned intact to the existing native controller.
-    /// The controller must not run another channel reader concurrently. This adds no advertisement.
+    /// Planning and retained Stop share this owner. The controller must not run a second reader;
+    /// this adds no capability advertisement.
     func receiveAndHandleNext(on channel: DirectSecureChannel) async throws -> AgentBridgeSecurePayload? {
         guard responseChannel === channel else { throw AgentBridgeValidationError.bindingChanged }
         return try await receiveAndHandleNext()
@@ -220,7 +261,7 @@ final class AgentBridgeNativePlanningSession {
         do {
             let received = try await responseChannel.receiveAllowingAgentBridge(negotiation: negotiation) { [self] in
                 try Task.checkCancellation()
-                try await MainActor.run { _ = try requireCurrent() }
+                try await MainActor.run { try requireOwnerCurrent() }
                 try Task.checkCancellation()
             }
             if case .agent(let request) = received {

@@ -2991,6 +2991,130 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
     }
 
+    func testNativeReceiveCancelsRetainedJobsWithoutCatalogOrReadPermissionAndReplaysExactReceipt() async throws {
+        for captured in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig), stop = try cancellationRequest(request)
+            _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            if captured {
+                let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+                let spool = try rig.store.openCaptureSpool(reservation, create: true, fileProtection: rig.captureProtection) {
+                    _ = try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer)
+                }
+                spool.close()
+            }
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+            _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let key = SymmetricKey(data: Data(repeating: 7, count: 32))
+            let bytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(stop)))
+            let wire = NativePlanningResponsePackets(inbound: [
+                try nativeResponsePacket(bytes, sequence: 0, key: key), try nativeResponsePacket(bytes, sequence: 1, key: key),
+            ])
+            let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+            defer { channel.cancel() }
+            let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel,
+                beforeNativeRead: { XCTFail("Stop cannot restore read configuration"); throw AgentBridgeValidationError.permissionRequired })
+            try lifecycle.observeNativeChange()
+            rig.reader.grants = .required; rig.reader.calls.removeAll()
+            rig.reader.defaults.reads = 0; rig.reader.defaults.writes = 0
+            let first = try await planner.receiveAndHandleNext(on: channel); XCTAssertNil(first)
+            let original = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            let replay = try await planner.receiveAndHandleNext(on: channel); XCTAssertNil(replay)
+            XCTAssertEqual(wire.packets.count, 2)
+            var receipts: [AgentBridgeExecutionReceipt] = []
+            for packet in wire.packets {
+                guard case .encrypted(let frame) = packet else { return XCTFail("Expected original encrypted channel") }
+                let plaintext = try ManualIPSyncSecurity.open(frame, using: key)
+                guard case .receipt(let receipt) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: Data(plaintext.dropFirst(16))).payload else {
+                    return XCTFail("Expected terminal execution receipt")
+                }
+                receipts.append(receipt)
+            }
+            XCTAssertEqual(receipts[0], receipts[1]); XCTAssertEqual(receipts[0].status, .cancelled)
+            XCTAssertTrue(receipts[0].sourceAcknowledged); XCTAssertEqual(receipts[0].artifactCount, 0)
+            XCTAssertEqual(receipts[0].requestSha256, stop.requestSha256)
+            XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), original)
+            XCTAssertTrue(rig.reader.calls.isEmpty); XCTAssertEqual(rig.reader.defaults.reads, 0); XCTAssertEqual(rig.reader.defaults.writes, 0)
+            XCTAssertThrowsError(try planner.requireCurrent()) { XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged) }
+            XCTAssertFalse(channel.isLocallyTerminal)
+        }
+    }
+
+    func testNativeReceiveCannotAcknowledgeForeignExpiredStoppedBusyOrMissingRetainedCancellation() async throws {
+        for mode in ["foreign", "expired", "stopped", "busy", "missing"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig), originalStop = try cancellationRequest(request)
+            let stop = mode == "foreign" ? AgentBridgeCancel(approvalId: originalStop.approvalId, authorityId: originalStop.authorityId,
+                jobId: try id(99), peer: originalStop.peer, requestSha256: originalStop.requestSha256) : originalStop
+            _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            var held: AgentBridgeNativeCaptureSpool?
+            if ["busy", "missing"].contains(mode) {
+                let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+                if mode == "busy" {
+                    held = try rig.store.openCaptureSpool(reservation, create: true, fileProtection: rig.captureProtection) {
+                        _ = try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer)
+                    }
+                }
+            }
+            defer { held?.close() }
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+            _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let key = SymmetricKey(data: Data(repeating: 7, count: 32))
+            let bytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(stop)))
+            let wire = NativePlanningResponsePackets(inbound: [try nativeResponsePacket(bytes, sequence: 0, key: key)])
+            let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+            defer { channel.cancel() }
+            let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel,
+                beforeNativeRead: { XCTFail("Stop cannot read configuration"); throw AgentBridgeValidationError.permissionRequired })
+            if mode == "expired" { rig.clock.advance(seconds: 604800) }
+            if mode == "stopped" { lifecycle.stop() }
+            let expected: AgentBridgeValidationError = mode == "foreign" ? .bindingChanged : mode == "expired" ? .planExpired :
+                mode == "stopped" ? .permissionRequired : mode == "busy" ? .busy : .spoolMissingRestartRequired
+            do { _ = try await planner.receiveAndHandleNext(on: channel); XCTFail("Expected retained-state rejection: \(mode)") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, expected, mode) }
+            XCTAssertTrue(wire.packets.isEmpty); XCTAssertTrue(channel.isLocallyTerminal)
+            XCTAssertTrue(try rig.store.snapshot().cancellationIntents?.allSatisfy { try $0.terminalReceipt() == nil } ?? true)
+        }
+    }
+
+    func testNativeCancellationReceiptRechecksTrustExpiryOwnerAndRetainedFilesAtGuardedWriteAndReturn() async throws {
+        for afterWrite in [false, true] { for mode in ["trust", "expiry", "owner", "files"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig), stop = try cancellationRequest(request)
+            _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer)
+            let reservation = try rig.service.claimCapture(request, authenticatedPeer: rig.peer)
+            let spool = try rig.store.openCaptureSpool(reservation, create: true, fileProtection: rig.captureProtection) {
+                _ = try rig.service.captureReadConfiguration(reservation, authenticatedPeer: rig.peer)
+            }
+            spool.close()
+            let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+            _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+            let mutate: @MainActor @Sendable () throws -> Void = {
+                switch mode {
+                case "trust": rig.session.revoke()
+                case "expiry": rig.clock.advance(seconds: 604800)
+                case "owner": lifecycle.stop()
+                default:
+                    let header = rig.directory.appendingPathComponent("captures/" + stop.requestSha256.rawValue + "/header.json")
+                    try Data("changed".utf8).write(to: header)
+                }
+            }
+            let key = SymmetricKey(data: Data(repeating: 7, count: 32))
+            let bytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(stop)))
+            let wire = NativePlanningResponsePackets(beforeWrite: { if !afterWrite { try await mutate() } },
+                afterWrite: { if afterWrite { try await mutate() } }, inbound: [try nativeResponsePacket(bytes, sequence: 0, key: key)])
+            let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+            defer { channel.cancel() }
+            let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel,
+                beforeNativeRead: { XCTFail("Stop cannot read configuration"); throw AgentBridgeValidationError.permissionRequired })
+            let expected: AgentBridgeValidationError = mode == "expiry" ? .planExpired : mode == "files" ? .spoolMissingRestartRequired : .permissionRequired
+            do { _ = try await planner.receiveAndHandleNext(on: channel); XCTFail("A stale proof must not return success") }
+            catch { XCTAssertEqual(error as? AgentBridgeValidationError, expected, mode) }
+            XCTAssertEqual(wire.packets.count, afterWrite ? 1 : 0) // Already emitted bytes cannot be recalled.
+            XCTAssertTrue(channel.isLocallyTerminal)
+        } }
+    }
+
     func testNativeReceiveRoutesDiscoveryAndPreservesBaseAndBinaryFrames() async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())

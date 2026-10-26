@@ -2043,6 +2043,134 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    private fun acceptedStopExecution(f: AgentBridgeExportPlanningFixture): AgentBridgeExecuteRequest {
+        val plan = f.service.plan(f.peerContext, f.request(f.enrolled()))
+        val approval = f.service.authorizeExactApproval(f.peerContext, f.native, plan.planId, AgentBridgeValidation.bindingFor(plan))
+        val request = AgentBridgeExecuteRequest(approval, AgentBridgeExportPlanningFixture.id(81), AgentBridgeExportPlanningFixture.id(82),
+            plan, AgentBridgeExportPlanningFixture.id(83), "healthmd.agent_execute_request", 1)
+        f.service.acceptExecution(f.peerContext, request)
+        return request
+    }
+    private fun stopRequest(request: AgentBridgeExecuteRequest): AgentBridgeCancelRequest {
+        val plan = request.plan as AgentBridgeGeneratedPlan
+        return AgentBridgeCancelRequest(request.approval.approvalId, plan.authorityReferences.native.authorityId,
+            request.jobId, plan.intent.peer, AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)), "healthmd.agent_cancel_request", 1)
+    }
+
+    @Test fun `native receive cancels original retained jobs without catalog or read permission and replays exact receipt`() {
+        for (captured in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
+            val request = acceptedStopExecution(f); val stop = stopRequest(request)
+            if (captured) {
+                val reservation = f.service.claimCapture(f.peerContext, request)
+                f.store.openCaptureSpool(reservation, true) { f.service.captureReadConfiguration(f.peerContext, reservation) }.close()
+            }
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                val fence = secondArg<() -> Unit>(); fence()
+                val incoming = ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("cancel_request", stop)); fence(); incoming
+            }
+            val receipts = mutableListOf<AgentBridgeExecutionReceipt>()
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                val fence = thirdArg<() -> Unit>(); fence()
+                assertThat(firstArg<AgentBridgeMessage>().type).isEqualTo("execution_receipt")
+                receipts += firstArg<AgentBridgeMessage>().payload as AgentBridgeExecutionReceipt; fence()
+            }
+            val planner = ownedPlanner(f, lifecycle, channel, beforeNativeRead = { error("Stop must not read configuration") })
+            lifecycle.observeNativeChange() // Pending settings metadata is not restored to answer Stop.
+            f.configuration.grants = AgentBridgeDiscoveryNativeGrants.REQUIRED
+            f.configuration.calls = 0; f.configuration.onRead = { error("Stop must not restore read authority") }; reset()
+            val caller = Job()
+            try {
+                assertThat(planner.receiveAndHandleNext(channel, caller)).isNull()
+                val original = Files.readAllBytes(f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+                assertThat(planner.receiveAndHandleNext(channel, caller)).isNull()
+                assertThat(receipts).hasSize(2); assertThat(receipts[1]).isEqualTo(receipts[0])
+                assertThat(receipts[0].status).isEqualTo(AgentBridgeExecutionReceiptStatus.CANCELLED)
+                assertThat(receipts[0].sourceAcknowledged).isTrue(); assertThat(receipts[0].artifactCount).isEqualTo(0)
+                assertThat(receipts[0].requestSha256).isEqualTo(stop.requestSha256)
+                assertThat(Files.readAllBytes(f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(original)
+                verify(exactly = 0) { channel.close() }
+                assertThat(f.configuration.calls).isEqualTo(0); assertThat(reads).isEqualTo(0); assertThat(writes).isEqualTo(0)
+                f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { planner.requireCurrent() }
+            } finally { caller.complete() }
+        }
+    }
+
+    @Test fun `native receive cannot acknowledge foreign expired stopped busy or missing retained cancellation`() {
+        for (mode in listOf("foreign", "expired", "stopped", "busy", "missing")) AgentBridgeExportPlanningFixture().use { f ->
+            val request = acceptedStopExecution(f)
+            val stop = stopRequest(request).let { if (mode == "foreign") it.copy(jobId = AgentBridgeExportPlanningFixture.id(99)) else it }
+            var held: AgentBridgeNativeCaptureSpool? = null
+            if (mode in listOf("busy", "missing")) {
+                val reservation = f.service.claimCapture(f.peerContext, request)
+                if (mode == "busy") held = f.store.openCaptureSpool(reservation, true) { f.service.captureReadConfiguration(f.peerContext, reservation) }
+            }
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                val fence = secondArg<() -> Unit>(); fence()
+                val incoming = ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("cancel_request", stop)); fence(); incoming
+            }
+            val planner = ownedPlanner(f, lifecycle, channel, beforeNativeRead = { error("Stop must not read configuration") })
+            if (mode == "expired") f.clock.now = f.clock.now.plusSeconds(604800)
+            if (mode == "stopped") lifecycle.stop()
+            val caller = Job()
+            try {
+                val expected = when (mode) {
+                    "foreign" -> AgentBridgeErrorCode.BINDING_CHANGED
+                    "expired" -> AgentBridgeErrorCode.PLAN_EXPIRED
+                    "stopped" -> AgentBridgeErrorCode.PERMISSION_REQUIRED
+                    "busy" -> AgentBridgeErrorCode.BUSY
+                    else -> AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED
+                }
+                f.expect(expected) { planner.receiveAndHandleNext(channel, caller) }
+                verify(exactly = 0) { channel.sendAgentBridge(any(), any(), any()) }
+                verify(atLeast = 1) { channel.close() }
+                assertThat(f.store.access { it!!.state.cancellationIntents.orEmpty().all { row -> row.terminalReceipt() == null } }).isTrue()
+            } finally { held?.close(); caller.complete() }
+        }
+    }
+
+    @Test fun `native cancellation receipt rechecks trust expiry owner and retained files at guarded write and return`() {
+        for (afterWrite in listOf(false, true)) for (mode in listOf("trust", "expiry", "owner", "files")) AgentBridgeExportPlanningFixture().use { f ->
+            val request = acceptedStopExecution(f); val stop = stopRequest(request)
+            val reservation = f.service.claimCapture(f.peerContext, request)
+            f.store.openCaptureSpool(reservation, true) { f.service.captureReadConfiguration(f.peerContext, reservation) }.close()
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                val fence = secondArg<() -> Unit>(); fence()
+                val incoming = ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("cancel_request", stop)); fence(); incoming
+            }
+            fun mutate() {
+                when (mode) {
+                    "trust" -> f.peerContext.trusted = false
+                    "expiry" -> f.clock.now = f.clock.now.plusSeconds(604800)
+                    "owner" -> lifecycle.stop()
+                    else -> Files.write(f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures")
+                        .resolve(stop.requestSha256).resolve("header.json"), "changed".toByteArray())
+                }
+            }
+            var emitted = 0
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                val fence = thirdArg<() -> Unit>()
+                if (!afterWrite) mutate()
+                fence(); emitted++
+                if (afterWrite) mutate()
+                fence()
+            }
+            val planner = ownedPlanner(f, lifecycle, channel, beforeNativeRead = { error("Stop cannot read configuration") })
+            val caller = Job()
+            try {
+                val expected = when (mode) { "expiry" -> AgentBridgeErrorCode.PLAN_EXPIRED; "files" -> AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED; else -> AgentBridgeErrorCode.PERMISSION_REQUIRED }
+                f.expect(expected) { planner.receiveAndHandleNext(channel, caller) }
+                assertThat(emitted).isEqualTo(if (afterWrite) 1 else 0) // An already emitted frame cannot be recalled.
+                verify(atLeast = 1) { channel.close() }
+            } finally { caller.complete() }
+        }
+    }
+
     @Test fun `native receive routes discovery and preserves base and binary payloads`() {
         AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()

@@ -208,6 +208,19 @@ internal class AgentBridgeExportPlanningService(
         return terminal.terminalReceipt() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
     }
 
+    /** Select from signed retained ownership, never a wire flag or missing-spool fallback.
+     * Finalizers independently validate the exact pending stop and current original job. */
+    fun finalizeCancellation(authenticated: AgentBridgeExportAuthenticatedPeer,
+        supplied: AgentBridgeCancelRequest): AgentBridgeExecutionReceipt {
+        val request = AgentBridgeCodec.decode(AgentBridgeCodec.encode(supplied)) as AgentBridgeCancelRequest
+        peer(authenticated, request.peer)
+        val captured = store.access { transaction ->
+            transaction?.state?.captureClaims.orEmpty().any { it.requestSha256 == request.requestSha256 }
+        }
+        return if (captured) finalizeCapturedCancellation(authenticated, request)
+            else finalizeUnclaimedCancellation(authenticated, request)
+    }
+
     /** Stop-only recovery. No mutable settings, SDK access, recapture or grant restoration. */
     fun finalizeCapturedCancellation(authenticated: AgentBridgeExportAuthenticatedPeer,
         supplied: AgentBridgeCancelRequest): AgentBridgeExecutionReceipt {

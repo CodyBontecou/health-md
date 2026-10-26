@@ -178,10 +178,16 @@ internal class AgentBridgeNativePlanningSession(
         requireSamePublication(publication)
     }
     fun requireCurrent(): AgentBridgeNativeCatalogPublication {
+        requireOwnerCurrent()
+        return lifecycle.currentPublication()
+    }
+    /** Transport/stop authority only; no current catalog, settings or SDK read permission. */
+    private fun requireOwnerCurrent() {
         if (wireAbandoned) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
         if (Looper.myLooper() == Looper.getMainLooper()) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
         peer.requireCurrent()
-        return lifecycle.currentPublication()
+        lifecycle.requireActiveOwner()
+        if (wireAbandoned) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
     }
     private fun requirePublication(publication: AgentBridgeNativeCatalogPublication?) {
         val current = requireCurrent()
@@ -210,6 +216,13 @@ internal class AgentBridgeNativePlanningSession(
         try {
             withTransportCancellation(caller, channel) {
                 caller.ensureActive()
+                val incoming = AgentBridgeCodec.decodeEnvelope(bytes, negotiation)
+                if (incoming.type == "cancel_request") {
+                    if (!bytes.contentEquals(AgentBridgeCodec.encodeEnvelope(incoming, negotiation)))
+                        throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+                    sendRetainedCancellation(incoming.payload as AgentBridgeCancelRequest, caller)
+                    return@withTransportCancellation
+                }
                 val publication = requireCurrent()
                 val response = AgentBridgeCodec.decodeEnvelope(handleEnvelope(bytes, negotiation), negotiation)
                 channel.sendAgentBridge(response, negotiation) {
@@ -237,9 +250,32 @@ internal class AgentBridgeNativePlanningSession(
     }
 
 
+    /** Called under the original wire-operation guard. No capture worker can still own this
+     * session; the retained-spool finalizer also refuses any independently held spool lock. */
+    private fun sendRetainedCancellation(request: AgentBridgeCancelRequest, caller: Job) {
+        val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        caller.ensureActive(); requireOwnerCurrent()
+        service.requestCancellation(peer, request)
+        val receipt = service.finalizeCancellation(peer, request)
+        val validate = {
+            caller.ensureActive(); requireOwnerCurrent()
+            if (service.finalizeCancellation(peer, request) != receipt)
+                throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            // Local-only tail after the finalizer's exact signed/retained-file proof.
+            lifecycle.requireActiveOwner()
+            if (wireAbandoned) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            caller.ensureActive()
+        }
+        validate()
+        channel.sendAgentBridge(AgentBridgeMessage("execution_receipt", receipt), negotiation, validate)
+        validate()
+    }
+
     /** One native receive iteration. This exact original planner handles bridge requests; base
      * envelopes and binary frames return intact to the existing controller. No concurrent reader
-     * may consume the same channel. Native advertisement/dispatcher remain unchanged. */
+     * may consume the same channel. Planning and retained Stop use this original owner;
+     * no additional native capability is advertised. */
     fun receiveAndHandleNext(caller: Job): ReceivedAgentBridgePayload? {
         if (!wireOperationActive.compareAndSet(false, true)) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
         return try { receiveAndHandleNextOwned(caller) } finally { wireOperationActive.set(false) }
@@ -259,7 +295,7 @@ internal class AgentBridgeNativePlanningSession(
         try {
             return withTransportCancellation(caller, channel) {
                 val received = channel.receiveAllowingAgentBridge(negotiation) {
-                    caller.ensureActive(); requireCurrent(); caller.ensureActive()
+                    caller.ensureActive(); requireOwnerCurrent(); caller.ensureActive()
                 }
                 if (received is ReceivedAgentBridgePayload.Agent) {
                     handleAndSendOwned(AgentBridgeCodec.encodeEnvelope(received.message, negotiation), caller)

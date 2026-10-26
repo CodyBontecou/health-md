@@ -68,6 +68,9 @@ internal class AgentBridgeNativeCatalogLifecycle {
     /** Actual native notification, including A→B→A coalesced before deferred SDK sampling. */
     fun observeNativeChange() = synchronized(lock) { requireAvailable(); advance() }
 
+    /** Local original-owner liveness only. Pending catalog refresh conveys no read authority. */
+    fun requireActiveOwner() = synchronized(lock) { requireAvailable() }
+
     fun stop() {
         synchronized(lock) { stopped = true; refreshEvents.value = null }
         initialPublication.completeExceptionally(AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED))

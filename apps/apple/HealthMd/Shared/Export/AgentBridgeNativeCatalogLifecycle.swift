@@ -96,6 +96,11 @@ nonisolated final class AgentBridgeNativeCatalogLifecycle: @unchecked Sendable {
         try lock.withLock { try requireAvailable(); try advance() }
     }
 
+    /// Local original-owner liveness only. Pending refresh conveys no catalog/read authority.
+    func requireActiveOwner() throws {
+        try lock.withLock { try requireAvailable() }
+    }
+
     func stop() {
         lock.withLock { stopped = true; refreshContinuation.finish() }
         finishInitialPublication(.permissionRequired)
