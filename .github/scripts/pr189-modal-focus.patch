@@ -1,0 +1,58 @@
+--- a/apps/android/app/src/androidTest/java/com/healthmd/presentation/accessibility/NativeInputReadinessTest.kt
++++ b/apps/android/app/src/androidTest/java/com/healthmd/presentation/accessibility/NativeInputReadinessTest.kt
+@@ -49,12 +49,7 @@
+             }
+         }
+         compose.onNodeWithTag(INITIAL_MODAL).assertIsDisplayed()
+-        compose.waitUntil(timeoutMillis = 10_000) {
+-            compose.runOnUiThread {
+-                modalOwner?.hasWindowFocus() == true &&
+-                    !compose.activity.window.decorView.hasWindowFocus()
+-            }
+-        }
++        awaitDiagnosticModalFocus { modalOwner }
+         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+         compose.waitUntil(timeoutMillis = 10_000) {
+             compose.runOnUiThread { !visible.value }
+@@ -80,12 +75,7 @@
+             }
+         }
+         compose.onNodeWithTag(INITIAL_MODAL).assertIsDisplayed()
+-        compose.waitUntil(timeoutMillis = 10_000) {
+-            compose.runOnUiThread {
+-                modalOwner?.hasWindowFocus() == true &&
+-                    !compose.activity.window.decorView.hasWindowFocus()
+-            }
+-        }
++        awaitDiagnosticModalFocus { modalOwner }
+         clearFixtureAndAwaitNativeHost()
+         compose.onNodeWithTag(INITIAL_MODAL).assertDoesNotExist()
+         assertTrue("Fixture disposal removes its native window exactly once", compose.runOnUiThread {
+@@ -153,6 +143,27 @@
+         })
+     }
+ 
++    // DEBUG-pr189-modal-oct26: diagnostic branch only; unchanged focus/time contract.
++    private fun awaitDiagnosticModalFocus(owner: () -> View?) {
++        try {
++            compose.waitUntil(timeoutMillis = 10_000) {
++                compose.runOnUiThread {
++                    owner()?.hasWindowFocus() == true &&
++                        !compose.activity.window.decorView.hasWindowFocus()
++                }
++            }
++        } catch (failure: ComposeTimeoutException) {
++            val facts = compose.runOnUiThread {
++                val modal = owner()
++                "modal(present=${modal != null}, attached=${modal?.isAttachedToWindow}, " +
++                    "windowFocus=${modal?.hasWindowFocus()}, rootIsSelf=${modal?.rootView === modal})"
++            }
++            withNativeInputDiagnostics("Diagnostic initial modal focus timeout; $facts") {
++                throw failure
++            }
++        }
++    }
++
+     companion object {
+         private const val INITIAL_MODAL = "native-input.initial-modal"
+     }

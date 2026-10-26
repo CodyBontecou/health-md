@@ -1,6 +1,13 @@
-name: PR189 JVM diagnosis (not qualification)
+name: PR189 Android diagnosis (not qualification)
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        default: jvm
+        options:
+          - jvm
+          - native-focus
 permissions:
   contents: read
 concurrency:
@@ -8,6 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   diagnose:
+    if: ${{ inputs.mode == 'jvm' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     defaults:
@@ -68,5 +76,92 @@ jobs:
             apps/android/build/reports/pr189-jvm-diagnostic/
             apps/android/app/build/test-results/testPlayReleaseUnitTest/
             apps/android/app/build/reports/tests/testPlayReleaseUnitTest/
+          retention-days: 3
+          if-no-files-found: warn
+
+  native-focus:
+    if: ${{ inputs.mode == 'native-focus' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          # The action's default also requests the retired SDK 'tools' package.
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+
+      - name: Restore pinned Rust toolchain and native build cache
+        uses: ./.github/actions/android-native-cache
+        with:
+          cache-targets: android
+
+      - name: Install pinned Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          android_sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -n "$android_sdk"
+          sdkmanager "ndk;27.1.12297006"
+          echo "ANDROID_NDK_HOME=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Validate wrapper
+        uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          min-wrapper-count: 1
+
+      - name: Apply failure-only focus diagnostics
+        working-directory: ${{ github.workspace }}
+        run: |
+          git diff --exit-code a130bb5b2f0bb74fe319003bac9169dfafdc5bfd -- apps/android packages/healthmd-core-rust packages/contracts
+          git apply --check .github/scripts/pr189-modal-focus.patch
+          git apply .github/scripts/pr189-modal-focus.patch
+      - name: Prepare the actual instrumentation APKs before boot
+        run: |
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process :healthmd-core:prepareRustDebug :app:assemblePlayDebug :app:assemblePlayDebugAndroidTest --stacktrace
+      - name: Enable KVM access
+        run: sudo chmod 666 /dev/kvm
+      - name: Repeat only the unchanged preflight contract on an owned AVD
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          disable-animations: true
+          script: |
+            adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+            adb -s emulator-5554 shell settings put secure show_ime_with_hard_keyboard 1
+            test "$(adb -s emulator-5554 shell settings get secure show_ime_with_hard_keyboard | tr -d '\r')" = 1
+            for attempt in $(seq 1 30); do default_ime=$(adb -s emulator-5554 shell settings get secure default_input_method | tr -d '\r'); if [ -n "$default_ime" ] && [ "$default_ime" != null ] && adb -s emulator-5554 shell ime list -s | tr -d '\r' | grep -Fx "$default_ime"; then exit 0; fi; sleep 1; done; exit 1
+            adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+            adb -s emulator-5554 shell locksettings set-disabled true
+            test "$(adb -s emulator-5554 shell locksettings get-disabled | tr -d '\r')" = true
+            adb -s emulator-5554 shell wm dismiss-keyguard
+            cd apps/android && timeout 90 ./scripts/prepare-ci-emulator.sh
+            timeout --signal=TERM --kill-after=30s 1800s bash .github/scripts/pr189-modal-focus.sh
+      - name: Retain synthetic native-focus evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pr189-native-focus-diagnostics
+          path: apps/android/build/reports/pr189-native-focus/
           retention-days: 3
           if-no-files-found: warn

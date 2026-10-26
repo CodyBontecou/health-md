@@ -1,0 +1,7 @@
+// Diagnostic repetitions must execute instrumentation; compiled APK tasks remain reusable.
+allprojects {
+    tasks.matching { it.name == 'connectedPlayDebugAndroidTest' }.configureEach {
+        outputs.doNotCacheIf('Diagnostic instrumentation must execute each round') { true }
+        outputs.upToDateWhen { false }
+    }
+}
