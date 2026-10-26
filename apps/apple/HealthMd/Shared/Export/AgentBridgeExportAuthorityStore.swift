@@ -66,6 +66,31 @@ nonisolated struct AgentBridgeExportStoredDecision: Codable {
     func approval() throws -> AgentBridgeApproval { try AgentBridgeV4Codec.decode(AgentBridgeApproval.self, from: approvalBytes) }
 }
 /// Immutable accepted-pending-capture journal entry. No capture/claim/transfer state is implied.
+/// Pure immutable-record work only. Each decoded/constructed job owns one bounded cache;
+/// copies share that same immutable value. No key, clock, live grant, file or SDK fact is cached.
+nonisolated private final class AgentBridgeAcceptedJobPureCache: @unchecked Sendable {
+    private let requestLock = NSLock()
+    private var parsedRequest: AgentBridgeExecute?
+    private let validationLock = NSLock()
+    private var structurallyValid = false
+
+    func request(_ bytes: Data) throws -> AgentBridgeExecute {
+        requestLock.lock(); defer { requestLock.unlock() }
+        if let parsedRequest { return parsedRequest }
+        let value = try AgentBridgeV4Codec.decode(AgentBridgeExecute.self, from: bytes)
+        parsedRequest = value
+        return value
+    }
+    func validate(_ operation: () throws -> Void) throws {
+        validationLock.lock(); defer { validationLock.unlock() }
+        guard !structurallyValid else { return }
+        // The body is closed pure model work. It can take requestLock but never
+        // invokes native callbacks, storage, an issuer fence, or this validator.
+        try operation()
+        structurallyValid = true
+    }
+}
+
 nonisolated struct AgentBridgeExportAcceptedJob: Codable, Equatable {
     let version: Int
     let requestBytes: Data
@@ -73,7 +98,23 @@ nonisolated struct AgentBridgeExportAcceptedJob: Codable, Equatable {
     let nativeResolution: Data
     let acceptedAt: AgentBridgeUTC
     let expiresAt: AgentBridgeUTC
-    func request() throws -> AgentBridgeExecute { try AgentBridgeV4Codec.decode(AgentBridgeExecute.self, from: requestBytes) }
+    private let pureCache = AgentBridgeAcceptedJobPureCache()
+    // Keep the complete original durable/equality identity explicit: derived parse state
+    // must neither enter signed bytes nor change comparisons with a fresh stored copy.
+    private enum CodingKeys: String, CodingKey {
+        case version, requestBytes, requestSHA256, nativeResolution, acceptedAt, expiresAt
+    }
+    init(version: Int, requestBytes: Data, requestSHA256: AgentBridgeDigest,
+         nativeResolution: Data, acceptedAt: AgentBridgeUTC, expiresAt: AgentBridgeUTC) {
+        self.version = version; self.requestBytes = requestBytes; self.requestSHA256 = requestSHA256
+        self.nativeResolution = nativeResolution; self.acceptedAt = acceptedAt; self.expiresAt = expiresAt
+    }
+    static func == (left: Self, right: Self) -> Bool {
+        left.version == right.version && left.requestBytes == right.requestBytes
+            && left.requestSHA256 == right.requestSHA256 && left.nativeResolution == right.nativeResolution
+            && left.acceptedAt == right.acceptedAt && left.expiresAt == right.expiresAt
+    }
+    func request() throws -> AgentBridgeExecute { try pureCache.request(requestBytes) }
     /// Deterministic pre-capture receipt derived only from the signed original acceptance.
     /// Zero digests/counts mean no manifest/frontier exists yet, matching the v4 native fixtures.
     func acceptedReceipt() throws -> AgentBridgeExecutionReceipt {
@@ -95,17 +136,19 @@ nonisolated struct AgentBridgeExportAcceptedJob: Codable, Equatable {
             sourceAcknowledged: true, status: .cancelled)
     }
     func validate() throws {
-        let value = try request()
-        let formatter = ISO8601DateFormatter()
-        guard version == 1, requestBytes.count <= 48 * 1024, nativeResolution.count <= 48 * 1024,
-              try AgentBridgeV4Codec.encode(value) == requestBytes,
-              AgentBridgeV4Codec.sha256(requestBytes) == requestSHA256.rawValue,
-              let accepted = formatter.date(from: acceptedAt.rawValue), let expires = formatter.date(from: expiresAt.rawValue),
-              expires.timeIntervalSince(accepted) == 604800,
-              acceptedAt.rawValue >= value.plan.issuedAt.rawValue, acceptedAt.rawValue < value.plan.expiresAt.rawValue,
-              value.approval.approvedAt.rawValue <= acceptedAt.rawValue else { throw AgentBridgeValidationError.bindingChanged }
-        // The MainActor service validates native resolution semantics; store validation below
-        // requires byte equality with that issuer-owned plan, without crossing actor isolation.
+        try pureCache.validate {
+            let value = try request()
+            let formatter = ISO8601DateFormatter()
+            guard version == 1, requestBytes.count <= 48 * 1024, nativeResolution.count <= 48 * 1024,
+                  try AgentBridgeV4Codec.encode(value) == requestBytes,
+                  AgentBridgeV4Codec.sha256(requestBytes) == requestSHA256.rawValue,
+                  let accepted = formatter.date(from: acceptedAt.rawValue), let expires = formatter.date(from: expiresAt.rawValue),
+                  expires.timeIntervalSince(accepted) == 604800,
+                  acceptedAt.rawValue >= value.plan.issuedAt.rawValue, acceptedAt.rawValue < value.plan.expiresAt.rawValue,
+                  value.approval.approvedAt.rawValue <= acceptedAt.rawValue else { throw AgentBridgeValidationError.bindingChanged }
+            // The MainActor service validates native resolution semantics; store validation below
+            // requires byte equality with that issuer-owned plan, without crossing actor isolation.
+        }
     }
 }
 nonisolated struct AgentBridgeExportJobAcceptance {
