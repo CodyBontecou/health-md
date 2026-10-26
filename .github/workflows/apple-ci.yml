@@ -27,6 +27,12 @@ on:
       - '.github/workflows/apple-nightly.yml'
   pull_request:
   workflow_dispatch:
+    inputs:
+      diagnose_macos_rss:
+        description: Run an additional bounded cold-process RSS reproduction (not qualification)
+        type: boolean
+        required: false
+        default: false
   workflow_call:
     inputs:
       release_sha:
@@ -491,6 +497,59 @@ jobs:
             apps/apple/build/logs/ios-automation-test-diagnostics.txt
             apps/apple/build/test-results/HealthMd-iOS.xcresult
           retention-days: 14
+
+  diagnose-macos-rss:
+    name: Diagnostic macOS RSS reproduction
+    needs: [changes, prepare-shared-core]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.diagnose_macos_rss }}
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      MACOS_CODE_COVERAGE: 'YES'
+    defaults:
+      run:
+        working-directory: apps/apple
+    steps:
+      - name: Checkout exact diagnostic source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '27.0'
+      - name: Restore same-run prepared shared Rust core
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-sdk27-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+      - name: Verify SDK27 diagnostic provenance
+        run: |
+          set -euo pipefail
+          bash scripts/qualify-history-authorization-sdk27.sh
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+      - name: Build diagnostic test products
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          make build-macos-tests CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/rss-diagnostic-derived 2>&1 | tee build/logs/rss-diagnostic-build.log
+      - name: Reproduce RSS failure in at most twenty cold processes
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          make diagnose-macos-rss CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/rss-diagnostic-derived 2>&1 | tee build/logs/rss-diagnostic-test.log
+      - name: Retain bounded synthetic RSS diagnosis
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-rss-diagnostic-${{ github.run_id }}
+          path: |
+            apps/apple/build/logs/rss-diagnostic-*.log
+            apps/apple/build/diagnostics/ConnectedCorpusRSS.xcresult
+          retention-days: 3
+          if-no-files-found: error
 
   test-macos:
     # Documentation checks reuse the coverage build's compilation profile.

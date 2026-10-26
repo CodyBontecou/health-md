@@ -164,6 +164,46 @@ class WorkflowRoutingTests(unittest.TestCase):
             self.assertEqual(value, execution[execution.index(flag) + 1])
 
 
+    def test_rss_diagnosis_is_additional_manual_only_and_keeps_full_native_gates(self):
+        workflow = WORKFLOW.read_text()
+        diagnostic = jobs()["diagnose-macos-rss"]
+        self.assertIn("diagnose_macos_rss:", workflow)
+        dispatch = workflow.split("  workflow_dispatch:\n", 1)[1].split("  workflow_call:", 1)[0]
+        self.assertIn("type: boolean", dispatch)
+        self.assertIn("default: false", dispatch)
+        self.assertIn("if: ${{ github.event_name == 'workflow_dispatch' && inputs.diagnose_macos_rss }}", diagnostic)
+        self.assertIn("needs: [changes, prepare-shared-core]", diagnostic)
+        self.assertIn("runs-on: xcode-27", diagnostic)
+        self.assertIn("ref: ${{ github.sha }}", diagnostic)
+        self.assertIn("name: apple-sdk27-shared-core", diagnostic)
+        self.assertIn("compare-history-sdk27-receipts.py", diagnostic)
+        self.assertIn("validate-apple-xcframework.sh", diagnostic)
+        self.assertIn("retention-days: 3", diagnostic)
+        self.assertNotIn("continue-on-error", diagnostic)
+        self.assertIn("make coverage CORE_RUST_PREPARE=:", jobs()["test-macos"])
+        self.assertNotIn("diagnose_macos_rss", jobs()["test-macos"])
+        self.assertIn("      - test-macos\n", jobs()["gate"])
+
+    def test_rss_diagnostic_expands_to_bounded_cold_execution_of_existing_unchanged_case(self):
+        result = subprocess.run(
+            ["make", "-n", "diagnose-macos-rss", "CORE_RUST_PREPARE=:",
+             "MACOS_DERIVED_DATA_DIR=build/rss-diagnostic-derived", "MACOS_CODE_COVERAGE=YES"],
+            cwd=REPO / "apps/apple", check=True, capture_output=True, text=True)
+        expanded = result.stdout.replace("\\\n", " ")
+        args = shlex.split(next(line.strip() for line in expanded.splitlines() if line.strip().startswith("xcodebuild ")))
+        self.assertEqual(["xcodebuild", "test-without-building"], args[:2])
+        for flag, value in (("-test-iterations", "20"), ("-test-repetition-relaunch-enabled", "YES"),
+                            ("-default-test-execution-time-allowance", "120"), ("-maximum-test-execution-time-allowance", "300"),
+                            ("-derivedDataPath", "build/rss-diagnostic-derived"), ("-enableCodeCoverage", "YES")):
+            self.assertEqual(value, args[args.index(flag) + 1])
+        self.assertIn("-run-tests-until-failure", args)
+        self.assertNotIn("-retry-tests-on-failure", args)
+        case = "testStreamableDecoderMapsLargeProductionHealthDayDataWithoutItemSizedRSSCopy"
+        self.assertIn("-only-testing:HealthMdTests/ConnectedCorpusPartitionFileTests/" + case, args)
+        self.assertIn("func " + case + "()", (REPO / "apps/apple/HealthMdTests/Sync/ConnectedCorpusPartitionFileTests.swift").read_text())
+
+
+
 class GateExecutionTests(unittest.TestCase):
     def run_gate(self, selected=(), **updates):
         environment = dict(os.environ, CHANGES_RESULT="success")

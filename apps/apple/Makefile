@@ -70,7 +70,7 @@ IOS_TEST_RAW_LOG   ?= build/logs/xcodebuild-ios-raw.log
 COVERAGE_DIR       := build/coverage
 XCRESULT_PATH      := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: help build-macos-tests test test-platforms test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs check-export-docs-after-tests test-cli cli install-cli test-export-lab-tools check-export-lab-release
+.PHONY: help build-macos-tests diagnose-macos-rss test test-platforms test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs check-export-docs-after-tests test-cli cli install-cli test-export-lab-tools check-export-lab-release
 
 help:
 	@awk '/^##/ { sub(/^## ?/, ""); print }' Makefile
@@ -117,6 +117,16 @@ test-ios: prepare-healthmd-core-rust
 build-macos-tests: prepare-healthmd-core-rust
 	@echo "Building macOS test products"
 	xcodebuild build-for-testing $(MACOS_TEST_PRODUCT_FLAGS) -enableCodeCoverage $(MACOS_CODE_COVERAGE)
+
+# Diagnostic stress loop only; the required full suite and its limits stay unchanged.
+diagnose-macos-rss: prepare-healthmd-core-rust
+	@mkdir -p build/diagnostics
+	xcodebuild test-without-building $(MACOS_TEST_PRODUCT_FLAGS) \
+	  -enableCodeCoverage YES \
+	  -only-testing:HealthMdTests/ConnectedCorpusPartitionFileTests/testStreamableDecoderMapsLargeProductionHealthDayDataWithoutItemSizedRSSCopy \
+	  -test-iterations 20 -run-tests-until-failure -test-repetition-relaunch-enabled YES \
+	  $(XCODE_TEST_TIMEOUT_FLAGS) \
+	  -resultBundlePath build/diagnostics/ConnectedCorpusRSS.xcresult
 
 test-macos: prepare-healthmd-core-rust
 	@echo "\n━━━  macOS Tests  ━━━"
