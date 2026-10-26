@@ -33,7 +33,13 @@ run_cases() {
       status=$?
       failed=1
     fi
-    echo "$phase iteration=$iteration exit=$status" | tee -a "$out/outcomes.txt"
+    count=$(grep -Ec 'testStreamableDecoderMapsLargeProductionHealthDayDataWithoutItemSizedRSSCopy.* (passed|failed) ' "$out/$phase-$iteration.log" || true)
+    if [[ "$count" != 1 ]]; then
+      echo "Missing exact production-model case result: $phase iteration=$iteration count=$count" >&2
+      failed=1
+      if [[ "$status" == 0 ]]; then status=1; fi
+    fi
+    echo "$phase iteration=$iteration exit=$status cases=$count" | tee -a "$out/outcomes.txt"
   done
 }
 # Isolate the original production-model case before earlier class tests can warm allocators.
