@@ -663,6 +663,7 @@ pub(crate) struct OutputTransaction {
     name: String,
     journal: OutputJournal,
     persisted: Option<Vec<u8>>,
+    attempt: Option<Vec<u8>>,
     is_new: bool,
     stage_slots: AtomicUsize,
 }
@@ -680,6 +681,7 @@ impl OutputTransaction {
             .map_err(|_| ClientError::AgentStoreBusy)?;
         let entries = scan_output_usage(&dir)?.0;
         let (journal, bytes) = read_retained_output(&dir, &store.host, job, &key)?;
+        let attempt = read_compatible_execution_attempt(&dir, &store.host, &journal.binding, &key)?;
         let transaction = Self {
             store: store.clone(),
             dir,
@@ -688,6 +690,7 @@ impl OutputTransaction {
             name: format!("output-{}.json", job.0),
             journal,
             persisted: Some(bytes),
+            attempt,
             is_new: false,
             stage_slots: AtomicUsize::new(8191 - usize::min(entries, 8191)),
         };
@@ -753,6 +756,7 @@ impl OutputTransaction {
             return Err(Error::BindingChanged.into());
         }
         validate_plans(&journal)?;
+        let attempt = read_compatible_execution_attempt(&dir, &store.host, binding, &key)?;
         if is_new
             && retained_bytes
                 .checked_add(MAX_OUTPUT_BYTES as u64)
@@ -768,6 +772,7 @@ impl OutputTransaction {
             name,
             journal,
             persisted,
+            attempt,
             is_new,
             stage_slots: AtomicUsize::new(8191 - usize::min(entries + usize::from(is_new), 8191)),
         })
@@ -949,6 +954,14 @@ impl OutputTransaction {
     pub fn require_current(&self) -> Result<(), ClientError> {
         self.store.directory()?;
         private::require_named_file(&self.dir, OUTPUT_LOCK, &self.lock)?;
+        let attempt_name = format!("attempt-{}.json", self.journal.binding.request.job_id.0);
+        match (&self.attempt, self.dir.symlink_metadata(&attempt_name)) {
+            (Some(expected), Ok(_))
+                if private::read_private(&self.dir, &attempt_name, MAX_OUTPUT_BYTES)?
+                    == *expected => {}
+            (None, Err(error)) if error.kind() == std::io::ErrorKind::NotFound => {}
+            _ => return Err(Error::BindingChanged.into()),
+        }
         match (&self.persisted, self.dir.symlink_metadata(&self.name)) {
             (Some(expected), Ok(_))
                 if private::read_private(&self.dir, &self.name, MAX_OUTPUT_BYTES)? == *expected =>
@@ -1018,6 +1031,63 @@ impl OutputTransaction {
         self.require_current()
     }
 }
+// An output journal independently binds authenticated acceptance. An optional older v1
+// intent may coexist with it, but a pending/confirmed Stop or contradictory accepted attempt
+// must not be ignored. Pin these exact bytes (including absence) across delaying callbacks.
+fn read_compatible_execution_attempt(
+    dir: &cap_std::fs::Dir,
+    host: &ControlUuid,
+    binding: &NativeBinding,
+    key: &SecretBox<[u8; 32]>,
+) -> Result<Option<Vec<u8>>, ClientError> {
+    let name = format!("attempt-{}.json", binding.request.job_id.0);
+    match dir.symlink_metadata(&name) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(private::unavailable(error)),
+        Ok(_) => {}
+    }
+    let bytes = private::read_private(dir, &name, MAX_OUTPUT_BYTES)?;
+    let saved: SignedExecutionAttempt = private_json::decode(&bytes)?;
+    saved.mac.validate_shape()?;
+    let attempt = &saved.attempt;
+    attempt.started_at.validate_shape()?;
+    let compatible = match (
+        attempt.schema_version,
+        attempt.accepted_receipt.as_ref(),
+        attempt.cancellation_request.as_ref(),
+    ) {
+        (1, None, None) => true,
+        (2, Some(accepted), None) => accepted == &binding.accepted,
+        _ => false,
+    };
+    if !compatible
+        || attempt.schema != "healthmd.agent_host_execution_attempt"
+        || attempt.host != *host
+        || attempt.request != binding.request
+        || attempt.request_sha256 != v4::document_digest(&binding.request)?
+        || attempt.started_at >= binding.accepted.expires_at
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    let expected = execution_attempt_bytes(
+        host,
+        &attempt.request,
+        &attempt.started_at,
+        attempt.accepted_receipt.as_ref(),
+        None,
+        None,
+        key,
+    )?;
+    let expected: SignedExecutionAttempt = private_json::decode(&expected)?;
+    if !healthmd_protocol::crypto::constant_time_equal(
+        saved.mac.0.as_bytes(),
+        expected.mac.0.as_bytes(),
+    ) {
+        return Err(ClientError::AgentAuthorityUnavailable);
+    }
+    Ok(Some(bytes))
+}
+
 /// Load original immutable metadata by a validated local job ID, never caller-provided
 /// request/receipt/frontier facts. The caller owns the existing output lock and must still
 /// perform current authority/key/root fences before using this metadata for any operation.
