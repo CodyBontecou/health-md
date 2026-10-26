@@ -82,6 +82,13 @@ Update `external-sources.json` deliberately when adopting a new plugin revision,
 
 Apple reference sources are read directly from the sibling `apps/apple` component. Override discovery with `HEALTHMD_APP_ROOT` or `--source` when testing another checkout.
 
+## SEO measurement
+
+Use `npm run seo:baseline -- --help` for the read-only Search Console reporting
+tool. See [SEO.md](SEO.md) for property selection, private output locations,
+comparison windows and data limitations. Live baseline collection requires
+authorized Search Console access; the reporting tool itself supplies no traffic data.
+
 ## Deployment
 
 The Vercel project must use `apps/website` as its Root Directory. Its build command and output directory remain `npm run build` and `dist`, as configured in `vercel.json`.
