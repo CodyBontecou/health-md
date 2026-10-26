@@ -639,7 +639,12 @@ final class AgentBridgeNativeCaptureSpool {
     /// Local-only publication tail: no SDK, native callback, repair or file creation.
     func requireCancellationCheckpoint(_ checkpoint: CancellationCheckpoint) throws {
         guard cancellationCheckpoint === checkpoint, let evidence = cancellationEvidence else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
-        try requireProtectedEvidence(evidence)
+        do { try requireProtectedEvidence(evidence) }
+        catch AgentBridgeValidationError.bindingChanged {
+            // This tail has only local file/identity checks. Changed retained evidence cannot
+            // qualify cancellation; no authority callback error is reclassified here.
+            throw AgentBridgeValidationError.spoolMissingRestartRequired
+        }
     }
 
     /// Only an authenticated retained checkpoint can supply this value. It does not persist a

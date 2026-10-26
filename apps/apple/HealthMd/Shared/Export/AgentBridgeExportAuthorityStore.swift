@@ -135,7 +135,14 @@ nonisolated struct AgentBridgeExportCancellationIntent: Codable, Equatable {
         self.terminalReceiptBytes = terminalReceiptBytes; self.confirmedAt = confirmedAt
     }
     func terminalReceipt() throws -> AgentBridgeExecutionReceipt? {
-        try terminalReceiptBytes.map { try AgentBridgeV4Codec.decode(AgentBridgeExecutionReceipt.self, from: $0) }
+        do {
+            return try terminalReceiptBytes.map { try AgentBridgeV4Codec.decode(AgentBridgeExecutionReceipt.self, from: $0) }
+        } catch let error as CancellationError { throw error }
+        catch {
+            // These are retained private evidence bytes, not a new public request. An invalid
+            // signed receipt breaks the issuer binding; public codec errors remain unchanged.
+            throw AgentBridgeValidationError.bindingChanged
+        }
     }
     func request() throws -> AgentBridgeCancel { try AgentBridgeV4Codec.decode(AgentBridgeCancel.self, from: requestBytes) }
     func validate(job: AgentBridgeExportAcceptedJob) throws {

@@ -1718,6 +1718,10 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                             let replacement = completionDirectory.appendingPathComponent("pending-" + UUID().uuidString.lowercased())
                             try before.write(to: replacement)
                             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: replacement.path)
+                            let fd = Darwin.open(replacement.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+                            guard fd >= 0 else { throw AgentBridgeValidationError.bindingChanged }
+                            defer { Darwin.close(fd) }
+                            try rig.captureProtection.applyCompleteProtection(fd)
                             guard Darwin.rename(replacement.path, path.path) == 0 else { throw AgentBridgeValidationError.bindingChanged }
                         }
                     }
