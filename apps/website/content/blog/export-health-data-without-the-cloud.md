@@ -5,6 +5,10 @@ lead: "For a local Apple Health export, choose a non-synced folder on your iPhon
 date: "2026-09-26T12:00:00.000Z"
 updated: "2026-10-25"
 category: "Workflow guide"
+related:
+  - local-first-health-data-architecture
+  - export-apple-health-data-to-obsidian
+  - apple-health-xml-export
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"

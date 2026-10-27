@@ -8,6 +8,10 @@ verified: "2026-10-25"
 verified_by: "Codex (agent)"
 verified_method: mixed
 category: "Workflow guide"
+related:
+  - export-apple-health-sleep-data
+  - export-health-connect-to-obsidian
+  - health-md-for-macos
 draft: false
 image: "/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-configuration.png"
 imageAlt: "Health.md export configuration screen"

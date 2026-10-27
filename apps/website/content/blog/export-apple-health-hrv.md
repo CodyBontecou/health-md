@@ -5,6 +5,10 @@ lead: "Enable Heart Rate Variability in Health.md, choose Summary for daily HRV 
 date: "2026-10-25"
 updated: "2026-10-25"
 category: "Workflow guide"
+related:
+  - export-apple-health-heart-rate
+  - export-apple-health-sleep-data
+  - apple-health-to-google-sheets
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"

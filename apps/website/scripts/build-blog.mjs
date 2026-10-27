@@ -152,11 +152,34 @@ async function loadPosts() {
       imageAlt: String(parsed.data.imageAlt || title).trim(),
       showCover: parsed.data.showCover !== false,
       tags: asStringArray(parsed.data.tags),
+      related: parsed.data.related ?? [],
       body: parsed.content.trim(),
     });
   }
 
   return posts.sort((a, b) => b.date.getTime() - a.date.getTime());
+}
+
+// Resolve curated slugs against published content so drafts and typos cannot
+// become recommendations. Titles and descriptions stay owned by each target.
+export function resolveRelatedGuides(posts) {
+  const bySlug = new Map(posts.map(post => [post.slug, post]));
+  if (bySlug.size !== posts.length) throw new Error('Blog posts must have unique slugs');
+  return new Map(posts.map(post => {
+    const slugs = post.related ?? [];
+    if (!Array.isArray(slugs) || slugs.length > 3) {
+      throw new Error(`${post.slug}: related must be an array of at most three published slugs`);
+    }
+    if (new Set(slugs).size !== slugs.length) {
+      throw new Error(`${post.slug}: related guides must not contain duplicates`);
+    }
+    return [post.slug, slugs.map(slug => {
+      if (typeof slug !== 'string' || slug === post.slug || !bySlug.has(slug)) {
+        throw new Error(`${post.slug}: invalid related guide ${String(slug)}`);
+      }
+      return bySlug.get(slug);
+    })];
+  }));
 }
 
 function headerHtml(depth = 1) {
@@ -312,7 +335,7 @@ function renderIndex(posts) {
 `;
 }
 
-async function renderPost(post) {
+async function renderPost(post, relatedGuides) {
   const canonical = `${SITE_URL}/blog/${post.slug}/`;
   const breadcrumbs = [
     { name: 'Health.md', url: `${SITE_URL}/` },
@@ -330,6 +353,12 @@ async function renderPost(post) {
     : '';
   const tags = post.tags.length
     ? `<div class="article-tags" aria-label="Tags">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}</div>`
+    : '';
+  const relatedNav = relatedGuides.length
+    ? `<nav class="article-related" aria-labelledby="related-guides-title">
+      <h2 id="related-guides-title">Continue with a related guide</h2>
+      <ul>${relatedGuides.map(guide => `<li><a href="/blog/${escapeHtml(guide.slug)}/">${escapeHtml(guide.title)}</a><p>${escapeHtml(guide.description)}</p></li>`).join('')}</ul>
+    </nav>`
     : '';
 
   return `<!DOCTYPE html>
@@ -358,6 +387,7 @@ async function renderPost(post) {
     ${cover}
     <div class="article-body">${bodyHtml}</div>
     ${tags}
+    ${relatedNav}
   </main>
   ${footerHtml(2)}
 </body>
@@ -389,6 +419,7 @@ function updateSitemap(source, posts) {
 
 export async function buildBlog({ outputRoot = ROOT } = {}) {
   const posts = await loadPosts();
+  const relatedGuides = resolveRelatedGuides(posts);
   const blogOutput = path.join(outputRoot, 'blog');
   await fs.mkdir(blogOutput, { recursive: true });
   await fs.copyFile(path.join(ROOT, 'blog', 'styles.css'), path.join(blogOutput, 'styles.css'));
@@ -397,7 +428,7 @@ export async function buildBlog({ outputRoot = ROOT } = {}) {
   for (const post of posts) {
     const postOutput = path.join(blogOutput, post.slug);
     await fs.mkdir(postOutput, { recursive: true });
-    await fs.writeFile(path.join(postOutput, 'index.html'), await renderPost(post));
+    await fs.writeFile(path.join(postOutput, 'index.html'), await renderPost(post, relatedGuides.get(post.slug)));
   }
 
   const sitemapSource = await fs.readFile(path.join(ROOT, 'sitemap.xml'), 'utf8');

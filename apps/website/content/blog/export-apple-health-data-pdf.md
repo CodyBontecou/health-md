@@ -5,6 +5,10 @@ lead: "On iPhone, open Health.md Settings → Clinician Report, choose a period 
 date: "2026-10-26"
 updated: "2026-10-26"
 category: "Workflow guide"
+related:
+  - apple-health-to-excel
+  - export-health-data-without-the-cloud
+  - export-apple-health-sleep-data
 draft: false
 verified: "2026-10-26"
 verified_by: "Codex (agent)"

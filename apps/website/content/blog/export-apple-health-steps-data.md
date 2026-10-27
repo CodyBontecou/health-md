@@ -5,6 +5,10 @@ lead: "Enable Steps in Health.md, preview one known day, and export its daily to
 date: "2026-10-26"
 updated: "2026-10-26"
 category: "Workflow guide"
+related:
+  - apple-health-to-excel
+  - export-apple-health-workouts
+  - export-apple-health-data-to-obsidian
 draft: false
 verified: "2026-10-26"
 verified_by: "Codex (agent)"

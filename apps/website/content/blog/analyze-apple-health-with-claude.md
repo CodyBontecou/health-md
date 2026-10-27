@@ -5,6 +5,10 @@ lead: "Export selected Apple Health data with Health.md, attach the CSV or JSON 
 date: "2026-09-26T12:00:00.000Z"
 updated: "2026-10-25"
 category: "Workflow guide"
+related:
+  - apple-health-to-chatgpt
+  - query-apple-health-with-claude-or-codex
+  - apple-health-to-excel
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"

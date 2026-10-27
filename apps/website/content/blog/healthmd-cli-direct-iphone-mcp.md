@@ -8,6 +8,10 @@ verified: "2026-10-26"
 verified_by: "Codex (agent)"
 verified_method: traced
 category: "Workflow guide"
+related:
+  - query-apple-health-with-claude-or-codex
+  - resumable-multi-day-health-exports
+  - local-first-health-data-architecture
 draft: false
 tags:
   - healthmd

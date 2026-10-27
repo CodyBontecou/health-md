@@ -5,6 +5,10 @@ lead: "The Mac app is built for people whose archive, Obsidian vault, scripts, o
 date: "2026-06-12"
 updated: "2026-07-16"
 category: "Product update"
+related:
+  - export-apple-health-data-to-obsidian
+  - local-first-health-data-architecture
+  - export-health-data-without-the-cloud
 draft: false
 image: "/assets/screenshots/optimized/macos-sync-with-iphone-1200.webp"
 imageAlt: "Health.md Mac sync with iPhone"

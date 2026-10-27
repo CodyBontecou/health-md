@@ -5,6 +5,10 @@ lead: "Already have an Apple Health archive? Keep the original, open a copy, and
 date: "2026-10-27"
 updated: "2026-10-27"
 category: "Export guide"
+related:
+  - apple-health-to-excel
+  - export-health-data-without-the-cloud
+  - health-md-vs-health-auto-export
 draft: false
 verified: "2026-10-27"
 verified_by: "Codex (agent)"

@@ -5,6 +5,10 @@ lead: "Select Workouts in Health.md, preview one known workout day, and export C
 date: "2026-10-25"
 updated: "2026-10-25"
 category: "Workflow guide"
+related:
+  - export-apple-health-steps-data
+  - export-apple-health-heart-rate
+  - apple-health-to-excel
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"

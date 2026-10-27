@@ -8,6 +8,10 @@ verified: "2026-10-26"
 verified_by: "Codex (agent)"
 verified_method: traced
 category: "Workflow guide"
+related:
+  - healthmd-cli-direct-iphone-mcp
+  - analyze-apple-health-with-claude
+  - local-first-health-data-architecture
 draft: false
 tags:
   - healthmd

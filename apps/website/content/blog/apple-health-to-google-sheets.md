@@ -5,6 +5,10 @@ lead: "Export Apple Health as daily CSV files with Health.md, upload them to Goo
 date: "2026-09-26T12:00:00.000Z"
 updated: "2026-10-25"
 category: "Workflow guide"
+related:
+  - apple-health-to-excel
+  - export-apple-health-steps-data
+  - apple-health-xml-export
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"

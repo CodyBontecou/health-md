@@ -5,6 +5,10 @@ lead: "A night that starts Monday and ends Tuesday belongs to Monday's Health.md
 date: "2026-09-22T13:30:00.000Z"
 updated: "2026-09-22T13:30:00.000Z"
 category: "Explainer"
+related:
+  - export-apple-health-sleep-data
+  - export-apple-health-data-to-obsidian
+  - export-apple-health-steps-data
 draft: false
 tags:
   - healthmd

@@ -5,6 +5,10 @@ lead: "Select the heart metrics you need in Health.md, choose Summary for daily 
 date: "2026-10-25"
 updated: "2026-10-25"
 category: "Workflow guide"
+related:
+  - export-apple-health-hrv
+  - export-apple-health-workouts
+  - apple-health-to-excel
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"

@@ -347,6 +347,45 @@ h1 {
   margin-top: 8px;
 }
 
+.article-related {
+  margin-top: 48px;
+}
+
+.article .article-related ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.article .article-related li + li {
+  margin-top: 24px;
+}
+
+.article-related a {
+  color: var(--pine);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.article-related a:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 4px;
+}
+
+.article-related a:active {
+  color: var(--pine-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article-related a:hover { color: var(--pine-2); }
+}
+
+.article-related p {
+  margin: 8px 0 0;
+}
+
 .article .article-breadcrumbs ol {
   display: flex;
   flex-wrap: wrap;

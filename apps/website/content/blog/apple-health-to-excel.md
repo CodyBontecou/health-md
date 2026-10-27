@@ -5,6 +5,10 @@ lead: "Export Apple Health as daily CSV files with Health.md, import them into d
 date: "2026-10-25"
 updated: "2026-10-25"
 category: "Workflow guide"
+related:
+  - apple-health-to-google-sheets
+  - export-apple-health-steps-data
+  - export-apple-health-data-pdf
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"

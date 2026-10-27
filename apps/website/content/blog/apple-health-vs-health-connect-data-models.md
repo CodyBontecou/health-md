@@ -5,6 +5,10 @@ lead: "Cross-platform health exports need common outcomes, explicit platform dif
 date: "2026-09-22T13:40:00.000Z"
 updated: "2026-09-22T13:40:00.000Z"
 category: "Engineering"
+related:
+  - export-health-connect-to-obsidian
+  - export-apple-health-data-to-obsidian
+  - export-apple-health-hrv
 draft: false
 tags:
   - healthmd

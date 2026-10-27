@@ -5,6 +5,10 @@ lead: "Choose Health.md for configurable daily files and Obsidian notes. Conside
 date: "2026-10-26"
 updated: "2026-10-26"
 category: "App comparison"
+related:
+  - apple-health-xml-export
+  - export-apple-health-data-to-obsidian
+  - export-health-data-without-the-cloud
 draft: false
 verified: "2026-10-26"
 verified_by: "Codex (agent)"

@@ -5,6 +5,10 @@ lead: "Health.md for Android reads Health Connect on the device and writes plain
 date: "2026-09-22T13:00:00.000Z"
 updated: "2026-09-22T13:00:00.000Z"
 category: "Workflow guide"
+related:
+  - export-apple-health-data-to-obsidian
+  - apple-health-vs-health-connect-data-models
+  - local-first-health-data-architecture
 draft: false
 tags:
   - healthmd

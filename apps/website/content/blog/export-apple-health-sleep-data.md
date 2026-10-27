@@ -5,6 +5,10 @@ lead: "To export Apple Health sleep data, authorize Sleep in Health.md, select t
 date: "2026-10-25"
 updated: "2026-10-25"
 category: "Workflow guide"
+related:
+  - why-sleep-is-in-yesterdays-note
+  - export-apple-health-data-to-obsidian
+  - export-apple-health-hrv
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"

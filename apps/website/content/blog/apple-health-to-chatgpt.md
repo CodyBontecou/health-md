@@ -5,6 +5,10 @@ lead: "Use Health.md to export selected Apple Health data, attach the CSV to Cha
 date: "2026-10-25"
 updated: "2026-10-25"
 category: "Workflow guide"
+related:
+  - analyze-apple-health-with-claude
+  - apple-health-to-excel
+  - query-apple-health-with-claude-or-codex
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"
