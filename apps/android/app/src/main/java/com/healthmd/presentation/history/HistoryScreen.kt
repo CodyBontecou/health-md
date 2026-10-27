@@ -437,9 +437,10 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: Histor
             stringResource(R.string.history_detail_destination_type),
             stringResource(
                 when (entry.target) {
-                    ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
-                    ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
                     ExportTarget.DEVICE_FOLDER -> R.string.export_preview_device_destination
+                    ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
+                    ExportTarget.GOOGLE_DRIVE -> R.string.google_drive_title
+                    ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
                 },
             ),
         )

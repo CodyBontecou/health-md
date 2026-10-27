@@ -425,6 +425,11 @@ fun ScheduleScreen(
             } else {
                 stringResource(R.string.schedule_target_api_unconfigured)
             },
+            driveSubtitle = when {
+                !uiState.googleDriveConfigurationAvailable -> stringResource(R.string.google_drive_configuration_missing)
+                uiState.googleDriveConfigured -> stringResource(R.string.google_drive_target_ready_generic)
+                else -> stringResource(R.string.google_drive_target_not_connected)
+            },
             gatewaySubtitle = if (uiState.agentDataGatewayConfigured) {
                 stringResource(
                     R.string.export_target_gateway_configured_subtitle,

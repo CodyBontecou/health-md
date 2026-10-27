@@ -153,6 +153,8 @@ object ScheduledExportPendingRequests {
                         } else {
                             request.folderOperationId == null || request.folderOperationId == folderOperationId
                         }
+                        // A retained Drive journal is replayed only by explicit recovery.
+                        ExportTarget.GOOGLE_DRIVE -> request.driveOperationId == null
                         // Gateway retries always capture fresh; no durable operation pinning yet.
                         ExportTarget.AGENT_DATA_GATEWAY -> true
                     }
@@ -167,7 +169,9 @@ object ScheduledExportPendingRequests {
                     (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT &&
                         request.apiOperationId != null && request.apiOperationId != apiOperationId) ||
                     (settings.scheduledExportTarget == ExportTarget.DEVICE_FOLDER &&
-                        request.folderOperationId != null && request.folderOperationId != folderOperationId)
+                        request.folderOperationId != null && request.folderOperationId != folderOperationId) ||
+                    (settings.scheduledExportTarget == ExportTarget.GOOGLE_DRIVE &&
+                        request.driveOperationId != null)
             }
             .mapTo(hashSetOf()) { it.date }
         val unclaimedRunDates = if (resumeExistingApiOperation || resumeExistingFolderOperation) {
@@ -189,6 +193,7 @@ object ScheduledExportPendingRequests {
         settingsSnapshotJson: String? = null,
         apiOperationIds: Map<LocalDate, String> = emptyMap(),
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ): ExportSettings = applyAttemptResult(
         settings = settings,
@@ -201,6 +206,7 @@ object ScheduledExportPendingRequests {
         settingsSnapshotJson = settingsSnapshotJson,
         apiOperationIds = apiOperationIds,
         folderOperationIds = folderOperationIds,
+        driveOperationIds = driveOperationIds,
         freshCaptureRetryDates = freshCaptureRetryDates,
     )
 
@@ -215,6 +221,7 @@ object ScheduledExportPendingRequests {
         settingsSnapshotJson: String? = null,
         apiOperationIds: Map<LocalDate, String> = emptyMap(),
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
@@ -256,6 +263,11 @@ object ScheduledExportPendingRequests {
                         } else {
                             existing?.folderOperationId ?: folderOperationIds[failure.date]
                         },
+                        driveOperationId = if (failure.date in freshCaptureRetryDates) {
+                            null
+                        } else {
+                            existing?.driveOperationId ?: driveOperationIds[failure.date]
+                        },
                         firstFailedAtMillis = existing?.firstFailedAtMillis?.takeIf { it > 0L } ?: nowMillis,
                         lastAttemptAtMillis = nowMillis,
                         lastFailureReason = failure.reason,
@@ -284,6 +296,7 @@ object ScheduledExportPendingRequests {
         settingsSnapshotJson: String? = null,
         apiOperationIds: Map<LocalDate, String> = emptyMap(),
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
@@ -315,6 +328,9 @@ object ScheduledExportPendingRequests {
                     null
                 } else {
                     folderOperationIds[date] ?: existing?.folderOperationId
+                },
+                driveOperationId = if (date in freshCaptureRetryDates) null else {
+                    driveOperationIds[date] ?: existing?.driveOperationId
                 },
                 firstFailedAtMillis = existing?.firstFailedAtMillis ?: 0L,
                 lastAttemptAtMillis = nowMillis,
@@ -373,16 +389,18 @@ object ScheduledExportPendingRequests {
             settingsSnapshotJson = existing.settingsSnapshotJson,
             apiOperationId = existing.apiOperationId,
             folderOperationId = existing.folderOperationId,
+            driveOperationId = existing.driveOperationId,
         )
     }
 
     private fun requiresDestinationFingerprintMatch(target: ExportTarget): Boolean =
-        target == ExportTarget.API_ENDPOINT || target == ExportTarget.AGENT_DATA_GATEWAY
+        target == ExportTarget.API_ENDPOINT || target == ExportTarget.AGENT_DATA_GATEWAY ||
+            target == ExportTarget.GOOGLE_DRIVE
 
     private fun ExportTarget.destinationFingerprint(settings: ExportSettings): String? =
         when (this) {
             ExportTarget.API_ENDPOINT -> APIExportEndpoint.fingerprint(settings.apiEndpointUrl)
             ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.fingerprint(settings.agentDataGatewayUrl)
-            ExportTarget.DEVICE_FOLDER -> null
+            ExportTarget.DEVICE_FOLDER, ExportTarget.GOOGLE_DRIVE -> null
         }
 }

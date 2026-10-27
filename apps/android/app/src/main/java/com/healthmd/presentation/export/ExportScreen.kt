@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.outlined.Launch
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -393,9 +394,10 @@ fun ExportScreen(
             isLoading = uiState.isPreviewing,
             destinationLabel = uiState.destinationLabel ?: stringResource(
                 when (uiState.selectedTarget) {
-                    ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
-                    ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
                     ExportTarget.DEVICE_FOLDER -> R.string.export_preview_device_destination
+                    ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
+                    ExportTarget.GOOGLE_DRIVE -> R.string.google_drive_title
+                    ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
                 }
             ),
             formatsPerDay = if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) 1 else uiState.exportFormats.size,
@@ -501,7 +503,11 @@ fun ExportScreen(
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Icon(
-                    if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) Icons.Outlined.UploadFile else Icons.Outlined.Folder,
+                    when (uiState.selectedTarget) {
+                        ExportTarget.DEVICE_FOLDER -> Icons.Outlined.Folder
+                        ExportTarget.API_ENDPOINT, ExportTarget.AGENT_DATA_GATEWAY -> Icons.Outlined.UploadFile
+                        ExportTarget.GOOGLE_DRIVE -> Icons.Outlined.CloudUpload
+                    },
                     contentDescription = null,
                     tint = if (destinationReady) AppColors.success else AppColors.textMuted,
                     modifier = Modifier.size(16.dp),
@@ -685,6 +691,14 @@ fun ExportScreen(
                 stringResource(R.string.export_target_api_raw_unconfigured_subtitle)
             } else {
                 stringResource(R.string.export_target_api_json_unconfigured_subtitle)
+            },
+            driveSubtitle = when {
+                !uiState.googleDriveConfigurationAvailable -> stringResource(R.string.google_drive_configuration_missing)
+                uiState.googleDriveDestinationLabel != null -> stringResource(
+                    R.string.google_drive_target_ready,
+                    requireNotNull(uiState.googleDriveDestinationLabel),
+                )
+                else -> stringResource(R.string.google_drive_target_not_connected)
             },
             gatewaySubtitle = if (uiState.agentDataGatewayConfigured) {
                 stringResource(
@@ -1378,9 +1392,9 @@ private fun ExportResultBadge(
         Text(
             if (result.exportMode == ExportMode.RAW_SNAPSHOT) {
                 stringResource(
-                    if (result.target == ExportTarget.API_ENDPOINT) R.string.raw_snapshot_result_uploaded else R.string.raw_snapshot_result_created,
+                    if (result.target == ExportTarget.DEVICE_FOLDER) R.string.raw_snapshot_result_created else R.string.raw_snapshot_result_uploaded,
                 ) + (result.httpStatusCode?.let { " · HTTP $it" } ?: "")
-            } else if (result.target == ExportTarget.API_ENDPOINT) {
+            } else if (result.target != ExportTarget.DEVICE_FOLDER) {
                 pluralStringResource(
                     R.plurals.export_result_uploaded_days,
                     result.totalCount,

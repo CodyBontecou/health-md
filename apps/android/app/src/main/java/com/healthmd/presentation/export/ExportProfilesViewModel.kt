@@ -8,6 +8,7 @@ import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.data.scheduler.ScheduledProfileEntryStore
 import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
@@ -52,6 +53,8 @@ data class ExportProfileEditorDraft(
     /** Bound SAF tree URI for DEVICE_FOLDER targets; null follows the live Export-tab folder. */
     val folderUri: String? = null,
     val folderDisplayName: String? = null,
+    /** Local Google Drive destination reference; authority remains in destination storage. */
+    val destinationId: String? = null,
     /** Raw endpoint URL for API_ENDPOINT targets (validated on save). */
     val apiEndpointUrl: String = "",
     /** Raw gateway base URL for AGENT_DATA_GATEWAY targets (validated on save). */
@@ -73,6 +76,7 @@ data class ExportProfilesUiState(
     /** Live device folder / settings the editor drafts resolve against (overlap preview, restore base). */
     val currentFolderUri: String? = null,
     val currentSettings: ExportSettings = ExportSettings(),
+    val connectedGoogleDriveDestinationId: String? = null,
 )
 
 /** Inputs the draft overlap preview resolves against, refreshed with the row stream. */
@@ -102,6 +106,7 @@ class ExportProfilesViewModel @Inject constructor(
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
     private val settingsRepository: SettingsRepository,
     private val profileCoordinator: ExportProfileCoordinator,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExportProfilesUiState())
@@ -150,6 +155,11 @@ class ExportProfilesViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            googleDriveSelectionStore.destinationId.collect { destinationId ->
+                _uiState.update { it.copy(connectedGoogleDriveDestinationId = destinationId) }
+            }
+        }
         // Bootstrap migration + initial arming, matching the schedule surface.
         viewModelScope.launch { runCatching { profileScheduler.reconcile() } }
     }
@@ -184,6 +194,7 @@ class ExportProfilesViewModel @Inject constructor(
                     agentDataGatewayUrl = gatewayBinding(draft),
                     folderUri = folderBinding(draft)?.first,
                     folderDisplayName = folderBinding(draft)?.second,
+                    destinationId = driveBinding(draft),
                 )
                 // Seed the new profile's entry (disabled) so the schedule surface
                 // and the row toggle have a cadence to edit immediately.
@@ -231,6 +242,7 @@ class ExportProfilesViewModel @Inject constructor(
                     agentDataGatewayUrl = gatewayBinding(draft),
                     folderUri = folderBinding(draft)?.first,
                     folderDisplayName = folderBinding(draft)?.second,
+                    destinationId = driveBinding(draft),
                 )
                 require(storedName != null) { "Profile $profileId could not be updated." }
                 if (uiState.value.rows.firstOrNull { it.isActive }?.profile?.id == profileId) {
@@ -317,6 +329,7 @@ class ExportProfilesViewModel @Inject constructor(
                     agentDataGatewayUrl = source.agentDataGatewayUrl,
                     folderUri = source.folderUri,
                     folderDisplayName = source.folderDisplayName,
+                    destinationId = source.destinationId,
                     // A blocked imported source must not become executable merely by duplication.
                     derivedFromProfileId = source.id,
                 )
@@ -378,7 +391,7 @@ class ExportProfilesViewModel @Inject constructor(
     private fun endpointBinding(draft: ExportProfileEditorDraft): String? = when (draft.target) {
         ExportTarget.API_ENDPOINT -> APIExportEndpoint.normalizedOrNull(draft.apiEndpointUrl)
             ?: throw IllegalArgumentException("API target requires a configured endpoint URL.")
-        ExportTarget.DEVICE_FOLDER -> null
+        ExportTarget.DEVICE_FOLDER, ExportTarget.GOOGLE_DRIVE -> null
         ExportTarget.AGENT_DATA_GATEWAY -> null
     }
 
@@ -386,7 +399,7 @@ class ExportProfilesViewModel @Inject constructor(
     private fun gatewayBinding(draft: ExportProfileEditorDraft): String? = when (draft.target) {
         ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.normalizedOrNull(draft.agentDataGatewayUrl)
             ?: throw IllegalArgumentException("Agent Data gateway target requires a configured gateway URL.")
-        ExportTarget.DEVICE_FOLDER -> null
+        ExportTarget.DEVICE_FOLDER, ExportTarget.GOOGLE_DRIVE -> null
         ExportTarget.API_ENDPOINT -> null
     }
 
@@ -394,9 +407,14 @@ class ExportProfilesViewModel @Inject constructor(
     private fun folderBinding(draft: ExportProfileEditorDraft): Pair<String?, String?>? =
         when (draft.target) {
             ExportTarget.DEVICE_FOLDER -> draft.folderUri to draft.folderDisplayName
-            ExportTarget.API_ENDPOINT -> null
-            ExportTarget.AGENT_DATA_GATEWAY -> null
+            ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE, ExportTarget.AGENT_DATA_GATEWAY -> null
         }
+
+    private fun driveBinding(draft: ExportProfileEditorDraft): String? = when (draft.target) {
+        ExportTarget.GOOGLE_DRIVE -> draft.destinationId?.takeIf(String::isNotBlank)
+            ?: throw IllegalArgumentException("Google Drive target requires a local destination.")
+        ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT, ExportTarget.AGENT_DATA_GATEWAY -> null
+    }
 
     /**
      * Freezes the draft's editable settings into a canonical snapshot scoped to the chosen
@@ -410,7 +428,7 @@ class ExportProfilesViewModel @Inject constructor(
             apiEndpointUrl = when (draft.target) {
                 ExportTarget.API_ENDPOINT -> endpointBinding(draft)
                     ?: throw IllegalArgumentException("API target requires a configured endpoint URL.")
-                ExportTarget.DEVICE_FOLDER -> draft.settings.apiEndpointUrl
+                ExportTarget.DEVICE_FOLDER, ExportTarget.GOOGLE_DRIVE -> draft.settings.apiEndpointUrl
                 ExportTarget.AGENT_DATA_GATEWAY -> ""
             },
             agentDataGatewayUrl = when (draft.target) {
@@ -446,6 +464,7 @@ class ExportProfilesViewModel @Inject constructor(
         fun initialCreationDraft(
             rows: List<ExportProfileRow>,
             currentSettings: ExportSettings,
+            connectedGoogleDriveDestinationId: String? = null,
         ): ExportProfileEditorDraft {
             val profiles = rows.map { it.profile }
             val active = rows.firstOrNull { it.isActive }?.profile
@@ -454,6 +473,7 @@ class ExportProfilesViewModel @Inject constructor(
                 target = currentSettings.scheduledExportTarget,
                 folderUri = active?.folderUri,
                 folderDisplayName = active?.folderDisplayName,
+                destinationId = active?.destinationId ?: connectedGoogleDriveDestinationId,
                 apiEndpointUrl = active?.apiEndpointUrl?.takeIf { it.isNotBlank() }
                     ?: currentSettings.apiEndpointUrl,
                 agentDataGatewayUrl = active?.agentDataGatewayUrl?.takeIf { it.isNotBlank() }
@@ -470,6 +490,7 @@ class ExportProfilesViewModel @Inject constructor(
         fun initialEditDraft(
             profile: ExportProfile,
             currentSettings: ExportSettings,
+            connectedGoogleDriveDestinationId: String? = null,
         ): ExportProfileEditorDraft {
             val withProfileDestinations = currentSettings.copy(
                 apiEndpointUrl = profile.apiEndpointUrl ?: currentSettings.apiEndpointUrl,
@@ -485,6 +506,7 @@ class ExportProfilesViewModel @Inject constructor(
                 target = profile.target,
                 folderUri = profile.folderUri,
                 folderDisplayName = profile.folderDisplayName,
+                destinationId = profile.destinationId ?: connectedGoogleDriveDestinationId,
                 apiEndpointUrl = profile.apiEndpointUrl ?: currentSettings.apiEndpointUrl,
                 agentDataGatewayUrl = profile.agentDataGatewayUrl ?: currentSettings.agentDataGatewayUrl,
                 settings = restored,

@@ -105,12 +105,12 @@ fun ExportProfileEditorDialog(
     val trimmedName = draft.name.trim()
     val endpointValid = draft.target != ExportTarget.API_ENDPOINT ||
         APIExportEndpoint.isConfigured(draft.apiEndpointUrl)
+    val driveValid = draft.target != ExportTarget.GOOGLE_DRIVE || !draft.destinationId.isNullOrBlank()
     val gatewayValid = draft.target != ExportTarget.AGENT_DATA_GATEWAY ||
         AgentDataGatewayEndpoint.isConfigured(draft.agentDataGatewayUrl)
     val canSave = trimmedName.isNotEmpty() &&
         draft.settings.exportFormats.isNotEmpty() &&
-        endpointValid &&
-        gatewayValid
+        endpointValid && driveValid && gatewayValid
 
     val overlappingNames = overlapPreview(draft.target, draft.folderUri, draft.settings)
 
@@ -152,6 +152,12 @@ fun ExportProfileEditorDialog(
                         text = "API Endpoint",
                         selected = draft.target == ExportTarget.API_ENDPOINT,
                         onClick = { draft = draft.copy(target = ExportTarget.API_ENDPOINT) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    EditorChoiceButton(
+                        text = "Google Drive",
+                        selected = draft.target == ExportTarget.GOOGLE_DRIVE,
+                        onClick = { draft = draft.copy(target = ExportTarget.GOOGLE_DRIVE) },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -202,6 +208,15 @@ fun ExportProfileEditorDialog(
                             )
                         }
                     }
+                    ExportTarget.GOOGLE_DRIVE -> Text(
+                        text = if (driveValid) {
+                            "Uses the connected local Google Drive destination."
+                        } else {
+                            "Connect Google Drive in Settings before saving this profile."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (driveValid) AppColors.textMuted else AppColors.error,
+                    )
                     ExportTarget.AGENT_DATA_GATEWAY -> {
                         EditorTextField(
                             value = draft.agentDataGatewayUrl,

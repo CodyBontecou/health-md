@@ -741,7 +741,12 @@ struct ContentView: View {
     // MARK: - Computed Properties
 
     private var canExport: Bool {
-        ExportTargetReadiness.canExport(
+        if let profileCoordinator,
+           profileCoordinator.profileStore.hasProfiles,
+           profileCoordinator.profileStore.activeProfile == nil {
+            return false
+        }
+        return ExportTargetReadiness.canExport(
             isHealthKitAuthorized: healthKitManager.isAuthorized,
             hasSelectedFormat: !advancedSettings.exportFormats.isEmpty,
             dailyNotesOnlyModeEnabled: advancedSettings.dailyNotesOnlyModeEnabled,
@@ -749,7 +754,18 @@ struct ContentView: View {
             hasLocalFolder: vaultManager.vaultURL != nil || vaultManager.requiresVaultReselection,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
             apiEndpointConfigured: apiExportSettings.isConfigured,
+            googleDriveReady: activeGoogleDriveDestination.map {
+                GoogleDriveExportService.shared?.readiness(destinationID: $0.id) == .ready
+            } ?? false,
             agentDataGatewayConfigured: agentDataGatewaySettings.isConfigured
+        )
+    }
+
+    private var activeGoogleDriveDestination: GoogleDriveDestination? {
+        guard let profile = profileCoordinator?.profileStore.activeProfile,
+              profile.target == .googleDrive else { return nil }
+        return profileCoordinator?.googleDriveDestinationStore.destination(
+            id: profile.googleDriveDestinationID
         )
     }
 
@@ -967,6 +983,8 @@ struct ContentView: View {
             return .connectedMac
         case .apiEndpoint:
             return .apiEndpoint
+        case .googleDrive:
+            return .googleDrive
         case .agentDataGateway:
             return .agentDataGateway
         }
@@ -1226,6 +1244,23 @@ struct ContentView: View {
                 presentExportConfigurationError("Configure a valid API endpoint before exporting.")
                 return
             }
+        case .googleDrive:
+            guard GoogleDriveConfiguration.from() != nil else {
+                presentExportConfigurationError("Google Drive is unavailable in this build (configuration_missing).")
+                return
+            }
+            guard let profile = profileCoordinator?.profileStore.activeProfile,
+                  profile.target == .googleDrive,
+                  let destination = profileCoordinator?.googleDriveDestinationStore.destination(
+                      id: profile.googleDriveDestinationID
+                  ) else {
+                presentExportConfigurationError("Choose and connect a Google Drive folder in the active export profile.")
+                return
+            }
+            guard GoogleDriveExportService.shared?.readiness(destinationID: destination.id) == .ready else {
+                presentExportConfigurationError("Reconnect Google Drive before exporting (reauthorization_required).")
+                return
+            }
         case .agentDataGateway:
             guard agentDataGatewaySettings.isConfigured else {
                 presentExportConfigurationError("Configure a valid Agent Data gateway endpoint before exporting.")
@@ -1337,6 +1372,7 @@ struct ContentView: View {
         case .connectedMac: exportDataToConnectedMac(selection)
         case .apiEndpoint: exportDataToAPIEndpoint(selection)
         case .agentDataGateway: exportDataToAgentDataGateway(selection)
+        case .googleDrive: exportDataToGoogleDrive(selection)
         }
     }
 
@@ -1548,6 +1584,94 @@ struct ContentView: View {
                     primaryReason,
                     detail: result.failedDateDetails.first
                 )
+            }
+        }
+    }
+
+    private func exportDataToGoogleDrive(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
+        guard let service = GoogleDriveExportService.shared,
+              let profile = profileCoordinator?.profileStore.activeProfile,
+              let destination = profileCoordinator?.googleDriveDestinationStore.destination(
+                  id: profile.googleDriveDestinationID
+              ) else {
+            presentExportConfigurationError("Choose and connect a Google Drive folder in the active export profile.")
+            return
+        }
+
+        isExporting = true
+        exportProgress = 0
+        exportStatusMessage = "Preparing Google Drive export…"
+        statusDismissTimer?.invalidate()
+        let snapshot = ExportSettingsSnapshot.from(
+            advancedSettings,
+            healthSubfolder: vaultManager.healthSubfolder,
+            appleExportEngineAuthorityIsFrozen: false,
+            calendarTimeZoneIdentifier: advancedSettings.exportTimeZoneOverride?.identifier
+        )
+        let destinationSnapshot = GoogleDriveDestinationSnapshot(destination: destination)
+        let operationID = UUID()
+
+        exportTask = Task {
+            defer {
+                isExporting = false
+                exportProgress = 0
+                exportTask = nil
+            }
+            let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
+            let result = await service.export(
+                operationID: operationID,
+                profileID: profile.id,
+                destinationSnapshot: destinationSnapshot,
+                dates: dates,
+                healthKitManager: healthKitManager,
+                settingsSnapshot: snapshot,
+                externalIntegrations: ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil,
+                onProgress: { current, total, date in
+                    exportStatusMessage = "Preparing \(date) for Google Drive… (\(current)/\(total))"
+                    exportProgress = Double(current) / Double(max(total, 1)) * 0.7
+                }
+            )
+            let rangeStart = dates.first ?? dateRange.startDate
+            let rangeEnd = dates.last ?? dateRange.endDate
+            ExportOrchestrator.recordResult(
+                result,
+                source: .manual,
+                dateRangeStart: rangeStart,
+                dateRangeEnd: rangeEnd,
+                targetLabel: "Google Drive",
+                exportTarget: .googleDrive,
+                idempotencyKey: operationID,
+                profileName: profile.name
+            )
+            var quotaAcknowledged = result.successCount == 0
+            if result.successCount > 0 {
+                // The operation ID is the durable accounting key, matching scheduled Drive jobs.
+                // A journal is acknowledged only after both history and quota are durable.
+                do {
+                    try purchaseManager.recordExportUse(jobID: operationID)
+                    quotaAcknowledged = true
+                    trackSuccessfulExport(targetType: .googleDrive, startDate: rangeStart, endDate: rangeEnd)
+                } catch {
+                    exportStatusMessage = "Google Drive upload completed, but local accounting is pending. Reopen Health.md to reconcile it."
+                }
+            }
+            if result.didCompleteAllRequestedDates, quotaAcknowledged {
+                await service.acknowledgeCompletedOperation(operationID)
+            }
+            if result.wasCancelled {
+                exportStatusMessage = "Google Drive export cancelled"
+                startStatusDismissTimer()
+            } else if result.isFullSuccess {
+                exportStatusMessage = "Uploaded \(result.totalFilesWritten) file(s) to Google Drive"
+                startStatusDismissTimer()
+            } else if result.isPartialSuccess {
+                partialExportNotice = PartialExportNotice(result: result)
+                exportStatusMessage = "Google Drive export partially completed (partial_completion)."
+            } else {
+                let id = result.failedDateDetails.first?.errorDetails ?? GoogleDriveErrorID.ambiguousCommit.rawValue
+                presentExportConfigurationError("Google Drive export stopped (\(id)).")
             }
         }
     }

@@ -10,6 +10,7 @@ import java.security.MessageDigest
 enum class ExportTarget {
     DEVICE_FOLDER,
     API_ENDPOINT,
+    GOOGLE_DRIVE,
     AGENT_DATA_GATEWAY,
 }
 
@@ -102,6 +103,7 @@ object ExportTargetReadiness {
         target: ExportTarget,
         hasExportFolder: Boolean,
         apiEndpointConfigured: Boolean,
+        googleDriveReady: Boolean = false,
         exportMode: ExportMode = ExportMode.COMPATIBILITY,
         rawProviderSupported: Boolean = true,
         rawSelectionReady: Boolean = true,
@@ -112,6 +114,7 @@ object ExportTargetReadiness {
         return when (target) {
             ExportTarget.DEVICE_FOLDER -> hasExportFolder
             ExportTarget.API_ENDPOINT -> apiEndpointConfigured
+            ExportTarget.GOOGLE_DRIVE -> googleDriveReady
             ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayConfigured
         }
     }

@@ -12,6 +12,11 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.drive.GoogleDriveConfiguration
+import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveSelectionStore
+import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
@@ -99,6 +104,10 @@ data class ExportUiState(
     val apiConfigurationError: APIConfigurationIssue? = null,
     val selectedHealthProviderId: String = "health_connect",
     val profileExecutionIssue: ExportProfileExecutionIssue? = null,
+    val googleDriveDestinationId: String? = null,
+    val googleDriveDestinationLabel: String? = null,
+    val googleDriveConfigurationAvailable: Boolean = GoogleDriveConfiguration.isConfigured(),
+    val profileStorageBlocked: Boolean = false,
 ) {
     val requiresHistoricalReadPermission: Boolean
         get() = ExportHistoryAccess.requiresHistoricalReadPermission(
@@ -141,9 +150,10 @@ data class ExportUiState(
             (rawProviderSupported && rawSelectionReady)
 
     val destinationReady: Boolean
-        get() = when (selectedTarget) {
+        get() = !profileStorageBlocked && when (selectedTarget) {
             ExportTarget.DEVICE_FOLDER -> folderName != null
             ExportTarget.API_ENDPOINT -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) rawApiEndpointConfigured else apiEndpointConfigured
+            ExportTarget.GOOGLE_DRIVE -> googleDriveConfigurationAvailable && googleDriveDestinationId != null
             ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayConfigured
         }
 
@@ -151,6 +161,7 @@ data class ExportUiState(
         get() = when (selectedTarget) {
             ExportTarget.DEVICE_FOLDER -> folderName
             ExportTarget.API_ENDPOINT -> APIExportEndpoint.displayName(settings.apiEndpointUrl)
+            ExportTarget.GOOGLE_DRIVE -> googleDriveDestinationLabel
             ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.displayName(settings.agentDataGatewayUrl)
         }
 }
@@ -171,6 +182,9 @@ class ExportViewModel @Inject constructor(
     private val rawSnapshotExportRunner: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val exportScheduler: ExportScheduler? = null,
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveDestinationStore: GoogleDriveDestinationStore,
     /** Attached by the export screen so manual runs can prompt Health Connect route consent. */
     val routeConsentCoordinator: ExerciseRouteConsentCoordinator = ExerciseRouteConsentCoordinator(),
 ) : ViewModel() {
@@ -224,6 +238,24 @@ class ExportViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.selectedHealthProviderId.collect { providerId ->
                 _uiState.update { it.copy(selectedHealthProviderId = providerId) }
+            }
+        }
+        exportProfileRepository?.let { repository ->
+            viewModelScope.launch {
+                repository.hasOpaqueProfileState.collect { blocked ->
+                    _uiState.update { it.copy(profileStorageBlocked = blocked) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            googleDriveSelectionStore.destinationId.collect { id ->
+                val destination = id?.let { googleDriveDestinationStore.find(it) }
+                _uiState.update {
+                    it.copy(
+                        googleDriveDestinationId = destination?.id,
+                        googleDriveDestinationLabel = destination?.folderLabel,
+                    )
+                }
             }
         }
 
@@ -460,7 +492,9 @@ class ExportViewModel @Inject constructor(
 
     fun startExport() {
         val currentState = _uiState.value
-        if (currentState.isExporting || currentState.isPreviewing || exportJob?.isActive == true) return
+        if (currentState.isExporting || currentState.isPreviewing || exportJob?.isActive == true ||
+            currentState.profileStorageBlocked
+        ) return
 
         // Block export if free tier is exhausted
         if (!currentState.isPurchased && currentState.freeExportsRemaining <= 0) return
@@ -531,6 +565,17 @@ class ExportViewModel @Inject constructor(
                     )
                 }
             }
+            val activeDriveProfile = if (settings.exportTarget == ExportTarget.GOOGLE_DRIVE) {
+                exportProfileRepository.getActiveProfile()?.takeIf { it.target == ExportTarget.GOOGLE_DRIVE }
+            } else null
+            // A bound profile remains authority even if Settings selected another Drive account.
+            // An unbound Drive profile must never inherit the process-global selection.
+            val frozenDriveDestinationId = if (activeDriveProfile != null) {
+                activeDriveProfile.destinationId
+            } else _uiState.value.googleDriveDestinationId
+            val googleDriveOperationId = if (settings.exportTarget == ExportTarget.GOOGLE_DRIVE) {
+                java.util.UUID.randomUUID().toString()
+            } else null
             val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                 _uiState.update { it.copy(exportProgress = 0, exportTotal = 1, exportProgressDate = _uiState.value.startDate) }
                 // Manual export runs are interactive: Health Connect may show per-session exercise
@@ -540,6 +585,9 @@ class ExportViewModel @Inject constructor(
                     endDate = _uiState.value.endDate,
                     settings = settings,
                     allowInteractiveRouteConsent = true,
+                    googleDriveDestinationId = frozenDriveDestinationId,
+                    googleDriveProfileId = activeDriveProfile?.id,
+                    googleDriveOperationId = googleDriveOperationId,
                 ) ?: ExportResult(
                     successCount = 0,
                     totalCount = 1,
@@ -563,6 +611,18 @@ class ExportViewModel @Inject constructor(
                             },
                             target = ExportTarget.API_ENDPOINT,
                         )
+                }
+                ExportTarget.GOOGLE_DRIVE -> withInteractiveRouteConsent {
+                    frozenDriveDestinationId?.let { destinationId ->
+                        googleDriveExportOrchestrator.exportDates(
+                            dates = dates, settings = settings, destinationId = destinationId,
+                            profileId = activeDriveProfile?.id,
+                            source = "manual", operationId = requireNotNull(googleDriveOperationId),
+                            onProgress = progress,
+                        )
+                    } ?: ExportResult(0, dates.size,
+                        dates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
+                        target = ExportTarget.GOOGLE_DRIVE)
                 }
                 ExportTarget.AGENT_DATA_GATEWAY -> withInteractiveRouteConsent {
                     agentDataGatewayExportRunner?.exportDates(dates, settings, progress)
@@ -596,13 +656,21 @@ class ExportViewModel @Inject constructor(
                     targetLabel = when (settings.exportTarget) {
                         ExportTarget.DEVICE_FOLDER -> _uiState.value.folderName
                         ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+                        ExportTarget.GOOGLE_DRIVE -> _uiState.value.googleDriveDestinationLabel
                         ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
                     },
-                    fileCount = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
-                        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) presentationResult.artifactCount else estimatedFileCount(presentationResult.successCount, settings)
-                    } else 0,
+                    fileCount = when (settings.exportTarget) {
+                        ExportTarget.DEVICE_FOLDER -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                            presentationResult.artifactCount
+                        } else {
+                            estimatedFileCount(presentationResult.successCount, settings)
+                        }
+                        ExportTarget.GOOGLE_DRIVE -> presentationResult.artifactCount
+                        ExportTarget.API_ENDPOINT, ExportTarget.AGENT_DATA_GATEWAY -> 0
+                    },
                     warningSummary = null,
                     exportMode = presentationResult.exportMode,
+                    driveOperationId = presentationResult.retryDriveOperationIds.values.firstOrNull(),
                 )
             )
 
@@ -615,6 +683,11 @@ class ExportViewModel @Inject constructor(
                         usedCount = settingsRepository.getFreeExportsUsed(),
                         isUnlocked = _uiState.value.isPurchased,
                     )
+                }
+            }
+            if (presentationResult.isFullSuccess && presentationResult.target == ExportTarget.GOOGLE_DRIVE) {
+                presentationResult.retryDriveOperationIds.values.toSet().forEach { operationId ->
+                    googleDriveExportOrchestrator.acknowledgeAfterHistory(operationId)
                 }
             }
 
@@ -763,6 +836,9 @@ class ExportViewModel @Inject constructor(
                         isTruncated = false,
                         days = emptyList(),
                     )
+                    // Renderer preview is destination-neutral and performs no Drive request.
+                    ExportTarget.GOOGLE_DRIVE -> ExportOrchestrator(healthRepository, exportRepository)
+                        .previewDates(dates, settings, onProgress = progress)
                     ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner?.previewDates(
                         dates = dates,
                         settings = settings,

@@ -16,11 +16,15 @@ final class HealthHistoryCanonicalProfileIdentityTests: XCTestCase {
         try await check(mutation: "remove_identity")
     }
 
+    func testRemovedLegacyPersistedIdentityDuringActualProviderAwaitRejectsCapture() async throws {
+        try await check(mutation: "remove_identity", legacyPersistence: true)
+    }
+
     func testUnchangedSeparateStoreIdentityDuringActualProviderAwaitAllowsCapture() async throws {
         try await check(mutation: "unchanged")
     }
 
-    private func check(mutation: String) async throws {
+    private func check(mutation: String, legacyPersistence: Bool = false) async throws {
         let suite = "HistoryCanonicalProfileTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -28,6 +32,16 @@ final class HealthHistoryCanonicalProfileIdentityTests: XCTestCase {
         let writer = ExportProfileStore(userDefaults: defaults)
         let first = writer.add(name: "First", settings: settings, target: .localIPhoneFolder)
         let second = writer.add(name: "Same settings", settings: settings, target: .localIPhoneFolder)
+        if legacyPersistence {
+            defaults.set(try JSONEncoder().encode([first, second]), forKey: ExportProfilePersistence.legacyListKey)
+            defaults.set(first.id.uuidString, forKey: ExportProfilePersistence.legacyActiveIDKey)
+            defaults.removeObject(forKey: ExportProfilePersistence.envelopeKey)
+            defaults.removeObject(forKey: ExportProfilePersistence.activeIDKey)
+        }
+        XCTAssertEqual(ExportProfilePersistence.hasEnvelope(in: defaults), !legacyPersistence)
+        let activeIdentityKey = legacyPersistence
+            ? ExportProfilePersistence.legacyActiveIDKey : ExportProfilePersistence.activeIDKey
+        XCTAssertEqual(defaults.string(forKey: activeIdentityKey), first.id.uuidString)
         let observedStore = ExportProfileStore(userDefaults: defaults)
         XCTAssertEqual(first.settings, second.settings)
         XCTAssertEqual(observedStore.activeProfileID, first.id)
@@ -61,7 +75,7 @@ final class HealthHistoryCanonicalProfileIdentityTests: XCTestCase {
         switch mutation {
         case "switch": XCTAssertTrue(writer.activate(id: second.id))
         case "delete": XCTAssertTrue(writer.delete(id: first.id))
-        case "remove_identity": defaults.removeObject(forKey: "exportProfiles.activeProfileID")
+        case "remove_identity": defaults.removeObject(forKey: activeIdentityKey)
         default: break
         }
         XCTAssertEqual(observedStore.activeProfileID, first.id, "Other stores do not publish through this cached instance")

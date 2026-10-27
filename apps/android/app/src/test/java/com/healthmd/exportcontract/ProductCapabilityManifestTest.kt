@@ -41,6 +41,7 @@ class ProductCapabilityManifestTest {
         assertEquals(
             setOf(
                 "core.shared-rust-profile-engine",
+                "destination.google-drive",
                 "automation.api-recovery-authority",
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
@@ -171,6 +172,7 @@ class ProductCapabilityManifestTest {
             "direct.cli_agent_push_wake",
             "export.range-summary",
             "setup.share-portable-configuration",
+            "destination.google-drive",
             "account.myself_lifetime_claim",
             "core.shared-rust-profile-engine",
             "support.local-reporting-fallback",

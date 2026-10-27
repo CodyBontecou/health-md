@@ -27,6 +27,7 @@ forbidden_coordinates=(
   'com.android.installreferrer:'
   'com.google.android.play:review'
   'com.google.android.gms:play-services-wearable'
+  'com.google.android.gms:play-services-auth'
   'project :wearable-contract'
 )
 for coordinate in "${forbidden_coordinates[@]}"; do
@@ -78,6 +79,8 @@ forbidden_packages=(
   'com.google.android.play.core.review'
   'com/google/android/gms/wearable'
   'com.google.android.gms.wearable'
+  'com/google/android/gms/auth'
+  'com.google.android.gms.auth'
   'com/healthmd/data/attribution'
   'com.healthmd.data.attribution'
   'com/healthmd/data/onboardinganalytics'

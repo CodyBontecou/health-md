@@ -32,6 +32,8 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     /// Display name captured at queue time for notifications and history
     /// labels. Not used for resolution — `profileID` is authoritative.
     let profileName: String?
+    /// Frozen Drive destination ID/fingerprint only. No account, folder, resource key or token.
+    let googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot?
     /// Local runtime authority, not part of the exported health-data contract.
     let recoveryGeneration: Int
     let scheduleEnabledAt: Date?
@@ -79,6 +81,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         settingsSnapshot: ExportSettingsSnapshot? = nil,
         profileID: UUID? = nil,
         profileName: String? = nil,
+        googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot? = nil,
         recoveryGeneration: Int = 0,
         scheduleEnabledAt: Date? = nil,
         apiDestinationIdentity: ScheduledAPIEndpointIdentity? = nil,
@@ -107,6 +110,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.settingsSnapshot = settingsSnapshot
         self.profileID = source == .scheduled ? profileID : nil
         self.profileName = source == .scheduled ? profileName : nil
+        self.googleDriveDestinationSnapshot = source == .scheduled ? googleDriveDestinationSnapshot : nil
         self.recoveryGeneration = source == .scheduled ? recoveryGeneration : 0
         self.scheduleEnabledAt = source == .scheduled ? scheduleEnabledAt : nil
         self.apiDestinationIdentity = source == .scheduled ? apiDestinationIdentity : nil
@@ -144,6 +148,10 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         // profile-free and keep their legacy execution path.
         profileID = try container.decodeIfPresent(UUID.self, forKey: .profileID)
         profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
+        googleDriveDestinationSnapshot = try container.decodeIfPresent(
+            GoogleDriveDestinationSnapshot.self,
+            forKey: .googleDriveDestinationSnapshot
+        )
         recoveryGeneration = try container.decodeIfPresent(Int.self, forKey: .recoveryGeneration) ?? 0
         scheduleEnabledAt = try container.decodeIfPresent(Date.self, forKey: .scheduleEnabledAt)
         // Legacy API work lacks proof of its original destination. Do not synthesize it

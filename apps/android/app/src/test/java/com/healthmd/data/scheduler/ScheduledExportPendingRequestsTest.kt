@@ -553,4 +553,44 @@ class ScheduledExportPendingRequestsTest {
         assertThat(requests.first { it.date == date2 }.lastAttemptAtMillis).isEqualTo(500L)
         assertThat(updated.pendingScheduledRetryDates).containsExactly("2026-06-02", "2026-06-03").inOrder()
     }
+    @Test
+    fun driveRetriesRemainBoundToCapturedDestination() {
+        val pending = LocalDate.parse("2026-06-01")
+        val today = LocalDate.parse("2026-06-20")
+        val settings = ExportSettings(
+            scheduledExportTarget = ExportTarget.GOOGLE_DRIVE,
+            scheduleDateWindow = ScheduleDateWindow.TODAY,
+            pendingScheduledExportRequests = listOf(PendingScheduledExportRequest(
+                date = pending, exportTarget = ExportTarget.GOOGLE_DRIVE,
+                destinationFingerprint = "drive-a", driveOperationId = "retained-a",
+            )),
+        )
+        assertThat(ScheduledExportPendingRequests.scheduledRunDates(
+            settings, today = today, destinationFingerprint = "drive-b",
+        )).containsExactly(today)
+        val updated = ScheduledExportPendingRequests.applyAttemptResult(
+            settings, attemptedDates = listOf(pending), failedDateDetails = emptyList(),
+            target = ExportTarget.GOOGLE_DRIVE, destinationFingerprint = "drive-b",
+        )
+        assertThat(ScheduledExportPendingRequests.pendingRequests(updated).single().driveOperationId)
+            .isEqualTo("retained-a")
+    }
+
+    @Test
+    fun ordinaryDriveRunCannotRecaptureDateOwnedByRetainedOperation() {
+        val today = LocalDate.parse("2026-06-20")
+        val settings = ExportSettings(
+            scheduledExportTarget = ExportTarget.GOOGLE_DRIVE,
+            scheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS,
+            scheduleLookbackDays = 1,
+            pendingScheduledExportRequests = listOf(PendingScheduledExportRequest(
+                date = today.minusDays(1), exportTarget = ExportTarget.GOOGLE_DRIVE,
+                destinationFingerprint = "drive-a", driveOperationId = "retained-a",
+            )),
+        )
+        assertThat(ScheduledExportPendingRequests.scheduledRunDates(
+            settings, today = today, destinationFingerprint = "drive-a",
+        )).isEmpty()
+    }
+
 }

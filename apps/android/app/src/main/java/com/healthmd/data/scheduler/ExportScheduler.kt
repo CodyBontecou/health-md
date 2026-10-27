@@ -14,6 +14,8 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.await
 import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
@@ -41,6 +43,8 @@ class ExportScheduler @Inject constructor(
     private val generationFactory: ScheduledExportGeneration,
     private val runCoordinator: ScheduledExportRunCoordinator,
     private val transitionObserver: ScheduledExportTransitionObserver,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveDestinationStore: GoogleDriveDestinationStore,
 ) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
     private val mutex = Mutex()
@@ -628,9 +632,12 @@ class ExportScheduler @Inject constructor(
         settings: ExportSettings,
         target: ExportTarget,
     ): String? = when (target) {
-        ExportTarget.API_ENDPOINT ->
-            apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
-                ?: throw IllegalStateException("Scheduled API destination is not configured")
+        ExportTarget.API_ENDPOINT -> apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
+            ?: throw IllegalStateException("Scheduled API destination is not configured")
+        ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()
+            ?.let { googleDriveDestinationStore.find(it) }
+            ?.fingerprint
+            ?: throw IllegalStateException("Scheduled Google Drive destination is not configured")
         ExportTarget.AGENT_DATA_GATEWAY ->
             AgentDataGatewayEndpoint.fingerprint(settings.agentDataGatewayUrl)
                 ?: throw IllegalStateException("Scheduled gateway destination is not configured")
@@ -715,9 +722,7 @@ class ExportScheduler @Inject constructor(
     private suspend fun enqueueExport(admission: ScheduledExportAdmission) {
         val occurrence = admission.occurrence
         val constraints = Constraints.Builder().apply {
-            if (occurrence.configuration.target == ExportTarget.API_ENDPOINT ||
-                occurrence.configuration.target == ExportTarget.AGENT_DATA_GATEWAY
-            ) {
+            if (occurrence.configuration.target != ExportTarget.DEVICE_FOLDER) {
                 setRequiredNetworkType(NetworkType.CONNECTED)
             }
         }.build()

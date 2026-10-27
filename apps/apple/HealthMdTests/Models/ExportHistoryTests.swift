@@ -89,6 +89,30 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(entry.summaryDescription.contains("10"))
     }
 
+    func testEntry_failedDetailsRejectFullSuccessEvenWhenCountsAndSuccessFlagMatch() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 2,
+            totalCount: 2,
+            failedDateDetails: [
+                FailedDateDetail(
+                    date: Date(),
+                    reason: .fileWriteError,
+                    errorDetails: GoogleDriveErrorID.partialCompletion.rawValue
+                )
+            ],
+            exportTarget: .googleDrive,
+            fileCount: 1
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+        XCTAssertEqual(entry.presentationStatus, .partialSuccess)
+    }
+
     func testEntry_cliRawExportUsesSentDaysInsteadOfZeroFiles() {
         let jobID = UUID()
         let details = ExportHistoryOperationDetails(

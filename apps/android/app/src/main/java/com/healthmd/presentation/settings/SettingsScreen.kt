@@ -35,6 +35,7 @@ import com.healthmd.distribution.DistributionWearSettingsCard
 import com.healthmd.domain.distribution.DistributionChannel
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.ExportProfilesEntryCard
+import com.healthmd.presentation.drive.GoogleDriveSettingsCard
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.widget.setup.WidgetSettingsCard
@@ -121,6 +122,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
+        GoogleDriveSettingsCard()
         if (distributionPolicy.purchasesAvailable) {
             SettingsNavigationCard(
                 title = stringResource(R.string.myself_claim_entry),
