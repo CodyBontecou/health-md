@@ -685,10 +685,14 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             case "grant": try rig.store.revokeNativeDelegation(request.plan.authorityReferences.native, expectedGeneration: rig.store.snapshot().generation, authorization: FakeNativeAuthorization())
             default: break
             }
-            let resume = try AgentBridgeV4Codec.decode(AgentBridgeResume.self, from: JSONSerialization.data(withJSONObject: object))
+            let incoming = try JSONSerialization.data(withJSONObject: object)
             let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
             let reads = rig.reader.calls.count
-            XCTAssertThrowsError(try rig.service.retainedAcceptance(resume, authenticatedPeer: rig.peer), mode) {
+            XCTAssertThrowsError(try {
+                // Cross-field substitutions may reject at typed decode before the service.
+                let resume = try AgentBridgeV4Codec.decode(AgentBridgeResume.self, from: incoming)
+                return try rig.service.retainedAcceptance(resume, authenticatedPeer: rig.peer)
+            }(), mode) {
                 XCTAssertNotNil($0 as? AgentBridgeValidationError)
             }
             XCTAssertEqual(rig.reader.calls.count, reads)
@@ -3512,6 +3516,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         defer { channel.cancel() }
         let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
         let request = try nativeCaptureRequest(rig, planner: planner)
+        // Create the original durable acceptance and claim without any SDK capture.
+        try await planner.withCaptureContext(request) { context in _ = try context.begin() }
+        XCTAssertEqual(wire.packets.count, 1)
         let original = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
         let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
         let incoming = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .resume(acceptanceObservation(request))))
@@ -3524,8 +3531,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTFail("Missing spool cannot become transfer readiness")
         } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
         XCTAssertEqual(wire.receiveCount, 1)
-        XCTAssertEqual(wire.packets.count, 1)
-        guard case .encrypted(let frame) = try XCTUnwrap(wire.packets.first) else { return XCTFail("Expected encrypted original acceptance") }
+        XCTAssertEqual(wire.packets.count, 2)
+        guard case .encrypted(let frame) = try XCTUnwrap(wire.packets.last) else { return XCTFail("Expected encrypted original acceptance") }
         let bytes = Data(try ManualIPSyncSecurity.open(frame, using: key).dropFirst(16))
         let envelope = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes)
         guard case .receipt(let receipt) = envelope.payload else { return XCTFail("Expected stored acceptance only") }
