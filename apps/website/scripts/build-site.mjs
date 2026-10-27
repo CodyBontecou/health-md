@@ -17,6 +17,7 @@ const STATIC_FILES = [
   'favicon.ico',
   'llms.txt',
   'robots.txt',
+  'indexnow-key.txt',
 ];
 
 await buildStarterVault({ check: true });

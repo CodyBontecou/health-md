@@ -219,3 +219,29 @@ not delete files saved by the user. The demo is explicitly fictional.
 `test/csv-combiner.test.mjs` round-trips the existing Apple daily fixtures and
 Android excerpt and covers resource limits, quoted/multiline fields, cancellation,
 errors, URL cleanup, formula prefixes and the absence of network/storage sinks.
+
+## IndexNow change notifications
+
+`npm run seo:indexnow -- https://healthmd.app/path/` performs a live preflight
+without sending a notification. After deploying a meaningful page update, add
+`--submit` to notify participating engines through the global IndexNow endpoint.
+Supply only the exact canonical URLs that recently changed, up to 100 per run.
+Do not submit the entire sitemap, unchanged pages, query variants, Markdown
+alternatives, samples or private content. This command intentionally supports
+live indexable HTML updates only; removals and redirects require separate review.
+
+The committed `indexnow-key.txt` is a publicly served domain-verification token,
+not a private credential. The static build copies it to the site root. Each run
+requires the live key to match, HTTP 200 HTML, exactly one matching canonical,
+no noindex directive, and the current allow-all robots policy. Redirects fail.
+The command rejects foreign hosts, credentials, query strings and fragments;
+it sends nothing unless every preflight passes and `--submit` is explicit.
+
+Save the command output with deployment evidence in ignored `.pi/` state.
+HTTP 200 means received; 202 means received with key validation pending.
+Neither proves crawling, indexing or ranking. Errors are not automatically
+retried; investigate before resubmitting. Keep the existing Google sitemap
+workflow and use Search Console or engine webmaster tools to assess indexing.
+This notification is a server-side operator action, with no browser script,
+visitor data or health data. See the [protocol](https://www.indexnow.org/documentation)
+and [submission guidance](https://www.indexnow.org/faq).
