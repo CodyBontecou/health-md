@@ -226,6 +226,7 @@ enum ExecutionPeerOutcome {
     DisconnectBeforeFinalize,
     DisconnectThenCancel,
     AcceptedThenCancel,
+    DisconnectAfterFirstPartition,
 }
 
 #[derive(Clone)]
@@ -430,157 +431,14 @@ async fn answer_approved_execute(
         };
         let transfer = Uuid::new_v4();
         last_transfer = transfer;
-        let artifact_id = Uuid::parse_str(&item.artifact_id.0).unwrap();
-        let part = v2::TransferPartition {
-            index: index as u64,
-            transfer_id: transfer,
-            artifact_id,
-            artifact_offset: 0,
-            byte_count: bytes.len() as u64,
-            chunk_count: 1,
-            sha256: digest.0.clone(),
-            previous_sha256: previous.clone(),
-        };
-        execute_send_base(
+        send_execution_partition(
             channel,
             &platform,
-            DirectMessage::TransferOpen(Unlabeled::from(a::TransferOpen {
-                session: a::TransferSession {
-                    protocol_version: 1,
-                    session_id: SwiftUuid(session.session_id),
-                    job_id: SwiftUuid(session.job_id),
-                    request_fingerprint: fingerprint.clone(),
-                    peer_binding: a::PeerBinding {
-                        source_installation_id: SwiftUuid(
-                            session.peer_binding.source_installation_id,
-                        ),
-                        destination_installation_id: SwiftUuid(
-                            session.peer_binding.destination_installation_id,
-                        ),
-                    },
-                    partition_target_bytes: 50_331_648,
-                    created_at: session.created_at,
-                },
-                partition: a::TransferPartition {
-                    index: i64::try_from(index).unwrap(),
-                    transfer_id: SwiftUuid(transfer),
-                    source_dates: vec![item.artifact_id.0.clone()],
-                    item_segment: Some(a::TransferItemSegment {
-                        item_id: item.artifact_id.0.clone(),
-                        offset: 0,
-                        item_byte_count: i64::try_from(bytes.len()).unwrap(),
-                        is_final_segment: true,
-                    }),
-                    byte_count: i64::try_from(bytes.len()).unwrap(),
-                    chunk_count: 1,
-                    sha256: digest.0.clone(),
-                    previous_sha256: previous.clone(),
-                },
-            })),
-            v2::Message::TransferOpen(v2::TransferOpen {
-                session: session.clone(),
-                partition: part,
-            }),
-        )
-        .await;
-        execute_expect_base(
-            channel,
-            &platform,
-            DirectMessage::TransferDisposition(Unlabeled::from(a::TransferDisposition {
-                session_id: SwiftUuid(session.session_id),
-                job_id: SwiftUuid(session.job_id),
-                partition_index: i64::try_from(index).unwrap(),
-                partition_sha256: digest.0.clone(),
-                disposition: a::TransferDispositionKind::Needed,
-                message: None,
-            })),
-            v2::Message::TransferDisposition(v2::TransferDisposition {
-                session_id: session.session_id,
-                job_id: session.job_id,
-                partition_index: index as u64,
-                partition_sha256: digest.0.clone(),
-                disposition: v2::TransferDispositionKind::Needed,
-                message: None,
-            }),
-        )
-        .await;
-        let chunk = a::TransferChunk {
-            transfer_id: SwiftUuid(transfer),
-            sequence: 1,
-            data: bytes.to_vec(),
-            sha256: digest.0.clone(),
-        };
-        channel
-            .send_binary_transfer_frame(
-                &healthmd_protocol::transfer::encode_binary_chunk(&chunk).unwrap(),
-            )
-            .await
-            .unwrap();
-        execute_expect_base(
-            channel,
-            &platform,
-            DirectMessage::TransferChunkAcknowledgement(Unlabeled::from(
-                a::TransferChunkAcknowledgement {
-                    transfer_id: SwiftUuid(transfer),
-                    sequence: 1,
-                    accepted: true,
-                    sha256: digest.0.clone(),
-                    message: None,
-                },
-            )),
-            v2::Message::TransferChunkAcknowledgement(v2::TransferChunkAcknowledgement {
-                transfer_id: transfer,
-                sequence: 1,
-                accepted: true,
-                sha256: digest.0.clone(),
-                message: None,
-            }),
-        )
-        .await;
-        execute_send_base(
-            channel,
-            &platform,
-            DirectMessage::TransferPartitionComplete(Unlabeled::from(
-                a::TransferPartitionComplete {
-                    session_id: SwiftUuid(session.session_id),
-                    job_id: SwiftUuid(session.job_id),
-                    partition_index: i64::try_from(index).unwrap(),
-                    transfer_id: SwiftUuid(transfer),
-                    partition_sha256: digest.0.clone(),
-                },
-            )),
-            v2::Message::TransferPartitionComplete(v2::TransferPartitionComplete {
-                session_id: session.session_id,
-                job_id: session.job_id,
-                partition_index: index as u64,
-                transfer_id: transfer,
-                partition_sha256: digest.0.clone(),
-            }),
-        )
-        .await;
-        execute_expect_base(
-            channel,
-            &platform,
-            DirectMessage::TransferPartitionAcknowledgement(Unlabeled::from(
-                a::TransferPartitionAcknowledgement {
-                    session_id: SwiftUuid(session.session_id),
-                    job_id: SwiftUuid(session.job_id),
-                    partition_index: i64::try_from(index).unwrap(),
-                    transfer_id: SwiftUuid(transfer),
-                    partition_sha256: digest.0.clone(),
-                    accepted: true,
-                    message: None,
-                },
-            )),
-            v2::Message::TransferPartitionAcknowledgement(v2::TransferPartitionAcknowledgement {
-                session_id: session.session_id,
-                job_id: session.job_id,
-                partition_index: index as u64,
-                transfer_id: transfer,
-                partition_sha256: digest.0.clone(),
-                accepted: true,
-                message: None,
-            }),
+            &session,
+            item,
+            index,
+            transfer,
+            previous.clone(),
         )
         .await;
         frontier = frontier
@@ -595,13 +453,22 @@ async fn answer_approved_execute(
             })
             .unwrap();
         previous = Some(digest.0.clone());
+        if outcome == ExecutionPeerOutcome::DisconnectAfterFirstPartition && index == 0 {
+            break;
+        }
     }
     if outcome != ExecutionPeerOutcome::Complete {
-        // Both partitions are durably acknowledged, but neither finalization nor any
-        // source completion has been sent. Dropping this channel must fail Execute.
+        // Only this prefix is durably acknowledged; no finalization or source completion
+        // has been sent. Dropping this channel must fail Execute.
         let completed = ExecutionReceipt {
             artifact_count: 2,
-            committed_partition_count: 2,
+            committed_partition_count: if outcome
+                == ExecutionPeerOutcome::DisconnectAfterFirstPartition
+            {
+                1
+            } else {
+                2
+            },
             frontier_sha256: frontier.sha256().clone(),
             manifest_sha256: manifest_digest,
             source_acknowledged: true,
@@ -721,6 +588,175 @@ async fn answer_approved_execute(
     }
 }
 
+// Identical partition exchange for first delivery and an authenticated resumed suffix.
+#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
+async fn send_execution_partition(
+    channel: &mut SecureChannel,
+    platform: &PeerPlatform,
+    session: &v2::TransferSession,
+    item: &ArtifactBranch1,
+    index: usize,
+    transfer: Uuid,
+    previous: Option<String>,
+) {
+    use healthmd_protocol::models as a;
+    let bytes = b"{\"synthetic\":true}";
+    let digest = Digest(healthmd_protocol::transfer::sha256_hex(bytes));
+    let artifact_id = Uuid::parse_str(&item.artifact_id.0).unwrap();
+    let fingerprint = a::RequestFingerprint {
+        version: 1,
+        sha256: session.request_fingerprint.clone(),
+    };
+    let part = v2::TransferPartition {
+        index: index as u64,
+        transfer_id: transfer,
+        artifact_id,
+        artifact_offset: 0,
+        byte_count: bytes.len() as u64,
+        chunk_count: 1,
+        sha256: digest.0.clone(),
+        previous_sha256: previous.clone(),
+    };
+    execute_send_base(
+        channel,
+        platform,
+        DirectMessage::TransferOpen(Unlabeled::from(a::TransferOpen {
+            session: a::TransferSession {
+                protocol_version: 1,
+                session_id: SwiftUuid(session.session_id),
+                job_id: SwiftUuid(session.job_id),
+                request_fingerprint: fingerprint.clone(),
+                peer_binding: a::PeerBinding {
+                    source_installation_id: SwiftUuid(session.peer_binding.source_installation_id),
+                    destination_installation_id: SwiftUuid(
+                        session.peer_binding.destination_installation_id,
+                    ),
+                },
+                partition_target_bytes: 50_331_648,
+                created_at: session.created_at,
+            },
+            partition: a::TransferPartition {
+                index: i64::try_from(index).unwrap(),
+                transfer_id: SwiftUuid(transfer),
+                source_dates: vec![item.artifact_id.0.clone()],
+                item_segment: Some(a::TransferItemSegment {
+                    item_id: item.artifact_id.0.clone(),
+                    offset: 0,
+                    item_byte_count: i64::try_from(bytes.len()).unwrap(),
+                    is_final_segment: true,
+                }),
+                byte_count: i64::try_from(bytes.len()).unwrap(),
+                chunk_count: 1,
+                sha256: digest.0.clone(),
+                previous_sha256: previous.clone(),
+            },
+        })),
+        v2::Message::TransferOpen(v2::TransferOpen {
+            session: session.clone(),
+            partition: part,
+        }),
+    )
+    .await;
+    execute_expect_base(
+        channel,
+        platform,
+        DirectMessage::TransferDisposition(Unlabeled::from(a::TransferDisposition {
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            partition_index: i64::try_from(index).unwrap(),
+            partition_sha256: digest.0.clone(),
+            disposition: a::TransferDispositionKind::Needed,
+            message: None,
+        })),
+        v2::Message::TransferDisposition(v2::TransferDisposition {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            partition_index: index as u64,
+            partition_sha256: digest.0.clone(),
+            disposition: v2::TransferDispositionKind::Needed,
+            message: None,
+        }),
+    )
+    .await;
+    let chunk = a::TransferChunk {
+        transfer_id: SwiftUuid(transfer),
+        sequence: 1,
+        data: bytes.to_vec(),
+        sha256: digest.0.clone(),
+    };
+    channel
+        .send_binary_transfer_frame(
+            &healthmd_protocol::transfer::encode_binary_chunk(&chunk).unwrap(),
+        )
+        .await
+        .unwrap();
+    execute_expect_base(
+        channel,
+        platform,
+        DirectMessage::TransferChunkAcknowledgement(Unlabeled::from(
+            a::TransferChunkAcknowledgement {
+                transfer_id: SwiftUuid(transfer),
+                sequence: 1,
+                accepted: true,
+                sha256: digest.0.clone(),
+                message: None,
+            },
+        )),
+        v2::Message::TransferChunkAcknowledgement(v2::TransferChunkAcknowledgement {
+            transfer_id: transfer,
+            sequence: 1,
+            accepted: true,
+            sha256: digest.0.clone(),
+            message: None,
+        }),
+    )
+    .await;
+    execute_send_base(
+        channel,
+        platform,
+        DirectMessage::TransferPartitionComplete(Unlabeled::from(a::TransferPartitionComplete {
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            partition_index: i64::try_from(index).unwrap(),
+            transfer_id: SwiftUuid(transfer),
+            partition_sha256: digest.0.clone(),
+        })),
+        v2::Message::TransferPartitionComplete(v2::TransferPartitionComplete {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            partition_index: index as u64,
+            transfer_id: transfer,
+            partition_sha256: digest.0.clone(),
+        }),
+    )
+    .await;
+    execute_expect_base(
+        channel,
+        platform,
+        DirectMessage::TransferPartitionAcknowledgement(Unlabeled::from(
+            a::TransferPartitionAcknowledgement {
+                session_id: SwiftUuid(session.session_id),
+                job_id: SwiftUuid(session.job_id),
+                partition_index: i64::try_from(index).unwrap(),
+                transfer_id: SwiftUuid(transfer),
+                partition_sha256: digest.0.clone(),
+                accepted: true,
+                message: None,
+            },
+        )),
+        v2::Message::TransferPartitionAcknowledgement(v2::TransferPartitionAcknowledgement {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            partition_index: index as u64,
+            transfer_id: transfer,
+            partition_sha256: digest.0.clone(),
+            accepted: true,
+            message: None,
+        }),
+    )
+    .await;
+}
+
 // A fresh authenticated owner must receive the retained final ACK before Resume and
 // must reproduce the exact original accepted binding, manifest and terminal receipt.
 #[allow(clippy::too_many_lines)]
@@ -728,15 +764,15 @@ async fn answer_retained_resume(
     channel: &mut SecureChannel,
     negotiation: Negotiation,
     state: ExecutedPeerSnapshot,
-) {
+) -> ExecutedPeerSnapshot {
     use healthmd_protocol::models as a;
     let ExecutedPeerSnapshot {
         request,
         accepted,
         manifest,
         session,
-        last_transfer,
-        completed,
+        mut last_transfer,
+        mut completed,
     } = state;
     let platform = request.plan.intent.peer.platform.clone();
     let bytes = b"{\"synthetic\":true}";
@@ -748,7 +784,7 @@ async fn answer_retained_resume(
             a::TransferPartitionAcknowledgement {
                 session_id: SwiftUuid(session.session_id),
                 job_id: SwiftUuid(session.job_id),
-                partition_index: 1,
+                partition_index: i64::try_from(completed.committed_partition_count - 1).unwrap(),
                 transfer_id: SwiftUuid(last_transfer),
                 partition_sha256: digest.0.clone(),
                 accepted: true,
@@ -758,7 +794,7 @@ async fn answer_retained_resume(
         v2::Message::TransferPartitionAcknowledgement(v2::TransferPartitionAcknowledgement {
             session_id: session.session_id,
             job_id: session.job_id,
-            partition_index: 1,
+            partition_index: completed.committed_partition_count - 1,
             transfer_id: last_transfer,
             partition_sha256: digest.0.clone(),
             accepted: true,
@@ -777,10 +813,13 @@ async fn answer_retained_resume(
     assert_eq!(resume.request_sha256, document_digest(&request).unwrap());
     assert_eq!(resume.manifest_sha256, document_digest(&manifest).unwrap());
     assert_eq!(resume.frontier_sha256, completed.frontier_sha256);
-    assert_eq!(resume.committed_partition_count, 2);
+    assert_eq!(
+        resume.committed_partition_count,
+        completed.committed_partition_count
+    );
     channel
         .send_v4(
-            &Envelope::new(Message::ExecutionReceipt(Box::new(accepted))),
+            &Envelope::new(Message::ExecutionReceipt(Box::new(accepted.clone()))),
             negotiation,
         )
         .await
@@ -853,6 +892,57 @@ async fn answer_retained_resume(
         .await;
     }
     let manifest_digest = document_digest(&manifest).unwrap();
+    if completed.committed_partition_count == 1 {
+        let Artifact::Branch1(first) = &manifest.artifacts[0] else {
+            panic!("Expected first file")
+        };
+        let mut frontier = TransferFrontier::new(
+            &request.job_id,
+            &accepted.request_sha256,
+            &manifest_digest,
+            &ControlUuid(session.session_id.to_string()),
+        )
+        .unwrap()
+        .appending(&TransferFrontierPartition {
+            partition_index: 0,
+            transfer_id: ControlUuid(last_transfer.to_string()),
+            artifact_id: first.artifact_id.clone(),
+            artifact_offset: 0,
+            byte_count: i64::try_from(bytes.len()).unwrap(),
+            chunk_count: 1,
+            sha256: digest.clone(),
+        })
+        .unwrap();
+        assert_eq!(frontier.sha256(), &completed.frontier_sha256);
+        let Artifact::Branch1(second) = &manifest.artifacts[1] else {
+            panic!("Expected second file")
+        };
+        let transfer = Uuid::new_v4();
+        send_execution_partition(
+            channel,
+            &platform,
+            &session,
+            second,
+            1,
+            transfer,
+            Some(digest.0.clone()),
+        )
+        .await;
+        frontier = frontier
+            .appending(&TransferFrontierPartition {
+                partition_index: 1,
+                transfer_id: ControlUuid(transfer.to_string()),
+                artifact_id: second.artifact_id.clone(),
+                artifact_offset: 0,
+                byte_count: i64::try_from(bytes.len()).unwrap(),
+                chunk_count: 1,
+                sha256: digest.clone(),
+            })
+            .unwrap();
+        last_transfer = transfer;
+        completed.committed_partition_count = 2;
+        completed.frontier_sha256 = frontier.sha256().clone();
+    }
     let previous = Some(digest.0.clone());
     execute_send_base(
         channel,
@@ -934,11 +1024,19 @@ async fn answer_retained_resume(
     .await;
     channel
         .send_v4(
-            &Envelope::new(Message::ExecutionReceipt(Box::new(completed))),
+            &Envelope::new(Message::ExecutionReceipt(Box::new(completed.clone()))),
             negotiation,
         )
         .await
         .unwrap();
+    ExecutedPeerSnapshot {
+        request,
+        accepted,
+        manifest,
+        session,
+        last_transfer,
+        completed,
+    }
 }
 
 async fn answer_retained_cancel(
@@ -1194,6 +1292,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 ExecutionPeerOutcome::DisconnectBeforeFinalize,
                 ExecutionPeerOutcome::DisconnectThenCancel,
                 ExecutionPeerOutcome::AcceptedThenCancel,
+                ExecutionPeerOutcome::DisconnectAfterFirstPartition,
             ]
             .map(|outcome| (platform.clone(), outcome))
         })
@@ -1389,9 +1488,10 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 ExecutionPeerOutcome::DisconnectThenCancel
                     | ExecutionPeerOutcome::AcceptedThenCancel
             ) {
-                for execution in &executions {
+                for execution in &mut executions {
                     let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
-                    answer_retained_resume(&mut channel, negotiation, execution.clone()).await;
+                    *execution =
+                        answer_retained_resume(&mut channel, negotiation, execution.clone()).await;
                 }
             }
             for execution in executions {
@@ -1486,9 +1586,13 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
         // across reconnect; an interrupted call still cannot return a terminal receipt.
         let before_recovery: Vec<_> = execution_paths
             .iter()
-            .map(|path| {
+            .enumerate()
+            .map(|(index, path)| {
                 let path = output.join(&path.0);
-                if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+                if outcome == ExecutionPeerOutcome::AcceptedThenCancel
+                    || (outcome == ExecutionPeerOutcome::DisconnectAfterFirstPartition
+                        && index == 1)
+                {
                     assert!(
                         !path.exists(),
                         "Accepted-only cancellation cannot create output"
@@ -1589,7 +1693,13 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
         for (path, before) in execution_paths.iter().zip(&before_recovery) {
             match before {
                 Some(bytes) => assert_eq!(&std::fs::read(output.join(&path.0)).unwrap(), bytes),
-                None => assert!(!output.join(&path.0).exists()),
+                None if outcome == ExecutionPeerOutcome::AcceptedThenCancel => {
+                    assert!(!output.join(&path.0).exists());
+                }
+                None => assert_eq!(
+                    std::fs::read(output.join(&path.0)).unwrap(),
+                    b"{\"synthetic\":true}"
+                ),
             }
         }
         assert_eq!(
