@@ -20,6 +20,9 @@ val generatedBindingsDirectory = layout.buildDirectory.dir("generated/bindings/k
 val generatedBindings = generatedBindingsDirectory.map {
     it.file("com/healthmd/core/healthmd_core_uniffi.kt")
 }
+val hostBindingsLibrary = layout.buildDirectory.file(
+    "rust-target/bindings-host/debug/${System.mapLibraryName("healthmd_core_uniffi")}",
+)
 val debugJniDirectory = layout.buildDirectory.dir("generated/jniLibs/debug")
 val releaseJniDirectory = layout.buildDirectory.dir("generated/jniLibs/release")
 
@@ -101,7 +104,12 @@ val generateKotlinBindings = tasks.register<Exec>("generateHealthMdCoreKotlinBin
     group = "verification"
     description = "Regenerates the pinned UniFFI Kotlin binding into the build directory."
     inputs.files(rustSourceInputs, bindingsScript)
+    inputs.property("hostOperatingSystem", System.getProperty("os.name"))
+    inputs.property("hostArchitecture", System.getProperty("os.arch"))
     outputs.dir(generatedBindingsDirectory)
+    // Binding generation builds this exact-source host library as well. JVM
+    // conformance tests consume it, so a missing library must invalidate the task.
+    outputs.file(hostBindingsLibrary)
     environment(
         "CARGO_TARGET_DIR",
         layout.buildDirectory.dir("rust-target/bindings-host").get().asFile.absolutePath,

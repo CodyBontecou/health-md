@@ -35,6 +35,9 @@ final class ProductCapabilityManifestTests: XCTestCase {
                 "setup.share-portable-configuration",
                 "cloud.opt-in-export-receiver",
                 "cloud.read-only-mcp",
+                "account.optional-native-sign-in",
+                "account.selected-portable-profile-sync",
+                "account.local-revision-approval",
             ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
@@ -173,6 +176,9 @@ final class ProductCapabilityManifestTests: XCTestCase {
                 "setup.share-portable-configuration",
                 "cloud.opt-in-export-receiver",
                 "cloud.read-only-mcp",
+                "account.optional-native-sign-in",
+                "account.selected-portable-profile-sync",
+                "account.local-revision-approval",
             ])
     }
 
