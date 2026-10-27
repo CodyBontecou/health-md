@@ -210,13 +210,7 @@ jobs:
 
       - name: Install pinned Android NDK
         shell: bash
-        run: |
-          set -euo pipefail
-          android_sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-          test -n "$android_sdk"
-          sdkmanager "ndk;27.1.12297006"
-          echo "ANDROID_NDK_HOME=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
-          echo "ANDROID_NDK_ROOT=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
+        run: bash scripts/install-ci-ndk.sh
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
@@ -378,13 +372,7 @@ jobs:
 
       - name: Install pinned Android NDK
         shell: bash
-        run: |
-          set -euo pipefail
-          android_sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-          test -n "$android_sdk"
-          sdkmanager "ndk;27.1.12297006"
-          echo "ANDROID_NDK_HOME=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
-          echo "ANDROID_NDK_ROOT=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
+        run: bash scripts/install-ci-ndk.sh
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
