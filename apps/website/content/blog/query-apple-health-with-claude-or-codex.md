@@ -96,7 +96,7 @@ The tools provide factual data access, not diagnosis or treatment advice. A resp
 Android supports direct durable exports. The typed MCP queries in this guide require iPhone.
 
 <div class="cta-row">
-<a class="button" href="/docs/cli/">Open the standalone CLI docs</a>
+<a class="button" href="/docs/cli/#first-export-from-your-phone">Open the standalone CLI first-export guide</a>
 <a class="button secondary" href="/docs/cli-reference/query/">Inspect typed query arguments</a>
 <a class="button secondary" href="/health-data-for-ai/">Compare AI connection paths</a>
 </div>

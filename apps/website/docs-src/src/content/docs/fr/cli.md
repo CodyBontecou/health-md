@@ -1,6 +1,6 @@
 ---
-title: "CLI Health.md"
-description: "Installez la CLI healthmd autonome sur macOS, Linux ou Windows, jumelez-la directement avec un iPhone ou un appareil Android, vérifiez l’état de préparation, exportez des données, exécutez des requêtes et gérez des tâches persistantes. Aucune app Mac requise."
+title: "CLI pour Apple Health et Health Connect"
+description: "Exportez les données Apple Health ou Health Connect avec Health.md dans le terminal. CLI en aperçu pour macOS, Linux et Windows, avec l’app ouverte sur le téléphone."
 ---
 
 La CLI `healthmd` autonome fonctionne sur macOS, Linux et Windows et se jumelle directement avec une app Health.md ouverte sur iPhone (protocole v1) ou Android (protocole v2). Elle ne nécessite jamais l’app Health.md for Mac, n’offre aucune sélection de back-end et ne lit jamais Apple Health ni Health Connect depuis l’ordinateur.
@@ -18,6 +18,22 @@ La CLI `healthmd` autonome fonctionne sur macOS, Linux et Windows et se jumelle 
 </div>
 
 Sur macOS ou Linux, installez l’aperçu avec <code>brew install CodyBontecou/tap/healthmd</code>. Utilisez la version mobile exacte nommée par les preuves de publication ; la publication du paquet ne prouve pas la compatibilité mobile.
+
+## Premier export depuis votre téléphone
+
+Pour Windows et les autres méthodes, suivez le [guide d’installation](/fr/docs/cli/installation/). Vérifiez la [version mobile compatible](/fr/docs/cli-direct/) avant le jumelage. Gardez Health.md ouvert sur le téléphone, activez Direct CLI Access et autorisez les catégories à exporter.
+
+Créez un dossier sur l’ordinateur et remplacez `/absolute/path/to/HealthVault` par son chemin absolu existant. Sous Windows, utilisez un chemin Windows complet. Suivez les instructions de jumelage, vérifiez la disponibilité, puis exportez une journée :
+
+```bash
+healthmd direct pair --transport manual-ip
+healthmd status
+healthmd export --yesterday --destination /absolute/path/to/HealthVault
+```
+
+Après un export réussi, ouvrez le dossier de destination et vérifiez les fichiers écrits. Le téléphone produit l’export ; la CLI enregistre les fichiers validés sur l’ordinateur. En cas de délai dépassé, [consultez l’état et reprenez la tâche](/fr/docs/cli-jobs/) au lieu de supposer son annulation.
+
+### Plateformes prises en charge
 
 La CLI Rust autonome fonctionne sur macOS, Linux et Windows, utilise des connexions directes Manual IP ou Tailscale et ne nécessite pas l’app Mac. Elle se jumelle aux sources iPhone via le protocole v1 et aux sources Android via le protocole v2, avec des contrôles automatisés de compatibilité Swift↔Rust et Kotlin↔Rust. La compatibilité des protocoles est implémentée ; la QA de publication sur appareils physiques doit se terminer avant la première version stable qualifiée. Des archives avec somme de contrôle, un installateur PowerShell et `cargo install healthmd-cli --locked` accompagnent chaque publication.
 
