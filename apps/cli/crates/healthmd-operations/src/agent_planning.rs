@@ -144,6 +144,38 @@ fn summary_json_settings(
     Ok(settings)
 }
 
+/// Local references only. Exact plan/approval/destination bytes come from the signed host
+/// issuer, never caller JSON. This DTO is not a native grant or a wire Execute request.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AgentExecuteInput {
+    pub plan_id: ControlUuid,
+    pub job_id: ControlUuid,
+    pub idempotency_key: ControlUuid,
+    pub request_id: ControlUuid,
+}
+impl ValidateShape for AgentExecuteInput {
+    fn validate_shape(&self) -> Result<(), Error> {
+        self.plan_id.validate_shape()?;
+        self.job_id.validate_shape()?;
+        self.idempotency_key.validate_shape()?;
+        self.request_id.validate_shape()
+    }
+}
+/// Reject ambiguous, incomplete or authority-bearing caller arguments before backend work.
+/// # Errors
+/// Invalid identifiers, duplicate/unknown fields and malformed JSON reject.
+pub fn agent_execute_from_bytes(raw: &[u8]) -> Result<AgentExecuteInput, Error> {
+    v4::decode_typed(raw)
+}
+
+pub fn execute_input_schema() -> Value {
+    let uuid = json!({"type":"string","pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"});
+    json!({"type":"object","additionalProperties":false,
+        "required":["plan_id","job_id","idempotency_key","request_id"],
+        "properties":{"plan_id":uuid,"job_id":uuid,"idempotency_key":uuid,"request_id":uuid}})
+}
+
 /// Decode complete planning arguments using the strict integrated v4 grammar.
 /// # Errors
 /// Invalid bounds, duplicate keys, unknown fields, nulls or unsupported axes reject.
@@ -172,6 +204,7 @@ pub fn agent_rpc_bytes_valid(raw: &[u8]) -> bool {
     match tree.pointer("/params/name").and_then(Value::as_str) {
         Some("healthmd_export_plan") => agent_plan_from_bytes(&bytes).is_ok(),
         Some("healthmd_export_approval") => agent_approval_from_bytes(&bytes).is_ok(),
+        Some("healthmd_export_execute") => agent_execute_from_bytes(&bytes).is_ok(),
         _ => false,
     }
 }
@@ -220,6 +253,48 @@ pub fn approval_input_schema() -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn execute_ids_reject_authority_fields_ambiguous_json_and_invalid_ids() {
+        let input = json!({"plan_id":"00000000-0000-4000-8000-000000000001","job_id":"00000000-0000-4000-8000-000000000002","idempotency_key":"00000000-0000-4000-8000-000000000003","request_id":"00000000-0000-4000-8000-000000000004"});
+        let raw = serde_json::to_vec(&input).unwrap();
+        assert!(agent_execute_from_bytes(&raw).is_ok());
+        for field in [
+            "approve",
+            "approval",
+            "plan",
+            "authority",
+            "destination",
+            "path",
+        ] {
+            let mut invalid = input.clone();
+            invalid[field] = json!(true);
+            assert!(agent_execute_from_bytes(&serde_json::to_vec(&invalid).unwrap()).is_err());
+        }
+        for field in ["plan_id", "job_id", "idempotency_key", "request_id"] {
+            let mut invalid = input.clone();
+            invalid.as_object_mut().unwrap().remove(field);
+            assert!(agent_execute_from_bytes(&serde_json::to_vec(&invalid).unwrap()).is_err());
+        }
+        for value in [
+            Value::Null,
+            json!(true),
+            json!(1.0),
+            json!("not-a-uuid"),
+            json!("00000000-0000-4000-8000-00000000000A"),
+        ] {
+            let mut invalid = input.clone();
+            invalid["job_id"] = value;
+            assert!(agent_execute_from_bytes(&serde_json::to_vec(&invalid).unwrap()).is_err());
+        }
+        let mut duplicate = raw;
+        duplicate.pop();
+        duplicate.extend_from_slice(b",\"job_id\":\"00000000-0000-4000-8000-000000000002\"}");
+        assert!(agent_execute_from_bytes(&duplicate).is_err());
+        let schema = execute_input_schema();
+        assert_eq!(schema["additionalProperties"], false);
+        assert_eq!(schema["properties"].as_object().unwrap().len(), 4);
+    }
+
     fn arguments() -> Value {
         json!({"dates":{"type":"exact","range":{"start_date":"2026-01-01","end_date":"2026-01-02"}},"calendar_timezone":"UTC","metric_ids":["steps"],"output_profile":"apple-v8","subfolder":"","folder_template":"{year}","filename_template":"{date}","destination_binding_id":"00000000-0000-4000-8000-000000000003"})
     }

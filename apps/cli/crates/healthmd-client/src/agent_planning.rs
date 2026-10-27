@@ -418,6 +418,7 @@ impl HostPlanner {
     /// substituted destinations reject without creating or changing issuer state.
     pub async fn prepare_approved_execution(
         &self,
+        expected_peer: &Peer,
         plan_id: &ControlUuid,
         job_id: ControlUuid,
         idempotency_key: ControlUuid,
@@ -428,7 +429,12 @@ impl HostPlanner {
         job_id.validate_shape()?;
         idempotency_key.validate_shape()?;
         request_id.validate_shape()?;
+        expected_peer.validate_shape()?;
         let (_, plan, _, decision, native_approval) = self.store.issued_plan(plan_id).await?;
+        // Reject another selected device before inspecting its registered destination.
+        if plan.intent.peer != *expected_peer {
+            return Err(Error::BindingChanged.into());
+        }
         let binding = approval_binding(&plan);
         if decision.as_ref() != Some(&binding) {
             return Err(Error::ApprovalRequired.into());
@@ -449,6 +455,21 @@ impl HostPlanner {
             .require_output_current(&request, None, clock, || async { Ok(()) })
             .await?;
         Ok(request)
+    }
+
+    /// Execute only through an already authenticated, independently negotiated original
+    /// bridge. Its durable admission and live authority checks still validate the complete
+    /// request; this method returns only after host commits and exact native confirmation.
+    /// # Errors
+    /// Unsupported source, lost authority, interrupted transfer or missing confirmation reject.
+    pub async fn execute_prepared(
+        &self,
+        source: &mut crate::agent_bridge::BridgeSession<'_>,
+        request: ExecuteRequest,
+        clock: &dyn PlanningClock,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, ClientError> {
+        let mut execution = source.begin_execution(&self.store, request, clock).await?;
+        execution.receive_confirmed_execution().await
     }
 
     /// No accepted receipt, old export conversion or fake execution until a genuine source

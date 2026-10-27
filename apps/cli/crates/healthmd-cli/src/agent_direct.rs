@@ -9,8 +9,8 @@ use healthmd_client::{
     direct::DirectClient,
 };
 use healthmd_operations::{
-    AgentPlanInput, BackendCapabilities, BackendError, CallContext, HealthDataBackend,
-    QueryPageRequest,
+    AgentExecuteInput, AgentPlanInput, BackendCapabilities, BackendError, CallContext,
+    HealthDataBackend, QueryPageRequest,
 };
 use healthmd_protocol::v4::{Approval, ApprovalRequest, ExportPlan};
 use serde_json::Value;
@@ -64,8 +64,8 @@ impl<C: CredentialStore> DirectAgentBackend<C> {
 impl<C: CredentialStore> HealthDataBackend for DirectAgentBackend<C> {
     fn capabilities(&self) -> BackendCapabilities {
         BackendCapabilities { source_kind: "paired_mobile".into(), transport: "authenticated_encrypted_mobile_direct".into(),
-            supports_queries: false, supports_local_file_exports: false, requires_foreground_source: true,
-            instructions: "Planning requires independently stored native/host consent, protected issuer key, and a registered host destination. No execution adapter is provided.".into() }
+            supports_queries: false, supports_local_file_exports: true, requires_foreground_source: true,
+            instructions: "Planning requires independently stored native/host consent, protected issuer key, and a registered host destination. Execution requires installed Agent Bridge support, both stored exact decisions and the registered host destination.".into() }
     }
     async fn readiness(&self, _: &CallContext) -> Result<Value, BackendError> {
         Err(unsupported())
@@ -79,6 +79,64 @@ impl<C: CredentialStore> HealthDataBackend for DirectAgentBackend<C> {
         _: QueryPageRequest,
     ) -> Result<Value, BackendError> {
         Err(unsupported())
+    }
+
+    async fn execute_approved_export(
+        &self,
+        context: &CallContext,
+        input: AgentExecuteInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        use healthmd_protocol::v4::ValidateShape as _;
+        input
+            .validate_shape()
+            .map_err(|e| agent_backend_error(e.into()))?;
+        let _gate = tokio::select! {
+            biased;
+            () = context.cancellation.cancelled() => return Err(BackendError::new("healthmd_request_cancelled", "The local request was cancelled.")),
+            guard = self.gate.lock() => guard,
+        };
+        let expected_peer = self
+            .client
+            .planning_peer(self.device)
+            .await
+            .map_err(agent_backend_error)?;
+        let planner = self.planner().await?;
+        let request = planner
+            .prepare_approved_execution(
+                &expected_peer,
+                &input.plan_id,
+                input.job_id,
+                input.idempotency_key,
+                input.request_id,
+                &SystemPlanningClock,
+            )
+            .await
+            .map_err(agent_backend_error)?;
+        let peer = self
+            .client
+            .planning_peer(self.device)
+            .await
+            .map_err(agent_backend_error)?;
+        if request.plan.intent.peer != peer {
+            return Err(BackendError::new(
+                "binding_changed",
+                "The selected peer differs from the approved plan.",
+            ));
+        }
+        let mut source = self
+            .client
+            .connect_bridge(
+                self.device,
+                self.port,
+                self.timeout,
+                context.cancellation.clone(),
+            )
+            .await
+            .map_err(agent_backend_error)?;
+        planner
+            .execute_prepared(&mut source, request, &SystemPlanningClock)
+            .await
+            .map_err(agent_backend_error)
     }
 
     async fn plan_export(
@@ -171,7 +229,7 @@ mod tests;
 fn unsupported() -> BackendError {
     BackendError::new(
         "unsupported_capability",
-        "This backend provides only configuration planning and stored-decision relay.",
+        "This Agent Bridge backend does not provide the requested operation.",
     )
 }
 
@@ -193,6 +251,6 @@ pub fn agent_backend_error(error: ClientError) -> BackendError {
     };
     BackendError::new(
         code,
-        "The configuration-only agent operation is unavailable, invalid, or unauthorized.",
+        "The agent operation is unavailable, invalid, interrupted, or unauthorized.",
     )
 }

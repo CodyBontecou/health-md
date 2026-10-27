@@ -95,6 +95,40 @@ impl HealthOperations {
         })
     }
 
+    /// Execute only an existing exact plan with both independently stored decisions.
+    /// # Errors
+    /// Remote/read-only callers, invalid arguments, lost authority or unconfirmed results reject.
+    pub async fn execute_approved_export(
+        &self,
+        context: &CallContext,
+        raw: &[u8],
+    ) -> Result<Value, BackendError> {
+        use healthmd_protocol::v4::{self, ExecutionReceiptStatus};
+        self.require_local_agent(context, true)?;
+        let input = crate::agent_execute_from_bytes(raw).map_err(agent_error)?;
+        if context.cancellation.is_cancelled() {
+            return Err(BackendError::new(
+                "healthmd_request_cancelled",
+                "The local request was cancelled.",
+            ));
+        }
+        let job_id = input.job_id.clone();
+        let receipt = self.backend.execute_approved_export(context, input).await?;
+        v4::validate_execution_receipt(&receipt).map_err(agent_error)?;
+        if receipt.job_id != job_id
+            || !receipt.source_acknowledged
+            || !matches!(
+                receipt.status,
+                ExecutionReceiptStatus::Complete
+                    | ExecutionReceiptStatus::CompleteEmpty
+                    | ExecutionReceiptStatus::Partial
+            )
+        {
+            return Err(agent_error(v4::Error::BindingChanged));
+        }
+        serde_json::to_value(receipt).map_err(|_| agent_error(v4::Error::InvalidRequest))
+    }
+
     fn require_local_agent(
         &self,
         context: &CallContext,
