@@ -1,6 +1,6 @@
 //! Bridge adaptation of deployed base controls. No new base fields or discriminators.
 use super::*;
-use crate::secure_channel::{SecurePayload, V2SecurePayload};
+use crate::secure_channel::AgentPayload;
 use healthmd_protocol::{
     encoding::SwiftUuid,
     models as apple, v2,
@@ -77,13 +77,18 @@ impl HostExecution<'_, '_, '_> {
     ) -> Result<Incoming, ClientError> {
         self.require_current().await?;
         transaction.require_current()?;
+        let payload = self
+            .bridge
+            .channel
+            .receive_agent_payload(self.bridge.negotiation)
+            .await?;
         let message = if self.binding.request.plan.intent.peer.platform == v4::PeerPlatform::Apple {
-            match self.bridge.channel.receive().await? {
-                SecurePayload::BinaryTransferFrame(bytes) => Incoming::Chunk(
+            match payload {
+                AgentPayload::BinaryTransferFrame(bytes) => Incoming::Chunk(
                     healthmd_protocol::transfer::decode_binary_chunk(&bytes)
                         .map_err(|_| Error::BindingChanged)?,
                 ),
-                SecurePayload::Message(message) => match *message {
+                AgentPayload::Apple(message) => match *message {
                     DirectMessage::TransferSession(Unlabeled { value }) => {
                         Incoming::Session(session(value)?)
                     }
@@ -150,14 +155,15 @@ impl HostExecution<'_, '_, '_> {
                     }
                     _ => return Err(ClientError::UnexpectedMessage),
                 },
+                _ => return Err(ClientError::UnexpectedMessage),
             }
         } else {
-            match self.bridge.channel.receive_v2_payload().await? {
-                V2SecurePayload::BinaryTransferFrame(bytes) => Incoming::Chunk(
+            match payload {
+                AgentPayload::BinaryTransferFrame(bytes) => Incoming::Chunk(
                     healthmd_protocol::transfer::decode_binary_chunk(&bytes)
                         .map_err(|_| Error::BindingChanged)?,
                 ),
-                V2SecurePayload::Message(message) => match message.message {
+                AgentPayload::Android(message) => match message.message {
                     v2::Message::TransferSession(value) => Incoming::Session(Session(value)),
                     v2::Message::ArtifactManifest(value) => {
                         if value.job_id.to_string() != self.binding.request.job_id.0 {
@@ -184,6 +190,7 @@ impl HostExecution<'_, '_, '_> {
                     }
                     _ => return Err(ClientError::UnexpectedMessage),
                 },
+                _ => return Err(ClientError::UnexpectedMessage),
             }
         };
         self.require_current().await?;

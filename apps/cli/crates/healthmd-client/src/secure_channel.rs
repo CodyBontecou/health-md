@@ -25,6 +25,10 @@ pub enum V2SecurePayload {
     BinaryTransferFrame(Vec<u8>),
 }
 
+#[path = "agent_channel_payload.rs"]
+mod agent_payload;
+pub(crate) use agent_payload::AgentPayload;
+
 pub struct SecureChannel {
     packet: PacketConnection,
     session_key: [u8; 32],
