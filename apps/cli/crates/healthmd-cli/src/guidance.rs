@@ -566,6 +566,18 @@ pub(super) fn group(group: &'static str) -> Value {
     })
 }
 
+pub(super) fn execute() -> Value {
+    json!({
+        "schema": GUIDANCE_SCHEMA, "schema_version": SCHEMA_VERSION, "status": "guidance",
+        "command": "healthmd execute", "request_sent": false,
+        "message": "Supply identifiers for an existing exact approved Agent Bridge plan. No device was contacted or export started.",
+        "required": [{"argument":"--arguments", "description":"Strict JSON with plan_id, job_id, idempotency_key and request_id; no approval fields or destination paths."}],
+        "before_continuing": ["The selected mobile source must support Agent Bridge.", "The host destination and both separate exact decisions must already be authorized."],
+        "next_actions": [{"command":"healthmd mcp schema healthmd_export_execute", "description":"Inspect the exact input schema locally."},
+            {"command":"healthmd execute --help", "description":"Inspect timeout and argument options."}]
+    })
+}
+
 pub(super) fn resume() -> Value {
     positional(
         "healthmd resume",

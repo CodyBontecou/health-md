@@ -238,6 +238,19 @@ pub trait HealthDataBackend: Send + Sync {
         ))
     }
 
+    /// Execute a separately approved issued plan through the original authenticated source.
+    /// Local references cannot issue consent or select an unregistered destination.
+    async fn execute_approved_export(
+        &self,
+        _context: &CallContext,
+        _input: crate::AgentExecuteInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        Err(BackendError::new(
+            "unsupported_capability",
+            "The selected source does not support approved Agent Bridge execution.",
+        ))
+    }
+
     async fn start_export(
         &self,
         _context: &CallContext,

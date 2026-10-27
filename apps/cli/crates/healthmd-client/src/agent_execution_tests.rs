@@ -102,6 +102,7 @@ async fn host_execution_request_reconstructs_only_signed_approved_plan_without_e
         let before = fixture.store.revision().await.unwrap();
         let result = planner
             .prepare_approved_execution(
+                &fixture.peer,
                 &fixture.request.plan.plan_id,
                 fixture.request.job_id.clone(),
                 fixture.request.idempotency_key.clone(),
@@ -138,7 +139,14 @@ async fn host_execution_request_requires_both_separately_stored_decisions() {
             let before = store.revision().await.unwrap();
             assert!(matches!(
                 planner
-                    .prepare_approved_execution(&plan.plan_id, id(20), id(19), id(22), &clock)
+                    .prepare_approved_execution(
+                        &peer,
+                        &plan.plan_id,
+                        id(20),
+                        id(19),
+                        id(22),
+                        &clock
+                    )
                     .await,
                 Err(ClientError::Agent(Error::ApprovalRequired))
             ));
@@ -150,7 +158,14 @@ async fn host_execution_request_requires_both_separately_stored_decisions() {
 
 #[tokio::test]
 async fn host_execution_request_rejects_expiry_revocation_and_destination_substitution() {
-    for mode in ["expired", "revoked", "destination", "unknown", "invalid"] {
+    for mode in [
+        "expired",
+        "revoked",
+        "destination",
+        "unknown",
+        "invalid",
+        "peer",
+    ] {
         let fixture = accepted_fixture(PeerPlatform::Ios).await;
         let planner = HostPlanner::new(fixture.store.clone());
         if mode == "expired" {
@@ -170,6 +185,10 @@ async fn host_execution_request_rejects_expiry_revocation_and_destination_substi
             std::fs::rename(&fixture.output, fixture.output.with_extension("original")).unwrap();
             std::fs::create_dir(&fixture.output).unwrap();
         }
+        let mut expected_peer = fixture.peer.clone();
+        if mode == "peer" {
+            expected_peer.source_installation_id = id(98);
+        }
         let before = fixture.store.revision().await.unwrap();
         let plan = if mode == "unknown" {
             id(99)
@@ -184,6 +203,7 @@ async fn host_execution_request_rejects_expiry_revocation_and_destination_substi
         assert!(
             planner
                 .prepare_approved_execution(
+                    &expected_peer,
                     &plan,
                     job,
                     fixture.request.idempotency_key.clone(),
