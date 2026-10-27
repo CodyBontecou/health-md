@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
 import { marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
+import { parseDocument, DomUtils } from 'htmlparser2';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SITE_URL = 'https://healthmd.app';
@@ -78,6 +79,41 @@ function slugify(value) {
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-')
     .slice(0, 80);
+}
+
+// Input has already passed through sanitizeRenderedMarkdown. Parse headings so
+// inline markup, entities and existing author-defined anchors stay intact.
+export function addArticleContents(bodyHtml) {
+  const document = parseDocument(bodyHtml);
+  const elements = DomUtils.findAll(() => true, document.children);
+  const usedIds = new Set(['article-contents-title', 'related-guides-title']);
+  for (const element of elements) {
+    const id = element.attribs.id;
+    if (!id) continue;
+    if (usedIds.has(id)) throw new Error(`Duplicate or reserved article ID: ${id}`);
+    usedIds.add(id);
+  }
+  const sections = [];
+  for (const heading of elements.filter(element => element.name === 'h2')) {
+    const title = DomUtils.textContent(heading).replace(/\s+/g, ' ').trim();
+    if (!title) continue;
+    if (!heading.attribs.id) {
+      const base = `section-${slugify(title) || 'overview'}`;
+      let id = base;
+      let suffix = 2;
+      while (usedIds.has(id)) id = `${base}-${suffix++}`;
+      heading.attribs.id = id;
+      usedIds.add(id);
+    }
+    sections.push({ id: heading.attribs.id, title });
+  }
+  const navigation = sections.length >= 5
+    ? `<nav class="article-contents" aria-labelledby="article-contents-title">
+      <h2 id="article-contents-title">On this page</h2>
+      <ul>${sections.map(({ id, title }) => `<li><a href="#${escapeHtml(encodeURIComponent(id))}">${escapeHtml(title)}</a></li>`).join('')}</ul>
+    </nav>`
+    : '';
+  return { html: DomUtils.getInnerHTML(document, { encodeEntities: 'utf8' }), navigation };
 }
 
 function asDate(value, field, filename) {
@@ -368,7 +404,7 @@ async function renderPost(post, relatedGuides) {
         ? `<span aria-current="page">${escapeHtml(name)}</span>`
         : `<a href="${escapeHtml(url)}">${escapeHtml(name)}</a>`}</li>`).join('')}</ol>
     </nav>`;
-  const bodyHtml = sanitizeRenderedMarkdown(await marked.parse(post.body));
+  const body = addArticleContents(sanitizeRenderedMarkdown(await marked.parse(post.body)));
   const cover = post.image && post.showCover
     ? `<figure class="article-cover"><img src="${escapeHtml(post.image)}" alt="${escapeHtml(post.imageAlt)}"></figure>`
     : '';
@@ -406,8 +442,9 @@ async function renderPost(post, relatedGuides) {
     <h1>${escapeHtml(post.title)}</h1>
     ${byline}
     <p class="lead">${escapeHtml(post.lead)}</p>
+    ${body.navigation}
     ${cover}
-    <div class="article-body">${bodyHtml}</div>
+    <div class="article-body">${body.html}</div>
     ${tags}
     ${relatedNav}
   </main>

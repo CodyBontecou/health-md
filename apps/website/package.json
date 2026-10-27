@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
+    "htmlparser2": "12.0.0",
     "marked": "^18.0.6",
     "sanitize-html": "^2.18.1",
     "three": "^0.185.1"

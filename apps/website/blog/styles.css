@@ -299,6 +299,62 @@ h1 {
   margin-bottom: 18px;
 }
 
+.article-contents {
+  margin: 24px 0 32px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.article-contents h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.article .article-contents ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.article .article-contents li + li {
+  margin-top: 0;
+}
+
+.article-contents a {
+  color: var(--pine);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.article-contents a:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 4px;
+}
+
+.article-contents a:active {
+  color: var(--pine-2);
+}
+
+.article-body h2[id] {
+  scroll-margin-top: 32px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article-contents a:hover { color: var(--pine-2); }
+}
+
+@media (max-width: 640px) {
+  .article .article-contents ul { grid-template-columns: 1fr; }
+}
+
 .article .article-byline {
   display: flex;
   flex-wrap: wrap;
