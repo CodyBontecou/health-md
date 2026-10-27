@@ -324,6 +324,16 @@ publication. Hash computation alone is never evidence of a durable output write 
 Host commit receipts and final source confirmation remain independently required for completion.
 
 Pre-capture `accepted` receipts retain their existing zero manifest/frontier digests; they are not `F0`.
+An accepted-only host with an authenticated original acceptance and no output/transfer journal may
+send Resume with zero manifest/frontier digests and zero committed partitions. These zeroes identify
+its retained observation, not a new frontier or permission to reconstruct missing evidence. The source
+must retain the exact original job, complete immutable manifest/spool/session/checkpoint and an empty
+acknowledged prefix; no ACK prelude is allowed in this mode. It returns the exact original acceptance,
+then the preserved manifest and transfer. Missing or ambiguous capture state requires a fresh approved
+job; Resume never repeats capture. Any native acknowledged prefix rejects this mode. A host with later
+output/transfer state must use its exact bound frontier and must never fall back to accepted-only
+recovery after a failed decoder. A retained pending Stop cannot resume export work.
+
 After a real manifest is published, even an empty prefix uses its bound seed. Frontier1 adds semantics
 to this deferred extension without changing deployed base messages, frames, envelope schemas or health
 export profiles. A future hash construction must not silently replace frontier1 for a retained job;

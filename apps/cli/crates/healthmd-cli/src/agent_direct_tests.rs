@@ -226,6 +226,7 @@ enum ExecutionPeerOutcome {
     DisconnectBeforeFinalize,
     DisconnectThenCancel,
     AcceptedThenCancel,
+    AcceptedThenResume,
     DisconnectAfterFirstPartition,
 }
 
@@ -332,14 +333,21 @@ async fn answer_approved_execute(
         partition_target_bytes: 50_331_648,
         created_at: chrono::DateTime::from_timestamp(native.time.seconds().unwrap(), 0).unwrap(),
     };
-    if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+    if matches!(
+        outcome,
+        ExecutionPeerOutcome::AcceptedThenCancel | ExecutionPeerOutcome::AcceptedThenResume
+    ) {
         // No manifest or base transfer message has crossed this channel. The retained
         // accepted owner must support public Cancel without fabricated output proof.
         return ExecutedPeerSnapshot {
             request,
             completed: ExecutionReceipt {
-                status: ExecutionReceiptStatus::Cancelled,
-                source_acknowledged: true,
+                status: if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+                    ExecutionReceiptStatus::Cancelled
+                } else {
+                    ExecutionReceiptStatus::Accepted
+                },
+                source_acknowledged: outcome == ExecutionPeerOutcome::AcceptedThenCancel,
                 ..accepted.clone()
             },
             accepted,
@@ -777,31 +785,34 @@ async fn answer_retained_resume(
     let platform = request.plan.intent.peer.platform.clone();
     let bytes = b"{\"synthetic\":true}";
     let digest = Digest(healthmd_protocol::transfer::sha256_hex(bytes));
-    execute_expect_base(
-        channel,
-        &platform,
-        DirectMessage::TransferPartitionAcknowledgement(Unlabeled::from(
-            a::TransferPartitionAcknowledgement {
-                session_id: SwiftUuid(session.session_id),
-                job_id: SwiftUuid(session.job_id),
-                partition_index: i64::try_from(completed.committed_partition_count - 1).unwrap(),
-                transfer_id: SwiftUuid(last_transfer),
+    if completed.committed_partition_count > 0 {
+        execute_expect_base(
+            channel,
+            &platform,
+            DirectMessage::TransferPartitionAcknowledgement(Unlabeled::from(
+                a::TransferPartitionAcknowledgement {
+                    session_id: SwiftUuid(session.session_id),
+                    job_id: SwiftUuid(session.job_id),
+                    partition_index: i64::try_from(completed.committed_partition_count - 1)
+                        .unwrap(),
+                    transfer_id: SwiftUuid(last_transfer),
+                    partition_sha256: digest.0.clone(),
+                    accepted: true,
+                    message: None,
+                },
+            )),
+            v2::Message::TransferPartitionAcknowledgement(v2::TransferPartitionAcknowledgement {
+                session_id: session.session_id,
+                job_id: session.job_id,
+                partition_index: completed.committed_partition_count - 1,
+                transfer_id: last_transfer,
                 partition_sha256: digest.0.clone(),
                 accepted: true,
                 message: None,
-            },
-        )),
-        v2::Message::TransferPartitionAcknowledgement(v2::TransferPartitionAcknowledgement {
-            session_id: session.session_id,
-            job_id: session.job_id,
-            partition_index: completed.committed_partition_count - 1,
-            transfer_id: last_transfer,
-            partition_sha256: digest.0.clone(),
-            accepted: true,
-            message: None,
-        }),
-    )
-    .await;
+            }),
+        )
+        .await;
+    }
     let Message::ResumeRequest(resume) = channel.receive_v4(negotiation).await.unwrap().message
     else {
         panic!("Only retained Resume is permitted")
@@ -811,7 +822,14 @@ async fn answer_retained_resume(
     assert_eq!(resume.binding, approval_binding(&request.plan));
     assert_eq!(resume.destination, request.plan.intent.destination);
     assert_eq!(resume.request_sha256, document_digest(&request).unwrap());
-    assert_eq!(resume.manifest_sha256, document_digest(&manifest).unwrap());
+    assert_eq!(
+        resume.manifest_sha256,
+        if completed.committed_partition_count == 0 {
+            Digest("0".repeat(64))
+        } else {
+            document_digest(&manifest).unwrap()
+        }
+    );
     assert_eq!(resume.frontier_sha256, completed.frontier_sha256);
     assert_eq!(
         resume.committed_partition_count,
@@ -892,56 +910,62 @@ async fn answer_retained_resume(
         .await;
     }
     let manifest_digest = document_digest(&manifest).unwrap();
-    if completed.committed_partition_count == 1 {
-        let Artifact::Branch1(first) = &manifest.artifacts[0] else {
-            panic!("Expected first file")
-        };
+    if completed.committed_partition_count < 2 {
+        let original_count = completed.committed_partition_count;
         let mut frontier = TransferFrontier::new(
             &request.job_id,
             &accepted.request_sha256,
             &manifest_digest,
             &ControlUuid(session.session_id.to_string()),
         )
-        .unwrap()
-        .appending(&TransferFrontierPartition {
-            partition_index: 0,
-            transfer_id: ControlUuid(last_transfer.to_string()),
-            artifact_id: first.artifact_id.clone(),
-            artifact_offset: 0,
-            byte_count: i64::try_from(bytes.len()).unwrap(),
-            chunk_count: 1,
-            sha256: digest.clone(),
-        })
         .unwrap();
-        assert_eq!(frontier.sha256(), &completed.frontier_sha256);
-        let Artifact::Branch1(second) = &manifest.artifacts[1] else {
-            panic!("Expected second file")
-        };
-        let transfer = Uuid::new_v4();
-        send_execution_partition(
-            channel,
-            &platform,
-            &session,
-            second,
-            1,
-            transfer,
-            Some(digest.0.clone()),
-        )
-        .await;
-        frontier = frontier
-            .appending(&TransferFrontierPartition {
-                partition_index: 1,
-                transfer_id: ControlUuid(transfer.to_string()),
-                artifact_id: second.artifact_id.clone(),
-                artifact_offset: 0,
-                byte_count: i64::try_from(bytes.len()).unwrap(),
-                chunk_count: 1,
-                sha256: digest.clone(),
-            })
-            .unwrap();
-        last_transfer = transfer;
+        for (index, artifact) in manifest.artifacts.iter().enumerate() {
+            let Artifact::Branch1(item) = artifact else {
+                panic!("Expected daily file")
+            };
+            let transfer = if (index as u64) < original_count {
+                last_transfer
+            } else {
+                Uuid::new_v4()
+            };
+            if (index as u64) >= original_count {
+                send_execution_partition(
+                    channel,
+                    &platform,
+                    &session,
+                    item,
+                    index,
+                    transfer,
+                    if index == 0 {
+                        None
+                    } else {
+                        Some(digest.0.clone())
+                    },
+                )
+                .await;
+                last_transfer = transfer;
+            }
+            frontier = frontier
+                .appending(&TransferFrontierPartition {
+                    partition_index: i64::try_from(index).unwrap(),
+                    transfer_id: ControlUuid(transfer.to_string()),
+                    artifact_id: item.artifact_id.clone(),
+                    artifact_offset: 0,
+                    byte_count: i64::try_from(bytes.len()).unwrap(),
+                    chunk_count: 1,
+                    sha256: digest.clone(),
+                })
+                .unwrap();
+            if (index as u64) + 1 == original_count {
+                assert_eq!(frontier.sha256(), &completed.frontier_sha256);
+            }
+        }
         completed.committed_partition_count = 2;
+        completed.artifact_count = 2;
         completed.frontier_sha256 = frontier.sha256().clone();
+        completed.manifest_sha256 = manifest_digest.clone();
+        completed.status = ExecutionReceiptStatus::Complete;
+        completed.source_acknowledged = true;
     }
     let previous = Some(digest.0.clone());
     execute_send_base(
@@ -1292,6 +1316,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 ExecutionPeerOutcome::DisconnectBeforeFinalize,
                 ExecutionPeerOutcome::DisconnectThenCancel,
                 ExecutionPeerOutcome::AcceptedThenCancel,
+                ExecutionPeerOutcome::AcceptedThenResume,
                 ExecutionPeerOutcome::DisconnectAfterFirstPartition,
             ]
             .map(|outcome| (platform.clone(), outcome))
@@ -1589,9 +1614,12 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
             .enumerate()
             .map(|(index, path)| {
                 let path = output.join(&path.0);
-                if outcome == ExecutionPeerOutcome::AcceptedThenCancel
-                    || (outcome == ExecutionPeerOutcome::DisconnectAfterFirstPartition
-                        && index == 1)
+                if matches!(
+                    outcome,
+                    ExecutionPeerOutcome::AcceptedThenCancel
+                        | ExecutionPeerOutcome::AcceptedThenResume
+                ) || (outcome == ExecutionPeerOutcome::DisconnectAfterFirstPartition
+                    && index == 1)
                 {
                     assert!(
                         !path.exists(),

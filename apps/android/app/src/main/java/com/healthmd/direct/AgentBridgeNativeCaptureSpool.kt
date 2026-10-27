@@ -335,10 +335,13 @@ internal class AgentBridgeNativeCaptureSpool(
             val manifest = readManifest(state)
             val current = checkedTransferFrontier(state)
             val frontier = acknowledgement?.let { acknowledgementFrontier(it, state) } ?: current
+            // Zeroes describe acceptance retained by the host, never permission to rewind a native prefix.
+            val acceptedOnly = acknowledgement == null && current.committedPartitionCount == 0L &&
+                resume.committedPartitionCount == 0 && resume.manifestSha256 == "0".repeat(64) && resume.frontierSha256 == "0".repeat(64)
             if (resume.jobId != request.jobId || resume.peer != plan.intent.peer || resume.destination != plan.intent.destination ||
                 resume.binding != AgentBridgeValidation.bindingFor(request.plan) || resume.requestSha256 != reservation.job.requestSha256 ||
-                resume.manifestSha256 != AgentBridgeCodec.sha256(manifest) || resume.committedPartitionCount.toLong() != frontier.committedPartitionCount ||
-                resume.frontierSha256 != frontier.sha256) fail(AgentBridgeErrorCode.BINDING_CHANGED)
+                (!acceptedOnly && (resume.manifestSha256 != AgentBridgeCodec.sha256(manifest) || resume.committedPartitionCount.toLong() != frontier.committedPartitionCount ||
+                resume.frontierSha256 != frontier.sha256))) fail(AgentBridgeErrorCode.BINDING_CHANGED)
             if (frontier.committedPartitionCount != current.committedPartitionCount) {
                 val evidence = collectingFileEvidence!!.toMap()
                 publishAcknowledgedFrontier(frontier, previous, state, evidence)

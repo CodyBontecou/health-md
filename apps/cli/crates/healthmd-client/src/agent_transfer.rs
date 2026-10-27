@@ -1,5 +1,6 @@
 //! Original-session base receiver. Durable byte acknowledgement is not source completion.
 use super::*;
+use crate::agent_host::output::OutputAdmission;
 use healthmd_protocol::{
     v2,
     v4::{TransferFrontier, TransferFrontierPartition},
@@ -291,6 +292,27 @@ impl<'trust> BridgeSession<'trust> {
         if cancellation.is_cancelled() {
             return Err(ClientError::WaitCancelled);
         }
+        // Decoder selection only; corrupt later-state evidence must never fall back
+        // to the accepted reader or synthesize a missing transfer journal.
+        if !store.has_retained_output(job)? {
+            let admission = OutputAdmission::open_retained_accepted(store, job, clock).await?;
+            let (request, accepted) = admission.resumable_accepted_binding()?;
+            if request.plan.intent.peer != *expected_peer {
+                return Err(Error::BindingChanged.into());
+            }
+            store
+                .require_output_current(&request, Some(&accepted.expires_at), clock, || async {
+                    if cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    Ok(())
+                })
+                .await?;
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            return admission.require_resumable_current(clock, cancellation);
+        }
         let retained = ResumedTransfer::open(store, job).await?;
         let binding = retained.transaction.binding();
         let guard = TransferGuard::new(&retained.transaction, binding, &retained.checkpoint)?;
@@ -345,6 +367,18 @@ impl<'trust> BridgeSession<'trust> {
         }
     }
     async fn resume_execution_inner<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        job: ControlUuid,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
+        if !store.has_retained_output(&job)? {
+            return Box::pin(self.resume_accepted_execution_inner(store, &job, clock)).await;
+        }
+        Box::pin(self.resume_output_execution_inner(store, job, clock)).await
+    }
+
+    async fn resume_output_execution_inner<'s, 'h>(
         &'s mut self,
         store: &'h HostAuthorityStore,
         job: ControlUuid,

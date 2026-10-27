@@ -675,6 +675,44 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    @Test fun `accepted only Resume preserves spool and cannot rewind native acknowledgements`() = runBlocking {
+        for (acknowledged in listOf(false, true)) {
+            withNativeExportPreparation { f, planner, request, client, manager ->
+                val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+                coEvery { client.aggregate(any()) } returns values
+                val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+                val transfer = planner.prepareTransferExport(request, manager, journalRenderer(resolution))
+                val frontier = planner.withRetainedCaptureContext(request) { context ->
+                    context.begin(); val seed = context.preserveTransferFrontier()
+                    if (acknowledged) context.recordAcknowledgedTransferPartition(0) else seed
+                }
+                val issuer = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME)
+                val directory = issuer.resolve("captures").resolve(transfer.export.requestSha256)
+                val progress = Files.readAllBytes(directory.resolve("progress.json"))
+                val reconnect = transferReconnect(f, TransferCapabilities())
+                val state = Files.readAllBytes(issuer.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))
+                coEvery { client.aggregate(any()) } throws IllegalStateException("Accepted-only Resume cannot query SDK")
+                val resume = resumeRequest(request, transfer, frontier).copy(committedPartitionCount = 0,
+                    manifestSha256 = "0".repeat(64), frontierSha256 = "0".repeat(64))
+                var admitted = false
+                try {
+                    reconnect.withResumedCaptureContext(resume) { recovered, context ->
+                        admitted = true
+                        assertThat(AgentBridgeCodec.encode(recovered)).isEqualTo(AgentBridgeCodec.encode(request))
+                        context.begin()
+                        assertThat(context.preserveManifest()).isEqualTo(transfer.export.manifestCanonical)
+                        assertThat(context.preserveTransferPlan()).isEqualTo(transfer.checkpointCanonical)
+                    }
+                    assertThat(acknowledged).isFalse()
+                } catch (failure: AgentBridgeException) { assertThat(acknowledged).isTrue() }
+                assertThat(admitted).isEqualTo(!acknowledged)
+                assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(progress)
+                assertThat(Files.readAllBytes(issuer.resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME))).isEqualTo(state)
+                coVerify(exactly = 2) { client.aggregate(any()) }
+            }
+        }
+    }
+
     @Test fun `native Resume reopens original job on fresh owner without SDK or rewrite`() = runBlocking {
         withNativeExportPreparation { f, planner, request, client, manager ->
             val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L

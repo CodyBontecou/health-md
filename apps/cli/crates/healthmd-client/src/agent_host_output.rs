@@ -34,6 +34,20 @@ pub(crate) enum RetainedCancellationHint {
     Confirmed,
 }
 impl HostAuthorityStore {
+    /// Select the output reader by existing-file presence only. Some historical signed
+    /// output journals predate accepted-attempt records; their own reader remains authoritative.
+    /// Any selected-reader failure propagates, never falls back to accepted-only recovery.
+    pub(crate) fn has_retained_output(&self, job: &ControlUuid) -> Result<bool, ClientError> {
+        job.validate_shape()?;
+        match self
+            .directory()?
+            .symlink_metadata(format!("output-{}.json", job.0))
+        {
+            Ok(_) => Ok(true),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(error) => Err(private::unavailable(error)),
+        }
+    }
     pub(crate) fn retained_cancellation_hint(
         &self,
         job: &ControlUuid,
@@ -300,6 +314,37 @@ impl OutputAdmission {
         };
         admission.require_current()?;
         Ok(admission)
+    }
+    /// Synchronous tail after authority/key callbacks and the final clock observation.
+    pub fn require_resumable_current(
+        &self,
+        clock: &dyn PlanningClock,
+        cancellation: &tokio_util::sync::CancellationToken,
+    ) -> Result<(), ClientError> {
+        let accepted = self.accepted.as_ref().ok_or(Error::BindingChanged)?;
+        let now = clock.now();
+        now.validate_shape()?;
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
+        }
+        if now < self.started_at
+            || now >= accepted.expires_at
+            || self.cancellation.is_some()
+            || self.source_confirmed
+        {
+            return Err(Error::BindingChanged.into());
+        }
+        self.require_current()
+    }
+    /// A pending Stop is monotonic: it cannot be converted back into export work.
+    pub fn resumable_accepted_binding(
+        &self,
+    ) -> Result<(ExecuteRequest, ExecutionReceipt), ClientError> {
+        self.require_current()?;
+        if self.cancellation.is_some() || self.source_confirmed {
+            return Err(Error::BindingChanged.into());
+        }
+        self.accepted_binding()
     }
     pub fn accepted_binding(&self) -> Result<(ExecuteRequest, ExecutionReceipt), ClientError> {
         Ok((

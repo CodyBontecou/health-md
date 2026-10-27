@@ -395,13 +395,18 @@ final class AgentBridgeNativeCaptureSpool {
             let manifest = try readManifest(state)
             let current = try checkedTransferFrontier(state)
             let frontier = try acknowledgement.map { try acknowledgementFrontier($0, state: state) } ?? current
+            // The host can have durable acceptance without having observed a manifest.
+            // Zeroes describe that host state only; they cannot erase a native ACK prefix.
+            let acceptedOnly = acknowledgement == nil && current.committedPartitionCount == 0 &&
+                resume.committedPartitionCount == 0 && resume.manifestSha256.rawValue == String(repeating: "0", count: 64) &&
+                resume.frontierSha256.rawValue == String(repeating: "0", count: 64)
             guard resume.jobId == request.jobId, resume.peer == request.plan.intent.peer,
                   resume.destination == request.plan.intent.destination,
                   resume.binding == AgentBridgeSemantics.binding(request.plan),
                   resume.requestSha256 == reservation.job.requestSHA256,
-                  resume.manifestSha256.rawValue == AgentBridgeV4Codec.sha256(manifest),
-                  resume.committedPartitionCount == frontier.committedPartitionCount,
-                  resume.frontierSha256 == frontier.sha256 else { throw AgentBridgeValidationError.bindingChanged }
+                  acceptedOnly || (resume.manifestSha256.rawValue == AgentBridgeV4Codec.sha256(manifest) &&
+                  resume.committedPartitionCount == frontier.committedPartitionCount &&
+                  resume.frontierSha256 == frontier.sha256) else { throw AgentBridgeValidationError.bindingChanged }
             if frontier != current {
                 // Compare the complete Resume before writing. Re-pin original files after the
                 // last native callback and immediately before the single progress publication.

@@ -558,3 +558,179 @@ async fn retained_output_pins_attempt_presence_and_bytes_after_delaying_fence() 
         }
     }
 }
+
+#[tokio::test]
+async fn accepted_resume_preflight_preserves_evidence_and_never_reverses_stop() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for case in [
+            Case::Accepted,
+            Case::Pending,
+            Case::PreSend,
+            Case::PlanExpired,
+            Case::RevokedGrant,
+            Case::WrongMac,
+            Case::Expired,
+            Case::MissingAttempt,
+            Case::MissingLock,
+            Case::LaterOutput,
+        ] {
+            let f = Box::pin(accepted_fixture(platform)).await;
+            let mut admission =
+                OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+                    Ok(f.output.clone())
+                })
+                .await
+                .unwrap();
+            if case != Case::PreSend {
+                admission
+                    .persist_accepted(&f.accepted, &f.clock, || async { Ok(f.output.clone()) })
+                    .await
+                    .unwrap();
+            }
+            if case == Case::Pending {
+                admission
+                    .persist_cancellation(&f.clock, || async { Ok(()) })
+                    .await
+                    .unwrap();
+            }
+            drop(admission);
+            let issuer = f.client.layout.root.join("agent-host-v1");
+            let path = issuer.join(format!("attempt-{}.json", f.request.job_id.0));
+            match case {
+                Case::PlanExpired => f.clock.advance_to(301),
+                Case::Expired => f.clock.advance_to(604_800),
+                Case::RevokedGrant => f
+                    .store
+                    .revoke_local(
+                        f.store.revision().await.unwrap(),
+                        &f.request.plan.authority_references.host.authority_id,
+                    )
+                    .await
+                    .unwrap(),
+                Case::WrongMac => {
+                    let mut value: serde_json::Value =
+                        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+                    value["mac"] = "0".repeat(64).into();
+                    std::fs::write(&path, canonical_json(&value).unwrap()).unwrap();
+                }
+                Case::MissingAttempt => std::fs::remove_file(&path).unwrap(),
+                Case::MissingLock => std::fs::remove_file(issuer.join("outputs.lock")).unwrap(),
+                Case::LaterOutput => std::fs::write(
+                    issuer.join(format!("output-{}.json", f.request.job_id.0)),
+                    b"corrupt later state",
+                )
+                .unwrap(),
+                _ => {}
+            }
+            let before = inventory(&issuer);
+            let planner = HostPlanner::new(f.store.clone());
+            let cancellation = CancellationToken::new();
+            let result = planner
+                .preflight_retained_resume(&f.peer, &f.request.job_id, &f.clock, &cancellation)
+                .await;
+            assert_eq!(
+                result.is_ok(),
+                matches!(case, Case::Accepted | Case::PlanExpired),
+                "{platform:?}/{case:?}"
+            );
+            assert_eq!(
+                inventory(&issuer),
+                before,
+                "Read-only preflight cannot repair or renew evidence"
+            );
+            assert_eq!(std::fs::read_dir(&f.output).unwrap().count(), 0);
+        }
+    }
+}
+
+#[tokio::test]
+async fn accepted_resume_preflight_rechecks_final_clock_cancellation_and_rollback() {
+    struct FinalClock {
+        time: UtcTimestamp,
+        calls: AtomicUsize,
+        target: usize,
+        replacement: Option<UtcTimestamp>,
+        cancellation: Option<CancellationToken>,
+    }
+    impl crate::agent_planning::PlanningClock for FinalClock {
+        fn now(&self) -> UtcTimestamp {
+            let at = self.calls.fetch_add(1, Ordering::SeqCst) + 1;
+            if at == self.target {
+                if let Some(token) = &self.cancellation {
+                    token.cancel();
+                }
+                if let Some(time) = &self.replacement {
+                    return time.clone();
+                }
+            }
+            self.time.clone()
+        }
+    }
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let f = Box::pin(accepted_fixture(platform)).await;
+        let mut admission = OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+            Ok(f.output.clone())
+        })
+        .await
+        .unwrap();
+        admission
+            .persist_accepted(&f.accepted, &f.clock, || async { Ok(f.output.clone()) })
+            .await
+            .unwrap();
+        drop(admission);
+        let planner = HostPlanner::new(f.store.clone());
+        let time = f.clock.now();
+        let baseline = FinalClock {
+            time: time.clone(),
+            calls: AtomicUsize::new(0),
+            target: usize::MAX,
+            replacement: None,
+            cancellation: None,
+        };
+        planner
+            .preflight_retained_resume(
+                &f.peer,
+                &f.request.job_id,
+                &baseline,
+                &CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let last = baseline.calls.load(Ordering::SeqCst);
+        for mode in ["cancel", "rollback", "expiry"] {
+            let cancellation = CancellationToken::new();
+            let replacement = match mode {
+                "rollback" => Some(
+                    serde_json::from_value(serde_json::json!(
+                        chrono::DateTime::from_timestamp(time.seconds().unwrap() - 1, 0)
+                            .unwrap()
+                            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+                    ))
+                    .unwrap(),
+                ),
+                "expiry" => Some(f.accepted.expires_at.clone()),
+                _ => None,
+            };
+            let clock = FinalClock {
+                time: time.clone(),
+                calls: AtomicUsize::new(0),
+                target: last,
+                replacement,
+                cancellation: (mode == "cancel").then(|| cancellation.clone()),
+            };
+            let before = inventory(&f.client.layout.root.join("agent-host-v1"));
+            assert!(
+                planner
+                    .preflight_retained_resume(&f.peer, &f.request.job_id, &clock, &cancellation)
+                    .await
+                    .is_err(),
+                "{mode}"
+            );
+            assert_eq!(clock.calls.load(Ordering::SeqCst), last);
+            assert_eq!(
+                inventory(&f.client.layout.root.join("agent-host-v1")),
+                before
+            );
+        }
+    }
+}

@@ -156,6 +156,98 @@ impl<'trust> BridgeSession<'trust> {
         Box::pin(owner.request_cancellation_inner()).await
     }
 
+    /// Recover the original accepted owner without inventing a manifest or sending Execute.
+    /// The native source must return that exact acceptance, then its preserved manifest.
+    pub(super) async fn resume_accepted_execution_inner<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
+        if self.send_interrupted {
+            return Err(Error::BindingChanged.into());
+        }
+        self.send_interrupted = true;
+        let admission = OutputAdmission::open_retained_accepted(store, job, clock).await?;
+        let (request, accepted) = admission.resumable_accepted_binding()?;
+        let owner = HostAcceptedExecution {
+            bridge: self,
+            store,
+            clock,
+            request,
+            accepted,
+            admission,
+        };
+        owner.require_current().await?;
+        let resume = v4::ResumeRequest {
+            schema: v4::ResumeRequestSchema::HealthmdAgentResumeRequest,
+            schema_version: 1,
+            job_id: owner.request.job_id.clone(),
+            request_sha256: document_digest(&owner.request)?,
+            manifest_sha256: Digest("0".repeat(64)),
+            frontier_sha256: Digest("0".repeat(64)),
+            committed_partition_count: 0,
+            peer: owner.request.plan.intent.peer.clone(),
+            binding: approval_binding(&owner.request.plan),
+            destination: owner.request.plan.intent.destination.clone(),
+        };
+        resume.validate_shape()?;
+        {
+            let admission = &owner.admission;
+            let request = &owner.request;
+            let accepted = &owner.accepted;
+            let cancellation = &owner.bridge.cancellation;
+            let trust = owner.bridge.trust_fence;
+            let expected = &owner.bridge.expected_trust;
+            let selected = owner.bridge.requested_device;
+            owner
+                .bridge
+                .channel
+                .send_v4_guarded(
+                    &Envelope::new(Message::ResumeRequest(Box::new(resume))),
+                    owner.bridge.negotiation,
+                    || async {
+                        store
+                            .require_output_current(
+                                request,
+                                Some(&accepted.expires_at),
+                                clock,
+                                || async {
+                                    if cancellation.is_cancelled() {
+                                        return Err(ClientError::WaitCancelled);
+                                    }
+                                    trust.require_current(selected, expected).await?;
+                                    if cancellation.is_cancelled() {
+                                        return Err(ClientError::WaitCancelled);
+                                    }
+                                    Ok(())
+                                },
+                            )
+                            .await?;
+                        admission.require_resumable_current(clock, cancellation)
+                    },
+                )
+                .await?;
+        }
+        owner.require_current().await?;
+        let received = owner
+            .bridge
+            .channel
+            .receive_v4(owner.bridge.negotiation)
+            .await?
+            .message;
+        owner.require_current().await?;
+        let Message::ExecutionReceipt(replayed) =
+            execution_response(received, &owner.request.request_id)?
+        else {
+            return Err(ClientError::UnexpectedMessage);
+        };
+        if *replayed != owner.accepted {
+            return Err(Error::BindingChanged.into());
+        }
+        Box::pin(owner.wait_manifest_inner()).await
+    }
+
     async fn begin_accepted_execution_inner<'s, 'h>(
         &'s mut self,
         store: &'h HostAuthorityStore,
@@ -474,7 +566,8 @@ impl<'s, 'h, 'trust> HostAcceptedExecution<'s, 'h, 'trust> {
                 },
             )
             .await?;
-        self.admission.require_current()
+        self.admission
+            .require_resumable_current(self.clock, &self.bridge.cancellation)
     }
 
     async fn wait_manifest_inner(self) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {

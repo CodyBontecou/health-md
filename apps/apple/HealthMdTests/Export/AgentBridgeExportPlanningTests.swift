@@ -1176,6 +1176,47 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         }
     }
 
+    func testAcceptedOnlyResumePreservesSpoolAndCannotRewindNativeAcknowledgements() async throws {
+        for acknowledged in [false, true] {
+            try await withNativeExportPreparation { rig, planner, request, store, manager in
+                store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+                let transfer = try await planner.prepareTransferExport(request, manager: manager)
+                try await planner.withRetainedCaptureContext(request) { context in
+                    _ = try context.begin(); _ = try context.preserveTransferFrontier()
+                    if acknowledged { _ = try context.recordAcknowledgedTransferPartition(0) }
+                }
+                let directory = rig.directory.appendingPathComponent("captures/" + transfer.export.requestSHA256)
+                let progress = try Data(contentsOf: directory.appendingPathComponent("progress.json"))
+                let reconnect = try transferReconnect(rig, capabilities: .current)
+                let issuer = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+                store.querySumResult = { _, _ in XCTFail("Accepted-only Resume cannot query SDK"); return nil }
+                let zero = try AgentBridgeDigest(String(repeating: "0", count: 64))
+                let resume = AgentBridgeResume(binding: AgentBridgeSemantics.binding(request.plan), committedPartitionCount: 0,
+                    destination: request.plan.intent.destination, frontierSha256: zero, jobId: request.jobId,
+                    manifestSha256: zero, peer: request.plan.intent.peer,
+                    requestSha256: try AgentBridgeDigest(transfer.export.requestSHA256))
+                var admitted = false
+                do {
+                    try await reconnect.withResumedCaptureContext(resume) { recovered, context in
+                        admitted = true
+                        XCTAssertEqual(try AgentBridgeV4Codec.encode(recovered), try AgentBridgeV4Codec.encode(request))
+                        _ = try context.begin()
+                        XCTAssertEqual(try context.preserveManifest(), transfer.export.manifestCanonical)
+                        XCTAssertEqual(try context.preserveTransferPlan(), transfer.checkpointCanonical)
+                    }
+                    XCTAssertFalse(acknowledged)
+                } catch {
+                    XCTAssertTrue(acknowledged)
+                    XCTAssertNotNil(error as? AgentBridgeValidationError)
+                }
+                XCTAssertEqual(admitted, !acknowledged)
+                XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("progress.json")), progress)
+                XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), issuer)
+                XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+            }
+        }
+    }
+
     func testNativeResumeReopensOriginalJobOnFreshOwnerWithoutSDKOrRewrite() async throws {
         try await withNativeExportPreparation { rig, planner, request, store, manager in
             store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
