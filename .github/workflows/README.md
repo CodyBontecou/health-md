@@ -91,6 +91,11 @@ configuration-specific `TEST_HOST`/`BUNDLE_LOADER` paths. It has no platform-glo
 generated test-host metadata: checking dependency edges alone can miss an extra
 independent root target. Both native suites and their hosted test bundle remain.
 
+Native unit products use XZ level 1 inside an uncompressed artifact wrapper.
+The archive retains every product, executable mode and link; its source/run/SDK
+and SHA-256 admission checks remain required before extraction. Compare total
+pack, download and restore time when qualifying this transport choice.
+
 Twenty phone UI cases run across three phone shards; a fourth shard runs four
 App Review/history cases on iPad. The
 same history method intentionally runs once per device family. Entire XCTest

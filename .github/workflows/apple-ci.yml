@@ -506,7 +506,7 @@ jobs:
         with:
           name: ios-native-products
           path: apps/apple/build/ios-unit-prepared/
-          compression-level: 0 # The product archive is already gzip-compressed.
+          compression-level: 0 # The product archive is already XZ-compressed.
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 3
@@ -917,7 +917,7 @@ jobs:
         with:
           name: macos-native-products
           path: apps/apple/build/macos-prepared/
-          compression-level: 0 # The product archive is already gzip-compressed.
+          compression-level: 0 # The product archive is already XZ-compressed.
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 3

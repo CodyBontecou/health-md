@@ -1,6 +1,7 @@
 import copy
 import importlib.util
 from pathlib import Path
+import sys
 import unittest
 
 spec = importlib.util.spec_from_file_location("native_test_shards", Path(__file__).parents[1] / "native_test_shards.py")
@@ -191,6 +192,54 @@ class IOSNativeTests(unittest.TestCase):
 
 
 class ProductRestoreTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == "darwin", "Native producer packaging uses macOS bsdtar")
+    def test_actual_xz_pack_restore_preserves_every_product_byte_mode_and_link(self):
+        import hashlib
+        import json
+        import os
+        import stat
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args = self.fixture(root)
+            producer = root / 'producer'
+            products = producer / 'Build/Products'
+            products.mkdir(parents=True)
+            (products / 'native.xctestrun').write_bytes(b'manifest')
+            for name in ['App.app/executable', 'App.app/resources/fixture.bin',
+                         'PackageFrameworks/Probe.framework/Versions/A/Probe',
+                         'libProbe.a', 'Probe.o', 'Probe.swiftmodule/arm64.swiftmodule']:
+                path = products / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes((name + '\x00payload').encode())
+            executable = products / 'App.app/executable'
+            executable.chmod(0o755)
+            os.link(executable, executable.with_name('hardlink'))
+            (products / 'PackageFrameworks/Probe.framework/Current').symlink_to('Versions/A')
+
+            def snapshot(base):
+                result = {}
+                for path in base.rglob('*'):
+                    mode = stat.S_IMODE(path.lstat().st_mode)
+                    value = (os.readlink(path) if path.is_symlink() else
+                             hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None)
+                    result[str(path.relative_to(base))] = (mode, value)
+                return result
+
+            archive = args.products / shards.PRODUCTS_ARCHIVE
+            shards.archive_products(producer, archive)
+            self.assertEqual(archive.read_bytes()[:6], b'\xfd7zXZ\x00')
+            args.prepared_sha256 = shards.file_digest(archive)
+            receipt_path = args.products / 'native-products-receipt.json'
+            receipt = json.loads(receipt_path.read_text())
+            receipt['prepared_archive_sha256'] = args.prepared_sha256
+            receipt_path.write_text(json.dumps(receipt))
+            shards.restore(args)
+            restored = args.derived / 'Build/Products'
+            self.assertEqual(snapshot(products), snapshot(restored))
+            self.assertEqual((restored / 'App.app/executable').stat().st_ino,
+                             (restored / 'App.app/hardlink').stat().st_ino)
+
     def fixture(self, root, malicious=None):
         import io
         import json
@@ -203,8 +252,8 @@ class ProductRestoreTests(unittest.TestCase):
         payload = inventory(["NativeTests/Probe/testFirst()", "NativeTests/Probe/testSecond()"])
         plan = shards.make_plan(payload, SHA, "123", "2", 2)
         (products / "native-test-plan.json").write_text(json.dumps(plan))
-        archive = products / "native-products.tar.gz"
-        with tarfile.open(archive, "w:gz") as output:
+        archive = products / shards.PRODUCTS_ARCHIVE
+        with tarfile.open(archive, "w:xz", preset=1) as output:
             name = malicious if malicious else "Build/Products/native.xctestrun"
             member = tarfile.TarInfo(name)
             data = b"manifest"
@@ -264,8 +313,8 @@ class ProductRestoreTests(unittest.TestCase):
         for target in ("../../../../escape", "/tmp/escape"):
             with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
                 args = self.fixture(Path(directory))
-                archive = args.products / "native-products.tar.gz"
-                with tarfile.open(archive, "w:gz") as output:
+                archive = args.products / shards.PRODUCTS_ARCHIVE
+                with tarfile.open(archive, "w:xz", preset=1) as output:
                     member = tarfile.TarInfo("Build/Products/link")
                     member.type, member.linkname = tarfile.SYMTYPE, target
                     output.addfile(member)

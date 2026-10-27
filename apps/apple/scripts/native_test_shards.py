@@ -6,6 +6,17 @@ import hashlib
 import json
 import re
 
+PRODUCTS_ARCHIVE = "native-products.tar.xz"
+
+
+def archive_products(derived, archive):
+    """Retain every product, permission and link with a smaller transport wrapper."""
+    import os
+    import subprocess
+    subprocess.run(["tar", "--options", "xz:compression-level=1", "-cJf",
+                    str(archive.resolve()), "-C", str(derived), "Build/Products"],
+                   env=dict(os.environ, COPYFILE_DISABLE="1"), check=True, timeout=120)
+
 
 def identifiers(payload: dict) -> list[str]:
     """Read Xcode's flat enumeration, never a source-code approximation."""
@@ -193,7 +204,6 @@ def qualify_simulator(payload: dict, destination: str) -> str:
 
 
 def prepare(args):
-    import os
     import subprocess
     products = args.derived / "Build/Products"
     manifests = list(products.glob("*.xctestrun"))
@@ -207,11 +217,8 @@ def prepare(args):
                     "-test-enumeration-output-path", str(raw)], check=True, timeout=120)
     plan = make_plan(json.loads(raw.read_text()), args.source_sha, args.run_id, args.attempt, platform=args.platform)
     (args.output / "native-test-plan.json").write_text(json.dumps(plan, indent=2) + "\n")
-    archive = args.output / "native-products.tar.gz"
-    # Keep every product/permission/link; spend less CPU on transport compression.
-    subprocess.run(["tar", "--options", "gzip:compression-level=1", "-czf",
-                    str(archive.resolve()), "-C", str(args.derived), "Build/Products"],
-                   env=dict(os.environ, COPYFILE_DISABLE="1"), check=True, timeout=120)
+    archive = args.output / PRODUCTS_ARCHIVE
+    archive_products(args.derived, archive)
     receipt = {key: plan[key] for key in ("source_sha", "run_id", "attempt", "platform")}
     receipt.update(prepared_archive_sha256=file_digest(archive),
                    xctestrun=str(manifests[0].relative_to(args.derived)),
@@ -231,7 +238,7 @@ def restore(args):
     validate_plan(plan)
     if receipt.get("platform") != plan["platform"]:
         raise ValueError("Native archive platform differs from the compiled inventory")
-    archive = args.products / "native-products.tar.gz"
+    archive = args.products / PRODUCTS_ARCHIVE
     if (not re.fullmatch(r"[0-9a-f]{64}", args.prepared_sha256)
             or receipt.get("prepared_archive_sha256") != args.prepared_sha256
             or file_digest(archive) != args.prepared_sha256
