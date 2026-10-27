@@ -46,6 +46,69 @@ class ShardReportTests(unittest.TestCase):
         self.assertEqual((8, 7, 1), (result['tests'], result['passed'], result['skipped']))
         self.assertEqual({0, 1, 2, 3, 4, 5}, {x['shard'] for x in result['cases']})
 
+    def separate_direct_e2e(self):
+        original = self.root / 'android-instrumentation-12-1-shard-0/app/build/outputs/androidTest-results/connected/e2e'
+        target = self.root / 'android-instrumentation-12-1-shard-direct-e2e/app/build/outputs/androidTest-results/connected/e2e'
+        target.parent.mkdir(parents=True, exist_ok=True)
+        original.rename(target)
+        shards.write_source_receipt(self.root / 'android-instrumentation-12-1-shard-direct-e2e/build/logs/instrumentation-source.json',
+                                    '12', '1', 'direct-e2e', self.source_sha)
+        return target
+
+    def test_separate_direct_journey_preserves_exact_case_union(self):
+        original = shards.verify(self.root, '12', '1', source_sha=self.source_sha)
+        self.separate_direct_e2e()
+        result = shards.verify(self.root, '12', '1', source_sha=self.source_sha, separate_direct_e2e=True)
+        identity = lambda result: {(c['kind'], c['class'], c['name'], c['result']) for c in result['cases']}
+        self.assertEqual(identity(original), identity(result))
+        self.assertEqual((6, 7), (result['shards'], result['producers']))
+        self.assertEqual({'direct-e2e'}, {c['shard'] for c in result['cases'] if c['kind'] == 'direct_e2e'})
+
+    def test_separate_direct_journey_requires_source_bound_report(self):
+        import json
+        report = self.separate_direct_e2e()
+        receipt = self.root / 'android-instrumentation-12-1-shard-direct-e2e/build/logs/instrumentation-source.json'
+        original = receipt.read_text()
+        value = json.loads(original); value['source_sha'] = 'b' * 40
+        receipt.write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError, 'identity mismatch'):
+            shards.verify(self.root, '12', '1', source_sha=self.source_sha, separate_direct_e2e=True)
+        receipt.write_text(original)
+        for path in report.rglob('*.xml'): path.unlink()
+        with self.assertRaisesRegex(ValueError, 'groups mismatch'):
+            shards.verify(self.root, '12', '1', source_sha=self.source_sha, separate_direct_e2e=True)
+
+    def test_separate_direct_journey_cannot_be_omitted_or_smuggled_into_legacy_mode(self):
+        with self.assertRaises(ValueError):
+            shards.verify(self.root, '12', '1', source_sha=self.source_sha, separate_direct_e2e=True)
+        self.separate_direct_e2e()
+        with self.assertRaises(ValueError):
+            shards.verify(self.root, '12', '1', source_sha=self.source_sha)
+
+    def test_failed_latest_direct_retry_never_reuses_older_success(self):
+        self.separate_direct_e2e()
+        self.report('direct-e2e', 'direct_e2e', failed=True, attempt=2)
+        with self.assertRaisesRegex(ValueError, 'Failed test'):
+            shards.verify(self.root, '12', '2', source_sha=self.source_sha, separate_direct_e2e=True)
+        self.report('direct-e2e', 'direct_e2e', attempt=2)
+        result = shards.verify(self.root, '12', '2', source_sha=self.source_sha, separate_direct_e2e=True)
+        self.assertEqual('2', result['shard_attempts']['direct-e2e'])
+
+    def test_separate_direct_cli_writer_and_verifier_roundtrip(self):
+        import json
+        import subprocess
+        import sys
+        self.separate_direct_e2e()
+        receipt = self.root / 'android-instrumentation-12-1-shard-direct-e2e/build/logs/instrumentation-source.json'
+        subprocess.run([sys.executable, str(SCRIPT), '--write-receipt', str(receipt),
+                        '--shard', 'direct-e2e', '--source-sha', self.source_sha,
+                        '--run-id', '12', '--attempt', '1'], check=True, capture_output=True)
+        result = subprocess.run([sys.executable, str(SCRIPT), '--reports', str(self.root),
+                                 '--separate-direct-e2e', '--source-sha', self.source_sha,
+                                 '--run-id', '12', '--attempt', '1'], capture_output=True, text=True)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(7, json.loads((self.root / 'case-inventory.json').read_text())['producers'])
+
     def test_partial_retry_keeps_successful_same_run_shards(self):
         self.report(2, 'play', failed=True)
         self.report(2, 'play', attempt=2)
@@ -247,12 +310,27 @@ class PartialRetryTests(unittest.TestCase):
 
 
 class ShardWorkflowTests(unittest.TestCase):
+    def test_each_device_role_executes_only_its_original_journey(self):
+        import subprocess
+        workflow = (SCRIPT.parents[3] / '.github/workflows/android-ci.yml').read_text()
+        workers = workflow.split('\n  instrumentation-shards:\n', 1)[1].split('\n  instrumentation:\n', 1)[0]
+        line = next(line.strip() for line in workers.splitlines()
+                    if './scripts/run-ci-instrumentation.sh' in line and './scripts/run-direct-cli-ui-e2e.sh' in line)
+        command = line.replace('./scripts/run-ci-instrumentation.sh', 'printf instrumentation')
+        command = command.replace('./scripts/run-direct-cli-ui-e2e.sh', 'printf direct-e2e')
+        self.assertNotIn('./scripts/', command)
+        for index in (*range(6), 'direct-e2e'):
+            result = subprocess.run(['bash', '-c', command.replace('${{ matrix.shard }}', str(index))],
+                                    cwd=SCRIPT.parents[3], capture_output=True, text=True)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual('direct-e2e' if index == 'direct-e2e' else 'instrumentation', result.stdout)
+
     def test_all_six_workers_and_stable_release_gate_remain_mandatory(self):
         workflow = (SCRIPT.parents[3] / '.github/workflows/android-ci.yml').read_text()
         workers = workflow.split('\n  instrumentation-shards:\n', 1)[1].split('\n  instrumentation:\n', 1)[0]
         aggregate = workflow.split('\n  instrumentation:\n', 1)[1].split('\n  fdroid:\n', 1)[0]
         self.assertIn('fail-fast: false', workers)
-        self.assertEqual(2, workers.count('./scripts/run-ci-gradle.sh --no-daemon --max-workers=2'))
+        self.assertEqual(3, workers.count('./scripts/run-ci-gradle.sh --no-daemon --max-workers=2'))
         self.assertNotIn('./gradlew --no-daemon', workers)
         for selector in (':healthmd-core:prepareRustDebug', ':app:assemblePlayDebug',
                          ':app:assemblePlayDebugAndroidTest', ':healthmd-core:assembleDebugAndroidTest',
@@ -264,7 +342,10 @@ class ShardWorkflowTests(unittest.TestCase):
         self.assertIn('shard: [0, 1, 2, 3, 4, 5]', workers)
         self.assertIn("HEALTHMD_ANDROID_SHARD_COUNT: '6'", workers)
         self.assertIn('HEALTHMD_ANDROID_SHARD_INDEX: ${{ matrix.shard }}', workers)
-        self.assertIn('if [ "${{ matrix.shard }}" = 0 ]; then', workers)
+        self.assertIn('if [ "${{ matrix.shard }}" = direct-e2e ]; then', workers)
+        self.assertIn('          - shard: direct-e2e', workers)
+        self.assertIn("if: ${{ matrix.shard != 'direct-e2e' }}", workers)
+        self.assertIn('--separate-direct-e2e', aggregate)
         self.assertIn('HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX: ${{ needs.changes.outputs.accessibility_matrix }}', workers)
         self.assertIn('needs: [changes, instrumentation-shards]', aggregate)
         self.assertIn('name: Emulator instrumentation and direct E2E', aggregate)

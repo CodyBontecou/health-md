@@ -159,11 +159,15 @@ or changing results run every active job. Selected jobs must succeed; a skipped
 job is accepted only when its selection output explicitly says `false`. The policy
 job's listing validator discovers every `scripts/tests/test_*.py`.
 
-Phone instrumentation uses six hosted shards with the same complete Play test inventory. Shard zero also runs the core
-suite and direct E2E; every shard runs the native-input readiness check using Play.
-The stable instrumentation gate validates the combined Play/core/E2E XML inventory.
+Phone instrumentation uses six hosted shards with the same complete Play test inventory.
+Shard zero also runs the core suite; every Play shard runs the native-input readiness
+check. A seventh `direct-e2e` worker runs the unchanged Direct CLI journey concurrently,
+so its separate APK/listener preparation does not delay shard zero. The stable gate
+requires all seven source-bound producer receipts and the complete Play/core/E2E XML
+inventory. Its verifier retains the historical six-worker layout for older evidence;
+current CI explicitly requires the separate Direct CLI producer.
 APK preparation reuses compilation outputs through the existing safe Gradle wrapper;
-requested Test tasks still execute freshly. Six workers trade more runner minutes
+requested Test tasks still execute freshly. Separate workers trade more runner minutes
 for shorter device-test execution; hosted cache and queue evidence determine actual savings.
 Local runs remain unsharded unless shard index/count are explicitly supplied.
 

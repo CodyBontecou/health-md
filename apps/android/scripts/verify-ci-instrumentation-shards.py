@@ -9,6 +9,11 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 SHARD_COUNT = 6
+DIRECT_E2E = 'direct-e2e'
+
+
+def producer_indices(separate_direct_e2e: bool) -> tuple:
+    return tuple(range(SHARD_COUNT)) + ((DIRECT_E2E,) if separate_direct_e2e else ())
 
 
 def report_kind(path: Path) -> str:
@@ -23,21 +28,26 @@ def report_kind(path: Path) -> str:
     raise ValueError(f'Unexpected instrumentation XML location: {path}')
 
 
-def source_receipt(run_id: str, attempt: str, shard: int, source_sha: str) -> dict:
+def source_receipt(run_id: str, attempt: str, shard: int | str, source_sha: str) -> dict:
     if not re.fullmatch(r'[1-9][0-9]*', run_id) or not re.fullmatch(r'[1-9][0-9]*', attempt):
         raise ValueError('Run ID and attempt must be positive integers')
-    if not 0 <= shard < SHARD_COUNT or not re.fullmatch(r'[0-9a-f]{40}', source_sha):
+    valid = (type(shard) is int and 0 <= shard < SHARD_COUNT) or shard == DIRECT_E2E
+    if not valid or not re.fullmatch(r'[0-9a-f]{40}', source_sha):
         raise ValueError('Exact source SHA and valid shard required')
     return dict(version=1, run_id=run_id, attempt=attempt, shard=shard, source_sha=source_sha)
 
 
-def write_source_receipt(path: Path, run_id: str, attempt: str, shard: int, source_sha: str) -> None:
+def write_source_receipt(path: Path, run_id: str, attempt: str, shard: int | str, source_sha: str) -> None:
     value = source_receipt(run_id, attempt, shard, source_sha)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
-def shard_directories(reports: Path, run_id: str, attempt: str, source_sha: str | None) -> dict:
+def shard_directories(reports: Path, run_id: str, attempt: str, source_sha: str | None,
+                      separate_direct_e2e: bool = False) -> dict:
+    indices = producer_indices(separate_direct_e2e)
+    if separate_direct_e2e and source_sha is None:
+        raise ValueError('Separate Direct E2E verification requires the exact source SHA')
     found = {p.name for p in reports.iterdir() if p.is_dir()}
     if source_sha is None:
         # Legacy callers remain strictly bound to one complete attempt.
@@ -49,11 +59,12 @@ def shard_directories(reports: Path, run_id: str, attempt: str, source_sha: str 
     source_receipt(run_id, attempt, 0, source_sha)
     selected = {}
     for name in sorted(found):
-        match = re.fullmatch(rf'android-instrumentation-{run_id}-([1-9][0-9]*)-shard-([0-9])', name)
+        match = re.fullmatch(rf'android-instrumentation-{run_id}-([1-9][0-9]*)-shard-([0-9]|{DIRECT_E2E})', name)
         if not match:
             raise ValueError(f'Unexpected shard artifact: {name}')
-        artifact_attempt, index = match.group(1), int(match.group(2))
-        if int(artifact_attempt) > int(attempt) or index >= SHARD_COUNT:
+        artifact_attempt = match.group(1)
+        index = int(match.group(2)) if match.group(2).isdecimal() else match.group(2)
+        if int(artifact_attempt) > int(attempt) or index not in indices:
             raise ValueError(f'Future attempt or unknown shard artifact: {name}')
         directory = reports / name
         receipt = json.loads((directory / 'build/logs/instrumentation-source.json').read_text())
@@ -61,18 +72,20 @@ def shard_directories(reports: Path, run_id: str, attempt: str, source_sha: str 
             raise ValueError(f'Shard source, run, attempt or identity mismatch: {name}')
         if index not in selected or int(artifact_attempt) > int(selected[index][0]):
             selected[index] = (artifact_attempt, directory)
-    if set(selected) != set(range(SHARD_COUNT)):
-        raise ValueError(f'Shard artifact set mismatch: missing shards={sorted(set(range(SHARD_COUNT))-set(selected))}')
+    if set(selected) != set(indices):
+        missing = sorted(str(index) for index in set(indices)-set(selected))
+        raise ValueError(f'Shard artifact set mismatch: missing shards={missing}')
     return selected
 
 
-def verify(reports: Path, run_id: str, attempt: str, *, source_sha: str | None = None) -> dict:
+def verify(reports: Path, run_id: str, attempt: str, *, source_sha: str | None = None,
+           separate_direct_e2e: bool = False) -> dict:
     if not run_id.isdecimal() or not attempt.isdecimal() or int(run_id) < 1 or int(attempt) < 1:
         raise ValueError('Run ID and attempt must be positive integers')
-    directories = shard_directories(reports, run_id, attempt, source_sha)
+    directories = shard_directories(reports, run_id, attempt, source_sha, separate_direct_e2e)
     inventory = []
     seen = set()
-    for index in range(SHARD_COUNT):
+    for index in producer_indices(separate_direct_e2e):
         directory = directories[index][1]
         groups = set()
         files = sorted(directory.glob('**/outputs/androidTest-results/connected/**/*.xml'))
@@ -98,11 +111,18 @@ def verify(reports: Path, run_id: str, attempt: str, *, source_sha: str | None =
                 seen.add(key)
                 inventory.append({'kind': kind, 'class': key[1], 'name': key[2], 'shard': index,
                                   'result': 'skipped' if case.find('skipped') is not None else 'passed'})
-        required = {'play', 'core', 'direct_e2e'} if index == 0 else {'play'}
+        if index == DIRECT_E2E:
+            required = {'direct_e2e'}
+        elif index == 0:
+            required = {'play', 'core'} if separate_direct_e2e else {'play', 'core', 'direct_e2e'}
+        else:
+            required = {'play'}
         if groups != required:
             raise ValueError(f'Shard {index} report groups mismatch: expected={sorted(required)}, found={sorted(groups)}')
     provenance = {} if source_sha is None else {
-        'source_sha': source_sha, 'shard_attempts': {str(i): directories[i][0] for i in range(SHARD_COUNT)}}
+        'source_sha': source_sha, 'shard_attempts': {str(i): directories[i][0] for i in producer_indices(separate_direct_e2e)}}
+    if separate_direct_e2e:
+        provenance['producers'] = SHARD_COUNT + 1
     return {**provenance, 'run_id': run_id, 'attempt': attempt, 'shards': SHARD_COUNT,
             'tests': len(inventory), 'passed': sum(x['result'] == 'passed' for x in inventory),
             'skipped': sum(x['result'] == 'skipped' for x in inventory),
@@ -114,7 +134,8 @@ def main() -> None:
     parser.add_argument('--reports', type=Path)
     parser.add_argument('--write-receipt', type=Path)
     parser.add_argument('--source-sha')
-    parser.add_argument('--shard', type=int)
+    parser.add_argument('--shard', type=lambda value: DIRECT_E2E if value == DIRECT_E2E else int(value))
+    parser.add_argument('--separate-direct-e2e', action='store_true')
     parser.add_argument('--run-id', required=True)
     parser.add_argument('--attempt', required=True)
     args = parser.parse_args()
@@ -126,7 +147,8 @@ def main() -> None:
             return
         if args.reports is None:
             raise ValueError('Reports directory required')
-        inventory = verify(args.reports, args.run_id, args.attempt, source_sha=args.source_sha)
+        inventory = verify(args.reports, args.run_id, args.attempt, source_sha=args.source_sha,
+                           separate_direct_e2e=args.separate_direct_e2e)
     except (ValueError, OSError, ET.ParseError) as error:
         parser.exit(1, f'Instrumentation shard verification failed: {error}\n')
     (args.reports / 'case-inventory.json').write_text(json.dumps(inventory, indent=2) + '\n')
