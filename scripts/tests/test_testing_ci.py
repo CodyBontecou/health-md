@@ -83,27 +83,29 @@ class CIOrchestrationTests(unittest.TestCase):
         self.assertFalse(lanes["strategy"]["fail-fast"])
         self.assertLessEqual(lanes["timeout-minutes"], 60)
         self.assertEqual(lanes["strategy"]["matrix"]["include"], [
-            {"variant": "debug", "app-task": "testPlayDebugUnitTest"},
-            {"variant": "release", "app-task": "testPlayReleaseUnitTest"},
-            {"variant": "e2e", "app-task": "testPlayE2eUnitTest"},
+            {"variant": variant, "app-task": task, "lane": lane}
+            for variant, task in (("debug", "testPlayDebugUnitTest"), ("release", "testPlayReleaseUnitTest"), ("e2e", "testPlayE2eUnitTest"))
+            for lane in ("remaining", "native-0", "native-1")
         ])
         step = next(s for s in lanes["steps"] if s.get("name") == "Run Play app, shared contract, core, and protocol tests")
-        self.assertIn('--no-daemon --max-workers=2 "${tasks[@]}"', step["run"])
+        self.assertIn('--no-daemon --max-workers=2 --init-script scripts/ci-jvm-shards.init.gradle "${tasks[@]}"', step["run"])
+        self.assertEqual(step['env']['HEALTHMD_JVM_LANE'], '${{ matrix.lane }}')
+        self.assertEqual(step['env']['HEALTHMD_JVM_VARIANT'], '${{ matrix.variant }}')
+        self.assertIn('debug:remaining', step['run'])
         self.assertIn('tasks=(":app:${{ matrix.app-task }}")', step["run"])
         self.assertEqual(step['env']['HEALTHMD_CI_APP_TEST_FORKS'], '2')
-        self.assertNotIn('--tests', step['run'])
-        self.assertNotIn('--exclude-task', step['run'])
+        binding_check = next(s for s in lanes['steps'] if ':healthmd-core:checkHealthMdCoreKotlinBindings' in s.get('run', ''))
+        self.assertNotIn(':healthmd-core:prepareRustDebug', binding_check['run'])
         for task in (":healthmd-core:testDebugUnitTest", ":wearable-contract:test", ":direct-protocol:test"):
             self.assertIn(task, step["run"])
-        binding_check = next(s for s in lanes['steps'] if ':healthmd-core:checkHealthMdCoreKotlinBindings' in s.get('run', ''))
-        self.assertIn(':healthmd-core:checkHealthMdCoreKotlinBindings', binding_check['run'])
-        # Gradle's real test graphs own native profile selection. Forcing Debug
-        # here made Release compile all four Debug ABIs before its Release ABIs.
-        self.assertNotIn(':healthmd-core:prepareRustDebug', binding_check['run'])
         for name in ("Run Android lint", "Assemble Play debug app and validate phone APK policy"):
-            self.assertEqual(next(s for s in lanes["steps"] if s.get("name") == name)["if"], "${{ matrix.variant == 'debug' }}")
+            self.assertEqual(next(s for s in lanes["steps"] if s.get("name") == name)["if"], "${{ matrix.variant == 'debug' && matrix.lane == 'remaining' }}")
         self.assertEqual(set(JOBS["test"]["needs"]), {"changes", "jvm-tests"})
         self.assertIn("test", JOBS["gate"]["needs"])
+        collector = next(s for s in JOBS['test']['steps'] if 'verify-jvm-shards.py' in s.get('run', ''))
+        self.assertIn('--run-id', collector['run'])
+        self.assertIn('--attempt', collector['run'])
+        self.assertIn('--source-sha', collector['run'])
 
     def test_play_jvm_gate_rejects_missing_failed_cancelled_or_skipped_lanes(self):
         step = JOBS["test"]["steps"][0]
