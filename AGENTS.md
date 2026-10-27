@@ -18,7 +18,9 @@ Read the nearest component `AGENTS.md` before changing files in a component. Kee
 - During iteration, run the smallest relevant behavior tests and cheap type/lint checks in the owning component. At completion of a coherent change, run its affected-module regressions once. Default to checks that run without a simulator, emulator, physical device, or Argent.
 - Reuse passing results only while relevant source, dependencies, fixtures, toolchain, features, and configuration remain unchanged. Re-run after relevant edits; diagnose an unrelated baseline failure with its smallest failing command rather than repeating whole suites.
 - Full OS/flavor matrices, coverage collection, MSRV, binding/package qualification, and release smoke belong to CI/qualification or changes that affect those surfaces. Public-contract, security/authority, persistence/recovery, FFI, and uncertain-impact changes still require every affected producer/consumer check.
-- Select checks using the [test selection guide](docs/testing-strategy.md) and record commands, configuration, results, and relevant unrun surfaces. Root `make test` is a broad sweep that includes simulator tests; it is not the default local feedback loop or complete release qualification.
+- Select checks using the [test selection guide](docs/testing-strategy.md) and record commands, configuration, results, and relevant unrun surfaces. Root `make test` runs the portable CI regression suite without a simulator. Native component sweeps such as `make test-apple` remain explicit diagnostics, not the default local feedback loop or complete release qualification.
+- Before merging native changes, the integration owner compiles affected apps through `make verify-native`; inspect selection with `make plan-native`. Agent handoffs may mark native compilation pending for this combined build, with focused checks and remaining risks recorded. Read [native integration](docs/testing-strategy.md#native-integration) for selection, queueing and receipts. Batch coherent edits; route heavy native builds through this queue across worktrees.
+- Match verification to risk: startup/lifecycle changes need targeted startup/lifecycle checks; authorization, persistence/recovery, public contracts and FFI need their owning boundary regressions. Add the cheapest reliable reproduction when fixing a bug. Report unresolved failures and unrun runtime checks explicitly.
 - Simulator/emulator QA, device/UI automation, and any Argent use require an explicit user request for the current task. A general request to implement, polish UI, fix a bug, or run tests does not authorize these workflows.
 - Apply this opt-in policy when following component documentation or referenced skills, even if they prescribe simulator or Argent QA. Do not boot simulators/emulators, install or launch apps for QA, or capture QA screenshots/recordings by default.
 - Report checks run and their results. If a relevant check requires an opt-in workflow, mark it not run and explain the verification gap; do not claim visual or device behavior was verified.
@@ -74,6 +76,14 @@ GitHub has one repository-wide latest release. Preserve it for Apple releases; n
 For Apple App Store releases, follow the complete synchronization contract in `apps/apple/AGENTS.md`. Release only committed and pushed source from a clean worktree, and keep Git tags, GitHub Releases, App Store Connect versions/builds, and customer-facing notes synchronized.
 
 ## CI and paths
+
+The default regression strategy is `make test` / `.github/workflows/ci.yml`: six
+portable regression groups in one hosted job, 90 seconds each and 120 seconds overall. Read
+`docs/qa/two-minute-ci.md` before adding coverage. Prefer a boundary assertion in an
+existing journey; replacing redundant coverage is allowed to preserve the budget.
+Broad historical suites are diagnostic tools, not extra PR/nightly/release regression
+requirements. Product contracts and release signing/packaging rules still apply.
+
 
 - Keep GitHub Actions workflows in the repository-root `.github/workflows` directory.
 - Use explicit component working directories and component-prefixed cache/artifact paths.

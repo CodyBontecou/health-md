@@ -102,6 +102,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      actions: read
     uses: ./.github/workflows/android-ci.yml
     with:
       release_sha: ${{ needs.resolve.outputs.release_sha }}
@@ -135,13 +136,12 @@ jobs:
           done
           jq -e --arg repository "$GITHUB_REPOSITORY" --arg sha "$RELEASE_SHA" \
             --argjson attempt "$RUN_ATTEMPT" '
-            .repository.full_name == $repository and .path == ".github/workflows/android-ci.yml" and
+            .repository.full_name == $repository and .path == ".github/workflows/ci.yml" and
             .event == "push" and .head_branch == "main" and .head_sha == $sha and
             .run_attempt == $attempt and .status == "completed" and .conclusion == "success"
           ' "$RUNNER_TEMP/run.json" >/dev/null
           jq -e --argjson attempt "$RUN_ATTEMPT" '
-            ["test","Rust/Kotlin direct interop",
-             "Emulator instrumentation and direct E2E","Android CI"] as $required |
+            ["CI"] as $required |
             ([.jobs[] | select(.run_attempt == $attempt and .status == "completed" and
               .conclusion == "success") | .name] | unique) as $passed |
             all($required[]; . as $name | $passed | index($name) != null)
