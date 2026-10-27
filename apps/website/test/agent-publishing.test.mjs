@@ -167,10 +167,10 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   const macTools = JSON.parse(await read('docs-src/public/agents/mcp/mac-tools-v1.json'));
   const portableTools = JSON.parse(portableSource);
   assert.equal(macTools.length, 21);
-  assert.equal(portableTools.length, 23);
+  assert.equal(portableTools.length, 25);
   assert.equal(new Set(macTools.map(({ name }) => name)).size, 21);
-  assert.equal(new Set(portableTools.map(({ name }) => name)).size, 23);
-  for (const name of ["healthmd_export_plan", "healthmd_export_approval"]) {
+  assert.equal(new Set(portableTools.map(({ name }) => name)).size, 25);
+  for (const name of ["healthmd_export_plan", "healthmd_export_approval", "healthmd_export_execute", "healthmd_export_execution_resume"]) {
     assert.ok(portableTools.some((tool) => tool.name === name));
   }
 });
