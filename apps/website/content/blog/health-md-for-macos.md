@@ -83,6 +83,43 @@ You can enable multiple formats. The [synthetic daily CSV sample](/docs/referenc
 
 Follow the [Excel import guide](/blog/apple-health-to-excel/) for spreadsheet steps, or [Apple Health to Obsidian](/blog/export-apple-health-data-to-obsidian/) for notes, Bases, and the free starter vault. Importing files into a hosted spreadsheet or another provider shares them with that provider.
 
+<div id="section-turn-daily-csvs-into-a-weekly-review"></div>
+
+## Turn daily CSVs into a weekly review
+
+Once the CSV files are on disk, a local script can summarize them without uploading them. Try this step with fictional data before pointing it at your own folder.
+
+[Download the weekly CSV review example](/assets/downloads/healthmd-weekly-review-example.zip). It includes a readable Python script, 28 daily CSVs from the [spreadsheet sample](/apple-health-to-csv/#spreadsheet-sample), instructions, and the expected output. No app or health permissions are needed for the sample. Python 3.9 or later must already be installed; it uses only the standard library.
+
+1. Unzip the download and open a terminal in **Health.md Weekly Review Example**.
+2. Inspect `weekly_review.py`, then run:
+
+```sh
+python3 weekly_review.py
+```
+
+3. Open the generated **weekly-review.md** in a text editor, Markdown viewer, or Obsidian. Compare it with the included **expected-weekly-review.md**.
+
+| Sample check | Expected result |
+| --- | ---: |
+| Calendar dates in the sample | 28 |
+| Days with recorded steps | 28 |
+| Total steps | 249,630 |
+| Days with recorded sleep | 27 |
+| Mean recorded sleep | 7.49 hours |
+
+All sample measurements are fictional. Sleep on **October 8, 2026** is deliberately missing and is excluded from the average. Recorded zero values stay included. Weeks begin Monday; a different input range can produce a partial first or last week. [Inspect the expected weekly review](/assets/downloads/weekly-review/expected-weekly-review.md) or [read the script](/assets/downloads/weekly-review/weekly_review.py) before downloading the pack.
+
+After checking your own dates, units, metric selection, and destination, use a separate folder of daily summary CSVs:
+
+```sh
+python3 weekly_review.py --input "/path/to/your/daily-csvs" --output "/path/to/your/weekly-review.md"
+```
+
+The output path is written or replaced on each run. Keep it separate from your source files. The example selects only `YYYY-MM-DD.csv` files directly inside the input folder, with `Activity / Steps / count` and `Sleep / Total Duration / seconds` rows. It rejects duplicate daily totals, timestamped readings, and unexpected units instead of silently mixing them. It does not select `combined.csv`, rollup files, or nested folders. See the [included instructions](/assets/downloads/weekly-review/README.txt) for the complete input checks.
+
+This is a manual step after files reach disk. It does not pair an iPhone, trigger Health.md, install a folder watcher, or schedule an export. The example was checked with fictional files; it does not establish that your phone-to-Mac transfer succeeded or that Apple Health exposed complete records. Verify that first using the export procedure above. For device scheduling, use the separate [scheduling guide](/docs/scheduling/); iOS controls background timing.
+
 ## Check dates, units and the destination
 
 Open one exported file on the Mac and compare a selected metric with the source day in Apple Health. Confirm the format, date, unit, and folder before exporting a longer range.
