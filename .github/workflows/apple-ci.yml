@@ -526,7 +526,7 @@ jobs:
   ios-device-candidate:
     name: Build unsigned iOS QA candidate alongside unit shards
     needs: [changes, prepare-ios-artifacts]
-    if: ${{ needs.changes.outputs.ios == 'true' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ always() && !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.ios == 'true' && needs.prepare-ios-artifacts.result == 'success' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
     runs-on: xcode-27
     timeout-minutes: 25
     defaults:
@@ -617,7 +617,7 @@ jobs:
   ios-native-shards:
     name: iOS native shard ${{ matrix.shard }}
     needs: [changes, prepare-ios-artifacts]
-    if: ${{ needs.changes.outputs.ios == 'true' }}
+    if: ${{ always() && !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.ios == 'true' && needs.prepare-ios-artifacts.result == 'success' }}
     strategy:
       fail-fast: false
       matrix:
@@ -937,7 +937,7 @@ jobs:
   macos-native-shards:
     name: macOS native shard ${{ matrix.shard }}
     needs: [changes, prepare-macos-artifacts]
-    if: ${{ needs.changes.outputs.macos == 'true' }}
+    if: ${{ always() && !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.macos == 'true' && needs.prepare-macos-artifacts.result == 'success' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1322,7 +1322,7 @@ jobs:
       matrix:
         shard: [0, 1, 2, 3]
     needs: [changes, prepare-ui-artifacts]
-    if: ${{ needs.changes.outputs.ios_ui == 'true' }}
+    if: ${{ always() && !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.ios_ui == 'true' && needs.prepare-ui-artifacts.result == 'success' }}
     runs-on: xcode-27
     timeout-minutes: 60
     defaults:

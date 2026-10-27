@@ -210,10 +210,14 @@ final class CIQualityGateTests: XCTestCase {
             XCTAssertTrue(job.contains("    timeout-minutes: \(minutes)\n"),
                           "\(name) must retain its bounded build or execution allowance")
         }
-        XCTAssertTrue(
-            content.contains("ios-ui-shards:\n    name: iOS UI shard ${{ matrix.shard }}\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [0, 1, 2, 3]\n    needs: [changes, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
-            "The split UI job must allow at least 60 minutes for clean builds"
-        )
+        let uiWorker = try workflowJob("ios-ui-shards", in: content)
+        for invariant in ["shard: [0, 1, 2, 3]", "fail-fast: false",
+                          "needs: [changes, prepare-ui-artifacts]", "timeout-minutes: 60",
+                          "always() && !cancelled()", "needs.changes.result == 'success'",
+                          "needs.changes.outputs.ios_ui == 'true'",
+                          "needs.prepare-ui-artifacts.result == 'success'", "runs-on: xcode-27"] {
+            XCTAssertTrue(uiWorker.contains(invariant), "UI workers must retain bounded complete admission: \(invariant)")
+        }
         XCTAssertEqual(
             content.components(separatedBy: "- name: Prepare and validate shared Rust core for Apple").count - 1,
             1,

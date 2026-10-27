@@ -221,6 +221,32 @@ class WorkflowRoutingTests(unittest.TestCase):
                            'macos-native-shards', 'test-macos', 'ios-ui-shards'):
             self.assertNotIn('needs: [changes, prepare-shared-core', blocks[downstream])
 
+    def test_all_native_consumers_override_skipped_ancestors_and_require_successful_products(self):
+        statuses = ('success', 'failure', 'cancelled', 'skipped', '')
+        for job, output, producer in [('ios-device-candidate', 'ios', 'prepare-ios-artifacts'),
+                                      ('ios-native-shards', 'ios', 'prepare-ios-artifacts'),
+                                      ('macos-native-shards', 'macos', 'prepare-macos-artifacts'),
+                                      ('ios-ui-shards', 'ios_ui', 'prepare-ui-artifacts')]:
+            expression = re.search(r'^    if: \$\{\{ (.+) \}\}$', jobs()[job], re.MULTILINE).group(1)
+            # A hot-cache branch skips cold ancestors. GitHub's implicit status
+            # admission can suppress even successful producers' descendants.
+            self.assertIn('always()', expression, job)
+            for ancestor_skipped, cancelled, selected, changes, product, event in itertools.product(
+                    (False, True), (False, True), ('true', 'false'), statuses, statuses,
+                    ('pull_request', 'workflow_dispatch', 'push', 'workflow_call')):
+                values = {f'needs.changes.outputs.{output}': selected, 'needs.changes.result': changes,
+                          f'needs.{producer}.result': product, 'github.event_name': event}
+                actual = expression.replace('always()', 'True').replace('!cancelled()', repr(not cancelled)).replace('&&', ' and ').replace('||', ' or ')
+                for key, value in values.items(): actual = actual.replace(key, repr(value))
+                tree = ast.parse(actual, mode='eval')
+                allowed = (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.Compare, ast.Eq, ast.Constant)
+                self.assertTrue(all(isinstance(node, allowed) for node in ast.walk(tree)))
+                implicit = not ancestor_skipped or 'always()' in expression
+                admitted = implicit and eval(compile(tree, '<native consumer admission>', 'eval'), {'__builtins__': {}})
+                expected = (not cancelled and selected == 'true' and changes == product == 'success'
+                            and (job != 'ios-device-candidate' or event in {'pull_request', 'workflow_dispatch'}))
+                self.assertEqual(admitted, expected, (job, values, ancestor_skipped, cancelled))
+
     def test_lightweight_core_gate_requires_exactly_one_complete_producer_path(self):
         gate = jobs()['prepare-shared-core']
         self.assertIn('needs: [changes, probe-shared-core, prepare-core-slices, assemble-shared-core]', gate)
