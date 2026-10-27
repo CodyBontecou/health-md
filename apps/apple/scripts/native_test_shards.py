@@ -64,7 +64,7 @@ def validate_plan(plan: dict) -> None:
         raise ValueError("Shard plan differs from the complete compiled inventory")
 
 
-def qualify_results(plan: dict, index: int, tree: dict, summary: dict) -> dict:
+def qualify_results(plan: dict, index: int, tree: dict, summary: dict, *, maximum_devices: int = 1) -> dict:
     validate_plan(plan)
     if type(index) is not int or not 0 <= index < len(plan["shards"]):
         raise ValueError("Unknown native shard")
@@ -96,9 +96,9 @@ def qualify_results(plan: dict, index: int, tree: dict, summary: dict) -> dict:
             for child in node.values(): visit(child, bundle)
     visit(tree)
     devices = tree.get("devices")
-    if (not isinstance(devices, list) or len(devices) != 1
-            or devices[0].get("platform") != "macOS" or devices[0].get("architecture") != "arm64"):
-        raise ValueError("Native results must come from one qualified arm64 Mac")
+    if (not isinstance(devices, list) or not 1 <= len(devices) <= maximum_devices
+            or any(device.get("platform") != "macOS" or device.get("architecture") != "arm64" for device in devices)):
+        raise ValueError("Native results must come from qualified arm64 Macs within the worker inventory")
     expected = plan["shards"][index]
     passed = sum(value == "Passed" for value in cases.values())
     skipped = len(cases) - passed
@@ -301,7 +301,7 @@ def combine(args):
     subprocess.run(["xcrun", "xcresulttool", "merge", "--output-path", str(args.result), *results], check=True, timeout=120)
     merged = {kind: json.loads(subprocess.check_output(["xcrun", "xcresulttool", "get", "test-results", kind, "--path", str(args.result)], text=True, timeout=60)) for kind in ("tests", "summary")}
     complete = make_plan(plan["inventory"], args.source_sha, args.run_id, args.attempt, 1)
-    qualify_results(complete, 0, merged["tests"], merged["summary"])
+    qualify_results(complete, 0, merged["tests"], merged["summary"], maximum_devices=len(plan["shards"]))
 
 
 def main():

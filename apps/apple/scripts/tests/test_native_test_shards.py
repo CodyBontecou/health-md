@@ -107,6 +107,14 @@ class NativeShardTests(unittest.TestCase):
             with self.subTest(devices=devices), self.assertRaises(ValueError):
                 shards.qualify_results(self.plan, 0, tree | {"devices": devices}, summary)
 
+    def test_merged_results_accept_distinct_qualified_worker_macs_only(self):
+        tree, summary = result(self.plan["shards"][0])
+        tree["devices"] = [{"platform": "macOS", "architecture": "arm64", "deviceId": str(index)} for index in range(4)]
+        self.assertEqual(shards.qualify_results(self.plan, 0, tree, summary, maximum_devices=4)["passed"], len(self.plan["shards"][0]))
+        with self.assertRaises(ValueError): shards.qualify_results(self.plan, 0, tree, summary)
+        tree["devices"][3]["architecture"] = "x86_64"
+        with self.assertRaises(ValueError): shards.qualify_results(self.plan, 0, tree, summary, maximum_devices=4)
+
     def test_summary_must_match_actual_method_results(self):
         tree, summary = result(self.plan["shards"][0])
         for key, bad in (("result", "Failed"), ("totalTestCount", 0), ("passedTests", 0), ("skippedTests", 1), ("failedTests", 1)):
