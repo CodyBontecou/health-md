@@ -9,6 +9,8 @@
     "blog:build": "node scripts/build-blog.mjs --output dist",
     "starter-vault:build": "node scripts/build-starter-vault.mjs",
     "starter-vault:check": "node scripts/build-starter-vault.mjs --check",
+    "spreadsheet-sample:build": "node scripts/build-spreadsheet-samples.mjs",
+    "spreadsheet-sample:check": "node scripts/build-spreadsheet-samples.mjs --check",
     "test": "node --test",
     "three:bundle": "node scripts/build-three-hero.mjs",
     "site:check": "node scripts/check-site-links.mjs && node scripts/check-built-locales.mjs && node scripts/check-agent-surfaces.mjs && node scripts/check-public-privacy.mjs",

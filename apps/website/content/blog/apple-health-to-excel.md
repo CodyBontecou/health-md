@@ -22,6 +22,26 @@ tags:
 
 Apple Health's built-in **Export All Health Data** creates an XML archive. For a spreadsheet workflow, Health.md reads authorized data on your iPhone and writes CSV files that Excel can import. This guide uses those daily files; it does not convert an existing Apple XML archive or export an Excel workbook directly.
 
+## Try the 28-day spreadsheet sample
+
+[Download the complete sample pack](/assets/downloads/healthmd-spreadsheet-sample.zip), or open the [Excel workbook](/assets/downloads/spreadsheet-sample/healthmd-health-data-sample.xlsx) on its own. No app installation or health permissions are needed to inspect these fictional files.
+
+The pack includes **28 daily CSVs**, a [combined CSV](/assets/downloads/spreadsheet-sample/combined.csv), and a workbook with editable steps and sleep charts. It reuses the starter vault's fictional dates, **September 28 to October 25, 2026**. These are illustrative two-metric samples, not complete exporter fixtures or an XLSX export feature in the app.
+
+Open **Overview** in the workbook to see the charts. **Daily metrics** calculates the daily values from **Raw data**. Sleep is stored in seconds and converted to hours. There are **28 recorded step days** and **27 recorded sleep days**: October 8 deliberately has no sleep reading, and the sleep chart has a gap there.
+
+![Preview of the fictional workbook with daily steps and sleep-duration charts, showing 28 step days and 27 sleep days.](/assets/downloads/spreadsheet-sample/workbook-preview.png)
+
+Rendered workbook preview. All values are fictional.
+
+| Check | Expected result |
+| --- | ---: |
+| Total steps over 28 recorded days | 249,630 |
+| Average sleep over 27 recorded days | 7.49 hours |
+| Missing sleep date | October 8, 2026 |
+
+To try recalculation, edit an existing numeric **Value** in **Raw data**. A zero remains a recorded value; an empty value is excluded. The separate **Checked value** column validates inputs, and the sleep chart uses an intentional `#N/A` helper for the missing day. The example has fixed dates and input ranges; appending rows does not extend it automatically. Keep your own records separate and use the walkthrough below to build your own workbook.
+
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
 Health.md includes **5 free export actions**, followed by a single lifetime unlock. You need desktop Excel for the import steps below. A Mac is not required to create the export on your iPhone.
