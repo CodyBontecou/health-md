@@ -109,22 +109,20 @@ summed runner work. F-Droid and Android Wear remain paused as described below.
 
 ## Android CI selection and accessibility coverage
 
-Play JVM qualification retains debug, release and E2E variants. Each variant has
-three fresh lanes: default Gradle discovery for all remaining classes, plus two
-halves of the slow native configuration class. The halves come from the live
-compiled JUnit annotations using the actual Test runtime classpath, rather than
-a hand-maintained method list. Every variant's remaining lane excludes only that
-native class. Debug's remaining lane also retains shared core, wearable-contract
-and protocol tests, lint, packaging and phone APK policy checks.
+Play JVM qualification retains debug, release and E2E variants on the original
+three runners. Each app Test task uses two class-level Gradle forks within the
+existing two-worker budget; default full test discovery, the per-worker heap
+and all assertions remain unchanged. CI opts in with
+`HEALTHMD_CI_APP_TEST_FORKS=2`; ordinary developer commands retain their existing
+profile. Shared core, wearable-contract and protocol tests, debug lint, packaging
+and phone APK policy remain required. Test outputs always execute and are never
+restored from a cache.
 
-The stable `test` collector requires all nine lanes, reconciles the two actual
-native XML method sets with their compiled inventory and exact source/run/attempt,
-and checks shared-module results. Missing, duplicate, stale, failed or unexpected
-cases reject qualification. All original compiler and Test profiles remain; the
-existing Gradle wrapper caches compilation while Test outputs always execute.
-Lane reports include variant and lane in their artifact names. More simultaneous
-runners trade extra preparation work for shorter wall time; full hosted results,
-including queue time, determine whether the complete target is met.
+The stable `test` gate still requires all three variants. This avoids six extra
+native-runner preparations while allowing the slow native class to overlap other
+classes. Per-variant XML, Gradle profiles and CPU/memory diagnostics remain in the
+original artifacts. Full hosted elapsed time, including queues and all active
+component suites, determines whether the complete target is met.
 
 On pull requests, `apps/android/scripts/android-ci-plan.py` selects the active Android
 jobs that consume changed files. Phone sources keep Play JVM tests and phone
