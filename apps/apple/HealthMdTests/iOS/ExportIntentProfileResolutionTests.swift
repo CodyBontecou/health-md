@@ -103,10 +103,9 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         _ = profile
     }
 
-    /// Issue #173 must add a separate context action, not reinterpret an
-    /// ordinary file-export Shortcut when its profile selects a remote target.
-    func testRemoteProfileShortcutStillUsesLocalPipelineAndFileQuota() async throws {
-        for target in [ExportTargetSelection.connectedMac, .apiEndpoint] {
+    /// Connected Mac retains its local-folder Shortcut behavior; #252 routes API profiles separately.
+    func testConnectedMacProfileShortcutStillUsesLocalPipelineAndFileQuota() async throws {
+        for target in [ExportTargetSelection.connectedMac] {
             let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
             let profile = store.add(
                 name: "Remote-\(target.rawValue)",
@@ -161,7 +160,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         let ghostDependencies = ExportIntentRunner.Dependencies(
                 refreshPurchaseStatus: {},
                 canExport: { true },
-                trackExportBlockedByQuota: {},
+                trackExportBlockedByQuota: { _ in },
                 hasVaultAccess: {
                     vaultEvents.append("hasAccess")
                     return true
@@ -188,7 +187,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
                         failedDateDetails: []
                     )
                 },
-                recordResult: { _, _, _, _, _, _ in },
+                recordResult: { _, _, _, _, _, _, _ in },
                 recordExportUse: {},
                 trackExportSucceeded: { _ in },
                 updateScheduleLastExport: {},
@@ -218,6 +217,161 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         XCTAssertTrue(dialog.contains("profile"))
     }
 
+    func testAPIProfileRunsUploadExactDatesAndSnapshotWithoutFolderAccess() async {
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        let profile = store.add(name: "Morning API", settings: makeSettings(filenameFormat: "api-{date}"), target: .apiEndpoint)
+        let folderProfile = store.add(name: "Local", settings: makeSnapshot(), target: .localIPhoneFolder)
+        store.activate(id: profile.id)
+        let dates = [Date(timeIntervalSince1970: 1_790_000_000)]
+
+        for name: String? in [nil, "  morning api  "] {
+            if name != nil { store.activate(id: folderProfile.id) }
+            let activeID = store.activeProfileID
+            let recorder = ProfileRunRecorder()
+            let dependencies = apiDependencies(recorder: recorder)
+            let outcome = await ExportIntentRunner.run(dates: dates, profileName: name, dependencies: dependencies)
+            guard case .success = outcome else { return XCTFail("Expected API success, got \(outcome)") }
+            XCTAssertEqual(recorder.apiDates, [dates])
+            XCTAssertEqual(recorder.apiDestinations, [apiDestination])
+            XCTAssertEqual(recorder.seenFilenameFormats, ["api-{date}"])
+            XCTAssertEqual(recorder.historyProfileNames, ["Morning API"])
+            XCTAssertEqual(recorder.historyTargets, [.apiEndpoint])
+            XCTAssertEqual(recorder.historyTargetLabels, [apiDestination.displayName])
+            XCTAssertEqual(recorder.analyticsTargets, [.apiEndpoint])
+            XCTAssertEqual(recorder.exportUseCount, 1)
+            XCTAssertTrue(recorder.adopted.isEmpty)
+            XCTAssertFalse(recorder.restored)
+            XCTAssertEqual(store.activeProfileID, activeID)
+        }
+    }
+
+    func testMissingAPIDestinationFailsWithoutFolderFallbackOrQuotaUse() async {
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        store.add(name: "API", settings: makeSnapshot(), target: .apiEndpoint)
+        let recorder = ProfileRunRecorder()
+        var dependencies = apiDependencies(recorder: recorder)
+        dependencies.resolveAPIDestination = { _ in nil }
+        let outcome = await ExportIntentRunner.run(dates: [Date()], dependencies: dependencies)
+        guard case .failure = outcome else { return XCTFail("Expected missing endpoint failure") }
+        XCTAssertTrue(recorder.apiDates.isEmpty)
+        XCTAssertEqual(recorder.exportUseCount, 0)
+    }
+
+    func testAPIQuotaGatePreventsUploadAndReportsAPITarget() async {
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        store.add(name: "API", settings: makeSnapshot(), target: .apiEndpoint)
+        let recorder = ProfileRunRecorder()
+        var dependencies = apiDependencies(recorder: recorder)
+        var blockedTargets: [PricingAnalyticsExportTargetType] = []
+        dependencies.canExport = { false }
+        dependencies.trackExportBlockedByQuota = { blockedTargets.append($0) }
+        let outcome = await ExportIntentRunner.run(dates: [Date()], dependencies: dependencies)
+        guard case .paywall = outcome else { return XCTFail("Expected quota gate") }
+        XCTAssertEqual(blockedTargets, [.apiEndpoint])
+        XCTAssertTrue(recorder.apiDates.isEmpty)
+        XCTAssertEqual(recorder.exportUseCount, 0)
+    }
+
+    func testAPIFailureRecordsAPIDestinationWithoutConsumingQuotaOrQueuingFolderRetry() async throws {
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        store.add(name: "API", settings: makeSnapshot(), target: .apiEndpoint)
+        let recorder = ProfileRunRecorder()
+        var dependencies = apiDependencies(recorder: recorder)
+        dependencies.exportAPIEndpoint = { dates, _, _ in
+            ExportOrchestrator.ExportResult(successCount: 0, totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .deviceLocked) })
+        }
+        let outcome = await ExportIntentRunner.run(dates: [Date()], dependencies: dependencies)
+        guard case .failure = outcome else { return XCTFail("Expected locked API failure") }
+        XCTAssertEqual(recorder.historyTargets, [.apiEndpoint])
+        XCTAssertEqual(recorder.exportUseCount, 0)
+        XCTAssertTrue(recorder.analyticsTargets.isEmpty)
+        XCTAssertTrue(try dependencies.pendingExportStore.loadAll().isEmpty)
+    }
+
+    func testPartialAPIUploadRecordsSuccessAndFailureWithoutLocalFallback() async {
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        store.add(name: "API", settings: makeSnapshot(), target: .apiEndpoint)
+        let recorder = ProfileRunRecorder()
+        var dependencies = apiDependencies(recorder: recorder)
+        dependencies.exportAPIEndpoint = { dates, _, _ in
+            ExportOrchestrator.ExportResult(successCount: 1, totalCount: dates.count,
+                failedDateDetails: [FailedDateDetail(date: dates[1], reason: .unknown)], formatsPerDate: 0)
+        }
+        let dates = [Date(timeIntervalSince1970: 1_790_000_000), Date(timeIntervalSince1970: 1_790_086_400)]
+        let outcome = await ExportIntentRunner.run(dates: dates, dependencies: dependencies)
+        guard case .partial(let exported, let total, _, _, _, _) = outcome else { return XCTFail("Expected partial API upload") }
+        XCTAssertEqual(exported, 1)
+        XCTAssertEqual(total, 2)
+        XCTAssertEqual(recorder.historyTargets, [.apiEndpoint])
+        XCTAssertEqual(recorder.analyticsTargets, [.apiEndpoint])
+        XCTAssertEqual(recorder.exportUseCount, 1)
+    }
+
+    func testCancelledAPIUploadRecordsCommittedDatesAgainstAPITarget() async {
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        store.add(name: "API", settings: makeSnapshot(), target: .apiEndpoint)
+        let recorder = ProfileRunRecorder()
+        var dependencies = apiDependencies(recorder: recorder)
+        dependencies.exportAPIEndpoint = { dates, _, _ in
+            ExportOrchestrator.ExportResult(successCount: 1, totalCount: dates.count,
+                failedDateDetails: [], formatsPerDate: 0, wasCancelled: true, completedDates: [dates[0]])
+        }
+        let dates = [Date(timeIntervalSince1970: 1_790_000_000), Date(timeIntervalSince1970: 1_790_086_400)]
+        let outcome = await ExportIntentRunner.run(dates: dates, dependencies: dependencies)
+        guard case .cancelled = outcome else { return XCTFail("Expected cancellation") }
+        XCTAssertEqual(recorder.historyTargets, [.apiEndpoint])
+        XCTAssertEqual(recorder.analyticsTargets, [.apiEndpoint])
+        XCTAssertEqual(recorder.exportUseCount, 1)
+    }
+
+    func testAPIResolverUsesBoundEndpointAndTokenAndFailsClosedForMissingOrInvalidBinding() throws {
+        let destinations = ProfileDestinationStore(userDefaults: defaults, keychain: FakeKeychainStore())
+        let endpoint = destinations.upsertAPIEndpoint(name: "Morning", endpointURLString: "http://morning.local/upload?secret=hidden", bearerToken: "test-token")
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        var profile = store.add(name: "API", settings: makeSnapshot(), target: .apiEndpoint)
+        profile.apiEndpointID = endpoint.id
+        let resolved = try XCTUnwrap(ExportIntentRunner.resolveAPIDestination(for: profile, destinationStore: destinations, legacyDestination: apiDestination))
+        XCTAssertEqual(resolved.endpointURL.absoluteString, endpoint.endpointURLString)
+        XCTAssertEqual(resolved.authorizationHeaderValue, "Bearer test-token")
+        XCTAssertEqual(resolved.redactedEndpointDescription, "http://morning.local/upload")
+        profile.apiEndpointID = UUID()
+        XCTAssertNil(ExportIntentRunner.resolveAPIDestination(for: profile, destinationStore: destinations, legacyDestination: apiDestination))
+        let invalid = destinations.upsertAPIEndpoint(name: "Invalid", endpointURLString: "file:///tmp/upload", bearerToken: nil)
+        profile.apiEndpointID = invalid.id
+        XCTAssertNil(ExportIntentRunner.resolveAPIDestination(for: profile, destinationStore: destinations, legacyDestination: apiDestination))
+        profile.apiEndpointID = nil
+        XCTAssertEqual(ExportIntentRunner.resolveAPIDestination(for: profile, destinationStore: destinations, legacyDestination: apiDestination), apiDestination)
+    }
+
+    private var apiDestination: APIExportDestinationSnapshot {
+        APIExportDestinationSnapshot(endpointURL: URL(string: "https://morning.local/upload")!,
+            authorizationHeaderValue: "Bearer fixture", displayName: "morning.local",
+            redactedEndpointDescription: "https://morning.local/upload")
+    }
+
+    private func apiDependencies(recorder: ProfileRunRecorder) -> ExportIntentRunner.Dependencies {
+        var dependencies = recorder.makeDependencies(defaults: defaults)
+        dependencies.hasVaultAccess = { XCTFail("API export must not require a folder"); return false }
+        dependencies.requiresVaultReselection = { XCTFail("API export must not inspect a folder"); return true }
+        dependencies.refreshVaultAccess = { XCTFail("API export must not refresh a folder") }
+        dependencies.withVaultAccess = { _ in XCTFail("API export must not acquire a folder lease"); return nil }
+        dependencies.targetLabel = { XCTFail("API export must not use a folder label"); return "folder" }
+        dependencies.exportDatesBackground = { _, _ in
+            XCTFail("API export must not write local files")
+            return ExportOrchestrator.ExportResult(successCount: 0, totalCount: 1, failedDateDetails: [])
+        }
+        dependencies.resolveAPIDestination = { [apiDestination] _ in apiDestination }
+        dependencies.exportAPIEndpoint = { [apiDestination] dates, settings, destination in
+            recorder.apiDates.append(dates)
+            recorder.apiDestinations.append(destination)
+            recorder.seenFilenameFormats.append(settings.filenameFormat)
+            XCTAssertEqual(destination, apiDestination)
+            return ExportOrchestrator.ExportResult(successCount: dates.count, totalCount: dates.count, failedDateDetails: [], formatsPerDate: 0)
+        }
+        return dependencies
+    }
+
     // MARK: - Helpers
 
     private func makeSnapshot() -> ExportSettingsSnapshot {
@@ -231,14 +385,18 @@ private final class ProfileRunRecorder {
     var restored = false
     var seenFilenameFormats: [String] = []
     var historyProfileNames: [String?] = []
+    var historyTargets: [ExportTargetSelection] = []
     var historyTargetLabels: [String?] = []
+    var analyticsTargets: [PricingAnalyticsExportTargetType] = []
     var exportUseCount = 0
+    var apiDates: [[Date]] = []
+    var apiDestinations: [APIExportDestinationSnapshot] = []
 
     func makeDependencies(defaults: UserDefaults) -> ExportIntentRunner.Dependencies {
         let dependencies = ExportIntentRunner.Dependencies(
             refreshPurchaseStatus: {},
             canExport: { true },
-            trackExportBlockedByQuota: {},
+            trackExportBlockedByQuota: { _ in },
             hasVaultAccess: { true },
             requiresVaultReselection: { false },
             refreshVaultAccess: {},
@@ -263,12 +421,13 @@ private final class ProfileRunRecorder {
                     failedDateDetails: []
                 )
             },
-            recordResult: { [weak self] _, _, _, _, targetLabel, profileName in
+            recordResult: { [weak self] _, _, _, _, label, profileName, target in
                 self?.historyProfileNames.append(profileName)
-                self?.historyTargetLabels.append(targetLabel)
+                self?.historyTargets.append(target)
+                self?.historyTargetLabels.append(label)
             },
             recordExportUse: { [weak self] in self?.exportUseCount += 1 },
-            trackExportSucceeded: { _ in },
+            trackExportSucceeded: { [weak self] in self?.analyticsTargets.append($0.targetType) },
             updateScheduleLastExport: {},
             pendingExportStore: InMemoryPendingExportStore(),
             exportNotificationScheduler: InspectableExportNotificationScheduler(),
