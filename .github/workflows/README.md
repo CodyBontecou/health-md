@@ -140,6 +140,12 @@ Lane reports include variant and lane in their artifact names. More simultaneous
 runners trade extra preparation work for shorter wall time; full hosted results,
 including queue time, determine whether the complete target is met.
 
+Trusted branch pushes, manual runs and same-repository PRs retain Gradle compilation
+state. Only each variant's remaining-class lane and the Play/core and Direct CLI
+device workers write it; other workers and fork PRs remain read-only. Gradle still
+checks compilation inputs, and the CI init script disables caching and up-to-date
+skips for every JVM Test task. Cache availability never replaces test evidence.
+
 The remaining-class lane uses two app-class forks within the existing two-worker
 budget; each native lane contains one class and preserves its exact method half.
 Gradle test graphs prepare all four ABIs for the actual library profile; the

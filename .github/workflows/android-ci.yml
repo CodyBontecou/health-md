@@ -221,7 +221,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          # One writer per variant; Test tasks remain uncacheable in ci-gradle.init.gradle.
+          cache-read-only: ${{ !((github.event_name == 'push' || github.event_name == 'workflow_dispatch') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) || matrix.lane != 'remaining' }}
 
       - name: Validate wrapper
         uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
@@ -388,7 +389,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          # Play/core and Direct CLI variants cover compilation for the other workers.
+          cache-read-only: ${{ !((github.event_name == 'push' || github.event_name == 'workflow_dispatch') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) || (matrix.shard != 0 && matrix.shard != 'direct-e2e') }}
 
       - name: Prepare instrumentation APKs before the emulator boots
         if: ${{ matrix.shard != 'direct-e2e' }}

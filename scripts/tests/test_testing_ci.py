@@ -3,6 +3,7 @@
 from pathlib import Path
 import ast
 import importlib.util
+import json
 import os
 import re
 import subprocess
@@ -29,6 +30,37 @@ SPEC.loader.exec_module(ci)
 
 
 class CIOrchestrationTests(unittest.TestCase):
+    def test_gradle_writers_require_trusted_events_and_cover_each_compilation_variant(self):
+        # Evaluate the actual workflow's boolean/equality expressions over its
+        # complete, canonical matrix domain. This subset also has JS semantics;
+        # actionlint separately validates the GitHub expression grammar/context.
+        scenarios = []
+        roles = {
+            'jvm-tests': JOBS['jvm-tests']['strategy']['matrix']['include'],
+            'instrumentation-shards': [dict(shard=i) for i in range(6)] + [dict(shard='direct-e2e')],
+        }
+        for job, matrix in roles.items():
+            settings = next(s['with'] for s in JOBS[job]['steps'] if s.get('name') == 'Set up Gradle')
+            expression = settings['cache-read-only'].removeprefix('${{').removesuffix('}}').strip()
+            for event in ['push', 'workflow_dispatch', 'pull_request', 'pull_request_target', 'schedule', 'workflow_call', '']:
+                for repository in ['owner/repo', 'fork/repo', '']:
+                    trusted = event in {'push', 'workflow_dispatch'} or (event == 'pull_request' and repository == 'owner/repo')
+                    for lane in matrix:
+                        writer = lane.get('lane') == 'remaining' if job == 'jvm-tests' else lane['shard'] in {0, 'direct-e2e'}
+                        scenarios.append(dict(expression=expression, github=dict(event_name=event, repository='owner/repo',
+                            event=dict(pull_request=dict(head=dict(repo=dict(full_name=repository))))), matrix=lane,
+                            expected=not (trusted and writer)))
+        script = """const cases = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+for (const item of cases) {
+  const actual = Function('github', 'matrix', 'return (' + item.expression + ')')(item.github, item.matrix);
+  if (actual !== item.expected) throw Error(JSON.stringify({item, actual}));
+}
+console.log('Qualified ' + cases.length + ' actual cache-writer contexts');
+"""
+        run = subprocess.run(['node', '-e', script], input=json.dumps(scenarios), text=True, capture_output=True)
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('336 actual cache-writer contexts', run.stdout)
+
     def test_cli_sources_keep_device_interop_and_readme_skips_native_jobs(self):
         for path in ("apps/cli/crates/healthmd-mcp/src/lib.rs", "apps/cli/crates/healthmd-cli/src/main.rs"):
             selected = ci.plan({path})
