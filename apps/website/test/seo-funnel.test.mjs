@@ -218,3 +218,21 @@ test('report calculates per-page action rates without duplicating denominators o
   assert.deepEqual(reportOptions(['--remote', '--days', '28']), { mode: '--remote', days: 28 });
   for (const args of [[], ['--local', '--remote'], ['--remote', '--days', '0'], ['--remote', '--days', '1; DROP TABLE x']]) assert.throws(() => reportOptions(args));
 });
+
+test('Android Obsidian store and sample actions use existing page, placement and target enums', () => {
+  const b = browser('/blog/export-health-connect-to-obsidian/');
+  startFunnel(b.win);
+  b.listeners.click(click(anchor('https://play.google.com/store/apps/details?id=com.healthmd.android', 'header')));
+  b.listeners.click(click(anchor('https://play.google.com/store/apps/details?id=com.healthmd.android')));
+  b.listeners.click(click(anchor('https://healthmd.app/assets/samples/health-connect-summary-excerpt.csv')));
+  assert.deepEqual(b.sent.map(request => [request.data.action, request.data.target, request.data.placement]), [
+    ['page_view', 'none', 'page'],
+    ['store_click', 'google_play', 'header'],
+    ['store_click', 'google_play', 'body'],
+    ['csv_sample_download', 'android_csv', 'body'],
+  ]);
+  for (const request of b.sent) {
+    assert.equal(request.data.page, 'android_obsidian');
+    assert.equal(validFunnelEvent(request.data), true);
+  }
+});

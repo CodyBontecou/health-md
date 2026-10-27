@@ -144,6 +144,10 @@ async function loadPosts() {
       ? asDate(parsed.data.updated, 'updated', filename)
       : date;
     const image = normalizeImage(parsed.data.image);
+    const platform = parsed.data.platform ?? 'apple';
+    if (!['apple', 'android'].includes(platform)) {
+      throw new Error(`${filename}: platform must be apple or android`);
+    }
 
     posts.push({
       slug,
@@ -154,6 +158,7 @@ async function loadPosts() {
       date,
       updated,
       image,
+      platform,
       imageAlt: String(parsed.data.imageAlt || title).trim(),
       showCover: parsed.data.showCover !== false,
       tags: asStringArray(parsed.data.tags),
@@ -187,8 +192,11 @@ export function resolveRelatedGuides(posts) {
   }));
 }
 
-function headerHtml(depth = 1) {
+function headerHtml(depth = 1, platform = 'apple') {
   const prefix = depth === 2 ? '../../' : '../';
+  const store = platform === 'android'
+    ? { url: 'https://play.google.com/store/apps/details?id=com.healthmd.android', label: 'Google Play' }
+    : { url: 'https://apps.apple.com/us/app/health-md/id6757763969', label: 'App Store' };
   return `<header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="${prefix}">
@@ -200,7 +208,7 @@ function headerHtml(depth = 1) {
           <a href="${prefix}visualizations/">Visualizations</a>
           <a href="${prefix}docs/">Docs</a>
           <a href="${depth === 2 ? '../' : './'}">Blog</a>
-          <a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
+          <a href="${store.url}" target="_blank" rel="noopener">${store.label}</a>
         </nav>
         <div class="theme-toggle" role="group" aria-label="Color theme">
           <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
@@ -391,7 +399,7 @@ async function renderPost(post, relatedGuides) {
   })}
 </head>
 <body>
-  ${headerHtml(2)}
+  ${headerHtml(2, post.platform)}
   <main class="article">
     ${breadcrumbNav}
     <span class="eyebrow">${escapeHtml(post.category)}</span>

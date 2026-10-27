@@ -90,12 +90,12 @@ test("landing closes with a localized download decision and compact footer", () 
   const footer = index.slice(index.indexOf('<footer class="site-footer">'));
 
   assert.match(downloadSection, /Take your health data with you\./);
-  assert.match(downloadSection, /Google Play: try 5 exports free, then make one lifetime purchase\. F-Droid: Full Access is included\./);
+  assert.match(downloadSection, /Google Play offers free manual exports, then a one-time lifetime purchase\. F-Droid catalog publication is pending\./);
   assert.match(downloadSection, /class="download-actions" aria-label="Download Health\.md"/);
   assert.equal((downloadSection.match(/class="hero-store-badge /g) ?? []).length, 3);
   assert.match(downloadSection, /href="https:\/\/apps\.apple\.com\/us\/app\/health-md\/id6757763969"/);
   assert.match(downloadSection, /href="https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.healthmd\.android"/);
-  assert.match(downloadSection, /href="https:\/\/f-droid\.org\/packages\/com\.healthmd\.android\/"/);
+  assert.match(downloadSection, /href="\/docs\/android\/#distribution-status"/);
   assert.match(downloadSection, /Switching channels requires uninstalling the app and does not migrate local app state\./);
 
   assert.match(footer, /<nav class="footer-links" aria-label="Footer navigation">/);
