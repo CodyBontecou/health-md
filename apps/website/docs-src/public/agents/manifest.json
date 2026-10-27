@@ -50,7 +50,7 @@
       "availability": "public_preview",
       "catalog_version": 1,
       "profile": "local_direct",
-      "tool_count": 25,
+      "tool_count": 26,
       "tool_names": [
         "healthmd_status",
         "healthmd_doctor",
@@ -71,6 +71,7 @@
         "healthmd_export_approval",
         "healthmd_export_execute",
         "healthmd_export_execution_resume",
+        "healthmd_export_execution_cancel",
         "healthmd_export_files",
         "healthmd_export_raw",
         "healthmd_raw_artifact_read",
@@ -80,8 +81,8 @@
       ],
       "path": "/agents/mcp/portable-tools-v1.json",
       "media_type": "application/json",
-      "bytes": 137434,
-      "sha256": "2d822a16cdcded3a1604577e8fc324f2b6b7155f60d41dfa889d35c6772bd801"
+      "bytes": 138507,
+      "sha256": "19d47d6b5bf91fc661381078d9c9ba345c90f503c792d8ab1057e19785f84e04"
     },
     {
       "id": "healthmd_cli_skill_manifest",
