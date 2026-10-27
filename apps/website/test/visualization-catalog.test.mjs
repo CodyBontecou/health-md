@@ -141,9 +141,8 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
   assert.match(previewHTML, /<script src="health-rollups\.js"><\/script>/);
 });
 
-test("canonical plugin v9 fixtures are byte-identical to package contract fixtures", {
-  skip: !process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
-}, async () => {
+test("canonical plugin v9 fixtures are byte-identical to package contract fixtures", async () => {
+  assert.ok(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO, "Set HEALTHMD_OBSIDIAN_PLUGIN_REPO to the pinned consumer checkout");
   const pluginFixtureRoot = path.join(
     path.resolve(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO),
     "tests",

@@ -1,13 +1,28 @@
 #!/bin/sh
 set -eu
 
-workspace_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-repo_root=$(CDPATH= cd -- "$workspace_root/../.." && pwd)
+workspace_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+repo_root=$(CDPATH='' cd -- "$workspace_root/../.." && pwd)
 package_root="$repo_root/apps/apple/Packages/HealthMdCoreRust"
 output=${1:-"$package_root/Artifacts/HealthmdCore.xcframework"}
 target_dir=${CARGO_TARGET_DIR:-"$workspace_root/target/apple"}
 ios_deployment_target=17.0
 macos_deployment_target=14.0
+scope=${HEALTHMD_CORE_APPLE_SCOPE:-full}
+case "$scope" in
+    full)
+        build_profile=release
+        release_flag=--release
+        build_targets="aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios aarch64-apple-darwin x86_64-apple-darwin"
+        ;;
+    ci-arm64)
+        [ "$(uname -m)" = arm64 ] || { echo "error: ci-arm64 requires an arm64 Mac" >&2; exit 1; }
+        build_profile=debug
+        release_flag=""
+        build_targets="aarch64-apple-ios-sim aarch64-apple-darwin"
+        ;;
+    *) echo "error: HEALTHMD_CORE_APPLE_SCOPE must be full or ci-arm64" >&2; exit 1 ;;
+esac
 
 case $(uname -s) in
     Darwin) ;;
@@ -33,12 +48,13 @@ fi
 if ! rustup run "$toolchain" rustc --version >/dev/null 2>&1; then
     rustup toolchain install "$toolchain" --profile minimal
 fi
-rustup target add --toolchain "$toolchain" \
-    aarch64-apple-ios \
-    aarch64-apple-ios-sim \
-    x86_64-apple-ios \
-    aarch64-apple-darwin \
-    x86_64-apple-darwin
+# Only install the architectures this invocation will actually compile.
+installed_targets=$(rustup target list --installed --toolchain "$toolchain")
+for rust_target in $build_targets; do
+    if ! printf '%s\n' "$installed_targets" | grep -Fx "$rust_target" >/dev/null; then
+        rustup target add --toolchain "$toolchain" "$rust_target"
+    fi
+done
 rustc_path=$(rustup which --toolchain "$toolchain" rustc)
 toolchain_bin=$(dirname -- "$rustc_path")
 cargo_path="$toolchain_bin/cargo"
@@ -65,7 +81,7 @@ build_target() {
                 "$cargo_path" build \
                     --manifest-path "$workspace_root/Cargo.toml" \
                     --locked \
-                    --release \
+                    $release_flag \
                     --package healthmd-core-uniffi \
                     --target "$target"
             ;;
@@ -81,7 +97,7 @@ build_target() {
                 "$cargo_path" build \
                     --manifest-path "$workspace_root/Cargo.toml" \
                     --locked \
-                    --release \
+                    $release_flag \
                     --package healthmd-core-uniffi \
                     --target "$target"
             ;;
@@ -92,11 +108,12 @@ build_target() {
     esac
 }
 
-build_target aarch64-apple-ios ios
-build_target aarch64-apple-ios-sim ios
-build_target x86_64-apple-ios ios
-build_target aarch64-apple-darwin macos
-build_target x86_64-apple-darwin macos
+for rust_target in $build_targets; do
+    case "$rust_target" in
+        *-apple-darwin) build_target "$rust_target" macos ;;
+        *) build_target "$rust_target" ios ;;
+    esac
+done
 
 artifact_parent=$(dirname -- "$output")
 mkdir -p "$artifact_parent"
@@ -113,21 +130,28 @@ simulator_library="$temp_dir/ios-simulator/libHealthmdCoreFFI.a"
 macos_library="$temp_dir/macos/libHealthmdCoreFFI.a"
 mkdir -p "$(dirname -- "$device_library")" "$(dirname -- "$simulator_library")" "$(dirname -- "$macos_library")"
 
-cp "$target_dir/aarch64-apple-ios/release/libhealthmd_core_uniffi.a" "$device_library"
-xcrun lipo -create \
-    "$target_dir/aarch64-apple-ios-sim/release/libhealthmd_core_uniffi.a" \
-    "$target_dir/x86_64-apple-ios/release/libhealthmd_core_uniffi.a" \
-    -output "$simulator_library"
-xcrun lipo -create \
-    "$target_dir/aarch64-apple-darwin/release/libhealthmd_core_uniffi.a" \
-    "$target_dir/x86_64-apple-darwin/release/libhealthmd_core_uniffi.a" \
-    -output "$macos_library"
-
-xcodebuild -create-xcframework \
-    -library "$device_library" -headers "$headers" \
-    -library "$simulator_library" -headers "$headers" \
-    -library "$macos_library" -headers "$headers" \
-    -output "$temp_dir/HealthmdCore.xcframework"
+if [ "$scope" = full ]; then
+    cp "$target_dir/aarch64-apple-ios/$build_profile/libhealthmd_core_uniffi.a" "$device_library"
+    xcrun lipo -create \
+        "$target_dir/aarch64-apple-ios-sim/$build_profile/libhealthmd_core_uniffi.a" \
+        "$target_dir/x86_64-apple-ios/$build_profile/libhealthmd_core_uniffi.a" \
+        -output "$simulator_library"
+    xcrun lipo -create \
+        "$target_dir/aarch64-apple-darwin/$build_profile/libhealthmd_core_uniffi.a" \
+        "$target_dir/x86_64-apple-darwin/$build_profile/libhealthmd_core_uniffi.a" \
+        -output "$macos_library"
+    set -- -library "$device_library" -headers "$headers" \
+        -library "$simulator_library" -headers "$headers" \
+        -library "$macos_library" -headers "$headers"
+else
+    # CI links the same production bridge into its arm64 simulator and Mac apps.
+    # This deliberately has no device slice and cannot qualify a release archive.
+    cp "$target_dir/aarch64-apple-ios-sim/$build_profile/libhealthmd_core_uniffi.a" "$simulator_library"
+    cp "$target_dir/aarch64-apple-darwin/$build_profile/libhealthmd_core_uniffi.a" "$macos_library"
+    set -- -library "$simulator_library" -headers "$headers" \
+        -library "$macos_library" -headers "$headers"
+fi
+xcodebuild -create-xcframework "$@" -output "$temp_dir/HealthmdCore.xcframework"
 "$workspace_root/scripts/normalize-apple-xcframework.py" "$temp_dir/HealthmdCore.xcframework"
 
 rm -rf "$output"

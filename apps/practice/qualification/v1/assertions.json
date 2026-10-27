@@ -96,7 +96,7 @@
       "evidenceLayer": "static-policy",
       "declaration": {
         "normalizedAstSha256": "6a1e847f2cc6d93ddfe275747140fbcdb9d964461de299cba71e7efb853ca5ec",
-        "line": 68
+        "line": 45
       },
       "assertions": [
         {
@@ -104,84 +104,84 @@
           "kind": "expect-matcher",
           "normalizedAstSha256": "2ea5b825740d27ebf3c1680c986f9c29c3c0042d607c7537c05c38e605b7ff17",
           "excerpt": "expect(script).toContain('schema: \"practice.synthetic.provenance/3\"')",
-          "line": 70
+          "line": 47
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "7985ec1e4f20e2945e0dbfab7defc80d961c34b4794ce94aa7e9edb40785cdbd",
           "excerpt": "expect(script).toContain(\"productionEnabled: false\")",
-          "line": 71
+          "line": 48
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-003",
           "kind": "expect-matcher",
           "normalizedAstSha256": "0fe38776e34013dc78eb8bda2b3e8bbf6300ace5fab64030b6622f10d13a6372",
           "excerpt": "expect(script).toContain(\"syntheticBoundaryFiles(root, repositoryRoot, { includeDist: false })\")",
-          "line": 72
+          "line": 49
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-004",
           "kind": "expect-matcher",
           "normalizedAstSha256": "3aac508f5c17f54515b2a346094a2da535f272c9e5e76544b0d06425b2f68235",
           "excerpt": "expect(script).toContain(\"candidateCommit: dirty ? null : sourceHeadCommit\")",
-          "line": 73
+          "line": 50
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-006",
           "kind": "expect-matcher",
           "normalizedAstSha256": "bcd10bdef02b0fd7043ad0ef26d2735010c1b412b035eb79c34c70cdd128f893",
           "excerpt": "expect(script).toContain(\"safeProvenanceMetadataPath\")",
-          "line": 74
+          "line": 51
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-007",
           "kind": "expect-matcher",
           "normalizedAstSha256": "116b97c84b3b2e8dabef48861d4ab31fdf81a91f9e6181eb3542c556caa64f79",
           "excerpt": "expect(script).toContain(\"statusDigest\")",
-          "line": 75
+          "line": 52
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-009",
           "kind": "expect-matcher",
           "normalizedAstSha256": "5de5f2d381591a37953a5e664e2a05d3429f08a7780f19fbc88d6b0f36a2ff07",
           "excerpt": "expect(script).toContain(\"pathSha256: digest(item.display)\")",
-          "line": 76
+          "line": 53
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-008",
           "kind": "expect-matcher",
           "normalizedAstSha256": "a4a658a3975f7bf7014ef30293356f2e8cc6929fcf3742fab45ffa1c93e50180",
           "excerpt": "expect(script).not.toContain(\"status: statusLines\")",
-          "line": 77
+          "line": 54
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-010",
           "kind": "expect-matcher",
           "normalizedAstSha256": "95831c4573173f36528ce4a0f7a435bdfc9d137e0c5e460ef95569d93b8796dd",
           "excerpt": "expect(script).not.toContain(\"sourceFiles.push({ path: item.display\")",
-          "line": 78
+          "line": 55
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-005",
           "kind": "expect-matcher",
           "normalizedAstSha256": "f08af5bb45c94266dc20a42e23d40d93f77823de3731075088a52b07119fca9d",
           "excerpt": "expect(gate.operationalEvidence).toEqual([ { name: \"migration\", status: \"not_implemented\" }, { name: \"rollback\", status: \"not_implemented\" }, { name: \"backup_restore\", status: \"…",
-          "line": 80
+          "line": 57
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-011",
           "kind": "expect-matcher",
           "normalizedAstSha256": "f9126cc4637a790031211ce426d31dd75c038d73bb65af0534a3ed6595473d93",
           "excerpt": "expect(script).toContain(\"qualifiedTreeCommit: repositoryHead\")",
-          "line": 86
+          "line": 63
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-012",
           "kind": "expect-matcher",
           "normalizedAstSha256": "ec6b516659f205af89f78bd607a98a1f0650cca9dedd5720062ec213c92b543a",
           "excerpt": "expect(script).toContain(\"sourceHeadCommit\")",
-          "line": 87
+          "line": 64
         }
       ]
     },
@@ -1519,219 +1519,72 @@
     {
       "id": "test-observable-39fca66c5f1593c0",
       "file": "test/component-runtime-boundary.test.ts",
-      "title": "structurally defines focused mobile policy jobs without reusable full-workflow calls",
+      "title": "runs the isolated practice qualification in the shared web lane",
       "command": {
         "id": "vitest",
         "value": "npm test"
       },
       "evidenceLayer": "static-policy",
       "declaration": {
-        "normalizedAstSha256": "4f0e7346fc7540f74ef8e2b6f17142151aa1540a1b99cf59cb183b9cc6b2614d",
+        "normalizedAstSha256": "2d189b1aae8b8ebd7c3685ded448161eba14ea223eaa4e9fe79fb8d75b4430f9",
         "line": 25
       },
       "assertions": [
         {
-          "id": "test-observable-39fca66c5f1593c0-assertion-001",
+          "id": "test-observable-39fca66c5f1593c0-assertion-100",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "150baceb372216fa5c5dfc3a1ff38e4029f99cc5d296e8b5ab4b13fc32ee90a4",
-          "excerpt": "expect(workflow).toContain(\"pull_request:\\n push:\\n branches: [main]\\n paths:\")",
+          "normalizedAstSha256": "cadc2e0e15816b6b8794cfedb69374fab9680e7511f3faf051981745843fe90a",
+          "excerpt": "expect(lane).toContain(\"cd apps/practice\")",
           "line": 27
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-002",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "41b210ac7e7c4e0c85d71107b771d8fd7330f8b7b5b581f28f2fa8161018bd5b",
-          "excerpt": "expect(workflow).not.toMatch(/pull_request:\\s*\\n\\s+paths:/)",
-          "line": 28
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-003",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "ceb06080b6230596e3e1dc16c40891aac60404cf8e173b4233bf525ac51d9df9",
-          "excerpt": "expect(workflow).toContain(\"- 'apps/apple/HealthMd.xcodeproj/**'\")",
-          "line": 29
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-004",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "febb33121efcabe58ba41e3555b696b4c54a1039148d39e2e89dff56f0a9e751",
-          "excerpt": "expect(workflow).toContain(\"- 'apps/android/app/build.gradle.kts'\")",
-          "line": 30
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-027",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "1b798007323d5b3ba2f978fdcbd0bd30cf7ae5b00eccf65b96aee8896886993e",
-          "excerpt": "expect(workflow).toContain(\"run: npm ci\")",
-          "line": 31
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-028",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "6384868d5bf89df1ffa95193a35eb15096ea5c6713667dbc7acfa906dc32ce36",
-          "excerpt": "expect(workflow).toContain(\"run: npm run check:ci\")",
+          "normalizedAstSha256": "49b767461818e10b41d7b79f449c4eb882fa992ffc1ed68dc8da6a295453b32c",
+          "excerpt": "expect(lane).toContain(\"npm run check:ci\")",
+          "line": 28
+        },
+        {
+          "id": "test-observable-39fca66c5f1593c0-assertion-101",
+          "kind": "expect-matcher",
+          "normalizedAstSha256": "fd3d02556f7dbc50c7f5bb2c7a9e2f298ee1c54150f44b4536def7f567a52109",
+          "excerpt": "expect(workflow).toContain(\"pull_request:\")",
+          "line": 30
+        },
+        {
+          "id": "test-observable-39fca66c5f1593c0-assertion-102",
+          "kind": "expect-matcher",
+          "normalizedAstSha256": "41b210ac7e7c4e0c85d71107b771d8fd7330f8b7b5b581f28f2fa8161018bd5b",
+          "excerpt": "expect(workflow).not.toMatch(/pull_request:\\s*\\n\\s+paths:/)",
+          "line": 31
+        },
+        {
+          "id": "test-observable-39fca66c5f1593c0-assertion-103",
+          "kind": "expect-matcher",
+          "normalizedAstSha256": "74309cd15a863d7f14acd7e43d9a6539fbd534bfe990ceb87b8227053df11d1d",
+          "excerpt": "expect(workflow).toContain(\"uses: ./.github/workflows/practice-ci.yml\")",
           "line": 32
         },
         {
-          "id": "test-observable-39fca66c5f1593c0-assertion-005",
+          "id": "test-observable-39fca66c5f1593c0-assertion-027",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "d8abf79e24c6a18d36bc57e7ef73612b3aea01b2d0cc023575e0150d5497a49b",
-          "excerpt": "expect(workflow).toContain(\"practice-focused-apple-policy:\")",
-          "line": 33
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-006",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "53741e151b6b06c9563dd6aef8f988d122cccb2439c5eee7bfbe163945dd4c93",
-          "excerpt": "expect(workflow).toContain(\"practice-focused-android-policy:\")",
+          "normalizedAstSha256": "dc6257bd139f2e5670cad7528cba7114e9685e735d6b477e1a494bac93c604bf",
+          "excerpt": "expect(web).toContain('npm --prefix \"$component\" ci --ignore-scripts')",
           "line": 34
         },
         {
-          "id": "test-observable-39fca66c5f1593c0-assertion-009",
+          "id": "test-observable-39fca66c5f1593c0-assertion-104",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "19d07be230c0b3a2485115c9cf290ec45e28fab1143fcb99a886f4da108cb225",
-          "excerpt": "expect(workflow).toContain(\"workflow_call:\")",
+          "normalizedAstSha256": "de9b8fea01fff7b09308cab6cd0410086157c6b708fceda03e7d201f39519ebe",
+          "excerpt": "expect(web).not.toContain(\"xcodebuild\")",
           "line": 35
         },
         {
-          "id": "test-observable-39fca66c5f1593c0-assertion-007",
+          "id": "test-observable-39fca66c5f1593c0-assertion-105",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "15c33a7305eb8f261470dba85ed2b375edc9109cd1000fef8a1ddbd624f1e0b2",
-          "excerpt": "expect(workflow).not.toContain(\"uses: ./.github/workflows/apple-ci.yml\")",
+          "normalizedAstSha256": "8fe56d2220e3dc436ffdd5501c9ce32219082d1104bf01d111e124a7ce775e8e",
+          "excerpt": "expect(web).not.toContain(\"wrangler deploy\")",
           "line": 36
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-008",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "92d4712ffeed80c967fcb92d9fd30322ceb84d17e0096ef4930942ff499013d3",
-          "excerpt": "expect(workflow).not.toContain(\"uses: ./.github/workflows/android-ci.yml\")",
-          "line": 37
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-010",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "edce0f87558f6bb79b0b63eb8ec2a520aeee8e15c2060629d0d51cc63b96bb85",
-          "excerpt": "expect(workflow).not.toContain(\"xcodebuild\")",
-          "line": 38
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-011",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "45328823fa3b79a3375295fd4bf467fe7e739c27aa345b296f5bbd328e29c87c",
-          "excerpt": "expect(workflow).toContain('plutil -convert json -o \"$project_json\" apps/apple/HealthMd.xcodeproj/project.pbxproj')",
-          "line": 39
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-012",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "78c32676626aad037ce8bc1fd6edfc8dc8e0bd579936e1ae39cd923e316cf53c",
-          "excerpt": "expect(workflow).toContain('value.get(\"isa\") == \"PBXNativeTarget\" and value.get(\"name\") == \"HealthMd\"')",
-          "line": 40
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-013",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "59a38e3f927a576c8e295021b3d19f2c3be9a20d1a5e288b4b12741f7bd9c576",
-          "excerpt": "expect(workflow).toContain('checked_configuration_names = {\"Release\", \"Release-iOS\"}')",
-          "line": 41
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-015",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "1d1cb15bd486836f2b321d4472b0d3ff9ea05461b17830f1afd1c0cf3cb82d76",
-          "excerpt": "expect(workflow).toContain(\"if len(releases) != 2 or {name for name, _ in releases} != checked_configuration_names:\")",
-          "line": 42
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-014",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "eec90d1c29e3a8b8bac3cbf0d5a9f2aed434cc3629b181eb84403ecccbc029c4",
-          "excerpt": "expect(workflow).toContain(\"baseConfigurationReference\")",
-          "line": 43
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-016",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "67d33f7e90041d2fb1cdcb876f697353b7afdfb681f6cf8b6753b2a22e902600",
-          "excerpt": "expect(workflow).toContain(\"if marker in json.dumps(project, sort_keys=True):\")",
-          "line": 44
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-029",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "6e79093d75dbf9704956fcf8e9ff9190c42013bc4465069313959a5a1bd50325",
-          "excerpt": "expect(workflow).toContain('os.environ.get(\"XCODE_XCCONFIG_FILE\")')",
-          "line": 45
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-030",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "ccad57bf819ed89cd88dbfc3eb578b936ce9fab307176d5fe52205b4f9558cdc",
-          "excerpt": "expect(workflow).toContain(\"for variable, value in os.environ.items():\")",
-          "line": 46
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-019",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "2970ec7efd611851a05dc4f4157fba9825bc52e2642ef21deaa0be6f516af19d",
-          "excerpt": "expect(workflow).toContain(\"swiftc \\\"$policy\\\" \\\"$harness\\\"\")",
-          "line": 47
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-020",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "e8fb64471caa7bdc30618c6fb51ea38be140582087a30be2c3f1e9baf75965cf",
-          "excerpt": "expect(workflow).toContain(\"swiftc -D HEALTHMD_PRACTICE_COMPILED_IN\")",
-          "line": 48
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-021",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "0b32b7d73becb92afd73980abd24ec56036328b76e69f6efcb0fc0d17c44c6bd",
-          "excerpt": "expect(workflow).toContain(\"-Dhealthmd.practice.expectedCompiledIn=false\")",
-          "line": 49
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-022",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "a4a4ee2e846e8d9257adf70abccbab8b41bae9f7625d6c0b9cf242be780bc21a",
-          "excerpt": "expect(workflow).toContain(\"-Dhealthmd.practice.expectedCompiledIn=true\")",
-          "line": 50
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-023",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "fa99c6659c43276a7486d798697dd3866cec6fbeb5d336b79178a91a9136d449",
-          "excerpt": "expect(workflow).toContain(\"PRACTICE_COMPILED_IN: included\")",
-          "line": 51
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-024",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "db37788a81e933d318fd3cc806b98d400189227350a2594cf5d5406ade7e2eb6",
-          "excerpt": "expect(workflow).toContain(\":app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest\")",
-          "line": 56
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-031",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "61cf6d80bd135f55c0e07b2a265f890342c59cd00cd1878489ac4325456d08e0",
-          "excerpt": "expect(workflow.match(/:app:testPlayDebugUnitTest --tests com\\.healthmd\\.domain\\.practice\\.PracticeFeaturePolicyTest/g)).toHaveLength(2)",
-          "line": 57
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-025",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "02fdbd8aab715be1062719fd9024cef487b4a04584c70b1bee8ab3b7d16d6658",
-          "excerpt": "expect(workflow).toContain(\"needs: [changes, validate, practice-focused-apple-policy, practice-focused-android-policy]\")",
-          "line": 58
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-026",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "20c21c43e37b989e24eb6904877f9d55d39517ecb8befb5512210638d09c17b1",
-          "excerpt": "expect(workflow.match(/ref: \\$\\{\\{ github\\.sha \\}\\}/g)).toHaveLength(3)",
-          "line": 59
         }
       ]
     },
@@ -3479,7 +3332,7 @@
       "evidenceLayer": "static-policy",
       "declaration": {
         "normalizedAstSha256": "d9bceef84b9515e5f2f5695052a32a231acc30f75da404fdb8a2d0a4dc17f31e",
-        "line": 90
+        "line": 67
       },
       "assertions": [
         {
@@ -3487,14 +3340,14 @@
           "kind": "expect-matcher",
           "normalizedAstSha256": "e19ba82d304d5b57564859bc42f61ada9b921585f427ed34b3576ca24b95c282",
           "excerpt": "expect(safeProvenanceMetadataPath(\"src/synthetic/service.ts\")).toBe(true)",
-          "line": 91
+          "line": 68
         },
         {
           "id": "test-observable-9fcb953d48f446a1-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "e888e192a0bd07550d5a3a32d2fe85d1f12cc2f4db8361d159113b2342252143",
           "excerpt": "expect(safeProvenanceMetadataPath(path)).toBe(false)",
-          "line": 92
+          "line": 69
         }
       ]
     },
@@ -4766,7 +4619,7 @@
       "evidenceLayer": "static-policy",
       "declaration": {
         "normalizedAstSha256": "4dda5f9066cd47bc0ee78bcadf20b09aa7f3930050f5e37a95e17fdc161e3a5d",
-        "line": 62
+        "line": 39
       },
       "assertions": [
         {
@@ -4774,35 +4627,35 @@
           "kind": "expect-matcher",
           "normalizedAstSha256": "9102d650f4eab94c394b6e6233154dcb7310131cefaed695bf4a5a26b515e2a5",
           "excerpt": "expect(source).not.toMatch(/(?:from|import\\s*)\\s*[\"'][^\"']*(?:apps\\/website|\\/worker\\/)/)",
-          "line": 64
+          "line": 41
         },
         {
           "id": "test-observable-b53a0818813d7262-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "e33d086f30cba5cbb066dbd713442f6ac73edfd3e1e011006f3b73669652fc18",
           "excerpt": "expect(wrangler).toContain('PRACTICE_RUNTIME_MODE = \"synthetic\"')",
-          "line": 65
+          "line": 42
         },
         {
           "id": "test-observable-b53a0818813d7262-assertion-003",
           "kind": "expect-matcher",
           "normalizedAstSha256": "df9674cc938348f6a278dab3f778dd650499c3aaf4457ad736a4314934c881dc",
           "excerpt": "expect(wrangler).toContain(\"workers_dev = false\")",
-          "line": 65
+          "line": 42
         },
         {
           "id": "test-observable-b53a0818813d7262-assertion-004",
           "kind": "expect-matcher",
           "normalizedAstSha256": "7ceef5f7f67ca3204a09cf32835d3760c2a131bfeb49d01761dc1d7fb9af78aa",
           "excerpt": "expect(wrangler).not.toMatch(/^routes?\\s*=/m)",
-          "line": 65
+          "line": 42
         },
         {
           "id": "test-observable-b53a0818813d7262-assertion-005",
           "kind": "expect-matcher",
           "normalizedAstSha256": "376c941c5ffe5ebbcda9b6383f00b3ab64b5b23a3c8de1381604e91bbb7d6a37",
           "excerpt": "expect(wrangler).not.toMatch(/^\\[\\[(?:d1_databases|kv_namespaces|r2_buckets|queues)\\]\\]/m)",
-          "line": 65
+          "line": 42
         }
       ]
     },
@@ -5583,7 +5436,7 @@
       "evidenceLayer": "static-policy",
       "declaration": {
         "normalizedAstSha256": "feb3441e9d684863479713fa202d5bb0b02f349f91c8fb98a29cce92401d0d2c",
-        "line": 95
+        "line": 72
       },
       "assertions": [
         {
@@ -5591,21 +5444,21 @@
           "kind": "expect-matcher",
           "normalizedAstSha256": "e63101a64398f9d0d6eef0e99fdbe383b04aa4f9b6c37f585a4929aaf7f6ed9b",
           "excerpt": "expect(gate).toMatchObject({ designation: \"synthetic-qualification-only-not-production-ready\", productionEnabled: false, productionReady: false, syntheticRuntimeRequired: true })",
-          "line": 97
+          "line": 74
         },
         {
           "id": "test-observable-c8db8d065d24e568-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "dd71f5ecc7db34f6b47f4d6ddc0909369bd3019ce5f214aa48db51521fcd1811",
           "excerpt": "expect(gate.mandatoryProductionGates.every(item => item.approved === false && item.status === \"pending\")).toBe(true)",
-          "line": 98
+          "line": 75
         },
         {
           "id": "test-observable-c8db8d065d24e568-assertion-003",
           "kind": "expect-matcher",
           "normalizedAstSha256": "e56a5bdddee9337f2d6d7a0fbc6f839c0893aa96940eb655fa5e158524545ce6",
           "excerpt": "expect(gate.operationalEvidence.every(item => item.status === \"not_implemented\")).toBe(true)",
-          "line": 98
+          "line": 75
         }
       ]
     },

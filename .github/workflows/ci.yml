@@ -1,0 +1,44 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main, testing]
+  workflow_dispatch:
+  repository_dispatch:
+    types: [healthmd-reference-updated]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  rust:
+    uses: ./.github/workflows/cli-ci.yml
+  apple:
+    uses: ./.github/workflows/apple-ci.yml
+  android:
+    uses: ./.github/workflows/android-ci.yml
+  web:
+    uses: ./.github/workflows/practice-ci.yml
+  gate:
+    name: CI
+    if: ${{ always() }}
+    needs: [rust, apple, android, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ci-receipt-*
+          path: .pi/ci-receipts
+      - name: Require every lane and the complete wall-clock budget
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 -c 'import json,os; r=json.loads(os.environ["RESULTS"]); assert len(r)==4 and all(v["result"]=="success" for v in r.values()),r'
+          python3 scripts/ci/verify_run.py

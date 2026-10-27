@@ -205,11 +205,11 @@
         },
         {
           "observableId": "TODO-81774f3a-work-01-observable-04",
-          "observableDescription": "Material criterion facet: The repository Practice workflow defines an unconditional pull-request entrypoint and a path-scoped main-branch push entrypoint. Exact assertion observables: `expect(workflow).toContain(\"pull_request:\\n push:\\n branches: [main]\\n paths:\")` and `expect(workflow).not.toMatch(/pull_request:\\s*\\n\\s+paths:/)`.",
+          "observableDescription": "Material criterion facet: The shared CI runs Practice qualification for every pull request using locked dependencies. Exact assertion observables: `expect(workflow).toContain(\"pull_request:\")` and `expect(workflow).not.toMatch(/pull_request:\\s*\\n\\s+paths:/)`.",
           "observableRef": "test-observable-39fca66c5f1593c0",
           "assertionRefs": [
-            "test-observable-39fca66c5f1593c0-assertion-001",
-            "test-observable-39fca66c5f1593c0-assertion-002"
+            "test-observable-39fca66c5f1593c0-assertion-101",
+            "test-observable-39fca66c5f1593c0-assertion-102"
           ]
         },
         {
@@ -224,7 +224,7 @@
         },
         {
           "observableId": "TODO-81774f3a-work-01-observable-06",
-          "observableDescription": "Material criterion facet: The repository Practice workflow structurally performs locked npm installation and invokes the complete component CI command. Exact assertion observables: `expect(workflow).toContain(\"run: npm ci\")` and `expect(workflow).toContain(\"run: npm run check:ci\")`.",
+          "observableDescription": "Material criterion facet: The shared CI runs Practice qualification for every pull request using locked dependencies. Exact assertion observables: `expect(web).toContain('npm --prefix \"$component\" ci --ignore-scripts')` and `expect(lane).toContain(\"npm run check:ci\")`.",
           "observableRef": "test-observable-39fca66c5f1593c0",
           "assertionRefs": [
             "test-observable-39fca66c5f1593c0-assertion-027",
@@ -501,7 +501,7 @@
         },
         {
           "observableId": "TODO-81774f3a-acceptance-03-observable-02",
-          "observableDescription": "Material criterion facet: The repository Practice workflow structurally performs locked npm installation and invokes the complete component CI command. Exact assertion observables: `expect(workflow).toContain(\"run: npm ci\")` and `expect(workflow).toContain(\"run: npm run check:ci\")`.",
+          "observableDescription": "Material criterion facet: The shared CI runs Practice qualification for every pull request using locked dependencies. Exact assertion observables: `expect(web).toContain('npm --prefix \"$component\" ci --ignore-scripts')` and `expect(lane).toContain(\"npm run check:ci\")`.",
           "observableRef": "test-observable-39fca66c5f1593c0",
           "assertionRefs": [
             "test-observable-39fca66c5f1593c0-assertion-027",

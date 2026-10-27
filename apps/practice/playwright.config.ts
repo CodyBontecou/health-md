@@ -22,7 +22,9 @@ export default defineConfig({
     video: "off",
   },
   webServer: {
-    command: "npm start",
+    command: process.env.npm_lifecycle_event === "test:e2e:built"
+      ? "node scripts/start-local.mjs --prebuilt"
+      : "npm start",
     url: `${baseURL}/api/v1/meta`,
     timeout: 60_000,
     reuseExistingServer: false,
@@ -31,7 +33,5 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
 });

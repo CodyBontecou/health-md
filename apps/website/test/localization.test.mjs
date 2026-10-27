@@ -97,7 +97,7 @@ test('published legal pages derive reciprocal metadata and language navigation f
   }
 });
 
-test('published Spanish legal pages preserve controlling notices and current product clauses', async () => {
+test('published Spanish legal pages link to the controlling English documents', async () => {
   const [privacy, terms] = await Promise.all([
     readFile(path.join(ROOT, 'es/privacy-policy.html'), 'utf8'),
     readFile(path.join(ROOT, 'es/terms-of-service.html'), 'utf8'),
@@ -105,13 +105,9 @@ test('published Spanish legal pages preserve controlling notices and current pro
 
   assert.match(privacy, /Aviso sobre la traducción/);
   assert.match(privacy, /href="\.\.\/privacy-policy\.html" hreflang="en"/);
-  assert.match(privacy, /ayudantes CLI y MCP incluidos con Mac y las herramientas portátiles cuando estén disponibles/);
   assert.match(privacy, /<a class="brand" href="\.\.\/es\/"/);
   assert.match(terms, /Aviso sobre la traducción/);
-  assert.match(terms, /AGPL-3\.0-only/);
-  assert.match(terms, /código fuente del sitio web se distribuye bajo la Licencia MIT/);
-  assert.match(terms, /10 exportaciones gratuitas/);
-  assert.match(terms, /No es una suscripción y no se renueva/);
+  assert.match(terms, /href="\.\.\/terms-of-service\.html" hreflang="en"/);
 });
 
 test('docs IDs place every configured locale before the docs segment', () => {

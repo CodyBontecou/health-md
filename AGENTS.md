@@ -56,6 +56,14 @@ For Apple App Store releases, follow the complete synchronization contract in `a
 
 ## CI and paths
 
+The default regression strategy is `make test` / `.github/workflows/ci.yml`: four
+parallel retained lanes, 90 seconds each and 120 seconds overall. Read
+`docs/qa/two-minute-ci.md` before adding coverage. Prefer a boundary assertion in an
+existing journey; replacing redundant coverage is allowed to preserve the budget.
+Broad historical suites are diagnostic tools, not extra PR/nightly/release regression
+requirements. Product contracts and release signing/packaging rules still apply.
+
+
 - Keep GitHub Actions workflows in the repository-root `.github/workflows` directory.
 - Use explicit component working directories and component-prefixed cache/artifact paths.
 - Keep `apps/cli` and `packages/healthmd-core-rust` as independent Cargo workspaces with independent lockfiles and target directories.

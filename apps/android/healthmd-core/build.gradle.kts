@@ -9,7 +9,10 @@ plugins {
 }
 
 val pinnedNdkVersion = "27.1.12297006"
-val expectedAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+val ciAbi = providers.gradleProperty("healthmd.ciAbi").orNull?.also {
+    require(it in setOf("arm64-v8a", "x86_64")) { "healthmd.ciAbi must be arm64-v8a or x86_64" }
+}
+val expectedAbis = ciAbi?.let(::listOf) ?: listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
 val rustWorkspace = rootProject.layout.projectDirectory.dir("../../packages/healthmd-core-rust")
 val rustBuildScript = rustWorkspace.file("scripts/build-android-cdylibs.sh")
 val bindingsScript = rustWorkspace.file("scripts/generate-kotlin-bindings.sh")
@@ -65,6 +68,10 @@ fun registerRustPreparation(
         "CARGO_TARGET_DIR",
         layout.buildDirectory.dir("rust-target/android-$profile").get().asFile.absolutePath,
     )
+    if (ciAbi != null) {
+        environment("HEALTHMD_CORE_ANDROID_ABIS", ciAbi)
+        doFirst { check(profile == "debug") { "healthmd.ciAbi is debug-only; release requires every supported ABI" } }
+    }
     commandLine(rustBuildScript.asFile.absolutePath, profile, outputDirectory.get().asFile.absolutePath)
 
     doFirst {

@@ -53,7 +53,7 @@ make test-wake
 make test-website
 ```
 
-`make test` runs all eight component gates with at most four Make jobs, including separate iOS and macOS Xcode build directories. It completes independent gates after a failure and returns a failing exit status. Use `make test TEST_JOBS=1` for serial execution or set `TEST_JOBS` to another positive limit. Android defaults to two Gradle workers to bound Kotlin compiler memory and reuses the component init script so JVM tests execute against current repository files while compiled outputs remain reusable. Other component tools may use their own compiler or test workers within each Make job.
+`make test` runs the same four retained CI lanes concurrently, with a 90-second deadline per lane and a 120-second overall limit. Install component dependencies, the pinned external consumer, and native toolchains first. Select an already booted isolated Android target with `ANDROID_SERIAL` and its ABI with `HEALTHMD_CI_ANDROID_ABI`. Logs and timing receipts are written to a unique ignored `.pi/ci/local-*` directory. See [the test strategy](docs/qa/two-minute-ci.md). Explicit component commands remain available for diagnosis and are not additional PR gates.
 
 Additional Gradle options can be supplied with `ANDROID_TEST_ARGS='--max-workers=2 --init-script scripts/ci-gradle.init.gradle --info'`. These arguments are evaluated from `apps/android`.
 
