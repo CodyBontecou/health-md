@@ -53,13 +53,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
         rollupPeriods: [HealthRollupPeriod],
         requestedRange: HealthRollupRangeRequest? = nil
     ) throws -> Data {
-        guard registry.profileId == AppleExportEnginePin.profileID,
-              registry.publicProfileId == AppleExportEnginePin.publicProfileID,
-              registry.publicSchema == HealthMdExportSchema.identifier,
-              registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
-              registry.profileRevision == 1,
-              registry.registryVersion == registryVersion,
-              registry.registrySha256 == HealthMetrics.registrySHA256
+        guard AppleExportEnginePin.supportsRegistry(registry)
         else { throw AdapterError.invalidRegistry }
         guard calendarTimeZoneIdentifier == "UTC"
                 || TimeZone.knownTimeZoneIdentifiers.contains(calendarTimeZoneIdentifier)
@@ -98,7 +92,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
             "registry_sha256": registry.registrySha256,
             "profile_revision": semanticProfileRevision,
             "session_id": sessionID,
-            "profile": AppleExportEnginePin.profileID,
+            "profile": registry.profileId,
             "calendar_time_zone": calendarTimeZoneIdentifier,
             "selected_selection_ids": selected,
             "disabled_output_keys": disabledOutputKeys,
@@ -133,13 +127,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
         calendarTimeZoneIdentifier: String,
         startingSourceOrdinal: UInt64 = 0
     ) throws -> EncodedBatch {
-        guard registry.profileId == AppleExportEnginePin.profileID,
-              registry.publicProfileId == AppleExportEnginePin.publicProfileID,
-              registry.publicSchema == HealthMdExportSchema.identifier,
-              registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
-              registry.profileRevision == 1,
-              registry.registryVersion == registryVersion,
-              registry.registrySha256 == HealthMetrics.registrySHA256 else {
+        guard AppleExportEnginePin.supportsRegistry(registry) else {
             throw AdapterError.invalidRegistry
         }
         guard (calendarTimeZoneIdentifier == "UTC"

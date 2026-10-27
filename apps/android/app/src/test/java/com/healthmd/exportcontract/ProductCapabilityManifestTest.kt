@@ -37,9 +37,16 @@ class ProductCapabilityManifestTest {
         assertEquals("Capability IDs must be unique", capabilities.size, states.size)
 
         assertEquals(sharedCapabilities + androidCapabilities, idsWithState(states, "available"))
-        assertEquals(appleCapabilities + "source.private-platform-database", idsWithState(states, "unavailable"))
+        assertEquals(
+            appleCapabilities + setOf(
+                "authorization.history-window-detection",
+                "source.private-platform-database",
+            ),
+            idsWithState(states, "unavailable"),
+        )
         assertEquals(
             setOf(
+                "automation.api-recovery-authority",
                 "cloud.opt-in-export-receiver",
                 "cloud.read-only-mcp",
                 "core.shared-rust-profile-engine",
@@ -199,6 +206,8 @@ class ProductCapabilityManifestTest {
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+            "authorization.history-window-detection",
+            "automation.api-recovery-authority",
             "cloud.opt-in-export-receiver",
             "cloud.read-only-mcp",
             "source.private-platform-database",

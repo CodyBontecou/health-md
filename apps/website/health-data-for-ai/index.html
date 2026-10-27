@@ -50,7 +50,7 @@
             "name": "Which AI assistants work with Health.md?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Claude, Codex, and compatible MCP hosts can use the chosen Health.md MCP surface. Assistants that accept CSV or JSON can analyze files you provide. Available tools and inline rendering depend on the host; inspect capabilities before choosing a workflow."
+              "text": "Claude, Codex, and compatible MCP hosts can use the chosen Health.md MCP surface. Assistants that accept CSV or JSON can analyze files you provide. Available tools and inline rendering depend on the host; inspect capabilities before choosing a workflow. This is not a hosted-client compatibility guarantee."
             }
           },
           {
@@ -58,7 +58,7 @@
             "name": "Do I need the Mac app to use MCP?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "The bundled healthmd-mcp helper requires Health.md for Mac open; existing encrypted context can be queried without a live iPhone, while fresh acquisition needs the connected source. The separate healthmd mcp serve preview does not require the Mac app and pairs with a compatible foreground iPhone. It remains unqualified for stable 1.0. File uploads require neither MCP setup."
+              "text": "No for standalone: healthmd mcp serve runs on macOS, Linux, and Windows as an explicitly unqualified preview, not a qualified stable release. It connects directly to a paired foreground phone without the Mac app. Install the CLI, enable Direct CLI Access, and pair with healthmd direct pair. Typed queries require a query-capable iPhone; Android typed MCP queries are not supported. The legacy bundled healthmd-mcp helper requires Health.md for Mac installed and open. It queries encrypted Mac context; use a connected foreground iPhone for explicit refreshes and fresh exports. Both topologies need a local MCP host with stdio support. File exports work from the iPhone app alone. Existing encrypted context can be queried without a live iPhone; fresh acquisition needs the connected source. File uploads require neither MCP setup."
             }
           },
           {
@@ -82,7 +82,7 @@
             "name": "Is my health data sent to Health.md's servers for AI use?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Not by default. Local file exports and direct device MCP queries do not create a Health.md server copy. The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it; a separately authorized read-only cloud MCP endpoint can return retained fields to your agent. There is no public signup and no automatic device sync. Agent hosts and model providers may retain or process files and returned values under their own policies."
+              "text": "Not automatically. Neither local MCP topology automatically uploads health records to Health.md Cloud. Local pairing does not authorize Cloud uploads or third-party Cloud reads. The separately authorized read-only Cloud MCP pilot reads retained exports, not a live phone. The optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it. This disposable single-user VM pilot has no backups or independent security-review sign-off. General production rollout remains unapproved. There is no public signup and no automatic device sync. Agent hosts and model providers may retain or process files and returned values under their own policies. You choose which files or query results to share with an AI client."
             }
           }
         ]
@@ -115,7 +115,7 @@
         <p class="about-eyebrow">Health data × AI</p>
         <h1 id="ai-title">Put your health data to work with AI.</h1>
         <p class="about-value-prop"><strong>Choose a file upload, the bundled Mac MCP helper, or the standalone CLI/MCP preview. Each gives an assistant a different path to selected Apple Health data.</strong></p>
-        <p class="about-intro">These local-first paths do not create a Health.md server copy by default. Agent hosts and model providers may process the files or returned values you share under their own policies.</p>
+        <p class="about-intro">These local-first paths do not create a Health.md server copy by default. Connecting local MCP does not enable Cloud uploads. Agent hosts and model providers may process the files or returned values you share under their own policies.</p>
         <div class="hero-actions" aria-label="Download Health.md">
           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
             <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
@@ -148,21 +148,27 @@
               <p><a href="/blog/query-apple-health-with-claude-or-codex/">Follow the standalone query guide</a> and check <a href="/docs/release-status/">release status and compatibility</a> before installing.</p>
             </div>
           </div>
+          <p class="section-lede">Standalone: healthmd mcp serve runs on macOS, Linux, and Windows as an explicitly unqualified preview, not a qualified stable release. It connects directly to a paired foreground phone without the Mac app. Install the CLI, enable Direct CLI Access, and pair with healthmd direct pair. Typed queries require a query-capable iPhone; Android typed MCP queries are not supported. The legacy bundled healthmd-mcp helper requires Health.md for Mac installed and open. It queries encrypted Mac context; use a connected foreground iPhone for explicit refreshes and fresh exports. Both topologies need a local MCP host with stdio support. File exports work from the iPhone app alone.</p>
           <p class="section-lede">Choose the connection before copying an MCP configuration. The bundled helper and standalone CLI have separate pairing, credentials, context, and jobs. A successful readiness check is not release or OS qualification. For Android files, start with the <a href="/health-connect-export/">Health Connect export guide</a>; the documented standalone typed-query preview requires iPhone.</p>
         </section>
 
         <section class="about-section" id="per-assistant">
           <p class="section-kicker">Per assistant</p>
           <h2>Setup notes</h2>
+          <p class="section-lede">The standalone <code>healthmd mcp serve</code> server runs on macOS, Linux, and Windows as an explicitly unqualified preview, not a qualified stable release. It connects directly to a paired foreground phone without the Mac app. Typed queries require a query-capable iPhone; Android typed MCP queries are not supported.</p>
+          <p>The legacy bundled <code>healthmd-mcp</code> helper requires Health.md for Mac installed and open. It queries encrypted Mac context; use a connected foreground iPhone for explicit refreshes and fresh exports.</p>
+          <p>Both topologies need a local MCP host with stdio support. For standalone, install the CLI, enable Direct CLI Access, and pair with <code>healthmd direct pair</code> over Manual IP or Tailscale. Keep Health.md foreground on the phone for each new request. Use native credential storage: Keychain on macOS, an unlocked Secret Service on Linux, or Credential Manager on Windows.</p>
           <div class="difference-list">
             <div>
               <span>01</span>
               <h3>Claude</h3>
+              <p>For standalone, configure the absolute installed <code>healthmd</code> path with arguments <code>mcp serve</code> in Claude Desktop's MCP configuration or a trusted Claude Code <code>.mcp.json</code>. For the legacy Mac topology, use the bundled <code>healthmd-mcp</code> path instead.</p>
               <p>For a file upload, use the <a href="/blog/analyze-apple-health-with-claude/">Claude walkthrough</a>. For MCP, choose the bundled Mac or standalone preview instructions above and configure that surface's executable. Inline chart support depends on the host and available tools; inspect capabilities rather than assuming every client renders the same result.</p>
             </div>
             <div>
               <span>02</span>
               <h3>Codex</h3>
+              <p>For standalone, use <code>healthmd setup codex</code> to pair a foreground iPhone and configure <code>healthmd mcp serve</code>.</p>
               <p>Use the <a href="/docs/guides/connect-agent/">bundled Mac setup</a> for encrypted-context queries, or the <a href="/blog/query-apple-health-with-claude-or-codex/">standalone preview guide</a> for direct-phone access. Keep their configuration and pairing steps separate. Run readiness and capability discovery before selecting a query.</p>
             </div>
             <div>
@@ -191,6 +197,7 @@
           <h2>Scoped by default</h2>
           <p class="section-lede"><strong>Choose an explicit scope and inspect what came back.</strong> File uploads share selected snapshots. MCP queries return bounded results with coverage, missing intervals, and limitations; preserve those details in the answer rather than treating an assistant's summary as proof of completeness.</p>
           <p>Acquisition and file-writing actions have their own authorization and host approval controls. Health.md reports factual observations with units, provenance, coverage, and missingness. It does not diagnose or recommend treatment. Direct device queries do not automatically upload results to Health.md.</p>
+          <p>Local pairing does not authorize Cloud uploads or third-party Cloud reads. The separately authorized read-only Cloud MCP pilot reads retained exports, not a live phone. This disposable single-user VM pilot has no backups or independent security-review sign-off. General production rollout remains unapproved.</p>
           <p>The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it. A separately authorized read-only cloud MCP endpoint can return retained fields to an agent. There is no public signup and no automatic device sync. Cloud MCP is distinct from both local MCP paths described above. Review the <a href="/privacy-policy.html#retention">privacy policy</a> for retention, deletion, and the pilot's unbacked storage limits; your agent or model provider's policies govern its copy.</p>
         </section>
 
@@ -220,11 +227,11 @@
           <div class="faq-list">
             <div>
               <h3>Which AI assistants work with Health.md?</h3>
-              <p>Claude, Codex, and compatible MCP hosts can use the chosen Health.md MCP surface. Assistants that accept CSV or JSON can analyze files you provide. Available tools and inline rendering depend on the host; inspect capabilities before choosing a workflow.</p>
+              <p>Claude, Codex, and compatible MCP hosts can use the chosen Health.md MCP surface. Assistants that accept CSV or JSON can analyze files you provide. Available tools and inline rendering depend on the host; inspect capabilities before choosing a workflow. This is not a hosted-client compatibility guarantee.</p>
             </div>
             <div>
               <h3>Do I need the Mac app to use MCP?</h3>
-              <p>The bundled healthmd-mcp helper requires Health.md for Mac open; existing encrypted context can be queried without a live iPhone, while fresh acquisition needs the connected source. The separate healthmd mcp serve preview does not require the Mac app and pairs with a compatible foreground iPhone. It remains unqualified for stable 1.0. File uploads require neither MCP setup.</p>
+              <p>No for standalone: healthmd mcp serve runs on macOS, Linux, and Windows as an explicitly unqualified preview, not a qualified stable release. It connects directly to a paired foreground phone without the Mac app. Install the CLI, enable Direct CLI Access, and pair with healthmd direct pair. Typed queries require a query-capable iPhone; Android typed MCP queries are not supported. The legacy bundled healthmd-mcp helper requires Health.md for Mac installed and open. It queries encrypted Mac context; use a connected foreground iPhone for explicit refreshes and fresh exports. Both topologies need a local MCP host with stdio support. File exports work from the iPhone app alone. Existing encrypted context can be queried without a live iPhone; fresh acquisition needs the connected source. File uploads require neither MCP setup.</p>
             </div>
             <div>
               <h3>Does the agent see all of my health data?</h3>
@@ -236,7 +243,7 @@
             </div>
             <div>
               <h3>Is my health data sent to Health.md's servers for AI use?</h3>
-              <p>Not by default. Local file exports and direct device MCP queries do not create a Health.md server copy. The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it; a separately authorized read-only cloud MCP endpoint can return retained fields to your agent. There is no public signup and no automatic device sync. Agent hosts and model providers may retain or process files and returned values under their own policies.</p>
+              <p>Not automatically. Neither local MCP topology automatically uploads health records to Health.md Cloud. Local pairing does not authorize Cloud uploads or third-party Cloud reads. The separately authorized read-only Cloud MCP pilot reads retained exports, not a live phone. The optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it. This disposable single-user VM pilot has no backups or independent security-review sign-off. General production rollout remains unapproved. There is no public signup and no automatic device sync. Agent hosts and model providers may retain or process files and returned values under their own policies. You choose which files or query results to share with an AI client.</p>
             </div>
           </div>
         </section>

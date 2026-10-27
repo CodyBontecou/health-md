@@ -375,6 +375,21 @@ class APIEndpointExportEngineIntegrationTest {
 
     @Test
     fun durableRestartUploadsOnlyUnacknowledgedPreparedBodiesWithoutRecapture() = runTest {
+        assertDurablePreparedReplay(testPin(ExportEngineMode.rust))
+    }
+
+    @Test
+    fun historicalAuthorityPreparedBodiesReplayWithoutUpgradingPinOrRerendering() = runTest {
+        assertDurablePreparedReplay(testPin(ExportEngineMode.rust).copy(
+            registrySha256 = com.healthmd.domain.exportengine.ExportEnginePin.HISTORICAL_REGISTRY_SHA256,
+        ))
+    }
+
+    private suspend fun assertDurablePreparedReplay(pin: com.healthmd.domain.exportengine.ExportEnginePin) {
+        val frozenSettings = settings().copy(
+            executionEnginePin = pin,
+            executionEngineAuthorityIsFrozen = true,
+        )
         val third = second.plusDays(1)
         val operationId = "11111111-2222-3333-4444-555555555555"
         val bodies = listOf(
@@ -396,7 +411,7 @@ class APIEndpointExportEngineIntegrationTest {
             capture = firstCapture,
             native = APIExportNativePlanBuilder { error("Rust must not invoke native") },
             rust = APIExportRustPlanner {
-                APIExportRustPlan(testPin(ExportEngineMode.rust), apiPlan(it, bodies))
+                APIExportRustPlan(pin, apiPlan(it, bodies))
             },
             uploader = firstUploader,
             credentials = credentials,
@@ -405,7 +420,7 @@ class APIEndpointExportEngineIntegrationTest {
 
         val partial = firstRunner.exportDates(
             dates = listOf(first, second, third),
-            settings = settings(),
+            settings = frozenSettings,
             durableOperationId = operationId,
             durableSettingsSnapshotJson = "snapshot-v1",
         )
@@ -429,14 +444,18 @@ class APIEndpointExportEngineIntegrationTest {
 
         val resumed = resumedRunner.exportDates(
             dates = listOf(third),
-            settings = settings(),
+            settings = frozenSettings,
             durableOperationId = operationId,
             durableSettingsSnapshotJson = "snapshot-v1",
         )
 
         assertThat(resumedCapture.calls).isEmpty()
         assertThat(resumedUploader.payloads).hasSize(1)
-        assertThat(resumedUploader.payloads.single()).contains("immutable-second")
+        // apiPlan expands preview descriptors into real envelopes. Resume must
+        // reproduce the exact attempted prepared envelope, not its descriptor.
+        assertThat(firstUploader.payloads).hasSize(2)
+        assertThat(resumedUploader.payloads.single()).isEqualTo(firstUploader.payloads[1])
+        assertThat(store.load(operationId)!!.enginePinJson).isEqualTo(com.healthmd.domain.exportengine.ExportEnginePinCodec.encodeCanonical(pin))
         assertThat(resumed.successCount).isEqualTo(1)
         assertThat(resumed.totalCount).isEqualTo(1)
         assertThat(resumed.failedDateDetails).isEmpty()

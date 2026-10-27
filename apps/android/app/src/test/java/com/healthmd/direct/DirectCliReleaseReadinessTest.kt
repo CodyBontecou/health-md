@@ -93,7 +93,7 @@ class DirectCliReleaseReadinessTest {
     }
 
     @Test
-    fun qrPairingUsesOptionalOpenSourceCameraPathWithoutExternalDeepLinkAuthority() {
+    fun qrPairingUsesOptionalOpenSourceCameraPathWithoutPairingDeepLinkAuthority() {
         val manifest = read("app/src/main/AndroidManifest.xml")
         assertThat(manifest).contains("android.permission.CAMERA")
         assertThat(manifest).contains("android.hardware.camera.any")

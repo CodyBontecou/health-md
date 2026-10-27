@@ -38,7 +38,7 @@
   "supportsDurableConnectedExportRecovery" : true,
   "supportsGranularPayloads" : true,
   "supportsIPhoneExportRequests" : true,
-  "supportsIPhoneInitiatedContextRefresh" : false,
+  "supportsIPhoneInitiatedContextRefresh" : true,
   "supportsJobCancellation" : true,
   "supportsMacDestinationStatus" : true,
   "supportsMacExportJobs" : true,

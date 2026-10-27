@@ -63,16 +63,22 @@ struct APIExportClient {
                 challengeHandler: Self.pinnedChallengeHandler(
                     expectedHost: host,
                     expectedDigest: digest
-                )
+                ),
+                redirectHandler: Self.safeRedirect,
+                maximumRedirects: Self.maximumRedirects
             )
         } else {
             self.responseLoader = BoundedURLSessionDataLoader(
-                configuration: URLSession.shared.configuration
+                configuration: URLSession.shared.configuration,
+                redirectHandler: Self.safeRedirect,
+                maximumRedirects: Self.maximumRedirects
             )
         }
         #else
         self.responseLoader = BoundedURLSessionDataLoader(
-            configuration: URLSession.shared.configuration
+            configuration: URLSession.shared.configuration,
+            redirectHandler: Self.safeRedirect,
+            maximumRedirects: Self.maximumRedirects
         )
         #endif
         self.maximumResponseBytes = max(1, maximumResponseBytes)
@@ -82,9 +88,44 @@ struct APIExportClient {
         session: URLSession,
         maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes
     ) {
-        self.responseLoader = BoundedURLSessionDataLoader(session: session)
+        self.responseLoader = BoundedURLSessionDataLoader(
+            session: session,
+            redirectHandler: Self.safeRedirect,
+            maximumRedirects: Self.maximumRedirects
+        )
         self.maximumResponseBytes = max(1, maximumResponseBytes)
     }
+
+    nonisolated static func safeRedirect(
+        response: HTTPURLResponse,
+        request: URLRequest
+    ) -> URLRequest? {
+        guard response.statusCode == 307 || response.statusCode == 308,
+              request.httpMethod == "POST",
+              let source = response.url,
+              let target = request.url,
+              target.user == nil,
+              target.password == nil,
+              sameOrigin(source, target) else {
+            return nil
+        }
+        return request
+    }
+
+    private nonisolated static func sameOrigin(_ first: URL, _ second: URL) -> Bool {
+        guard let left = origin(of: first), let right = origin(of: second) else { return false }
+        return left.0 == right.0 && left.1 == right.1 && left.2 == right.2
+    }
+
+    private nonisolated static func origin(of url: URL) -> (String, String, Int)? {
+        guard let scheme = url.scheme?.lowercased(),
+              let host = url.host?.lowercased() else { return nil }
+        let port = url.port ?? (scheme == "https" ? 443 : (scheme == "http" ? 80 : -1))
+        guard port >= 0 else { return nil }
+        return (scheme, host, port)
+    }
+
+    private nonisolated static let maximumRedirects = 5
 
     @MainActor
     func upload(
@@ -184,14 +225,15 @@ struct APIExportClient {
             throw APIExportClientError.invalidResponse
         }
 
-        let responsePreview = Self.responsePreview(from: data)
         guard (200..<300).contains(httpResponse.statusCode) else {
+            // Never decode an untrusted rejection body: it may echo request
+            // credentials or health payload bytes. Preserve status only.
             throw APIExportClientError.serverRejected(
                 statusCode: httpResponse.statusCode,
-                body: responsePreview
+                body: nil
             )
         }
-
+        let responsePreview = Self.responsePreview(from: data)
         return APIExportUploadResult(
             statusCode: httpResponse.statusCode,
             responseBodyPreview: responsePreview
@@ -249,13 +291,14 @@ struct APIExportClient {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIExportClientError.invalidResponse
         }
-        let responsePreview = Self.responsePreview(from: data)
         guard (200..<300).contains(httpResponse.statusCode) else {
+            // Keep streamed-upload rejection errors status-only as well.
             throw APIExportClientError.serverRejected(
                 statusCode: httpResponse.statusCode,
-                body: responsePreview
+                body: nil
             )
         }
+        let responsePreview = Self.responsePreview(from: data)
         return APIExportUploadResult(
             statusCode: httpResponse.statusCode,
             responseBodyPreview: responsePreview

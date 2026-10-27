@@ -21,6 +21,8 @@ SHARDS = (
         "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
         "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
         "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
+        "ExportProfilesJourneyUITests/testQA_ProfileThirtyMinuteRefreshPersistsWithWeeklyCadence",
+        "ExportProfilesJourneyUITests/testQA_ProfileHourlyRefreshPersistsWithWeeklyCadence",
     ),
     (
         "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",

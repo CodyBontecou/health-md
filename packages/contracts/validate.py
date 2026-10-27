@@ -704,7 +704,7 @@ def validate_render_fixture(root: Path, path: Path) -> None:
         or payload["render_input_version"] != 1
         or payload["artifact_plan_version"] != 1
         or payload["registry_sha256"]
-        != "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
+        != "7b7c3d2b9030c8fbc6db08b4e740922140d7cc2a9b7727461c47ad9baa6fd771"
     ):
         fail("healthmd.render differential: version or registry pin is invalid")
     cases = payload.get("cases")
@@ -3294,7 +3294,7 @@ def validate_apple_v10_profile_extension(root: Path, path: Path) -> None:
     payload = load_json(path, "Apple v10 profile extension")
     if payload != expected or path.read_bytes() != (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode():
         fail("Apple v10 extension must preserve its independently versioned identity and base hash")
-    registry = root / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json"
+    registry = root / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-shipped-v3.4.2.json"
     if hashlib.sha256(registry.read_bytes()).hexdigest() != expected["registry_sha256"]:
         fail("Apple v10 cannot mutate its frozen base registry")
     snapshot = load_json(registry, "frozen base registry")

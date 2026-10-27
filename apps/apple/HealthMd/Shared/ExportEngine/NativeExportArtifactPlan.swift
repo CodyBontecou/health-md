@@ -244,8 +244,8 @@ nonisolated struct NativeExportArtifactPlan: Equatable, Sendable {
         }
         guard Self.isValidOperationID(requestID) else { throw ValidationError.invalidRequestID }
         guard Self.isValidOperationID(sessionID) else { throw ValidationError.invalidSessionID }
-        guard profile == .appleHealthDataV10,
-              pin.profile == AppleExportEnginePin.profileID else {
+        guard profile == pin.coreProfile,
+              Self.profileIdentifier(profile) == pin.profile else {
             throw ValidationError.invalidProfile
         }
         guard artifacts.count <= 4_096 else { throw ValidationError.tooManyArtifacts }

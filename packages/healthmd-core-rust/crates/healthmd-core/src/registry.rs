@@ -323,23 +323,47 @@ pub fn metric_registry_snapshot(
     if expected_registry_version != REGISTRY_VERSION {
         return Err(CoreError::UnsupportedRegistryVersion);
     }
-    let document = REGISTRY
-        .get_or_init(|| decode_and_validate(REGISTRY_BYTES, true))
-        .as_ref()
-        .map_err(|error| *error)?;
-    if profile == MetricRegistryProfile::AppleHealthDataV10 {
+    let hash = if profile == MetricRegistryProfile::AppleHealthDataV10 {
+        &apple_v10_profile()?.registry_sha256
+    } else {
+        REGISTRY_SHA256
+    };
+    metric_registry_snapshot_at_authority(profile, expected_registry_version, hash)
+}
+
+/// Project only an exact, explicitly retained authority; never upgrade its digest.
+///
+/// # Errors
+/// Unknown digests, profiles, versions, or corrupt embedded authorities fail closed.
+pub fn metric_registry_snapshot_at_authority(
+    profile: MetricRegistryProfile,
+    expected_registry_version: u32,
+    registry_sha256: &str,
+) -> Result<MetricRegistrySnapshot, CoreError> {
+    if expected_registry_version != REGISTRY_VERSION {
+        return Err(CoreError::UnsupportedRegistryVersion);
+    }
+    let bytes = crate::authority::registry_bytes(registry_sha256, profile.id())?;
+    if format!("{:x}", Sha256::digest(bytes)) != registry_sha256 {
+        return Err(CoreError::InvalidRegistry);
+    }
+    let document = decode_and_validate(bytes, false)?;
+    let mut snapshot = if profile == MetricRegistryProfile::AppleHealthDataV10 {
         let extension = apple_v10_profile()?;
-        let mut snapshot = project_snapshot(document, MetricRegistryProfile::AppleHealthDataV8)?;
-        snapshot.profile_id.clone_from(&extension.profile_id);
-        snapshot
+        let mut value = project_snapshot(&document, MetricRegistryProfile::AppleHealthDataV8)?;
+        value.profile_id.clone_from(&extension.profile_id);
+        value
             .public_profile_id
             .clone_from(&extension.public_profile_id);
-        snapshot.public_schema.clone_from(&extension.public_schema);
-        snapshot.public_schema_version = extension.public_schema_version;
-        snapshot.profile_revision = extension.profile_revision;
-        return Ok(snapshot);
-    }
-    project_snapshot(document, profile)
+        value.public_schema.clone_from(&extension.public_schema);
+        value.public_schema_version = extension.public_schema_version;
+        value.profile_revision = extension.profile_revision;
+        value
+    } else {
+        project_snapshot(&document, profile)?
+    };
+    registry_sha256.clone_into(&mut snapshot.registry_sha256);
+    Ok(snapshot)
 }
 
 #[derive(Deserialize)]
@@ -376,7 +400,7 @@ fn apple_v10_profile() -> Result<&'static AppleV10Profile, CoreError> {
                 || extension.public_profile_id != "apple-v10"
                 || extension.public_schema != "healthmd.health_data"
                 || extension.public_schema_version != 10
-                || extension.registry_sha256 != REGISTRY_SHA256
+                || extension.registry_sha256 != crate::authority::HISTORICAL_REGISTRY_SHA256
                 || extension.registry_version != REGISTRY_VERSION
                 || extension.whoop_schema_version != 2
             {
@@ -935,7 +959,10 @@ mod tests {
         assert_eq!(current.profile_id, "apple_health_data_v10");
         assert_eq!(current.public_profile_id, "apple-v10");
         assert_eq!(current.public_schema_version, 10);
-        assert_eq!(current.registry_sha256, old.registry_sha256);
+        assert_eq!(
+            current.registry_sha256,
+            crate::authority::HISTORICAL_REGISTRY_SHA256
+        );
         assert_eq!(current.categories, old.categories);
         assert_eq!(current.metrics, old.metrics);
         assert_eq!(current.outputs, old.outputs);

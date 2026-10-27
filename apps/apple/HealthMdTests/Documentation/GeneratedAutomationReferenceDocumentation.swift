@@ -564,6 +564,7 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsIPhoneExportRequests: true,
             supportsAllAvailableHistoryExportRequests: true,
             supportsRequestScopedContextAcquisition: true,
+            supportsIPhoneInitiatedContextRefresh: true,
             supportsPhoneContextAutomation: true,
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,
