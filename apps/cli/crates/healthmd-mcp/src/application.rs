@@ -294,20 +294,27 @@ impl HealthMdSession {
             )),
             "healthmd_pairing_start" => self.start_pairing(&context, &arguments).await,
             "healthmd_pairing_status" => self.pairing_status(&context, &arguments).await,
-            "healthmd_export_plan" | "healthmd_export_approval" => {
+            "healthmd_export_plan"
+            | "healthmd_export_approval"
+            | "healthmd_export_execute"
+            | "healthmd_export_execution_resume"
+            | "healthmd_export_execution_cancel" => {
                 let raw = serde_json::to_vec(&arguments)
                     .map_err(|_| ApplicationError::invalid_params("Invalid tool arguments"))?;
+                let operations = &self.application.operations;
                 let response = async {
-                    if name == "healthmd_export_plan" {
-                        self.application
-                            .operations
-                            .plan_export(&context, &raw)
-                            .await
-                    } else {
-                        self.application
-                            .operations
-                            .relay_export_approval(&context, &raw)
-                            .await
+                    match name {
+                        "healthmd_export_plan" => operations.plan_export(&context, &raw).await,
+                        "healthmd_export_approval" => {
+                            operations.relay_export_approval(&context, &raw).await
+                        }
+                        "healthmd_export_execute" => {
+                            operations.execute_approved_export(&context, &raw).await
+                        }
+                        "healthmd_export_execution_resume" => {
+                            operations.resume_approved_export(&context, &raw).await
+                        }
+                        _ => operations.cancel_approved_export(&context, &raw).await,
                     }
                 };
                 let value = tokio::select! {
@@ -1177,7 +1184,7 @@ mod tests {
         ));
         let session = application.session(CallerIdentity::local());
         let tools = session.list_tools();
-        assert_eq!(tools.len(), 23);
+        assert_eq!(tools.len(), 26);
         let export = tools
             .iter()
             .find(|tool| tool["name"] == "healthmd_export_raw")
@@ -1242,7 +1249,7 @@ mod tests {
         ));
         let session = application.session(CallerIdentity::local());
         session.set_ui_enabled(true);
-        assert_eq!(session.list_tools().len(), 23);
+        assert_eq!(session.list_tools().len(), 26);
         assert_eq!(session.list_resources().len(), 2);
         let pairing_tool = session
             .list_tools()

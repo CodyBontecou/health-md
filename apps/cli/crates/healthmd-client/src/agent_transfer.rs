@@ -57,6 +57,49 @@ impl ResumedTransfer {
             checkpoint,
         })
     }
+    fn last_acknowledgement(
+        &self,
+    ) -> Result<Option<v2::TransferPartitionAcknowledgement>, ClientError> {
+        let Some(last) = self.journal.partitions.last() else {
+            return Ok(None);
+        };
+        // The authenticated retained prefix and staged bytes were verified at open and are
+        // rechecked by the send guard. Caller count/digest fields cannot synthesize this ACK.
+        Ok(Some(v2::TransferPartitionAcknowledgement {
+            session_id: self.journal.session.0.session_id,
+            job_id: self.journal.session.0.job_id,
+            partition_index: u64::try_from(last.partition.partition_index)
+                .map_err(private::unavailable)?,
+            transfer_id: uuid::Uuid::parse_str(&last.partition.transfer_id.0)
+                .map_err(private::unavailable)?,
+            partition_sha256: last.partition.sha256.0.clone(),
+            accepted: true,
+            message: None,
+        }))
+    }
+
+    async fn replay_last_acknowledgement<F, Fut>(
+        &self,
+        channel: &mut crate::secure_channel::SecureChannel,
+        mut current: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut + Copy + Send,
+        Fut: std::future::Future<Output = Result<(), ClientError>> + Send,
+    {
+        if let Some(acknowledgement) = self.last_acknowledgement()? {
+            let bytes = wire::encode_base_response(
+                self.transaction.binding(),
+                Response::Partition(acknowledgement),
+            )?;
+            channel
+                .send_bridge_plaintext_guarded(&bytes, current)
+                .await?;
+            current().await?;
+        }
+        Ok(())
+    }
+
     fn request(&self) -> Result<v4::ResumeRequest, ClientError> {
         let binding = self.transaction.binding();
         Ok(v4::ResumeRequest {
@@ -74,12 +117,13 @@ impl ResumedTransfer {
     }
 }
 
-pub(super) struct TransferGuard {
+pub(crate) struct TransferGuard {
     dir: cap_std::fs::Dir,
     name: String,
     bytes: Vec<u8>,
     partitions: Vec<PartitionRecord>,
     completion: crate::agent_host::output::CompletionEvidence,
+    frontiers: Vec<Digest>,
 }
 impl TransferGuard {
     fn new(
@@ -110,6 +154,17 @@ impl TransferGuard {
         if completion.is_present() {
             require_completed_journal(transaction, binding, &journal)?;
         }
+        let mut frontier = TransferFrontier::new(
+            &binding.request.job_id,
+            &binding.manifest.request_sha256,
+            &document_digest(&binding.manifest)?,
+            &ControlUuid(journal.session.0.session_id.to_string()),
+        )?;
+        let mut frontiers = vec![frontier.sha256().clone()];
+        for record in &journal.partitions {
+            frontier = frontier.appending(&record.partition)?;
+            frontiers.push(frontier.sha256().clone());
+        }
         let guard = Self {
             dir: transaction
                 .directory()
@@ -119,11 +174,36 @@ impl TransferGuard {
             bytes,
             partitions: journal.partitions,
             completion,
+            frontiers,
         };
         guard.verify()?;
         Ok(guard)
     }
-    pub(super) fn verify(&self) -> Result<(), ClientError> {
+    /// Retained signed prefix and staged bytes, without opening another output lease.
+    pub(crate) fn for_stop(transaction: &OutputTransaction) -> Result<Self, ClientError> {
+        let (_, bytes) = transaction.read_transfer::<TransferJournal>()?;
+        Self::new(transaction, transaction.binding(), &bytes)
+    }
+    pub(crate) fn evidence_digests(&self) -> (Digest, Option<Digest>) {
+        (
+            Digest(healthmd_protocol::transfer::sha256_hex(&self.bytes)),
+            self.completion
+                .bytes()
+                .map(|bytes| Digest(healthmd_protocol::transfer::sha256_hex(bytes))),
+        )
+    }
+    pub(crate) fn validate_stop_frontier(
+        &self,
+        receipt: &ExecutionReceipt,
+    ) -> Result<(), ClientError> {
+        let count =
+            usize::try_from(receipt.committed_partition_count).map_err(private::unavailable)?;
+        if self.frontiers.get(count) != Some(&receipt.frontier_sha256) {
+            return Err(Error::BindingChanged.into());
+        }
+        Ok(())
+    }
+    pub(crate) fn verify(&self) -> Result<(), ClientError> {
         self.completion.verify()?;
         if private::read_private(&self.dir, &self.name, 64 * 1024 * 1024)? != self.bytes {
             return Err(Error::BindingChanged.into());
@@ -196,6 +276,54 @@ fn expected_mode(mode: &OutputSettingsWriteMode) -> v2::FileWriteMode {
     }
 }
 impl<'trust> BridgeSession<'trust> {
+    /// Read-only local recovery preflight. This verifies the retained signed prefix and
+    /// current host authority before an adapter opens a listener; it creates no recovery
+    /// state and cannot replace the authenticated source's later validation.
+    pub(crate) async fn preflight_retained_resume(
+        store: &HostAuthorityStore,
+        expected_peer: &v4::Peer,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        cancellation: &tokio_util::sync::CancellationToken,
+    ) -> Result<(), ClientError> {
+        expected_peer.validate_shape()?;
+        job.validate_shape()?;
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
+        }
+        let retained = ResumedTransfer::open(store, job).await?;
+        let binding = retained.transaction.binding();
+        let guard = TransferGuard::new(&retained.transaction, binding, &retained.checkpoint)?;
+        if binding.request.plan.intent.peer != *expected_peer {
+            return Err(Error::BindingChanged.into());
+        }
+        let host = store
+            .authorization(
+                expected_peer,
+                &binding.request.plan.intent.destination.binding_id,
+                Some(&binding.request.plan.authority_references.host),
+                clock,
+            )
+            .await?;
+        store
+            .require_output_current(
+                &binding.request,
+                Some(&binding.accepted.expires_at),
+                clock,
+                || async {
+                    if cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    Ok(())
+                },
+            )
+            .await?;
+        retained.request()?.validate_shape()?;
+        require_resume_lifetime(binding, &host.delegation.expires_at, clock, cancellation)?;
+        retained.transaction.require_current()?;
+        guard.verify()
+    }
+
     /// Reopen the original immutable host job on this authenticated channel. No caller
     /// request, receipt or frontier replaces retained facts; no fresh Execute is sent.
     /// # Errors
@@ -268,6 +396,9 @@ impl<'trust> BridgeSession<'trust> {
             require_resume_lifetime(&binding, &host.delegation.expires_at, clock, cancellation)
         };
         current().await?;
+        retained
+            .replay_last_acknowledgement(&mut self.channel, current)
+            .await?;
         self.channel
             .send_v4_guarded(
                 &Envelope::new(Message::ResumeRequest(Box::new(resume))),
@@ -897,39 +1028,8 @@ impl HostExecution<'_, '_, '_> {
         transaction: &OutputTransaction,
         item: &ArtifactBranch1,
     ) -> Result<(), ClientError> {
-        let Incoming::Manifest {
-            id,
-            path,
-            bytes,
-            sha256,
-            mode,
-            android,
-        } = self.receive_base(transaction).await?
-        else {
-            return Err(ClientError::UnexpectedMessage);
-        };
-        if id != item.artifact_id
-            || path != item.relative_path.0
-            || bytes != item.byte_count
-            || sha256 != item.sha256.0
-            || mode != expected_mode(&item.write_mode)
-        {
-            return Err(Error::BindingChanged.into());
-        }
-        if let Some(base) = android {
-            let media = serde_json::to_value(&item.media_type).map_err(private::unavailable)?;
-            if base.kind != v2::ArtifactKind::GeneratedFile
-                || base.schema.id != "healthmd.generated-files"
-                || base.schema.major != 1
-                || Some(base.media_type.as_str()) != media.as_str()
-                || base.logical_checksum_sha256.is_some()
-                || base.snapshot_status.is_some()
-                || base.provider_id.is_some()
-            {
-                return Err(Error::BindingChanged.into());
-            }
-        }
-        Ok(())
+        let message = self.receive_base(transaction).await?;
+        validate_base_manifest_message(item, message)
     }
 }
 
@@ -995,7 +1095,7 @@ fn validate_retained_prefix(
     Ok(frontier)
 }
 
-fn validate_retained_session(
+pub(super) fn validate_retained_session(
     binding: &NativeBinding,
     session: &Session,
 ) -> Result<(), ClientError> {
@@ -1054,3 +1154,42 @@ fn verify_partition_file(
 #[cfg(all(test, unix))]
 #[path = "agent_retained_checkpoint_tests.rs"]
 mod retained_prefix_tests;
+
+pub(super) fn validate_base_manifest_message(
+    item: &ArtifactBranch1,
+    message: Incoming,
+) -> Result<(), ClientError> {
+    let Incoming::Manifest {
+        id,
+        path,
+        bytes,
+        sha256,
+        mode,
+        android,
+    } = message
+    else {
+        return Err(ClientError::UnexpectedMessage);
+    };
+    if id != item.artifact_id
+        || path != item.relative_path.0
+        || bytes != item.byte_count
+        || sha256 != item.sha256.0
+        || mode != expected_mode(&item.write_mode)
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    if let Some(base) = android {
+        let media = serde_json::to_value(&item.media_type).map_err(private::unavailable)?;
+        if base.kind != v2::ArtifactKind::GeneratedFile
+            || base.schema.id != "healthmd.generated-files"
+            || base.schema.major != 1
+            || Some(base.media_type.as_str()) != media.as_str()
+            || base.logical_checksum_sha256.is_some()
+            || base.snapshot_status.is_some()
+            || base.provider_id.is_some()
+        {
+            return Err(Error::BindingChanged.into());
+        }
+    }
+    Ok(())
+}

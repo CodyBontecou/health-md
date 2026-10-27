@@ -92,6 +92,45 @@ pub struct LocalEnrollment {
     pub root: PathBuf,
 }
 
+/// Human enrollment pins objects, not just path strings. Keeping both original handles
+/// open prevents inode reuse while native consent or key callbacks suspend the operation.
+struct LocalEnrollmentRoots {
+    issuer_path: PathBuf,
+    issuer: cap_std::fs::Dir,
+    issuer_identity: private::RootIdentity,
+    destination_path: PathBuf,
+    destination: cap_std::fs::Dir,
+    destination_identity: private::RootIdentity,
+}
+impl LocalEnrollmentRoots {
+    fn pin(
+        issuer_path: &std::path::Path,
+        destination_path: &std::path::Path,
+    ) -> Result<Self, ClientError> {
+        let (issuer, issuer_identity) = private::inspect_root(issuer_path)?;
+        private::private_directory(&issuer)?;
+        let (destination, destination_identity) = private::inspect_root(destination_path)?;
+        Ok(Self {
+            issuer_path: issuer_path.into(),
+            issuer,
+            issuer_identity,
+            destination_path: destination_path.into(),
+            destination,
+            destination_identity,
+        })
+    }
+    fn require_current(&self) -> Result<(), ClientError> {
+        private::require_directory_identity(&self.issuer, &self.issuer_identity)?;
+        private::require_directory_identity(&self.destination, &self.destination_identity)?;
+        if private::inspect_root(&self.issuer_path)?.1 != self.issuer_identity
+            || private::inspect_root(&self.destination_path)?.1 != self.destination_identity
+        {
+            return Err(Error::BindingChanged.into());
+        }
+        private::private_directory(&self.issuer)
+    }
+}
+
 #[derive(Clone)]
 pub struct HostAuthorityStore {
     path: PathBuf,
@@ -227,7 +266,6 @@ impl HostAuthorityStore {
         host.validate_shape()?;
         candidate.delegation.validate_shape()?;
         candidate.binding_id.validate_shape()?;
-        consent.enroll(&candidate).await?;
         if candidate.delegation.issuer != AuthorityReferenceIssuer::AuthorizedHost
             || candidate.delegation.peer.host_installation_id != host
         {
@@ -250,11 +288,15 @@ impl HostAuthorityStore {
                 projection_catalog_sha256: None,
             },
         )?;
-        let (dir, directory_identity) = private::inspect_root(&path)?;
-        private::private_directory(&dir)?;
-        let (_, identity) = private::inspect_root(&candidate.root)?;
+        let roots = LocalEnrollmentRoots::pin(&path, &candidate.root)?;
+        consent.enroll(&candidate).await?;
+        roots.require_current()?;
+        let dir = &roots.issuer;
+        let directory_identity = roots.issuer_identity.clone();
+        let identity = roots.destination_identity.clone();
         let key = key_bytes(&protected_key.load_existing(&host).await?)?;
-        let lock = private::open_private(&dir, LOCK, true, true)?;
+        roots.require_current()?;
+        let lock = private::open_private(dir, LOCK, true, true)?;
         lock.try_lock_exclusive().map_err(busy_lock_error)?;
         let _unlock = IssuerLockRelease(&lock);
         let destination = Destination {
@@ -282,8 +324,8 @@ impl HostAuthorityStore {
             }],
             plans: vec![],
         };
-        private::publish(&dir, STATE, &encode(&state, &key)?, true, || async {
-            Ok(())
+        private::publish(dir, STATE, &encode(&state, &key)?, true, || async {
+            roots.require_current()
         })
         .await?;
         Ok(Self {

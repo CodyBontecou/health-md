@@ -198,10 +198,15 @@ class DirectCliCoordinator @Inject constructor(
         val catalogLifecycle = AgentBridgeNativeCatalogLifecycle()
         private val catalogRefreshLock = Any()
         private var catalogRefresh: AgentBridgeNativeCatalogRefresh? = null
+        private var executionManager: com.healthmd.data.health.HealthConnectManager? = null
+        fun originalExecutionManager(): com.healthmd.data.health.HealthConnectManager? = synchronized(catalogRefreshLock) {
+            requireCurrent()
+            executionManager
+        }
         fun revoke() {
             revoked = true
             nativePlanner = null
-            val previous = synchronized(catalogRefreshLock) { catalogRefresh.also { catalogRefresh = null } }
+            val previous = synchronized(catalogRefreshLock) { catalogRefresh.also { catalogRefresh = null; executionManager = null } }
             previous?.close()
             catalogLifecycle.stop()
         }
@@ -211,6 +216,7 @@ class DirectCliCoordinator @Inject constructor(
                 requireCurrent()
                 catalogLifecycle.beginSample() // Terminal scheduler cancellation cannot be renewed.
                 if (catalogRefresh != null) return
+                executionManager = healthConnect
                 AgentBridgeNativeCatalogRefresh(scope, catalogLifecycle) {
                     requireCurrent()
                     refreshAgentBridgeNativeCatalog(context, healthConnect)
@@ -681,11 +687,17 @@ class DirectCliCoordinator @Inject constructor(
             originalOwner.requireCurrent()
             factory().also { originalOwner.requireCurrent(); it.requireCurrent() }
         } else null
+        // Capture once from the same owner that supplied the SDK-backed catalog. Wire
+        // requests and later refresh registrations cannot replace this manager.
+        val executionManager = if (planner != null) originalOwner?.originalExecutionManager() else null
         while (true) {
             // One awaited reader owns this channel. A retained planner never falls back to
             // the deployed decoder after its original owner is revoked.
             val envelope = if (planner == null) channel.receiveV2() else {
-                when (val received = planner.receiveAndHandleNext(channel, currentCoroutineContext().job)) {
+                val received = if (executionManager != null) {
+                    planner.receiveAndHandleExecutionNext(channel, executionManager, confirmedStopIsHandled = true)
+                } else planner.receiveAndHandleNext(channel, currentCoroutineContext().job)
+                when (received) {
                     null -> continue
                     is com.healthmd.direct.protocol.ReceivedAgentBridgePayload.Base -> received.envelope
                     else -> throw com.healthmd.direct.protocol.AgentBridgeException(

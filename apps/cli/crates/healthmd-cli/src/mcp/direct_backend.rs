@@ -379,6 +379,63 @@ impl HealthDataBackend for DirectMobileBackend {
             .map_err(|error| backend_error(&error, None))
     }
 
+    async fn execute_approved_export(
+        &self,
+        context: &CallContext,
+        input: healthmd_operations::AgentExecuteInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        crate::agent_direct::DirectAgentBackend::new(
+            Arc::clone(&self.client),
+            Arc::new(healthmd_client::agent_host::NativeProtectedHostKey(
+                healthmd_client::agent_host::NativeHostKeyReader,
+            )),
+            self.configuration.device_id,
+            self.configuration.port,
+            self.configuration.timeout,
+            Arc::clone(&self.operation_gate),
+        )
+        .execute_approved_export(context, input)
+        .await
+    }
+
+    async fn resume_approved_export(
+        &self,
+        context: &CallContext,
+        input: healthmd_operations::AgentResumeInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        crate::agent_direct::DirectAgentBackend::new(
+            Arc::clone(&self.client),
+            Arc::new(healthmd_client::agent_host::NativeProtectedHostKey(
+                healthmd_client::agent_host::NativeHostKeyReader,
+            )),
+            self.configuration.device_id,
+            self.configuration.port,
+            self.configuration.timeout,
+            Arc::clone(&self.operation_gate),
+        )
+        .resume_approved_export(context, input)
+        .await
+    }
+
+    async fn cancel_approved_export(
+        &self,
+        context: &CallContext,
+        input: healthmd_operations::AgentCancelInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        crate::agent_direct::DirectAgentBackend::new(
+            Arc::clone(&self.client),
+            Arc::new(healthmd_client::agent_host::NativeProtectedHostKey(
+                healthmd_client::agent_host::NativeHostKeyReader,
+            )),
+            self.configuration.device_id,
+            self.configuration.port,
+            self.configuration.timeout,
+            Arc::clone(&self.operation_gate),
+        )
+        .cancel_approved_export(context, input)
+        .await
+    }
+
     async fn plan_export(
         &self,
         context: &CallContext,

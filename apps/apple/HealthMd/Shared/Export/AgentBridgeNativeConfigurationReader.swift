@@ -288,6 +288,114 @@ final class AgentBridgeNativePlanningSession {
         }
     }
 
+    /// One original reader dispatches approved Execute or immutable Resume. An optional base
+    /// ACK must be followed immediately by Resume, never a new Execute.
+    /// The ACK is comparison metadata only; retained admission validates it with the complete
+    /// signed original job before any source progress or acceptance is returned.
+    func receiveAndHandleExportNext(on channel: DirectSecureChannel, confirmCompletion: Bool = true, confirmedStopIsHandled: Bool = false,
+        prepare: @escaping @MainActor @Sendable (AgentBridgeExecute, AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
+    ) async throws -> AgentBridgeSecurePayload? {
+        guard responseChannel === channel else { throw AgentBridgeValidationError.bindingChanged }
+        guard !wireOperationActive else { throw AgentBridgeValidationError.busy }
+        wireOperationActive = true; defer { wireOperationActive = false }
+        guard let negotiation = responseNegotiation, negotiation.baseVersion == 1, negotiation.agentBridgeV4 else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        var selectedStopBinding: (jobID: String, requestSHA256: String)?
+        do {
+            var incoming = try await readExecutionWire(channel, negotiation: negotiation)
+            var acknowledgement: DirectTransferPartitionAcknowledgement?
+            if case .base(.transferPartitionAcknowledgement(let value)) = incoming {
+                acknowledgement = value
+                incoming = try await readExecutionWire(channel, negotiation: negotiation)
+            }
+            if case .agent(let envelope) = incoming, case .resume(let resume) = envelope.payload {
+                selectedStopBinding = (resume.jobId.rawValue, resume.requestSha256.rawValue)
+                try await resumedCaptureContextOwned(resume, acknowledging: acknowledgement) { [self] request, context, job in
+                    try await sendResumeAcceptance(job, resume: resume, context: context)
+                    try await sendPreparedTransfer(request, context: context, confirmCompletion: confirmCompletion) {
+                        try await prepare(request, $0)
+                    }
+                }
+                return nil
+            }
+            guard acknowledgement == nil else { throw AgentBridgeValidationError.bindingChanged }
+            if case .agent(let envelope) = incoming, case .execute(let request) = envelope.payload {
+                selectedStopBinding = (request.jobId.rawValue, try AgentBridgeV4Codec.digest(request))
+                try Task.checkCancellation()
+                let publication = try requireCurrent()
+                let accepted = try service.acceptExecution(request, authenticatedPeer: peer)
+                if !accepted.newlyAccepted {
+                    // Exact idempotency replay is metadata only, even after planning expiry.
+                    let cancellation = AgentBridgeCaptureCancellation()
+                    try await withTaskCancellationHandler {
+                        try await sendAcceptedExecution(accepted.job, request: request, publication: publication, cancellation: cancellation)
+                    } onCancel: { cancellation.cancel(); channel.cancel() }
+                    return nil
+                }
+                try await captureContextOwned(request, retained: false, acceptedExecution: accepted) { [self] context in
+                    try await sendPreparedTransfer(request, context: context, confirmCompletion: confirmCompletion) {
+                        try await prepare(request, $0)
+                    }
+                }
+                return nil
+            }
+            if case .agent(let envelope) = incoming {
+                try await handleAndSendOwned(negotiation.encode(envelope))
+                return nil
+            }
+            _ = try requireCurrent(); try Task.checkCancellation()
+            return incoming
+        } catch let stop as ConfirmedTransferStop {
+            guard let binding = selectedStopBinding else {
+                wireAbandoned = true; channel.cancel(); throw AgentBridgeValidationError.bindingChanged
+            }
+            // Only the private, source-proven result bypasses ordinary abandonment. Its
+            // intentional public cancelled outcome must not be caught as an unsafe failure.
+            if confirmedStopIsHandled {
+                try requireConfirmedTransferStop(stop, jobID: binding.jobID, requestSHA256: binding.requestSHA256)
+            } else {
+                try finishConfirmedTransferStop(stop, jobID: binding.jobID, requestSHA256: binding.requestSHA256)
+            }
+            return nil
+        } catch {
+            wireAbandoned = true; channel.cancel(); throw error
+        }
+    }
+
+    private func readExecutionWire(_ channel: DirectSecureChannel, negotiation: AgentBridgeNegotiation) async throws -> AgentBridgeSecurePayload {
+        let incoming = try await withTaskCancellationHandler {
+            try await channel.receiveAllowingAgentBridge(negotiation: negotiation) { [self] in
+                try Task.checkCancellation()
+                try await MainActor.run { try requireOwnerCurrent() }
+                try Task.checkCancellation()
+            }
+        } onCancel: { channel.cancel() }
+        lastInboundActivityAt = ContinuousClock().now
+        return incoming
+    }
+
+    private func sendResumeAcceptance(_ job: AgentBridgeExportAcceptedJob, resume: AgentBridgeResume,
+        context: AgentBridgeNativeCaptureContext
+    ) async throws {
+        guard let responseChannel, let responseNegotiation else { throw AgentBridgeValidationError.unsupportedCapability }
+        let response = try AgentBridgeEnvelope(payload: .receipt(job.acceptedReceipt()))
+        let validate: @MainActor @Sendable () throws -> Void = { [self] in
+            try Task.checkCancellation()
+            // Repeated proof uses the now-preserved frontier, never applies the ACK again or
+            // re-accepts an expired plan. The last SDK callback precedes the local file proof.
+            try context.requireResumeBeforeBegin(resume, acknowledging: nil)
+            try lifecycle.requireActiveOwner()
+            guard !wireAbandoned else { throw AgentBridgeValidationError.permissionRequired }
+            try Task.checkCancellation()
+        }
+        try validate()
+        try await responseChannel.sendAgentBridge(response, negotiation: responseNegotiation) {
+            try await MainActor.run { try validate() }
+        }
+        try validate()
+    }
+
     /// Native presentation only: signed issuer records for the original peer, excluding decisions
     /// already made. Stale/expired/revoked requests are omitted; storage and owner failures reject.
     func nativePlansAwaitingReview() throws -> [AgentBridgePlan] {
@@ -325,20 +433,33 @@ final class AgentBridgeNativePlanningSession {
     /// contributes comparison values only; it cannot supply a plan, acceptance or frontier.
     func withResumedCaptureContext<T>(_ resume: AgentBridgeResume,
         acknowledging acknowledgement: DirectTransferPartitionAcknowledgement? = nil, operation: (AgentBridgeExecute, AgentBridgeNativeCaptureContext) async throws -> T) async throws -> T {
+        guard !wireOperationActive else { throw AgentBridgeValidationError.busy }
+        wireOperationActive = true; defer { wireOperationActive = false }
+        return try await resumedCaptureContextOwned(resume, acknowledging: acknowledgement) { request, context, _ in
+            try await operation(request, context)
+        }
+    }
+
+    private func resumedCaptureContextOwned<T>(_ resume: AgentBridgeResume,
+        acknowledging acknowledgement: DirectTransferPartitionAcknowledgement?,
+        operation: (AgentBridgeExecute, AgentBridgeNativeCaptureContext, AgentBridgeExportAcceptedJob) async throws -> T
+    ) async throws -> T {
+        guard wireOperationActive else { throw AgentBridgeValidationError.busy }
         try Task.checkCancellation(); _ = try requireCurrent()
         guard resume.peer == peer.peer else { throw AgentBridgeValidationError.bindingChanged }
-        let request = try store.inspectCurrent { state in
+        let job = try store.inspectCurrent { state in
             guard let job = try state.acceptedJobs?.first(where: {
                 let original = try $0.request()
                 return original.jobId == resume.jobId && original.plan.intent.peer == peer.peer
             }) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
-            return try job.request()
+            return job
         }
+        let request = try job.request()
         _ = try requireCurrent(); try Task.checkCancellation()
-        return try await withRetainedCaptureContext(request) { context in
+        return try await captureContextOwned(request, retained: true) { context in
             try context.requireResumeBeforeBegin(resume, acknowledging: acknowledgement)
             try Task.checkCancellation()
-            return try await operation(request, context)
+            return try await operation(request, context, job)
         }
     }
 
@@ -346,6 +467,14 @@ final class AgentBridgeNativePlanningSession {
                                    operation: (AgentBridgeNativeCaptureContext) async throws -> T) async throws -> T {
         guard !wireOperationActive else { throw AgentBridgeValidationError.busy }
         wireOperationActive = true; defer { wireOperationActive = false }
+        return try await captureContextOwned(request, retained: retained, operation: operation)
+    }
+
+    private func captureContextOwned<T>(_ request: AgentBridgeExecute, retained: Bool,
+        acceptedExecution: AgentBridgeExportJobAcceptance? = nil,
+        operation: (AgentBridgeNativeCaptureContext) async throws -> T
+    ) async throws -> T {
+        guard wireOperationActive else { throw AgentBridgeValidationError.busy }
         guard let negotiation = responseNegotiation, negotiation.baseVersion == 1,
               negotiation.agentBridgeV4, responseChannel != nil else { throw AgentBridgeValidationError.unsupportedCapability }
         let cancellation = AgentBridgeCaptureCancellation()
@@ -369,7 +498,7 @@ final class AgentBridgeNativePlanningSession {
                     }
                     _ = try captureReadConfiguration(reservation)
                 } else {
-                    let accepted = try service.acceptExecution(request, authenticatedPeer: peer)
+                    let accepted = try acceptedExecution ?? service.acceptExecution(request, authenticatedPeer: peer)
                     try cancellation.requireActive(); try Task.checkCancellation()
                     try await sendAcceptedExecution(accepted.job, request: request, publication: publication,
                         cancellation: cancellation)

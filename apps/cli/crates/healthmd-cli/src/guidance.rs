@@ -566,6 +566,34 @@ pub(super) fn group(group: &'static str) -> Value {
     })
 }
 
+pub(super) fn execute() -> Value {
+    json!({
+        "schema": GUIDANCE_SCHEMA, "schema_version": SCHEMA_VERSION, "status": "guidance",
+        "command": "healthmd execute", "request_sent": false,
+        "message": "Supply identifiers for an existing exact approved Agent Bridge plan. No device was contacted or export started.",
+        "required": [{"argument":"--arguments", "description":"Strict JSON with plan_id, job_id, idempotency_key and request_id; no approval fields or destination paths."}],
+        "before_continuing": ["The selected mobile source must support Agent Bridge.", "The host destination and both separate exact decisions must already be authorized."],
+        "next_actions": [{"command":"healthmd mcp schema healthmd_export_execute", "description":"Inspect the exact input schema locally."},
+            {"command":"healthmd execute --help", "description":"Inspect timeout and argument options."}]
+    })
+}
+
+pub(super) fn resume_execution() -> Value {
+    json!({"schema": GUIDANCE_SCHEMA, "schema_version": SCHEMA_VERSION, "status":"guidance",
+        "command":"healthmd resume-execution", "request_sent":false,
+        "message":"Supply only job_id for an existing retained Agent Bridge export. No device was contacted or recovery started.",
+        "required":[{"argument":"--arguments", "description":"Strict JSON containing only the existing job_id; no frontier, receipt, approval or destination fields."}],
+        "next_actions":[{"command":"healthmd mcp schema healthmd_export_execution_resume", "description":"Inspect the exact local schema."}]})
+}
+
+pub(super) fn cancel_execution() -> Value {
+    json!({"schema": GUIDANCE_SCHEMA, "schema_version": SCHEMA_VERSION, "status":"guidance",
+        "command":"healthmd cancel-execution", "request_sent":false,
+        "message":"Supply only job_id for an existing retained Agent Bridge export. No device was contacted or Stop requested.",
+        "required":[{"argument":"--arguments", "description":"Strict JSON containing only the existing job_id; no frontier, receipt, approval or destination fields."}],
+        "next_actions":[{"command":"healthmd mcp schema healthmd_export_execution_cancel", "description":"Inspect the exact local schema."}]})
+}
+
 pub(super) fn resume() -> Value {
     positional(
         "healthmd resume",

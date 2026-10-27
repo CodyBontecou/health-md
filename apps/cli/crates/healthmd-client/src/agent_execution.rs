@@ -250,7 +250,31 @@ impl HostAuthorityStore {
         job: &ControlUuid,
         clock: &dyn PlanningClock,
     ) -> Result<SourceStopConfirmation, ClientError> {
-        let receipt = crate::agent_host::output::read_source_confirmation(self, job, clock).await?;
+        let receipt = Box::pin(crate::agent_host::output::read_source_confirmation(
+            self,
+            job,
+            clock,
+            || async { Ok(()) },
+        ))
+        .await?;
+        Ok(SourceStopConfirmation { receipt })
+    }
+    /// Historical source facts with a caller fence after the last protected-key callback,
+    /// followed by synchronous verification of the reader's pinned local evidence.
+    pub(crate) async fn retained_source_stop_confirmation_fenced<F, Fut>(
+        &self,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        fence: F,
+    ) -> Result<SourceStopConfirmation, ClientError>
+    where
+        F: FnMut() -> Fut + Copy,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        let receipt = Box::pin(crate::agent_host::output::read_source_confirmation(
+            self, job, clock, fence,
+        ))
+        .await?;
         Ok(SourceStopConfirmation { receipt })
     }
 }
@@ -880,6 +904,11 @@ impl Drop for PrivateOutputFile {
 #[path = "agent_transfer.rs"]
 mod transfer;
 pub use transfer::ReceivedArtifacts;
+pub(crate) use transfer::TransferGuard;
 
 #[path = "agent_confirmation.rs"]
 mod confirmation;
+
+#[path = "agent_output_cancellation.rs"]
+mod output_cancellation;
+pub use output_cancellation::HostPendingOutputCancellation;

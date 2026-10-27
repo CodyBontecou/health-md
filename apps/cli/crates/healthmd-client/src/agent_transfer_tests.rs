@@ -87,7 +87,7 @@ pub(super) fn binding(
     }
     binding
 }
-async fn send(
+pub(super) async fn send(
     channel: &mut SecureChannel,
     platform: PeerPlatform,
     apple: DirectMessage,
@@ -117,7 +117,7 @@ async fn expect(
         );
     }
 }
-fn apple_session(value: &v2::TransferSession) -> a::TransferSession {
+pub(super) fn apple_session(value: &v2::TransferSession) -> a::TransferSession {
     a::TransferSession {
         protocol_version: 1,
         session_id: SwiftUuid(value.session_id),

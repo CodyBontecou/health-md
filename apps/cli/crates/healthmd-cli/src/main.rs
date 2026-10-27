@@ -114,6 +114,12 @@ enum Command {
     Plan(AgentArgs),
     /// Relay separately stored exact decisions for an issued plan; never create consent.
     Approval(AgentArgs),
+    /// Execute an issued plan using separately stored host/native decisions and its registered destination.
+    Execute(AgentExecuteArgs),
+    /// Recover an existing approved Agent Bridge job using its immutable retained state.
+    ResumeExecution(AgentExecuteArgs),
+    /// Stop a retained Agent Bridge job and inspect native source acknowledgement.
+    CancelExecution(AgentExecuteArgs),
     /// Resume an interrupted durable direct job.
     Resume(ResumeArgs),
     /// Request cancellation of a durable direct job.
@@ -129,9 +135,20 @@ enum Command {
 }
 
 #[derive(Debug, Args)]
+struct AgentExecuteArgs {
+    /// Strict operation JSON. Omit to inspect the operation-specific requirements locally.
+    #[arg(long)]
+    arguments: Option<String>,
+    /// Bounded authenticated timeout; never wakes or unlocks the source.
+    #[arg(long, default_value_t = 30, value_parser = clap::value_parser!(u64).range(5..=600))]
+    timeout_seconds: u64,
+}
+
+#[derive(Debug, Args)]
 struct AgentArgs {
     /// Complete strict JSON DTO; inspect `healthmd mcp schema healthmd_export_plan` or
-    /// `healthmd mcp schema healthmd_export_approval`. Destination is an existing opaque binding.
+    /// `healthmd mcp schema healthmd_export_approval` / `healthmd_export_execute`.
+    /// Execute accepts only existing plan/job/idempotency/request IDs; destinations are registered opaque bindings.
     #[arg(long)]
     arguments: String,
     /// Bounded listener timeout. Planning never uses a wake nudge/window.
@@ -1116,6 +1133,36 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
                 .await
                 .map(CommandSuccess::json)
         }
+        Command::Execute(options) => {
+            direct_agent_control(
+                options,
+                "healthmd_export_execute",
+                guidance::execute,
+                device,
+                port,
+            )
+            .await
+        }
+        Command::ResumeExecution(options) => {
+            direct_agent_control(
+                options,
+                "healthmd_export_execution_resume",
+                guidance::resume_execution,
+                device,
+                port,
+            )
+            .await
+        }
+        Command::CancelExecution(options) => {
+            direct_agent_control(
+                options,
+                "healthmd_export_execution_cancel",
+                guidance::cancel_execution,
+                device,
+                port,
+            )
+            .await
+        }
         Command::Resume(options) => direct_resume(options, device, port).await,
         Command::Cancel(options) => direct_cancel(options, device, port)
             .await
@@ -1128,6 +1175,29 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
                 command_name(&command)
             ),
         }),
+    }
+}
+
+async fn direct_agent_control(
+    options: AgentExecuteArgs,
+    operation: &'static str,
+    guidance: fn() -> Value,
+    device: Option<Uuid>,
+    port: u16,
+) -> Result<CommandSuccess, CommandError> {
+    match options.arguments {
+        Some(arguments) => direct_agent(
+            AgentArgs {
+                arguments,
+                timeout_seconds: options.timeout_seconds,
+            },
+            operation,
+            device,
+            port,
+        )
+        .await
+        .map(CommandSuccess::json),
+        None => Ok(CommandSuccess::json(guidance())),
     }
 }
 
@@ -1147,6 +1217,13 @@ fn incomplete_command_guidance(cli: &Cli) -> Option<Value> {
         Command::Query(options) if options.operation.is_none() => Some(guidance::query(None)),
         Command::Query(options) if options.arguments.is_none() => {
             Some(guidance::query(options.operation.as_deref()))
+        }
+        Command::Execute(options) if options.arguments.is_none() => Some(guidance::execute()),
+        Command::CancelExecution(options) if options.arguments.is_none() => {
+            Some(guidance::cancel_execution())
+        }
+        Command::ResumeExecution(options) if options.arguments.is_none() => {
+            Some(guidance::resume_execution())
         }
         Command::Resume(options) if options.job_id.is_none() => Some(guidance::resume()),
         Command::Cancel(options) if options.job_id.is_none() => Some(guidance::cancel()),
@@ -1311,6 +1388,7 @@ async fn direct_agent(
             "path_collision" => "path_collision",
             "native_rebind_required" => "native_rebind_required",
             "direct_source_unavailable" => "direct_source_unavailable",
+            "healthmd_request_cancelled" => "direct_wait_cancelled",
             "query_budget_exceeded" => "query_budget_exceeded",
             "entitlement_required" => "entitlement_required",
             _ => "unsupported_capability",
@@ -2710,6 +2788,9 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Query(_) => "query",
         Command::Plan(_) => "plan",
         Command::Approval(_) => "approval",
+        Command::Execute(_) => "execute",
+        Command::ResumeExecution(_) => "resume-execution",
+        Command::CancelExecution(_) => "cancel-execution",
         Command::Resume(_) => "resume",
         Command::Cancel(_) => "cancel",
         Command::Direct(DirectArgs {
@@ -3507,5 +3588,86 @@ mod tests {
 
         let unknown = map_direct_pair_error(ClientError::CredentialMutationOutcomeUnknown);
         assert_eq!(unknown.code, "direct_storage_outcome_unknown");
+    }
+}
+
+#[cfg(test)]
+mod agent_execute_parser_tests {
+    use super::*;
+    #[test]
+    fn execute_is_explicit_and_preserves_device_port_and_strict_argument_bytes() {
+        let raw = r#"{"plan_id":"00000000-0000-4000-8000-000000000001","job_id":"00000000-0000-4000-8000-000000000002","idempotency_key":"00000000-0000-4000-8000-000000000003","request_id":"00000000-0000-4000-8000-000000000004"}"#;
+        let cli = Cli::try_parse_from([
+            "healthmd",
+            "--device",
+            "00000000-0000-4000-8000-000000000005",
+            "--port",
+            "17649",
+            "execute",
+            "--arguments",
+            raw,
+        ])
+        .unwrap();
+        assert_eq!(cli.port, 17649);
+        assert_eq!(
+            cli.device.unwrap().to_string(),
+            "00000000-0000-4000-8000-000000000005"
+        );
+        let Command::Execute(input) = cli.command else {
+            panic!("Execute command lost");
+        };
+        assert_eq!(input.arguments.as_deref(), Some(raw));
+        let missing = Cli::try_parse_from(["healthmd", "execute"]).unwrap();
+        let discovery = incomplete_command_guidance(&missing).unwrap();
+        assert_eq!(discovery["schema"], "healthmd.cli_guidance");
+        assert_eq!(discovery["request_sent"], false);
+        let malformed = Cli::try_parse_from(["healthmd", "execute", "--arguments", ""]).unwrap();
+        assert!(incomplete_command_guidance(&malformed).is_none());
+        assert!(Cli::try_parse_from(["healthmd", "execute", "--timeout-seconds", "0"]).is_err());
+        assert!(
+            Cli::try_parse_from(["healthmd", "execute", "--arguments", raw, "--approve"]).is_err()
+        );
+    }
+}
+
+#[cfg(test)]
+mod agent_resume_parser_tests {
+    use super::*;
+    #[test]
+    fn resume_execution_has_local_guidance_and_explicit_strict_arguments() {
+        let missing = Cli::try_parse_from(["healthmd", "resume-execution"]).unwrap();
+        assert_eq!(
+            incomplete_command_guidance(&missing).unwrap()["request_sent"],
+            false
+        );
+        let raw = r#"{"job_id":"00000000-0000-4000-8000-000000000002"}"#;
+        let cli =
+            Cli::try_parse_from(["healthmd", "resume-execution", "--arguments", raw]).unwrap();
+        let Command::ResumeExecution(input) = cli.command else {
+            panic!("recovery command lost")
+        };
+        assert_eq!(input.arguments.as_deref(), Some(raw));
+        assert!(Cli::try_parse_from(["healthmd", "resume-execution", "--approve"]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod agent_cancel_parser_tests {
+    use super::*;
+    #[test]
+    fn cancel_execution_has_local_guidance_and_explicit_strict_arguments() {
+        let missing = Cli::try_parse_from(["healthmd", "cancel-execution"]).unwrap();
+        assert_eq!(
+            incomplete_command_guidance(&missing).unwrap()["request_sent"],
+            false
+        );
+        let raw = r#"{"job_id":"00000000-0000-4000-8000-000000000002"}"#;
+        let cli =
+            Cli::try_parse_from(["healthmd", "cancel-execution", "--arguments", raw]).unwrap();
+        let Command::CancelExecution(input) = cli.command else {
+            panic!("recovery command lost")
+        };
+        assert_eq!(input.arguments.as_deref(), Some(raw));
+        assert!(Cli::try_parse_from(["healthmd", "cancel-execution", "--approve"]).is_err());
     }
 }

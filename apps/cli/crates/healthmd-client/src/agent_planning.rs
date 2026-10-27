@@ -5,9 +5,9 @@ use healthmd_protocol::v4::{
     Approval, ApprovalRequest, Archive, AuthorityReference, AuthorityReferenceIssuer,
     AuthorityReferences, CalendarZone, Capture, CaptureCompatibilityDetail, ConfigurationContext,
     ControlUuid, Dates, Discovery, DiscoveryEntitlement, DiscoveryFeaturesItem,
-    DiscoverySettingsPoliciesItem, Error, ExecuteRequest, ExportDelegationRightsItem, ExportIntent,
-    ExportIntentProduct, ExportIntentProductType, ExportIntentSchema,
-    ExportIntentTimestampTimezone, ExportPlan, MetricSupport, OutputSettings,
+    DiscoverySettingsPoliciesItem, Error, ExecuteRequest, ExecuteRequestSchema,
+    ExportDelegationRightsItem, ExportIntent, ExportIntentProduct, ExportIntentProductType,
+    ExportIntentSchema, ExportIntentTimestampTimezone, ExportPlan, MetricSupport, OutputSettings,
     OutputSupportNativeArchiveProductsItem, OutputSupportPathTokensItem, Peer, PeerPlatform,
     PlanRequest, PlanRequestSchema, Policy, Selection, SemanticId, UtcTimestamp, ValidateShape,
     approval_binding, derived_export_authority, predicted_paths, resolve_dates, setting_origins,
@@ -406,6 +406,211 @@ impl HostPlanner {
             .require_issued_current(&plan, Some(&approval), true, clock, Some(source))
             .await?;
         Ok(approval)
+    }
+
+    /// Reconstruct an execution request from the signed issued plan and separately stored
+    /// host/native decisions. The caller supplies identifiers only, never approval, authority
+    /// descriptions, output paths or replacement plan bytes. No listener, capture, journal,
+    /// consent issuance or acceptance occurs here; the original bridge must revalidate every
+    /// live fence before sending and receiving an export.
+    /// # Errors
+    /// Invalid identifiers, missing decisions, stale/revoked authority, expired plans or
+    /// substituted destinations reject without creating or changing issuer state.
+    pub async fn prepare_approved_execution(
+        &self,
+        expected_peer: &Peer,
+        plan_id: &ControlUuid,
+        job_id: ControlUuid,
+        idempotency_key: ControlUuid,
+        request_id: ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<ExecuteRequest, ClientError> {
+        plan_id.validate_shape()?;
+        job_id.validate_shape()?;
+        idempotency_key.validate_shape()?;
+        request_id.validate_shape()?;
+        expected_peer.validate_shape()?;
+        let (_, plan, _, decision, native_approval) = self.store.issued_plan(plan_id).await?;
+        // Reject another selected device before inspecting its registered destination.
+        if plan.intent.peer != *expected_peer {
+            return Err(Error::BindingChanged.into());
+        }
+        let binding = approval_binding(&plan);
+        if decision.as_ref() != Some(&binding) {
+            return Err(Error::ApprovalRequired.into());
+        }
+        let approval = native_approval.ok_or(Error::ApprovalRequired)?;
+        let request = ExecuteRequest {
+            schema: ExecuteRequestSchema::HealthmdAgentExecuteRequest,
+            schema_version: 1,
+            plan,
+            approval,
+            request_id,
+            job_id,
+            idempotency_key,
+        };
+        // Read-only local preflight, never a substitute for the authenticated original
+        // session's fresh trust/key/root/expiry fences and durable single-attempt admission.
+        self.store
+            .require_output_current(&request, None, clock, || async { Ok(()) })
+            .await?;
+        Ok(request)
+    }
+
+    /// Execute only through an already authenticated, independently negotiated original
+    /// bridge. Its durable admission and live authority checks still validate the complete
+    /// request; this method returns only after host commits and exact native confirmation.
+    /// # Errors
+    /// Unsupported source, lost authority, interrupted transfer or missing confirmation reject.
+    pub async fn execute_prepared(
+        &self,
+        source: &mut crate::agent_bridge::BridgeSession<'_>,
+        request: ExecuteRequest,
+        clock: &dyn PlanningClock,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, ClientError> {
+        let mut execution = source.begin_execution(&self.store, request, clock).await?;
+        execution.receive_confirmed_execution().await
+    }
+
+    /// Verify existing immutable recovery evidence for the selected peer before listening.
+    /// This does not renew a plan, issue consent, recapture, or mark a job resumed.
+    /// # Errors
+    /// Missing/corrupt evidence, changed peer/destination, expired authority or cancellation reject.
+    pub async fn preflight_retained_resume(
+        &self,
+        expected_peer: &Peer,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        cancellation: &tokio_util::sync::CancellationToken,
+    ) -> Result<(), ClientError> {
+        crate::agent_bridge::BridgeSession::preflight_retained_resume(
+            &self.store,
+            expected_peer,
+            job,
+            clock,
+            cancellation,
+        )
+        .await
+    }
+
+    /// Recover an existing job on a fresh authenticated bridge, preserving original request,
+    /// manifest, destination and frontier. Returns only after exact native completion.
+    /// # Errors
+    /// Invalid retained state, changed authority, interruption or missing confirmation reject.
+    pub async fn resume_retained(
+        &self,
+        source: &mut crate::agent_bridge::BridgeSession<'_>,
+        job: ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, ClientError> {
+        let mut execution = source.resume_execution(&self.store, job, clock).await?;
+        execution.receive_confirmed_execution().await
+    }
+
+    /// Persist or replay local Stop intent before contacting the source. This uses existing
+    /// signed issuer facts and a caller-provided live trust/cancellation fence, never export
+    /// permission renewal. A returned proof is retained historical source state only.
+    /// # Errors
+    /// Missing/ambiguous evidence, wrong peer, lost key/trust, expiry or cancellation reject.
+    pub async fn prepare_retained_cancellation<F, Fut>(
+        &self,
+        expected_peer: &Peer,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        mut fence: F,
+    ) -> Result<Option<crate::agent_bridge::SourceStopConfirmation>, ClientError>
+    where
+        F: FnMut() -> Fut + Copy,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        use crate::agent_host::output::{
+            OutputAdmission, PendingOutputStop, RetainedCancellationHint,
+        };
+        expected_peer.validate_shape()?;
+        fence().await?;
+        match self.store.retained_cancellation_hint(job)? {
+            RetainedCancellationHint::Accepted => {
+                let mut owner =
+                    OutputAdmission::open_retained_accepted(&self.store, job, clock).await?;
+                let (request, _) = owner.accepted_binding()?;
+                if request.plan.intent.peer != *expected_peer {
+                    return Err(Error::BindingChanged.into());
+                }
+                owner.persist_cancellation(clock, fence).await?;
+                Ok(None)
+            }
+            RetainedCancellationHint::Output => {
+                let _pending = Box::pin(PendingOutputStop::prepare_or_open_retained(
+                    &self.store,
+                    expected_peer,
+                    job,
+                    clock,
+                    fence,
+                ))
+                .await?;
+                Ok(None)
+            }
+            RetainedCancellationHint::Confirmed => {
+                let proof =
+                    Box::pin(self.store.retained_source_stop_confirmation(job, clock)).await?;
+                if proof.receipt().binding.peer != *expected_peer {
+                    return Err(Error::BindingChanged.into());
+                }
+                fence().await?;
+                let current = Box::pin(
+                    self.store
+                        .retained_source_stop_confirmation_fenced(job, clock, fence),
+                )
+                .await?;
+                if current.receipt() != proof.receipt() {
+                    return Err(Error::BindingChanged.into());
+                }
+                // Historical facts confer no live grant or destination-verification authority.
+                Ok(Some(current))
+            }
+        }
+    }
+
+    /// Request Stop on a fresh authenticated source, using only existing stored job facts.
+    /// Local intent is never terminal; the source's original completion/cancellation wins.
+    /// # Errors
+    /// Invalid lifecycle, trust/key/evidence drift, expiry, interruption or missing ack reject.
+    pub async fn cancel_retained(
+        &self,
+        source: &mut crate::agent_bridge::BridgeSession<'_>,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<crate::agent_bridge::SourceStopConfirmation, ClientError> {
+        use crate::agent_host::output::RetainedCancellationHint;
+        let peer = source.peer().clone();
+        if let Some(proof) = Box::pin(
+            self.prepare_retained_cancellation(&peer, job, clock, || source.require_current()),
+        )
+        .await?
+        {
+            return Ok(proof);
+        }
+        match self.store.retained_cancellation_hint(job)? {
+            RetainedCancellationHint::Accepted => {
+                let pending = Box::pin(source.request_retained_accepted_cancellation(
+                    &self.store,
+                    job,
+                    clock,
+                ))
+                .await?;
+                Box::pin(pending.wait_source_confirmation()).await
+            }
+            RetainedCancellationHint::Output => {
+                let pending = Box::pin(source.request_retained_execution_cancellation(
+                    &self.store,
+                    job,
+                    clock,
+                ))
+                .await?;
+                Box::pin(pending.wait_source_confirmation()).await
+            }
+            RetainedCancellationHint::Confirmed => Err(Error::BindingChanged.into()),
+        }
     }
 
     /// No accepted receipt, old export conversion or fake execution until a genuine source

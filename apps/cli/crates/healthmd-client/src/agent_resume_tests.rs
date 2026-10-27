@@ -4,6 +4,7 @@ use crate::agent_host::{
     HostAuthorityStore,
     output::{NativeBinding, OutputTransaction},
 };
+use crate::secure_channel::AgentPayload;
 use std::path::{Path, PathBuf};
 use transfer_tests::{TransferCase, payload};
 
@@ -378,17 +379,29 @@ async fn recovery_peer(
     case: RecoveryCase,
 ) {
     let (mut channel, negotiation) = output_channel(port, saved, &peer, platform).await;
-    let received =
-        tokio::time::timeout(Duration::from_secs(3), channel.receive_v4(negotiation)).await;
     if case.before_send() {
+        let received = tokio::time::timeout(
+            Duration::from_secs(3),
+            channel.receive_agent_payload(negotiation),
+        )
+        .await;
         assert!(
             !matches!(received, Ok(Ok(_))),
             "rejected recovery emitted a wire control: {case:?}"
         );
         return;
     }
-    let Message::ResumeRequest(request) = received.unwrap().unwrap().message else {
-        panic!("only Resume is permitted")
+    expect_resume_ack(
+        &mut channel,
+        negotiation,
+        &binding,
+        prefix as u64,
+        &payload(TransferCase::Exact),
+    )
+    .await;
+    let Message::ResumeRequest(request) = channel.receive_v4(negotiation).await.unwrap().message
+    else {
+        panic!("only Resume is permitted after the exact durable ACK")
     };
     assert_eq!(request.job_id, binding.request.job_id);
     assert_eq!(request.binding, approval_binding(&binding.request.plan));
@@ -690,3 +703,53 @@ async fn authenticated_resume_rejects_inconsistent_whole_artifact_for_committed_
 
 #[path = "agent_resume_modes_tests.rs"]
 mod modes;
+
+pub(super) async fn expect_resume_ack(
+    channel: &mut SecureChannel,
+    negotiation: v4::Negotiation,
+    binding: &NativeBinding,
+    prefix: u64,
+    data: &[u8],
+) {
+    if prefix == 0 {
+        return;
+    }
+    let acknowledgement = match channel.receive_agent_payload(negotiation).await.unwrap() {
+        AgentPayload::Apple(message) => {
+            let DirectMessage::TransferPartitionAcknowledgement(Unlabeled { value }) = *message
+            else {
+                panic!("durable partition ACK must precede Resume");
+            };
+            v2::TransferPartitionAcknowledgement {
+                session_id: value.session_id.0,
+                job_id: value.job_id.0,
+                partition_index: u64::try_from(value.partition_index).unwrap(),
+                transfer_id: value.transfer_id.0,
+                partition_sha256: value.partition_sha256,
+                accepted: value.accepted,
+                message: value.message,
+            }
+        }
+        AgentPayload::Android(message) => {
+            let v2::Message::TransferPartitionAcknowledgement(value) = message.message else {
+                panic!("durable partition ACK must precede Resume");
+            };
+            value
+        }
+        _ => panic!("durable partition ACK must precede Resume"),
+    };
+    let segments = data.chunks(9).collect::<Vec<_>>();
+    let index = usize::try_from(prefix - 1).unwrap() % segments.len();
+    assert_eq!(
+        acknowledgement,
+        v2::TransferPartitionAcknowledgement {
+            session_id: Uuid::parse_str(&id(30).0).unwrap(),
+            job_id: Uuid::parse_str(&binding.request.job_id.0).unwrap(),
+            partition_index: prefix - 1,
+            transfer_id: Uuid::parse_str(&id(30 + prefix).0).unwrap(),
+            partition_sha256: healthmd_protocol::transfer::sha256_hex(segments[index]),
+            accepted: true,
+            message: None,
+        }
+    );
+}

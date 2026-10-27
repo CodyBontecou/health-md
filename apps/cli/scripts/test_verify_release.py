@@ -157,10 +157,17 @@ class HistoryReadinessDocumentationTests(unittest.TestCase):
         for filename in ("qa.md", "command-guidance.md"):
             with self.subTest(document=filename):
                 text = (self.DOCS / filename).read_text(encoding="utf-8")
-                examples = re.findall(r"--arguments '([^'\n]+)'", text)
+                examples = re.findall(
+                    r"(?:healthmd ([a-z-]+) )?--arguments '([^'\n]+)'", text
+                )
                 self.assertTrue(examples, "retain a typed execution example")
-                for raw in examples:
+                dated_examples = 0
+                for command, raw in examples:
                     arguments = json.loads(raw)
+                    if command == "cancel-execution":
+                        self.assertEqual(arguments, {"job_id": "JOB_UUID"})
+                        continue
+                    dated_examples += 1
                     dates = arguments["dates"]
                     self.assertEqual(set(dates), {"type", "range"})
                     self.assertEqual(dates["type"], "exact")
@@ -169,6 +176,7 @@ class HistoryReadinessDocumentationTests(unittest.TestCase):
                     end = date.fromisoformat(dates["range"]["end_date"])
                     self.assertGreaterEqual(end, start)
                     self.assertLessEqual((end - start).days + 1, 7)
+                self.assertGreater(dated_examples, 0, "retain a bounded typed query example")
                 self.assertIn("illustrative", text)
 
 
@@ -186,18 +194,21 @@ class CanonicalCliDocumentationTests(unittest.TestCase):
             (self.ROOT / "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json")
             .read_text(encoding="utf-8")
         )
-        self.assertEqual(len(catalog), 23)
+        self.assertEqual(len(catalog), 26)
         self.assertIn(f"Current development source exposes {len(catalog)}", readiness)
         self.assertIn("Published alpha.6 preview has 19 tools", readiness)
         self.assertIn("Alpha.7 remains an unpublished draft", readiness)
         self.assertIn("the 13-tool read-only catalog", readiness)
         self.assertIn("the 21-tool local stdio MCP catalog", readiness)
         self.assertIn("bundled Mac helper has 21 tools", readiness)
-        for name in ("healthmd_export_plan", "healthmd_export_approval"):
+        for name in ("healthmd_export_plan", "healthmd_export_approval",
+                     "healthmd_export_execute", "healthmd_export_execution_resume",
+                     "healthmd_export_execution_cancel"):
             self.assertIn(name, {tool["name"] for tool in catalog})
             self.assertIn(name, readiness)
-        self.assertIn("unwired/unadvertised", readiness)
-        self.assertIn("no bound execution", readiness)
+        self.assertIn("native extension 4 remains unadvertised", readiness)
+        self.assertIn("installed setup", readiness)
+        self.assertIn("full feature acceptance remain incomplete", readiness)
 
     def test_pairing_inventory_distinguishes_universal_and_legacy_selectors(self) -> None:
         compatibility = (self.ROOT / "apps/cli/docs/mobile-compatibility.md").read_text(encoding="utf-8")

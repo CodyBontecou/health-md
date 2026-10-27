@@ -28,12 +28,27 @@ impl PlanningClock for ObservedAt<'_> {
     }
 }
 
-pub(crate) async fn read_source_confirmation(
+pub(crate) async fn read_source_confirmation<F, Fut>(
     store: &HostAuthorityStore,
     job: &ControlUuid,
     clock: &dyn PlanningClock,
-) -> Result<ExecutionReceipt, ClientError> {
+    mut fence: F,
+) -> Result<ExecutionReceipt, ClientError>
+where
+    F: FnMut() -> Fut + Copy,
+    Fut: std::future::Future<Output = Result<(), ClientError>>,
+{
     job.validate_shape()?;
+    // File presence selects a decoder only; it never establishes trusted state. Both readers
+    // independently acquire the original lock and authenticate their complete evidence, then
+    // recheck it after the final protected-key await. A raced/unsafe hint fails closed rather
+    // than retrying a different format after authentication or binding failure.
+    let dir = store.directory()?;
+    match dir.symlink_metadata(format!("output-{}.json", job.0)) {
+        Ok(_) => return later_stop::read_confirmed_output_stop(store, job, clock, fence).await,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(private::unavailable(error)),
+    }
     let key = key_bytes(&store.protected_key.load_existing(&store.host).await?)?;
     let dir = store.directory()?;
     let lock = private::open_private(&dir, OUTPUT_LOCK, true, false)?;
@@ -105,6 +120,14 @@ pub(crate) async fn read_source_confirmation(
     {
         return Err(ClientError::AgentAuthorityUnavailable);
     }
+    let now = clock.now();
+    now.validate_shape()?;
+    if attempt.source_confirmed_at > now {
+        return Err(ClientError::AgentAuthorityUnavailable);
+    }
+    // The caller fence follows the final key/time callback while this reader still owns
+    // the original lock and exact authenticated local evidence. No await follows it.
+    fence().await?;
     let now = clock.now();
     now.validate_shape()?;
     if attempt.source_confirmed_at > now {

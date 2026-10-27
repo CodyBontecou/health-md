@@ -71,7 +71,13 @@ impl JsonRpcSession {
         };
         if matches!(
             request.pointer("/params/name").and_then(Value::as_str),
-            Some("healthmd_export_plan" | "healthmd_export_approval")
+            Some(
+                "healthmd_export_plan"
+                    | "healthmd_export_approval"
+                    | "healthmd_export_execute"
+                    | "healthmd_export_execution_resume"
+                    | "healthmd_export_execution_cancel"
+            )
         ) && !healthmd_operations::agent_rpc_bytes_valid(input.as_bytes())
         {
             return Some(response_error(

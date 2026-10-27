@@ -299,6 +299,91 @@ h1 {
   margin-bottom: 18px;
 }
 
+.article-contents {
+  margin: 24px 0 32px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.article-contents h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.article .article-contents ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.article .article-contents li + li {
+  margin-top: 0;
+}
+
+.article-contents a {
+  color: var(--pine);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.article-contents a:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 4px;
+}
+
+.article-contents a:active {
+  color: var(--pine-2);
+}
+
+.article-body h2[id] {
+  scroll-margin-top: 32px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article-contents a:hover { color: var(--pine-2); }
+}
+
+@media (max-width: 640px) {
+  .article .article-contents ul { grid-template-columns: 1fr; }
+}
+
+.article .article-byline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 16px 0 24px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.article-byline a {
+  color: var(--pine);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.article-byline a:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 4px;
+}
+
+.article-byline a:active {
+  color: var(--pine-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article-byline a:hover { color: var(--pine-2); }
+}
+
 .article-body a {
   color: var(--pine);
   text-decoration: underline;
@@ -346,6 +431,68 @@ h1 {
 .article li + li {
   margin-top: 8px;
 }
+
+.article-related {
+  margin-top: 48px;
+}
+
+.article .article-related ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.article .article-related li + li {
+  margin-top: 24px;
+}
+
+.article-related a {
+  color: var(--pine);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.article-related a:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 4px;
+}
+
+.article-related a:active {
+  color: var(--pine-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article-related a:hover { color: var(--pine-2); }
+}
+
+.article-related p {
+  margin: 8px 0 0;
+}
+
+.article .article-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 20px;
+}
+.article .article-breadcrumbs li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+.article-breadcrumbs [aria-current="page"] { overflow-wrap: anywhere; }
+.article-breadcrumbs a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.article-breadcrumbs a:focus-visible { outline: 2px solid var(--pine); outline-offset: 4px; }
+.article-breadcrumbs a:active { color: var(--pine-2); }
+@media (hover: hover) and (pointer: fine) { .article-breadcrumbs a:hover { color: var(--pine); } }
 
 .article code {
   border: 1px solid var(--accent-border);
@@ -523,3 +670,78 @@ footer {
     flex-direction: column;
   }
 }
+
+.workflow-directory {
+  padding-bottom: 64px;
+}
+
+.workflow-directory h2,
+.posts > h2 {
+  font-size: 24px;
+  line-height: 32px;
+  text-wrap: balance;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin: 24px 0;
+}
+
+.workflow-grid article {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.workflow-grid h3 {
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.workflow-grid p {
+  margin: 12px 0;
+}
+
+.workflow-grid a {
+  display: block;
+  width: fit-content;
+  margin-top: 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.workflow-directory a:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 4px;
+}
+
+@media (max-width: 720px) {
+  .workflow-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Starter previews show the actual fictional download contents, not a simulated app. */
+.starter-preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+.starter-preview-card { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.article-body .starter-preview-card h3 { margin-top: 12px; font-size: 24px; line-height: 32px; }
+.article-body .starter-label { margin: 0; color: var(--muted); font-size: 12px; line-height: 16px; }
+.starter-preview-card dl { margin: 24px 0; }
+.starter-preview-card dl div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+.starter-preview-card dd { margin: 0; font-family: var(--mono); }
+.article-body .starter-caption { color: var(--muted); font-size: 14px; line-height: 20px; }
+.article-body .starter-chart img { width: 100%; height: auto; }
+#starter-vault, #your-first-note { scroll-margin-top: 128px; }
+@media (max-width: 640px) { .starter-preview-grid { grid-template-columns: minmax(0, 1fr); } .starter-preview-card { padding: 16px; } }
+
+.starter-log-scroll, .article-table-scroll { overflow-x: auto; }
+.starter-log-scroll:focus-visible, .article-table-scroll:focus-visible { outline: 3px solid var(--pine); outline-offset: 4px; }
+
+.article-body .starter-actions a.button { font-family: var(--sans); font-size: 16px; line-height: 24px; font-weight: 600; padding: 8px 12px; text-decoration: none; touch-action: manipulation; }
+.article-body .starter-actions a.button:not(.secondary) { background: #6532cb; border-color: #6532cb; color: #fff; }
+.starter-actions a:focus-visible { outline: 3px solid var(--pine); outline-offset: 4px; }
+.starter-actions a:active { opacity: 0.85; }
+@media (hover: hover) and (pointer: fine) { .article-body .starter-actions a.button:not(.secondary):hover { background: #5126ac; color: #fff; } }

@@ -3676,7 +3676,7 @@
       "openWorldHint": false,
       "readOnlyHint": false
     },
-    "description": "Relay only separately stored exact host and native decisions for an issued v4 plan binding. This request and MCP annotations cannot create consent or authority. No execution adapter is provided.",
+    "description": "Relay only separately stored exact host and native decisions for an issued v4 plan binding. This request and MCP annotations cannot create consent or authority. Execute requires both stored decisions and installed Agent Bridge support.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3903,6 +3903,102 @@
     },
     "name": "healthmd_export_approval",
     "title": "Relay an existing exact export decision"
+  },
+  {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Execute an exact previously issued plan using separately stored host and native decisions and its registered destination. Supply only plan/job/idempotency/request IDs; caller approval fields and destination paths are rejected. Requires installed Agent Bridge support. Returns only after durable host output and exact native confirmation. Local cancellation does not confirm source cancellation; retain IDs for recovery.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "idempotency_key": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "job_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "plan_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plan_id",
+        "job_id",
+        "idempotency_key",
+        "request_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_execute",
+    "title": "Execute an approved stored export plan"
+  },
+  {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Recover an existing signed Agent Bridge job using its retained request, manifest, registered destination and verified committed prefix. Supply only job_id. Requires the same paired source and current authority; never recaptures or falls back to legacy exports. Returns only after durable output and exact native confirmation.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_execution_resume",
+    "title": "Resume an approved Agent Bridge export"
+  },
+  {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Request or replay Stop using only an existing job_id and signed retained state. Returns native acknowledgement or its authenticated historical receipt; native completion wins if already complete. Output is explicitly not verified by this operation. Local request cancellation or timeout is not source cancellation. Never recaptures, changes destination or renews grants. Requires the authorized local surface.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_execution_cancel",
+    "title": "Stop a retained Agent Bridge export"
   },
   {
     "_meta": {

@@ -8,9 +8,10 @@ description: 设置 Android 版 Health.md，将 Health Connect 数据导出为 M
   <p>Android 版 Health.md 在设备上读取 Health Connect，并将 Markdown、Obsidian Bases、JSON 或 CSV 写入您选择的文件夹。此文件夹导出流程无需 Health.md 账户或健康数据云服务，也无需订阅。</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">前往 Google Play 获取</a>
-    <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">前往 F-Droid 获取</a>
+    <a class="docs-button-secondary" href="#distribution-status">F-Droid 发布状态</a>
     <a class="docs-button-secondary" href="/zh-hans/docs/export/">阅读导出文档</a>
   </div>
+  <p id="distribution-status">F-Droid 目录发布尚待完成。当前 Android 版本可从 Google Play 获取。</p>
 </div>
 
 <div class="reference-stats">

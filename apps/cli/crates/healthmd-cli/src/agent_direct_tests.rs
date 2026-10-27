@@ -192,6 +192,888 @@ async fn answer_discovery(
         .await
         .unwrap();
 }
+async fn execute_send_base(
+    channel: &mut SecureChannel,
+    platform: &PeerPlatform,
+    apple: DirectMessage,
+    android: v2::Message,
+) {
+    if *platform == PeerPlatform::Apple {
+        channel.send(&apple).await.unwrap();
+    } else {
+        channel.send_v2(&v2::Envelope::new(android)).await.unwrap();
+    }
+}
+async fn execute_expect_base(
+    channel: &mut SecureChannel,
+    platform: &PeerPlatform,
+    apple: DirectMessage,
+    android: v2::Message,
+) {
+    if *platform == PeerPlatform::Apple {
+        let SecurePayload::Message(message) = channel.receive().await.unwrap() else {
+            panic!("Expected Apple control");
+        };
+        assert_eq!(*message, apple);
+    } else {
+        assert_eq!(channel.receive_v2().await.unwrap().message, android);
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ExecutionPeerOutcome {
+    Complete,
+    DisconnectBeforeFinalize,
+    DisconnectThenCancel,
+    AcceptedThenCancel,
+    DisconnectAfterFirstPartition,
+}
+
+#[derive(Clone)]
+struct ExecutedPeerSnapshot {
+    request: ExecuteRequest,
+    accepted: ExecutionReceipt,
+    manifest: ArtifactManifest,
+    session: v2::TransferSession,
+    last_transfer: Uuid,
+    completed: ExecutionReceipt,
+}
+
+// One bounded positive peer transcript verifies the actual public backend, both deployed
+// base envelopes, durable host output and final source confirmation. Native SDK is synthetic.
+#[allow(clippy::too_many_lines)]
+async fn answer_approved_execute(
+    channel: &mut SecureChannel,
+    negotiation: Negotiation,
+    native: &mut NativeFake,
+    outcome: ExecutionPeerOutcome,
+) -> ExecutedPeerSnapshot {
+    use healthmd_protocol::models as a;
+    let Message::ExecuteRequest(request) = channel.receive_v4(negotiation).await.unwrap().message
+    else {
+        panic!("Expected Execute only");
+    };
+    let request = *request;
+    let platform = native.peer.platform.clone();
+    assert_eq!(request.plan.intent.peer, native.peer);
+    let approved = native
+        .relay_approval(ApprovalRequest {
+            schema: ApprovalRequestSchema::HealthmdAgentApprovalRequest,
+            schema_version: 1,
+            request_id: id(210),
+            plan_id: request.plan.plan_id.clone(),
+            binding: approval_binding(&request.plan),
+        })
+        .await
+        .unwrap();
+    assert_eq!(request.approval, approved);
+    let bytes = b"{\"synthetic\":true}";
+    let digest = Digest(healthmd_protocol::transfer::sha256_hex(bytes));
+    let accepted = ExecutionReceipt {
+        schema: ExecutionReceiptSchema::HealthmdAgentExecutionReceipt,
+        schema_version: 1,
+        artifact_count: 0,
+        binding: approval_binding(&request.plan),
+        committed_partition_count: 0,
+        expires_at: later(&native.time, 604_800),
+        frontier_sha256: Digest("0".repeat(64)),
+        job_id: request.job_id.clone(),
+        manifest_sha256: Digest("0".repeat(64)),
+        request_sha256: document_digest(&request).unwrap(),
+        source_acknowledged: false,
+        status: ExecutionReceiptStatus::Accepted,
+    };
+    channel
+        .send_v4(
+            &Envelope::new(Message::ExecutionReceipt(Box::new(accepted.clone()))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+    assert_eq!(request.plan.predicted_paths.len(), 2);
+    let manifest = ArtifactManifest {
+        schema: ArtifactManifestSchema::HealthmdAgentArtifactManifest,
+        schema_version: 1,
+        job_id: request.job_id.clone(),
+        binding: accepted.binding.clone(),
+        request_sha256: accepted.request_sha256.clone(),
+        capture_status: ArtifactManifestCaptureStatus::Complete,
+        branch_statuses: vec![],
+        artifacts: request
+            .plan
+            .predicted_paths
+            .iter()
+            .map(|path| {
+                Artifact::Branch1(ArtifactBranch1 {
+                    artifact_id: ControlUuid(Uuid::new_v4().to_string()),
+                    relative_path: path.clone(),
+                    byte_count: bytes.len() as u64,
+                    sha256: digest.clone(),
+                    media_type: ArtifactBranch1MediaType::ApplicationJson,
+                    profile: if platform == PeerPlatform::Apple {
+                        ArtifactBranch1Profile::AppleV8
+                    } else {
+                        ArtifactBranch1Profile::AndroidFrozenV4
+                    },
+                    write_mode: OutputSettingsWriteMode::Overwrite,
+                })
+            })
+            .collect(),
+    };
+    let session = v2::TransferSession {
+        session_id: Uuid::new_v4(),
+        job_id: Uuid::parse_str(&request.job_id.0).unwrap(),
+        request_fingerprint: accepted.request_sha256.0.clone(),
+        peer_binding: v2::PeerBinding {
+            source_installation_id: Uuid::parse_str(&native.peer.source_installation_id.0).unwrap(),
+            destination_installation_id: Uuid::parse_str(&native.peer.host_installation_id.0)
+                .unwrap(),
+        },
+        partition_target_bytes: 50_331_648,
+        created_at: chrono::DateTime::from_timestamp(native.time.seconds().unwrap(), 0).unwrap(),
+    };
+    if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+        // No manifest or base transfer message has crossed this channel. The retained
+        // accepted owner must support public Cancel without fabricated output proof.
+        return ExecutedPeerSnapshot {
+            request,
+            completed: ExecutionReceipt {
+                status: ExecutionReceiptStatus::Cancelled,
+                source_acknowledged: true,
+                ..accepted.clone()
+            },
+            accepted,
+            manifest,
+            session,
+            last_transfer: Uuid::nil(),
+        };
+    }
+    channel
+        .send_v4(
+            &Envelope::new(Message::ArtifactManifest(Box::new(manifest.clone()))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+    let fingerprint = a::RequestFingerprint {
+        version: 1,
+        sha256: session.request_fingerprint.clone(),
+    };
+    execute_send_base(
+        channel,
+        &platform,
+        DirectMessage::TransferSession(Unlabeled::from(a::TransferSession {
+            protocol_version: 1,
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            request_fingerprint: fingerprint.clone(),
+            peer_binding: a::PeerBinding {
+                source_installation_id: SwiftUuid(session.peer_binding.source_installation_id),
+                destination_installation_id: SwiftUuid(
+                    session.peer_binding.destination_installation_id,
+                ),
+            },
+            partition_target_bytes: 50_331_648,
+            created_at: session.created_at,
+        })),
+        v2::Message::TransferSession(session.clone()),
+    )
+    .await;
+    for artifact in &manifest.artifacts {
+        let Artifact::Branch1(item) = artifact else {
+            panic!("Expected daily file");
+        };
+        let file = Uuid::parse_str(&item.artifact_id.0).unwrap();
+        execute_send_base(
+            channel,
+            &platform,
+            DirectMessage::FileManifest(Unlabeled::from(a::FileManifest {
+                job_id: SwiftUuid(session.job_id),
+                file_id: SwiftUuid(file),
+                relative_path: item.relative_path.0.clone(),
+                byte_count: i64::try_from(bytes.len()).unwrap(),
+                sha256: digest.0.clone(),
+                write_mode: a::FileWriteMode::Overwrite,
+            })),
+            v2::Message::ArtifactManifest(v2::ArtifactManifest {
+                job_id: session.job_id,
+                artifact_id: file,
+                kind: v2::ArtifactKind::GeneratedFile,
+                schema: v2::ArtifactSchema {
+                    id: "healthmd.generated-files".into(),
+                    major: 1,
+                },
+                media_type: "application/json".into(),
+                byte_count: bytes.len() as u64,
+                sha256: digest.0.clone(),
+                relative_path: Some(item.relative_path.0.clone()),
+                write_mode: Some(v2::FileWriteMode::Overwrite),
+                logical_checksum_sha256: None,
+                snapshot_status: None,
+                provider_id: None,
+            }),
+        )
+        .await;
+    }
+    let manifest_digest = document_digest(&manifest).unwrap();
+    let mut frontier = TransferFrontier::new(
+        &request.job_id,
+        &accepted.request_sha256,
+        &manifest_digest,
+        &ControlUuid(session.session_id.to_string()),
+    )
+    .unwrap();
+    let mut previous = None;
+    let mut last_transfer = Uuid::nil();
+    for (index, artifact) in manifest.artifacts.iter().enumerate() {
+        let Artifact::Branch1(item) = artifact else {
+            panic!("Expected daily file");
+        };
+        let transfer = Uuid::new_v4();
+        last_transfer = transfer;
+        send_execution_partition(
+            channel,
+            &platform,
+            &session,
+            item,
+            index,
+            transfer,
+            previous.clone(),
+        )
+        .await;
+        frontier = frontier
+            .appending(&TransferFrontierPartition {
+                partition_index: i64::try_from(index).unwrap(),
+                transfer_id: ControlUuid(transfer.to_string()),
+                artifact_id: item.artifact_id.clone(),
+                artifact_offset: 0,
+                byte_count: i64::try_from(bytes.len()).unwrap(),
+                chunk_count: 1,
+                sha256: digest.clone(),
+            })
+            .unwrap();
+        previous = Some(digest.0.clone());
+        if outcome == ExecutionPeerOutcome::DisconnectAfterFirstPartition && index == 0 {
+            break;
+        }
+    }
+    if outcome != ExecutionPeerOutcome::Complete {
+        // Only this prefix is durably acknowledged; no finalization or source completion
+        // has been sent. Dropping this channel must fail Execute.
+        let completed = ExecutionReceipt {
+            artifact_count: 2,
+            committed_partition_count: if outcome
+                == ExecutionPeerOutcome::DisconnectAfterFirstPartition
+            {
+                1
+            } else {
+                2
+            },
+            frontier_sha256: frontier.sha256().clone(),
+            manifest_sha256: manifest_digest,
+            source_acknowledged: true,
+            status: ExecutionReceiptStatus::Complete,
+            ..accepted.clone()
+        };
+        return ExecutedPeerSnapshot {
+            request,
+            accepted,
+            manifest,
+            session,
+            last_transfer,
+            completed,
+        };
+    }
+    execute_send_base(
+        channel,
+        &platform,
+        DirectMessage::TransferFinalize(Unlabeled::from(a::TransferFinalize {
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            request_fingerprint: fingerprint,
+            total_partitions: 2,
+            total_bytes: i64::try_from(bytes.len() * 2).unwrap(),
+            final_partition_sha256: previous.clone(),
+            outcome: None,
+        })),
+        v2::Message::TransferFinalize(v2::TransferFinalize {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            request_fingerprint: session.request_fingerprint.clone(),
+            total_partitions: 2,
+            total_bytes: (bytes.len() * 2) as u64,
+            final_partition_sha256: previous.clone(),
+        }),
+    )
+    .await;
+    execute_expect_base(
+        channel,
+        &platform,
+        DirectMessage::TransferFinalAcknowledgement(Unlabeled::from(
+            a::TransferFinalAcknowledgement {
+                session_id: SwiftUuid(session.session_id),
+                job_id: SwiftUuid(session.job_id),
+                accepted: true,
+                total_partitions: 2,
+                total_bytes: i64::try_from(bytes.len() * 2).unwrap(),
+                final_partition_sha256: previous.clone(),
+                response_byte_count: None,
+                response_sha256: None,
+                message: None,
+            },
+        )),
+        v2::Message::TransferFinalAcknowledgement(v2::TransferFinalAcknowledgement {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            accepted: true,
+            total_partitions: 2,
+            total_bytes: (bytes.len() * 2) as u64,
+            final_partition_sha256: previous,
+            response_byte_count: None,
+            response_sha256: None,
+            message: None,
+        }),
+    )
+    .await;
+    for artifact in &manifest.artifacts {
+        let Artifact::Branch1(item) = artifact else {
+            panic!("Expected daily file");
+        };
+        let Message::CommitReceipt(receipt) =
+            channel.receive_v4(negotiation).await.unwrap().message
+        else {
+            panic!("Expected durable commit");
+        };
+        validate_commit_receipt(&receipt, None).unwrap();
+        assert_eq!(receipt.artifact_id, item.artifact_id);
+        assert_eq!(receipt.input_sha256, digest);
+        assert_eq!(receipt.after_sha256, digest);
+        assert_eq!(receipt.manifest_sha256, manifest_digest);
+        assert_eq!(receipt.destination, request.plan.intent.destination);
+    }
+    execute_send_base(
+        channel,
+        &platform,
+        DirectMessage::CompletionConfirmed(a::JobIdPayload {
+            job_id: SwiftUuid(session.job_id),
+        }),
+        v2::Message::CompletionConfirmed(v2::JobPayload {
+            job_id: session.job_id,
+        }),
+    )
+    .await;
+    let completed = ExecutionReceipt {
+        artifact_count: 2,
+        committed_partition_count: 2,
+        frontier_sha256: frontier.sha256().clone(),
+        manifest_sha256: manifest_digest,
+        source_acknowledged: true,
+        status: ExecutionReceiptStatus::Complete,
+        ..accepted.clone()
+    };
+    channel
+        .send_v4(
+            &Envelope::new(Message::ExecutionReceipt(Box::new(completed.clone()))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+    ExecutedPeerSnapshot {
+        request,
+        accepted,
+        manifest,
+        session,
+        last_transfer,
+        completed,
+    }
+}
+
+// Identical partition exchange for first delivery and an authenticated resumed suffix.
+#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
+async fn send_execution_partition(
+    channel: &mut SecureChannel,
+    platform: &PeerPlatform,
+    session: &v2::TransferSession,
+    item: &ArtifactBranch1,
+    index: usize,
+    transfer: Uuid,
+    previous: Option<String>,
+) {
+    use healthmd_protocol::models as a;
+    let bytes = b"{\"synthetic\":true}";
+    let digest = Digest(healthmd_protocol::transfer::sha256_hex(bytes));
+    let artifact_id = Uuid::parse_str(&item.artifact_id.0).unwrap();
+    let fingerprint = a::RequestFingerprint {
+        version: 1,
+        sha256: session.request_fingerprint.clone(),
+    };
+    let part = v2::TransferPartition {
+        index: index as u64,
+        transfer_id: transfer,
+        artifact_id,
+        artifact_offset: 0,
+        byte_count: bytes.len() as u64,
+        chunk_count: 1,
+        sha256: digest.0.clone(),
+        previous_sha256: previous.clone(),
+    };
+    execute_send_base(
+        channel,
+        platform,
+        DirectMessage::TransferOpen(Unlabeled::from(a::TransferOpen {
+            session: a::TransferSession {
+                protocol_version: 1,
+                session_id: SwiftUuid(session.session_id),
+                job_id: SwiftUuid(session.job_id),
+                request_fingerprint: fingerprint.clone(),
+                peer_binding: a::PeerBinding {
+                    source_installation_id: SwiftUuid(session.peer_binding.source_installation_id),
+                    destination_installation_id: SwiftUuid(
+                        session.peer_binding.destination_installation_id,
+                    ),
+                },
+                partition_target_bytes: 50_331_648,
+                created_at: session.created_at,
+            },
+            partition: a::TransferPartition {
+                index: i64::try_from(index).unwrap(),
+                transfer_id: SwiftUuid(transfer),
+                source_dates: vec![item.artifact_id.0.clone()],
+                item_segment: Some(a::TransferItemSegment {
+                    item_id: item.artifact_id.0.clone(),
+                    offset: 0,
+                    item_byte_count: i64::try_from(bytes.len()).unwrap(),
+                    is_final_segment: true,
+                }),
+                byte_count: i64::try_from(bytes.len()).unwrap(),
+                chunk_count: 1,
+                sha256: digest.0.clone(),
+                previous_sha256: previous.clone(),
+            },
+        })),
+        v2::Message::TransferOpen(v2::TransferOpen {
+            session: session.clone(),
+            partition: part,
+        }),
+    )
+    .await;
+    execute_expect_base(
+        channel,
+        platform,
+        DirectMessage::TransferDisposition(Unlabeled::from(a::TransferDisposition {
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            partition_index: i64::try_from(index).unwrap(),
+            partition_sha256: digest.0.clone(),
+            disposition: a::TransferDispositionKind::Needed,
+            message: None,
+        })),
+        v2::Message::TransferDisposition(v2::TransferDisposition {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            partition_index: index as u64,
+            partition_sha256: digest.0.clone(),
+            disposition: v2::TransferDispositionKind::Needed,
+            message: None,
+        }),
+    )
+    .await;
+    let chunk = a::TransferChunk {
+        transfer_id: SwiftUuid(transfer),
+        sequence: 1,
+        data: bytes.to_vec(),
+        sha256: digest.0.clone(),
+    };
+    channel
+        .send_binary_transfer_frame(
+            &healthmd_protocol::transfer::encode_binary_chunk(&chunk).unwrap(),
+        )
+        .await
+        .unwrap();
+    execute_expect_base(
+        channel,
+        platform,
+        DirectMessage::TransferChunkAcknowledgement(Unlabeled::from(
+            a::TransferChunkAcknowledgement {
+                transfer_id: SwiftUuid(transfer),
+                sequence: 1,
+                accepted: true,
+                sha256: digest.0.clone(),
+                message: None,
+            },
+        )),
+        v2::Message::TransferChunkAcknowledgement(v2::TransferChunkAcknowledgement {
+            transfer_id: transfer,
+            sequence: 1,
+            accepted: true,
+            sha256: digest.0.clone(),
+            message: None,
+        }),
+    )
+    .await;
+    execute_send_base(
+        channel,
+        platform,
+        DirectMessage::TransferPartitionComplete(Unlabeled::from(a::TransferPartitionComplete {
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            partition_index: i64::try_from(index).unwrap(),
+            transfer_id: SwiftUuid(transfer),
+            partition_sha256: digest.0.clone(),
+        })),
+        v2::Message::TransferPartitionComplete(v2::TransferPartitionComplete {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            partition_index: index as u64,
+            transfer_id: transfer,
+            partition_sha256: digest.0.clone(),
+        }),
+    )
+    .await;
+    execute_expect_base(
+        channel,
+        platform,
+        DirectMessage::TransferPartitionAcknowledgement(Unlabeled::from(
+            a::TransferPartitionAcknowledgement {
+                session_id: SwiftUuid(session.session_id),
+                job_id: SwiftUuid(session.job_id),
+                partition_index: i64::try_from(index).unwrap(),
+                transfer_id: SwiftUuid(transfer),
+                partition_sha256: digest.0.clone(),
+                accepted: true,
+                message: None,
+            },
+        )),
+        v2::Message::TransferPartitionAcknowledgement(v2::TransferPartitionAcknowledgement {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            partition_index: index as u64,
+            transfer_id: transfer,
+            partition_sha256: digest.0.clone(),
+            accepted: true,
+            message: None,
+        }),
+    )
+    .await;
+}
+
+// A fresh authenticated owner must receive the retained final ACK before Resume and
+// must reproduce the exact original accepted binding, manifest and terminal receipt.
+#[allow(clippy::too_many_lines)]
+async fn answer_retained_resume(
+    channel: &mut SecureChannel,
+    negotiation: Negotiation,
+    state: ExecutedPeerSnapshot,
+) -> ExecutedPeerSnapshot {
+    use healthmd_protocol::models as a;
+    let ExecutedPeerSnapshot {
+        request,
+        accepted,
+        manifest,
+        session,
+        mut last_transfer,
+        mut completed,
+    } = state;
+    let platform = request.plan.intent.peer.platform.clone();
+    let bytes = b"{\"synthetic\":true}";
+    let digest = Digest(healthmd_protocol::transfer::sha256_hex(bytes));
+    execute_expect_base(
+        channel,
+        &platform,
+        DirectMessage::TransferPartitionAcknowledgement(Unlabeled::from(
+            a::TransferPartitionAcknowledgement {
+                session_id: SwiftUuid(session.session_id),
+                job_id: SwiftUuid(session.job_id),
+                partition_index: i64::try_from(completed.committed_partition_count - 1).unwrap(),
+                transfer_id: SwiftUuid(last_transfer),
+                partition_sha256: digest.0.clone(),
+                accepted: true,
+                message: None,
+            },
+        )),
+        v2::Message::TransferPartitionAcknowledgement(v2::TransferPartitionAcknowledgement {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            partition_index: completed.committed_partition_count - 1,
+            transfer_id: last_transfer,
+            partition_sha256: digest.0.clone(),
+            accepted: true,
+            message: None,
+        }),
+    )
+    .await;
+    let Message::ResumeRequest(resume) = channel.receive_v4(negotiation).await.unwrap().message
+    else {
+        panic!("Only retained Resume is permitted")
+    };
+    assert_eq!(resume.job_id, request.job_id);
+    assert_eq!(resume.peer, request.plan.intent.peer);
+    assert_eq!(resume.binding, approval_binding(&request.plan));
+    assert_eq!(resume.destination, request.plan.intent.destination);
+    assert_eq!(resume.request_sha256, document_digest(&request).unwrap());
+    assert_eq!(resume.manifest_sha256, document_digest(&manifest).unwrap());
+    assert_eq!(resume.frontier_sha256, completed.frontier_sha256);
+    assert_eq!(
+        resume.committed_partition_count,
+        completed.committed_partition_count
+    );
+    channel
+        .send_v4(
+            &Envelope::new(Message::ExecutionReceipt(Box::new(accepted.clone()))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+    channel
+        .send_v4(
+            &Envelope::new(Message::ArtifactManifest(Box::new(manifest.clone()))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+    let fingerprint = a::RequestFingerprint {
+        version: 1,
+        sha256: session.request_fingerprint.clone(),
+    };
+    execute_send_base(
+        channel,
+        &platform,
+        DirectMessage::TransferSession(Unlabeled::from(a::TransferSession {
+            protocol_version: 1,
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            request_fingerprint: fingerprint.clone(),
+            peer_binding: a::PeerBinding {
+                source_installation_id: SwiftUuid(session.peer_binding.source_installation_id),
+                destination_installation_id: SwiftUuid(
+                    session.peer_binding.destination_installation_id,
+                ),
+            },
+            partition_target_bytes: 50_331_648,
+            created_at: session.created_at,
+        })),
+        v2::Message::TransferSession(session.clone()),
+    )
+    .await;
+    for artifact in &manifest.artifacts {
+        let Artifact::Branch1(item) = artifact else {
+            panic!("Expected daily file");
+        };
+        let file = Uuid::parse_str(&item.artifact_id.0).unwrap();
+        execute_send_base(
+            channel,
+            &platform,
+            DirectMessage::FileManifest(Unlabeled::from(a::FileManifest {
+                job_id: SwiftUuid(session.job_id),
+                file_id: SwiftUuid(file),
+                relative_path: item.relative_path.0.clone(),
+                byte_count: i64::try_from(bytes.len()).unwrap(),
+                sha256: digest.0.clone(),
+                write_mode: a::FileWriteMode::Overwrite,
+            })),
+            v2::Message::ArtifactManifest(v2::ArtifactManifest {
+                job_id: session.job_id,
+                artifact_id: file,
+                kind: v2::ArtifactKind::GeneratedFile,
+                schema: v2::ArtifactSchema {
+                    id: "healthmd.generated-files".into(),
+                    major: 1,
+                },
+                media_type: "application/json".into(),
+                byte_count: bytes.len() as u64,
+                sha256: digest.0.clone(),
+                relative_path: Some(item.relative_path.0.clone()),
+                write_mode: Some(v2::FileWriteMode::Overwrite),
+                logical_checksum_sha256: None,
+                snapshot_status: None,
+                provider_id: None,
+            }),
+        )
+        .await;
+    }
+    let manifest_digest = document_digest(&manifest).unwrap();
+    if completed.committed_partition_count == 1 {
+        let Artifact::Branch1(first) = &manifest.artifacts[0] else {
+            panic!("Expected first file")
+        };
+        let mut frontier = TransferFrontier::new(
+            &request.job_id,
+            &accepted.request_sha256,
+            &manifest_digest,
+            &ControlUuid(session.session_id.to_string()),
+        )
+        .unwrap()
+        .appending(&TransferFrontierPartition {
+            partition_index: 0,
+            transfer_id: ControlUuid(last_transfer.to_string()),
+            artifact_id: first.artifact_id.clone(),
+            artifact_offset: 0,
+            byte_count: i64::try_from(bytes.len()).unwrap(),
+            chunk_count: 1,
+            sha256: digest.clone(),
+        })
+        .unwrap();
+        assert_eq!(frontier.sha256(), &completed.frontier_sha256);
+        let Artifact::Branch1(second) = &manifest.artifacts[1] else {
+            panic!("Expected second file")
+        };
+        let transfer = Uuid::new_v4();
+        send_execution_partition(
+            channel,
+            &platform,
+            &session,
+            second,
+            1,
+            transfer,
+            Some(digest.0.clone()),
+        )
+        .await;
+        frontier = frontier
+            .appending(&TransferFrontierPartition {
+                partition_index: 1,
+                transfer_id: ControlUuid(transfer.to_string()),
+                artifact_id: second.artifact_id.clone(),
+                artifact_offset: 0,
+                byte_count: i64::try_from(bytes.len()).unwrap(),
+                chunk_count: 1,
+                sha256: digest.clone(),
+            })
+            .unwrap();
+        last_transfer = transfer;
+        completed.committed_partition_count = 2;
+        completed.frontier_sha256 = frontier.sha256().clone();
+    }
+    let previous = Some(digest.0.clone());
+    execute_send_base(
+        channel,
+        &platform,
+        DirectMessage::TransferFinalize(Unlabeled::from(a::TransferFinalize {
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            request_fingerprint: fingerprint,
+            total_partitions: 2,
+            total_bytes: i64::try_from(bytes.len() * 2).unwrap(),
+            final_partition_sha256: previous.clone(),
+            outcome: None,
+        })),
+        v2::Message::TransferFinalize(v2::TransferFinalize {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            request_fingerprint: session.request_fingerprint.clone(),
+            total_partitions: 2,
+            total_bytes: (bytes.len() * 2) as u64,
+            final_partition_sha256: previous.clone(),
+        }),
+    )
+    .await;
+    execute_expect_base(
+        channel,
+        &platform,
+        DirectMessage::TransferFinalAcknowledgement(Unlabeled::from(
+            a::TransferFinalAcknowledgement {
+                session_id: SwiftUuid(session.session_id),
+                job_id: SwiftUuid(session.job_id),
+                accepted: true,
+                total_partitions: 2,
+                total_bytes: i64::try_from(bytes.len() * 2).unwrap(),
+                final_partition_sha256: previous.clone(),
+                response_byte_count: None,
+                response_sha256: None,
+                message: None,
+            },
+        )),
+        v2::Message::TransferFinalAcknowledgement(v2::TransferFinalAcknowledgement {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            accepted: true,
+            total_partitions: 2,
+            total_bytes: (bytes.len() * 2) as u64,
+            final_partition_sha256: previous,
+            response_byte_count: None,
+            response_sha256: None,
+            message: None,
+        }),
+    )
+    .await;
+    for artifact in &manifest.artifacts {
+        let Artifact::Branch1(item) = artifact else {
+            panic!("Expected daily file");
+        };
+        let Message::CommitReceipt(receipt) =
+            channel.receive_v4(negotiation).await.unwrap().message
+        else {
+            panic!("Expected durable commit");
+        };
+        validate_commit_receipt(&receipt, None).unwrap();
+        assert_eq!(receipt.artifact_id, item.artifact_id);
+        assert_eq!(receipt.input_sha256, digest);
+        assert_eq!(receipt.after_sha256, digest);
+        assert_eq!(receipt.manifest_sha256, manifest_digest);
+        assert_eq!(receipt.destination, request.plan.intent.destination);
+    }
+    execute_send_base(
+        channel,
+        &platform,
+        DirectMessage::CompletionConfirmed(a::JobIdPayload {
+            job_id: SwiftUuid(session.job_id),
+        }),
+        v2::Message::CompletionConfirmed(v2::JobPayload {
+            job_id: session.job_id,
+        }),
+    )
+    .await;
+    channel
+        .send_v4(
+            &Envelope::new(Message::ExecutionReceipt(Box::new(completed.clone()))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+    ExecutedPeerSnapshot {
+        request,
+        accepted,
+        manifest,
+        session,
+        last_transfer,
+        completed,
+    }
+}
+
+async fn answer_retained_cancel(
+    channel: &mut SecureChannel,
+    negotiation: Negotiation,
+    state: ExecutedPeerSnapshot,
+    outcome: ExecutionPeerOutcome,
+) {
+    let Message::CancelRequest(cancel) = channel.receive_v4(negotiation).await.unwrap().message
+    else {
+        panic!("Only Cancel permitted; no transfer ACK, Execute or Resume")
+    };
+    assert_eq!(cancel.job_id, state.request.job_id);
+    assert_eq!(cancel.peer, state.request.plan.intent.peer);
+    assert_eq!(cancel.approval_id, state.request.approval.approval_id);
+    assert_eq!(cancel.authority_id, state.request.approval.authority_id);
+    assert_eq!(
+        cancel.request_sha256,
+        document_digest(&state.request).unwrap()
+    );
+    let receipt = if outcome == ExecutionPeerOutcome::DisconnectThenCancel {
+        ExecutionReceipt {
+            status: ExecutionReceiptStatus::Cancelled,
+            ..state.completed
+        }
+    } else {
+        state.completed
+    };
+    channel
+        .send_v4(
+            &Envelope::new(Message::ExecutionReceipt(Box::new(receipt))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+}
+
 fn arguments(peer: &Peer) -> Value {
     serde_json::json!({"dates":{"type":"exact","range":{"start_date":"2026-01-01","end_date":"2026-01-02"}},"calendar_timezone":"UTC","metric_ids":["steps"],"output_profile":profile(peer),"subfolder":"","folder_template":"{year}","filename_template":"{date}","destination_binding_id":id(3)})
 }
@@ -215,11 +1097,206 @@ fn comparable_plan(mut value: Value) -> Value {
     value
 }
 
+#[tokio::test]
+async fn actual_execute_backend_rejects_missing_plan_before_listener_or_output() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let root = std::fs::canonicalize(temporary.path()).unwrap();
+    let credentials = InjectedCredentials::default();
+    let layout = StorageLayout { root: root.clone() };
+    healthmd_client::storage::IdentityStore::new(layout.clone())
+        .load_or_create(chrono::Utc::now())
+        .unwrap();
+    let client = Arc::new(
+        DirectClient::open_planning_with_credentials(layout, credentials.clone()).unwrap(),
+    );
+    let source_id = Uuid::new_v4();
+    let peer = Peer {
+        host_installation_id: ControlUuid(client.identity.installation_id.0.to_string()),
+        source_installation_id: ControlUuid(source_id.to_string()),
+        platform: PeerPlatform::Apple,
+    };
+    let (store, output) = enroll(&root, &peer, &SystemPlanningClock.now()).await;
+    let mut trust = TrustState::empty(client.identity.installation_id);
+    trust
+        .save_client(TrustedClient {
+            installation_id: SwiftUuid(source_id),
+            display_name: "Synthetic source".into(),
+            platform: Some(WirePlatform::Ios),
+            reconnect_secret: vec![13; 32],
+            paired_at: chrono::Utc::now(),
+            last_connected_at: chrono::Utc::now(),
+            wake: None,
+        })
+        .unwrap();
+    TrustStore::new(credentials.clone())
+        .save(&trust)
+        .await
+        .unwrap();
+    let writes = credentials.0.writes.load(Ordering::SeqCst);
+    let occupied = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let backend: Arc<dyn HealthDataBackend> = Arc::new(DirectAgentBackend::new(
+        client,
+        Arc::new(ExistingFakeKey(AtomicUsize::new(0))),
+        Some(source_id),
+        occupied.local_addr().unwrap().port(),
+        Duration::from_secs(5),
+        Arc::new(Mutex::new(())),
+    ));
+    let input = serde_json::json!({"plan_id":id(99),"job_id":id(20),"idempotency_key":id(19),"request_id":id(22)});
+    let before = store.revision().await.unwrap();
+    let error = crate::mcp::execute_agent_operation(
+        backend,
+        "healthmd_export_execute",
+        &serde_json::to_vec(&input).unwrap(),
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.code, "approval_required");
+    assert_eq!(store.revision().await.unwrap(), before);
+    assert_eq!(credentials.0.writes.load(Ordering::SeqCst), writes);
+    assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
+}
+
+#[tokio::test]
+async fn actual_resume_backend_rejects_missing_job_before_listener_or_output() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let root = std::fs::canonicalize(temporary.path()).unwrap();
+    let credentials = InjectedCredentials::default();
+    let layout = StorageLayout { root: root.clone() };
+    healthmd_client::storage::IdentityStore::new(layout.clone())
+        .load_or_create(chrono::Utc::now())
+        .unwrap();
+    let client = Arc::new(
+        DirectClient::open_planning_with_credentials(layout, credentials.clone()).unwrap(),
+    );
+    let source_id = Uuid::new_v4();
+    let peer = Peer {
+        host_installation_id: ControlUuid(client.identity.installation_id.0.to_string()),
+        source_installation_id: ControlUuid(source_id.to_string()),
+        platform: PeerPlatform::Apple,
+    };
+    let (store, output) = enroll(&root, &peer, &SystemPlanningClock.now()).await;
+    let mut trust = TrustState::empty(client.identity.installation_id);
+    trust
+        .save_client(TrustedClient {
+            installation_id: SwiftUuid(source_id),
+            display_name: "Synthetic source".into(),
+            platform: Some(WirePlatform::Ios),
+            reconnect_secret: vec![13; 32],
+            paired_at: chrono::Utc::now(),
+            last_connected_at: chrono::Utc::now(),
+            wake: None,
+        })
+        .unwrap();
+    TrustStore::new(credentials.clone())
+        .save(&trust)
+        .await
+        .unwrap();
+    let writes = credentials.0.writes.load(Ordering::SeqCst);
+    let occupied = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let backend: Arc<dyn HealthDataBackend> = Arc::new(DirectAgentBackend::new(
+        client,
+        Arc::new(ExistingFakeKey(AtomicUsize::new(0))),
+        Some(source_id),
+        occupied.local_addr().unwrap().port(),
+        Duration::from_secs(5),
+        Arc::new(Mutex::new(())),
+    ));
+    let input = serde_json::json!({"job_id":id(20)});
+    let before = store.revision().await.unwrap();
+    let error = crate::mcp::execute_agent_operation(
+        backend,
+        "healthmd_export_execution_resume",
+        &serde_json::to_vec(&input).unwrap(),
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.code, "permission_required");
+    assert_eq!(store.revision().await.unwrap(), before);
+    assert_eq!(credentials.0.writes.load(Ordering::SeqCst), writes);
+    assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
+}
+
+#[tokio::test]
+async fn actual_cancel_backend_rejects_missing_job_before_listener_or_output() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let root = std::fs::canonicalize(temporary.path()).unwrap();
+    let credentials = InjectedCredentials::default();
+    let layout = StorageLayout { root: root.clone() };
+    healthmd_client::storage::IdentityStore::new(layout.clone())
+        .load_or_create(chrono::Utc::now())
+        .unwrap();
+    let client = Arc::new(
+        DirectClient::open_planning_with_credentials(layout, credentials.clone()).unwrap(),
+    );
+    let source_id = Uuid::new_v4();
+    let peer = Peer {
+        host_installation_id: ControlUuid(client.identity.installation_id.0.to_string()),
+        source_installation_id: ControlUuid(source_id.to_string()),
+        platform: PeerPlatform::Apple,
+    };
+    let (store, output) = enroll(&root, &peer, &SystemPlanningClock.now()).await;
+    let mut trust = TrustState::empty(client.identity.installation_id);
+    trust
+        .save_client(TrustedClient {
+            installation_id: SwiftUuid(source_id),
+            display_name: "Synthetic source".into(),
+            platform: Some(WirePlatform::Ios),
+            reconnect_secret: vec![13; 32],
+            paired_at: chrono::Utc::now(),
+            last_connected_at: chrono::Utc::now(),
+            wake: None,
+        })
+        .unwrap();
+    TrustStore::new(credentials.clone())
+        .save(&trust)
+        .await
+        .unwrap();
+    let writes = credentials.0.writes.load(Ordering::SeqCst);
+    let occupied = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let backend: Arc<dyn HealthDataBackend> = Arc::new(DirectAgentBackend::new(
+        client,
+        Arc::new(ExistingFakeKey(AtomicUsize::new(0))),
+        Some(source_id),
+        occupied.local_addr().unwrap().port(),
+        Duration::from_secs(5),
+        Arc::new(Mutex::new(())),
+    ));
+    let input = serde_json::json!({"job_id":id(20)});
+    let before = store.revision().await.unwrap();
+    let error = crate::mcp::execute_agent_operation(
+        backend,
+        "healthmd_export_execution_cancel",
+        &serde_json::to_vec(&input).unwrap(),
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.code, "permission_required");
+    assert_eq!(store.revision().await.unwrap(), before);
+    assert_eq!(credentials.0.writes.load(Ordering::SeqCst), writes);
+    assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
+}
+
 // Keep both public transports and exact independently established decisions in one tracer.
 #[allow(clippy::too_many_lines)]
 #[tokio::test]
-async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_both_platforms() {
-    for platform in [PeerPlatform::Apple, PeerPlatform::Android] {
+async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
+    for (platform, outcome) in [PeerPlatform::Apple, PeerPlatform::Android]
+        .into_iter()
+        .flat_map(|platform| {
+            [
+                ExecutionPeerOutcome::Complete,
+                ExecutionPeerOutcome::DisconnectBeforeFinalize,
+                ExecutionPeerOutcome::DisconnectThenCancel,
+                ExecutionPeerOutcome::AcceptedThenCancel,
+                ExecutionPeerOutcome::DisconnectAfterFirstPartition,
+            ]
+            .map(|outcome| (platform.clone(), outcome))
+        })
+    {
         let temporary = tempfile::TempDir::new().unwrap();
         let root = std::fs::canonicalize(temporary.path()).unwrap();
         let credentials = InjectedCredentials::default();
@@ -289,7 +1366,13 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
             let session = app.session(CallerIdentity::local());
             assert!(!session.list_tools().iter().any(|v| matches!(
                 v["name"].as_str(),
-                Some("healthmd_export_plan" | "healthmd_export_approval")
+                Some(
+                    "healthmd_export_plan"
+                        | "healthmd_export_approval"
+                        | "healthmd_export_execute"
+                        | "healthmd_export_execution_resume"
+                        | "healthmd_export_execution_cancel"
+                )
             )));
             assert!(
                 session
@@ -393,6 +1476,28 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
                         .unwrap();
                 }
             }
+            let mut executions = Vec::new();
+            for _ in 0..2 {
+                let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
+                executions.push(
+                    answer_approved_execute(&mut channel, negotiation, &mut native, outcome).await,
+                );
+            }
+            if !matches!(
+                outcome,
+                ExecutionPeerOutcome::DisconnectThenCancel
+                    | ExecutionPeerOutcome::AcceptedThenCancel
+            ) {
+                for execution in &mut executions {
+                    let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
+                    *execution =
+                        answer_retained_resume(&mut channel, negotiation, execution.clone()).await;
+                }
+            }
+            for execution in executions {
+                let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
+                answer_retained_cancel(&mut channel, negotiation, execution, outcome).await;
+            }
         });
         let input = arguments(&peer);
         let cli_plan = crate::mcp::execute_agent_operation(
@@ -420,6 +1525,8 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
             .await
             .unwrap();
         consent_sender.send(()).unwrap();
+        let execution_plan_id = plan.plan_id.clone();
+        let execution_paths = plan.predicted_paths.clone();
         let request = ApprovalRequest {
             schema: ApprovalRequestSchema::HealthmdAgentApprovalRequest,
             schema_version: 1,
@@ -443,7 +1550,158 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
         )
         .await;
         assert_eq!(cli_approval, mcp_approval);
+        let cli_input = serde_json::json!({"plan_id":execution_plan_id,"job_id":id(200),"idempotency_key":id(201),"request_id":id(202)});
+        let cli_result = crate::mcp::execute_agent_operation(
+            Arc::clone(&backend),
+            "healthmd_export_execute",
+            &serde_json::to_vec(&cli_input).unwrap(),
+            CancellationToken::new(),
+        )
+        .await;
+        let cli_execution = if outcome == ExecutionPeerOutcome::Complete {
+            cli_result.unwrap()
+        } else {
+            assert!(
+                cli_result.is_err(),
+                "Interrupted Execute cannot report completion"
+            );
+            Value::Null
+        };
+        let mcp_input = serde_json::json!({"plan_id":execution_plan_id,"job_id":id(203),"idempotency_key":id(204),"request_id":id(205)});
+        let mcp_execution = if outcome == ExecutionPeerOutcome::Complete {
+            rpc_call(&rpc, "healthmd_export_execute", mcp_input, 3).await
+        } else {
+            let raw = serde_json::json!({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"healthmd_export_execute","arguments":mcp_input}}).to_string();
+            let response: Value =
+                serde_json::from_str(&rpc.handle(&raw, CancellationToken::new()).await.unwrap())
+                    .unwrap();
+            assert!(response.get("error").is_none());
+            assert_eq!(
+                response["result"]["isError"], true,
+                "Interrupted MCP Execute cannot report completion"
+            );
+            Value::Null
+        };
+        // Durable host commits can precede source completion. Preserve their exact bytes
+        // across reconnect; an interrupted call still cannot return a terminal receipt.
+        let before_recovery: Vec<_> = execution_paths
+            .iter()
+            .enumerate()
+            .map(|(index, path)| {
+                let path = output.join(&path.0);
+                if outcome == ExecutionPeerOutcome::AcceptedThenCancel
+                    || (outcome == ExecutionPeerOutcome::DisconnectAfterFirstPartition
+                        && index == 1)
+                {
+                    assert!(
+                        !path.exists(),
+                        "Accepted-only cancellation cannot create output"
+                    );
+                    None
+                } else {
+                    let bytes = std::fs::read(path).unwrap();
+                    assert_eq!(bytes, b"{\"synthetic\":true}");
+                    Some(bytes)
+                }
+            })
+            .collect();
+        if !matches!(
+            outcome,
+            ExecutionPeerOutcome::DisconnectThenCancel | ExecutionPeerOutcome::AcceptedThenCancel
+        ) {
+            let cli_resume = crate::mcp::execute_agent_operation(
+                Arc::clone(&backend),
+                "healthmd_export_execution_resume",
+                &serde_json::to_vec(&serde_json::json!({"job_id":id(200)})).unwrap(),
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+            let mcp_resume = rpc_call(
+                &rpc,
+                "healthmd_export_execution_resume",
+                serde_json::json!({"job_id":id(203)}),
+                4,
+            )
+            .await;
+            if outcome == ExecutionPeerOutcome::Complete {
+                assert_eq!(cli_resume, cli_execution);
+                assert_eq!(mcp_resume, mcp_execution);
+            }
+            for result in [&cli_resume, &mcp_resume] {
+                assert_eq!(result["status"], "complete");
+                assert_eq!(result["source_acknowledged"], true);
+                assert_eq!(result["artifact_count"], 2);
+                assert_eq!(result["committed_partition_count"], 2);
+                assert_eq!(result["binding"], cli_approval["binding"]);
+            }
+        }
+        let cli_cancel = crate::mcp::execute_agent_operation(
+            Arc::clone(&backend),
+            "healthmd_export_execution_cancel",
+            &serde_json::to_vec(&serde_json::json!({"job_id":id(200)})).unwrap(),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+        let mcp_cancel = rpc_call(
+            &rpc,
+            "healthmd_export_execution_cancel",
+            serde_json::json!({"job_id":id(203)}),
+            5,
+        )
+        .await;
+        for result in [&cli_cancel, &mcp_cancel] {
+            assert_eq!(result["schema"], "healthmd.agent_source_stop_result");
+            assert_eq!(result["schema_version"], 1);
+            assert_eq!(result["output_verified"], false);
+            assert_eq!(
+                result["source_receipt"]["status"],
+                if matches!(
+                    outcome,
+                    ExecutionPeerOutcome::DisconnectThenCancel
+                        | ExecutionPeerOutcome::AcceptedThenCancel
+                ) {
+                    "cancelled"
+                } else {
+                    "complete"
+                }
+            );
+            assert_eq!(result["source_receipt"]["source_acknowledged"], true);
+            assert_eq!(result["source_receipt"]["binding"], cli_approval["binding"]);
+        }
         source.await.unwrap();
+        // A second Cancel is a local historical read, even with its listener port occupied.
+        let _occupied = TcpListener::bind(("0.0.0.0", port)).await.unwrap();
+        let history = crate::mcp::execute_agent_operation(
+            Arc::clone(&backend),
+            "healthmd_export_execution_cancel",
+            &serde_json::to_vec(&serde_json::json!({"job_id":id(200)})).unwrap(),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(history, cli_cancel);
+        let history = rpc_call(
+            &rpc,
+            "healthmd_export_execution_cancel",
+            serde_json::json!({"job_id":id(203)}),
+            6,
+        )
+        .await;
+        assert_eq!(history, mcp_cancel);
+        for (path, before) in execution_paths.iter().zip(&before_recovery) {
+            match before {
+                Some(bytes) => assert_eq!(&std::fs::read(output.join(&path.0)).unwrap(), bytes),
+                None if outcome == ExecutionPeerOutcome::AcceptedThenCancel => {
+                    assert!(!output.join(&path.0).exists());
+                }
+                None => assert_eq!(
+                    std::fs::read(output.join(&path.0)).unwrap(),
+                    b"{\"synthetic\":true}"
+                ),
+            }
+        }
         assert_eq!(
             TrustStore::new(credentials.clone())
                 .load(client.identity.installation_id)
@@ -454,7 +1712,17 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
         assert_eq!(credentials.0.writes.load(Ordering::SeqCst), writes);
         assert!(credentials.0.reads.load(Ordering::SeqCst) >= 16);
         assert!(key.0.load(Ordering::SeqCst) > 0);
-        assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
+        if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+            assert_eq!(std::fs::read_dir(&output).unwrap().count(), 0);
+            for result in [&cli_cancel, &mcp_cancel] {
+                assert_eq!(result["source_receipt"]["artifact_count"], 0);
+                assert_eq!(result["source_receipt"]["committed_partition_count"], 0);
+                assert_eq!(result["source_receipt"]["manifest_sha256"], "0".repeat(64));
+                assert_eq!(result["source_receipt"]["frontier_sha256"], "0".repeat(64));
+            }
+        } else {
+            assert_eq!(std::fs::read_dir(output.join("2026")).unwrap().count(), 2);
+        }
     }
 }
 

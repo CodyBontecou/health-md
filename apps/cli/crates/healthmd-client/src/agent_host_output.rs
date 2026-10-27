@@ -22,6 +22,44 @@ pub(crate) use completion::CompletionEvidence;
 #[path = "agent_source_confirmation.rs"]
 mod source_confirmation;
 pub(crate) use source_confirmation::read_source_confirmation;
+#[path = "agent_output_stop.rs"]
+mod later_stop;
+pub(crate) use later_stop::PendingOutputStop;
+
+/// Decoder selection only: each selected reader must authenticate its complete evidence.
+#[derive(Clone, Copy)]
+pub(crate) enum RetainedCancellationHint {
+    Accepted,
+    Output,
+    Confirmed,
+}
+impl HostAuthorityStore {
+    pub(crate) fn retained_cancellation_hint(
+        &self,
+        job: &ControlUuid,
+    ) -> Result<RetainedCancellationHint, ClientError> {
+        job.validate_shape()?;
+        let dir = self.directory()?;
+        let output = match dir.symlink_metadata(format!("output-{}.json", job.0)) {
+            Ok(_) => true,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+            Err(error) => return Err(private::unavailable(error)),
+        };
+        let bytes =
+            private::read_private(&dir, &format!("attempt-{}.json", job.0), MAX_OUTPUT_BYTES)?;
+        let hint: serde_json::Value = private_json::decode(&bytes)?;
+        match (
+            output,
+            hint.pointer("/attempt/schema_version")
+                .and_then(serde_json::Value::as_u64),
+        ) {
+            (false, Some(2 | 3)) => Ok(RetainedCancellationHint::Accepted),
+            (true, Some(1 | 2 | 5 | 7)) => Ok(RetainedCancellationHint::Output),
+            (false, Some(4)) | (true, Some(6 | 8)) => Ok(RetainedCancellationHint::Confirmed),
+            _ => Err(Error::BindingChanged.into()),
+        }
+    }
+}
 
 #[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -64,11 +102,9 @@ impl NativeBinding {
             })
             .collect::<Result<Vec<_>, _>>()?;
         let predicted = &request.plan.predicted_paths;
-        let exact = matches!(
-            self.manifest.capture_status,
-            v4::ArtifactManifestCaptureStatus::Complete
-                | v4::ArtifactManifestCaptureStatus::CompleteEmpty
-        );
+        // A successful empty capture has no artifacts by the existing v4 contract.
+        // Predicted paths are not permission to fabricate files for absent source data.
+        let exact = self.manifest.capture_status == v4::ArtifactManifestCaptureStatus::Complete;
         let ordered = predicted
             .iter()
             .filter(|path| paths.contains(path))
@@ -1047,7 +1083,17 @@ fn read_compatible_execution_attempt(
         Ok(_) => {}
     }
     let bytes = private::read_private(dir, &name, MAX_OUTPUT_BYTES)?;
-    let saved: SignedExecutionAttempt = private_json::decode(&bytes)?;
+    validate_compatible_execution_attempt(&bytes, host, binding, key)?;
+    Ok(Some(bytes))
+}
+
+fn validate_compatible_execution_attempt(
+    bytes: &[u8],
+    host: &ControlUuid,
+    binding: &NativeBinding,
+    key: &SecretBox<[u8; 32]>,
+) -> Result<SignedExecutionAttempt, ClientError> {
+    let saved: SignedExecutionAttempt = private_json::decode(bytes)?;
     saved.mac.validate_shape()?;
     let attempt = &saved.attempt;
     attempt.started_at.validate_shape()?;
@@ -1085,7 +1131,7 @@ fn read_compatible_execution_attempt(
     ) {
         return Err(ClientError::AgentAuthorityUnavailable);
     }
-    Ok(Some(bytes))
+    Ok(saved)
 }
 
 /// Load original immutable metadata by a validated local job ID, never caller-provided
