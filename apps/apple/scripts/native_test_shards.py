@@ -157,7 +157,7 @@ def sdk_digest(path):
     spec = importlib.util.spec_from_file_location("native_sdk_receipts", Path(__file__).with_name("compare-history-sdk27-receipts.py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return hashlib.sha256(module.build_identity(path.read_text()).encode()).hexdigest()
+    return hashlib.sha256(module.build_identity(path.read_bytes().decode("utf-8")).encode()).hexdigest()
 
 
 def check_identity(value, args):

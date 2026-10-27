@@ -179,14 +179,15 @@ class ProductRestoreTests(unittest.TestCase):
 
     def test_archive_digest_current_source_and_sdk_drift_reject_before_extraction(self):
         import tempfile
-        for mode in ("archive", "source", "run", "attempt", "sdk"):
+        for mode in ("archive", "source", "run", "attempt", "sdk", "sdk-newlines"):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
                 args = self.fixture(Path(directory))
                 if mode == "archive": args.prepared_sha256 = "0" * 64
                 elif mode == "source": args.source_sha = "b" * 40
                 elif mode == "run": args.run_id = "999"
                 elif mode == "attempt": args.attempt = "9"
-                else: args.sdk_receipt.write_text("ImageOS=macos27 ImageVersion=first\nCompiler=changed\n")
+                elif mode == "sdk": args.sdk_receipt.write_text("ImageOS=macos27 ImageVersion=first\nCompiler=changed\n")
+                else: args.sdk_receipt.write_bytes(args.sdk_receipt.read_bytes().replace(b"\n", b"\r\n"))
                 with self.assertRaises(ValueError): shards.restore(args)
                 self.assertFalse(args.derived.exists())
 
