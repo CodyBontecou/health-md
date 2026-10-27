@@ -39,7 +39,7 @@ const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/ver
 
 test("landing page makes local-first health data movement the primary message", () => {
   assert.match(index, /<title>Export Apple Health and Health Connect \| Health\.md<\/title>/);
-  assert.match(index, /Move your<br>health forward\./);
+  assert.match(index, /Export your<br>health data\./);
   assert.match(index, /A private bridge for your health data<br>to your files, scripts, and agents\./);
   assert.match(index, /Your data\. Your rules\./);
   assert.match(index, /Local-first by default\.[\s\S]*optional single-owner Health\.md Cloud pilot[\s\S]*no public signup/);
@@ -289,7 +289,7 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
 
 test("landing experience follows the reference's single-screen desktop composition", () => {
   assert.match(index, /<div class="header-nav">/);
-  assert.match(index, /<nav aria-label="Documentation"><a class="header-docs-link" href="docs\/">Docs<\/a><\/nav>/);
+  assert.match(index, /<nav aria-label="Main navigation">\s*<a class="header-docs-link" href="docs\/">Docs<\/a>\s*<a class="header-docs-link" href="\/blog\/" hreflang="en">Guides<\/a>\s*<\/nav>/);
   assert.doesNotMatch(index, /<!-- HEALTHMD_LANGUAGE_SELECTOR -->/);
   assert.doesNotMatch(index.slice(index.indexOf('<header'), index.indexOf('</header>')), /language-menu|language-selector/);
   assert.doesNotMatch(index, /↗/);

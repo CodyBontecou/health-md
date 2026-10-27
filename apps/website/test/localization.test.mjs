@@ -59,7 +59,7 @@ for (const [index, locale] of translatedLocales.entries()) {
     assert.equal(schema.url, expectedUrl);
     assert.equal(runtime.intlLocale, locale.intlLocale);
     assert.ok(html.includes(`href="${runtime.sampleMarkdownHref}" download data-sample-download`));
-    assert.doesNotMatch(html, /Move your<br>health forward\.|Your data\. Your rules\./);
+    assert.doesNotMatch(html, /Export your<br>health data\.|Your data\. Your rules\./);
   });
 }
 
