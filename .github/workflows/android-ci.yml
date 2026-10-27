@@ -48,6 +48,7 @@ jobs:
             apps/android/app/build
             apps/android/healthmd-core/build
             apps/android/direct-protocol/build
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
       - name: Ensure pinned NDK and native builder
         run: |
           sdkmanager 'ndk;27.1.12297006' >/dev/null
