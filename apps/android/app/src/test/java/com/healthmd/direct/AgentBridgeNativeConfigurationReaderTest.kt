@@ -1066,6 +1066,16 @@ class AgentBridgeNativeConfigurationReaderTest {
 
     @Test fun `native completion persists exact host receipts and source confirmation`() = runBlocking { checkNativeTransferSender("complete") }
     @Test fun `native Resume carries retained prefix and confirms original completion without capture`() = runBlocking { checkNativeTransferSender("complete-resume") }
+    @Test fun `native wire Resume replays original acceptance before immutable transfer`() = runBlocking { checkNativeTransferSender("wire-resume") }
+    @Test fun `native wire Resume reconciles a lost partition ACK without recapture`() = runBlocking { checkNativeTransferSender("wire-lost-ack") }
+    @Test fun `native wire Resume accepts zero prefix without fabricating an ACK`() = runBlocking { checkNativeTransferSender("wire-zero-prefix") }
+    @Test fun `native wire Resume rejects bad full binding before ACK advancement`() = runBlocking { checkNativeTransferSender("wire-bad-binding") }
+    @Test fun `native wire Resume rejects wrong ACK and duplicate ACK without response`() = runBlocking {
+        for (mode in listOf("wire-bad-ack", "wire-double-ack")) checkNativeTransferSender(mode)
+    }
+    @Test fun `native wire Resume retains original acceptance after plan expiry`() = runBlocking { checkNativeTransferSender("wire-expired-plan") }
+    @Test fun `native wire Resume Stop preserves channel for exact receipt replay`() = runBlocking { checkNativeTransferSender("wire-stop") }
+
     @Test fun `native completion rejects changed input with valid commit key`() = runBlocking { checkNativeTransferSender("complete-bad-input") }
     @Test fun `native completion rejects reordered receipts`() = runBlocking { checkNativeTransferSender("complete-order") }
     @Test fun `native completion rejects missing receipt`() = runBlocking { checkNativeTransferSender("complete-missing") }
@@ -1108,10 +1118,13 @@ class AgentBridgeNativeConfigurationReaderTest {
                 coVerify(exactly = 2) { client.aggregate(any()) }
                 return@withNativeExportPreparation
             }
-            val stopTransfer = mode.startsWith("stop-")
+            val stopTransfer = mode.startsWith("stop-") || mode == "wire-stop"
             val keepalive = mode.contains("keepalive")
-            val completion=mode.startsWith("complete") || mode == "stop-host"
-            val resumedPrefix = mode == "resume" || mode == "complete-resume" || mode == "stop-resume"
+            val wireResume = mode.startsWith("wire-")
+            val wireInvalid = mode in setOf("wire-bad-binding", "wire-bad-ack", "wire-double-ack")
+            val lostAck = mode == "wire-lost-ack" || mode == "wire-bad-binding"
+            val completion=mode.startsWith("complete") || mode == "stop-host" || wireResume
+            val resumedPrefix = mode == "resume" || mode == "complete-resume" || mode == "stop-resume" || (wireResume && mode != "wire-zero-prefix")
             var resumeEnvelope: AgentBridgeResumeRequest? = null
             val manifest=AgentBridgeCodec.decode(original.export.manifestCanonical) as AgentBridgeArtifactManifest
             val hostReceipts=manifest.artifacts.map { nativeHostCommit(it,request,original.export.manifestCanonical,mode=="complete-bad-input") }.toMutableList()
@@ -1121,9 +1134,22 @@ class AgentBridgeNativeConfigurationReaderTest {
             val acceptedBeforeResume = f.store.access { it!!.state.acceptedJobs }
 
             if (resumedPrefix || mode == "rewind") planner.withRetainedCaptureContext(request) { context ->
-                context.begin(); context.preserveTransferFrontier(); context.recordAcknowledgedTransferPartition(0)
-                if (mode == "complete-resume" || mode == "stop-resume") resumeEnvelope = resumeRequest(request, original, context.preserveTransferFrontier())
+                context.begin(); context.preserveTransferFrontier()
+                if (lostAck) {
+                    context.preserveAwaitingPartitionAcknowledgement(0)
+                    val part = original.partitions.first()
+                    val expected = context.preserveTransferFrontier().appending(AgentBridgeTransferFrontierPartition(0, part.transferId,
+                        original.export.baseFiles.first().manifest.artifactId, 0, part.byteCount, part.chunkCount, part.sha256))
+                    resumeEnvelope = resumeRequest(request, original, expected)
+                } else {
+                    context.recordAcknowledgedTransferPartition(0)
+                    if (mode == "complete-resume" || mode == "stop-resume" || wireResume) resumeEnvelope = resumeRequest(request, original, context.preserveTransferFrontier())
+                }
             }
+            if (mode == "wire-zero-prefix") planner.withRetainedCaptureContext(request) { context ->
+                context.begin(); resumeEnvelope = resumeRequest(request, original, context.preserveTransferFrontier())
+            }
+            if (mode == "wire-expired-plan") f.clock.now = f.clock.now.plusSeconds(600)
             var priorCompletion: AgentBridgeExecutionReceipt? = null
             if (mode == "stop-complete") planner.withRetainedCaptureContext(request) { context ->
                 context.begin(); context.preserveTransferFrontier()
@@ -1136,6 +1162,21 @@ class AgentBridgeNativeConfigurationReaderTest {
             val agent = mutableListOf<AgentBridgeMessage>(); val base = mutableListOf<ReceivedEnvelope>()
             val chunks = mutableListOf<Pair<String, ByteArray>>()
             val responses = java.util.ArrayDeque<ReceivedAgentBridgePayload>()
+            val resumePrelude = java.util.ArrayDeque<ReceivedAgentBridgePayload>()
+            if (wireResume) {
+                if (resumedPrefix) {
+                    val part = original.partitions.first()
+                    val ack = TransferPartitionAcknowledgement(original.session.sessionId, original.session.jobId, 0, part.transferId,
+                        if (mode == "wire-bad-ack") "0".repeat(64) else part.sha256, true)
+                    val encoded = ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode("transfer_partition_acknowledgement", TransferPartitionAcknowledgement.serializer(), ack)))
+                    resumePrelude.add(encoded)
+                    if (mode == "wire-double-ack") resumePrelude.add(encoded)
+                }
+                if (mode != "wire-double-ack") {
+                    val resume = requireNotNull(resumeEnvelope).let { if (mode == "wire-bad-binding") it.copy(manifestSha256 = "0".repeat(64)) else it }
+                    resumePrelude.add(ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("resume_request", resume)))
+                }
+            }
             // A host reply becomes available only after its first outbound challenge.
             // The native reader can already be waiting while preparation is in flight.
             val responseReady = java.util.concurrent.CountDownLatch(1)
@@ -1218,9 +1259,10 @@ class AgentBridgeNativeConfigurationReaderTest {
             every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
                 // Socket reads wait for a peer response or close; preparation has no
                 // ten-second deadline. The runner bounds the whole test command.
-                responseReady.await()
+                val prelude = resumePrelude.pollFirst()
+                if (prelude == null) responseReady.await()
                 secondArg<() -> Unit>()()
-                val result = responses.pollFirst() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                val result = prelude ?: responses.pollFirst() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
                 if (mode == "revoke" || mode == "keepalive-revoke") lifecycle.stop()
                 if ((result as? ReceivedAgentBridgePayload.Agent)?.message?.type == "cancel_request") stopReceived = true
                 secondArg<() -> Unit>()(); result
@@ -1232,6 +1274,7 @@ class AgentBridgeNativeConfigurationReaderTest {
             val job = f.store.access { it!!.state.acceptedJobs!!.single() }
             val directory = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve("captures").resolve(job.requestSha256)
             completionDirectory=directory
+            val progressBeforeWire = Files.readAllBytes(directory.resolve("progress.json"))
             coEvery { client.aggregate(any()) } throws IllegalStateException("No SDK on immutable carriage")
             val forbidden = AgentBridgeNativeDayRenderer(DailyAggregateRustPlanner { error("No render") }, pinLoader = { error("No core load") })
             var publicationInterrupted = false
@@ -1249,7 +1292,8 @@ class AgentBridgeNativeConfigurationReaderTest {
                 var stopped = false
                 var failure: Throwable? = null
                 try {
-                    if (mode == "stop-resume") reconnect.sendResumedExecutionExport(requireNotNull(resumeEnvelope), manager, renderer = forbidden)
+                    if (wireResume) reconnect.receiveAndHandleExecutionNext(channel, manager, forbidden)
+                    else if (mode == "stop-resume") reconnect.sendResumedExecutionExport(requireNotNull(resumeEnvelope), manager, renderer = forbidden)
                     else if (completion) reconnect.sendExecutionExport(request, manager, true, forbidden)
                     else reconnect.sendTransferExport(request, manager, true, forbidden)
                 } catch (caught: Throwable) { failure = caught; stopped = (caught as? AgentBridgeException)?.code == AgentBridgeErrorCode.CANCELLED }
@@ -1269,7 +1313,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                     assertThat(receipt.sourceAcknowledged).isTrue()
                     assertThat(receipt.requestSha256).isEqualTo(original.export.requestSha256)
                     assertThat(receipt.status).isEqualTo(if (priorCompletion != null) priorCompletion!!.status else AgentBridgeExecutionReceiptStatus.CANCELLED)
-                    val expectedCount = if (mode == "stop-resume") 1 else if (mode in listOf("stop-complete", "stop-final", "stop-host")) original.partitions.size else 0
+                    val expectedCount = if (mode == "stop-resume" || wireResume) 1 else if (mode in listOf("stop-complete", "stop-final", "stop-host")) original.partitions.size else 0
                     assertThat(receipt.committedPartitionCount).isEqualTo(expectedCount)
                     if (priorCompletion != null) assertThat(receipt).isEqualTo(priorCompletion)
                     verify(exactly = 0) { channel.close() }
@@ -1284,7 +1328,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 coVerify(exactly = 2) { client.aggregate(any()) }
                 return@withNativeExportPreparation
             }
-            val fails = (completion && mode !in setOf("complete", "complete-resume", "complete-keepalive")) || mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication", "keepalive-revoke", "keepalive-write-revoke")
+            val fails = wireInvalid || (completion && !wireResume && mode !in setOf("complete", "complete-resume", "complete-keepalive")) || mode.startsWith("bad-") || mode in listOf("revoke", "rewind", "publication", "keepalive-revoke", "keepalive-write-revoke")
             try {
                 if (mode == "contended") {
                     reconnect.transmitTransfer(request, true) { context ->
@@ -1298,6 +1342,8 @@ class AgentBridgeNativeConfigurationReaderTest {
                         catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BUSY) }
                         original
                     }
+                } else if (wireResume) {
+                    assertThat(reconnect.receiveAndHandleExecutionNext(channel, manager, forbidden)).isNull()
                 } else if (mode == "complete-resume") reconnect.sendResumedExecutionExport(requireNotNull(resumeEnvelope), manager, renderer = forbidden)
                 else if(completion)reconnect.sendExecutionExport(request,manager,true,forbidden)
                 else reconnect.sendTransferExport(request, manager, true, forbidden)
@@ -1310,6 +1356,18 @@ class AgentBridgeNativeConfigurationReaderTest {
                 verify(atLeast = 1) { channel.close() }
             }
             f.peerContext.onCheck = null
+            if (wireInvalid) {
+                assertThat(agent).isEmpty(); assertThat(base).isEmpty(); assertThat(chunks).isEmpty()
+                assertThat(Files.readAllBytes(directory.resolve("progress.json"))).isEqualTo(progressBeforeWire)
+                assertThat(f.store.access { it!!.state.acceptedJobs }).isEqualTo(acceptedBeforeResume)
+                return@withNativeExportPreparation
+            }
+            if (wireResume) {
+                assertThat(agent.first().type).isEqualTo("execution_receipt")
+                assertThat(agent.first().payload).isEqualTo(requireNotNull(acceptedBeforeResume).single().acceptedReceipt())
+                agent.removeAt(0) // Remaining assertions qualify the unchanged transfer/completion transcript.
+                assertThat(f.store.access { it!!.state.acceptedJobs }).isEqualTo(acceptedBeforeResume)
+            }
             if (keepalive) {
                 assertThat(base.count { it.type == "pong" }).isEqualTo(if (mode == "bad-keepalive-pong") 1 else if (fails) 0 else expectedPongs)
                 if (!fails) { assertThat(responses).isEmpty(); verify(exactly = 0) { channel.close() } }

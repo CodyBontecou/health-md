@@ -185,6 +185,16 @@ async fn resume_original(
     let peer = &binding.request.plan.intent.peer;
     let platform = peer_platform(peer);
     let (mut channel, negotiation) = output_channel(port, saved, peer, platform).await;
+    expect_resume_ack(
+        &mut channel,
+        negotiation,
+        &binding,
+        prefix,
+        &payload(transfer_case(
+            &binding.request.plan.effective_settings.write_mode,
+        )),
+    )
+    .await;
     let Message::ResumeRequest(resume) = channel.receive_v4(negotiation).await.unwrap().message
     else {
         panic!("Resume only")

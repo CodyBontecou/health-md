@@ -57,6 +57,49 @@ impl ResumedTransfer {
             checkpoint,
         })
     }
+    fn last_acknowledgement(
+        &self,
+    ) -> Result<Option<v2::TransferPartitionAcknowledgement>, ClientError> {
+        let Some(last) = self.journal.partitions.last() else {
+            return Ok(None);
+        };
+        // The authenticated retained prefix and staged bytes were verified at open and are
+        // rechecked by the send guard. Caller count/digest fields cannot synthesize this ACK.
+        Ok(Some(v2::TransferPartitionAcknowledgement {
+            session_id: self.journal.session.0.session_id,
+            job_id: self.journal.session.0.job_id,
+            partition_index: u64::try_from(last.partition.partition_index)
+                .map_err(private::unavailable)?,
+            transfer_id: uuid::Uuid::parse_str(&last.partition.transfer_id.0)
+                .map_err(private::unavailable)?,
+            partition_sha256: last.partition.sha256.0.clone(),
+            accepted: true,
+            message: None,
+        }))
+    }
+
+    async fn replay_last_acknowledgement<F, Fut>(
+        &self,
+        channel: &mut crate::secure_channel::SecureChannel,
+        mut current: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut + Copy + Send,
+        Fut: std::future::Future<Output = Result<(), ClientError>> + Send,
+    {
+        if let Some(acknowledgement) = self.last_acknowledgement()? {
+            let bytes = wire::encode_base_response(
+                self.transaction.binding(),
+                Response::Partition(acknowledgement),
+            )?;
+            channel
+                .send_bridge_plaintext_guarded(&bytes, current)
+                .await?;
+            current().await?;
+        }
+        Ok(())
+    }
+
     fn request(&self) -> Result<v4::ResumeRequest, ClientError> {
         let binding = self.transaction.binding();
         Ok(v4::ResumeRequest {
@@ -268,6 +311,9 @@ impl<'trust> BridgeSession<'trust> {
             require_resume_lifetime(&binding, &host.delegation.expires_at, clock, cancellation)
         };
         current().await?;
+        retained
+            .replay_last_acknowledgement(&mut self.channel, current)
+            .await?;
         self.channel
             .send_v4_guarded(
                 &Envelope::new(Message::ResumeRequest(Box::new(resume))),

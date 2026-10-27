@@ -349,6 +349,83 @@ internal class AgentBridgeNativePlanningSession(
         return { finished.set(true); cancellation.cancel() }
     }
 
+    /** One original reader admits only an optional base ACK immediately followed by Resume.
+     * No ACK by itself advances native state or supplies a replacement Execute. */
+    suspend fun receiveAndHandleResumedNext(channel: DirectSecureChannel, caller: Job, confirmCompletion: Boolean = true,
+        prepare: suspend (AgentBridgeExecuteRequest, AgentBridgeNativeCaptureContext) -> AgentBridgeNativePreparedTransfer): ReceivedAgentBridgePayload? {
+        if (responseChannel !== channel || currentCoroutineContext().job !== caller)
+            throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+        if (!wireOperationActive.compareAndSet(false, true)) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
+        var selectedResume: AgentBridgeResumeRequest? = null
+        try {
+            val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+            if (negotiation.baseApplication != 2 || !negotiation.agentExtension || negotiation.appleQueryExtension)
+                throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+            var incoming = readResumeWire(channel, caller, negotiation)
+            var acknowledgement: TransferPartitionAcknowledgement? = null
+            val base = (incoming as? ReceivedAgentBridgePayload.Base)?.envelope
+            if (base?.type == "transfer_partition_acknowledgement") {
+                acknowledgement = V2Codec.decodePayload(base, TransferPartitionAcknowledgement.serializer())
+                incoming = readResumeWire(channel, caller, negotiation)
+            }
+            val message = (incoming as? ReceivedAgentBridgePayload.Agent)?.message
+            if (message?.type == "resume_request") {
+                val resume = message.payload as? AgentBridgeResumeRequest ?: throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+                selectedResume = resume
+                resumedCaptureContextOwned(resume, acknowledgement) { request, context, job ->
+                    sendResumeAcceptance(job, resume, context, caller)
+                    sendPreparedTransfer(request, context, confirmCompletion) { prepare(request, it) }
+                }
+                return null
+            }
+            if (acknowledgement != null) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            if (message != null) {
+                handleAndSendOwned(AgentBridgeCodec.encodeEnvelope(message, negotiation), caller)
+                return null
+            }
+            requireCurrent(); caller.ensureActive()
+            return incoming
+        } catch (stop: ConfirmedTransferStop) {
+            val resume = selectedResume ?: run {
+                wireAbandoned = true; runCatching { channel.close() }
+                throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            }
+            // The intentional public CANCELLED from this private proof must bypass the
+            // ordinary failure catch; cancellation alone never enters this branch.
+            finishConfirmedTransferStop(stop, resume.jobId, resume.requestSha256, caller)
+            return null
+        } catch (failure: Throwable) {
+            wireAbandoned = true; runCatching { channel.close() }; caller.ensureActive(); throw failure
+        } finally { wireOperationActive.set(false) }
+    }
+
+    private suspend fun readResumeWire(channel: DirectSecureChannel, caller: Job, negotiation: AgentBridgeNegotiation): ReceivedAgentBridgePayload =
+        withContext(Dispatchers.IO) {
+            withTransportCancellation(caller, channel) {
+                channel.receiveAllowingAgentBridge(negotiation) {
+                    caller.ensureActive(); requireOwnerCurrent(); caller.ensureActive()
+                }
+            }
+        }
+
+    private fun sendResumeAcceptance(job: AgentBridgeExportAcceptedJob, resume: AgentBridgeResumeRequest,
+        context: AgentBridgeNativeCaptureContext, caller: Job) {
+        val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val validate = {
+            caller.ensureActive()
+            context.requireResumeBeforeBegin(resume)
+            lifecycle.requireActiveOwner()
+            if (wireAbandoned) throw AgentBridgeException(AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            caller.ensureActive()
+        }
+        withTransportCancellation(caller, channel) {
+            validate()
+            channel.sendAgentBridge(AgentBridgeMessage("execution_receipt", job.acceptedReceipt()), negotiation, validate)
+            validate()
+        }
+    }
+
     private fun <T> withTransportCancellation(caller: Job, channel: DirectSecureChannel, operation: () -> T): T {
         val finish = armTransportCancellation(caller, channel)
         try { caller.ensureActive(); return operation() } finally { finish() }
@@ -368,21 +445,31 @@ internal class AgentBridgeNativePlanningSession(
      * plan, acceptance or authority; all fields must match the existing signed job and frontier. */
     suspend fun <T> withResumedCaptureContext(resume: AgentBridgeResumeRequest,
         acknowledgement: TransferPartitionAcknowledgement? = null, operation: suspend (AgentBridgeExecuteRequest, AgentBridgeNativeCaptureContext) -> T): T {
+        if (!wireOperationActive.compareAndSet(false, true)) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
+        return try { resumedCaptureContextOwned(resume, acknowledgement) { request, context, _ -> operation(request, context) } }
+        finally { wireOperationActive.set(false) }
+    }
+
+    private suspend fun <T> resumedCaptureContextOwned(resume: AgentBridgeResumeRequest,
+        acknowledgement: TransferPartitionAcknowledgement?,
+        operation: suspend (AgentBridgeExecuteRequest, AgentBridgeNativeCaptureContext, AgentBridgeExportAcceptedJob) -> T): T {
+        if (!wireOperationActive.get()) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
         currentCoroutineContext().ensureActive(); requireCurrent()
         val authenticated = peer.requireCurrent()
         if (resume.peer != authenticated) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
-        val request = store.access { transaction ->
+        val job = store.access { transaction ->
             val job = transaction?.state?.acceptedJobs?.singleOrNull {
                 val original = it.request()
                 original.jobId == resume.jobId && (original.plan as? AgentBridgeGeneratedPlan)?.intent?.peer == authenticated
             } ?: throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
-            job.request()
+            job
         }
+        val request = job.request()
         requireCurrent(); currentCoroutineContext().ensureActive()
-        return withRetainedCaptureContext(request) { context ->
+        return captureContextOwned(request, true) { context ->
             context.requireResumeBeforeBegin(resume, acknowledgement)
             currentCoroutineContext().ensureActive()
-            operation(request, context)
+            operation(request, context, job)
         }
     }
 

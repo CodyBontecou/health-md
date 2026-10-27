@@ -33,7 +33,7 @@ pub(in crate::agent_bridge::execution) enum Incoming {
     Finalize(v2::TransferFinalize),
     Confirmation(ControlUuid),
 }
-pub(super) enum Response {
+pub(in crate::agent_bridge::execution) enum Response {
     Disposition(v2::TransferDisposition),
     Chunk(v2::TransferChunkAcknowledgement),
     Partition(v2::TransferPartitionAcknowledgement),
@@ -88,90 +88,13 @@ impl HostExecution<'_, '_, '_> {
         Ok(message)
     }
     // Both base schemas are mapped field-for-field before the common guarded write.
-    #[allow(clippy::too_many_lines)]
     pub(super) async fn send_base(
         &mut self,
         transaction: &OutputTransaction,
         response: Response,
     ) -> Result<(), ClientError> {
         let durable_ack = matches!(&response, Response::Partition(_) | Response::Final(_));
-        let plaintext = if self.binding.request.plan.intent.peer.platform == v4::PeerPlatform::Apple
-        {
-            let message = match response {
-                Response::Disposition(v) => DirectMessage::TransferDisposition(Unlabeled::from(
-                    apple::TransferDisposition {
-                        session_id: SwiftUuid(v.session_id),
-                        job_id: SwiftUuid(v.job_id),
-                        partition_index: v
-                            .partition_index
-                            .try_into()
-                            .map_err(private::unavailable)?,
-                        partition_sha256: v.partition_sha256,
-                        disposition: match v.disposition {
-                            v2::TransferDispositionKind::Needed => {
-                                apple::TransferDispositionKind::Needed
-                            }
-                            v2::TransferDispositionKind::AlreadyCommitted => {
-                                apple::TransferDispositionKind::AlreadyCommitted
-                            }
-                            v2::TransferDispositionKind::Rejected => {
-                                apple::TransferDispositionKind::Rejected
-                            }
-                        },
-                        message: None,
-                    },
-                )),
-                Response::Chunk(v) => DirectMessage::TransferChunkAcknowledgement(Unlabeled::from(
-                    apple::TransferChunkAcknowledgement {
-                        transfer_id: SwiftUuid(v.transfer_id),
-                        sequence: i64::from(v.sequence),
-                        accepted: v.accepted,
-                        sha256: v.sha256,
-                        message: None,
-                    },
-                )),
-                Response::Partition(v) => DirectMessage::TransferPartitionAcknowledgement(
-                    Unlabeled::from(apple::TransferPartitionAcknowledgement {
-                        session_id: SwiftUuid(v.session_id),
-                        job_id: SwiftUuid(v.job_id),
-                        partition_index: v
-                            .partition_index
-                            .try_into()
-                            .map_err(private::unavailable)?,
-                        transfer_id: SwiftUuid(v.transfer_id),
-                        partition_sha256: v.partition_sha256,
-                        accepted: v.accepted,
-                        message: None,
-                    }),
-                ),
-                Response::Final(v) => DirectMessage::TransferFinalAcknowledgement(Unlabeled::from(
-                    apple::TransferFinalAcknowledgement {
-                        session_id: SwiftUuid(v.session_id),
-                        job_id: SwiftUuid(v.job_id),
-                        accepted: v.accepted,
-                        total_partitions: v
-                            .total_partitions
-                            .try_into()
-                            .map_err(private::unavailable)?,
-                        total_bytes: v.total_bytes.try_into().map_err(private::unavailable)?,
-                        final_partition_sha256: v.final_partition_sha256,
-                        response_byte_count: None,
-                        response_sha256: None,
-                        message: None,
-                    },
-                )),
-            };
-            healthmd_protocol::encoding::canonical_json(&message).map_err(private::unavailable)?
-        } else {
-            let message = match response {
-                Response::Disposition(v) => v2::Message::TransferDisposition(v),
-                Response::Chunk(v) => v2::Message::TransferChunkAcknowledgement(v),
-                Response::Partition(v) => v2::Message::TransferPartitionAcknowledgement(v),
-                Response::Final(v) => v2::Message::TransferFinalAcknowledgement(v),
-            };
-            healthmd_protocol::encoding::canonical_json(&v2::Envelope::new(message))
-                .map_err(private::unavailable)?
-        };
+        let plaintext = encode_base_response(&self.binding, response)?;
         self.send_transfer_control_bytes(transaction, &plaintext, durable_ack)
             .await
     }
@@ -353,4 +276,81 @@ fn decode_apple_message(
         }
         _ => return Err(ClientError::UnexpectedMessage),
     })
+}
+
+pub(in crate::agent_bridge::execution) fn encode_base_response(
+    binding: &NativeBinding,
+    response: Response,
+) -> Result<Vec<u8>, ClientError> {
+    let plaintext = if binding.request.plan.intent.peer.platform == v4::PeerPlatform::Apple {
+        let message = match response {
+            Response::Disposition(v) => {
+                DirectMessage::TransferDisposition(Unlabeled::from(apple::TransferDisposition {
+                    session_id: SwiftUuid(v.session_id),
+                    job_id: SwiftUuid(v.job_id),
+                    partition_index: v.partition_index.try_into().map_err(private::unavailable)?,
+                    partition_sha256: v.partition_sha256,
+                    disposition: match v.disposition {
+                        v2::TransferDispositionKind::Needed => {
+                            apple::TransferDispositionKind::Needed
+                        }
+                        v2::TransferDispositionKind::AlreadyCommitted => {
+                            apple::TransferDispositionKind::AlreadyCommitted
+                        }
+                        v2::TransferDispositionKind::Rejected => {
+                            apple::TransferDispositionKind::Rejected
+                        }
+                    },
+                    message: None,
+                }))
+            }
+            Response::Chunk(v) => DirectMessage::TransferChunkAcknowledgement(Unlabeled::from(
+                apple::TransferChunkAcknowledgement {
+                    transfer_id: SwiftUuid(v.transfer_id),
+                    sequence: i64::from(v.sequence),
+                    accepted: v.accepted,
+                    sha256: v.sha256,
+                    message: None,
+                },
+            )),
+            Response::Partition(v) => DirectMessage::TransferPartitionAcknowledgement(
+                Unlabeled::from(apple::TransferPartitionAcknowledgement {
+                    session_id: SwiftUuid(v.session_id),
+                    job_id: SwiftUuid(v.job_id),
+                    partition_index: v.partition_index.try_into().map_err(private::unavailable)?,
+                    transfer_id: SwiftUuid(v.transfer_id),
+                    partition_sha256: v.partition_sha256,
+                    accepted: v.accepted,
+                    message: None,
+                }),
+            ),
+            Response::Final(v) => DirectMessage::TransferFinalAcknowledgement(Unlabeled::from(
+                apple::TransferFinalAcknowledgement {
+                    session_id: SwiftUuid(v.session_id),
+                    job_id: SwiftUuid(v.job_id),
+                    accepted: v.accepted,
+                    total_partitions: v
+                        .total_partitions
+                        .try_into()
+                        .map_err(private::unavailable)?,
+                    total_bytes: v.total_bytes.try_into().map_err(private::unavailable)?,
+                    final_partition_sha256: v.final_partition_sha256,
+                    response_byte_count: None,
+                    response_sha256: None,
+                    message: None,
+                },
+            )),
+        };
+        healthmd_protocol::encoding::canonical_json(&message).map_err(private::unavailable)?
+    } else {
+        let message = match response {
+            Response::Disposition(v) => v2::Message::TransferDisposition(v),
+            Response::Chunk(v) => v2::Message::TransferChunkAcknowledgement(v),
+            Response::Partition(v) => v2::Message::TransferPartitionAcknowledgement(v),
+            Response::Final(v) => v2::Message::TransferFinalAcknowledgement(v),
+        };
+        healthmd_protocol::encoding::canonical_json(&v2::Envelope::new(message))
+            .map_err(private::unavailable)?
+    };
+    Ok(plaintext)
 }
