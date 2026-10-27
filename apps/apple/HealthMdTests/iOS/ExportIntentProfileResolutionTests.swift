@@ -257,6 +257,21 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         XCTAssertEqual(recorder.exportUseCount, 0)
     }
 
+    func testAPIUploadFailureDialogNamesUploadWithoutFolderFallback() async {
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        store.add(name: "API", settings: makeSnapshot(), target: .apiEndpoint)
+        let recorder = ProfileRunRecorder()
+        var dependencies = apiDependencies(recorder: recorder)
+        dependencies.exportAPIEndpoint = { dates, _, _ in
+            ExportOrchestrator.ExportResult(successCount: 0, totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .apiUploadFailed) })
+        }
+        let outcome = await ExportIntentRunner.run(dates: [Date()], dependencies: dependencies)
+        XCTAssertEqual(ExportIntentRunner.dialog(for: outcome), "Export failed: API upload failed.")
+        XCTAssertEqual(recorder.historyTargets, [.apiEndpoint])
+        XCTAssertEqual(recorder.exportUseCount, 0)
+    }
+
     func testAPIQuotaGatePreventsUploadAndReportsAPITarget() async {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         store.add(name: "API", settings: makeSnapshot(), target: .apiEndpoint)
