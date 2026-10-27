@@ -158,6 +158,14 @@ pub async fn agent(
                 )
             })?;
         }
+        "healthmd_export_execution_resume" => {
+            healthmd_operations::agent_resume_from_bytes(raw).map_err(|e| {
+                healthmd_operations::BackendError::new(
+                    e.to_string(),
+                    "Invalid typed recovery arguments.",
+                )
+            })?;
+        }
         _ => {
             return Err(healthmd_operations::BackendError::new(
                 "unsupported_capability",
@@ -205,6 +213,7 @@ pub async fn execute_agent_operation(
         "healthmd_export_plan" => service.plan_export(&context, raw).await,
         "healthmd_export_approval" => service.relay_export_approval(&context, raw).await,
         "healthmd_export_execute" => service.execute_approved_export(&context, raw).await,
+        "healthmd_export_execution_resume" => service.resume_approved_export(&context, raw).await,
         _ => Err(healthmd_operations::BackendError::new(
             "unsupported_capability",
             "Unknown fixed agent operation.",
@@ -792,6 +801,23 @@ mod tests {
             }
         }
 
+        async fn resume_approved_export(
+            &self,
+            context: &CallContext,
+            input: healthmd_operations::AgentResumeInput,
+        ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+            self.execute_approved_export(
+                context,
+                healthmd_operations::AgentExecuteInput {
+                    plan_id: input.job_id.clone(),
+                    request_id: input.job_id.clone(),
+                    idempotency_key: input.job_id.clone(),
+                    job_id: input.job_id,
+                },
+            )
+            .await
+        }
+
         async fn execute_approved_export(
             &self,
             _context: &CallContext,
@@ -1201,6 +1227,148 @@ mod tests {
                 .unwrap()
                 .len(),
             4
+        );
+    }
+
+    #[tokio::test]
+    async fn resume_cli_and_mcp_share_confirmed_result_and_reject_nonterminal_receipts() {
+        let backend = Arc::new(FixtureBackend::default());
+        let erased: Arc<dyn HealthDataBackend> = backend.clone();
+        let app = Arc::new(healthmd_mcp::HealthMdApplication::new(
+            erased.clone(),
+            healthmd_operations::SurfaceProfile::LocalDirect,
+        ));
+        let rpc = healthmd_mcp::JsonRpcSession::new(
+            app.session(healthmd_operations::CallerIdentity::local()),
+        );
+        let arguments = json!({"job_id":"00000000-0000-4000-8000-000000000002"});
+        let raw = serde_json::to_vec(&arguments).unwrap();
+        let cli = execute_agent_operation(
+            erased.clone(),
+            "healthmd_export_execution_resume",
+            &raw,
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+        let request = json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"healthmd_export_execution_resume","arguments":arguments}}).to_string();
+        let response: Value = serde_json::from_str(
+            &rpc.handle(&request, CancellationToken::new())
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(response["result"]["isError"], false);
+        let mcp: Value =
+            serde_json::from_str(response["result"]["content"][0]["text"].as_str().unwrap())
+                .unwrap();
+        assert_eq!(mcp, cli);
+        assert_eq!(backend.executions.lock().unwrap().len(), 2);
+        for mode in 1..=4 {
+            backend
+                .execution_mode
+                .store(mode, std::sync::atomic::Ordering::SeqCst);
+            assert!(
+                execute_agent_operation(
+                    erased.clone(),
+                    "healthmd_export_execution_resume",
+                    &raw,
+                    CancellationToken::new()
+                )
+                .await
+                .is_err()
+            );
+            let mut next: Value = serde_json::from_str(&request).unwrap();
+            next["id"] = json!(mode + 1);
+            let response: Value = serde_json::from_str(
+                &rpc.handle(&next.to_string(), CancellationToken::new())
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(response["result"]["isError"], true);
+        }
+        let before = backend.executions.lock().unwrap().len();
+        let mut duplicate = request.clone();
+        let needle = "\"job_id\":\"00000000-0000-4000-8000-000000000002\"";
+        duplicate = duplicate.replace(needle, &format!("{needle},{needle}"));
+        let response: Value = serde_json::from_str(
+            &rpc.handle(&duplicate, CancellationToken::new())
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(response["error"]["code"], -32602);
+        assert_eq!(backend.executions.lock().unwrap().len(), before);
+    }
+
+    #[tokio::test]
+    async fn resume_local_export_scope_and_cancellation_are_required_before_backend() {
+        let backend = Arc::new(FixtureBackend::default());
+        let raw =
+            serde_json::to_vec(&json!({"job_id":"00000000-0000-4000-8000-000000000002"})).unwrap();
+        for profile in [
+            healthmd_operations::SurfaceProfile::LocalReadOnly,
+            healthmd_operations::SurfaceProfile::RemoteReadOnly,
+            healthmd_operations::SurfaceProfile::DataReadOnly,
+        ] {
+            let service = healthmd_operations::HealthOperations::new(backend.clone(), profile);
+            let context = CallContext {
+                caller: healthmd_operations::CallerIdentity::local(),
+                cancellation: CancellationToken::new(),
+                session_id: None,
+                progress: None,
+            };
+            assert_eq!(
+                service
+                    .resume_approved_export(&context, &raw)
+                    .await
+                    .unwrap_err()
+                    .code,
+                "permission_required"
+            );
+        }
+        let service = healthmd_operations::HealthOperations::new(
+            backend.clone(),
+            healthmd_operations::SurfaceProfile::LocalDirect,
+        );
+        let mut context = CallContext {
+            caller: healthmd_operations::CallerIdentity::local_read_only(),
+            cancellation: CancellationToken::new(),
+            session_id: None,
+            progress: None,
+        };
+        assert_eq!(
+            service
+                .resume_approved_export(&context, &raw)
+                .await
+                .unwrap_err()
+                .code,
+            "permission_required"
+        );
+        context.caller = healthmd_operations::CallerIdentity::local();
+        context.cancellation.cancel();
+        assert_eq!(
+            service
+                .resume_approved_export(&context, &raw)
+                .await
+                .unwrap_err()
+                .code,
+            "healthmd_request_cancelled"
+        );
+        assert!(backend.executions.lock().unwrap().is_empty());
+        let schema = tool_catalog(Some("healthmd_export_execution_resume")).unwrap();
+        assert_eq!(schema["tool"]["annotations"]["readOnlyHint"], false);
+        assert_eq!(
+            schema["tool"]["_meta"]["anthropic/requiresUserInteraction"],
+            true
+        );
+        assert_eq!(
+            schema["tool"]["inputSchema"]["properties"]
+                .as_object()
+                .unwrap()
+                .len(),
+            1
         );
     }
 

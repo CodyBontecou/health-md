@@ -38,6 +38,7 @@ const DIRECT_TOOLS: &[&str] = &[
     "healthmd_export_plan",
     "healthmd_export_approval",
     "healthmd_export_execute",
+    "healthmd_export_execution_resume",
     // Main's approval-gated public corpus and bounded job-artifact operations.
     "healthmd_export_raw",
     "healthmd_raw_artifact_read",

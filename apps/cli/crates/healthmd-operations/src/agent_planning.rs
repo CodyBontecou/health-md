@@ -176,6 +176,28 @@ pub fn execute_input_schema() -> Value {
         "properties":{"plan_id":uuid,"job_id":uuid,"idempotency_key":uuid,"request_id":uuid}})
 }
 
+/// Local job reference only. Recovery loads request, destination and frontier from signed storage.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AgentResumeInput {
+    pub job_id: ControlUuid,
+}
+impl ValidateShape for AgentResumeInput {
+    fn validate_shape(&self) -> Result<(), Error> {
+        self.job_id.validate_shape()
+    }
+}
+/// Decode strict recovery arguments; caller frontier/receipt/authority fields are forbidden.
+/// # Errors
+/// Invalid identifiers, duplicate keys, unknown fields and malformed JSON reject.
+pub fn agent_resume_from_bytes(raw: &[u8]) -> Result<AgentResumeInput, Error> {
+    v4::decode_typed(raw)
+}
+pub fn resume_input_schema() -> Value {
+    let uuid = json!({"type":"string","pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"});
+    json!({"type":"object","additionalProperties":false,"required":["job_id"],"properties":{"job_id":uuid}})
+}
+
 /// Decode complete planning arguments using the strict integrated v4 grammar.
 /// # Errors
 /// Invalid bounds, duplicate keys, unknown fields, nulls or unsupported axes reject.
@@ -205,6 +227,7 @@ pub fn agent_rpc_bytes_valid(raw: &[u8]) -> bool {
         Some("healthmd_export_plan") => agent_plan_from_bytes(&bytes).is_ok(),
         Some("healthmd_export_approval") => agent_approval_from_bytes(&bytes).is_ok(),
         Some("healthmd_export_execute") => agent_execute_from_bytes(&bytes).is_ok(),
+        Some("healthmd_export_execution_resume") => agent_resume_from_bytes(&bytes).is_ok(),
         _ => false,
     }
 }
@@ -319,5 +342,45 @@ mod tests {
         let mut value = arguments();
         value["filename_template"] = json!("../escape");
         assert!(agent_plan_from_bytes(&serde_json::to_vec(&value).unwrap()).is_err());
+    }
+}
+
+#[cfg(test)]
+mod recovery_input_tests {
+    use super::*;
+    #[test]
+    fn resume_arguments_reject_replacement_authority_and_ambiguous_jobs() {
+        let id = "00000000-0000-4000-8000-000000000002";
+        let valid = json!({"job_id":id});
+        assert!(agent_resume_from_bytes(&serde_json::to_vec(&valid).unwrap()).is_ok());
+        for field in [
+            "frontier_sha256",
+            "committed_partition_count",
+            "destination",
+            "receipt",
+            "approval",
+            "plan",
+            "peer",
+            "request_id",
+        ] {
+            let mut invalid = valid.clone();
+            invalid[field] = json!(id);
+            assert!(agent_resume_from_bytes(&serde_json::to_vec(&invalid).unwrap()).is_err());
+        }
+        for bad in [
+            Value::Null,
+            json!(false),
+            json!(3.0),
+            json!("not-a-job"),
+            json!("AAAAAAAA-0000-4000-8000-000000000002"),
+        ] {
+            assert!(
+                agent_resume_from_bytes(&serde_json::to_vec(&json!({"job_id":bad})).unwrap())
+                    .is_err()
+            );
+        }
+        assert!(agent_resume_from_bytes(b"{}").is_err());
+        let duplicate = format!("{{\"job_id\":\"{id}\",\"job_id\":\"{id}\"}}");
+        assert!(agent_resume_from_bytes(duplicate.as_bytes()).is_err());
     }
 }

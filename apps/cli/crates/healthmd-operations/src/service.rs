@@ -103,7 +103,6 @@ impl HealthOperations {
         context: &CallContext,
         raw: &[u8],
     ) -> Result<Value, BackendError> {
-        use healthmd_protocol::v4::{self, ExecutionReceiptStatus};
         self.require_local_agent(context, true)?;
         let input = crate::agent_execute_from_bytes(raw).map_err(agent_error)?;
         if context.cancellation.is_cancelled() {
@@ -114,19 +113,28 @@ impl HealthOperations {
         }
         let job_id = input.job_id.clone();
         let receipt = self.backend.execute_approved_export(context, input).await?;
-        v4::validate_execution_receipt(&receipt).map_err(agent_error)?;
-        if receipt.job_id != job_id
-            || !receipt.source_acknowledged
-            || !matches!(
-                receipt.status,
-                ExecutionReceiptStatus::Complete
-                    | ExecutionReceiptStatus::CompleteEmpty
-                    | ExecutionReceiptStatus::Partial
-            )
-        {
-            return Err(agent_error(v4::Error::BindingChanged));
+        confirmed_agent_receipt(receipt, &job_id)
+    }
+
+    /// Recover only an existing signed job and return exact source-confirmed completion.
+    /// # Errors
+    /// Remote/read-only callers, invalid arguments, lost authority or unconfirmed results reject.
+    pub async fn resume_approved_export(
+        &self,
+        context: &CallContext,
+        raw: &[u8],
+    ) -> Result<Value, BackendError> {
+        self.require_local_agent(context, true)?;
+        let input = crate::agent_resume_from_bytes(raw).map_err(agent_error)?;
+        if context.cancellation.is_cancelled() {
+            return Err(BackendError::new(
+                "healthmd_request_cancelled",
+                "The local request was cancelled.",
+            ));
         }
-        serde_json::to_value(receipt).map_err(|_| agent_error(v4::Error::InvalidRequest))
+        let job_id = input.job_id.clone();
+        let receipt = self.backend.resume_approved_export(context, input).await?;
+        confirmed_agent_receipt(receipt, &job_id)
     }
 
     fn require_local_agent(
@@ -274,4 +282,24 @@ impl HealthOperations {
             })
         }
     }
+}
+
+fn confirmed_agent_receipt(
+    receipt: healthmd_protocol::v4::ExecutionReceipt,
+    job_id: &healthmd_protocol::v4::ControlUuid,
+) -> Result<Value, BackendError> {
+    use healthmd_protocol::v4::{self, ExecutionReceiptStatus};
+    v4::validate_execution_receipt(&receipt).map_err(agent_error)?;
+    if receipt.job_id != *job_id
+        || !receipt.source_acknowledged
+        || !matches!(
+            receipt.status,
+            ExecutionReceiptStatus::Complete
+                | ExecutionReceiptStatus::CompleteEmpty
+                | ExecutionReceiptStatus::Partial
+        )
+    {
+        return Err(agent_error(v4::Error::BindingChanged));
+    }
+    serde_json::to_value(receipt).map_err(|_| agent_error(v4::Error::InvalidRequest))
 }

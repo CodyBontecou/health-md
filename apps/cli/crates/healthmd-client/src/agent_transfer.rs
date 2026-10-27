@@ -239,6 +239,54 @@ fn expected_mode(mode: &OutputSettingsWriteMode) -> v2::FileWriteMode {
     }
 }
 impl<'trust> BridgeSession<'trust> {
+    /// Read-only local recovery preflight. This verifies the retained signed prefix and
+    /// current host authority before an adapter opens a listener; it creates no recovery
+    /// state and cannot replace the authenticated source's later validation.
+    pub(crate) async fn preflight_retained_resume(
+        store: &HostAuthorityStore,
+        expected_peer: &v4::Peer,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        cancellation: &tokio_util::sync::CancellationToken,
+    ) -> Result<(), ClientError> {
+        expected_peer.validate_shape()?;
+        job.validate_shape()?;
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
+        }
+        let retained = ResumedTransfer::open(store, job).await?;
+        let binding = retained.transaction.binding();
+        let guard = TransferGuard::new(&retained.transaction, binding, &retained.checkpoint)?;
+        if binding.request.plan.intent.peer != *expected_peer {
+            return Err(Error::BindingChanged.into());
+        }
+        let host = store
+            .authorization(
+                expected_peer,
+                &binding.request.plan.intent.destination.binding_id,
+                Some(&binding.request.plan.authority_references.host),
+                clock,
+            )
+            .await?;
+        store
+            .require_output_current(
+                &binding.request,
+                Some(&binding.accepted.expires_at),
+                clock,
+                || async {
+                    if cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    Ok(())
+                },
+            )
+            .await?;
+        retained.request()?.validate_shape()?;
+        require_resume_lifetime(binding, &host.delegation.expires_at, clock, cancellation)?;
+        retained.transaction.require_current()?;
+        guard.verify()
+    }
+
     /// Reopen the original immutable host job on this authenticated channel. No caller
     /// request, receipt or frontier replaces retained facts; no fresh Execute is sent.
     /// # Errors

@@ -81,6 +81,63 @@ impl<C: CredentialStore> HealthDataBackend for DirectAgentBackend<C> {
         Err(unsupported())
     }
 
+    async fn resume_approved_export(
+        &self,
+        context: &CallContext,
+        input: healthmd_operations::AgentResumeInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        use healthmd_protocol::v4::ValidateShape as _;
+        input
+            .validate_shape()
+            .map_err(|e| agent_backend_error(e.into()))?;
+        let _gate = tokio::select! {
+            biased;
+            () = context.cancellation.cancelled() => return Err(BackendError::new("healthmd_request_cancelled", "The local request was cancelled.")),
+            guard = self.gate.lock() => guard,
+        };
+        let expected_peer = self
+            .client
+            .planning_peer(self.device)
+            .await
+            .map_err(agent_backend_error)?;
+        let planner = self.planner().await?;
+        planner
+            .preflight_retained_resume(
+                &expected_peer,
+                &input.job_id,
+                &SystemPlanningClock,
+                &context.cancellation,
+            )
+            .await
+            .map_err(agent_backend_error)?;
+        if self
+            .client
+            .planning_peer(self.device)
+            .await
+            .map_err(agent_backend_error)?
+            != expected_peer
+        {
+            return Err(BackendError::new(
+                "binding_changed",
+                "The selected peer differs from the retained job.",
+            ));
+        }
+        let mut source = self
+            .client
+            .connect_bridge(
+                self.device,
+                self.port,
+                self.timeout,
+                context.cancellation.clone(),
+            )
+            .await
+            .map_err(agent_backend_error)?;
+        planner
+            .resume_retained(&mut source, input.job_id, &SystemPlanningClock)
+            .await
+            .map_err(agent_backend_error)
+    }
+
     async fn execute_approved_export(
         &self,
         context: &CallContext,

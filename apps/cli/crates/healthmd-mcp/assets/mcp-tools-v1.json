@@ -3956,6 +3956,33 @@
       "openWorldHint": false,
       "readOnlyHint": false
     },
+    "description": "Recover an existing signed Agent Bridge job using its retained request, manifest, registered destination and verified committed prefix. Supply only job_id. Requires the same paired source and current authority; never recaptures or falls back to legacy exports. Returns only after durable output and exact native confirmation.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_execution_resume",
+    "title": "Resume an approved Agent Bridge export"
+  },
+  {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
     "description": "After explicit user approval, run a durable generated-file export from the explicitly selected iPhone (v1) or Android phone (v2) into an existing desktop destination. Omitted policy uses iOS requested dates or Android saved settings. Android rejects request-scoped selectors; profiles own scope and require an installed-peer policy advertisement. Unknown or blocked profiles fail closed without saved-settings fallback.",
     "inputSchema": {
       "additionalProperties": false,

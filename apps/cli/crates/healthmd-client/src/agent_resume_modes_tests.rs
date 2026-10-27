@@ -719,3 +719,149 @@ async fn completed_resume_reuses_exact_record_published_before_checkpoint_refere
         );
     }
 }
+
+#[tokio::test]
+async fn host_resume_api_preflights_immutable_job_and_confirms_without_reapplying_output() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let f = Box::pin(recover_mode(platform, OutputSettingsWriteMode::Append)).await;
+        let planner = HostPlanner::new(f.store.clone());
+        let peer = &f.binding.request.plan.intent.peer;
+        let job = &f.binding.request.job_id;
+        let clock = AdvancingClock::new();
+        let cancellation = CancellationToken::new();
+        let root = f.client.layout.root.join("agent-host-v1");
+        let retained = |prefix: &str| root.join(format!("{prefix}-{}.json", job.0));
+        let paths = [
+            retained("output"),
+            retained("transfer"),
+            retained("completion"),
+        ];
+        let before: Vec<_> = paths.iter().map(|p| std::fs::read(p).unwrap()).collect();
+        planner
+            .preflight_retained_resume(peer, job, &clock, &cancellation)
+            .await
+            .unwrap();
+        let mut wrong_peer = peer.clone();
+        wrong_peer.source_installation_id = id(199);
+        assert!(matches!(
+            planner
+                .preflight_retained_resume(&wrong_peer, job, &clock, &cancellation)
+                .await,
+            Err(ClientError::Agent(Error::BindingChanged))
+        ));
+        assert!(
+            planner
+                .preflight_retained_resume(peer, &id(198), &clock, &cancellation)
+                .await
+                .is_err()
+        );
+        let cancelled = CancellationToken::new();
+        cancelled.cancel();
+        assert!(matches!(
+            planner
+                .preflight_retained_resume(peer, job, &clock, &cancelled)
+                .await,
+            Err(ClientError::WaitCancelled)
+        ));
+        for (path, original) in paths.iter().zip(&before) {
+            assert_eq!(&std::fs::read(path).unwrap(), original);
+        }
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let source = tokio::spawn(resume_original(
+            listener.local_addr().unwrap().port(),
+            FakeMobileTrust {
+                installation_id: f.saved.installation_id,
+                display_name: f.saved.display_name.clone(),
+                reconnect_secret: f.saved.reconnect_secret.clone(),
+            },
+            f.binding.clone(),
+            f.receipts.clone(),
+            f.prefix,
+        ));
+        let mut bridge = connect_bound_bridge(
+            &f.client,
+            Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
+            &listener,
+            Duration::from_secs(10),
+            cancellation.clone(),
+        )
+        .await
+        .unwrap();
+        let receipt = Box::pin(planner.resume_retained(&mut bridge, job.clone(), &clock))
+            .await
+            .unwrap();
+        assert!(receipt.source_acknowledged);
+        assert_eq!(&receipt.job_id, job);
+        source.await.unwrap();
+        for (path, original) in paths.iter().zip(&before) {
+            assert_eq!(&std::fs::read(path).unwrap(), original);
+        }
+        for path in &f.binding.request.plan.predicted_paths {
+            assert_eq!(
+                std::fs::read(f.output.join(&path.0)).unwrap(),
+                expected_output(platform, &OutputSettingsWriteMode::Append)
+            );
+        }
+        let original = std::fs::read(&paths[1]).unwrap();
+        std::fs::write(&paths[1], b"corrupt retained prefix").unwrap();
+        assert!(
+            planner
+                .preflight_retained_resume(peer, job, &clock, &cancellation)
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            std::fs::read(&paths[1]).unwrap(),
+            b"corrupt retained prefix"
+        );
+        std::fs::write(&paths[1], original).unwrap();
+    }
+}
+
+struct RecoveryDriftClock {
+    path: PathBuf,
+    changed: std::sync::atomic::AtomicBool,
+}
+impl crate::agent_planning::PlanningClock for RecoveryDriftClock {
+    fn now(&self) -> v4::UtcTimestamp {
+        if !self.changed.swap(true, Ordering::SeqCst) {
+            std::fs::write(&self.path, b"callback-time recovery drift").unwrap();
+        }
+        now()
+    }
+}
+#[tokio::test]
+async fn host_resume_preflight_rejects_retained_drift_during_authority_callbacks() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let f = Box::pin(recover_mode(platform, OutputSettingsWriteMode::Append)).await;
+        let planner = HostPlanner::new(f.store.clone());
+        let peer = &f.binding.request.plan.intent.peer;
+        let job = &f.binding.request.job_id;
+        for prefix in ["transfer", "completion"] {
+            let path = f
+                .client
+                .layout
+                .root
+                .join("agent-host-v1")
+                .join(format!("{prefix}-{}.json", job.0));
+            let original = std::fs::read(&path).unwrap();
+            let clock = RecoveryDriftClock {
+                path: path.clone(),
+                changed: std::sync::atomic::AtomicBool::new(false),
+            };
+            assert!(
+                planner
+                    .preflight_retained_resume(peer, job, &clock, &CancellationToken::new())
+                    .await
+                    .is_err(),
+                "{prefix} drift after initial read must reject before listener admission"
+            );
+            assert!(clock.changed.load(Ordering::SeqCst));
+            assert_eq!(
+                std::fs::read(&path).unwrap(),
+                b"callback-time recovery drift"
+            );
+            std::fs::write(&path, original).unwrap();
+        }
+    }
+}

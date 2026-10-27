@@ -472,6 +472,41 @@ impl HostPlanner {
         execution.receive_confirmed_execution().await
     }
 
+    /// Verify existing immutable recovery evidence for the selected peer before listening.
+    /// This does not renew a plan, issue consent, recapture, or mark a job resumed.
+    /// # Errors
+    /// Missing/corrupt evidence, changed peer/destination, expired authority or cancellation reject.
+    pub async fn preflight_retained_resume(
+        &self,
+        expected_peer: &Peer,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        cancellation: &tokio_util::sync::CancellationToken,
+    ) -> Result<(), ClientError> {
+        crate::agent_bridge::BridgeSession::preflight_retained_resume(
+            &self.store,
+            expected_peer,
+            job,
+            clock,
+            cancellation,
+        )
+        .await
+    }
+
+    /// Recover an existing job on a fresh authenticated bridge, preserving original request,
+    /// manifest, destination and frontier. Returns only after exact native completion.
+    /// # Errors
+    /// Invalid retained state, changed authority, interruption or missing confirmation reject.
+    pub async fn resume_retained(
+        &self,
+        source: &mut crate::agent_bridge::BridgeSession<'_>,
+        job: ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, ClientError> {
+        let mut execution = source.resume_execution(&self.store, job, clock).await?;
+        execution.receive_confirmed_execution().await
+    }
+
     /// No accepted receipt, old export conversion or fake execution until a genuine source
     /// journal/capture adapter exists. This method never contacts the source.
     /// # Errors

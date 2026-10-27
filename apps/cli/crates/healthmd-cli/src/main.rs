@@ -116,6 +116,8 @@ enum Command {
     Approval(AgentArgs),
     /// Execute an issued plan using separately stored host/native decisions and its registered destination.
     Execute(AgentExecuteArgs),
+    /// Recover an existing approved Agent Bridge job using its immutable retained state.
+    ResumeExecution(AgentExecuteArgs),
     /// Resume an interrupted durable direct job.
     Resume(ResumeArgs),
     /// Request cancellation of a durable direct job.
@@ -132,7 +134,7 @@ enum Command {
 
 #[derive(Debug, Args)]
 struct AgentExecuteArgs {
-    /// Four existing plan/job/idempotency/request IDs as strict JSON. Omit to inspect requirements locally.
+    /// Strict operation JSON. Omit to inspect the operation-specific requirements locally.
     #[arg(long)]
     arguments: Option<String>,
     /// Bounded authenticated timeout; never wakes or unlocks the source.
@@ -1143,6 +1145,20 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
             .map(CommandSuccess::json),
             None => Ok(CommandSuccess::json(guidance::execute())),
         },
+        Command::ResumeExecution(options) => match options.arguments {
+            Some(arguments) => direct_agent(
+                AgentArgs {
+                    arguments,
+                    timeout_seconds: options.timeout_seconds,
+                },
+                "healthmd_export_execution_resume",
+                device,
+                port,
+            )
+            .await
+            .map(CommandSuccess::json),
+            None => Ok(CommandSuccess::json(guidance::resume_execution())),
+        },
         Command::Resume(options) => direct_resume(options, device, port).await,
         Command::Cancel(options) => direct_cancel(options, device, port)
             .await
@@ -1176,6 +1192,9 @@ fn incomplete_command_guidance(cli: &Cli) -> Option<Value> {
             Some(guidance::query(options.operation.as_deref()))
         }
         Command::Execute(options) if options.arguments.is_none() => Some(guidance::execute()),
+        Command::ResumeExecution(options) if options.arguments.is_none() => {
+            Some(guidance::resume_execution())
+        }
         Command::Resume(options) if options.job_id.is_none() => Some(guidance::resume()),
         Command::Cancel(options) if options.job_id.is_none() => Some(guidance::cancel()),
         Command::Direct(DirectArgs { command: None }) => Some(guidance::group("direct")),
@@ -2740,6 +2759,7 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Plan(_) => "plan",
         Command::Approval(_) => "approval",
         Command::Execute(_) => "execute",
+        Command::ResumeExecution(_) => "resume-execution",
         Command::Resume(_) => "resume",
         Command::Cancel(_) => "cancel",
         Command::Direct(DirectArgs {
@@ -3576,5 +3596,26 @@ mod agent_execute_parser_tests {
         assert!(
             Cli::try_parse_from(["healthmd", "execute", "--arguments", raw, "--approve"]).is_err()
         );
+    }
+}
+
+#[cfg(test)]
+mod agent_resume_parser_tests {
+    use super::*;
+    #[test]
+    fn resume_execution_has_local_guidance_and_explicit_strict_arguments() {
+        let missing = Cli::try_parse_from(["healthmd", "resume-execution"]).unwrap();
+        assert_eq!(
+            incomplete_command_guidance(&missing).unwrap()["request_sent"],
+            false
+        );
+        let raw = r#"{"job_id":"00000000-0000-4000-8000-000000000002"}"#;
+        let cli =
+            Cli::try_parse_from(["healthmd", "resume-execution", "--arguments", raw]).unwrap();
+        let Command::ResumeExecution(input) = cli.command else {
+            panic!("recovery command lost")
+        };
+        assert_eq!(input.arguments.as_deref(), Some(raw));
+        assert!(Cli::try_parse_from(["healthmd", "resume-execution", "--approve"]).is_err());
     }
 }

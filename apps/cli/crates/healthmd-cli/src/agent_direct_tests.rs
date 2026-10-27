@@ -220,6 +220,15 @@ async fn execute_expect_base(
     }
 }
 
+struct ExecutedPeerSnapshot {
+    request: ExecuteRequest,
+    accepted: ExecutionReceipt,
+    manifest: ArtifactManifest,
+    session: v2::TransferSession,
+    last_transfer: Uuid,
+    completed: ExecutionReceipt,
+}
+
 // One bounded positive peer transcript verifies the actual public backend, both deployed
 // base envelopes, durable host output and final source confirmation. Native SDK is synthetic.
 #[allow(clippy::too_many_lines)]
@@ -227,7 +236,7 @@ async fn answer_approved_execute(
     channel: &mut SecureChannel,
     negotiation: Negotiation,
     native: &mut NativeFake,
-) {
+) -> ExecutedPeerSnapshot {
     use healthmd_protocol::models as a;
     let Message::ExecuteRequest(request) = channel.receive_v4(negotiation).await.unwrap().message
     else {
@@ -388,11 +397,13 @@ async fn answer_approved_execute(
     )
     .unwrap();
     let mut previous = None;
+    let mut last_transfer = Uuid::nil();
     for (index, artifact) in manifest.artifacts.iter().enumerate() {
         let Artifact::Branch1(item) = artifact else {
             panic!("Expected daily file");
         };
         let transfer = Uuid::new_v4();
+        last_transfer = transfer;
         let artifact_id = Uuid::parse_str(&item.artifact_id.0).unwrap();
         let part = v2::TransferPartition {
             index: index as u64,
@@ -644,8 +655,236 @@ async fn answer_approved_execute(
         manifest_sha256: manifest_digest,
         source_acknowledged: true,
         status: ExecutionReceiptStatus::Complete,
-        ..accepted
+        ..accepted.clone()
     };
+    channel
+        .send_v4(
+            &Envelope::new(Message::ExecutionReceipt(Box::new(completed.clone()))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+    ExecutedPeerSnapshot {
+        request,
+        accepted,
+        manifest,
+        session,
+        last_transfer,
+        completed,
+    }
+}
+
+// A fresh authenticated owner must receive the retained final ACK before Resume and
+// must reproduce the exact original accepted binding, manifest and terminal receipt.
+#[allow(clippy::too_many_lines)]
+async fn answer_retained_resume(
+    channel: &mut SecureChannel,
+    negotiation: Negotiation,
+    state: ExecutedPeerSnapshot,
+) {
+    use healthmd_protocol::models as a;
+    let ExecutedPeerSnapshot {
+        request,
+        accepted,
+        manifest,
+        session,
+        last_transfer,
+        completed,
+    } = state;
+    let platform = request.plan.intent.peer.platform.clone();
+    let bytes = b"{\"synthetic\":true}";
+    let digest = Digest(healthmd_protocol::transfer::sha256_hex(bytes));
+    execute_expect_base(
+        channel,
+        &platform,
+        DirectMessage::TransferPartitionAcknowledgement(Unlabeled::from(
+            a::TransferPartitionAcknowledgement {
+                session_id: SwiftUuid(session.session_id),
+                job_id: SwiftUuid(session.job_id),
+                partition_index: 1,
+                transfer_id: SwiftUuid(last_transfer),
+                partition_sha256: digest.0.clone(),
+                accepted: true,
+                message: None,
+            },
+        )),
+        v2::Message::TransferPartitionAcknowledgement(v2::TransferPartitionAcknowledgement {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            partition_index: 1,
+            transfer_id: last_transfer,
+            partition_sha256: digest.0.clone(),
+            accepted: true,
+            message: None,
+        }),
+    )
+    .await;
+    let Message::ResumeRequest(resume) = channel.receive_v4(negotiation).await.unwrap().message
+    else {
+        panic!("Only retained Resume is permitted")
+    };
+    assert_eq!(resume.job_id, request.job_id);
+    assert_eq!(resume.peer, request.plan.intent.peer);
+    assert_eq!(resume.binding, approval_binding(&request.plan));
+    assert_eq!(resume.destination, request.plan.intent.destination);
+    assert_eq!(resume.request_sha256, document_digest(&request).unwrap());
+    assert_eq!(resume.manifest_sha256, document_digest(&manifest).unwrap());
+    assert_eq!(resume.frontier_sha256, completed.frontier_sha256);
+    assert_eq!(resume.committed_partition_count, 2);
+    channel
+        .send_v4(
+            &Envelope::new(Message::ExecutionReceipt(Box::new(accepted))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+    channel
+        .send_v4(
+            &Envelope::new(Message::ArtifactManifest(Box::new(manifest.clone()))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+    let fingerprint = a::RequestFingerprint {
+        version: 1,
+        sha256: session.request_fingerprint.clone(),
+    };
+    execute_send_base(
+        channel,
+        &platform,
+        DirectMessage::TransferSession(Unlabeled::from(a::TransferSession {
+            protocol_version: 1,
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            request_fingerprint: fingerprint.clone(),
+            peer_binding: a::PeerBinding {
+                source_installation_id: SwiftUuid(session.peer_binding.source_installation_id),
+                destination_installation_id: SwiftUuid(
+                    session.peer_binding.destination_installation_id,
+                ),
+            },
+            partition_target_bytes: 50_331_648,
+            created_at: session.created_at,
+        })),
+        v2::Message::TransferSession(session.clone()),
+    )
+    .await;
+    for artifact in &manifest.artifacts {
+        let Artifact::Branch1(item) = artifact else {
+            panic!("Expected daily file");
+        };
+        let file = Uuid::parse_str(&item.artifact_id.0).unwrap();
+        execute_send_base(
+            channel,
+            &platform,
+            DirectMessage::FileManifest(Unlabeled::from(a::FileManifest {
+                job_id: SwiftUuid(session.job_id),
+                file_id: SwiftUuid(file),
+                relative_path: item.relative_path.0.clone(),
+                byte_count: i64::try_from(bytes.len()).unwrap(),
+                sha256: digest.0.clone(),
+                write_mode: a::FileWriteMode::Overwrite,
+            })),
+            v2::Message::ArtifactManifest(v2::ArtifactManifest {
+                job_id: session.job_id,
+                artifact_id: file,
+                kind: v2::ArtifactKind::GeneratedFile,
+                schema: v2::ArtifactSchema {
+                    id: "healthmd.generated-files".into(),
+                    major: 1,
+                },
+                media_type: "application/json".into(),
+                byte_count: bytes.len() as u64,
+                sha256: digest.0.clone(),
+                relative_path: Some(item.relative_path.0.clone()),
+                write_mode: Some(v2::FileWriteMode::Overwrite),
+                logical_checksum_sha256: None,
+                snapshot_status: None,
+                provider_id: None,
+            }),
+        )
+        .await;
+    }
+    let manifest_digest = document_digest(&manifest).unwrap();
+    let previous = Some(digest.0.clone());
+    execute_send_base(
+        channel,
+        &platform,
+        DirectMessage::TransferFinalize(Unlabeled::from(a::TransferFinalize {
+            session_id: SwiftUuid(session.session_id),
+            job_id: SwiftUuid(session.job_id),
+            request_fingerprint: fingerprint,
+            total_partitions: 2,
+            total_bytes: i64::try_from(bytes.len() * 2).unwrap(),
+            final_partition_sha256: previous.clone(),
+            outcome: None,
+        })),
+        v2::Message::TransferFinalize(v2::TransferFinalize {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            request_fingerprint: session.request_fingerprint.clone(),
+            total_partitions: 2,
+            total_bytes: (bytes.len() * 2) as u64,
+            final_partition_sha256: previous.clone(),
+        }),
+    )
+    .await;
+    execute_expect_base(
+        channel,
+        &platform,
+        DirectMessage::TransferFinalAcknowledgement(Unlabeled::from(
+            a::TransferFinalAcknowledgement {
+                session_id: SwiftUuid(session.session_id),
+                job_id: SwiftUuid(session.job_id),
+                accepted: true,
+                total_partitions: 2,
+                total_bytes: i64::try_from(bytes.len() * 2).unwrap(),
+                final_partition_sha256: previous.clone(),
+                response_byte_count: None,
+                response_sha256: None,
+                message: None,
+            },
+        )),
+        v2::Message::TransferFinalAcknowledgement(v2::TransferFinalAcknowledgement {
+            session_id: session.session_id,
+            job_id: session.job_id,
+            accepted: true,
+            total_partitions: 2,
+            total_bytes: (bytes.len() * 2) as u64,
+            final_partition_sha256: previous,
+            response_byte_count: None,
+            response_sha256: None,
+            message: None,
+        }),
+    )
+    .await;
+    for artifact in &manifest.artifacts {
+        let Artifact::Branch1(item) = artifact else {
+            panic!("Expected daily file");
+        };
+        let Message::CommitReceipt(receipt) =
+            channel.receive_v4(negotiation).await.unwrap().message
+        else {
+            panic!("Expected durable commit");
+        };
+        validate_commit_receipt(&receipt, None).unwrap();
+        assert_eq!(receipt.artifact_id, item.artifact_id);
+        assert_eq!(receipt.input_sha256, digest);
+        assert_eq!(receipt.after_sha256, digest);
+        assert_eq!(receipt.manifest_sha256, manifest_digest);
+        assert_eq!(receipt.destination, request.plan.intent.destination);
+    }
+    execute_send_base(
+        channel,
+        &platform,
+        DirectMessage::CompletionConfirmed(a::JobIdPayload {
+            job_id: SwiftUuid(session.job_id),
+        }),
+        v2::Message::CompletionConfirmed(v2::JobPayload {
+            job_id: session.job_id,
+        }),
+    )
+    .await;
     channel
         .send_v4(
             &Envelope::new(Message::ExecutionReceipt(Box::new(completed))),
@@ -739,6 +978,67 @@ async fn actual_execute_backend_rejects_missing_plan_before_listener_or_output()
     assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
 }
 
+#[tokio::test]
+async fn actual_resume_backend_rejects_missing_job_before_listener_or_output() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let root = std::fs::canonicalize(temporary.path()).unwrap();
+    let credentials = InjectedCredentials::default();
+    let layout = StorageLayout { root: root.clone() };
+    healthmd_client::storage::IdentityStore::new(layout.clone())
+        .load_or_create(chrono::Utc::now())
+        .unwrap();
+    let client = Arc::new(
+        DirectClient::open_planning_with_credentials(layout, credentials.clone()).unwrap(),
+    );
+    let source_id = Uuid::new_v4();
+    let peer = Peer {
+        host_installation_id: ControlUuid(client.identity.installation_id.0.to_string()),
+        source_installation_id: ControlUuid(source_id.to_string()),
+        platform: PeerPlatform::Apple,
+    };
+    let (store, output) = enroll(&root, &peer, &SystemPlanningClock.now()).await;
+    let mut trust = TrustState::empty(client.identity.installation_id);
+    trust
+        .save_client(TrustedClient {
+            installation_id: SwiftUuid(source_id),
+            display_name: "Synthetic source".into(),
+            platform: Some(WirePlatform::Ios),
+            reconnect_secret: vec![13; 32],
+            paired_at: chrono::Utc::now(),
+            last_connected_at: chrono::Utc::now(),
+            wake: None,
+        })
+        .unwrap();
+    TrustStore::new(credentials.clone())
+        .save(&trust)
+        .await
+        .unwrap();
+    let writes = credentials.0.writes.load(Ordering::SeqCst);
+    let occupied = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let backend: Arc<dyn HealthDataBackend> = Arc::new(DirectAgentBackend::new(
+        client,
+        Arc::new(ExistingFakeKey(AtomicUsize::new(0))),
+        Some(source_id),
+        occupied.local_addr().unwrap().port(),
+        Duration::from_secs(5),
+        Arc::new(Mutex::new(())),
+    ));
+    let input = serde_json::json!({"job_id":id(20)});
+    let before = store.revision().await.unwrap();
+    let error = crate::mcp::execute_agent_operation(
+        backend,
+        "healthmd_export_execution_resume",
+        &serde_json::to_vec(&input).unwrap(),
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.code, "permission_required");
+    assert_eq!(store.revision().await.unwrap(), before);
+    assert_eq!(credentials.0.writes.load(Ordering::SeqCst), writes);
+    assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
+}
+
 // Keep both public transports and exact independently established decisions in one tracer.
 #[allow(clippy::too_many_lines)]
 #[tokio::test]
@@ -814,7 +1114,10 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
             assert!(!session.list_tools().iter().any(|v| matches!(
                 v["name"].as_str(),
                 Some(
-                    "healthmd_export_plan" | "healthmd_export_approval" | "healthmd_export_execute"
+                    "healthmd_export_plan"
+                        | "healthmd_export_approval"
+                        | "healthmd_export_execute"
+                        | "healthmd_export_execution_resume"
                 )
             )));
             assert!(
@@ -919,9 +1222,15 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
                         .unwrap();
                 }
             }
+            let mut executions = Vec::new();
             for _ in 0..2 {
                 let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
-                answer_approved_execute(&mut channel, negotiation, &mut native).await;
+                executions
+                    .push(answer_approved_execute(&mut channel, negotiation, &mut native).await);
+            }
+            for execution in executions {
+                let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
+                answer_retained_resume(&mut channel, negotiation, execution).await;
             }
         });
         let input = arguments(&peer);
@@ -986,6 +1295,23 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
         .unwrap();
         let mcp_input = serde_json::json!({"plan_id":execution_plan_id,"job_id":id(203),"idempotency_key":id(204),"request_id":id(205)});
         let mcp_execution = rpc_call(&rpc, "healthmd_export_execute", mcp_input, 3).await;
+        let cli_resume = crate::mcp::execute_agent_operation(
+            Arc::clone(&backend),
+            "healthmd_export_execution_resume",
+            &serde_json::to_vec(&serde_json::json!({"job_id":id(200)})).unwrap(),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+        let mcp_resume = rpc_call(
+            &rpc,
+            "healthmd_export_execution_resume",
+            serde_json::json!({"job_id":id(203)}),
+            4,
+        )
+        .await;
+        assert_eq!(cli_resume, cli_execution);
+        assert_eq!(mcp_resume, mcp_execution);
         for result in [&cli_execution, &mcp_execution] {
             assert_eq!(result["status"], "complete");
             assert_eq!(result["source_acknowledged"], true);

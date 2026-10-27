@@ -251,6 +251,18 @@ pub trait HealthDataBackend: Send + Sync {
         ))
     }
 
+    /// Recover only an existing signed Agent Bridge job, without legacy job conversion.
+    async fn resume_approved_export(
+        &self,
+        _context: &CallContext,
+        _input: crate::AgentResumeInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        Err(BackendError::new(
+            "unsupported_capability",
+            "The selected source does not support retained Agent Bridge recovery.",
+        ))
+    }
+
     async fn start_export(
         &self,
         _context: &CallContext,

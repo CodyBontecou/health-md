@@ -159,6 +159,13 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
         local_only: true,
     },
     OperationDefinition {
+        name: "healthmd_export_execution_resume",
+        title: "Resume an approved Agent Bridge export",
+        description: "Recover an existing signed Agent Bridge job using its retained request, manifest, registered destination and verified committed prefix. Supply only job_id. Requires the same paired source and current authority; never recaptures or falls back to legacy exports. Returns only after durable output and exact native confirmation.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
         name: "healthmd_export_files",
         title: "Export Health.md files",
         description: "After explicit user approval, run a durable generated-file export from the explicitly selected iPhone (v1) or Android phone (v2) into an existing desktop destination. Omitted policy uses iOS requested dates or Android saved settings. Android rejects request-scoped selectors; profiles own scope and require an installed-peer policy advertisement. Unknown or blocked profiles fail closed without saved-settings fallback.",
@@ -382,7 +389,7 @@ fn base_operation_declarations() -> Vec<Value> {
                 "healthmd_export_plan" => {
                     declaration["annotations"] = json!({"readOnlyHint": true, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false});
                 }
-                "healthmd_export_execute" | "healthmd_export_files" | "healthmd_export_raw" | "healthmd_export_job_resume" => {
+                "healthmd_export_execute" | "healthmd_export_execution_resume" | "healthmd_export_files" | "healthmd_export_raw" | "healthmd_export_job_resume" => {
                     declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
                     declaration["annotations"] = mutating_annotations(false);
                 }
@@ -458,6 +465,7 @@ fn base_input_schema(name: &str) -> Value {
         "healthmd_export_plan" => crate::agent_planning::plan_input_schema(),
         "healthmd_export_approval" => crate::agent_planning::approval_input_schema(),
         "healthmd_export_execute" => crate::agent_planning::execute_input_schema(),
+        "healthmd_export_execution_resume" => crate::agent_planning::resume_input_schema(),
         "healthmd_export_files" => export_files_schema(),
         "healthmd_export_raw" => raw_export_schema(),
         "healthmd_raw_artifact_read" => raw_artifact_read_schema(),
@@ -1616,7 +1624,7 @@ mod tests {
     #[test]
     fn local_catalog_exposes_bounded_pairing_tools_with_safe_annotations() {
         let tools = list(SurfaceProfile::LocalDirect);
-        assert_eq!(tools.len(), 24);
+        assert_eq!(tools.len(), 25);
         let start = tools
             .iter()
             .find(|tool| tool["name"] == "healthmd_pairing_start")

@@ -11,8 +11,9 @@ pub mod registry;
 pub mod service;
 
 pub use agent_planning::{
-    AgentExecuteInput, AgentPlanInput, agent_approval_from_bytes, agent_execute_from_bytes,
-    agent_plan_from_bytes, agent_rpc_bytes_valid,
+    AgentExecuteInput, AgentPlanInput, AgentResumeInput, agent_approval_from_bytes,
+    agent_execute_from_bytes, agent_plan_from_bytes, agent_resume_from_bytes,
+    agent_rpc_bytes_valid,
 };
 pub use backend::{
     ArtifactStore, ArtifactStoreBackend, BackendCapabilities, BackendError, CallContext,

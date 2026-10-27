@@ -578,6 +578,14 @@ pub(super) fn execute() -> Value {
     })
 }
 
+pub(super) fn resume_execution() -> Value {
+    json!({"schema": GUIDANCE_SCHEMA, "schema_version": SCHEMA_VERSION, "status":"guidance",
+        "command":"healthmd resume-execution", "request_sent":false,
+        "message":"Supply only job_id for an existing retained Agent Bridge export. No device was contacted or recovery started.",
+        "required":[{"argument":"--arguments", "description":"Strict JSON containing only the existing job_id; no frontier, receipt, approval or destination fields."}],
+        "next_actions":[{"command":"healthmd mcp schema healthmd_export_execution_resume", "description":"Inspect the exact local schema."}]})
+}
+
 pub(super) fn resume() -> Value {
     positional(
         "healthmd resume",
