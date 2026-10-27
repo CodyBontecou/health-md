@@ -99,6 +99,7 @@ test('homepage multi-format downloads count the selected CSV once even when the 
 });
 
 test('page/locale and destination/source classifiers have closed vocabularies', () => {
+  assert.deepEqual(funnelPage('/blog/apple-health-xml-export/'), { page: 'xml_export', locale: 'en' });
   assert.deepEqual(funnelPage('/blog/health-md-vs-health-auto-export/'), { page: 'auto_export_comparison', locale: 'en' });
   assert.deepEqual(funnelPage('/es/'), { page: 'home', locale: 'es' });
   assert.equal(funnelPage('/es/apple-health-to-csv/'), null);
@@ -154,6 +155,8 @@ test('collector routes events to real SQLite daily counters without storing requ
   assert.equal(rows.length, 1);
   assert.equal(rows[0].count, 2);
   assert.deepEqual(Object.keys(rows[0]), ['day', 'page', 'locale', 'source', 'action', 'target', 'placement', 'count']);
+  assert.equal((await worker.fetch(request({ ...event, page: 'xml_export' }), { DB }, {})).status, 204);
+  assert.equal(DB.db.prepare("SELECT count FROM web_funnel_daily WHERE page = 'xml_export'").get().count, 1);
 });
 
 test('collector rejects origins, methods, queries, oversized bodies and sensitive/unknown fields', async t => {

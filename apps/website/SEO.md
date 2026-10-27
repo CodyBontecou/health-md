@@ -88,7 +88,8 @@ their original links; analytics never waits, retries, or prevents navigation.
 `assets/funnel-contract.js` owns the fixed page, locale, action, target, placement,
 and source vocabulary shared by the browser and campaign Worker. It currently
 covers the homepage (all ten locales), export/CSV/Android/AI hubs, the guides hub,
-Obsidian workflows, the Health Auto Export comparison, and the named spreadsheet, metric, PDF, and AI acquisition
+Obsidian workflows, the Health Auto Export comparison, the XML archive explainer,
+and the named spreadsheet, metric, PDF, and AI acquisition
 guides. Other pages, including account and health-data routes, are excluded.
 Add genuine acquisition pages to that owner rather than sending arbitrary URLs.
 

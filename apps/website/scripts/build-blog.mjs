@@ -289,7 +289,7 @@ function renderIndex(posts) {
         <article><h3>Android</h3><p>Authorize Health Connect, choose a folder, and verify your first exported file.</p><a href="/health-connect-export/">Start an Android export</a></article>
         <article><h3>Reports, automation and agents</h3><p>Create a PDF report, set up scheduled files, or choose an agent workflow with its device requirements.</p><a href="/docs/scheduling/">Set up scheduled exports</a><a href="/blog/export-health-data-without-the-cloud/">Export without cloud storage</a><a href="/blog/export-apple-health-data-pdf/">Create a health summary PDF</a><a href="/health-data-for-ai/">Use health data with AI</a><a href="/blog/analyze-apple-health-with-claude/">Analyze Apple Health with Claude</a><a href="/blog/apple-health-to-chatgpt/">Analyze Apple Health with ChatGPT</a></article>
       </div>
-      <p><a href="/apple-health-export/">Compare Apple Health export workflows</a>, <a href="/blog/health-md-vs-health-auto-export/">compare Health.md and Health Auto Export</a>, or <a href="/docs/troubleshooting/">troubleshoot an export</a>.</p>
+      <p><a href="/apple-health-export/">Compare Apple Health export workflows</a>, <a href="/blog/apple-health-xml-export/">open an Apple Health XML archive</a>, <a href="/blog/health-md-vs-health-auto-export/">compare Health.md and Health Auto Export</a>, or <a href="/docs/troubleshooting/">troubleshoot an export</a>.</p>
     </section>
     <section class="posts" aria-labelledby="latest-articles">
       <h2 class="container" id="latest-articles">Latest articles and product updates</h2>
