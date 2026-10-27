@@ -1,6 +1,14 @@
 name: Rust CI
 on:
   workflow_dispatch:
+    inputs:
+      probe:
+        type: boolean
+        default: false
+      runner:
+        type: choice
+        default: ubuntu-24.04
+        options: [ubuntu-24.04, ubuntu-24.04-arm, macos-26, ubuntu-slim]
   workflow_call:
     inputs:
       release_sha:
@@ -14,7 +22,15 @@ permissions:
   contents: read
   actions: read
 jobs:
+  probe:
+    if: ${{ inputs.probe }}
+    name: Infrastructure runner latency probe
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 1
+    steps:
+      - run: date -u; uname -m
   test:
+    if: ${{ !inputs.probe }}
     uses: ./.github/workflows/ci.yml
     with:
       release_sha: ${{ inputs.release_sha || github.sha }}
