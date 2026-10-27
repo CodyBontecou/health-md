@@ -72,6 +72,16 @@ fn identity(metadata: &Metadata) -> Result<RootIdentity, ClientError> {
     }
 }
 
+pub(crate) fn require_directory_identity(
+    dir: &Dir,
+    expected: &RootIdentity,
+) -> Result<(), ClientError> {
+    if identity(&dir.dir_metadata().map_err(unavailable)?)? != *expected {
+        return Err(ClientError::AgentAuthorityUnavailable);
+    }
+    Ok(())
+}
+
 pub(crate) fn identity_digest(identity: &RootIdentity) -> Result<Digest, ClientError> {
     v4::document_digest(identity).map_err(Into::into)
 }
