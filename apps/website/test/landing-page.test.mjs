@@ -38,11 +38,11 @@ const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/componen
 const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/vertical-tables.js"), "utf8");
 
 test("landing page makes local-first health data movement the primary message", () => {
-  assert.match(index, /Move Your Health Forward/);
-  assert.match(index, /Move your<br>health forward\./);
+  assert.match(index, /<title>Export Apple Health and Health Connect \| Health\.md<\/title>/);
+  assert.match(index, /Export your<br>health data\./);
   assert.match(index, /A private bridge for your health data<br>to your files, scripts, and agents\./);
   assert.match(index, /Your data\. Your rules\./);
-  assert.match(index, /Health\.md does not store your health data\.[\s\S]*You choose every export destination\./);
+  assert.match(index, /Local-first by default\.[\s\S]*optional single-owner Health\.md Cloud pilot[\s\S]*no public signup/);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
   assert.equal((index.match(/<section/g) ?? []).length, 6);
@@ -90,12 +90,12 @@ test("landing closes with a localized download decision and compact footer", () 
   const footer = index.slice(index.indexOf('<footer class="site-footer">'));
 
   assert.match(downloadSection, /Take your health data with you\./);
-  assert.match(downloadSection, /Google Play: try 5 exports free, then make one lifetime purchase\. F-Droid: Full Access is included\./);
+  assert.match(downloadSection, /Google Play offers free manual exports, then a one-time lifetime purchase\. F-Droid catalog publication is pending\./);
   assert.match(downloadSection, /class="download-actions" aria-label="Download Health\.md"/);
   assert.equal((downloadSection.match(/class="hero-store-badge /g) ?? []).length, 3);
   assert.match(downloadSection, /href="https:\/\/apps\.apple\.com\/us\/app\/health-md\/id6757763969"/);
   assert.match(downloadSection, /href="https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.healthmd\.android"/);
-  assert.match(downloadSection, /href="https:\/\/f-droid\.org\/packages\/com\.healthmd\.android\/"/);
+  assert.match(downloadSection, /href="\/docs\/android\/#distribution-status"/);
   assert.match(downloadSection, /Switching channels requires uninstalling the app and does not migrate local app state\./);
 
   assert.match(footer, /<nav class="footer-links" aria-label="Footer navigation">/);
@@ -186,7 +186,7 @@ test("scheduling showcase explains recurring on-device exports", async () => {
 test("agent showcase connects scoped questions to contextual answers", async () => {
   assert.match(index, /<section class="agent-showcase" id="agents"/);
   assert.match(index, /Your health data,<br>ready for questions\./);
-  assert.match(index, /without routing data through a Health\.md cloud/);
+  assert.match(index, /from a paired device\. The separate single-owner cloud pilot can query only exports intentionally uploaded to it/);
   assert.match(index, /href="docs\/guides\/connect-agent\/"[\s\S]*?Connect an agent/);
   assert.match(index, /href="docs\/cli\/"[\s\S]*?Explore CLI &amp; MCP/);
   assert.ok(index.indexOf("Connect an agent") < index.indexOf("Explore CLI &amp; MCP"));
@@ -215,12 +215,14 @@ test("agent showcase connects scoped questions to contextual answers", async () 
   await access(path.join(ROOT, "assets/app-icon/healthmd-mark.png"));
 });
 
-test("product and legal copy reject Health.md server storage without hiding user destinations", () => {
+test("product and legal copy disclose the opt-in, unbacked cloud pilot without implying automatic collection", () => {
   const publicCopy = `${index}\n${privacyPolicy}\n${terms}`;
-  assert.match(privacyPolicy, /Health\.md does not collect or store (?:Apple Health, Health Connect, or other )?health data on Health\.md servers/i);
+  assert.match(privacyPolicy, /optional, unbacked single-owner Health\.md Cloud pilot stores API exports/);
+  assert.match(privacyPolicy, /no off-host backup or account recovery/);
   assert.match(privacyPolicy, /user-configured API endpoint/i);
   assert.match(privacyPolicy, /file provider/i);
-  assert.match(terms, /We do not collect or store your health data on Health\.md servers/);
+  assert.match(terms, /optional, unbacked single-owner Health\.md Cloud pilot stores API exports/);
+  assert.doesNotMatch(publicCopy, /Health\.md does not (?:collect or )?store (?:your )?health data/i);
   assert.doesNotMatch(publicCopy, /Hosted Account|hosted-data|serve-hosted|\/data\/v1\//i);
 });
 
@@ -249,7 +251,7 @@ test("terms of service uses the legal design and covers the current product mode
   assert.match(terms, /<header class="site-header">/);
   assert.match(terms, /<footer class="site-footer">/);
   assert.match(terms, /Terms,<br>made readable\./);
-  assert.match(terms, /Last updated: August 6, 2026/);
+  assert.match(terms, /Last updated: September 28, 2026/);
   assert.match(terms, /consumer apps for iPhone, iPad, Mac, and Android/);
   assert.match(terms, /command-line and MCP tools where made available/);
   assert.match(terms, /preview, source-build, beta, or compatibility path/);
@@ -287,7 +289,7 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
 
 test("landing experience follows the reference's single-screen desktop composition", () => {
   assert.match(index, /<div class="header-nav">/);
-  assert.match(index, /<nav aria-label="Documentation"><a class="header-docs-link" href="docs\/">Docs<\/a><\/nav>/);
+  assert.match(index, /<nav aria-label="Main navigation">\s*<a class="header-docs-link" href="docs\/">Docs<\/a>\s*<a class="header-docs-link" href="\/blog\/" hreflang="en">Guides<\/a>\s*<\/nav>/);
   assert.doesNotMatch(index, /<!-- HEALTHMD_LANGUAGE_SELECTOR -->/);
   assert.doesNotMatch(index.slice(index.indexOf('<header'), index.indexOf('</header>')), /language-menu|language-selector/);
   assert.doesNotMatch(index, /↗/);

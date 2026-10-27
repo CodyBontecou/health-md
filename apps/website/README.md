@@ -53,15 +53,25 @@ URLs stay canonical. Do not translate commands, schema keys, metric IDs, filenam
 fixtures, code examples, or generated reference artifacts. Localized sample
 fixtures preserve the source values and physical units (human-facing abbreviations may be localized); regional unit conversion is separate product work.
 
-Localized legal pages are published as convenience translations for Spanish, German, French,
-Brazilian Portuguese, Italian, Dutch, Japanese, Korean, and Simplified Chinese. Each translation
-links to the controlling English version. A qualified human must review legal and health terminology
-before enabling any additional legal locale. Localized store badges and documentation social cards
+Legal pages are temporarily published in canonical English only. Previously published convenience
+translations for Spanish, German, French, Brazilian Portuguese, Italian, Dutch, Japanese, Korean,
+and Simplified Chinese predate the optional Health.md Cloud pilot; their source remains as `noindex`
+review drafts but is not shipped in `dist`. Old localized legal URLs temporarily redirect to the
+updated English pages. A qualified human must review each translated legal page before republishing
+it. Localized store badges and documentation social cards
 are required. Landing and first-export
 screenshots are configured in `i18n/locales.mjs`; any English fallback must be declared there. The
 authentic shared onboarding capture at `/docs/assets/docs/iphone-first-export/onboarding-start.webp`
 retains the app's current English foreground copy, and the shared setup-required capture is also
 English; translated guides label both cases explicitly.
+
+## Free Obsidian starter vault
+
+`starter-vault/` contains the editable source notes for the downloadable sample vault. Run
+`npm run starter-vault:build` after editing them and commit the generated ZIP under
+`assets/downloads/`. `npm run starter-vault:check` and the site build reject stale downloads.
+See [the starter authoring notes](starter-vault/README.md) for compatibility checks and packaging.
+The existing Obsidian workflow article links the download; publication uses the normal website deployment.
 
 ## External Obsidian plugin source
 
@@ -79,6 +89,13 @@ Update `external-sources.json` deliberately when adopting a new plugin revision,
 ## Apple reference documentation
 
 Apple reference sources are read directly from the sibling `apps/apple` component. Override discovery with `HEALTHMD_APP_ROOT` or `--source` when testing another checkout.
+
+## SEO measurement
+
+Use `npm run seo:baseline -- --help` for the read-only Search Console reporting
+tool. See [SEO.md](SEO.md) for property selection, private output locations,
+comparison windows and data limitations. Live baseline collection requires
+authorized Search Console access; the reporting tool itself supplies no traffic data.
 
 ## Deployment
 

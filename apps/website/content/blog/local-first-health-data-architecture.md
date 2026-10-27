@@ -3,8 +3,15 @@ title: "What local-first health-data architecture actually means."
 description: "A concrete look at Health.md's phone reads, user-controlled destinations, direct transport, credentials, optional providers, and cloud boundaries."
 lead: "Local-first is an architectural boundary, not a slogan: know where health records are read, where they travel, and who controls every destination."
 date: "2026-09-22T13:50:00.000Z"
-updated: "2026-09-22T13:50:00.000Z"
+updated: "2026-10-22"
+verified: "2026-10-22"
+verified_by: "Codex (agent)"
+verified_method: mixed
 category: "Engineering"
+related:
+  - export-health-data-without-the-cloud
+  - private-health-data-webhooks
+  - healthmd-cli-direct-iphone-mcp
 draft: false
 tags:
   - healthmd
@@ -25,29 +32,35 @@ The simplest workflow has no Health.md health-data server:
 2. Health.md builds the selected output on-device;
 3. it writes into a folder the user chose.
 
-That folder may be local, in an Obsidian vault, or exposed by a sync provider. If the user chooses iCloud Drive, Google Drive, OneDrive, Syncthing, or Obsidian Sync, that provider's own network and privacy model applies. “Health.md has no cloud hop” does not mean a user-selected destination cannot sync.
+That folder may be local, in an Obsidian vault, or exposed by a sync provider. If the user chooses iCloud Drive, Google Drive, OneDrive, Syncthing, or Obsidian Sync, that provider's own network and privacy model applies. The local folder workflow has no Health.md server hop, but a user-selected destination can still sync.
 
 ## Direct computer access
 
-The standalone CLI pairs with an open iPhone or Android device over Manual IP or Tailscale. Pairing and transport are authenticated and encrypted. The phone still performs the platform health read; the CLI receives the explicitly requested result.
+The standalone CLI pairs with an open iPhone or Android device over Manual IP or Tailscale. Pairing and transport are authenticated and encrypted. The phone still performs the platform health read; the CLI receives the explicitly requested result for that device’s supported operations. Typed MCP health queries currently require an iPhone; Android supports its own status, raw and file-export operations.
 
-Trust material belongs in the operating system credential service. Large health-bearing bodies go to validated files or a private durable spool rather than being copied automatically into an agent conversation. Job status is designed to expose health-free progress fields such as IDs, counts, bytes, and safe errors.
+Trust material belongs in the operating system credential service. Raw downloads and file exports use validated files or private durable spools. Explicit typed queries can return selected values to an agent, whose own transcript and provider policies then apply. Job status is designed to expose health-free progress fields such as IDs, counts, bytes, and safe errors.
 
 ## The Mac path
 
 The Apple apps can also prepare files for a connected Mac over the local network. The Mac is a destination and automation surface, not a replacement HealthKit source. Encrypted context and direct export paths keep version, coverage, and compatibility boundaries explicit.
 
-The bundled Mac MCP server is a production component of the Mac app. The standalone cross-platform CLI/MCP package is versioned and qualified separately; a successful Mac workflow does not certify every Linux, Windows, Android, LAN, or Tailscale combination.
+The bundled Mac MCP server is a production component of the Mac app. The standalone cross-platform CLI/MCP package is an alpha, versioned separately, with its full stable-release qualification matrix still pending; a successful Mac workflow does not certify every Linux, Windows, Android, LAN, or Tailscale combination.
 
 ## Intentional network destinations
 
 Local-first does not ban networks. It makes remote movement explicit.
 
-The iPhone API Endpoint target POSTs selected JSON to a URL the user configures. Android raw snapshots can be sent to an explicitly selected HTTPS endpoint under stricter redirect and checksum rules. Connected provider features contact the provider the user chose. These are disclosed destinations, not a hidden Health.md relay.
+The iPhone API Endpoint target POSTs selected JSON to a URL the user configures. Android raw snapshots can be sent to an explicitly selected HTTPS endpoint under stricter redirect and checksum rules. The cloud pilot does not accept Android Raw API Snapshot artifacts. Connected provider features contact the provider the user chose. These are disclosed destinations, not a hidden Health.md relay.
+
+### Separate optional cloud pilot
+
+The optional single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it. There is no public signup and no automatic device sync. Local folder exports and direct CLI queries do not automatically create a copy there. A separately authorized read-only cloud MCP endpoint can return retained fields to an agent; agent hosts and model providers may process or retain those values under their own policies.
+
+The pilot retains original API-export JSON envelopes, including historical revisions and embedded source data, without an age cutoff, subject to its quota. It runs on an unbacked VM: disk, key, or VM loss can permanently destroy exports. Account deletion disables access immediately; background erasure is not instantaneous. It is not a generally available multi-user service. See the [privacy policy](/privacy-policy.html#retention) for the full boundaries.
 
 ## Analytics and billing boundaries
 
-Product analytics must not contain health values, metric names, health dates, exported files, private paths, credentials, or user-entered text. Store purchases are handled by Apple or Google. The F-Droid Android build excludes billing and Health.md telemetry code entirely.
+Product analytics must not contain health values, metric names, health dates, exported files, private paths, credentials, or user-entered text. Store purchases are handled by Apple or Google. The F-Droid Android flavor does not initialize Health.md telemetry and does not depend on Google Play Billing.
 
 ## Questions to ask any health-data tool
 

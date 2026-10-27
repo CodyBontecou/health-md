@@ -15,6 +15,7 @@ struct A11ySyntheticApp: App {
         switch ProcessInfo.processInfo.environment["A11Y_SCENARIO"] ?? "foundation" {
         case "foundation": A11yFoundationScenario()
         case "dialogs": DialogsA11yScenario()
+        case "history": HistoryA11yScenario()
         case "format": FormatA11yScenario()
         case "reading": ReadingA11yScenario()
         case "scheduling": SchedulingA11yScenario()

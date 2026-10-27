@@ -5,12 +5,13 @@ description: Configura Health.md per Android, esporta i dati di Health Connect i
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Da Health Connect a file privati</p>
-  <p>Health.md per Android legge i dati di Health Connect sul dispositivo e scrive file Markdown, Obsidian Bases, JSON o CSV nelle cartelle che scegli. Nessun account Health.md, nessun cloud per i dati sanitari e nessun abbonamento.</p>
+  <p>Health.md per Android legge i dati di Health Connect sul dispositivo e scrive file Markdown, Obsidian Bases, JSON o CSV nelle cartelle che scegli. Questo flusso di esportazione in cartelle non richiede un account Health.md, un cloud per i dati sanitari o un abbonamento.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Scarica da Google Play</a>
-    <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">Scarica da F-Droid</a>
+    <a class="docs-button-secondary" href="#distribution-status">Stato della pubblicazione su F-Droid</a>
     <a class="docs-button-secondary" href="/it/docs/export/">Leggi la documentazione sull'esportazione</a>
   </div>
+  <p id="distribution-status">La pubblicazione nel catalogo F-Droid è in attesa. La versione Android attuale è disponibile su Google Play.</p>
 </div>
 
 <div class="reference-stats">
@@ -139,12 +140,14 @@ Health.md per Android privilegia l'archiviazione locale:
 
 - I record di Health Connect vengono letti sul tuo dispositivo Android.
 - Le esportazioni vengono scritte direttamente nelle cartelle che scegli.
-- Health.md non gestisce un servizio cloud per i dati sanitari.
+- Per impostazione predefinita, le esportazioni in cartelle e le query dirette al dispositivo non creano una copia sui server di Health.md.
 - Le impostazioni e la cronologia delle esportazioni rimangono sul dispositivo.
 - La fatturazione è gestita da Google Play.
 - Le cartelle gestite da provider vengono sincronizzate secondo i termini del rispettivo provider.
 
 Per la configurazione locale più rigorosa, esegui esportazioni manuali in una cartella locale del dispositivo e lascia disattivate le esportazioni programmate e la sincronizzazione tramite provider.
+
+Il progetto pilota Health.md Cloud, separato e facoltativo, è riservato a un solo proprietario e conserva solo le esportazioni API inviate intenzionalmente. Nessuna registrazione pubblica né sincronizzazione automatica dei dispositivi è disponibile; questo flusso di cartelle non carica dati nel progetto pilota. L’[informativa sulla privacy](/privacy-policy.html) descrive conservazione, eliminazione, quota e rischi di perdita senza backup.
 
 ## Documentazione correlata
 
@@ -156,4 +159,4 @@ Per la configurazione locale più rigorosa, esegui esportazioni manuali in una c
   <a href="/it/docs/visualizations-roadmap/"><span>Obsidian</span>Come i file JSON e Markdown esportati alimentano le visualizzazioni di Health.md.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Ultimo aggiornamento: 31 agosto 2026</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Ultimo aggiornamento: 4 ottobre 2026</p>

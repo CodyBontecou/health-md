@@ -1,6 +1,6 @@
 ---
-title: "Health.md-CLI"
-description: "Installeer de zelfstandige healthmd-CLI op macOS, Linux of Windows, koppel deze rechtstreeks aan een iPhone of Android-apparaat, controleer de gereedheid, exporteer gegevens, voer queries uit en beheer persistente taken. Geen Mac-app nodig."
+title: "CLI voor Apple Health en Health Connect"
+description: "Exporteer Apple Health- of Health Connect-gegevens via de terminal met Health.md. CLI-preview voor macOS, Linux en Windows met de telefoonapp geopend."
 ---
 
 De zelfstandige `healthmd`-CLI draait op macOS, Linux en Windows en koppelt rechtstreeks met een geopende Health.md-app op de iPhone (protocol v1) of op Android (protocol v2). De CLI heeft Health.md voor Mac nooit nodig, kent geen backendselectie en leest Apple Health of Health Connect nooit vanaf de computer.
@@ -18,6 +18,22 @@ De zelfstandige `healthmd`-CLI draait op macOS, Linux en Windows en koppelt rech
 </div>
 
 Installeer de preview op macOS of Linux met <code>brew install CodyBontecou/tap/healthmd</code>. Gebruik de exacte mobiele build die de releasebewijzen noemen; pakketpublicatie bewijst geen mobiele compatibiliteit.
+
+## Eerste export vanaf je telefoon
+
+Volg voor Windows en andere methoden de [installatiehandleiding](/nl/docs/cli/installation/). Controleer vóór het koppelen de [compatibele mobiele build](/nl/docs/cli-direct/). Houd Health.md op de telefoon geopend, schakel Direct CLI Access in en geef toegang tot de gewenste categorieën.
+
+Maak een map op je computer en vervang `/absolute/path/to/HealthVault` door het bestaande absolute pad ervan. Gebruik op Windows een volledig Windows-pad. Volg de koppelstappen, controleer de gereedheid en exporteer één dag:
+
+```bash
+healthmd direct pair --transport manual-ip
+healthmd status
+healthmd export --yesterday --destination /absolute/path/to/HealthVault
+```
+
+Open na een geslaagde export de doelmap en controleer de geschreven bestanden. De telefoon maakt de export; de CLI slaat de gevalideerde bestanden op de computer op. Bij een time-out [controleer je de status en hervat je de taak](/nl/docs/cli-jobs/), in plaats van aan te nemen dat deze is geannuleerd.
+
+### Ondersteunde platforms
 
 De zelfstandige Rust-CLI draait op macOS, Linux en Windows, gebruikt rechtstreekse Manual IP- of Tailscale-verbindingen en heeft de Mac-app niet nodig. De CLI koppelt met iPhone-bronnen via protocol v1 en met Android-bronnen via protocol v2, met geautomatiseerde Swift↔Rust- en Kotlin↔Rust-compatibiliteitscontroles. De protocolcompatibiliteit is geïmplementeerd; fysieke release-QA moet nog worden afgerond vóór de eerste gekwalificeerde stabiele versie. Archieven met controlesom, een PowerShell-installatieprogramma en `cargo install healthmd-cli --locked` horen bij elke release.
 

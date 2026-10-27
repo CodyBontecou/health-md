@@ -13,6 +13,25 @@
 
 Read the nearest component `AGENTS.md` before changing files in a component. Keep component build commands, lockfiles, and generated artifacts scoped to that component.
 
+## Verification policy
+
+- During iteration, run the smallest relevant behavior tests and cheap type/lint checks in the owning component. At completion of a coherent change, run its affected-module regressions once. Default to checks that run without a simulator, emulator, physical device, or Argent.
+- Reuse passing results only while relevant source, dependencies, fixtures, toolchain, features, and configuration remain unchanged. Re-run after relevant edits; diagnose an unrelated baseline failure with its smallest failing command rather than repeating whole suites.
+- Full OS/flavor matrices, coverage collection, MSRV, binding/package qualification, and release smoke belong to CI/qualification or changes that affect those surfaces. Public-contract, security/authority, persistence/recovery, FFI, and uncertain-impact changes still require every affected producer/consumer check.
+- Select checks using the [test selection guide](docs/testing-strategy.md) and record commands, configuration, results, and relevant unrun surfaces. Root `make test` is a broad sweep that includes simulator tests; it is not the default local feedback loop or complete release qualification.
+- Simulator/emulator QA, device/UI automation, and any Argent use require an explicit user request for the current task. A general request to implement, polish UI, fix a bug, or run tests does not authorize these workflows.
+- Apply this opt-in policy when following component documentation or referenced skills, even if they prescribe simulator or Argent QA. Do not boot simulators/emulators, install or launch apps for QA, or capture QA screenshots/recordings by default.
+- Report checks run and their results. If a relevant check requires an opt-in workflow, mark it not run and explain the verification gap; do not claim visual or device behavior was verified.
+
+## Documentation maintenance
+
+- Use code, tests, schemas, and configuration to establish implemented behavior. Preserve normative contracts, security/privacy policy, and accepted decisions; a conflict with implementation requires investigation, not automatic deletion of the document.
+- Maintain one canonical document per audience and purpose. Update or link an existing guide before creating another. Create tracked Markdown for durable user guidance, operational knowledge, rationale, or constraints that are not readily recoverable from source.
+- Keep task plans, session prompts, handoffs, and completion summaries in the issue tracker or ignored `.pi/` state. Promote only durable findings into maintained documentation; report routine work and checks in the conversation or PR.
+- Derive mechanical catalogs and examples from their owning code/schema generators. Preserve generated publications, immutable skill versions, fixtures, release evidence, and migration provenance; update sources and run the relevant drift checks instead of hand-editing copies.
+- Before removing or moving a document, inspect source, test, CI, generator, publication, and agent-instruction consumers. Preserve unique decisions and unresolved work in their canonical owner. Age and absence of backlinks alone are not evidence of obsolescence.
+- For a repository-wide structural inventory, run `python3 scripts/audit-markdown.py`; it writes JSON/CSV to ignored `.pi/markdown-audit/` without changing documents. Its classifications and findings require semantic review, not automatic deletion.
+
 ## Cross-platform product and contract policy
 
 Apple and Android should remain unified whenever their operating systems expose semantically compatible capabilities. Read `docs/architecture/cross-platform-unification-policy.md` before changing a mobile feature, metric, setting, export, API behavior, automation surface, or public terminology.

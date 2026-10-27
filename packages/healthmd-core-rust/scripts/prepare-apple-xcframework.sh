@@ -6,32 +6,10 @@ repo_root=$(CDPATH='' cd -- "$workspace_root/../.." && pwd)
 package_root="$repo_root/apps/apple/Packages/HealthMdCoreRust"
 xcframework=${1:-"$package_root/Artifacts/HealthmdCore.xcframework"}
 stamp="$(dirname -- "$xcframework")/.healthmd-core-source.sha256"
-scope=${HEALTHMD_CORE_APPLE_SCOPE:-full}
 
 "$workspace_root/scripts/generate-apple-bindings.sh" --check
 
-source_digest=$(
-    (
-        cd "$workspace_root"
-        printf 'apple-build-scope=%s\n' "$scope"
-        {
-            printf '%s\n' Cargo.toml Cargo.lock rust-toolchain.toml
-            find crates/healthmd-core crates/healthmd-core-uniffi crates/healthmd-protocol -type f -print
-            printf '%s\n' \
-                scripts/build-apple-xcframework.sh \
-                scripts/prepare-apple-xcframework.sh \
-                scripts/normalize-apple-xcframework.py \
-                scripts/validate-apple-xcframework.sh
-        } | LC_ALL=C sort | while IFS= read -r file; do
-            shasum -a 256 "$file"
-        done
-
-        cd "$package_root"
-        find Bindings -type f -print | LC_ALL=C sort | while IFS= read -r file; do
-            shasum -a 256 "$file"
-        done
-    ) | shasum -a 256 | awk '{ print $1 }'
-)
+source_digest=$("$workspace_root/scripts/apple-source-digest.sh")
 
 prepared_digest=""
 if [ -f "$stamp" ]; then

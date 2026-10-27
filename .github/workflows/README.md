@@ -49,7 +49,7 @@ not satisfy the public PR gate.
 
 Android `1.9.3` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
 
-`.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow runs the reduced Android lane against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
+`.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow re-runs the complete Android CI matrix against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
 
 After Internal Testing succeeds, dispatch `.github/workflows/android-promote-production.yml` **from the exact annotated release tag** with the semantic version and phone version code. It requires the same tag/main/version bindings, retains a pre-mutation intent, verifies that the exact code is active on `internal` and that production has no newer code, applies the reviewed English listing while promoting that artifact to `production`, and submits the single edit for review. Success requires Google Play to report `IN_REVIEW`, `APPROVED_NOT_PUBLISHED`, or `PUBLISHED`. The workflow retains an attempt-qualified production receipt.
 
@@ -88,9 +88,24 @@ The canonical release path starts from a draft GitHub Release whose tag starts w
 - `.github/workflows/release-ios.yml`
 - `.github/workflows/release-macos.yml`
 
-Use `release_tag=v<version>`. The tag version must match `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`; each workflow fails early if it does not. Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it.
+Dispatch from `main` with `release_tag=v<version>`. Apple versions use `v<major>.<minor>[.<patch>]`; the tag must exist on `origin`, its commit and the workflow commit must be reachable from `origin/main`, and the tag version must match every committed `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`. The resolver also requires an existing draft GitHub Release before qualification for a non-dry-run manual submission. It never creates a source ledger after an upload.
 
-Publishing a release still triggers both workflows as a legacy fallback, but it is not the canonical path because publication must wait for ASC approval.
+Before building, each workflow resolves the tag to an immutable SHA and runs the full Apple CI suite (`apple-ci.yml`) against it. The release job checks out **that same SHA**, not the dispatch branch head. Native tests, UI regressions, coverage, warnings, the connectivity package, and the workflow-policy job must all pass; a failed, cancelled, or skipped required job blocks the release. Release callers and reusable CI have distinct concurrency namespaces. Exact-SHA qualification groups are isolated by caller and run ID and cannot cancel their parent or another release; ordinary branch CI still cancels superseded runs.
+
+Workflow-only recovery may dispatch newer `main` workflow code with the original `release_tag`. The release tag must be an ancestor of that workflow SHA, and the diff may change only `.github/workflows/`, `.github/actions/`, or `.github/scripts/`. Qualification and archives still use the original tag's product source, without an overlay from newer `main`. A product, dependency, build-script, version, or metadata fix needs a newly committed and tagged release; never move an existing release tag. Recovery can load the current workflow's source-policy script from Git into `$RUNNER_TEMP` even when the original tag predates that script.
+
+Both release jobs recheck the clean, qualified checkout and pushed tag object at checkout, immediately before and after archiving, and before publication. Staged, unstaged, and non-ignored untracked files fail closed; ignored build products are allowed. The macOS workflow does not remove package references or otherwise edit the tagged project to avoid package networking. Any required project change must be committed, qualified, and released as new source. Summaries record the archived source SHA separately from the executing workflow SHA.
+
+Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it. Human publication remains a legacy fallback, not the canonical submission path. Non-Apple tags (`healthmd-cli/v*`, `android/v*`) and bot-authored publications skip resolution, qualification, and release jobs, so they do not launch duplicate full Apple suites. Untagged branch dispatch is supported only with `dry_run=true`: it qualifies and archives the exact dispatch SHA and cannot upload or submit.
+
+The lightweight policy regressions run on Ubuntu in Apple CI and are included in its final gate. Release-workflow and `.github/scripts/**` changes are in both Apple CI path maps. To run them locally without signing or a native build (Python with `PyYAML==6.0.3`, Git, Bash, and jq):
+
+```sh
+python3 -m unittest discover -s .github/scripts/tests -p 'test_apple_*.py' -v
+actionlint .github/workflows/apple-ci.yml .github/workflows/release-ios.yml .github/workflows/release-macos.yml
+```
+
+The tests use local synthetic Git remotes and a stubbed release-record read; they never dispatch workflows, push, access signing credentials, or perform store operations.
 
 ## What the workflows do
 
@@ -151,8 +166,12 @@ signing jobs skip and the archive/installer ship unsigned with Sigstore-checksum
 when the ledger records a `qualified` publisher, both Windows executables and the PowerShell
 installer are Authenticode-signed and native jobs require an exact match with the protected
 variable. Native runners verify every extracted macOS signature (and every Windows signature once
-qualified). The remote draft assets are then compared byte-for-byte with the qualified
+qualified). The generated Homebrew formula is normalized in an isolated tap before the checksum
+closure is signed. The remote draft assets are then compared byte-for-byte with the qualified
 workflow artifacts before the separate protected `cli-release` environment can publish them.
+After publication, the sealed formula clean-installs on every supported macOS/Linux architecture,
+preserves the signed binaries byte-for-byte, and completes an installed MCP handshake before a
+serialized, anti-rollback tap job pushes and remotely rechecks the exact formula blob.
 
 The repository variables, `cli-signing` environment secrets, rollback/key-compromise/crates-yank/
 Homebrew runbooks, and mobile compatibility requirements are documented in

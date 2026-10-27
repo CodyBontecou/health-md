@@ -12,7 +12,6 @@ const outputRoot = outputFlagIndex >= 0
   : root;
 const sitemapPath = path.join(outputRoot, "sitemap.xml");
 const siteOrigin = "https://healthmd.app";
-const lastmod = "2026-07-16";
 
 const categoryLabels = {
   all: "All data",
@@ -125,6 +124,7 @@ function pageDescription(viz, dataFilter, colorScheme) {
 
 function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
   const url = `${siteOrigin}${pagePath(viz, dataFilter, colorScheme)}`;
+  const canonicalUrl = `${siteOrigin}${pagePath(viz, viz.category)}`;
   const title = pageTitle(viz);
   const description = pageDescription(viz, dataFilter, colorScheme);
   const jsonLd = {
@@ -133,7 +133,7 @@ function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
     name: `Health.md ${viz.label} visualization`,
     applicationCategory: "HealthApplication",
     operatingSystem: "iOS, macOS, Obsidian",
-    url,
+    url: canonicalUrl,
     description,
     featureList: viz.exportSources.map((id) => `Works with Health.md ${exportSourceLabels[id]} exports`),
     isPartOf: {
@@ -147,7 +147,7 @@ function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
   let html = template
     .replace(/<title>.*?<\/title>/s, `<title>${escapeHtml(title)}</title>`)
     .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${escapeHtml(description)}">`)
-    .replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${escapeHtml(url)}">`)
+    .replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${escapeHtml(canonicalUrl)}">`)
     .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${escapeHtml(title)}">`)
     .replace(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${escapeHtml(description)}">`)
     .replace(/<meta property="og:url" content="[^"]*">/, `<meta property="og:url" content="${escapeHtml(url)}">`)
@@ -190,21 +190,16 @@ async function updateSitemap(visualizations) {
   const sitemap = await fs.readFile(sitemapPath, "utf8");
   const start = "  <!-- BEGIN GENERATED VISUALIZATION URLS -->";
   const end = "  <!-- END GENERATED VISUALIZATION URLS -->";
-  const urls = visualizations.flatMap((viz) =>
-    ["all", viz.category].flatMap((dataFilter) =>
-      colorSchemes.map((colorScheme) => {
-        const loc = `${siteOrigin}${pagePath(viz, dataFilter, colorScheme)}`;
-        return [
-          "  <url>",
-          `    <loc>${escapeHtml(loc)}</loc>`,
-          `    <lastmod>${lastmod}</lastmod>`,
-          "    <changefreq>weekly</changefreq>",
-          "    <priority>0.7</priority>",
-          "  </url>"
-        ].join("\n");
-      })
-    )
-  ).join("\n");
+  // Palette and all-data routes remain usable share links. Only the existing
+  // category/theme representative is proposed for indexing. Omit lastmod until
+  // a per-page source modification date can be established.
+  const urls = visualizations.map((viz) => [
+    "  <url>",
+    `    <loc>${escapeHtml(`${siteOrigin}${pagePath(viz, viz.category)}`)}</loc>`,
+    "    <changefreq>weekly</changefreq>",
+    "    <priority>0.7</priority>",
+    "  </url>"
+  ].join("\n")).join("\n");
   const block = `${start}\n${urls}\n${end}`;
   let next;
   const markerRe = new RegExp(`\\n  <!-- BEGIN GENERATED VISUALIZATION URLS -->[\\s\\S]*?  <!-- END GENERATED VISUALIZATION URLS -->`);

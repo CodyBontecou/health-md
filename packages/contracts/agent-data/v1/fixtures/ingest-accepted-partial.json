@@ -1,0 +1,27 @@
+{
+  "schema": "healthmd.agent_ingest_response",
+  "schema_version": 1,
+  "outcome": "accepted",
+  "stored": {
+    "revision_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "byte_count": 8192,
+    "completeness": {
+      "type": "partial",
+      "finalized": true,
+      "covered_owner_dates": ["2026-03-16"]
+    }
+  },
+  "partition": {
+    "owner_date": "2026-03-16",
+    "authoritative": {
+      "revision_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "completeness": {
+        "type": "partial",
+        "finalized": true,
+        "covered_owner_dates": ["2026-03-16"]
+      }
+    },
+    "complete_revision_present": false,
+    "partial_revision_present": true
+  }
+}

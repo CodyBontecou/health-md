@@ -4,7 +4,29 @@ set -eu
 workspace_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 repo_root=$(CDPATH='' cd -- "$workspace_root/../.." && pwd)
 package_root="$repo_root/apps/apple/Packages/HealthMdCoreRust"
-output=${1:-"$package_root/Artifacts/HealthmdCore.xcframework"}
+mode=full
+slice_target=
+slices_dir=
+case ${1:-} in
+    --slice)
+        [ "$#" -eq 3 ] || { echo 'Usage: --slice TARGET OUTPUT.a' >&2; exit 2; }
+        mode=slice
+        slice_target=$2
+        output=$3
+        case "$slice_target" in
+            aarch64-apple-ios|aarch64-apple-ios-sim|x86_64-apple-ios) slice_platform=ios ;;
+            aarch64-apple-darwin|x86_64-apple-darwin) slice_platform=macos ;;
+            *) echo "error: unsupported Apple slice: $slice_target" >&2; exit 2 ;;
+        esac
+        ;;
+    --assemble)
+        [ "$#" -eq 3 ] || { echo 'Usage: --assemble SLICES_DIR OUTPUT.xcframework' >&2; exit 2; }
+        mode=assemble
+        slices_dir=$2
+        output=$3
+        ;;
+    *) output=${1:-"$package_root/Artifacts/HealthmdCore.xcframework"} ;;
+esac
 target_dir=${CARGO_TARGET_DIR:-"$workspace_root/target/apple"}
 ios_deployment_target=17.0
 macos_deployment_target=14.0
@@ -17,6 +39,7 @@ case "$scope" in
         ;;
     ci-arm64)
         [ "$(uname -m)" = arm64 ] || { echo "error: ci-arm64 requires an arm64 Mac" >&2; exit 1; }
+        [ "$mode" = full ] || { echo "error: slice/assemble modes require full scope" >&2; exit 1; }
         build_profile=debug
         release_flag=""
         build_targets="aarch64-apple-ios-sim aarch64-apple-darwin"
@@ -45,25 +68,38 @@ if [ -z "$toolchain" ]; then
     exit 1
 fi
 
-if ! rustup run "$toolchain" rustc --version >/dev/null 2>&1; then
+if [ "$mode" != assemble ] && ! rustup run "$toolchain" rustc --version >/dev/null 2>&1; then
     rustup toolchain install "$toolchain" --profile minimal
 fi
-# Only install the architectures this invocation will actually compile.
-installed_targets=$(rustup target list --installed --toolchain "$toolchain")
-for rust_target in $build_targets; do
-    if ! printf '%s\n' "$installed_targets" | grep -Fx "$rust_target" >/dev/null; then
-        rustup target add --toolchain "$toolchain" "$rust_target"
-    fi
-done
-rustc_path=$(rustup which --toolchain "$toolchain" rustc)
-toolchain_bin=$(dirname -- "$rustc_path")
-cargo_path="$toolchain_bin/cargo"
+if [ "$mode" = slice ]; then
+    selected_targets=$slice_target
+elif [ "$mode" = full ]; then
+    selected_targets=$build_targets
+else
+    selected_targets=""
+fi
+if [ -n "$selected_targets" ]; then
+    installed_targets=$(rustup target list --installed --toolchain "$toolchain")
+    for rust_target in $selected_targets; do
+        if ! printf '%s\n' "$installed_targets" | grep -Fx "$rust_target" >/dev/null; then
+            rustup target add --toolchain "$toolchain" "$rust_target"
+        fi
+    done
+fi
+if [ "$mode" != assemble ]; then
+    rustc_path=$(rustup which --toolchain "$toolchain" rustc)
+    toolchain_bin=$(dirname -- "$rustc_path")
+    cargo_path="$toolchain_bin/cargo"
+fi
 source_revision=${HEALTHMD_CORE_SOURCE_REVISION:-$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf development)}
 if [ "$source_revision" != development ] && [ -n "$(git -C "$repo_root" status --porcelain -- packages/healthmd-core-rust 2>/dev/null)" ]; then
     source_revision="$source_revision-dirty"
 fi
 export HEALTHMD_CORE_SOURCE_REVISION="$source_revision"
 
+# Rust 1.88 strips host proc-macros by default in release builds. Its Mach-O
+# strip pass can misalign LINKEDIT, which macOS27 dyld rejects (rust-lang/rust#157750).
+# Override only build dependencies: shipped target optimization/stripping stays unchanged.
 build_target() {
     target=$1
     platform=$2
@@ -82,6 +118,7 @@ build_target() {
                     --manifest-path "$workspace_root/Cargo.toml" \
                     --locked \
                     $release_flag \
+                    --config 'profile.release.build-override.strip="none"' \
                     --package healthmd-core-uniffi \
                     --target "$target"
             ;;
@@ -98,6 +135,7 @@ build_target() {
                     --manifest-path "$workspace_root/Cargo.toml" \
                     --locked \
                     $release_flag \
+                    --config 'profile.release.build-override.strip="none"' \
                     --package healthmd-core-uniffi \
                     --target "$target"
             ;;
@@ -108,12 +146,28 @@ build_target() {
     esac
 }
 
-for rust_target in $build_targets; do
-    case "$rust_target" in
-        *-apple-darwin) build_target "$rust_target" macos ;;
-        *) build_target "$rust_target" ios ;;
-    esac
-done
+if [ "$mode" = slice ]; then
+    build_target "$slice_target" "$slice_platform"
+    mkdir -p "$(dirname -- "$output")"
+    cp "$target_dir/$slice_target/release/libhealthmd_core_uniffi.a" "$output"
+    echo "Built static Apple slice: $slice_target"
+    exit 0
+elif [ "$mode" = full ]; then
+    for rust_target in $build_targets; do
+        case "$rust_target" in
+            *-apple-darwin) build_target "$rust_target" macos ;;
+            *) build_target "$rust_target" ios ;;
+        esac
+    done
+fi
+
+input_library() {
+    if [ "$mode" = assemble ]; then
+        printf '%s/%s.a\n' "$slices_dir" "$1"
+    else
+        printf '%s/%s/%s/libhealthmd_core_uniffi.a\n' "$target_dir" "$1" "$build_profile"
+    fi
+}
 
 artifact_parent=$(dirname -- "$output")
 mkdir -p "$artifact_parent"
@@ -131,27 +185,29 @@ macos_library="$temp_dir/macos/libHealthmdCoreFFI.a"
 mkdir -p "$(dirname -- "$device_library")" "$(dirname -- "$simulator_library")" "$(dirname -- "$macos_library")"
 
 if [ "$scope" = full ]; then
-    cp "$target_dir/aarch64-apple-ios/$build_profile/libhealthmd_core_uniffi.a" "$device_library"
+    cp "$(input_library aarch64-apple-ios)" "$device_library"
     xcrun lipo -create \
-        "$target_dir/aarch64-apple-ios-sim/$build_profile/libhealthmd_core_uniffi.a" \
-        "$target_dir/x86_64-apple-ios/$build_profile/libhealthmd_core_uniffi.a" \
+        "$(input_library aarch64-apple-ios-sim)" \
+        "$(input_library x86_64-apple-ios)" \
         -output "$simulator_library"
     xcrun lipo -create \
-        "$target_dir/aarch64-apple-darwin/$build_profile/libhealthmd_core_uniffi.a" \
-        "$target_dir/x86_64-apple-darwin/$build_profile/libhealthmd_core_uniffi.a" \
+        "$(input_library aarch64-apple-darwin)" \
+        "$(input_library x86_64-apple-darwin)" \
         -output "$macos_library"
-    set -- -library "$device_library" -headers "$headers" \
+
+    xcodebuild -create-xcframework \
+        -library "$device_library" -headers "$headers" \
         -library "$simulator_library" -headers "$headers" \
-        -library "$macos_library" -headers "$headers"
+        -library "$macos_library" -headers "$headers" \
+        -output "$temp_dir/HealthmdCore.xcframework"
 else
-    # CI links the same production bridge into its arm64 simulator and Mac apps.
-    # This deliberately has no device slice and cannot qualify a release archive.
-    cp "$target_dir/aarch64-apple-ios-sim/$build_profile/libhealthmd_core_uniffi.a" "$simulator_library"
-    cp "$target_dir/aarch64-apple-darwin/$build_profile/libhealthmd_core_uniffi.a" "$macos_library"
-    set -- -library "$simulator_library" -headers "$headers" \
-        -library "$macos_library" -headers "$headers"
+    cp "$(input_library aarch64-apple-ios-sim)" "$simulator_library"
+    cp "$(input_library aarch64-apple-darwin)" "$macos_library"
+    xcodebuild -create-xcframework \
+        -library "$simulator_library" -headers "$headers" \
+        -library "$macos_library" -headers "$headers" \
+        -output "$temp_dir/HealthmdCore.xcframework"
 fi
-xcodebuild -create-xcframework "$@" -output "$temp_dir/HealthmdCore.xcframework"
 "$workspace_root/scripts/normalize-apple-xcframework.py" "$temp_dir/HealthmdCore.xcframework"
 
 rm -rf "$output"

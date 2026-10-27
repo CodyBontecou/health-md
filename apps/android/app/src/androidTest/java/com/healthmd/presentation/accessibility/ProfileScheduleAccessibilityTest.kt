@@ -1,5 +1,8 @@
 package com.healthmd.presentation.accessibility
 
+import android.os.SystemClock
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -41,6 +44,7 @@ import java.util.Locale
 @RunWith(Parameterized::class)
 class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : AccessibilityTestHarness(display) {
     companion object {
+        private const val NATIVE_LAYOUT_SETTLE_MILLIS = 100L
         private const val ID = "synthetic-profile"
         private const val LONG_NAME = "Synthetic weekly archive for a family with a long descriptive profile name"
 
@@ -265,6 +269,67 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     @Test
+    fun nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField() {
+        val initial = sampleEntry().copy(todayRefreshEnabled = false)
+        val saved = mutableListOf<ScheduledProfileEntry>()
+        val open = mutableStateOf(true)
+        var dismisses = 0
+        setContent {
+            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
+                onSave = { saved += it; open.value = false }, onDismiss = { dismisses++; open.value = false })
+        }
+        val last = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
+        last.assertMinimumTouchTarget().assertInNativeOwner().performTouchInput { click() }
+        last.assertIsFocused().performTextReplacement(Int.MAX_VALUE.toString())
+        last.scrollIfPossible().assertInNativeOwner()
+        assertAnchorLocals(last)
+        assertTextFits(last, GeistType.label20Mono.fontSize)
+        // No Done/focus-clear prerequisite: Save remains scroll-reachable with the field focused.
+        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.a11y_profiles_save))
+        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+        assertEquals(listOf(initial.copy(cadenceValue = Int.MAX_VALUE)), saved)
+        assertEquals(0, dismisses)
+    }
+
+    @Test
+    fun nativeCancelAndBackDismissWithoutSavingDraftEdits() {
+        val initial = sampleEntry()
+        val open = mutableStateOf(true)
+        val saved = mutableListOf<ScheduledProfileEntry>()
+        var dismisses = 0
+        setContent {
+            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
+                onSave = { saved += it }, onDismiss = { dismisses++; open.value = false })
+        }
+        replace(ProfileScheduleTags.EVERY, "123456")
+        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
+        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
+        waitForNativeKeyboardHidden()
+        tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
+        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+        assertEquals(1, dismisses)
+        compose.runOnIdle { open.value = true }
+        val restored = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
+        restored.assertTextEquals(initial.cadenceValue.toString())
+        replace(ProfileScheduleTags.EVERY, "")
+        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
+        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
+        waitForNativeKeyboardHidden()
+        captureContent("profiles-editor-cancel", ProfileScheduleTags.DIALOG)
+        // Espresso selects the activity root even while this separate native dialog owns focus.
+        // Inject the real system Back key without requiring the obscured activity window to focus.
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag(ProfileScheduleTags.DIALOG)
+                .fetchSemanticsNodes(atLeastOneRootRequired = false).isEmpty()
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+        assertEquals(2, dismisses)
+        assertTrue(saved.isEmpty())
+    }
+
+    @Test
     fun openEditorAndDeleteConfirmationStillUseLiveProtectionWrappers() {
         val state = mutableStateOf(ProfileSchedulesUiState(listOf(ProfileScheduleRow(sampleProfile(), sampleEntry()))))
         val protectionEnabled = mutableStateOf(false)
@@ -449,6 +514,11 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
 
     private fun tapNativeAction(tag: String, label: String) {
         val action = compose.onNodeWithTag(tag).scrollIfPossible()
+        // The button container can be visible while IME/scroll layout still clips its label.
+        // Bring the actual text into view before measuring it; keep all fit/touch assertions.
+        val copy = compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true)
+            .scrollIfPossible()
+        awaitNativeControlVisible(copy, "native action label $tag before tapping $label")
         action.assertMinimumTouchTarget().assertInNativeOwner().assertRole(Role.Button)
         assertActionTextFits(tag, label)
         action.performTouchInput { click() }
@@ -473,10 +543,40 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         assertTextFits(selected, GeistType.copy16.fontSize)
     }
 
-    /** Native popup dismissal/scroll layout can settle after Compose's semantics update. */
+    /** Native popup focus/scroll layout can move after Compose first reports visibility.
+     * Require fully visible geometry to remain stable before the unchanged assertions and tap. */
     private fun awaitNativeControlVisible(control: SemanticsNodeInteraction, stage: String) {
+        var previous: Triple<Rect, Rect, Rect>? = null
+        var stableSince = 0L
         try {
-            compose.waitUntil(timeoutMillis = 5_000) { control.isDisplayed() }
+            compose.waitUntil(timeoutMillis = 5_000) {
+                val geometry = if (control.isDisplayed()) control.readLayoutOnIdle { node ->
+                    if (!node.layoutInfo.isPlaced) return@readLayoutOnIdle null
+                    val position = node.positionInRoot
+                    val size = node.size
+                    Triple(Rect(position.x, position.y, position.x + size.width, position.y + size.height),
+                        node.boundsInRoot, generateSequence(node) { it.parent }.last().boundsInRoot)
+                } else null
+                val fullyVisible = geometry?.let { (bounds, clipped, owner) ->
+                    bounds.width > 0 && bounds.height > 0 &&
+                        kotlin.math.abs(bounds.left - clipped.left) <= 1 &&
+                        kotlin.math.abs(bounds.right - clipped.right) <= 1 &&
+                        kotlin.math.abs(bounds.top - clipped.top) <= 1 &&
+                        kotlin.math.abs(bounds.bottom - clipped.bottom) <= 1 &&
+                        bounds.left >= owner.left - 1 && bounds.right <= owner.right + 1 &&
+                        bounds.top >= owner.top - 1 && bounds.bottom <= owner.bottom + 1
+                } == true
+                val now = SystemClock.uptimeMillis()
+                if (!fullyVisible) {
+                    previous = null
+                    stableSince = now
+                    false
+                } else if (geometry != previous) {
+                    previous = geometry
+                    stableSince = now
+                    false
+                } else now - stableSince >= NATIVE_LAYOUT_SETTLE_MILLIS
+            }
         } catch (failure: Throwable) {
             val geometry = runCatching {
                 val node = control.fetchSemanticsNode()

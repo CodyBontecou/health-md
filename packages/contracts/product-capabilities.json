@@ -59,6 +59,49 @@
       ]
     },
     {
+      "id": "diagnostics.local_bundle",
+      "name": "Local diagnostic events and reviewed bundles",
+      "classification": "shared",
+      "summary": "Inspect bounded privacy-classified technical events, separately opt into recording/sharing peer context, attach any existing original files including health exports, and explicitly review/save/share a frozen local ZIP without automatic uploads or new health reads.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/diagnostics/v1/contract.md",
+        "apps/apple/docs/features/diagnostics.md",
+        "apps/android/docs/features/diagnostics.md",
+        "apps/apple/HealthMdTests/Diagnostics/DiagnosticRecorderTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/diagnostics/DiagnosticStoreTest.kt"
+      ]
+    },
+    {
+      "id": "support.local-reporting-fallback",
+      "name": "Local reporting fallback",
+      "classification": "planned",
+      "summary": "Explain unsuccessful feedback handoffs and offer editable, copyable report text without requiring another external app.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Next Android support-settings update: replace the no-handler toast-only path with editable, copyable recipient/template/diagnostics text and injected ActivityNotFoundException regression coverage."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/feedback-reporting.md",
+        "apps/apple/HealthMd/Shared/Utilities/FeedbackReporter.swift",
+        "apps/android/app/src/main/java/com/healthmd/presentation/common/FeedbackHelper.kt"
+      ]
+    },
+    {
       "id": "export.daily-files",
       "name": "Daily local export files",
       "classification": "shared",
@@ -263,7 +306,7 @@
       "id": "export.completed-workouts",
       "name": "Completed workouts",
       "classification": "shared",
-      "summary": "Export completed workout sessions and detail time series exposed by each source API.",
+      "summary": "Export completed workout sessions and detail time series exposed by each source API. Optional Details/Metadata table presentation is staged separately: Apple is available; Android is planned for its first unified-v9 Markdown presentation-settings/profile writer (current v4/v5 renderers already use bullets without these tables). See the independently versioned workout-presentation parity record.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -278,7 +321,9 @@
         }
       },
       "evidence": [
-        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md",
+        "apps/apple/docs/features/workout-presentation.md",
+        "apps/apple/docs/features/workout-presentation-parity-v1.json"
       ]
     },
     {
@@ -411,6 +456,33 @@
         "apps/apple/HealthMdUITests/ExportProfilesJourneyUITests.swift",
         "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportProfilesScreen.kt",
         "apps/android/app/src/test/java/com/healthmd/presentation/export/ExportProfilesViewModelTest.kt"
+      ]
+    },
+    {
+      "id": "export.agent-data-gateway",
+      "name": "Agent Data gateway export destination",
+      "classification": "shared",
+      "summary": "Upload a profile's exact exported artifacts to a configured self-hosted Agent Data ingestion gateway endpoint per ingestion protocol v1, with health-free per-artifact receipts and bounded retry of transient outcomes.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/agent-data/v1/contract.md",
+        "apps/cli/docs/agent-data.md",
+        "apps/apple/docs/features/agent-data-gateway-export.md",
+        "apps/android/docs/features/agent-data-gateway.md",
+        "apps/apple/HealthMd/Shared/Managers/AgentDataGatewayExportRunner.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/export/AgentDataGatewayExportRunner.kt"
       ]
     },
     {

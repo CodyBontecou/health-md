@@ -5,6 +5,7 @@ Health.md scheduled exports use APNs silent pushes routed to the registered devi
 `PushRegistrationManager` sends `apnsEnvironment: "development" | "production"` with every `/devices/register` request. It reads `aps-environment` from the installed iOS provisioning profile rather than assuming Debug means sandbox and Release means production. An absent profile means App Store production distribution. A present but unreadable/unsupported profile skips registration rather than guessing a host. On macOS, the public `SecTask` API reads the signed APNs entitlement directly. The iOS profile parser uses only Foundation; Apple's provisioning profile format may change, so profile decode failures require investigation when updating signing/toolchains. See [Apple's APS Environment entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/aps-environment) and [TN3125: Provisioning Profiles](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles).
 
 The scheduled-export outcome remains shared with Android. This registration field is an Apple transport detail: Android uses `AlarmManager`/`WorkManager` through `apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportScheduler.kt`, not APNs, and has no producer or consumer of this registration payload. No health export schema or scheduling setting changes.
+The repo-level guard does not prove APNs delivery. Run local commands from `apps/apple`.
 
 ## Local commands
 
@@ -23,12 +24,12 @@ make check-apns-scheduling
 Run the focused XCTest source/config guard:
 
 ```bash
-xcodebuild test \
-  -project HealthMd.xcodeproj \
-  -scheme HealthMd-Tests-macOS \
-  -destination 'platform=macOS,arch=$(uname -m)' \
+make prepare-healthmd-core-rust
+xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS \
+  -destination "platform=macOS,arch=$(uname -m)" \
   -only-testing:HealthMdTests/APNsSchedulingPreflightTests \
-  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+  DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 ```
 
 ## What the guard checks
@@ -57,4 +58,4 @@ The command above should fail before any release upload or App Store Connect sub
 
 ## Release wiring
 
-`.github/workflows/release-ios.yml` runs `scripts/check-apns-scheduling-preflight.sh` before archiving and before `asc review submit`, so GitHub Release-triggered iOS deployments are blocked if the repo configuration regresses.
+[The iOS release workflow](../../../../.github/workflows/release-ios.yml) runs `scripts/check-apns-scheduling-preflight.sh` before archiving and before `asc review submissions-submit`, so release submission is blocked if the repo configuration regresses.

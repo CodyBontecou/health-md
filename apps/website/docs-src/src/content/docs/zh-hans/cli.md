@@ -1,6 +1,6 @@
 ---
-title: "Health.md CLI"
-description: "在 macOS、Linux 或 Windows 上安装独立的 healthmd CLI，直接与 iPhone 或 Android 设备配对，检查就绪状态，导出数据，运行查询并管理持久作业。无需 Mac 应用。"
+title: "Apple Health 与 Health Connect CLI"
+description: "使用 Health.md 从终端导出 Apple Health 或 Health Connect 数据。适用于 macOS、Linux 和 Windows 的预览版 CLI，需在手机上打开应用并配对。"
 ---
 
 独立版 `healthmd` CLI 可在 macOS、Linux 和 Windows 上运行，直接与 iPhone（协议 v1）或 Android（协议 v2）上已打开的 Health.md 应用配对。它完全不需要 Health.md Mac 版，没有后端选择，也绝不会从计算机读取 Apple Health 或 Health Connect。
@@ -18,6 +18,22 @@ description: "在 macOS、Linux 或 Windows 上安装独立的 healthmd CLI，�
 </div>
 
 在 macOS 或 Linux 上，使用 <code>brew install CodyBontecou/tap/healthmd</code> 安装预览版。请使用发布证据中指定的精确移动构建版本；软件包的发布并不能证明移动兼容性。
+
+## 从手机进行首次导出
+
+Windows 和其他安装方式请参阅[安装指南](/zh-hans/docs/cli/installation/)。配对前请确认[兼容的移动构建版本](/zh-hans/docs/cli-direct/)。在手机上保持 Health.md 打开，启用 Direct CLI Access，并授权要导出的健康类别。
+
+在计算机上创建文件夹，将下方 `/absolute/path/to/HealthVault` 替换为该现有文件夹的绝对路径。在 Windows 上请使用完整的 Windows 路径。按照配对提示操作，检查就绪状态，然后导出一天的数据：
+
+```bash
+healthmd direct pair --transport manual-ip
+healthmd status
+healthmd export --yesterday --destination /absolute/path/to/HealthVault
+```
+
+导出成功后，打开目标文件夹并检查已写入的文件。手机生成导出，CLI 将验证后的文件保存到计算机。如果超时，请[检查状态并恢复作业](/zh-hans/docs/cli-jobs/)，不要假定作业已取消。
+
+### 支持的平台
 
 独立 Rust CLI 可在 macOS、Linux 和 Windows 上运行，使用 Manual IP 或 Tailscale 直连，不需要 Mac 应用。它通过协议 v1 与 iPhone 来源配对，通过协议 v2 与 Android 来源配对，并带有自动化的 Swift↔Rust 与 Kotlin↔Rust 兼容性关卡。协议兼容性已经实现；在首个合格稳定版发布之前，仍需完成实机发布 QA。每个版本都附带带校验和的归档、PowerShell 安装程序以及 `cargo install healthmd-cli --locked`。
 

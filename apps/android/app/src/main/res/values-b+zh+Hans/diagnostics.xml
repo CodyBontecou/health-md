@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">诊断</string>
+    <string name="diagnostics_entry">查看本地技术事件并选择要共享的内容</string>
+    <string name="diagnostics_recording">本地记录</string>
+    <string name="diagnostics_privacy">诊断信息会保留在此设备上，直到你保存或共享。运行事件不包含健康数值、健康记录ID、请求的健康数据日期、路径、端点或凭据。这些记录并非匿名。</string>
+    <string name="diagnostics_enabled">记录运行事件</string>
+    <string name="diagnostics_retention">日志详细程度只改变细节，不会授予收集健康内容的权限。保留上限：7天／20 MiB。不会自动上传。</string>
+    <string name="diagnostics_start_private">记录私密上下文15分钟</string>
+    <string name="diagnostics_stop_private">停止私密记录</string>
+    <string name="diagnostics_private_description">V1私密上下文会在可用时记录所连接设备的名称。不会采集健康内容、凭据或任意错误文本。私密片段的有效期不超过24小时，并在下次访问应用时到期处理。</string>
+    <string name="diagnostics_private_until">私密记录到期时间：%1$s</string>
+    <string name="diagnostics_clear">清除所有诊断信息</string>
+    <string name="diagnostics_clear_question">删除本地事件、已准备的资料包和附件副本吗？这会停止私密记录。已导出的文件和已共享的副本不受影响。</string>
+    <string name="diagnostics_select">选择事件</string>
+    <string name="diagnostics_hour">过去1小时</string>
+    <string name="diagnostics_day">过去24小时</string>
+    <string name="diagnostics_week">过去7天</string>
+    <string name="diagnostics_operation">操作UUID（可选）</string>
+    <string name="diagnostics_include_private">包含已记录的私密上下文</string>
+    <string name="diagnostics_search">搜索事件ID或字段</string>
+    <string name="diagnostics_refresh">刷新事件</string>
+    <string name="diagnostics_summary">事件：%1$d · 会话丢弃：%2$d · 无效：%3$d · 已截断：%4$s</string>
+    <string name="diagnostics_view_limit">显示最新的100个匹配事件。资料包包含所选快照，最多10,000个事件；任何截断都会注明。</string>
+    <string name="diagnostics_attachments">可选附件</string>
+    <string name="diagnostics_attachment_description">添加现有文件，包括健康导出文件或屏幕截图。原始字节会原样复制，不会清除敏感信息。包含原始文件名。不会新读取健康数据。限制：50个文件／100 MiB。</string>
+    <string name="diagnostics_choose">选择文件…</string>
+    <string name="diagnostics_remove">移除%1$s</string>
+    <string name="diagnostics_prepare">准备资料包</string>
+    <string name="diagnostics_review">准备并检查</string>
+    <string name="diagnostics_frozen">已固定的快照。事件：%1$d。健康内容：%2$s。ZIP未加密。</string>
+    <string name="diagnostics_reviewed">我已检查想要共享的文件</string>
+    <string name="diagnostics_share">共享已检查的ZIP</string>
+    <string name="diagnostics_save">保存已检查的ZIP</string>
+    <string name="diagnostics_share_question">共享此诊断资料包吗？</string>
+    <string name="diagnostics_share_warning">ZIP未加密。所含私密上下文和附件可能泄露健康数据或机密。在GitHub或Discord发布的公开帖子可能被任何人访问。目标服务控制其副本，Health.md无法将其撤回。</string>
+    <string name="diagnostics_share_confirm">共享此资料包</string>
+    <string name="diagnostics_bundle_retention">本地资料包的有效期不超过24小时，并在下次访问应用时到期处理；仅保留最新的3个。已保存或共享的副本有各自的保留规则。</string>
+    <string name="diagnostics_preview_truncated">\n\n[预览已截断至128 KiB。完整原始文件仍保留在ZIP中。]</string>
+    <string name="diagnostics_failure">诊断操作失败。请检查文件访问权限和本地存储，然后重新准备并检查。</string>
+    <string name="diagnostics_invalid_operation">操作ID必须是UUID。</string>
+</resources>

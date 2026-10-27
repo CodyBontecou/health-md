@@ -5,12 +5,13 @@ description: Set up Health.md for Android. Export Health Connect data, select St
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Health Connect to private files</p>
-  <p>Health.md for Android reads Health Connect on-device and writes Markdown, Obsidian Bases, JSON, or CSV to folders you choose. No Health.md account, no health-data cloud, and no subscription.</p>
+  <p>Health.md for Android reads Health Connect on-device and writes Markdown, Obsidian Bases, JSON, or CSV to folders you choose. This folder export workflow requires no Health.md account or health-data cloud, and no subscription.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
-    <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">Get on F-Droid</a>
+    <a class="docs-button-secondary" href="#distribution-status">F-Droid publication status</a>
     <a class="docs-button-secondary" href="/docs/export/">Read Export Docs</a>
   </div>
+  <p id="distribution-status">F-Droid catalog publication is pending. Get the current Android release on Google Play.</p>
 </div>
 
 <div class="reference-stats">
@@ -39,7 +40,7 @@ Health.md for Android turns Health Connect into a local-first health journal. Ch
 
 ## First export
 
-1. Install Health.md from Google Play or F-Droid.
+1. Install the current Health.md release from Google Play.
 2. Open **Health Connect** setup and grant only the categories you want Health.md to export.
 3. Pick the export destination through Android's folder picker.
 4. Choose formats: Markdown, Obsidian Bases, JSON, CSV, or any combination.
@@ -141,12 +142,14 @@ Health.md for Android is local-first:
 
 - Health Connect records are read on your Android device.
 - Exports are written directly to folders you choose.
-- Health.md does not run a health-data cloud service.
+- Core folder exports and direct device queries do not create a Health.md server copy by default.
 - Settings and export history stay on-device.
 - Billing is handled by Google Play in the Play build. F-Droid includes unlimited access without Billing and contains no Health.md telemetry code or telemetry identity/state.
 - Provider-backed folders sync according to that provider's own terms.
 
 If you want the strictest local setup, run manual exports to a local device folder and leave scheduled exports and provider-backed sync disabled.
+
+The separate, optional single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it. There is no public signup and no automatic device sync; this folder workflow does not upload to it. See the [privacy policy](/privacy-policy.html) for retention, deletion, quota, and unbacked storage risks.
 
 ## Related docs
 
@@ -158,4 +161,4 @@ If you want the strictest local setup, run manual exports to a local device fold
   <a href="/docs/visualizations-roadmap/"><span>Obsidian</span>How exported JSON and Markdown power Health.md visualizations.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-09-01</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-10-04</p>

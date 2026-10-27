@@ -11,7 +11,7 @@ const PAGES = [
     dir: 'apple-health-export',
     url: 'https://healthmd.app/apple-health-export/',
     title: 'Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian | Health.md',
-    h1: 'Export your Apple Health data — your way.',
+    h1: 'How to export Apple Health data',
     minFaqs: 5,
   },
   {
@@ -24,8 +24,8 @@ const PAGES = [
   {
     dir: 'apple-health-to-csv',
     url: 'https://healthmd.app/apple-health-to-csv/',
-    title: 'Export Apple Health to CSV — No Xcode, No Scripts | Health.md',
-    h1: 'Apple Health to CSV, without the Xcode project.',
+    title: 'Export Apple Health to CSV for Excel and Google Sheets | Health.md',
+    h1: 'Export Apple Health to CSV',
     minFaqs: 4,
   },
 ];
@@ -125,4 +125,98 @@ test('homepage footer links the landing pages', () => {
   for (const page of PAGES) {
     assert.ok(index.includes(`href="${page.dir}/"`), `footer link to ${page.dir}`);
   }
+});
+
+test('CSV hero explains the free allowance and lifetime unlock before the download CTA', () => {
+  const hero = sources['apple-health-to-csv'].match(/<section class="about-hero"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(hero, 'hero exists');
+  const beforeCta = hero.slice(0, hero.indexOf('class="hero-actions"'));
+  assert.match(beforeCta, /5 free export actions/);
+  assert.match(beforeCta, /one-time lifetime unlock/i);
+  assert.match(beforeCta, /no subscription/i);
+});
+
+test('CSV comparison distinguishes XML conversion from finished App Store exporters', () => {
+  const html = sources['apple-health-to-csv'];
+  assert.doesNotMatch(html, /Most CSV tools ask you to build|The well-known Apple Health CSV exporters are open-source/);
+  const comparison = html.match(/<section[^>]+id="status-quo"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(comparison, 'workflow comparison exists');
+  assert.match(comparison, /XML/);
+  assert.match(comparison, /Other App Store apps also offer CSV export/);
+  assert.match(comparison, /preview/);
+  assert.match(comparison, /folder/);
+});
+
+test('CSV preview is an explicitly synthetic, ordered excerpt of the production-generated fixture', async () => {
+  const html = sources['apple-health-to-csv'];
+  const fixturePath = 'reference/generated/core/summary-day.csv';
+  const [published, producer] = await Promise.all([
+    readFile(path.join(ROOT, 'docs-src/public', fixturePath), 'utf8'),
+    readFile(path.join(ROOT, '../apple/docs', fixturePath), 'utf8'),
+  ]);
+  assert.equal(published, producer, 'download matches the Apple generated reference');
+  assert.ok(html.includes(`href="/docs/${fixturePath}" download`), 'download uses the existing generated artifact');
+  assert.match(html, /id="csv-example-caption"[^>]*>[\s\S]*?Synthetic example \(selected rows\)/);
+  assert.match(html, /role="region"[^>]*aria-labelledby="csv-example-caption"[^>]*tabindex="0"/);
+  const excerpt = html.match(/<code class="language-csv">([\s\S]*?)<\/code>/)?.[1];
+  assert.ok(excerpt, 'inline CSV excerpt exists');
+  const lines = excerpt.trim().split('\n');
+  assert.equal(lines[0], 'Date,Category,Metric,Value,Unit,Timestamp');
+  assert.ok(lines.some((line) => line.includes(',Metadata,schema_version,8,,')), 'Apple v8 identified');
+  const original = published.trim().split('\n');
+  let previous = -1;
+  for (const line of lines) {
+    const position = original.indexOf(line, previous + 1);
+    assert.ok(position > previous, `exact generated row in source order: ${line}`);
+    previous = position;
+  }
+  assert.ok(lines.some((line) => line.split(',').length === 5), 'compatibility aggregate width is not padded');
+  assert.ok(lines.some((line) => line.split(',').length === 6), 'metadata retains all six fields');
+});
+
+test('CSV hero table stays consistent with the downloadable producer fixture', async () => {
+  const html = sources['apple-health-to-csv'];
+  const hero = html.match(/<aside class="csv-sample-card"[\s\S]*?<\/aside>/)?.[0];
+  assert.ok(hero, 'sample card exists');
+  const fixture = await readFile(path.join(ROOT, 'docs-src/public/reference/generated/core/summary-day.csv'), 'utf8');
+  const displayed = [...hero.matchAll(/<tr><th scope="row">([^<]+)<\/th><td>([^<]+)<\/td><td>([^<]+)<\/td><\/tr>/g)];
+  assert.equal(displayed.length, 3, 'all three visible rows are checked');
+  for (const [, label, value, unit] of displayed) {
+    // These are plain numeric summary rows, not quoted source-record JSON cells.
+    const metric = label.replace(/ \(sleep\)$/, '');
+    assert.ok(Number.isFinite(Number(value)), `${label}: numeric preview`);
+    const row = fixture.split('\n').find(line => {
+      const fields = line.split(',');
+      return fields[2] === metric && (label.endsWith(' (sleep)') ? fields[1] === 'Sleep' : true);
+    });
+    assert.ok(row, `${label}: metric exists in the downloaded fixture`);
+    const [date, , , expectedValue, expectedUnit] = row.split(',');
+    assert.equal(value, expectedValue, `${label}: producer value`);
+    assert.equal(unit, expectedUnit, `${label}: producer unit`);
+    const displayedDate = new Intl.DateTimeFormat('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+    }).format(new Date(`${date}T00:00:00Z`));
+    assert.ok(hero.includes(displayedDate), `${label}: sample date`);
+  }
+});
+
+test('CSV guide uses a standalone article column rather than the shared sidebar layout', async () => {
+  assert.ok(sources['apple-health-to-csv'].includes('class="about-layout csv-layout"'));
+  const styles = await readFile(path.join(ROOT, 'assets/about.css'), 'utf8');
+  const layout = styles.match(/\.csv-layout\s*\{([^}]+)\}/)?.[1];
+  assert.ok(layout, 'page-scoped layout exists');
+  assert.match(layout, /grid-template-columns:\s*minmax\(0,\s*[^)]+\)\s*;/, 'one flexible article column');
+  assert.match(styles, /\.csv-layout p code\s*\{\s*overflow-wrap: anywhere;/, 'long inline headers wrap on narrow screens');
+});
+
+test('CSV FAQ answers match structured data and explain action accounting', () => {
+  const html = sources['apple-health-to-csv'];
+  const graph = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1])['@graph'];
+  const faq = graph.find((entry) => entry['@type'] === 'FAQPage');
+  const visible = html.slice(html.indexOf('<div class="faq-list">'));
+  for (const question of faq.mainEntity) {
+    assert.ok(visible.includes(`<p>${question.acceptedAnswer.text}</p>`), `visible answer matches: ${question.name}`);
+  }
+  const pricing = faq.mainEntity.find((entry) => entry.name === 'Is it free?').acceptedAnswer.text;
+  assert.match(pricing, /One action can include multiple dates and formats/);
 });
