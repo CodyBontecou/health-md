@@ -13,8 +13,8 @@ draft: false
 verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: traced
-image: "/docs/assets/docs/iphone-first-export/metric-selection.webp"
-imageAlt: "Health.md Health Metrics screen with the Sleep category and individual metric controls"
+image: "/assets/guides/first-csv-export/sleep-enabled.webp"
+imageAlt: "Health.md Sleep metrics expanded with Total Sleep, Bedtime, Wake Time, Deep Sleep, REM Sleep, and Core Sleep enabled"
 showCover: false
 tags:
   - apple-health
@@ -42,8 +42,8 @@ You do not need a Mac for this manual iPhone export. If setup is incomplete, fol
 In Health.md, open **Health Metrics** and expand **Sleep**. Enable the measurements you need, such as Total Sleep, Bedtime, Wake Time, Deep Sleep, REM Sleep, and Core Sleep. Available output depends on your source records, permissions, OS, and installed app version; a metric selection cannot create a stage that your source did not record.
 
 <figure class="phone-shot">
-<img src="/docs/assets/docs/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md Health Metrics screen with Sleep collapsed and currently off, plus Activity and Heart categories." />
-<figcaption>Expand Sleep to choose metrics. This existing setup image shows Sleep off; enable the measurements you want. Counts and available options can differ.</figcaption>
+<a href="/assets/guides/first-csv-export/sleep-enabled.webp"><img src="/assets/guides/first-csv-export/sleep-enabled.webp" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md Sleep metrics expanded with Total Sleep, Bedtime, Wake Time, Deep Sleep, REM Sleep, and Core Sleep enabled; Awake During Sleep is off." /></a>
+<figcaption>Six sleep metrics are enabled in this fictional-data simulator example. The category is marked Partial because Awake During Sleep and Time in Bed are not selected. Selection does not guarantee that a source recorded those metrics.</figcaption>
 </figure>
 
 Use **Summary** for a compact daily view. If you need selected timestamped samples or intervals, review **Detailed Time-Series** in [Data Detail and formatting](/docs/format/). **Lossless Health Records** is a separate Apple-only archive option for supported canonical source records; it is not the same thing as a daily sleep total.
@@ -60,7 +60,7 @@ Daily sleep summaries use a local **noon-to-noon journal window**. For Monday 23
 | Tuesday's activity so far | Tuesday / Today |
 | Both | Monday and Tuesday |
 
-Start with one night you can identify in Apple Health. If the watch or source app synchronizes later, export the start day again. Keep the existing [sleep-date explanation](/blog/why-sleep-is-in-yesterdays-note/) and [sleep-date reference](/docs/sleep-date-attribution/) handy; this guide uses the same rule rather than introducing a new date convention.
+Start with one night you can identify in Apple Health. If the watch or source app synchronizes later, export the same journal day again. Keep the existing [sleep-date explanation](/blog/why-sleep-is-in-yesterdays-note/) and [sleep-date reference](/docs/sleep-date-attribution/) handy; this guide uses the same rule rather than introducing a new date convention.
 
 ## 3. Preview and export one day as CSV
 
@@ -69,6 +69,20 @@ Start with one night you can identify in Apple Health. If the watch or source ap
 3. Tap **Preview**. Check the selected date, sleep metrics, units, and output format. Preview checks the health-data path before you test a file write.
 4. Tap **Export Data**, review the written, skipped, or failed files, then open the destination in Files.
 5. Open one generated CSV and compare its date and sleep values with the source. Daily exports produce separate files for the selected days, not one combined workbook.
+
+The screenshots below use the real app interface and CSV writer with fictional data in a simulator. They show the same October 26 export as the [CSV walkthrough](/apple-health-to-csv/#how-it-works). They demonstrate the file workflow, not Health permission approval or the completeness of a person's records.
+
+<figure class="phone-shot">
+<a href="/assets/guides/first-csv-export/csv-written.webp"><img src="/assets/guides/first-csv-export/csv-written.webp" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md reports two generated files for one data day and names the saved 2026-10-26.csv, with View Exported File and Browse Export Folder actions." /></a>
+<figcaption>The completed write reports one data day. Two generated files means the daily CSV plus the optional data dictionary, not two nights of sleep.</figcaption>
+</figure>
+
+<figure class="phone-shot">
+<a href="/assets/guides/first-csv-export/csv-opened.webp"><img src="/assets/guides/first-csv-export/csv-opened.webp" width="1206" height="2622" loading="lazy" decoding="async" alt="The saved October 26 CSV opened on iPhone, including fictional Total Duration, Bedtime, Wake Time, Deep Sleep, REM Sleep, Core Sleep, and Steps rows." /></a>
+<figcaption>In this captured example, Total Duration is 23,400 seconds, or 6.5 hours. The rows share the October 26 journal date. This is a separate fictional dataset from the reference excerpt below.</figcaption>
+</figure>
+
+[Download the CSV shown in these screenshots](/assets/guides/first-csv-export/2026-10-26.csv) to inspect its rows. To try a multi-day sleep chart, use the [28-day spreadsheet sample](/apple-health-to-csv/#spreadsheet-sample), then follow the [Excel](/blog/apple-health-to-excel/) or [Google Sheets](/blog/apple-health-to-google-sheets/) guide. Keep summary totals separate from stage intervals and leave missing sleep blank.
 
 If Preview works but saving fails, reselect the folder and check its file provider. The [folder and vault guide](/docs/folder-vault/) explains that destination boundary.
 

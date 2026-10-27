@@ -1,0 +1,14 @@
+Date,Category,Metric,Value,Unit,Timestamp
+2026-10-26,Metadata,schema,healthmd.health_data,,
+2026-10-26,Metadata,schema_version,8,,
+2026-10-26,Metadata,unit_system,metric,,
+2026-10-26,Metadata,time_context.calendar_timezone,America/Puerto_Rico,,
+2026-10-26,Metadata,time_context.timestamp_timezone,UTC,,
+2026-10-26,Raw HealthKit,Raw Capture Status,not_requested,status,
+2026-10-26,Sleep,Total Duration,23400.0,seconds
+2026-10-26,Sleep,Bedtime,22:00,time
+2026-10-26,Sleep,Wake Time,06:00,time
+2026-10-26,Sleep,Deep Sleep,5400.0,seconds
+2026-10-26,Sleep,REM Sleep,7200.0,seconds
+2026-10-26,Sleep,Core Sleep,10800.0,seconds
+2026-10-26,Activity,Steps,12500,count
