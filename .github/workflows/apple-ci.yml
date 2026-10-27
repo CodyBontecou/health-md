@@ -1,4 +1,4 @@
-name: PR189 native Resume SDK27 qualification
+name: PR189 native Execute and Resume SDK27 qualification
 on:
   workflow_dispatch:
 permissions:
@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v6
         with:
-          ref: 3559db0d87849d7c4ccf1e0a711f88fd043aa44e
+          ref: 6f5b3fb8ebc6feb93472c52d183bc9dc2d741598
           path: candidate
           persist-credentials: false
       - uses: maxim-lobanov/setup-xcode@v1
@@ -28,8 +28,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 3559db0d87849d7c4ccf1e0a711f88fd043aa44e
-          test "$(git rev-parse HEAD^{tree})" = 179692354bdc0110ee828b72c4395eeead8727ac
+          test "$(git rev-parse HEAD)" = 6f5b3fb8ebc6feb93472c52d183bc9dc2d741598
+          test "$(git rev-parse HEAD^{tree})" = ca9079e43554f10614e5eedd0edeaf6239c7dc69
           git diff --exit-code
           mkdir -p build/logs/pr189-resume-sdk27
           {
@@ -62,7 +62,7 @@ jobs:
           xcrun lipo -verify_arch arm64 "$app/HealthMd"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
           git diff --exit-code
-      - name: Compile and run owning Resume controls
+      - name: Compile and run owning Execute and Resume controls
         working-directory: candidate/apps/apple
         shell: bash
         run: |
@@ -73,10 +73,14 @@ jobs:
           import re
           text=Path('HealthMdTests/Export/AgentBridgeExportPlanningTests.swift').read_text()
           names=re.findall(r'^\s*func (testNative\w*Resume\w*)\(',text,re.M)
-          assert len(names)==len(set(names)) and len(names)>=30
+          names=[n for n in names if not n.startswith('testNativeWireExecute')]
+          assert len(names)==34 and len(names)==len(set(names))
           assert len([n for n in names if n.startswith('testNativeWireResume')])==8
+          execute=re.findall(r'^\s*func (testNativeWireExecute\w*)\(',text,re.M)
+          assert len(execute)==5
+          names+=execute
           names.append('testNativeTransferOrdinaryCancelledErrorsCannotImpersonateConfirmedSourceStop')
-          assert len(names)==35 and all('func '+n+'(' in text for n in names)
+          assert len(names)==40 and len(names)==len(set(names)) and all('func '+n+'(' in text for n in names)
           Path('build/logs/pr189-resume-sdk27/expected-cases.txt').write_text('\n'.join(names)+'\n')
           PY
           args=()
