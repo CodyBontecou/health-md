@@ -8,9 +8,10 @@ description: Set up Health.md for Android. Export Health Connect data, select St
   <p>Health.md for Android reads Health Connect on-device and writes Markdown, Obsidian Bases, JSON, or CSV to folders you choose. This folder export workflow requires no Health.md account or health-data cloud, and no subscription.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
-    <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">Get on F-Droid</a>
+    <a class="docs-button-secondary" href="#distribution-status">F-Droid publication status</a>
     <a class="docs-button-secondary" href="/docs/export/">Read Export Docs</a>
   </div>
+  <p id="distribution-status">F-Droid catalog publication is pending. Get the current Android release on Google Play.</p>
 </div>
 
 <div class="reference-stats">
@@ -39,7 +40,7 @@ Health.md for Android turns Health Connect into a local-first health journal. Ch
 
 ## First export
 
-1. Install Health.md from Google Play or F-Droid.
+1. Install the current Health.md release from Google Play.
 2. Open **Health Connect** setup and grant only the categories you want Health.md to export.
 3. Pick the export destination through Android's folder picker.
 4. Choose formats: Markdown, Obsidian Bases, JSON, CSV, or any combination.

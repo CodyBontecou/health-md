@@ -635,7 +635,9 @@
     setMeta('meta[name="twitter:title"]', title);
     setMeta('meta[name="twitter:description"]', description);
     var canonical = document.head.querySelector('link[rel="canonical"]');
-    if (canonical) canonical.setAttribute("href", url);
+    // Keep the search representative independent of the selected share palette
+    // and category filter, matching the generated HTML and sitemap.
+    if (canonical) canonical.setAttribute("href", "https://healthmd.app/visualizations/" + dataFilterSlugs[viz.category] + "/" + viz.id + "/theme-colors/");
   }
 
   function byId(items, id) {

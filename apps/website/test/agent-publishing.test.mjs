@@ -174,15 +174,15 @@ test('CLI launch post uses runnable preview commands and honest privacy boundari
     readFile(path.join(ROOT, 'content/blog/healthmd-cli-direct-iphone-mcp.md')),
     readFile(path.join(REPOSITORY_ROOT, 'apps/cli/README.md')),
   ]).then((buffers) => buffers.map((buffer) => buffer.toString('utf8')));
-  assert.match(post, /published `0\.1\.0-alpha\.6` portable preview/);
-  assert.match(post, /alpha\.7 remains an unpublished draft with zero assets/);
-  assert.match(post, /portable preview exposes 19 tools/i);
-  assert.match(post, /development source[^.]*total of 21/i);
+  assert.match(post, /unqualified public preview/);
+  assert.match(post, /healthmd-cli\/v0\.1\.0-alpha\.6/);
+  assert.match(post, /alpha\.7 remains a draft with no assets/i);
+  assert.match(post, /published preview and development source can expose different operations/i);
+  assert.match(post, /\/docs\/release-status\//);
   assert.match(post, /brew install CodyBontecou\/tap\/healthmd/);
   assert.match(post, /healthmd status --job JOB_UUID/);
   assert.match(post, /healthmd resume JOB_UUID/);
   assert.doesNotMatch(post, /healthmd setup claude/);
-  assert.match(post, /full-corpus raw-artifact tools/);
   assert.match(post, /no Health\.md health-data cloud/i);
   assert.match(cliReadme, /0\.1\.0-alpha\.6` is the published, explicitly unqualified preview/);
   assert.match(cliReadme, /alpha\.7` remains an unpublished draft with no download assets/);

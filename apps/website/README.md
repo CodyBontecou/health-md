@@ -65,6 +65,14 @@ authentic shared onboarding capture at `/docs/assets/docs/iphone-first-export/on
 retains the app's current English foreground copy, and the shared setup-required capture is also
 English; translated guides label both cases explicitly.
 
+## Free Obsidian starter vault
+
+`starter-vault/` contains the editable source notes for the downloadable sample vault. Run
+`npm run starter-vault:build` after editing them and commit the generated ZIP under
+`assets/downloads/`. `npm run starter-vault:check` and the site build reject stale downloads.
+See [the starter authoring notes](starter-vault/README.md) for compatibility checks and packaging.
+The existing Obsidian workflow article links the download; publication uses the normal website deployment.
+
 ## External Obsidian plugin source
 
 The Obsidian plugin remains in [`CodyBontecou/health-md-visualizations`](https://github.com/CodyBontecou/health-md-visualizations). CI checks out the revision recorded in `external-sources.json`.
@@ -96,6 +104,13 @@ After adopting a catalog revision, regenerate routes with `npm run visualization
 ## Apple reference documentation
 
 Apple reference sources are read directly from the sibling `apps/apple` component. Override discovery with `HEALTHMD_APP_ROOT` or `--source` when testing another checkout.
+
+## SEO measurement
+
+Use `npm run seo:baseline -- --help` for the read-only Search Console reporting
+tool. See [SEO.md](SEO.md) for property selection, private output locations,
+comparison windows and data limitations. Live baseline collection requires
+authorized Search Console access; the reporting tool itself supplies no traffic data.
 
 ## Deployment
 
