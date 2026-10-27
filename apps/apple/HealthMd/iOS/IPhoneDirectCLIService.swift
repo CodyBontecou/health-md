@@ -377,6 +377,7 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     var statusProvider: (() async -> DirectIPhoneStatus)?
     var agentBridgePlanningSessionProvider: (() throws -> AgentBridgeNativePlanningSession)?
+    var agentBridgeExecutionReceiver: (@MainActor @Sendable (AgentBridgeNativePlanningSession, DirectSecureChannel) async throws -> AgentBridgeSecurePayload?)?
     var exportRequestHandler: ((
         DirectExportRequest,
         DirectPeerBinding,
@@ -1272,13 +1273,20 @@ final class IPhoneDirectCLIService: ObservableObject {
         sessionTask = Task { [weak self] in
             guard let self else { return }
             var planningReceiver: AgentBridgeNativePlanningSession?
+            var executionReceiver: (@MainActor @Sendable (AgentBridgeNativePlanningSession, DirectSecureChannel) async throws -> AgentBridgeSecurePayload?)?
             do {
                 while !Task.isCancelled {
                     // Await the original reader inline. A negotiated planning session keeps
                     // its owner and channel; revocation must never fall back to base decoding.
                     let payload: DirectSecurePayload
                     if let planningReceiver {
-                        switch try await planningReceiver.receiveAndHandleNext(on: connected) {
+                        let received: AgentBridgeSecurePayload?
+                        if let executionReceiver {
+                            received = try await executionReceiver(planningReceiver, connected)
+                        } else {
+                            received = try await planningReceiver.receiveAndHandleNext(on: connected)
+                        }
+                        switch received {
                         case nil:
                             lastInboundActivityAt = heartbeatClock.now
                             heartbeatPingSentAt = nil
@@ -1327,6 +1335,9 @@ final class IPhoneDirectCLIService: ObservableObject {
                                 throw AgentBridgeValidationError.permissionRequired
                             }
                             planningReceiver = try provider()
+                            // Pin native composition once for this accepted owner; subsequent
+                            // property changes cannot retarget an active connection's SDK.
+                            executionReceiver = self.agentBridgeExecutionReceiver
                         }
                     }
                 }
