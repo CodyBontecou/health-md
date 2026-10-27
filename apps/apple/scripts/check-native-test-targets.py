@@ -6,7 +6,7 @@ import re
 
 
 def qualify_targets(text: str, platform: str) -> list[str]:
-    targets = set(re.findall(r"^\s*Target '([^']+)' in project 'HealthMd'\s*$", text, re.MULTILINE))
+    targets = set(re.findall(r"^\s*Target '([^']+)' in project 'HealthMd'(?: \(no dependencies\))?\s*$", text, re.MULTILINE))
     hosts = {'iOS': ('HealthMd', 'HealthMd-macOS'), 'macOS': ('HealthMd-macOS', 'HealthMd')}
     if platform not in hosts:
         raise ValueError('Unknown native test platform')

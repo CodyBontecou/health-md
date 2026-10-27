@@ -86,10 +86,17 @@ for the same PR/manual events as before. Its archive and source/checksum receipt
 retain the existing name and lifetime.
 
 The shared unit-test target retains both platform-filtered host dependencies and
-configuration-specific `TEST_HOST`/`BUNDLE_LOADER` paths. It has no platform-global
-`TestTargetID` selecting the desktop host. Validate complete target graphs and
+configuration-specific `TEST_HOST`/`BUNDLE_LOADER` paths. The iOS test scheme
+selects its host and test bundle explicitly with implicit target selection disabled.
+Validate complete target graphs and
 generated test-host metadata: checking dependency edges alone can miss an extra
 independent root target. Both native suites and their hosted test bundle remain.
+
+The manual `apple-history-sdk27.yml` workflow accepts `native_graph=true` for
+target-graph diagnosis. It retains the three public SDK signature probes,
+validates exact core inputs, captures every planned target node and stops its
+owned diagnostic build. Complete compilation, test inventories and coverage
+still require the full Apple CI workflow.
 
 Native unit products use XZ level 1 inside an uncompressed artifact wrapper.
 The archive retains every product, executable mode and link; its source/run/SDK

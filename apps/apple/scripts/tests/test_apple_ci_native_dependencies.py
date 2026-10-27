@@ -21,11 +21,15 @@ class NativeDependencyTests(unittest.TestCase):
         mac = "    Target 'HealthMdTests' in project 'HealthMd'\n    Target 'HealthMd-macOS' in project 'HealthMd'\n"
         self.assertEqual(['HealthMd', 'HealthMdTests'], native_targets.qualify_targets(ios, 'iOS'))
         self.assertEqual(['HealthMd-macOS', 'HealthMdTests'], native_targets.qualify_targets(mac, 'macOS'))
+        self.assertEqual(['HealthMd', 'HealthMdTests'], native_targets.qualify_targets(
+            ios.replace("in project 'HealthMd'", "in project 'HealthMd' (no dependencies)"), 'iOS'))
         for platform, invalid in [('iOS', ios + mac), ('macOS', mac + ios),
                                   ('iOS', "    Target 'HealthMd' in project 'HealthMd'\n"),
                                   ('macOS', '')]:
             with self.subTest(platform=platform, invalid=invalid), self.assertRaises(ValueError):
                 native_targets.qualify_targets(invalid, platform)
+        with self.assertRaises(ValueError):
+            native_targets.qualify_targets(ios + "    Target 'HealthMd-macOS' in project 'HealthMd' (no dependencies)\n", 'iOS')
 
     def block(self, identifier):
         match = re.search(r'^\t\t' + identifier + r' /\*[^\n]+\*/ = \{\n(.*?)^\t\t\};',
@@ -41,13 +45,7 @@ class NativeDependencyTests(unittest.TestCase):
         self.assertRegex(dependency, r'platformFilters\s*=\s*\(\s*macos,?\s*\);')
         self.assertIn('target = 62CC00052F15D70300F9103F', dependency)
 
-    def test_shared_bundle_does_not_infer_an_unconditional_mac_test_host(self):
-        text = (PROJECT / 'project.pbxproj').read_text()
-        attributes = text.split('TargetAttributes = {', 1)[1].split('\n\t\t\t\t};', 1)[0]
-        target = re.search(r'^\t{5}' + TEST_TARGET + r' = \{\n(.*?)^\t{5}\};', attributes, re.M | re.S)
-        self.assertIsNotNone(target)
-        self.assertNotIn('TestTargetID', target.group(1),
-                         'A shared test bundle must select its host through the platform configuration')
+    def test_shared_bundle_retains_each_platform_host_configuration(self):
         for identifier, host in [('62A1B0092F50A00100000009', 'Health.md.app/Contents/MacOS/Health.md'),
                                  ('62A1B00A2F50A00100000010', 'Health.md.app/Contents/MacOS/Health.md'),
                                  ('1BAC721C5C094A2F9BA90F1D', 'HealthMd.app/HealthMd')]:
@@ -64,6 +62,13 @@ class NativeDependencyTests(unittest.TestCase):
         self.assertIn('target = 624B99EE2F15D70300F9103F', ios)
         for platform in ('iOS', 'macOS'):
             scheme = ET.parse(PROJECT / f'xcshareddata/xcschemes/HealthMd-Tests-{platform}.xcscheme')
+            build = scheme.find('./BuildAction')
+            if platform == 'iOS':
+                self.assertEqual(build.get('buildImplicitDependencies'), 'NO')
+                entries = build.findall('./BuildActionEntries/BuildActionEntry')
+                self.assertEqual([e.find('BuildableReference').get('BlueprintIdentifier') for e in entries],
+                                 ['624B99EE2F15D70300F9103F', TEST_TARGET])
+                self.assertTrue(all(e.get('buildForTesting') == 'YES' for e in entries))
             testables = scheme.findall('./TestAction/Testables/TestableReference')
             self.assertEqual(len(testables), 1)
             self.assertEqual(testables[0].get('skipped'), 'NO')

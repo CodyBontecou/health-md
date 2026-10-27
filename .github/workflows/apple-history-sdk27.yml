@@ -5,6 +5,11 @@ on:
     branches: [fix/audit-172]
     paths: ['.github/workflows/apple-history-sdk27.yml']
   workflow_dispatch:
+    inputs:
+      native_graph:
+        description: Capture the complete iOS unit target graph and stop the diagnostic build early
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -25,7 +30,7 @@ jobs:
           receipt=history-sdk27-receipt.txt
           {
             echo "HEAD=$(git rev-parse HEAD)"
-            echo "TREE=$(git rev-parse HEAD^{tree})"
+            echo "TREE=$(git rev-parse 'HEAD^{tree}')"
             echo "ImageOS=${ImageOS:-unknown} ImageVersion=${ImageVersion:-unknown}"
             echo "DEVELOPER_DIR=$DEVELOPER_DIR"
             uname -a
@@ -52,5 +57,46 @@ jobs:
         with:
           name: history-sdk27-receipt
           path: history-sdk27-receipt.txt
+          if-no-files-found: error
+          retention-days: 1
+      - name: Fingerprint the graph diagnostic toolchain
+        if: ${{ inputs.native_graph }}
+        id: toolchain
+        run: |
+          set -euo pipefail
+          fingerprint=$({ xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; xcrun --sdk macosx --show-sdk-version; } | shasum -a 256 | awk '{print $1}')
+          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+      - name: Test diagnostic process ownership before starting a build
+        if: ${{ inputs.native_graph }}
+        run: python3 apps/apple/scripts/tests/test_capture_native_test_graph.py
+      - name: Restore exact core inputs for graph planning only
+        if: ${{ inputs.native_graph }}
+        id: core
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          key: >-
+            apple-shared-core-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fingerprint }}-${{ hashFiles('packages/healthmd-core-rust/vendor/**', 'packages/healthmd-core-rust/Cargo.toml', 'packages/healthmd-core-rust/Cargo.lock', 'packages/healthmd-core-rust/rust-toolchain.toml', 'packages/healthmd-core-rust/crates/**', 'packages/healthmd-core-rust/scripts/*apple*', 'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+      - name: Diagnose complete iOS test target graph
+        if: ${{ inputs.native_graph }}
+        working-directory: apps/apple
+        run: |
+          set -euo pipefail
+          test '${{ steps.core.outputs.cache-hit }}' = true
+          test "$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)" = "$(cat Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256)"
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+          echo 'Build planning only: this does not qualify native tests, products, coverage or runtime behavior.'
+          python3 scripts/capture-native-test-graph.py --platform iOS --log native-target-graph.log -- \
+            make build-ios-tests CORE_RUST_PREPARE=: IOS_DERIVED_DATA_DIR=build/graph-diagnostic-derived \
+            IOS_SIM='generic/platform=iOS Simulator' \
+            IOS_TEST_BUILD_FLAGS='ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO'
+      - name: Retain optional graph diagnostic
+        if: ${{ always() && inputs.native_graph }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-target-graph-diagnostic
+          path: apps/apple/native-target-graph.log
           if-no-files-found: error
           retention-days: 1
