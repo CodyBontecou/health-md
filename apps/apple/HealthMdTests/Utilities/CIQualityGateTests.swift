@@ -201,11 +201,15 @@ final class CIQualityGateTests: XCTestCase {
     func testWorkflow_boundsAppleTestsAndRunsMacOSSuiteOnce() throws {
         let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        XCTAssertEqual(
-            content.components(separatedBy: "timeout-minutes: 75").count - 1,
-            2,
-            "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
-        )
+        for (name, minutes) in [
+            ("prepare-ios-artifacts", 30), ("prepare-macos-artifacts", 30),
+            ("ios-native-shards", 75), ("macos-native-shards", 50),
+            ("test-ios", 75), ("test-macos", 75),
+        ] {
+            let job = try workflowJob(name, in: content)
+            XCTAssertTrue(job.contains("    timeout-minutes: \(minutes)\n"),
+                          "\(name) must retain its bounded build or execution allowance")
+        }
         XCTAssertTrue(
             content.contains("ios-ui-shards:\n    name: iOS UI shard ${{ matrix.shard }}\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [0, 1, 2, 3]\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
             "The split UI job must allow at least 60 minutes for clean builds"
@@ -288,7 +292,18 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertTrue(runner.contains("run-owned-ui.py"))
         XCTAssertTrue(content.contains("Qualify SDK27 compiler before native slice build"))
         XCTAssertTrue(content.contains("apple-shared-core-v2-"))
-        XCTAssertEqual(content.components(separatedBy: "python3 scripts/compare-history-sdk27-receipts.py").count - 1, 4)
+        for name in [
+            "assemble-shared-core", "prepare-ios-artifacts", "ios-device-candidate",
+            "ios-native-shards", "test-ios", "prepare-macos-artifacts",
+            "macos-native-shards", "test-macos", "prepare-ui-artifacts", "ios-ui-shards",
+        ] {
+            XCTAssertEqual(
+                try workflowJob(name, in: content)
+                    .components(separatedBy: "python3 scripts/compare-history-sdk27-receipts.py").count - 1,
+                1,
+                "Every native producer and consumer must compare its actual SDK receipt"
+            )
+        }
         let qualifier = try source("scripts/qualify-history-authorization-sdk27.sh")
         XCTAssertTrue(qualifier.contains("Xcode 27.0\\nBuild version 27A266a"))
         XCTAssertTrue(qualifier.contains("swiftlang-6.4.0.34.1 clang-2100.3.34.1"))
@@ -339,11 +354,16 @@ final class CIQualityGateTests: XCTestCase {
             content.contains("make test-macos"),
             "The PR workflow must not run the macOS suite before the coverage pass"
         )
-        XCTAssertEqual(
-            content.components(separatedBy: "make coverage").count - 1,
-            1,
-            "The PR workflow must run the coverage-enabled macOS suite exactly once"
-        )
+        let nativeWorker = try workflowJob("macos-native-shards", in: content)
+        let nativeCollector = try workflowJob("test-macos", in: content)
+        let nativeRunner = try source("scripts/native_test_shards.py")
+        XCTAssertEqual(nativeWorker.components(separatedBy: "python3 scripts/native_test_shards.py run").count - 1, 1)
+        XCTAssertTrue(nativeWorker.contains("shard: [0, 1, 2, 3]"))
+        XCTAssertTrue(nativeRunner.contains("[\"-enableCodeCoverage\", \"YES\", \"-test-timeouts-enabled\", \"YES\""))
+        XCTAssertEqual(nativeCollector.components(separatedBy: "python3 scripts/native_test_shards.py combine").count - 1, 1)
+        XCTAssertTrue(nativeCollector.contains("--result build/coverage/HealthMd.xcresult"))
+        XCTAssertTrue(nativeCollector.contains("scripts/check-coverage.sh build/coverage/HealthMd.xcresult"))
+        XCTAssertFalse(content.contains("make coverage"), "Coverage must consume the exhaustive shard results without rerunning tests")
         XCTAssertTrue(
             content.contains("test-ios-ui:"),
             "UI regressions must run in a job parallel to iOS unit tests"
@@ -553,6 +573,13 @@ final class CIQualityGateTests: XCTestCase {
             12,
             "Onboarding must hide decorative icons and progress layers from VoiceOver"
         )
+    }
+
+    private func workflowJob(_ name: String, in content: String) throws -> String {
+        let start = try XCTUnwrap(content.range(of: "\n  \(name):\n"))
+        let tail = content[start.upperBound...]
+        let next = tail.range(of: #"(?m)^  [A-Za-z0-9_-]+:\s*$"#, options: .regularExpression)
+        return String(tail[..<(next?.lowerBound ?? tail.endIndex)])
     }
 
     private func source(_ relativePath: String) throws -> String {

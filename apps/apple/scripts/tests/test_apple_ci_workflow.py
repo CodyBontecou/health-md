@@ -28,6 +28,16 @@ def gate_script():
 
 
 class WorkflowRoutingTests(unittest.TestCase):
+    def test_native_policy_failure_blocks_shared_core_fanout_before_app_builds(self):
+        blocks = jobs()
+        probe = blocks["probe-shared-core"]
+        step = probe.split("      - name: Run native workflow policy before expensive preparation\n", 1)[1].split("      - name:", 1)[0]
+        self.assertIn("run: python3 scripts/run-ci-quality-gates.py", step)
+        self.assertNotIn("continue-on-error", step)
+        self.assertLess(probe.index("run-ci-quality-gates.py"), probe.index("Restore exact-source shared-core cache"))
+        self.assertIn("needs: [changes, probe-shared-core]", blocks["prepare-core-slices"])
+        self.assertIn("needs.probe-shared-core.result == 'success'", blocks["prepare-core-slices"])
+
     def test_each_job_uses_its_own_planner_output_and_keeps_existing_dependencies(self):
         blocks = jobs()
         for output, job in JOBS.items():

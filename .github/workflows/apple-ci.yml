@@ -198,6 +198,9 @@ jobs:
         with:
           xcode-version: '27.0'
 
+      - name: Run native workflow policy before expensive preparation
+        run: python3 scripts/run-ci-quality-gates.py
+
       - name: Require SDK27 public history signature and record provenance
         run: |
           bash scripts/qualify-history-authorization-sdk27.sh
