@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v6
         with:
-          ref: f481cfa135f938b9a7d831f6aa0f9537ac3a5648
+          ref: 533b9606a7db29a4a27a583389dc1dd186c1619f
           path: candidate
           persist-credentials: false
       - uses: maxim-lobanov/setup-xcode@v1
@@ -28,8 +28,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = f481cfa135f938b9a7d831f6aa0f9537ac3a5648
-          test "$(git rev-parse 'HEAD^{tree}')" = 6929fd5841fc7c5f8fd301f994ac4f8790de25ee
+          test "$(git rev-parse HEAD)" = 533b9606a7db29a4a27a583389dc1dd186c1619f
+          test "$(git rev-parse 'HEAD^{tree}')" = 03e450e5b932858b9bd48bb3d21a336df700669b
           git diff --exit-code
           mkdir -p build/logs/pr189-resume-sdk27
           {
@@ -74,14 +74,16 @@ jobs:
           text=Path('HealthMdTests/Export/AgentBridgeExportPlanningTests.swift').read_text()
           names=re.findall(r'^\s*func (testNative\w*Resume\w*)\(',text,re.M)
           names=[n for n in names if not n.startswith('testNativeWireExecute')]
-          assert len(names)==34 and len(names)==len(set(names))
-          assert len([n for n in names if n.startswith('testNativeWireResume')])==8
+          assert len(names)==35 and len(names)==len(set(names))
+          assert len([n for n in names if n.startswith('testNativeWireResume')])==9
           execute=re.findall(r'^\s*func (testNativeWireExecute\w*)\(',text,re.M)
           assert len(execute)==5
           names+=execute
           names.append('testNativeTransferOrdinaryCancelledErrorsCannotImpersonateConfirmedSourceStop')
           names.append('testAcceptedOnlyResumePreservesSpoolAndCannotRewindNativeAcknowledgements')
-          assert len(names)==41 and len(names)==len(set(names)) and all('func '+n+'(' in text for n in names)
+          names.append('testRetainedAcceptanceObservationNeedsNoCaptureAndNeverRenewsOrReadsSettings')
+          names.append('testRetainedAcceptanceObservationRejectsMissingChangedExpiredAndRevokedJobsWithoutRepair')
+          assert len(names)==44 and len(names)==len(set(names)) and all('func '+n+'(' in text for n in names)
           Path('build/logs/pr189-resume-sdk27/expected-cases.txt').write_text('\n'.join(names)+'\n')
           PY
           args=()
