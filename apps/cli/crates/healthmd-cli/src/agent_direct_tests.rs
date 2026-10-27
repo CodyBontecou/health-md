@@ -225,6 +225,7 @@ enum ExecutionPeerOutcome {
     Complete,
     DisconnectBeforeFinalize,
     DisconnectThenCancel,
+    AcceptedThenCancel,
 }
 
 #[derive(Clone)]
@@ -318,13 +319,6 @@ async fn answer_approved_execute(
             })
             .collect(),
     };
-    channel
-        .send_v4(
-            &Envelope::new(Message::ArtifactManifest(Box::new(manifest.clone()))),
-            negotiation,
-        )
-        .await
-        .unwrap();
     let session = v2::TransferSession {
         session_id: Uuid::new_v4(),
         job_id: Uuid::parse_str(&request.job_id.0).unwrap(),
@@ -337,6 +331,29 @@ async fn answer_approved_execute(
         partition_target_bytes: 50_331_648,
         created_at: chrono::DateTime::from_timestamp(native.time.seconds().unwrap(), 0).unwrap(),
     };
+    if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+        // No manifest or base transfer message has crossed this channel. The retained
+        // accepted owner must support public Cancel without fabricated output proof.
+        return ExecutedPeerSnapshot {
+            request,
+            completed: ExecutionReceipt {
+                status: ExecutionReceiptStatus::Cancelled,
+                source_acknowledged: true,
+                ..accepted.clone()
+            },
+            accepted,
+            manifest,
+            session,
+            last_transfer: Uuid::nil(),
+        };
+    }
+    channel
+        .send_v4(
+            &Envelope::new(Message::ArtifactManifest(Box::new(manifest.clone()))),
+            negotiation,
+        )
+        .await
+        .unwrap();
     let fingerprint = a::RequestFingerprint {
         version: 1,
         sha256: session.request_fingerprint.clone(),
@@ -1176,6 +1193,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 ExecutionPeerOutcome::Complete,
                 ExecutionPeerOutcome::DisconnectBeforeFinalize,
                 ExecutionPeerOutcome::DisconnectThenCancel,
+                ExecutionPeerOutcome::AcceptedThenCancel,
             ]
             .map(|outcome| (platform.clone(), outcome))
         })
@@ -1366,7 +1384,11 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                     answer_approved_execute(&mut channel, negotiation, &mut native, outcome).await,
                 );
             }
-            if outcome != ExecutionPeerOutcome::DisconnectThenCancel {
+            if !matches!(
+                outcome,
+                ExecutionPeerOutcome::DisconnectThenCancel
+                    | ExecutionPeerOutcome::AcceptedThenCancel
+            ) {
                 for execution in &executions {
                     let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
                     answer_retained_resume(&mut channel, negotiation, execution.clone()).await;
@@ -1465,12 +1487,24 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
         let before_recovery: Vec<_> = execution_paths
             .iter()
             .map(|path| {
-                let bytes = std::fs::read(output.join(&path.0)).unwrap();
-                assert_eq!(bytes, b"{\"synthetic\":true}");
-                bytes
+                let path = output.join(&path.0);
+                if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+                    assert!(
+                        !path.exists(),
+                        "Accepted-only cancellation cannot create output"
+                    );
+                    None
+                } else {
+                    let bytes = std::fs::read(path).unwrap();
+                    assert_eq!(bytes, b"{\"synthetic\":true}");
+                    Some(bytes)
+                }
             })
             .collect();
-        if outcome != ExecutionPeerOutcome::DisconnectThenCancel {
+        if !matches!(
+            outcome,
+            ExecutionPeerOutcome::DisconnectThenCancel | ExecutionPeerOutcome::AcceptedThenCancel
+        ) {
             let cli_resume = crate::mcp::execute_agent_operation(
                 Arc::clone(&backend),
                 "healthmd_export_execution_resume",
@@ -1519,7 +1553,11 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
             assert_eq!(result["output_verified"], false);
             assert_eq!(
                 result["source_receipt"]["status"],
-                if outcome == ExecutionPeerOutcome::DisconnectThenCancel {
+                if matches!(
+                    outcome,
+                    ExecutionPeerOutcome::DisconnectThenCancel
+                        | ExecutionPeerOutcome::AcceptedThenCancel
+                ) {
                     "cancelled"
                 } else {
                     "complete"
@@ -1549,7 +1587,10 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
         .await;
         assert_eq!(history, mcp_cancel);
         for (path, before) in execution_paths.iter().zip(&before_recovery) {
-            assert_eq!(&std::fs::read(output.join(&path.0)).unwrap(), before);
+            match before {
+                Some(bytes) => assert_eq!(&std::fs::read(output.join(&path.0)).unwrap(), bytes),
+                None => assert!(!output.join(&path.0).exists()),
+            }
         }
         assert_eq!(
             TrustStore::new(credentials.clone())
@@ -1561,7 +1602,17 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
         assert_eq!(credentials.0.writes.load(Ordering::SeqCst), writes);
         assert!(credentials.0.reads.load(Ordering::SeqCst) >= 16);
         assert!(key.0.load(Ordering::SeqCst) > 0);
-        assert_eq!(std::fs::read_dir(output.join("2026")).unwrap().count(), 2);
+        if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+            assert_eq!(std::fs::read_dir(&output).unwrap().count(), 0);
+            for result in [&cli_cancel, &mcp_cancel] {
+                assert_eq!(result["source_receipt"]["artifact_count"], 0);
+                assert_eq!(result["source_receipt"]["committed_partition_count"], 0);
+                assert_eq!(result["source_receipt"]["manifest_sha256"], "0".repeat(64));
+                assert_eq!(result["source_receipt"]["frontier_sha256"], "0".repeat(64));
+            }
+        } else {
+            assert_eq!(std::fs::read_dir(output.join("2026")).unwrap().count(), 2);
+        }
     }
 }
 
