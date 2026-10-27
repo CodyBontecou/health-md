@@ -73,6 +73,7 @@ jobs:
           python3 apps/apple/scripts/tests/test_ci_apple_core_slices.py
           python3 apps/apple/scripts/tests/test_ios_ui_shards.py
           python3 apps/apple/scripts/tests/test_start_ci_ios_simulator.py
+          python3 apps/apple/scripts/tests/test_native_test_shards.py
       - name: Validate Apple documentation links
         # Links can target any repository file, including files in skipped jobs.
         run: python3 apps/apple/scripts/check-documentation-links.py
@@ -200,6 +201,9 @@ jobs:
 
       - name: Run native workflow policy before expensive preparation
         run: python3 scripts/run-ci-quality-gates.py
+
+      - name: Test native product transport on its actual macOS host
+        run: python3 scripts/tests/test_native_test_shards.py ProductRestoreTests.test_actual_xz_pack_restore_preserves_every_product_byte_mode_and_link
 
       - name: Require SDK27 public history signature and record provenance
         run: |
