@@ -109,11 +109,13 @@ Apple daily CSV sleep durations use seconds in the production v8 example.
 Compatibility summary rows can omit Timestamp; a timestamped Sleep Stage row
 contains a label plus duration in Value and an ISO-8601 start Timestamp.
 Keep daily totals separate from individual interval rows when calculating.
-Health.md assigns a sleep session to its local start day.
+Daily sleep compatibility summaries use a local noon-to-noon journal window. A night can belong to the prior journal date even when the source session begins after midnight. Raw/canonical records retain separate ownership and original timestamps.
 
-Verified: 2026-10-25
+Verified: 2026-10-27
 Source: `apps/apple/HealthMd/Shared/Export/CSVExporter.swift` Sleep block,
 `apps/apple/docs/reference/generated/core/summary-day.csv`, and
 `docs-src/src/content/docs/sleep-date-attribution.md`. The website's
 `test/sleep-export-sample.test.mjs` checks the published excerpt against the
 producer fixture. This is source tracing, not a newly executed device export.
+
+Date evidence: `apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift` sleepWindow/fetchSleepData; `apps/apple/docs/features/export-schema.md` Day ownership; `apps/android/app/src/main/java/com/healthmd/data/health/SleepJournalSummary.kt`; `apps/android/docs/export-contract/android-sleep-journal-summary.md`. This clarifies existing behavior; exporter schemas, aggregation and fixtures are unchanged.

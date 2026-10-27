@@ -3,8 +3,8 @@ title: "Query Apple Health with Claude or Codex using the CLI preview"
 description: "Connect the standalone Health.md MCP preview to an open iPhone, run a seven-day Apple Health query, and verify dates, units, coverage and pagination."
 lead: "Use the standalone direct-phone preview for one explicit Apple Health question, then verify the returned scope and coverage. The bundled Mac helper has a separate setup path."
 date: "2026-09-22T13:20:00.000Z"
-updated: "2026-10-26"
-verified: "2026-10-26"
+updated: "2026-10-27"
+verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: traced
 category: "Workflow guide"
@@ -78,7 +78,7 @@ A bounded agent request can be:
 
 ### Verify the first answer
 
-- Compare the actual returned date scope with the requested seven days. Sleep sessions use their local start date; an overnight session can belong to yesterday. See [sleep-date attribution](/docs/sleep-date-attribution/).
+- Compare the actual returned date scope with the requested seven days. Check returned session start/end timestamps and the query window; do not infer session boundaries from a daily sleep total. Daily summaries use a separate noon-to-noon journal window. See [sleep-date attribution](/docs/sleep-date-attribution/).
 - Inspect the response's units, coverage, missingness and limitations before accepting an average or trend. Seven requested dates do not guarantee seven observed nights.
 - Distinguish a complete phone acquisition from a complete set of query pages. Follow the returned cursor and aggregate limits when needed.
 - If readiness or acquisition fails, follow the reported next action. For interrupted durable exports, inspect the saved job and use [resume](/docs/cli-reference/resume/) rather than repeatedly creating overlapping exports. A typed-query cursor and a durable export job are different mechanisms.

@@ -79,7 +79,7 @@ You can enable more than one format. Start with a single day and a small metric 
 
 Health Connect and Apple Health overlap, but they are not identical databases. Health.md shares public fields only where the meanings are proven equivalent. Provider-specific fields remain provider-specific, and unsupported data is reported rather than invented.
 
-Sleep is assigned to the local date on which the session starts. On Tuesday morning, Monday night usually appears in Monday's file. Export **Yesterday**—or Monday and Tuesday together—when checking an overnight session.
+Daily sleep summaries use a local noon-to-noon journal window. On Tuesday morning, Monday night belongs to Monday's file even if bedtime was after midnight on Tuesday. Export **Yesterday**, or Monday and Tuesday for both sleep and activity. See the [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples).
 
 ## Automate carefully
 

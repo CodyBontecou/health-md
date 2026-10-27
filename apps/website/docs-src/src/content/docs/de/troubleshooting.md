@@ -25,7 +25,7 @@ Meldet ein strukturiertes Ergebnis `complete_empty`, unterscheide es von nicht u
 
 ## Der Schlaf der letzten Nacht fehlt unter Heute
 
-Health.md ordnet Schlaf auf Apple und Android dem **Starttag** zu. Exportiere am Dienstagmorgen **Gestern** (Montag) oder Montag und Dienstag. Synchronisiert die Quelle später, exportiere den Starttag erneut. Siehe [Schlafdaten](/de/docs/sleep-date-attribution/).
+Health.md nutzt auf Apple und Android ein lokales Schlaffenster **von Mittag zu Mittag**. Exportiere am Dienstagmorgen **Gestern** (Montag), auch für Schlafbeginn nach Mitternacht am Dienstag, oder Montag und Dienstag für Schlaf und Aktivität. Bei später Synchronisierung wiederhole den Journaltag. Siehe [Datumsbeispiele](/de/docs/sleep-date-attribution/#sleep-date-examples).
 
 ## Die Vorschau zeigt Daten, der Ordner ist leer
 

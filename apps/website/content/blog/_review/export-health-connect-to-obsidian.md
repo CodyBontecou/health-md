@@ -16,3 +16,7 @@ Source and documentation review only. No emulator, device, Obsidian import, sche
 - [x] The described core folder export requires no Health.md account or relay through a Health.md health-data server: `android.md`, `FileExportManager.kt` and `privacy-policy.html`. Selected sync/document providers have their own data paths. This claim is scoped to the folder workflow rather than every optional product surface.
 
 - [x] Public distribution status is separated from build capability: the official F-Droid catalog returns a real 404 at verification, while `apps/android/docs/fdroid-distribution-plan.md` states publication gates are pending. Homepage download metadata, Android acquisition hub and localized docs link to the authored `distribution-status` notice rather than claiming catalog availability. No F-Droid publication or application release was attempted.
+
+## Sleep-date clarification — 2026-10-27
+
+- [x] Supersedes the earlier calendar-start-day shorthand. Android SleepJournalSummary uses a local noon-to-noon window, matching the normative android-sleep-journal-summary.md contract. After-midnight sleep can belong to the previous journal date; raw records retain their own ownership. No Android exporter, schema, unit, aggregation or fixture changed. Current website wording and localized troubleshooting now point to the shared concrete examples. Verification is source tracing, not a new device export.

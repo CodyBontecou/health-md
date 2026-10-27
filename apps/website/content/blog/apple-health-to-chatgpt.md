@@ -3,14 +3,14 @@ title: "How to export Apple Health data to ChatGPT"
 description: "Export Apple Health to ChatGPT with Health.md. Upload CSV, inspect source rows and units, and create steps or sleep summaries with coverage and duplicate checks."
 lead: "Use Health.md to export selected Apple Health data, attach the CSV to ChatGPT, and check the underlying daily values before asking for a summary or chart."
 date: "2026-10-25"
-updated: "2026-10-25"
+updated: "2026-10-27"
 category: "Workflow guide"
 related:
   - analyze-apple-health-with-claude
   - apple-health-to-excel
   - query-apple-health-with-claude-or-codex
 draft: false
-verified: "2026-10-25"
+verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: traced
 tags:
@@ -111,7 +111,7 @@ coverage, and missing-date handling. Do not imply complete coverage from a
 line drawn across missing dates. State any files you could not fully read.
 ```
 
-For sleep, substitute daily **Sleep / Total Duration / seconds** rows and ask for hours. A night is assigned to the local date it **started**: Monday-to-Tuesday sleep belongs to Monday. Read the [sleep export guide](/blog/export-apple-health-sleep-data/) if dates or stages look surprising.
+For sleep, substitute daily **Sleep / Total Duration / seconds** rows and ask for hours. Sleep summaries use a local noon-to-noon journal window: Monday night belongs to Monday even when bedtime is after midnight. See the [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples). Read the [sleep export guide](/blog/export-apple-health-sleep-data/) if dates or stages look surprising.
 
 Check both the daily table and the aggregate. Ask for calculation steps or generated code where available, and inspect any downloadable table or chart before using it. OpenAI's [file review guidance](https://learn.chatgpt.com/docs/artifacts-viewer) explains reviewing generated outputs. An independent check is available through the [Excel guide](/blog/apple-health-to-excel/) or [Google Sheets guide](/blog/apple-health-to-google-sheets/).
 

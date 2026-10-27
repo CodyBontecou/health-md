@@ -1,16 +1,16 @@
 ---
 title: "How to export Apple Health sleep data"
 description: "Export Apple Health sleep data to CSV with Health.md. Choose sleep metrics and the right date, preview a day, and understand summaries, stages, and missing data."
-lead: "To export Apple Health sleep data, authorize Sleep in Health.md, select the sleep metrics you need, choose the date the night started, and preview a one-day CSV export before saving it."
+lead: "To export Apple Health sleep data, authorize Sleep in Health.md, select the sleep metrics you need, choose the sleep journal day, and preview a one-day CSV export before saving it."
 date: "2026-10-25"
-updated: "2026-10-25"
+updated: "2026-10-27"
 category: "Workflow guide"
 related:
   - why-sleep-is-in-yesterdays-note
   - export-apple-health-data-to-obsidian
   - export-apple-health-hrv
 draft: false
-verified: "2026-10-25"
+verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: traced
 image: "/docs/assets/docs/iphone-first-export/metric-selection.webp"
@@ -48,9 +48,11 @@ In Health.md, open **Health Metrics** and expand **Sleep**. Enable the measureme
 
 Use **Summary** for a compact daily view. If you need selected timestamped samples or intervals, review **Detailed Time-Series** in [Data Detail and formatting](/docs/format/). **Lossless Health Records** is a separate Apple-only archive option for supported canonical source records; it is not the same thing as a daily sleep total.
 
-## 2. Choose the date the night started
+<div id="section-2-choose-the-date-the-night-started"></div>
 
-Health.md assigns an overnight sleep session to its **start date**. For sleep from Monday at 11:45 PM to Tuesday at 7:30 AM, export **Monday**, usually **Yesterday** when checking on Tuesday morning.
+## 2. Choose the sleep journal day
+
+Daily sleep summaries use a local **noon-to-noon journal window**. For Monday 23:45 to Tuesday 07:30, export **Monday**, usually **Yesterday** on Tuesday morning. Tuesday 01:00 to 07:30 also belongs to Monday’s journal window, while a Tuesday afternoon nap belongs to Tuesday. See the [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples); raw source records have separate ownership rules.
 
 | What you want on Tuesday morning | Date to export |
 | --- | --- |
@@ -104,7 +106,7 @@ For import instructions, use [Excel, Sheets, or Numbers](/apple-health-to-csv/#o
 Check these in order:
 
 1. **Source records:** confirm that Apple Health contains the night, then allow the watch or sleep app to synchronize.
-2. **Date:** inspect the sleep-start day, especially when looking for last night's sleep in today's file.
+2. **Date:** inspect the noon-to-noon journal day, especially when looking for last night's sleep in today's file.
 3. **Read permissions and metric selection:** review Sleep access for Health.md and the enabled sleep metrics. An empty result alone does not identify whether records are absent, unavailable, or inaccessible.
 4. **Detail and units:** a daily summary is different from a list of stage intervals. CSV duration rows may use seconds while another display shows hours.
 5. **Destination and result:** distinguish a successful preview from a failed file write. Check the result and folder rather than assuming an idle button means the export succeeded.
@@ -117,7 +119,7 @@ Once a manual night looks right, select a longer range. Confirm which dates reac
 
 For recurring exports, follow the [scheduling guide](/docs/scheduling/). iOS controls background timing; the chosen time is a target, and source synchronization or protected-data access can delay a run. Verify a manual result before relying on a schedule.
 
-On Android, use the [Health Connect export guide](/health-connect-export/). Health.md shares the sleep-start-date rule, but available records, stage identities, and export profiles differ. Apple Core sleep and Android Light sleep are not interchangeable labels to merge without checking their semantics.
+On Android, use the [Health Connect export guide](/health-connect-export/). Health.md shares the noon-to-noon sleep-summary window, but available records, stage identities, and export profiles differ. Apple Core sleep and Android Light sleep are not interchangeable labels to merge without checking their semantics.
 
 ## Privacy and the native Apple export alternative
 

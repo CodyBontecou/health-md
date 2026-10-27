@@ -3,8 +3,8 @@ title: "Apple Health to Obsidian: Daily Notes and a Free Starter Vault"
 description: "Try a free Obsidian vault with fictional health notes, charts, and a weekly review. Then export your own Apple Health data to daily notes with Health.md."
 lead: "Health.md writes selected Apple Health data into your Obsidian vault as Markdown or Bases-ready frontmatter. Choose a folder, preview one day, then export a separate health note or update an existing daily note."
 date: "2026-06-13"
-updated: "2026-10-26"
-verified: "2026-10-25"
+updated: "2026-10-27"
+verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: mixed
 category: "Workflow guide"
@@ -226,7 +226,7 @@ That local-first shape matters for health data. You can back up the vault, sync 
 ## Troubleshooting notes
 
 - If exports are empty, review Health.md’s Health permissions, selected categories, date range, and capture warnings. Empty output alone does not prove that the source contains no records.
-- If last night's sleep is missing, export the day the sleep session started. A session from Monday night to Tuesday morning belongs to Monday. See [sleep-date attribution](/blog/why-sleep-is-in-yesterdays-note/).
+- If last night's sleep is missing, check the local noon-to-noon sleep journal window. Monday night belongs to Monday, including bedtime after midnight on Tuesday. See [sleep-date attribution](/blog/why-sleep-is-in-yesterdays-note/).
 - Check that your watch or source app has synchronized and that the selected day contains the metric. An absent value is not a measured zero.
 - If Obsidian does not see the files, confirm the destination folder is inside the vault Obsidian is opening on that device.
 - If you use scheduled exports, remember that iOS background refresh is opportunistic. Treat the scheduled time as a target, not a guarantee.

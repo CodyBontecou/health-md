@@ -87,7 +87,7 @@ Follow the [Excel import guide](/blog/apple-health-to-excel/) for spreadsheet st
 
 Open one exported file on the Mac and compare a selected metric with the source day in Apple Health. Confirm the format, date, unit, and folder before exporting a longer range.
 
-For overnight sleep, choose the date the session **started**. Monday night normally belongs to Monday's note, even when you export on Tuesday morning. See [sleep dates and daily notes](/docs/sleep-date-attribution/).
+For sleep summaries, choose the local noon-to-noon journal day. Monday night belongs to Monday's note, including a bedtime after midnight on Tuesday. See [sleep dates and daily notes](/docs/sleep-date-attribution/).
 
 A missing value is not zero. Check authorization, metric selection, the requested day, and whether the original data source has synchronized into Apple Health. Daily summaries and detailed source records are different representations; do not add them together as extra measurements. See [export formats and detail](/docs/format/).
 

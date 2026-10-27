@@ -3,7 +3,7 @@ title: "Apple Health and Health Connect are not the same data model."
 description: "How Health.md shares proven semantics across HealthKit and Health Connect without renaming related-but-different records into false parity."
 lead: "Cross-platform health exports need common outcomes, explicit platform differences, and source-faithful archives—not a lowest-common-denominator fiction."
 date: "2026-09-22T13:40:00.000Z"
-updated: "2026-09-22T13:40:00.000Z"
+updated: "2026-10-27"
 category: "Engineering"
 related:
   - export-health-connect-to-obsidian
@@ -16,6 +16,9 @@ tags:
   - health-connect
   - interoperability
   - schemas
+verified: "2026-10-27"
+verified_by: "Codex (agent)"
+verified_method: traced
 ---
 
 Apple Health and Android Health Connect both store health and fitness information. That does not make every quantity, record type, permission, source field, or aggregation interchangeable.
@@ -31,10 +34,10 @@ Many workflows have a genuinely common outcome:
 - preview an export;
 - write Markdown, Bases, JSON, or CSV;
 - preserve unit and source information;
-- report permission, unsupported, empty, partial, and failed states;
+- report available capture states, errors, and limitations;
 - automate against a stable profile.
 
-For proven equivalents, Health.md uses shared semantic IDs and canonical units. Daily boundaries are computed in the relevant local timezone. Sleep sessions use a shared start-date attribution rule.
+For proven equivalents, Health.md uses shared semantic IDs and canonical units. Daily boundaries are computed in the relevant local timezone. Daily sleep summaries use a shared local noon-to-noon journal window; raw records retain their separate ownership rules.
 
 ## What must remain distinct
 
@@ -60,7 +63,7 @@ Cross-platform software must retain capture state. These statements are not equi
 - the app does not support the type;
 - the source failed or returned partial data.
 
-Flattening those states into `0` creates confident but incorrect analysis. Health.md contracts keep missingness and limitations next to values so consumers can make defensible claims.
+Flattening those states into `0` creates confident but incorrect analysis. Health.md contracts retain the available missingness and limitations next to values. HealthKit can make denied reads indistinguishable from empty results; consumers must not infer a permission state that the public API does not disclose.
 
 ## A practical rule for consumers
 

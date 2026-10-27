@@ -3,14 +3,14 @@ title: "How to export Apple Health to Excel"
 description: "Export Apple Health to Excel using CSV. Import daily files, filter steps or sleep, combine dates, and build a weekly PivotTable without counting metadata."
 lead: "Export Apple Health as daily CSV files with Health.md, import them into desktop Excel, then select the metric and unit you want before building a table or chart."
 date: "2026-10-25"
-updated: "2026-10-25"
+updated: "2026-10-27"
 category: "Workflow guide"
 related:
   - apple-health-to-google-sheets
   - export-apple-health-steps-data
   - export-apple-health-data-pdf
 draft: false
-verified: "2026-10-25"
+verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: traced
 tags:
@@ -100,7 +100,7 @@ When new files arrive, refresh the import query (or append the newly imported ro
 
 Repeat the filtered-copy workflow with `Category = Sleep`, `Metric = Total Duration`, and `Unit = seconds`. After numeric conversion, add an **Hours** column with `=IF(G2="","",G2/3600)` and chart that column against Calendar date. The synthetic sample's **27900.0 seconds = 7.75 hours**.
 
-A sleep session belongs to the local date it **started**. For a night beginning Monday and ending Tuesday, select Monday. Stage rows are not extra daily totals. Follow the [Apple Health sleep export guide](/blog/export-apple-health-sleep-data/) for date selection, stages, and missing nights.
+Daily sleep summaries use a local noon-to-noon journal window. For Monday night, select Monday even if bedtime is after midnight. See the [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples). Stage rows are not extra daily totals. Follow the [Apple Health sleep export guide](/blog/export-apple-health-sleep-data/) for date selection, stages, and missing nights.
 
 ## Fix common import problems
 

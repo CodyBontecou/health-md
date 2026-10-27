@@ -3,14 +3,14 @@ title: "How to use Apple Health data with Claude"
 description: "Export Apple Health to Claude with Health.md. Upload CSV or JSON, check dates and units, and ask for steps or sleep summaries with source evidence and missing-data checks."
 lead: "Export selected Apple Health data with Health.md, attach the CSV or JSON to Claude, and check the source rows before asking for trends. No terminal is needed for this file-upload workflow."
 date: "2026-09-26T12:00:00.000Z"
-updated: "2026-10-25"
+updated: "2026-10-27"
 category: "Workflow guide"
 related:
   - apple-health-to-chatgpt
   - query-apple-health-with-claude-or-codex
   - apple-health-to-excel
 draft: false
-verified: "2026-10-25"
+verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: traced
 tags:
@@ -99,7 +99,7 @@ and the daily values used. Do not fill missing days with zero or add duplicates.
 If you cannot read every file, say what is missing before calculating.
 ```
 
-Replace “the calendar range I specify” with your actual start and end dates. You can ask the same question for daily sleep duration, converting seconds to hours. Health.md assigns a sleep session to the local day it **started**, so a Monday-to-Tuesday night belongs to Monday. See the [sleep export guide](/blog/export-apple-health-sleep-data/) for date selection and stage details.
+Replace “the calendar range I specify” with your actual start and end dates. You can ask the same question for daily sleep duration, converting seconds to hours. Daily sleep summaries use a local noon-to-noon journal window, so a Monday night belongs to Monday even if bedtime is after midnight. The [sleep-date guide](/docs/sleep-date-attribution/#sleep-journal-window) explains the boundary. See the [sleep export guide](/blog/export-apple-health-sleep-data/) for date selection and stage details.
 
 A useful answer separates the exported facts, the arithmetic, and uncertainty. Check totals against the daily source rows; ask for the calculation steps or generated code when available. A chart alone is not verification. For an independent spreadsheet check, use [Apple Health to Excel](/blog/apple-health-to-excel/) or [Apple Health to Google Sheets](/blog/apple-health-to-google-sheets/).
 

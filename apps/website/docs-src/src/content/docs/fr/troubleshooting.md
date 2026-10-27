@@ -25,7 +25,7 @@ Si un résultat structuré indique `complete_empty`, distinguez-le des sorties n
 
 ## Le sommeil de la nuit manque dans Aujourd'hui
 
-Health.md attribue le sommeil au **jour de début** sur Apple et Android. Le mardi matin, exportez **Hier** (lundi), ou lundi et mardi. Si la source se synchronise tard, réexportez le jour de début. Voir les [dates du sommeil](/fr/docs/sleep-date-attribution/).
+Health.md utilise une fenêtre locale de sommeil **de midi à midi** sur Apple et Android. Le mardi matin, exportez **Hier** (lundi), y compris pour un coucher après minuit le mardi, ou lundi et mardi pour le sommeil et l’activité. Si la source arrive tard, répétez le jour du journal. Voir les [exemples de dates](/fr/docs/sleep-date-attribution/#sleep-date-examples).
 
 ## L'aperçu contient des données, mais le dossier est vide
 

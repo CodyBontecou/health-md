@@ -3,14 +3,14 @@ title: "How to export Apple Health to Google Sheets"
 description: "Export Apple Health to Google Sheets using CSV. Import daily files, filter steps or sleep, and build weekly pivot tables and charts with the right dates and units."
 lead: "Export Apple Health as daily CSV files with Health.md, upload them to Google Sheets, then filter the metric and unit you want before making a weekly table or chart."
 date: "2026-09-26T12:00:00.000Z"
-updated: "2026-10-25"
+updated: "2026-10-27"
 category: "Workflow guide"
 related:
   - apple-health-to-excel
   - export-apple-health-steps-data
   - apple-health-xml-export
 draft: false
-verified: "2026-10-25"
+verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: traced
 tags:
@@ -66,7 +66,7 @@ With the synthetic sample, filtering leaves one steps row: **2026-03-15, 12500 s
 
 A weekly average covers only dates with recorded numeric values. Missing days are not zero-step days, and an incomplete week is not a full seven-day record. If a pivot counts rows instead of showing the intended values, inspect the numeric helper cells and the selected summary function.
 
-For a sleep trend, repeat the workflow in a separate **Sleep** tab with `Category` = `Sleep`, `Metric` = `Total Duration`, and `Unit` = `seconds`. Convert only those numeric duration rows, then add **Hours** with `=IF(G2="","",G2/3600)`. The synthetic sample's **27900.0 seconds = 7.75 hours**. Sleep Stage rows are not additional daily totals. A session belongs to the local date it started; see the [Apple Health sleep export guide](/blog/export-apple-health-sleep-data/) for choosing the right day.
+For a sleep trend, repeat the workflow in a separate **Sleep** tab with `Category` = `Sleep`, `Metric` = `Total Duration`, and `Unit` = `seconds`. Convert only those numeric duration rows, then add **Hours** with `=IF(G2="","",G2/3600)`. The synthetic sample's **27900.0 seconds = 7.75 hours**. Sleep Stage rows are not additional daily totals. Daily sleep summaries use a local noon-to-noon journal window, not always the source session’s calendar start date; see the [Apple Health sleep export guide](/blog/export-apple-health-sleep-data/) for choosing the right day.
 
 ## Step 4: Add a chart and keep it current
 

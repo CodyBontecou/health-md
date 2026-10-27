@@ -25,7 +25,7 @@ Se um resultado estruturado indicar `complete_empty`, diferencie-o de saída nã
 
 ## O sono da última noite não aparece em Hoje
 
-O Health.md atribui o sono ao **dia de início** no Apple e no Android. Na terça de manhã, exporte **Ontem** (segunda), ou segunda e terça. Se a origem sincronizar tarde, exporte o dia de início novamente. Veja as [datas do sono](/pt-br/docs/sleep-date-attribution/).
+O Health.md usa uma janela local de sono **de meio-dia a meio-dia** no Apple e no Android. Na terça de manhã, exporte **Ontem** (segunda), inclusive para sono iniciado após a meia-noite de terça, ou segunda e terça para sono e atividade. Se a fonte sincronizar tarde, repita o dia do diário. Veja os [exemplos de datas](/pt-br/docs/sleep-date-attribution/#sleep-date-examples).
 
 ## A prévia mostra dados, mas a pasta está vazia
 

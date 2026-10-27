@@ -25,7 +25,7 @@ If a structured result reports `complete_empty`, keep it distinct from unsupport
 
 ## Last night's sleep is missing from Today
 
-Health.md assigns sleep to its **start day** on Apple and Android. On Tuesday morning, export **Yesterday** (Monday), or Monday and Tuesday. If the source syncs late, export the start day again. See [sleep dates](/docs/sleep-date-attribution/).
+Health.md uses a local **noon-to-noon sleep journal window** on Apple and Android. On Tuesday morning, export **Yesterday** (Monday), including sleep that began after midnight on Tuesday, or export Monday and Tuesday for both sleep and activity. If the source syncs late, repeat the sleep journal day. See [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples).
 
 ## Preview shows data, but the folder is empty
 

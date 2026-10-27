@@ -25,7 +25,7 @@ Meldt een gestructureerd resultaat `complete_empty`, onderscheid dit dan van nie
 
 ## De slaap van afgelopen nacht ontbreekt bij Vandaag
 
-Health.md wijst slaap op Apple en Android toe aan de **begindag**. Exporteer op dinsdagochtend **Gisteren** (maandag), of maandag en dinsdag. Synchroniseert de bron later, exporteer de begindag opnieuw. Zie [slaapdatums](/nl/docs/sleep-date-attribution/).
+Health.md gebruikt op Apple en Android een lokaal slaapvenster **van middag tot middag**. Exporteer op dinsdagochtend **Gisteren** (maandag), ook voor slaap die na middernacht op dinsdag begon, of maandag en dinsdag voor slaap en activiteit. Herhaal bij late synchronisatie de dag van het dagboek. Zie [datumvoorbeelden](/nl/docs/sleep-date-attribution/#sleep-date-examples).
 
 ## Het voorbeeld toont gegevens, maar de map is leeg
 
