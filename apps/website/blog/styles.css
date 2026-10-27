@@ -299,6 +299,35 @@ h1 {
   margin-bottom: 18px;
 }
 
+.article .article-byline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 16px 0 24px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.article-byline a {
+  color: var(--pine);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.article-byline a:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 4px;
+}
+
+.article-byline a:active {
+  color: var(--pine-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article-byline a:hover { color: var(--pine-2); }
+}
+
 .article-body a {
   color: var(--pine);
   text-decoration: underline;

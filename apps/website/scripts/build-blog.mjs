@@ -9,6 +9,11 @@ import sanitizeHtml from 'sanitize-html';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SITE_URL = 'https://healthmd.app';
 const CONTENT_DIR = path.join(ROOT, 'content', 'blog');
+const BLOG_AUTHOR = {
+  '@type': 'Person',
+  name: 'Cody Bontecou',
+  url: `${SITE_URL}/about/#team-behind-healthmd`,
+};
 
 marked.setOptions({
   gfm: true,
@@ -229,7 +234,7 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
         description,
         datePublished: isoDate(date),
         dateModified: isoDate(updated),
-        author: { '@type': 'Person', name: 'Cody Bontecou' },
+        author: BLOG_AUTHOR,
         publisher: { '@type': 'Organization', name: 'Health.md', url: SITE_URL },
         image: socialImage,
         mainEntityOfPage: canonical,
@@ -263,6 +268,7 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
   <meta property="og:url" content="${escapeHtml(canonical)}">
   <meta property="og:image" content="${escapeHtml(socialImage)}">
   ${type === 'article' ? `<meta property="article:published_time" content="${isoDate(date)}">` : ''}
+  ${type === 'article' ? `<meta property="article:modified_time" content="${isoDate(updated)}">` : ''}
   <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
   <meta name="twitter:title" content="${escapeHtml(socialTitle)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
@@ -337,6 +343,13 @@ function renderIndex(posts) {
 
 async function renderPost(post, relatedGuides) {
   const canonical = `${SITE_URL}/blog/${post.slug}/`;
+  const published = isoDate(post.date);
+  const updated = isoDate(post.updated);
+  const byline = `<p class="article-byline">
+      <span>By <a href="${escapeHtml(BLOG_AUTHOR.url)}" rel="author">${escapeHtml(BLOG_AUTHOR.name)}</a></span>
+      <span>Published <time datetime="${published}">${escapeHtml(formatDate(post.date))}</time></span>${updated !== published ? `
+      <span>Updated <time datetime="${updated}">${escapeHtml(formatDate(post.updated))}</time></span>` : ''}
+    </p>`;
   const breadcrumbs = [
     { name: 'Health.md', url: `${SITE_URL}/` },
     { name: 'Guides', url: `${SITE_URL}/blog/` },
@@ -381,8 +394,9 @@ async function renderPost(post, relatedGuides) {
   ${headerHtml(2)}
   <main class="article">
     ${breadcrumbNav}
-    <span class="eyebrow">${escapeHtml(formatDate(post.date))} · ${escapeHtml(post.category)}</span>
+    <span class="eyebrow">${escapeHtml(post.category)}</span>
     <h1>${escapeHtml(post.title)}</h1>
+    ${byline}
     <p class="lead">${escapeHtml(post.lead)}</p>
     ${cover}
     <div class="article-body">${bodyHtml}</div>
