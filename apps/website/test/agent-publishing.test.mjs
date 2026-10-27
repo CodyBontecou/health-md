@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -113,7 +115,9 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   const skillV7 = await read('docs-src/public/agents/skills/healthmd-cli/v7/SKILL.md');
   const skillV8 = await read('docs-src/public/agents/skills/healthmd-cli/v8/SKILL.md');
   assert.equal(sha256(skillV8), 'ec4c48f223a69f24ab4a517f2efb164c6d574cd2cfd19c8d24300d03e097a0cc');
-  const publishedSkill = await read('docs-src/public/agents/skills/healthmd-cli/v9/SKILL.md');
+  const skillV9 = await read('docs-src/public/agents/skills/healthmd-cli/v9/SKILL.md');
+  assert.equal(sha256(skillV9), '7dbb5a55efa4c9220da4f2e65b668480b36aea086fe0b5fbd31256642fd54c27');
+  const publishedSkill = await read('docs-src/public/agents/skills/healthmd-cli/v10/SKILL.md');
   assert.equal(sha256(skillV7), 'c25037d7f43818925769eb2093c319c0465bfa3ed1d2454287cefcd8f8261c48');
   assert.equal(skillV1.length, 15_734);
   assert.equal(sha256(skillV1), '6f36d8e479552745ae282a30a8471bc2ce477e7d1d6d8040f6ba72cd75047792');
@@ -125,11 +129,11 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   assert.match(skillV2.toString('utf8'), /0\.1\.0-alpha\.2.*public preview/s);
   assert.deepEqual(publishedSkill, skillSource);
   const skillManifest = JSON.parse(await read('docs-src/public/agents/skills/healthmd-cli/manifest.json'));
-  assert.equal(skillManifest.latest.version, 9);
-  assert.equal(skillManifest.latest.path, '/agents/skills/healthmd-cli/v9/SKILL.md');
+  assert.equal(skillManifest.latest.version, 10);
+  assert.equal(skillManifest.latest.path, '/agents/skills/healthmd-cli/v10/SKILL.md');
   assert.equal(skillManifest.latest.bytes, publishedSkill.length);
   assert.equal(skillManifest.latest.sha256, sha256(publishedSkill));
-  assert.equal(skillManifest.versions.length, 9);
+  assert.equal(skillManifest.versions.length, 10);
   assert.equal(skillManifest.versions[0].sha256, sha256(skillV1));
   assert.equal(skillManifest.versions[1].sha256, sha256(skillV2));
   assert.equal(skillManifest.versions[2].sha256, sha256(skillV3));
@@ -138,7 +142,8 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   assert.equal(skillManifest.versions[5].sha256, sha256(skillV6));
   assert.equal(skillManifest.versions[6].sha256, sha256(skillV7));
   assert.equal(skillManifest.versions[7].sha256, sha256(skillV8));
-  assert.deepEqual(skillManifest.versions[8], skillManifest.latest);
+  assert.equal(skillManifest.versions[8].sha256, sha256(skillV9));
+  assert.deepEqual(skillManifest.versions[9], skillManifest.latest);
   assert.equal(skillManifest.install_as, 'healthmd-cli/SKILL.md');
   assert.equal(skillManifest.availability, 'public_preview');
   const agentManifest = JSON.parse(await read('docs-src/public/agents/manifest.json'));
@@ -262,4 +267,46 @@ test('generated query fixtures distinguish typed partial coverage and structured
   assert.ok(partial.items.length > 0);
   assert.ok(partial.limitations.length > 0);
   assert.equal(Object.hasOwn(partial, 'status'), false);
+});
+
+
+test('publisher rejects frozen v9 changes before replacing current publications', async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), 'healthmd-skill-publisher-'));
+  try {
+    const sources = [
+      'apps/website/docs-src/scripts/sync-agent-assets.mjs',
+      'apps/website/docs-src/agent-docs/cli-llms.txt',
+      'apps/website/docs-src/reference-source.json',
+      'apps/website/docs-src/public/agents/mcp/mac-tools-v1.json',
+      'apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json',
+      '.agents/skills/healthmd-cli/SKILL.md',
+      ...Array.from({ length: 9 }, (_, index) =>
+        `apps/website/docs-src/public/agents/skills/healthmd-cli/v${index + 1}/SKILL.md`),
+    ];
+    for (const relative of sources) {
+      const destination = path.join(fixture, relative);
+      await mkdir(path.dirname(destination), { recursive: true });
+      await cp(path.join(REPOSITORY_ROOT, relative), destination);
+    }
+    const script = path.join(fixture, sources[0]);
+    const generate = () => spawnSync(process.execPath, [script, '--write'], {
+      encoding: 'utf8', timeout: 10_000,
+    });
+    const initial = generate();
+    assert.equal(initial.status, 0, initial.stderr);
+    const publicRoot = path.join(fixture, 'apps/website/docs-src/public');
+    const manifestPath = path.join(publicRoot, 'agents/skills/healthmd-cli/manifest.json');
+    const latestPath = path.join(publicRoot, 'agents/skills/healthmd-cli/v10/SKILL.md');
+    const manifest = await readFile(manifestPath);
+    const latest = await readFile(latestPath);
+    const frozenPath = path.join(publicRoot, 'agents/skills/healthmd-cli/v9/SKILL.md');
+    await writeFile(frozenPath, Buffer.concat([await readFile(frozenPath), Buffer.from('\n')]));
+    const rejected = generate();
+    assert.equal(rejected.status, 1, rejected.stderr);
+    assert.match(rejected.stderr, /Published Health\.md CLI skill v9 was modified/);
+    assert.deepEqual(await readFile(manifestPath), manifest);
+    assert.deepEqual(await readFile(latestPath), latest);
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
 });

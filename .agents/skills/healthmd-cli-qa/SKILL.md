@@ -19,9 +19,12 @@ can support ordinary screen locking after first unlock after reboot; absent/stop
 sessions need human reopening/restart. Wake cannot unlock, grant native permissions or approve work.
 See the [Android source guide](../../../apps/android/docs/features/direct-cli.md).
 
-Native extension-4 routes remain unwired/unadvertised. Stored planning/DTO checks do not deliver
-native consent/configuration/session adapters, send boundaries, bound execution/bridge receipts,
-recipes or the complete CLI/MCP × iOS/Android journey. Unit/conformance/build passes are not installed/release qualification.
+Native extension-4 remains unadvertised. Guarded native bound execution and public
+Execute/Resume/Cancel adapters exist in source. Installed native consent, host provisioning,
+recipes and the complete CLI/MCP × iOS/Android journey remain incomplete.
+Separate source-only encrypted-peer checks from native SDK, installed and physical acceptance.
+Cancel returns native source facts with `output_verified: false`, including completion winners.
+Unit/conformance/build passes are not installed/release qualification.
 Use [mobile compatibility](../../../apps/cli/docs/mobile-compatibility.md),
 [production readiness](../../../apps/cli/docs/production-readiness.md) and the
 [implementation ledger](../../../docs/qa/agent-bridge-implementation.md) for exact pending gates.

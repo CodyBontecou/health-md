@@ -357,11 +357,13 @@ class NativeDirectDocumentationTests(unittest.TestCase):
             with self.subTest(document=path.relative_to(self.ROOT).as_posix()):
                 text = path.read_text(encoding="utf-8")
                 self.assertIn("## Source and qualification", text)
-                for term in ("not installed/release qualification", "alpha.7 preview has 19",
-                             "development catalog declares 23", "read-only profile 13",
+                for term in ("not installed/release qualification", "alpha.6 preview has 19",
+                             "development catalog declares 26", "read-only profile 13",
                              "frozen CLI 1.0 scope 21", "healthmd_export_plan",
-                             "healthmd_export_approval", "independently negotiated extension 4",
-                             "unwired/unadvertised", "native consent", "bound execution",
+                             "healthmd_export_approval", "healthmd_export_execute",
+                             "healthmd_export_execution_resume", "healthmd_export_execution_cancel",
+                             "output_verified: false", "independently negotiated extension 4",
+                             "unadvertised", "native consent", "bound execution",
                              "host-owned recipes", "exact-build matrix",
                              "production-readiness.md", "mobile-compatibility.md"):
                     self.assertIn(term, text)
@@ -401,9 +403,11 @@ class ConsumerSkillDocumentationTests(unittest.TestCase):
 
     def test_consumer_gates_development_tools_and_platform_lifecycle(self) -> None:
         text = self.CLI.read_text(encoding="utf-8")
-        for term in ("alpha.7 exposes 19", "development catalog has 23", "development-only",
+        for term in ("alpha.6 exposes 19", "development catalog has 26", "development-only",
                      "healthmd_export_raw", "healthmd_raw_artifact_read", "healthmd_export_plan",
-                     "healthmd_export_approval", "unwired/unadvertised", "host-owned recipes",
+                     "healthmd_export_approval", "healthmd_export_execute",
+                     "healthmd_export_execution_resume", "healthmd_export_execution_cancel",
+                     "output_verified: false", "unadvertised", "host-owned recipes",
                      "first-mobile", "alpha.7's iPhone-only", "user-started foreground service",
                      "ordinary screen locking", "first unlock after reboot", "force-stop",
                      "production-readiness.md"):
@@ -488,7 +492,7 @@ class DevelopmentQASkillDocumentationTests(unittest.TestCase):
                 text = path.read_text(encoding="utf-8")
                 self.assertIn("## Current source and qualification", text)
                 for term in ("Apple application 1", "Android application 2", "iPhone query 3",
-                             "independent agent extension 4", "unwired/unadvertised",
+                             "independent agent extension 4", "unadvertised",
                              "user-started foreground service", "ordinary screen locking",
                              "first unlock after reboot", "force-stop", "native consent",
                              "bound execution", "not installed/release qualification",

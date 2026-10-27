@@ -34,9 +34,11 @@ ordinary screen locking after first unlock after reboot. Absent/stopped/force-st
 needs human reopening/restart; wake cannot unlock, grant access or approve unattended work.
 Use the [Android source guide](../../../apps/android/docs/features/direct-cli.md) for its boundaries.
 
-Native extension-4 routes remain unwired/unadvertised. Stored planning/codec/resolver tests do
-not implement native consent/configuration/session adapters, send boundaries, bound execution,
-bridge receipts, recipes or the full journey. Source passes are not installed/release qualification:
+Native extension-4 remains unadvertised. Guarded native bound execution and public
+Execute/Resume/Cancel adapters exist in source. Installed native consent, host provisioning,
+recipes and full cross-platform acceptance remain incomplete. Cancel acknowledges native
+source facts with `output_verified: false`; it does not verify host output or create export rights.
+Source passes are not installed/release qualification:
 consult [exact mobile evidence](../../../apps/cli/docs/mobile-compatibility.md),
 [release scope](../../../apps/cli/docs/production-readiness.md) and the
 [implementation ledger](../../../docs/qa/agent-bridge-implementation.md).
