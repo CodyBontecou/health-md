@@ -256,6 +256,8 @@ final class CIQualityGateTests: XCTestCase {
             "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
             "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
             "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
+            "ExportProfilesJourneyUITests/testQA_ProfileThirtyMinuteRefreshPersistsWithWeeklyCadence",
+            "ExportProfilesJourneyUITests/testQA_ProfileHourlyRefreshPersistsWithWeeklyCadence",
             "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
             "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab",
             "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
@@ -276,7 +278,7 @@ final class CIQualityGateTests: XCTestCase {
             "HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
             "HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot",
         ]
-        XCTAssertEqual(selections.count, 24, "PR smoke must preserve twenty phone and four tablet executions")
+        XCTAssertEqual(selections.count, 26, "PR smoke must preserve twenty-two phone and four tablet executions")
         XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the historical UI inventory plus configured gateway admission")
         XCTAssertTrue(content.contains("needs: [changes, prepare-ui-artifacts, ios-ui-shards]"))
         XCTAssertTrue(content.contains("test \"$SHARDS_RESULT\" = success"))
