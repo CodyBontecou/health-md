@@ -2,6 +2,7 @@
 from pathlib import Path
 import importlib.util
 import json
+import re
 import subprocess
 import unittest
 import xml.etree.ElementTree as ET
@@ -13,11 +14,83 @@ native_targets = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(native_targets)
 
 
+def read_project(text):
+    """Parse the project's OpenStep dictionaries without a macOS-only tool."""
+    lexer = re.compile(r'\s+|//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|[{}()=;,]|[^\s{}()=;,]+', re.S)
+    tokens = []
+    offset = 0
+    while offset < len(text):
+        match = lexer.match(text, offset)
+        if match is None:
+            raise ValueError('Unsupported project syntax')
+        token = match.group()
+        if token.startswith('/*') and not token.endswith('*/'):
+            raise ValueError('Unterminated project comment')
+        offset = match.end()
+        if not token.isspace() and not token.startswith(('//', '/*')):
+            tokens.append(token)
+    position = 0
+
+    def take(expected=None):
+        nonlocal position
+        if position >= len(tokens):
+            raise ValueError('Incomplete project')
+        token = tokens[position]
+        position += 1
+        if expected is not None and token != expected:
+            raise ValueError('Unexpected project delimiter')
+        return token
+
+    def value():
+        token = take()
+        if token == '{':
+            result = {}
+            while position < len(tokens) and tokens[position] != '}':
+                key = take()
+                if key.startswith('"'):
+                    key = json.loads(key)
+                if key in result:
+                    raise ValueError('Duplicate project key')
+                take('=')
+                result[key] = value()
+                take(';')
+            take('}')
+            return result
+        if token == '(':
+            result = []
+            while position < len(tokens) and tokens[position] != ')':
+                result.append(value())
+                if position < len(tokens) and tokens[position] == ',':
+                    take(',')
+                elif position >= len(tokens) or tokens[position] != ')':
+                    raise ValueError('Missing project list delimiter')
+            take(')')
+            return result
+        if token in '{}()=;,':
+            raise ValueError('Unexpected project value')
+        return json.loads(token) if token.startswith('"') else token
+
+    result = value()
+    if position != len(tokens) or not isinstance(result, dict):
+        raise ValueError('Unexpected trailing project content')
+    return result
+
+
+class ProjectParserTests(unittest.TestCase):
+    def test_nested_comments_strings_and_lists(self):
+        self.assertEqual({'name': 'a / b', 'group': {'members': ['one', 'two']}, 'empty': []},
+                         read_project('// header\n{ name = "a / b"; group = { members = (one, /* comment */ two,); }; empty = (); }'))
+
+    def test_malformed_or_duplicate_content_is_rejected(self):
+        for text in ['{', '{ a = b; a = c; }', '{} extra', '{ a = (one two); }', '{ a = b }', '{} /*', '{} /* unclosed comment']:
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                read_project(text)
+
+
 class NativeDependencyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.project = json.loads(subprocess.check_output([
-            'plutil', '-convert', 'json', '-o', '-', str(PROJECT / 'project.pbxproj')]))
+        cls.project = read_project((PROJECT / 'project.pbxproj').read_text())
         cls.objects = cls.project['objects']
         cls.targets = {v.get('name'): (k, v) for k, v in cls.objects.items()
                        if v.get('isa') == 'PBXNativeTarget'}
