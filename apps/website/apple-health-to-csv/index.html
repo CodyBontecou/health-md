@@ -148,7 +148,7 @@
             </table>
           </div>
           <a class="proof-button" href="/docs/reference/generated/core/summary-day.csv" download>Download sample CSV <span aria-hidden="true">↓</span></a>
-          <p class="csv-sample-note">No app or health permissions needed. The full CSV includes category, date, metadata, and timestamp fields. <a href="#whats-inside">See the row format</a>.</p>
+          <p class="csv-sample-note">No app or health permissions needed. The full CSV includes category, date, metadata, and timestamp fields. <a href="#whats-inside">See the row format</a>, or <a href="#spreadsheet-sample">try 28 days with a finished workbook</a>.</p>
         </aside>
       </div>
     </section>
@@ -191,10 +191,6 @@
           <p class="section-kicker">How it works</p>
           <h2>Your first CSV, from selection to saved file</h2>
           <p class="section-lede">Start with one date you can check in Apple Health. Follow the <a href="/docs/iphone-first-export/">first-export screenshot walkthrough</a> if you are setting up Health permissions or a destination for the first time.</p>
-          <figure class="guide-screen">
-            <img src="/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-formats-and-daily-notes.png" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md export settings with a date range and switches for Markdown, Obsidian Bases, JSON, and CSV.">
-            <figcaption>The CSV switch is in Export Formats. This screenshot shows it off; enable CSV for your spreadsheet export. Your metric count and available options may differ.</figcaption>
-          </figure>
           <div class="process-list">
             <div>
               <span>1</span>
@@ -212,6 +208,26 @@
               <p>Enable CSV, choose a writable folder in Files, and tap Export Data. Review the result, open the folder, and import one generated file into your spreadsheet.</p>
             </div>
           </div>
+          <p>These captures use the real app interface and CSV writer with fictional health data in a simulator. They demonstrate the file workflow; your permissions, available metrics, and values will differ. Select a screenshot to inspect it.</p>
+          <div class="csv-walkthrough-grid">
+            <figure class="guide-screen">
+              <a href="/assets/guides/first-csv-export/csv-enabled.webp"><img src="/assets/guides/first-csv-export/csv-enabled.webp" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md export settings with CSV enabled and Summary selected."></a>
+              <figcaption><strong>CSV enabled.</strong> Choose CSV and Summary for the selected day. The destination must be writable.</figcaption>
+            </figure>
+            <figure class="guide-screen">
+              <a href="/assets/guides/first-csv-export/csv-preview.webp"><img src="/assets/guides/first-csv-export/csv-preview.webp" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md Export Preview with one day, one format, the TestVault destination, and the October 26 CSV filename."></a>
+              <figcaption><strong>Check the preview.</strong> Check the date, CSV filename, and destination. Open the listed file to inspect its metrics. Preview does not write a file.</figcaption>
+            </figure>
+            <figure class="guide-screen">
+              <a href="/assets/guides/first-csv-export/csv-written.webp"><img src="/assets/guides/first-csv-export/csv-written.webp" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md export result confirming that the CSV file was written."></a>
+              <figcaption><strong>Verify the write.</strong> After Export Data, check the written-file result. This run wrote the daily CSV and an optional data dictionary.</figcaption>
+            </figure>
+            <figure class="guide-screen">
+              <a href="/assets/guides/first-csv-export/csv-opened.webp"><img src="/assets/guides/first-csv-export/csv-opened.webp" width="1206" height="2622" loading="lazy" decoding="async" alt="The saved Health.md CSV opened on iPhone with fictional steps and sleep rows."></a>
+              <figcaption><strong>Open the saved CSV.</strong> Open the generated CSV and check its Date, Metric, Value, and Unit columns.</figcaption>
+            </figure>
+          </div>
+          <p><a href="/assets/guides/first-csv-export/2026-10-26.csv" download>Download the fictional CSV shown above</a> to inspect the saved rows. Its sleep total is 23,400 seconds (6.5 hours); Steps is 12,500 count. The reference sample at the top of this page uses a different fictional day.</p>
           <div class="csv-result-check">
             <h3>Find the file you just saved</h3>
             <p>After Export Data finishes, review the written, skipped, or failed files. Open <strong>Files → Browse</strong> and the folder you selected in Health.md. Find the CSV for your chosen date; daily exports write separate files for separate dates.</p>
@@ -219,10 +235,28 @@
           </div>
         </section>
 
+        <section class="about-section" id="spreadsheet-sample">
+          <p class="section-kicker">Try a finished spreadsheet</p>
+          <h2>28 days, two charts, and the CSVs behind them</h2>
+          <p>Open the fictional workbook before using your own data. It includes raw rows, daily steps and sleep views, and working charts. No app, health permissions, or sign-in is needed to download it.</p>
+          <figure class="csv-workbook-preview">
+            <a href="/assets/downloads/spreadsheet-sample/workbook-preview.png"><img src="/assets/downloads/spreadsheet-sample/workbook-preview.png" width="2072" height="1340" loading="lazy" decoding="async" alt="Preview of the fictional workbook with daily steps and sleep charts across 28 dates, including a gap for missing sleep."></a>
+            <figcaption>All values are fictional. Steps are recorded on 28 days; sleep is recorded on 27. Missing sleep remains missing.</figcaption>
+          </figure>
+          <p><a class="proof-button" href="/assets/downloads/spreadsheet-sample/healthmd-health-data-sample.xlsx" download>Download the Excel workbook</a></p>
+          <p><a href="/assets/downloads/healthmd-spreadsheet-sample.zip" download>Download the full sample pack</a> for the workbook, 28 daily CSV inputs, combined CSV, and README. Or <a href="/assets/downloads/spreadsheet-sample/combined.csv" download>download the combined CSV</a> for a spreadsheet import.</p>
+          <ol>
+            <li><strong>Inspect the result:</strong> open the workbook in Excel and compare its raw rows with the steps and sleep charts. Its dates and input ranges are fixed; adding rows does not extend them automatically.</li>
+            <li><strong>Try the inputs:</strong> unzip the pack, then use <a href="#combine-csv-files">the browser combiner</a> to append its daily CSVs. The combiner preserves rows; it does not create charts or an Excel workbook.</li>
+            <li><strong>Repeat with your data:</strong> <a href="#how-it-works">export one known day</a>, verify the saved CSV, then follow the <a href="/blog/apple-health-to-excel/">Excel guide</a> or <a href="/blog/apple-health-to-google-sheets/">Google Sheets guide</a>. Importing to Sheets sends that copy to Google.</li>
+          </ol>
+          <p>The sample pack is a separate fictional dataset from the app captures above. Health.md exports CSV files, not an Excel workbook; the workbook is an example of what you can build from them.</p>
+        </section>
+
         <section class="about-section" id="open-in-spreadsheet">
           <p class="section-kicker">From file to spreadsheet</p>
           <h2>Open your Apple Health CSV in Excel, Sheets, or Numbers</h2>
-          <p>Try the <a href="/docs/reference/generated/core/summary-day.csv" download>synthetic CSV sample</a> first, then repeat with one day of your own export. The sample contains fictional values and metadata rows.</p>
+          <p>Try the <a href="#spreadsheet-sample">28-day workbook and CSV pack</a> for a complete example, or the <a href="/docs/reference/generated/core/summary-day.csv" download>single-day synthetic CSV</a> to check a basic import. Keep these fictional datasets separate from your own records.</p>
           <div class="about-card-grid">
             <div class="about-card">
               <h3>Excel on desktop</h3>

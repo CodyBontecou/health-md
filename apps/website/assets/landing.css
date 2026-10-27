@@ -154,6 +154,12 @@ a {
   gap: 18px;
 }
 
+.header-nav nav {
+  display: flex;
+  align-items: center;
+  gap: inherit;
+}
+
 .header-docs-link {
   position: relative;
   display: inline-flex;
@@ -277,6 +283,8 @@ main {
 
 .hero-intro h1 {
   max-width: 760px;
+  hyphens: auto;
+  overflow-wrap: anywhere;
   margin-left: clamp(-8px, -0.5vw, -4px);
   font-size: clamp(86px, 7.2vw, 114px);
   font-weight: 470;
