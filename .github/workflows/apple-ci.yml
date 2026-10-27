@@ -1,11 +1,11 @@
-name: PR189 native Execute and Resume SDK27 qualification
+name: PR189 full macOS VM-ledger SDK27 diagnosis
 on:
   workflow_dispatch:
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: pr189-resume-sdk27-${{ github.run_id }}
+  group: pr189-rss-ledger-sdk27-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   qualify:
@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v6
         with:
-          ref: 93e185178850ffe1ba9a88ca2d69a38995fa7dc5
+          ref: 84585b3c72d567ab03c5e53f250d840631cce313
           path: candidate
           persist-credentials: false
       - uses: maxim-lobanov/setup-xcode@v1
@@ -28,16 +28,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 93e185178850ffe1ba9a88ca2d69a38995fa7dc5
-          test "$(git rev-parse 'HEAD^{tree}')" = bfc8604aeb26a92ae2383014398e72ce96c8cf5e
+          test "$(git rev-parse HEAD)" = 84585b3c72d567ab03c5e53f250d840631cce313
+          test "$(git rev-parse 'HEAD^{tree}')" = 832a00ab4c49c521b7bbba7459c5cd132c1dad62
           git diff --exit-code
-          mkdir -p build/logs/pr189-resume-sdk27
+          mkdir -p build/logs/pr189-rss-ledger-sdk27
           {
             git rev-parse HEAD 'HEAD^{tree}'
             xcodebuild -version
             xcrun swiftc --version
             uname -m
-          } | tee build/logs/pr189-resume-sdk27/identity.txt
+          } | tee build/logs/pr189-rss-ledger-sdk27/identity.txt
           bash scripts/qualify-history-authorization-sdk27.sh
           ../../packages/healthmd-core-rust/scripts/prepare-apple-xcframework.sh
           cp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
@@ -45,80 +45,47 @@ jobs:
           actual=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)
           test "$actual" = "$(cat Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256)"
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
-      - name: Compile installed iPhone controller against SDK27
+      - name: Reproduce the complete macOS test order with VM-ledger evidence
         working-directory: candidate/apps/apple
         shell: bash
         run: |
           set -euo pipefail
-          xcodebuild build -project HealthMd.xcodeproj -scheme HealthMd \
-            -configuration Debug -destination 'generic/platform=iOS' \
-            -derivedDataPath build/pr189-resume-ios-derived \
-            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee build/logs/pr189-resume-sdk27/iphone-build.log
-          app=build/pr189-resume-ios-derived/Build/Products/Debug-iphoneos/HealthMd.app
-          test -f "$app/HealthMd"
-          xcrun lipo -verify_arch arm64 "$app/HealthMd"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
-          git diff --exit-code
-      - name: Compile and run owning Execute and Resume controls
-        working-directory: candidate/apps/apple
-        shell: bash
-        run: |
-          set -euo pipefail
-          out=build/logs/pr189-resume-sdk27
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          text=Path('HealthMdTests/Export/AgentBridgeExportPlanningTests.swift').read_text()
-          names=re.findall(r'^\s*func (testNative\w*Resume\w*)\(',text,re.M)
-          names=[n for n in names if not n.startswith('testNativeWireExecute')]
-          assert len(names)==35 and len(names)==len(set(names))
-          assert len([n for n in names if n.startswith('testNativeWireResume')])==9
-          execute=re.findall(r'^\s*func (testNativeWireExecute\w*)\(',text,re.M)
-          assert len(execute)==5
-          names+=execute
-          names.append('testNativeTransferOrdinaryCancelledErrorsCannotImpersonateConfirmedSourceStop')
-          names.append('testAcceptedOnlyResumePreservesSpoolAndCannotRewindNativeAcknowledgements')
-          names.append('testRetainedAcceptanceObservationNeedsNoCaptureAndNeverRenewsOrReadsSettings')
-          names.append('testRetainedAcceptanceObservationRejectsMissingChangedExpiredAndRevokedJobsWithoutRepair')
-          assert len(names)==44 and len(names)==len(set(names)) and all('func '+n+'(' in text for n in names)
-          Path('build/logs/pr189-resume-sdk27/expected-cases.txt').write_text('\n'.join(names)+'\n')
-          PY
-          args=()
-          while IFS= read -r name; do
-            args+=("-only-testing:HealthMdTests/AgentBridgeExportPlanningTests/$name")
-          done < "$out/expected-cases.txt"
+          out=build/logs/pr189-rss-ledger-sdk27
+          # Keep the original full-suite order, 72 MiB input, 32 MiB bound and 2 ms sampler.
+          # The pinned candidate adds same-observation ledger counters to assertion failures.
           status=0
           xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS \
-            -derivedDataPath build/pr189-resume-derived \
+            -derivedDataPath build/pr189-rss-ledger-derived \
             -destination "platform=macOS,arch=$(uname -m)" \
-            -resultBundlePath build/pr189-resume.xcresult \
-            -enableCodeCoverage YES "${args[@]}" \
+            -resultBundlePath build/pr189-rss-ledger.xcresult \
+            -enableCodeCoverage YES \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
             -maximum-test-execution-time-allowance 300 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee "$out/cases.log" || status=$?
-          python3 - "$out/cases.log" "$status" "$out/expected-cases.txt" <<'PY'
+          python3 - "$out/cases.log" "$status" <<'PYCODE'
           from pathlib import Path
           import json,re,sys
-          expected=set(Path(sys.argv[3]).read_text().splitlines())
-          cases=re.findall(r"Test Case '-\[HealthMdTests.AgentBridgeExportPlanningTests ([^\]]+)\]' (passed|failed|skipped) ",Path(sys.argv[1]).read_text())
-          receipt={'native_exit':int(sys.argv[2]),'expected':sorted(expected),'observed':cases}
+          text=Path(sys.argv[1]).read_text()
+          cases=re.findall(r"Test Case '-\[HealthMdTests\.([^\]]+)\]' (passed|failed|skipped) ",text)
+          target='ConnectedCorpusPartitionFileTests testStreamableDecoderMapsLargeProductionHealthDayDataWithoutItemSizedRSSCopy'
+          target_cases=[(n,r) for n,r in cases if n==target]
+          ledger=[line for line in text.splitlines() if 'Production HealthData encoding must not create an item-sized Data copy' in line]
+          receipt={'source':'84585b3c72d567ab03c5e53f250d840631cce313','native_exit':int(sys.argv[2]),'observed_count':len(cases),'failed':[n for n,r in cases if r=='failed'],'target':target_cases,'ledger_assertions':ledger}
           Path(sys.argv[1]).with_name('receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
-          if len(cases)!=len(expected) or {n for n,_ in cases}!=expected or any(r!='passed' for _,r in cases):
-              raise SystemExit('Incomplete or failing Resume qualification; no passing claim')
-          if sys.argv[2]!='0': raise SystemExit('Native command failed')
-          PY
+          if len(target_cases)!=1: raise SystemExit('Memory diagnostic target missing or duplicated')
+          if target_cases[0][1]=='failed' and not any('baseline: footprint=' in line and 'peak: footprint=' in line for line in ledger):
+              raise SystemExit('Failure lacks the required VM ledger evidence')
+          if len(cases)<2990: raise SystemExit('Full suite execution incomplete')
+          PYCODE
           git diff --exit-code
           exit "$status"
       - name: Preserve minimal synthetic qualification evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pr189-native-resume-sdk27
+          name: pr189-rss-ledger-sdk27
           path: candidate/apps/apple/build/logs/
           retention-days: 3
           if-no-files-found: warn
