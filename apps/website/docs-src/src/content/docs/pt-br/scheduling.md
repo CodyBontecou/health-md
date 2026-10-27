@@ -1,33 +1,38 @@
 ---
-title: "Agendamento"
-description: "Execute exportações automaticamente em cadências diárias, semanais ou de calendário personalizadas. O iOS usa tarefas em segundo plano e uma notificação local de recuperação quando os dados protegidos estão indisponíveis."
+title: "Agendar exportações do Apple Health e resolver execuções perdidas"
+description: "Verifique exportações agendadas, a janela de dias completos e a recuperação. O iOS não garante o horário; Repetir no histórico usa as configurações atuais."
 ---
 
-## A aba Agendar
-<p>É uma tela de status, não um painel de ajustes. Ela informa rapidamente:</p>
-<ul><li>Se o agendamento está ativado ou desativado</li><li>A próxima execução agendada, se houver</li><li>O resultado da última execução</li></ul>
-<p>Um botão — <em>Configurar agendamento</em> ou <em>Gerenciar agendamento</em> — abre a tela de detalhes.</p>
+Esta página descreve o agendamento no iPhone. O Android tem outras permissões em segundo plano e requisitos de compra; consulte [Automação no Android](/pt-br/docs/android/).
 
-## Configurações do agendamento
-<div class="options">
-<div class="option"><strong>Ativar exportações agendadas</strong><p>Controle mestre no topo. Quando desativado, não há execuções em segundo plano nem notificações.</p></div>
-<div class="option"><strong>Frequência</strong><p>Diária, semanal ou personalizada. Agendamentos personalizados se repetem a cada N dias, semanas ou meses desde uma data inicial. O período retrospectivo define quantos dias concluídos cada execução abrange.</p></div>
-<div class="option"><strong>Horário</strong><p>Hora e minuto. O iOS trata isso como uma indicação, não como garantia — veja as limitações abaixo.</p></div>
-</div>
+## Verifique a primeira exportação agendada
 
-## Histórico de exportações
-<p>A lista no fim da tela Agendar registra cada execução agendada e seu resultado. Toque em uma linha para ver detalhes. Execuções com falha incluem um botão <em>Tentar novamente</em>, que repete o intervalo com as configurações e o destino atuais e depois registra uma nova linha no histórico.</p>
+1. Ative o perfil desejado. Confira métricas, formatos, nível de detalhe, modo de gravação e destino. Exporte manualmente um dia completo e verifique o arquivo ou resultado do endpoint antes de automatizar.
+2. Abra Agendar e Configurar ou Gerenciar agendamento. Ative-o, escolha Diário, Semanal ou Personalizado, ajuste o horário e comece com um dia completo de retrospectiva. Permita notificações se quiser lembretes locais de recuperação.
+3. Confira o estado, a próxima ocorrência e o último resultado. Após uma tentativa, examine o histórico e o destino real; uma data futura ou notificação não comprova a gravação.
+4. Verifique datas, unidades, cobertura e dados ausentes. Um arquivo salvo, sozinho, não comprova captura completa.
 
-## Como o agendamento do iOS realmente funciona
-<div class="doc-diagram"><div class="flow-steps" aria-label="Fluxo alternativo da exportação agendada">
-<span><strong>1. Horário previsto</strong>O Health.md pede ao iOS que desperte o app perto do horário escolhido.</span>
-<span><strong>2. Tentativa em segundo plano</strong>Se o dispositivo estiver disponível, o iOS executa uma tarefa de atualização.</span>
-<span><strong>3. Alternativa com bloqueio</strong>Se o HealthKit estiver indisponível, o Health.md envia uma notificação.</span>
-<span><strong>4. Toque para concluir</strong>Ao abrir a notificação, o app pode ler o HealthKit e exportar.</span>
-</div></div>
+Na Apple, uma solicitação agendada que exporta pelo menos uma data compartilha as cinco ações gratuitas com exportações manuais e outras ações contabilizadas. Full Access remove esse limite compartilhado. Consulte [Desbloqueio e compras](/pt-br/docs/paywall/).
 
-<div class="callout"><strong>Limitações do iOS que você deve conhecer.</strong><p style="margin-top:6px;">Os dados do HealthKit não podem ser lidos enquanto o dispositivo está bloqueado. As exportações agendadas usam <code>BGAppRefreshTask</code>, que o iOS agenda de forma oportunista conforme os padrões de uso — o horário definido é uma meta, não um contrato. Como alternativa, o app envia uma notificação local no horário agendado se o dispositivo estiver bloqueado; toque nela para executar a exportação.</p></div>
-<ul><li>O horário é aproximado. O iOS pode executar antes ou depois, ou ignorar a tarefa se o aparelho estiver desligado ou desconectado.</li><li>As exportações funcionam melhor quando o telefone costuma estar conectado à energia e desbloqueado aproximadamente no mesmo horário.</li><li>Se a exportação falhar porque o dispositivo estava bloqueado, toque na notificação para executá-la com acesso ao HealthKit.</li></ul>
+## Entenda a janela de dias completos
+
+Agendamentos diários, semanais e personalizados podem ter retrospectiva. O personalizado repete a cada N dias, semanas ou meses desde a data inicial. Cada nova ocorrência reexporta toda a janela configurada, incluindo datas anteriores já exportadas. Três dias cobrem ontem e os dois dias anteriores; atrasos mantêm a janela ancorada no dia previsto.
+
+A atualização de hoje é independente e não substitui essa janela. Confira caminhos e modo de gravação antes de sobrepor exportações; instantâneos repetidos do mesmo dia não são novas medições.
+
+## Escolha a recuperação correta
+
+- **Recuperação agendada pendente:** desbloqueie o iPhone, abra Health.md e examine a tentativa. Ela mantém as datas exatas não resolvidas, configurações salvas e destino. Datas concluídas permanecem concluídas; a recuperação não amplia a retrospectiva.
+- **Repetir pelo histórico:** inicia outra execução para o intervalo com as configurações e o destino atuais e cria uma nova linha. Confira a configuração ativa antes de repetir. Isso não retoma a tentativa pendente congelada.
+- **Destino alterado ou inacessível:** restaure o acesso ou examine o perfil pendente. Uma recuperação API antiga do iPhone não deve adotar silenciosamente outro endpoint ou credencial. Não inicie novas tentativas repetidamente enquanto a original estiver sem resolução.
+
+Consulte [Perfis de exportação](/pt-br/docs/export-profiles/) para regras de recuperação, identidade e destino.
+
+## O que o iOS garante ou não
+
+O horário é um objetivo, não uma conclusão garantida. O iOS controla a execução em segundo plano, e o bloqueio pode impedir leituras do HealthKit. Solicitações e notificações silenciosas não contornam essa proteção.
+
+Lembretes locais exigem permissão e não garantem entrega no horário escolhido. Se um chegar, desbloqueie o aparelho e abra-o para tentar recuperar. Se não chegar, abra Health.md e verifique pendências e histórico. Confira o resultado em vez de presumir sucesso por um alerta ou pelo tempo decorrido.
 
 ## Controle programático
 <p>Você pode ativar ou desativar o agendamento nos Atalhos com o intent <em>Ativar ou desativar exportação agendada</em>. <a href="/pt-br/docs/shortcuts/">Veja exemplos em Atalhos</a>.</p>

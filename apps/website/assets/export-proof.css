@@ -1,0 +1,44 @@
+/* CSV output proof, scoped to this acquisition page. */
+.csv-page { background: var(--paper); }
+.csv-hero-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; gap: 48px; }
+.csv-page .about-hero h1 { max-width: 680px; font-size: 60px; line-height: 1; text-wrap: balance; }
+.csv-page .about-value-prop { max-width: 680px; margin-top: 24px; font-size: 24px; line-height: 32px; }
+.csv-page .about-intro { font-size: 16px; line-height: 24px; }
+.csv-jump-link { margin-top: 24px; font-size: 16px; }
+.csv-jump-link a, .csv-sample-card a:not(.proof-button) { color: #6532cb; text-decoration: underline; text-underline-offset: 4px; }
+.csv-sample-card { min-width: 0; padding: 24px; border: 1px solid var(--about-line); border-radius: 16px; background: #fff; }
+.csv-sample-card h2 { margin: 12px 0; font-size: 30px; line-height: 36px; letter-spacing: -0.04em; text-wrap: balance; }
+.csv-sample-card p { font-size: 16px; line-height: 24px; color: #64646c; }
+.csv-file-label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 24px; font: 14px/20px var(--font-mono); }
+.csv-file-label > span:last-child { margin-left: auto; color: #64646c; }
+.csv-table-wrap { overflow-x: auto; margin: 16px 0 24px; }
+.csv-table-wrap table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; line-height: 20px; }
+.csv-table-wrap caption { text-align: left; color: #64646c; padding-bottom: 8px; font-size: 12px; line-height: 16px; }
+.csv-table-wrap th, .csv-table-wrap td { padding: 12px 8px; border-bottom: 1px solid var(--about-line); }
+.csv-table-wrap thead { background: #f5f4f7; }
+.csv-table-wrap tbody th { font-weight: 500; }
+.csv-table-wrap td { font-family: var(--font-mono); }
+.proof-button { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 48px; padding: 8px 12px; border: 1px solid #6532cb; border-radius: 8px; color: #fff; background: #6532cb; font-size: 16px; line-height: 24px; font-weight: 600; text-decoration: none; touch-action: manipulation; }
+.csv-sample-card .proof-button { width: 100%; }
+.csv-sample-card .csv-sample-note { margin: 16px 0 0; font-size: 14px; line-height: 20px; }
+.csv-result-check { margin-top: 24px; padding: 24px; border: 1px solid var(--about-line); border-radius: 16px; background: #f5f4f7; }
+.csv-result-check h3 { margin-top: 0; }
+.csv-result-check p:last-child { margin-bottom: 0; }
+.csv-final-action .proof-button { margin-top: 16px; }
+.csv-page a:focus-visible, .csv-table-wrap:focus-visible { outline: 3px solid #6532cb; outline-offset: 4px; }
+.proof-button:active { opacity: 0.85; }
+@media (hover: hover) and (pointer: fine) { .proof-button:hover { background: #5126ac; color: #fff; } }
+@media (max-width: 900px) {
+  .csv-hero-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .csv-page .about-hero h1 { font-size: 48px; line-height: 1; }
+}
+@media (max-width: 480px) {
+  .csv-page .about-hero-inner { width: calc(100% - 32px); padding-top: 128px; padding-bottom: 48px; }
+  .csv-page .about-hero h1 { font-size: 36px; line-height: 40px; }
+  .csv-page .about-value-prop { font-size: 20px; line-height: 28px; }
+  .csv-sample-card { padding: 16px; }
+  .csv-sample-card h2 { font-size: 24px; line-height: 32px; }
+  .csv-file-label > span:last-child { margin-left: 0; }
+}
+
+.csv-page .about-content a.proof-button { color: #fff; text-decoration: none; }

@@ -1,18 +1,51 @@
 ---
 title: "睡眠日期与每日笔记"
-description: "了解夜间睡眠为何归属于开始日期，以及早晨应导出哪个范围。"
+description: "选择正确的睡眠导出日期：了解正午到次日正午的窗口、午夜后入睡、午睡和空结果。"
 ---
 
-Health.md 将睡眠时段归到它**开始的日期**。周一 23:45 到周二 7:30 的睡眠属于周一摘要。即使 Health Connect 显示起床日期，Apple 与 Android 仍使用这一规则。
+周二早上导出昨晚睡眠时，通常选择 **昨天，也就是周一**。Health.md 的每日睡眠摘要使用本地时间 **12:00 到次日 12:00** 的日记窗口，即周一正午到周二正午，而不是普通活动摘要的午夜分界。
 
-| 目标 | 导出 |
-|---|---|
-| 周二早晨查看昨晚睡眠 | **昨天**（周一） |
-| 周二活动 | **今天** |
-| 两者 | 周一和周二 |
+<div id="sleep-journal-window"></div>
 
-可读的每日摘要会把整晚放在一起。规范源记录保留原始开始和结束时间，并属于开始日；Health.md 不会虚构地拆成两半。需要时段语义时请使用 `healthmd_sleep_sessions`。
+## 为什么睡眠会出现在昨天的笔记中
 
-Daily Note Injection 与 API Endpoint 使用同一归属方式。如果数据源同步较晚，请重新导出开始日。目前没有把摘要改归起床日的选项。
+即使午夜后才入睡，这个窗口也能把通常的一晚放在一起。窗口包含起始正午，不包含次日正午。跨越正午的睡眠可能分别计入相邻两天的摘要。原始时间戳不会为了匹配笔记日期而被改写。
 
-<div class="related"><a href="/zh-hans/docs/scheduling/"><span>自动化</span>早晨包含“昨天”。</a><a href="/zh-hans/docs/troubleshooting/"><span>帮助</span>排查空数据和延迟。</a></div>
+Apple 和 Android 的兼容摘要共享这个窗口，但指标、睡眠阶段、源记录和聚合方式仍可能不同。目前没有将每日摘要切换为起床日归属的设置。
+
+<div id="sleep-date-examples"></div>
+
+## 应该导出哪一天？
+
+以下是本地时间的虚构示例，不是真实健康记录。
+
+| 睡眠或活动 | 导出日期 |
+| --- | --- |
+| 周一 23:45 到周二 07:30 | **周一** |
+| 周二 01:00 到周二 07:30 | **周一**，不是周二 |
+| 周二午睡，14:00 到 14:30 | **周二** |
+| 周二的步数和活动 | **周二** |
+| 周一晚睡眠和周二活动 | **周一和周二** |
+
+请核对导出所用的本地时区。其他应用的起床日标签或文件修改时间并不决定 Health.md 的日记日期。
+
+<div id="sleep-empty-checks"></div>
+
+## 如果预期的笔记为空
+
+1. 检查日记日期和所选睡眠指标。
+2. 等待手表或源应用将数据同步到 Apple Health 或 Health Connect，再预览并重新导出该日。
+3. 核对访问权限。在 iPhone 上，HealthKit 的空结果无法说明读取是否被拒绝。在 Android 上，确认源应用确实向 Health Connect 写入了受支持的记录。
+4. 检查目标文件夹以及已写入、跳过或失败的结果。预览并不能证明文件已保存。缺失不等于零。
+
+Daily Note Injection 和 API Endpoint 摘要使用相同窗口。源数据晚到时，可重新导出该日或检查计划的回溯窗口。后台执行不保证在精确时间成功写入。
+
+<div id="sleep-records-and-queries"></div>
+
+## 摘要、源记录和会话查询
+
+原始或规范记录保留原始时间戳，并有各自的归属规则。不要从每日总量重建会话，也不要把源时间区间作为额外睡眠加到总量上。
+
+`healthmd_sleep_sessions` 需要受支持的 **Apple Health** CLI/MCP 配置。Android 类型化 MCP 查询目前不受支持。请参阅[平台能力](/zh-hans/docs/guides/platform-features/)和 [MCP](/zh-hans/docs/mcp/)。
+
+另见[计划导出](/zh-hans/docs/scheduling/)、[故障排查](/zh-hans/docs/troubleshooting/)和[导出格式](/zh-hans/docs/format/)。

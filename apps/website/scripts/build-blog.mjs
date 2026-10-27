@@ -5,10 +5,16 @@ import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
 import { marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
+import { parseDocument, DomUtils } from 'htmlparser2';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SITE_URL = 'https://healthmd.app';
 const CONTENT_DIR = path.join(ROOT, 'content', 'blog');
+const BLOG_AUTHOR = {
+  '@type': 'Person',
+  name: 'Cody Bontecou',
+  url: `${SITE_URL}/about/#team-behind-healthmd`,
+};
 
 marked.setOptions({
   gfm: true,
@@ -43,6 +49,7 @@ function sanitizeRenderedMarkdown(html) {
       '*': ['class', 'id', 'role', 'title'],
       a: ['href', 'rel', 'target'],
       audio: ['controls', 'preload', 'src'],
+      div: ['aria-label', 'tabindex'],
       img: ['alt', 'decoding', 'height', 'loading', 'sizes', 'src', 'srcset', 'width'],
       source: ['src', 'srcset', 'type'],
       video: ['controls', 'height', 'poster', 'preload', 'src', 'width'],
@@ -72,6 +79,41 @@ function slugify(value) {
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-')
     .slice(0, 80);
+}
+
+// Input has already passed through sanitizeRenderedMarkdown. Parse headings so
+// inline markup, entities and existing author-defined anchors stay intact.
+export function addArticleContents(bodyHtml) {
+  const document = parseDocument(bodyHtml);
+  const elements = DomUtils.findAll(() => true, document.children);
+  const usedIds = new Set(['article-contents-title', 'related-guides-title']);
+  for (const element of elements) {
+    const id = element.attribs.id;
+    if (!id) continue;
+    if (usedIds.has(id)) throw new Error(`Duplicate or reserved article ID: ${id}`);
+    usedIds.add(id);
+  }
+  const sections = [];
+  for (const heading of elements.filter(element => element.name === 'h2')) {
+    const title = DomUtils.textContent(heading).replace(/\s+/g, ' ').trim();
+    if (!title) continue;
+    if (!heading.attribs.id) {
+      const base = `section-${slugify(title) || 'overview'}`;
+      let id = base;
+      let suffix = 2;
+      while (usedIds.has(id)) id = `${base}-${suffix++}`;
+      heading.attribs.id = id;
+      usedIds.add(id);
+    }
+    sections.push({ id: heading.attribs.id, title });
+  }
+  const navigation = sections.length >= 5
+    ? `<nav class="article-contents" aria-labelledby="article-contents-title">
+      <h2 id="article-contents-title">On this page</h2>
+      <ul>${sections.map(({ id, title }) => `<li><a href="#${escapeHtml(encodeURIComponent(id))}">${escapeHtml(title)}</a></li>`).join('')}</ul>
+    </nav>`
+    : '';
+  return { html: DomUtils.getInnerHTML(document, { encodeEntities: 'utf8' }), navigation };
 }
 
 function asDate(value, field, filename) {
@@ -138,6 +180,10 @@ async function loadPosts() {
       ? asDate(parsed.data.updated, 'updated', filename)
       : date;
     const image = normalizeImage(parsed.data.image);
+    const platform = parsed.data.platform ?? 'apple';
+    if (!['apple', 'android'].includes(platform)) {
+      throw new Error(`${filename}: platform must be apple or android`);
+    }
 
     posts.push({
       slug,
@@ -148,9 +194,11 @@ async function loadPosts() {
       date,
       updated,
       image,
+      platform,
       imageAlt: String(parsed.data.imageAlt || title).trim(),
       showCover: parsed.data.showCover !== false,
       tags: asStringArray(parsed.data.tags),
+      related: parsed.data.related ?? [],
       body: parsed.content.trim(),
     });
   }
@@ -158,8 +206,33 @@ async function loadPosts() {
   return posts.sort((a, b) => b.date.getTime() - a.date.getTime());
 }
 
-function headerHtml(depth = 1) {
+// Resolve curated slugs against published content so drafts and typos cannot
+// become recommendations. Titles and descriptions stay owned by each target.
+export function resolveRelatedGuides(posts) {
+  const bySlug = new Map(posts.map(post => [post.slug, post]));
+  if (bySlug.size !== posts.length) throw new Error('Blog posts must have unique slugs');
+  return new Map(posts.map(post => {
+    const slugs = post.related ?? [];
+    if (!Array.isArray(slugs) || slugs.length > 3) {
+      throw new Error(`${post.slug}: related must be an array of at most three published slugs`);
+    }
+    if (new Set(slugs).size !== slugs.length) {
+      throw new Error(`${post.slug}: related guides must not contain duplicates`);
+    }
+    return [post.slug, slugs.map(slug => {
+      if (typeof slug !== 'string' || slug === post.slug || !bySlug.has(slug)) {
+        throw new Error(`${post.slug}: invalid related guide ${String(slug)}`);
+      }
+      return bySlug.get(slug);
+    })];
+  }));
+}
+
+function headerHtml(depth = 1, platform = 'apple') {
   const prefix = depth === 2 ? '../../' : '../';
+  const store = platform === 'android'
+    ? { url: 'https://play.google.com/store/apps/details?id=com.healthmd.android', label: 'Google Play' }
+    : { url: 'https://apps.apple.com/us/app/health-md/id6757763969', label: 'App Store' };
   return `<header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="${prefix}">
@@ -171,7 +244,7 @@ function headerHtml(depth = 1) {
           <a href="${prefix}visualizations/">Visualizations</a>
           <a href="${prefix}docs/">Docs</a>
           <a href="${depth === 2 ? '../' : './'}">Blog</a>
-          <a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
+          <a href="${store.url}" target="_blank" rel="noopener">${store.label}</a>
         </nav>
         <div class="theme-toggle" role="group" aria-label="Color theme">
           <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
@@ -194,7 +267,7 @@ function footerHtml(depth = 1) {
   <script src="${prefix}assets/analytics.js" defer></script>`;
 }
 
-function documentHead({ title, socialTitle = title, description, canonical, image, type = 'website', date, updated, depth = 1 }) {
+function documentHead({ title, socialTitle = title, description, canonical, image, type = 'website', date, updated, depth = 1, breadcrumbs }) {
   const prefix = depth === 2 ? '../../' : '../';
   const socialImage = image || `${SITE_URL}/assets/app-icon/icon_1024x1024.png`;
   const jsonLd = type === 'article'
@@ -205,7 +278,7 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
         description,
         datePublished: isoDate(date),
         dateModified: isoDate(updated),
-        author: { '@type': 'Person', name: 'Cody Bontecou' },
+        author: BLOG_AUTHOR,
         publisher: { '@type': 'Organization', name: 'Health.md', url: SITE_URL },
         image: socialImage,
         mainEntityOfPage: canonical,
@@ -217,6 +290,13 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
         description,
         url: canonical,
       };
+  const breadcrumbJsonLd = breadcrumbs && {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbs.map(({ name, url }, index) => ({
+      '@type': 'ListItem', position: index + 1, name, item: url,
+    })),
+  };
 
   return `<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -232,6 +312,7 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
   <meta property="og:url" content="${escapeHtml(canonical)}">
   <meta property="og:image" content="${escapeHtml(socialImage)}">
   ${type === 'article' ? `<meta property="article:published_time" content="${isoDate(date)}">` : ''}
+  ${type === 'article' ? `<meta property="article:modified_time" content="${isoDate(updated)}">` : ''}
   <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
   <meta name="twitter:title" content="${escapeHtml(socialTitle)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
@@ -244,7 +325,8 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
   <script src="${prefix}assets/theme.js"></script>
   <link rel="stylesheet" href="${depth === 2 ? '../styles.css' : 'styles.css'}">
   <link rel="stylesheet" href="${prefix}assets/theme-icons.css">
-  <script type="application/ld+json">${escapeJsonForHtml(jsonLd)}</script>`;
+  <script type="application/ld+json">${escapeJsonForHtml(jsonLd)}</script>${breadcrumbJsonLd ? `
+  <script type="application/ld+json">${escapeJsonForHtml(breadcrumbJsonLd)}</script>` : ''}`;
 }
 
 function renderIndex(posts) {
@@ -260,8 +342,8 @@ function renderIndex(posts) {
         </li>`;
   }).join('\n        ');
 
-  const title = 'Health.md Blog — Product Updates and Workflows';
-  const description = 'Product updates, release notes, and workflow articles for Health.md Apple Health exports, Obsidian workflows, and local-first data archives.';
+  const title = 'Health.md Guides — Export, Obsidian and Automation';
+  const description = 'Practical guides to exporting Apple Health and Health Connect data, opening CSV files, updating Obsidian notes, and automating your own health-data workflows.';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -274,13 +356,24 @@ function renderIndex(posts) {
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <span class="eyebrow">Product updates</span>
-          <h1>Release notes and workflow ideas for Health.md.</h1>
-          <p>New app features, workflow changes, and practical examples for Apple Health, Obsidian, and local data export systems.</p>
+          <span class="eyebrow">Health data guides</span>
+          <h1>Put your health data where you can use it.</h1>
+          <p>Start with one useful export, then connect your spreadsheet, Obsidian vault, or agent. Choose a workflow below, or browse the latest articles.</p>
         </div>
       </div>
     </section>
-    <section class="posts">
+    <section class="workflow-directory container" aria-labelledby="workflow-heading">
+      <h2 id="workflow-heading">Choose your first workflow</h2>
+      <div class="workflow-grid">
+        <article><h3>CSV analysis</h3><p>Export selected dates, inspect a sample, and analyze CSV in a spreadsheet or a local Python script.</p><a href="/apple-health-to-csv/">Export Apple Health to CSV</a><a href="/apple-health-to-csv/#combine-csv-files">Combine daily CSV files</a><a href="/blog/apple-health-to-excel/">Analyze Apple Health in Excel</a><a href="/blog/apple-health-to-google-sheets/">Analyze Apple Health in Google Sheets</a><a href="/blog/apple-health-to-python/">Analyze Apple Health with Python</a><a href="/blog/export-apple-health-steps-data/">Export steps data</a><a href="/blog/export-apple-health-sleep-data/">Export sleep data</a><a href="/blog/export-apple-health-workouts/">Export workout data</a><a href="/blog/export-apple-health-heart-rate/">Export heart rate data</a><a href="/blog/export-apple-health-hrv/">Export HRV data</a></article>
+        <article><h3>Obsidian</h3><p>Write health notes to your vault or add selected metrics to existing daily notes.</p><a href="/blog/export-apple-health-data-to-obsidian/">Apple Health to Obsidian</a><a href="/blog/export-health-connect-to-obsidian/">Health Connect to Obsidian</a><a href="/blog/health-md-for-macos/">Export Apple Health to a Mac vault</a></article>
+        <article><h3>Android</h3><p>Authorize Health Connect, choose a folder, and verify your first exported file.</p><a href="/health-connect-export/">Start an Android export</a></article>
+        <article><h3>Reports, automation and agents</h3><p>Create a PDF report, set up scheduled files, or choose an agent workflow with its device requirements.</p><a href="/docs/scheduling/">Set up scheduled exports</a><a href="/blog/export-health-data-without-the-cloud/">Export without cloud storage</a><a href="/blog/export-apple-health-data-pdf/">Create a health summary PDF</a><a href="/health-data-for-ai/">Use health data with AI</a><a href="/blog/analyze-apple-health-with-claude/">Analyze Apple Health with Claude</a><a href="/blog/apple-health-to-chatgpt/">Analyze Apple Health with ChatGPT</a></article>
+      </div>
+      <p><a href="/apple-health-export/">Compare Apple Health export workflows</a>, <a href="/blog/apple-health-xml-export/">open an Apple Health XML archive</a>, <a href="/blog/health-md-vs-health-auto-export/">compare Health.md and Health Auto Export</a>, or <a href="/docs/troubleshooting/">troubleshoot an export</a>.</p>
+    </section>
+    <section class="posts" aria-labelledby="latest-articles">
+      <h2 class="container" id="latest-articles">Latest articles and product updates</h2>
       <ul class="container post-list">
         ${items || '<li class="post-item">No posts have been published yet.</li>'}
       </ul>
@@ -292,14 +385,37 @@ function renderIndex(posts) {
 `;
 }
 
-async function renderPost(post) {
+async function renderPost(post, relatedGuides) {
   const canonical = `${SITE_URL}/blog/${post.slug}/`;
-  const bodyHtml = sanitizeRenderedMarkdown(await marked.parse(post.body));
+  const published = isoDate(post.date);
+  const updated = isoDate(post.updated);
+  const byline = `<p class="article-byline">
+      <span>By <a href="${escapeHtml(BLOG_AUTHOR.url)}" rel="author">${escapeHtml(BLOG_AUTHOR.name)}</a></span>
+      <span>Published <time datetime="${published}">${escapeHtml(formatDate(post.date))}</time></span>${updated !== published ? `
+      <span>Updated <time datetime="${updated}">${escapeHtml(formatDate(post.updated))}</time></span>` : ''}
+    </p>`;
+  const breadcrumbs = [
+    { name: 'Health.md', url: `${SITE_URL}/` },
+    { name: 'Guides', url: `${SITE_URL}/blog/` },
+    { name: post.title, url: canonical },
+  ];
+  const breadcrumbNav = `<nav class="article-breadcrumbs" aria-label="Breadcrumb">
+      <ol>${breadcrumbs.map(({ name, url }, index) => `<li>${index ? '<span aria-hidden="true">/</span>' : ''}${index === breadcrumbs.length - 1
+        ? `<span aria-current="page">${escapeHtml(name)}</span>`
+        : `<a href="${escapeHtml(url)}">${escapeHtml(name)}</a>`}</li>`).join('')}</ol>
+    </nav>`;
+  const body = addArticleContents(sanitizeRenderedMarkdown(await marked.parse(post.body)));
   const cover = post.image && post.showCover
     ? `<figure class="article-cover"><img src="${escapeHtml(post.image)}" alt="${escapeHtml(post.imageAlt)}"></figure>`
     : '';
   const tags = post.tags.length
     ? `<div class="article-tags" aria-label="Tags">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}</div>`
+    : '';
+  const relatedNav = relatedGuides.length
+    ? `<nav class="article-related" aria-labelledby="related-guides-title">
+      <h2 id="related-guides-title">Continue with a related guide</h2>
+      <ul>${relatedGuides.map(guide => `<li><a href="/blog/${escapeHtml(guide.slug)}/">${escapeHtml(guide.title)}</a><p>${escapeHtml(guide.description)}</p></li>`).join('')}</ul>
+    </nav>`
     : '';
 
   return `<!DOCTYPE html>
@@ -315,17 +431,22 @@ async function renderPost(post) {
     date: post.date,
     updated: post.updated,
     depth: 2,
+    breadcrumbs,
   })}
 </head>
 <body>
-  ${headerHtml(2)}
+  ${headerHtml(2, post.platform)}
   <main class="article">
-    <span class="eyebrow">${escapeHtml(formatDate(post.date))} · ${escapeHtml(post.category)}</span>
+    ${breadcrumbNav}
+    <span class="eyebrow">${escapeHtml(post.category)}</span>
     <h1>${escapeHtml(post.title)}</h1>
+    ${byline}
     <p class="lead">${escapeHtml(post.lead)}</p>
+    ${body.navigation}
     ${cover}
-    <div class="article-body">${bodyHtml}</div>
+    <div class="article-body">${body.html}</div>
     ${tags}
+    ${relatedNav}
   </main>
   ${footerHtml(2)}
 </body>
@@ -357,6 +478,7 @@ function updateSitemap(source, posts) {
 
 export async function buildBlog({ outputRoot = ROOT } = {}) {
   const posts = await loadPosts();
+  const relatedGuides = resolveRelatedGuides(posts);
   const blogOutput = path.join(outputRoot, 'blog');
   await fs.mkdir(blogOutput, { recursive: true });
   await fs.copyFile(path.join(ROOT, 'blog', 'styles.css'), path.join(blogOutput, 'styles.css'));
@@ -365,7 +487,7 @@ export async function buildBlog({ outputRoot = ROOT } = {}) {
   for (const post of posts) {
     const postOutput = path.join(blogOutput, post.slug);
     await fs.mkdir(postOutput, { recursive: true });
-    await fs.writeFile(path.join(postOutput, 'index.html'), await renderPost(post));
+    await fs.writeFile(path.join(postOutput, 'index.html'), await renderPost(post, relatedGuides.get(post.slug)));
   }
 
   const sitemapSource = await fs.readFile(path.join(ROOT, 'sitemap.xml'), 'utf8');

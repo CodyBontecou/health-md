@@ -7,17 +7,20 @@ import { buildBlog } from './build-blog.mjs';
 import { buildLocalizedLanding } from './build-localized-pages.mjs';
 import { buildLocalizedLegalPages } from './build-localized-legal-pages.mjs';
 import { localizeSitemapFile } from './build-localized-sitemap.mjs';
+import { buildStarterVault } from './build-starter-vault.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = path.join(ROOT, 'dist');
 const DOCS_OUTPUT = path.join(ROOT, 'docs-src', 'dist');
-const STATIC_DIRECTORIES = ['assets', 'visualizations', 'about', 'apple-health-export', 'health-data-for-ai', 'apple-health-to-csv'];
+const STATIC_DIRECTORIES = ['assets', 'visualizations', 'about', 'apple-health-export', 'health-data-for-ai', 'apple-health-to-csv', 'health-connect-export'];
 const STATIC_FILES = [
   'favicon.ico',
   'llms.txt',
   'robots.txt',
+  'indexnow-key.txt',
 ];
 
+await buildStarterVault({ check: true });
 await fs.rm(OUTPUT, { recursive: true, force: true });
 await fs.mkdir(OUTPUT, { recursive: true });
 

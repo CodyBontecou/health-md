@@ -7,11 +7,13 @@ routes = [
   { pattern = "healthmd.app/v/*", zone_name = "healthmd.app" },
   { pattern = "www.healthmd.app/v/*", zone_name = "healthmd.app" },
   { pattern = "healthmd.app/v1/installs*", zone_name = "healthmd.app" },
-  { pattern = "www.healthmd.app/v1/installs*", zone_name = "healthmd.app" }
+  { pattern = "www.healthmd.app/v1/installs*", zone_name = "healthmd.app" },
+  { pattern = "healthmd.app/v1/web-events*", zone_name = "healthmd.app" },
+  { pattern = "www.healthmd.app/v1/web-events*", zone_name = "healthmd.app" }
 ]
 
 [triggers]
-# Delete click/install attribution older than 13 months and rate windows older than 24 hours.
+# Expire click/install attribution and website counters within their retention periods.
 crons = ["17 4 * * *"]
 
 [vars]

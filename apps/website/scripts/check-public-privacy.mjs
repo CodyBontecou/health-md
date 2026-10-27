@@ -15,6 +15,7 @@ export const publicPrivacyPages = [
   'apple-health-export/index.html',
   'apple-health-to-csv/index.html',
   'health-data-for-ai/index.html',
+  'health-connect-export/index.html',
 ];
 
 // These global promises contradict the optional retained-export pilot. A
@@ -117,7 +118,7 @@ export async function checkBuiltPublicPrivacy(outputRoot) {
     assert.equal(dates.get(`https://healthmd.app/${file}`), new Date(`${visibleDate} UTC`).toISOString().slice(0, 10),
       `${file}: built sitemap date does not match the visible legal revision`);
   }
-  for (const slug of ['export-apple-health-data-to-obsidian', 'local-first-health-data-architecture']) {
+  for (const slug of ['export-apple-health-data-to-obsidian', 'local-first-health-data-architecture', 'export-apple-health-sleep-data', 'apple-health-to-excel', 'apple-health-to-python', 'apple-health-to-google-sheets', 'analyze-apple-health-with-claude', 'apple-health-to-chatgpt', 'export-health-data-without-the-cloud', 'export-apple-health-workouts', 'export-apple-health-heart-rate', 'export-apple-health-hrv', 'export-apple-health-steps-data', 'export-apple-health-data-pdf']) {
     const source = await fs.readFile(path.join(ROOT, 'content/blog', `${slug}.md`), 'utf8');
     const updated = source.match(/^updated: "([^"]+)"$/m)[1].slice(0, 10);
     assert.equal(dates.get(`https://healthmd.app/blog/${slug}/`), updated, `${slug}: stale built blog revision date`);

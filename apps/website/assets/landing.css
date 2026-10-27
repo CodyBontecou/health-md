@@ -3372,3 +3372,33 @@ html:lang(zh-Hans) .hero-intro p {
     transform: none;
   }
 }
+
+.workflow-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-top: 24px;
+  list-style: none;
+}
+
+.workflow-links a,
+.workflow-link a {
+  color: var(--purple);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.workflow-link {
+  margin-top: 24px;
+}
+
+.workflow-links a:hover,
+.workflow-link a:hover {
+  color: var(--ink);
+}
+
+.workflow-links a:focus-visible,
+.workflow-link a:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 4px;
+}
