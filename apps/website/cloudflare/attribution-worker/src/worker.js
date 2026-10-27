@@ -7,6 +7,15 @@ import {
 import { FUNNEL_ENDPOINT } from "../../../assets/funnel-contract.js";
 import { handleWebFunnel } from "./web-funnel.js";
 
+// Known date-style YouTube links predate the current campaign-token format.
+// Recover their content intent without inventing store/install attribution.
+const LEGACY_GUIDE_REDIRECTS = Object.freeze({
+  "/v/yt-csv-0702": "/apple-health-to-csv/",
+  "/v/yt-obsidian-0702": "/blog/export-apple-health-data-to-obsidian/",
+  "/v/yt-obsidian-0703": "/blog/export-apple-health-data-to-obsidian/",
+  "/v/yt-obsidian-070312": "/blog/export-apple-health-data-to-obsidian/",
+});
+
 function referrerHost(request) {
   const raw = request.headers.get("referer") || request.headers.get("referrer");
   if (!raw) return null;
@@ -470,6 +479,18 @@ export default {
 
     if (url.pathname === "/health") {
       return jsonResponse({ ok: true, service: "healthmd-campaign-redirects" });
+    }
+
+    const legacyPath = url.pathname.replace(/\/$/, "");
+    if (Object.hasOwn(LEGACY_GUIDE_REDIRECTS, legacyPath)) {
+      return new Response(null, {
+        status: 301,
+        headers: {
+          location: new URL(LEGACY_GUIDE_REDIRECTS[legacyPath], "https://healthmd.app").href,
+          "cache-control": "public, max-age=3600",
+          "referrer-policy": "no-referrer",
+        },
+      });
     }
 
     const slug = slugFromRequest(request);

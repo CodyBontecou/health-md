@@ -70,15 +70,15 @@ function cleanSlug(slug) {
 export function parseCampaignSlug(rawSlug) {
   const slug = cleanSlug(rawSlug);
   if (!slug) return null;
-  if (explicitLinks[slug]) return explicitLinks[slug];
+  if (Object.hasOwn(explicitLinks, slug)) return explicitLinks[slug];
 
   const match = slug.match(/^([a-z]{1,4})-([a-z0-9]+)-([0-9]{3})$/);
   if (!match) return null;
 
   const [, platform, angle, sequence] = match;
+  if (!Object.hasOwn(platformLabels, platform) || !Object.hasOwn(angleConfig, angle)) return null;
   const platformLabel = platformLabels[platform];
   const angleDetails = angleConfig[angle];
-  if (!platformLabel || !angleDetails) return null;
 
   return {
     slug,

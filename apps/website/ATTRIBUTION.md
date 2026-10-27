@@ -261,6 +261,21 @@ Ads Exploration
 ppid=e9f90675-b5b1-4813-9e44-004cd1c84f90
 ```
 
+## Legacy short links
+
+The exact `LEGACY_GUIDE_REDIRECTS` allowlist in the Worker recovers known old
+date-style YouTube URLs with a permanent redirect to the relevant CSV or
+Obsidian guide. GET and HEAD are supported, including one trailing slash.
+These are content recovery links, not current-format campaign aliases: they
+do not create campaign-click records or store/install attribution. Incoming
+query parameters are discarded and destinations are fixed Health.md URLs.
+Unknown links still return 404; do not infer arbitrary legacy campaign tokens
+or redirect all unknown short links to the homepage.
+
+After deploying a change, verify each recovered URL reaches its canonical guide
+in one redirect and that the guide returns 200. Check a normal current-format
+campaign with HEAD to avoid adding synthetic campaign-click records.
+
 ## Test after deploy
 
 Use explicit user agents so each operating-system branch is covered:

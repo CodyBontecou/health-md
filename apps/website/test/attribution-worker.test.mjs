@@ -157,6 +157,45 @@ async function campaignRedirect(userAgent, extraHeaders = {}) {
   };
 }
 
+test("known legacy short links recover to fixed guides without attribution or query forwarding", async () => {
+  const legacyLinks = [
+    ["yt-csv-0702", "/apple-health-to-csv/"],
+    ["yt-obsidian-0702", "/blog/export-apple-health-data-to-obsidian/"],
+    ["yt-obsidian-0703", "/blog/export-apple-health-data-to-obsidian/"],
+    ["yt-obsidian-070312", "/blog/export-apple-health-data-to-obsidian/"],
+  ];
+  const noAttribution = {
+    waitUntil() { assert.fail("Legacy content redirects must not enqueue attribution"); },
+  };
+  const noStorage = {
+    prepare() { assert.fail("Legacy content redirects must not write attribution"); },
+  };
+  for (const [slug, destination] of legacyLinks) {
+    for (const method of ["GET", "HEAD"]) {
+      for (const suffix of ["", "/"]) {
+        const request = new Request(`https://www.healthmd.app/v/${slug}${suffix}?next=https://evil.example&ct=fake&token=private`, { method });
+        const response = await worker.fetch(request, { ...env, DB: noStorage }, noAttribution);
+        assert.equal(response.status, 301, `${method} ${slug}${suffix}`);
+        assert.equal(response.headers.get("location"), `https://healthmd.app${destination}`);
+        assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
+        assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+        assert.equal(response.headers.get("x-healthmd-attribution-warning"), null);
+        assert.equal(await response.text(), "");
+      }
+    }
+  }
+});
+
+test("legacy recovery remains exact and does not accept writes or unknown links", async () => {
+  for (const path of ["/v/yt-csv-0703", "/v/yt-obsidian-0703123", "/v/yt-csv-0702/extra", "/v/yt-csv-0702//", "/v/__proto__", "/v/constructor", "/v/yt-constructor-001", "/cdn-cgi/l/email-protection"]) {
+    const response = await worker.fetch(new Request(`https://healthmd.app${path}`), env, context);
+    assert.equal(response.status, 404, path);
+    assert.equal(response.headers.get("location"), null);
+  }
+  const response = await worker.fetch(new Request("https://healthmd.app/v/yt-csv-0702", { method: "POST" }), env, context);
+  assert.equal(response.status, 405);
+});
+
 test("valid Android install attribution is stored with only allowlisted fields", async () => {
   const database = new FakeD1Database();
   const response = await worker.fetch(
