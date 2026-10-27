@@ -385,21 +385,27 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
-    private suspend fun withNativeExportPreparation(transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities()), peerTransferCapabilities: TransferCapabilities? = TransferCapabilities(), dates: AgentBridgeDates = AgentBridgeDatesExact(AgentBridgeRange("2026-03-08", "2026-03-07"), "exact"), operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager) -> Unit) {
+    private suspend fun withNativeExportPreparation(transferNegotiation: TransferNegotiation? = TransferCapabilities().negotiatedWith(TransferCapabilities()), peerTransferCapabilities: TransferCapabilities? = TransferCapabilities(), dates: AgentBridgeDates = AgentBridgeDatesExact(AgentBridgeRange("2026-03-08", "2026-03-07"), "exact"), responseChannel: DirectSecureChannel? = null, operation: suspend (AgentBridgeExportPlanningFixture, AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest, HealthConnectClient, HealthConnectManager) -> Unit) {
         AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
-            val planner = ownedPlanner(f, lifecycle, mockk<DirectSecureChannel>(relaxed = true), transferNegotiation = transferNegotiation, peerTransferCapabilities = peerTransferCapabilities)
+            val planner = ownedPlanner(f, lifecycle, responseChannel ?: mockk<DirectSecureChannel>(relaxed = true), transferNegotiation = transferNegotiation, peerTransferCapabilities = peerTransferCapabilities)
             val request = nativeCaptureRequest(f, planner, listOf("steps"), dates)
             val client = mockk<HealthConnectClient>(relaxed = true)
             coEvery { client.permissionController.getGrantedPermissions() } returns setOf(HealthPermission.getReadPermission(StepsRecord::class))
             val manager = HealthConnectManager(mockk<Context>(relaxed = true), client)
             val preferenceReads = reads; val preferenceWrites = writes
+            var primaryFailure: Throwable? = null
             try { operation(f, planner, request, client, manager) }
+            catch (failure: Throwable) { primaryFailure = failure; throw failure }
             finally {
                 try {
-                    assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
-                    assertThat(reads).isEqualTo(preferenceReads); assertThat(writes).isEqualTo(preferenceWrites)
+                    try {
+                        assertThat(f.store.access { it!!.state.captureClaims!!.size }).isEqualTo(1)
+                        assertThat(reads).isEqualTo(preferenceReads); assertThat(writes).isEqualTo(preferenceWrites)
+                    } catch (validation: Throwable) {
+                        if (primaryFailure != null) primaryFailure.addSuppressed(validation) else throw validation
+                    }
                 } finally {
                     // Each mode owns a complete fixture, including its mock call graph.
                     // Restore the same class-scoped worker-boundary answers after cleanup.
@@ -1066,6 +1072,114 @@ class AgentBridgeNativeConfigurationReaderTest {
 
     @Test fun `native completion persists exact host receipts and source confirmation`() = runBlocking { checkNativeTransferSender("complete") }
     @Test fun `native Resume carries retained prefix and confirms original completion without capture`() = runBlocking { checkNativeTransferSender("complete-resume") }
+    @Test fun `native wire Execute captures once and confirms exact completion`() = runBlocking { checkNativeWireExecute("complete") }
+    @Test fun `native wire Execute Stop is handled and replays exact cancellation receipt`() = runBlocking { checkNativeWireExecute("stop") }
+    @Test fun `native wire Execute exact replay after plan expiry is metadata only`() = runBlocking { checkNativeWireExecute("replay") }
+    @Test fun `native wire Execute rejects changed idempotent bytes without recapture`() = runBlocking { checkNativeWireExecute("changed") }
+    @Test fun `native wire Execute rejects ACK prefix without treating it as Resume`() = runBlocking { checkNativeWireExecute("ack") }
+
+    private suspend fun checkNativeWireExecute(mode: String) {
+        val channel = mockk<DirectSecureChannel>(relaxed = true)
+        withNativeExportPreparation(responseChannel = channel) { f, session, request, client, manager ->
+            val agent = mutableListOf<AgentBridgeMessage>()
+            val base = mutableListOf<ReceivedEnvelope>()
+            val incoming = java.util.concurrent.LinkedBlockingQueue<Result<ReceivedAgentBridgePayload>>()
+            fun agentRequest(value: AgentBridgeExecuteRequest) { incoming.put(Result.success(ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("execute_request", value)))) }
+            fun <T> reply(type: String, serializer: kotlinx.serialization.SerializationStrategy<T>, payload: T) {
+                incoming.put(Result.success(ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode(type, serializer, payload)))))
+            }
+            agentRequest(request)
+            every { channel.close() } answers { incoming.offer(Result.failure(IOException("Synthetic peer closed"))); Unit }
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                secondArg<() -> Unit>()(); incoming.take().getOrThrow().also { secondArg<() -> Unit>()() }
+            }
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                thirdArg<() -> Unit>()(); agent += firstArg<AgentBridgeMessage>(); thirdArg<() -> Unit>()()
+            }
+            val opens = mutableListOf<TransferOpen>()
+            every { channel.sendV2ForAgentBridge(any(), any<kotlinx.serialization.SerializationStrategy<Any>>(), any<Any>(), any(), any()) } answers {
+                lastArg<() -> Unit>()()
+                val envelope = V2Codec.decode(V2Codec.encode(firstArg(), secondArg<kotlinx.serialization.SerializationStrategy<Any>>(), thirdArg()))
+                base += envelope
+                when (envelope.type) {
+                    "transfer_open" -> {
+                        val open = V2Codec.decodePayload(envelope, TransferOpen.serializer()); opens += open
+                        if (mode == "stop") incoming.put(Result.success(ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("cancel_request", stopRequest(request)))))
+                        else reply("transfer_disposition", TransferDisposition.serializer(), TransferDisposition(open.session.sessionId, open.session.jobId, open.partition.index, open.partition.sha256, TransferDispositionKind.NEEDED))
+                    }
+                    "transfer_finalize" -> {
+                        val final = V2Codec.decodePayload(envelope, TransferFinalize.serializer())
+                        reply("transfer_final_acknowledgement", TransferFinalAcknowledgement.serializer(), TransferFinalAcknowledgement(final.sessionId, final.jobId, true, final.totalPartitions, final.totalBytes, final.finalPartitionSha256))
+                        val manifest = agent.single { it.type == "artifact_manifest" }.payload as AgentBridgeArtifactManifest
+                        val bytes = AgentBridgeCodec.encode(manifest)
+                        manifest.artifacts.forEach { incoming.put(Result.success(ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("commit_receipt", nativeHostCommit(it, request, bytes, false))))) }
+                    }
+                }
+                lastArg<() -> Unit>()()
+            }
+            var chunks = 0
+            every { channel.sendTransferChunkForAgentBridge(any(), any(), any(), any(), any()) } answers {
+                lastArg<() -> Unit>()()
+                val id = firstArg<String>(); val sequence = secondArg<Int>(); val bytes = thirdArg<ByteArray>()
+                BinaryTransferFrame.encode(id, sequence, bytes); chunks++
+                reply("transfer_chunk_acknowledgement", TransferChunkAcknowledgement.serializer(), TransferChunkAcknowledgement(id, sequence, true, AgentBridgeCodec.sha256(bytes)))
+                val open = opens.last(); assertThat(id).isEqualTo(open.partition.transferId)
+                if (sequence.toLong() == open.partition.chunkCount) reply("transfer_partition_acknowledgement", TransferPartitionAcknowledgement.serializer(), TransferPartitionAcknowledgement(open.session.sessionId, open.session.jobId, open.partition.index, id, open.partition.sha256, true))
+                lastArg<() -> Unit>()()
+            }
+            val values = mockk<AggregationResult>(); every { values[StepsRecord.COUNT_TOTAL] } returns 123L
+            coEvery { client.aggregate(any()) } answers {
+                assertThat((agent.first().payload as AgentBridgeExecutionReceipt).status).isEqualTo(AgentBridgeExecutionReceiptStatus.ACCEPTED)
+                assertThat(f.store.access { it!!.state.acceptedJobs!!.size }).isEqualTo(1)
+                values
+            }
+            val resolution = Json.decodeFromString<AgentBridgeRequestSettingsResolution>(f.store.access { it!!.state.plans.single().resolutionCanonical })
+            suspend fun receive() = session.receiveAndHandleExecutionNext(channel, manager, journalRenderer(resolution), confirmedStopIsHandled = true)
+            assertThat(receive()).isNull()
+            assertThat(agent.map { it.type }).containsExactly("execution_receipt", "artifact_manifest", "execution_receipt").inOrder()
+            val accepted = agent.first().payload as AgentBridgeExecutionReceipt
+            val completed = agent.last().payload as AgentBridgeExecutionReceipt
+            assertThat(accepted.sourceAcknowledged).isFalse()
+            assertThat(completed.sourceAcknowledged).isTrue(); assertThat(completed.status).isEqualTo(if (mode == "stop") AgentBridgeExecutionReceiptStatus.CANCELLED else AgentBridgeExecutionReceiptStatus.COMPLETE)
+            assertThat(completed.requestSha256).isEqualTo(AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)))
+            assertThat(opens.size).isEqualTo(if (mode == "stop") 1 else 2)
+            assertThat(chunks.toLong()).isEqualTo(if (mode == "stop") 0L else opens.sumOf { it.partition.chunkCount })
+            assertThat(base.count { it.type == "completion_confirmed" }).isEqualTo(if (mode == "stop") 0 else 1)
+            verify(exactly = 0) { channel.close() }
+            if (mode == "stop") {
+                val ledger = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+                val before = Files.readAllBytes(ledger); val writesBefore = agent.size + base.size + chunks
+                incoming.put(Result.success(ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("cancel_request", stopRequest(request)))))
+                assertThat(receive()).isNull(); assertThat(agent.last().payload).isEqualTo(completed)
+                assertThat(agent.size + base.size + chunks).isEqualTo(writesBefore + 1)
+                assertThat(Files.readAllBytes(ledger)).isEqualTo(before)
+                verify(exactly = 0) { channel.close() }
+            } else if (mode != "complete") {
+                val ledger = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+                val before = Files.readAllBytes(ledger)
+                val writesBefore = agent.size + base.size + chunks
+                f.clock.now = f.clock.now.plusSeconds(600)
+                if (mode == "ack") {
+                    val open = opens.first(); val part = open.partition
+                    reply("transfer_partition_acknowledgement", TransferPartitionAcknowledgement.serializer(), TransferPartitionAcknowledgement(open.session.sessionId, open.session.jobId, 0, part.transferId, part.sha256, true))
+                }
+                agentRequest(if (mode == "changed") request.copy(requestId = AgentBridgeExportPlanningFixture.id(84)) else request)
+                if (mode == "replay") {
+                    assertThat(receive()).isNull(); assertThat(agent.last().payload).isEqualTo(accepted)
+                    assertThat(agent.size + base.size + chunks).isEqualTo(writesBefore + 1)
+                    verify(exactly = 0) { channel.close() }
+                } else {
+                    try { receive(); throw AssertionError("Changed bytes or ACK-prefixed Execute admitted") }
+                    catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED) }
+                    assertThat(agent.size + base.size + chunks).isEqualTo(writesBefore)
+                    verify(atLeast = 1) { channel.close() }
+                }
+                assertThat(Files.readAllBytes(ledger)).isEqualTo(before)
+            }
+            coVerify(exactly = 2) { client.aggregate(any()) }
+        }
+    }
+
     @Test fun `native wire Resume replays original acceptance before immutable transfer`() = runBlocking { checkNativeTransferSender("wire-resume") }
     @Test fun `native wire Resume reconciles a lost partition ACK without recapture`() = runBlocking { checkNativeTransferSender("wire-lost-ack") }
     @Test fun `native wire Resume accepts zero prefix without fabricating an ACK`() = runBlocking { checkNativeTransferSender("wire-zero-prefix") }

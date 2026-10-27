@@ -1102,11 +1102,11 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         if let originalFailure { throw originalFailure }
     }
 
-    private func withNativeExportPreparation(transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), peerTransferCapabilities: DirectTransferCapabilities? = .current, _ operation: (Rig, AgentBridgeNativePlanningSession, AgentBridgeExecute, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
+    private func withNativeExportPreparation(transferNegotiation: DirectTransferNegotiation? = DirectTransferCapabilities.current.negotiated(with: .current), peerTransferCapabilities: DirectTransferCapabilities? = .current, responseChannel: DirectSecureChannel? = nil, _ operation: (Rig, AgentBridgeNativePlanningSession, AgentBridgeExecute, FakeHealthStore, HealthKitManager) async throws -> Void) async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
         _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
-        let channel = DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
+        let channel = responseChannel ?? DirectSecureChannel(packetConnection: NativePlanningResponsePackets(), sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
         let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel, transferNegotiation: transferNegotiation, peerTransferCapabilities: peerTransferCapabilities)
         let request = try nativeCaptureRequest(rig, planner: planner)
         let store = FakeHealthStore()
@@ -1769,6 +1769,134 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
 
     func testNativeCompletionRequiresExactHostReceiptsAndPersistsReplay() async throws { try await checkNativeTransferSender("complete") }
     func testNativeResumeCarriesRetainedPrefixAndConfirmsOriginalCompletionWithoutCapture() async throws { try await checkNativeTransferSender("complete-resume") }
+    func testNativeWireExecuteCapturesOnceAndConfirmsExactCompletion() async throws { try await checkNativeWireExecute("complete") }
+    func testNativeWireExecuteStopIsHandledAndReplaysExactCancellationReceipt() async throws { try await checkNativeWireExecute("stop") }
+    func testNativeWireExecuteExactReplayAfterPlanExpiryIsMetadataOnly() async throws { try await checkNativeWireExecute("replay") }
+    func testNativeWireExecuteRejectsChangedIdempotentBytesWithoutRecapture() async throws { try await checkNativeWireExecute("changed") }
+    func testNativeWireExecuteRejectsACKPrefixWithoutTreatingItAsResume() async throws { try await checkNativeWireExecute("ack") }
+
+    private func checkNativeWireExecute(_ mode: String) async throws {
+        let key = SymmetricKey(data: Data(repeating: 29, count: 32))
+        let peer = NativeExecuteWireState()
+        let enqueue: @MainActor @Sendable (Data) throws -> Void = { bytes in
+            let wire = try XCTUnwrap(peer.wire)
+            wire.appendInbound(try self.nativeResponsePacket(bytes, sequence: UInt64(peer.nextSequence), key: key))
+            peer.gates[peer.nextSequence].release(); peer.nextSequence += 1
+        }
+        let wire = NativePlanningResponsePackets(afterWrite: {
+            try await MainActor.run {
+                let packet = try XCTUnwrap(peer.wire?.packets.last)
+                guard case .encrypted(let frame) = packet else { throw AgentBridgeValidationError.invalidRequest }
+                let bytes = Data(try ManualIPSyncSecurity.open(frame, using: key).dropFirst(16))
+                if DirectTransferBinaryFrame.isBinaryFrame(bytes) {
+                    let chunk = try DirectTransferBinaryFrame.decode(bytes).chunk
+                    peer.chunks += 1
+                    try enqueue(JSONEncoder().encode(DirectMessage.transferChunkAcknowledgement(.init(transferID: chunk.transferID,
+                        sequence: chunk.sequence, accepted: true, sha256: chunk.sha256))))
+                    let open = try XCTUnwrap(peer.opens.last)
+                    XCTAssertEqual(chunk.transferID, open.partition.transferID)
+                    if chunk.sequence == open.partition.chunkCount {
+                        try enqueue(JSONEncoder().encode(DirectMessage.transferPartitionAcknowledgement(.init(sessionID: open.session.sessionID,
+                            jobID: open.session.jobID, partitionIndex: open.partition.index, transferID: chunk.transferID,
+                            partitionSHA256: open.partition.sha256, accepted: true))))
+                    }
+                } else if let envelope = try? AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes) {
+                    peer.agent.append(envelope)
+                } else {
+                    let message = try JSONDecoder().decode(DirectMessage.self, from: bytes)
+                    peer.base.append(message)
+                    switch message {
+                    case .transferOpen(let open):
+                        peer.opens.append(open)
+                        if mode == "stop" {
+                            try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(self.cancellationRequest(XCTUnwrap(peer.request))))))
+                        } else {
+                            try enqueue(JSONEncoder().encode(DirectMessage.transferDisposition(.init(sessionID: open.session.sessionID,
+                                jobID: open.session.jobID, partitionIndex: open.partition.index, partitionSHA256: open.partition.sha256, disposition: .needed))))
+                        }
+                    case .transferFinalize(let final):
+                        try enqueue(JSONEncoder().encode(DirectMessage.transferFinalAcknowledgement(.init(sessionID: final.sessionID,
+                            jobID: final.jobID, accepted: true, totalPartitions: final.totalPartitions, totalBytes: final.totalBytes,
+                            finalPartitionSHA256: final.finalPartitionSHA256))))
+                        let request = try XCTUnwrap(peer.request)
+                        guard let envelope = peer.agent.first(where: { if case .manifest = $0.payload { true } else { false } }),
+                              case .manifest(let manifest) = envelope.payload else { throw AgentBridgeValidationError.invalidRequest }
+                        let manifestBytes = try AgentBridgeV4Codec.encode(manifest)
+                        for artifact in manifest.artifacts {
+                            let receipt = try self.nativeHostCommit(artifact, request: request, manifest: manifestBytes)
+                            try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .commit(receipt))))
+                        }
+                    default: break
+                    }
+                }
+            }
+        }, beforeReceive: {
+            let gate = await MainActor.run {
+                let gate = peer.gates[peer.consumed]; peer.consumed += 1; return gate
+            }
+            await gate.wait()
+        }, onCancel: { Task { @MainActor in peer.gates.forEach { $0.release() } } })
+        peer.wire = wire
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic Execute peer")
+        defer { channel.cancel(); peer.wire = nil }
+        try await withNativeExportPreparation(responseChannel: channel) { rig, session, request, store, manager in
+            peer.request = request
+            store.querySumResult = { _, _ in
+                guard case .receipt(let accepted)? = peer.agent.first?.payload else { XCTFail("SDK read before acceptance"); return 0 }
+                XCTAssertEqual(accepted.status, .accepted)
+                return 123
+            }
+            try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .execute(request))))
+            let received = try await session.receiveAndHandleExecutionNext(on: channel, manager: manager, confirmedStopIsHandled: true)
+            XCTAssertNil(received)
+            guard peer.agent.count == 3 else { return XCTFail("Missing accepted/manifest/completion sequence") }
+            guard case .receipt(let accepted) = peer.agent[0].payload, case .manifest = peer.agent[1].payload,
+                  case .receipt(let completed) = peer.agent[2].payload else { return XCTFail("Missing accepted/manifest/completion sequence") }
+            XCTAssertFalse(accepted.sourceAcknowledged); XCTAssertTrue(completed.sourceAcknowledged)
+            XCTAssertEqual(completed.status, mode == "stop" ? .cancelled : .complete); XCTAssertEqual(completed.requestSha256.rawValue, try AgentBridgeV4Codec.digest(request))
+            XCTAssertEqual(peer.opens.count, mode == "stop" ? 1 : 2)
+            XCTAssertEqual(peer.chunks, mode == "stop" ? 0 : peer.opens.reduce(0) { $0 + $1.partition.chunkCount })
+            XCTAssertEqual(peer.base.filter { if case .completionConfirmed = $0 { true } else { false } }.count, mode == "stop" ? 0 : 1)
+            XCTAssertFalse(channel.isLocallyTerminal)
+            if mode == "stop" {
+                let ledger = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+                let writesBefore = wire.packets.count
+                try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(self.cancellationRequest(request)))))
+                let result = try await session.receiveAndHandleExecutionNext(on: channel, manager: manager, confirmedStopIsHandled: true)
+                XCTAssertNil(result)
+                guard case .receipt(let replay)? = peer.agent.last?.payload else { return XCTFail("Missing Stop replay") }
+                XCTAssertEqual(replay, completed); XCTAssertEqual(wire.packets.count, writesBefore + 1)
+                XCTAssertEqual(try Data(contentsOf: ledger), before); XCTAssertFalse(channel.isLocallyTerminal)
+            } else if mode != "complete" {
+                let ledger = rig.directory.appendingPathComponent("state.json"), before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+                let writesBefore = wire.packets.count
+                rig.clock.advance(seconds: 600)
+                if mode == "ack" {
+                    let open = try XCTUnwrap(peer.opens.first)
+                    try enqueue(JSONEncoder().encode(DirectMessage.transferPartitionAcknowledgement(.init(sessionID: open.session.sessionID,
+                        jobID: open.session.jobID, partitionIndex: 0, transferID: open.partition.transferID,
+                        partitionSHA256: open.partition.sha256, accepted: true))))
+                }
+                let retry = mode == "changed" ? try AgentBridgeExecute(approval: request.approval, idempotencyKey: request.idempotencyKey,
+                    jobId: request.jobId, plan: request.plan, requestId: id(84)) : request
+                try enqueue(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .execute(retry))))
+                if mode == "replay" {
+                    let result = try await session.receiveAndHandleExecutionNext(on: channel, manager: manager, confirmedStopIsHandled: true)
+                    XCTAssertNil(result)
+                    guard case .receipt(let replay)? = peer.agent.last?.payload else { return XCTFail("Missing replay receipt") }
+                    XCTAssertEqual(replay, accepted); XCTAssertEqual(wire.packets.count, writesBefore + 1)
+                    XCTAssertFalse(channel.isLocallyTerminal)
+                } else {
+                    do { _ = try await session.receiveAndHandleExecutionNext(on: channel, manager: manager, confirmedStopIsHandled: true); XCTFail("Changed bytes or ACK-prefixed Execute admitted") }
+                    catch { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+                    XCTAssertEqual(wire.packets.count, writesBefore); XCTAssertTrue(channel.isLocallyTerminal)
+                }
+                XCTAssertEqual(try Data(contentsOf: ledger), before)
+            }
+            XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
+        }
+    }
+
     func testNativeWireResumeReplaysOriginalAcceptanceBeforeImmutableTransfer() async throws { try await checkNativeTransferSender("wire-resume") }
     func testNativeWireResumeReconcilesLostPartitionACKWithoutRecapture() async throws { try await checkNativeTransferSender("wire-lost-ack") }
     func testNativeWireResumeAcceptsZeroPrefixWithoutFabricatingACK() async throws { try await checkNativeTransferSender("wire-zero-prefix") }
@@ -5991,6 +6119,17 @@ private final class Rig {
     }
 }
 
+@MainActor private final class NativeExecuteWireState {
+    var wire: NativePlanningResponsePackets?
+    var request: AgentBridgeExecute?
+    var agent: [AgentBridgeEnvelope] = []
+    var base: [DirectMessage] = []
+    var opens: [DirectTransferOpen] = []
+    var chunks = 0
+    var nextSequence = 0
+    var consumed = 0
+    let gates = (0..<32).map { _ in NativePreparationTestGate() }
+}
 @MainActor private final class NativeTransferWriteState { var count = 0 }
 @MainActor private final class NativeTransferStopState { var nextReceive = 0; var received = false }
 
