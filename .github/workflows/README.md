@@ -60,6 +60,22 @@ disable the unused compiler index store. The native XCFramework still
 contains all five previously qualified target architectures. Test results are
 never restored from a cache.
 
+macOS unit tests compile once with coverage enabled. Xcode enumerates the complete
+compiled XCTest and Swift Testing method inventory; four workers receive a
+balanced, exhaustive partition of those methods. Each worker restores the same
+current-run archive, checks its source/run/attempt and SDK provenance, and runs
+its selection with the existing 120/300-second method allowances. Test results
+are never cached. Explicit runtime skips remain visible in the retained method
+inventory and summary.
+
+The stable `test-macos` collector requires successful preparation and every
+worker, verifies actual xcresult methods against the compiled inventory, then
+merges all four result bundles. The existing coverage threshold, warning checks,
+generated-documentation checks, named automation receipts and tested QA candidate
+remain downstream of that complete merged result. Missing, duplicate, stale,
+failed or unexpected methods reject qualification. Native-generated automation
+reference text is collected from its executing worker; conflicting copies fail.
+
 The fourteen existing phone UI cases plus three history cases run across three
 phone shards; a fourth shard runs four App Review/history cases on iPad. The
 same history method intentionally runs once per device family. Entire XCTest

@@ -37,11 +37,16 @@ class WorkflowRoutingTests(unittest.TestCase):
                     self.assertIn("needs: [changes, prepare-ui-artifacts, ios-ui-shards]", blocks[job])
                     self.assertIn("test \"$SHARDS_RESULT\" = success", blocks[job])
                     self.assertIn("ios_ui_shards.py verify", blocks[job])
+                elif output == "macos":
+                    self.assertIn("if: ${{ always() && needs.changes.outputs.macos == 'true' }}", blocks[job])
+                    self.assertIn("needs: [changes, prepare-shared-core, prepare-macos-artifacts, macos-native-shards]", blocks[job])
+                    self.assertIn('test "$SHARDS_RESULT" = success', blocks[job])
+                    self.assertIn('test "$PRODUCTS_RESULT" = success', blocks[job])
                 elif output == "prepare":
                     self.assertIn("always() && needs.changes.outputs.prepare == 'true'", blocks[job])
                 else:
                     self.assertIn(f"if: ${{{{ needs.changes.outputs.{output} == 'true' }}}}", blocks[job])
-                if output in {"ios", "macos"}:
+                if output == "ios":
                     self.assertIn("needs: [changes, prepare-shared-core]", blocks[job])
                     self.assertIn("name: apple-sdk27-shared-core", blocks[job])
                 self.assertIn(f"      {output}: ${{{{ steps.detect.outputs.{output} }}}}", blocks["changes"])
@@ -83,7 +88,7 @@ class WorkflowRoutingTests(unittest.TestCase):
 
     def test_all_original_test_commands_and_ui_coverage_remain(self):
         workflow = WORKFLOW.read_text()
-        for command in ("make test-ios CORE_RUST_PREPARE=:", "make coverage CORE_RUST_PREPARE=:",
+        for command in ("make test-ios CORE_RUST_PREPARE=:", "python3 scripts/native_test_shards.py combine",
                         "make check-export-docs-after-tests", "scripts/check-coverage.sh build/coverage/HealthMd.xcresult",
                         "swift test --package-path apps/apple/Packages/HealthMdConnectivity"):
             self.assertIn(command, workflow)
@@ -201,23 +206,45 @@ class WorkflowRoutingTests(unittest.TestCase):
 
 
     def test_macos_prebuild_preserves_bounded_execution_and_warning_coverage_gates(self):
-        native = jobs()['test-macos']
-        build = native.split('      - name: Build macOS unit-test products\n', 1)[1].split('      - name:', 1)[0]
-        execution = native.split('      - name: Run macOS unit tests with coverage\n', 1)[1].split('      - name:', 1)[0]
-        self.assertIn('    timeout-minutes: 75\n', native)
+        blocks = jobs()
+        producer, worker, native = (blocks[name] for name in ('prepare-macos-artifacts', 'macos-native-shards', 'test-macos'))
+        build = producer.split('      - name: Build macOS unit-test products\n', 1)[1].split('      - name:', 1)[0]
+        execution = worker.split('      - name: Execute complete selected native methods with coverage\n', 1)[1].split('      - name:', 1)[0]
         self.assertIn('timeout-minutes: 25', build)
         self.assertIn('timeout-minutes: 45', execution)
-        self.assertLess(native.index('make build-macos-tests'), native.index('make coverage'))
+        self.assertIn('MACOS_CODE_COVERAGE=YES', build)
+        self.assertIn('MACOS_DERIVED_DATA_DIR=build/macos-qa-derived', build)
+        self.assertIn('| tee build/logs/build-macos.log', build)
+        self.assertIn('native_test_shards.py prepare', producer)
+        self.assertIn('shard: [0, 1, 2, 3]', worker)
+        self.assertIn('fail-fast: false', worker)
+        self.assertIn('native_test_shards.py run', execution)
+        self.assertIn('--prepared-sha256', execution)
+        self.assertIn("needs: [changes, prepare-shared-core, prepare-macos-artifacts]", worker)
+        for job in (producer, worker, native):
+            self.assertIn('name: apple-sdk27-shared-core', job)
+            self.assertIn('compare-history-sdk27-receipts.py', job)
+            self.assertNotIn('continue-on-error', job)
         for step in (build, execution):
             self.assertIn('set -euo pipefail', step)
-            self.assertIn('MACOS_DERIVED_DATA_DIR=build/macos-qa-derived', step)
             self.assertNotIn('TEST_FILTER', step)
-        self.assertIn('MACOS_CODE_COVERAGE: \'YES\'', native)
-        self.assertIn('| tee build/logs/build-macos.log', build)
-        self.assertIn('| tee -a build/logs/build-macos.log', execution)
+        self.assertIn('native_test_shards.py combine', native)
+        self.assertIn('--result build/coverage/HealthMd.xcresult', native)
+        self.assertLess(native.index('native_test_shards.py combine'), native.index('Retain tested macOS QA candidate'))
         self.assertIn('scripts/check-warnings.sh build/logs/build-macos.log', native)
         self.assertIn('scripts/check-coverage.sh build/coverage/HealthMd.xcresult', native)
-        self.assertNotIn('continue-on-error', native)
+        self.assertIn('make check-export-docs-after-tests', native)
+        self.assertIn('ci-automation-test-receipt.py', native)
+
+    def test_macos_collector_executes_only_after_every_native_prerequisite_succeeds(self):
+        native = jobs()['test-macos']
+        step = native.split('      - name: Require every native producer and shard\n', 1)[1].split('      - name:', 1)[0]
+        script = "\n".join(line[10:] for line in step.split('        run: |\n', 1)[1].splitlines())
+        for products, workers in itertools.product(('success', 'failure', 'cancelled', 'skipped', ''), repeat=2):
+            result = subprocess.run(['bash', '-c', script], capture_output=True, text=True,
+                                    env=dict(os.environ, PRODUCTS_RESULT=products, SHARDS_RESULT=workers))
+            with self.subTest(products=products, workers=workers):
+                self.assertEqual(result.returncode == 0, products == workers == 'success')
 
     def test_macos_make_prebuild_and_execution_share_products_without_test_filtering(self):
         def command(target):
