@@ -324,11 +324,14 @@ test("scheduled retention deletes only expired aggregate attribution state", asy
   );
   await retentionPromise;
 
-  assert.equal(database.batchStatements.length, 3);
+  assert.equal(database.batchStatements.length, 5);
   const statements = database.batchStatements.map((statement) => statement.sql);
   assert.ok(statements.some((sql) => sql.startsWith("DELETE FROM campaign_clicks")));
   assert.ok(statements.some((sql) => sql.startsWith("DELETE FROM campaign_installs")));
   assert.ok(statements.some((sql) => sql.startsWith("DELETE FROM campaign_ingest_windows")));
+  const funnelDelete = database.batchStatements.find(statement => statement.sql.startsWith("DELETE FROM web_funnel_daily"));
+  assert.equal(funnelDelete.values[0], "2025-03-01");
+  assert.ok(statements.some(sql => sql.startsWith("DELETE FROM web_funnel_ingest_windows")));
   assert.equal(statements.some((sql) => /ip|user_agent|request_id/i.test(sql)), false);
   const clickDelete = database.batchStatements.find((statement) =>
     statement.sql.startsWith("DELETE FROM campaign_clicks"));
