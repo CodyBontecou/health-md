@@ -12,7 +12,7 @@ available, then switch them together to avoid pending checks or an unprotected g
 concurrently on every PR and main/testing push. Every group must pass from current,
 clean source within 90 seconds, and the complete workflow must fit 120 seconds including
 queue, checkout, toolchain setup, dependencies, caches and reporting. The final gate
-runs in the same job, avoiding a fifth runner assignment and artifact transfers.
+runs in the same job, avoiding another runner assignment and artifact transfers.
 
 See [the retained test strategy](../../docs/qa/two-minute-ci.md) for exact coverage,
 retired native/browser/build surfaces, local commands and timing evidence. No retired
@@ -70,19 +70,19 @@ The canonical release path starts from a draft GitHub Release whose tag starts w
 
 Dispatch from `main` with `release_tag=v<version>`. Apple versions use `v<major>.<minor>[.<patch>]`; the tag must exist on `origin`, its commit and the workflow commit must be reachable from `origin/main`, and the tag version must match every committed `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`. The resolver also requires an existing draft GitHub Release before qualification for a non-dry-run manual submission. It never creates a source ledger after an upload.
 
-Before building, each workflow resolves the tag to an immutable SHA and runs the full Apple CI suite (`apple-ci.yml`) against it. The release job checks out **that same SHA**, not the dispatch branch head. Native tests, UI regressions, coverage, warnings, the connectivity package, and the workflow-policy job must all pass; a failed, cancelled, or skipped required job blocks the release. Release callers and reusable CI have distinct concurrency namespaces. Exact-SHA qualification groups are isolated by caller and run ID and cannot cancel their parent or another release; ordinary branch CI still cancels superseded runs.
+Before building, each workflow resolves the tag to an immutable SHA and invokes the portable CI gate through `apple-ci.yml` against it. The qualification job grants `contents: read` for source access and `actions: read` for the final run-timing check; Android release qualification grants the same permissions. The release job checks out **that same SHA**, not the dispatch branch head. All six portable regression groups and the final timing gate must pass; failed, cancelled, or skipped qualification blocks the release. Native tests, UI regressions, coverage, connectivity-package tests, and historical workflow-policy suites are explicit diagnostics, not release qualification requirements. Release callers and reusable CI have distinct concurrency namespaces. Exact-SHA qualification groups are isolated by caller and run ID and cannot cancel their parent or another release; ordinary branch CI still cancels superseded runs.
 
 Workflow-only recovery may dispatch newer `main` workflow code with the original `release_tag`. The release tag must be an ancestor of that workflow SHA, and the diff may change only `.github/workflows/`, `.github/actions/`, or `.github/scripts/`. Qualification and archives still use the original tag's product source, without an overlay from newer `main`. A product, dependency, build-script, version, or metadata fix needs a newly committed and tagged release; never move an existing release tag. Recovery can load the current workflow's source-policy script from Git into `$RUNNER_TEMP` even when the original tag predates that script.
 
 Both release jobs recheck the clean, qualified checkout and pushed tag object at checkout, immediately before and after archiving, and before publication. Staged, unstaged, and non-ignored untracked files fail closed; ignored build products are allowed. The macOS workflow does not remove package references or otherwise edit the tagged project to avoid package networking. Any required project change must be committed, qualified, and released as new source. Summaries record the archived source SHA separately from the executing workflow SHA.
 
-Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it. Human publication remains a legacy fallback, not the canonical submission path. Non-Apple tags (`healthmd-cli/v*`, `android/v*`) and bot-authored publications skip resolution, qualification, and release jobs, so they do not launch duplicate full Apple suites. Untagged branch dispatch is supported only with `dry_run=true`: it qualifies and archives the exact dispatch SHA and cannot upload or submit.
+Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it. Human publication remains a legacy fallback, not the canonical submission path. Non-Apple tags (`healthmd-cli/v*`, `android/v*`) and bot-authored publications skip resolution, qualification, and release jobs, so they do not launch duplicate Apple release qualification runs. Untagged branch dispatch is supported only with `dry_run=true`: it qualifies and archives the exact dispatch SHA and cannot upload or submit.
 
-The lightweight policy regressions run on Ubuntu in Apple CI and are included in its final gate. Release-workflow and `.github/scripts/**` changes are in both Apple CI path maps. To run them locally without signing or a native build (Python with `PyYAML==6.0.3`, Git, Bash, and jq):
+The historical Apple policy tests remain available as explicit diagnostics; some still describe the retired native CI layout and are not part of the portable gate. The release-source tests exercise immutable source identity without signing or a native build (Python with `PyYAML==6.0.3`, Git, Bash, and jq):
 
 ```sh
-python3 -m unittest discover -s .github/scripts/tests -p 'test_apple_*.py' -v
-actionlint .github/workflows/apple-ci.yml .github/workflows/release-ios.yml .github/workflows/release-macos.yml
+python3 -m unittest discover -s .github/scripts/tests -p 'test_apple_release_source.py' -v
+actionlint .github/workflows/ci.yml .github/workflows/apple-ci.yml .github/workflows/release-ios.yml .github/workflows/release-macos.yml
 ```
 
 The tests use local synthetic Git remotes and a stubbed release-record read; they never dispatch workflows, push, access signing credentials, or perform store operations.
@@ -160,16 +160,16 @@ Homebrew runbooks, and mobile compatibility requirements are documented in
 [`release-evidence-template.md`](../../apps/cli/docs/release-evidence-template.md) per candidate.
 Azure uses an environment-scoped federated credential and the minimum Artifact Signing Certificate
 Profile Signer role; it does not use a client secret. Pull requests
-never receive signing credentials and produce unsigned smoke candidates only. A missing signing
+never receive signing credentials. CLI distribution builds run on release tags only. A missing signing
 input, rejected notarization, absent timestamp, checksum mismatch, stale/extra draft asset, or
 credential-upgrade failure leaves the release in draft state.
 
 ## Direct CLI wake Worker
 
-`.github/workflows/wake-ci.yml` owns the `apps/wake` source gate. It installs the component's locked
-Node dependencies, runs the cross-language-pinned HMAC and notification policy tests, type-checks
-the Worker, and builds a Wrangler dry-run bundle without credentials or deployment. Main pushes are
-path-scoped; pull requests always report the stable `Wake CI / Wake CI` context.
+The Wake group in `.github/workflows/ci.yml` runs `scripts/ci/wake.sh` on every PR and
+main/testing push as part of `CI / CI`. It installs the component's locked Node dependencies,
+runs the cross-language-pinned HMAC and notification policy tests, and type-checks the Worker.
+Wrangler dry-run bundling remains an explicit diagnostic, outside the portable gate.
 
 The live Worker remains an independently deployed, notification-only service with its own D1 and
 APNs secrets. Deployment is not coupled to CLI artifact publication and must use committed, pushed
