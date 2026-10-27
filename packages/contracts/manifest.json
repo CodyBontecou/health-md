@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "8addcb04239ed59873099116064d2711d6605b7e04809ff7e8c0638665726b92",
+      "sha256": "b0ac1412db346c9e80a0ef646ea8d460cc5b9ec309bc7fed0b9e836e32f46fa1",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -901,6 +901,40 @@
           "sha256": "5644b1af9471dad14d36a9b683e54aaa49a7024afb3771872633778a78b0a9c7",
           "provenance": "Reviewed synthetic ingest request manifest for an Apple complete health-data daily upload whose informational record_count deliberately disagrees with byte_count, proving counts never reject or reclassify; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
           "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.watch_snapshot",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Bounded manual Watch-local activity snapshot with explicit missingness and purpose/account-bound backend acknowledgement; source implementation awaits physical networking and receiver qualification.",
+      "specification": "packages/contracts/watch-snapshot/v1/contract.md",
+      "authorities": [
+        "packages/contracts/watch-snapshot/v1/contract.md"
+      ],
+      "implementations": [
+        "apps/apple/Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportContract.swift",
+        "apps/apple/Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportService.swift",
+        "apps/apple/Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportHTTP.swift",
+        "apps/apple/HealthMdWatch/WatchExportCaptureProvider.swift"
+      ],
+      "consumers": [
+        "apps/apple/Packages/HealthMdWatchExport/Tests/HealthMdWatchExportTests/WatchExportCaptureTests.swift",
+        "apps/apple/Packages/HealthMdWatchExport/Tests/HealthMdWatchExportTests/WatchExportServiceTests.swift",
+        "apps/apple/Packages/HealthMdWatchExport/Tests/HealthMdWatchExportTests/WatchExportHTTPTests.swift"
+      ],
+      "documentation": [
+        "apps/apple/docs/features/watch-api-sync.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/watch-snapshot/v1/fixtures/watch-snapshot-v1.json",
+          "sha256": "4c08ecfe86c686c039e894a88c3080d0aba34148b86b07cf3e55546a8a284a4d",
+          "provenance": "Hand-authored synthetic zero/missing/failed capture; the production Swift encoder is compared structurally to the packaged mirror in WatchExportCaptureTests.",
+          "mirrors": [
+            "apps/apple/Packages/HealthMdWatchExport/Tests/HealthMdWatchExportTests/Fixtures/watch-snapshot-v1.json"
+          ]
         }
       ]
     }

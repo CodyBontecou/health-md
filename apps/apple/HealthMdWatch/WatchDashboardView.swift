@@ -184,6 +184,10 @@ struct WatchDashboardView: View {
                     }
                     .disabled(viewModel.isLoading)
 
+                    NavigationLink("API Sync / Sync Now") {
+                        WatchExportView()
+                    }
+
                     metricGrid
                 }
                 .padding(.horizontal)

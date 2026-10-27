@@ -12,7 +12,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[4]
 WORKFLOW = REPO / ".github/workflows/apple-ci.yml"
 JOBS = {"prepare": "prepare-shared-core", "ios": "test-ios", "ios_ui": "test-ios-ui",
-        "macos": "test-macos", "connectivity": "connectivity-package", "policy": "workflow-policy"}
+        "macos": "test-macos", "connectivity": "connectivity-package", "watch": "build-watch", "policy": "workflow-policy"}
 
 
 def jobs():
@@ -36,7 +36,7 @@ class WorkflowRoutingTests(unittest.TestCase):
                     self.assertIn("ios_ui_shards.py verify", blocks[job])
                 else:
                     self.assertIn(f"if: ${{{{ needs.changes.outputs.{output} == 'true' }}}}", blocks[job])
-                if output in {"ios", "macos"}:
+                if output in {"ios", "macos", "watch"}:
                     self.assertIn("needs: [changes, prepare-shared-core]", blocks[job])
                     self.assertIn("name: apple-sdk27-shared-core", blocks[job])
                 self.assertIn(f"      {output}: ${{{{ steps.detect.outputs.{output} }}}}", blocks["changes"])

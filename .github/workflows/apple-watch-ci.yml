@@ -1,0 +1,75 @@
+name: Apple Watch CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/apple/HealthMdWatch/**'
+      - 'apps/apple/HealthMdWatchShared/**'
+      - 'apps/apple/HealthMdWatchWidgets/**'
+      - 'apps/apple/HealthMd.xcodeproj/**'
+      - 'apps/apple/Packages/HealthMdWatchExport/**'
+      - 'packages/contracts/**'
+      - 'apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift'
+      - 'apps/apple/HealthMdTests/Utilities/CIQualityGateTests.swift'
+      - 'apps/android/app/src/test/java/com/healthmd/exportcontract/ProductCapabilityManifestTest.kt'
+      - '.github/workflows/apple-ci.yml'
+      - '.github/workflows/apple-watch-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-watch-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  registry-projections:
+    name: Reproduce registry capability projections
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Regenerate from canonical inventories and compare
+        run: |
+          set -euo pipefail
+          python3 packages/healthmd-core-rust/scripts/tests/test_registry_capability_scope.py
+          python3 packages/healthmd-core-rust/scripts/import-native-registry.py
+          python3 packages/healthmd-core-rust/scripts/generate-registry-adapters.py
+          git diff --binary > registry-projections.patch
+          git diff --exit-code
+      - name: Preserve source-only projection diff for diagnosis
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: watch-registry-projections
+          path: registry-projections.patch
+          retention-days: 1
+
+  capture-upload-and-build:
+    name: Watch capture/upload regressions
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Validate contract inventory and mirrored fixture
+        run: python3 packages/contracts/validate.py
+      - name: Check planned Watch governance without native SDKs
+        run: python3 packages/contracts/test_watch_capability_governance.py
+      - name: Run dependency-free capture and upload behavior tests
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          mkdir -p apps/apple/build/watch-ci
+          swift test --package-path apps/apple/Packages/HealthMdWatchExport --jobs 2 \
+            2>&1 | tee apps/apple/build/watch-ci/tests.log
+      - name: Preserve bounded diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-watch-ci-diagnostics
+          path: apps/apple/build/watch-ci/*.log
+          retention-days: 7

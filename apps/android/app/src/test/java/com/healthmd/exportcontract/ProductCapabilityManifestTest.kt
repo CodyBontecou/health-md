@@ -45,6 +45,7 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
+                "export.watch-origin-manual-api",
                 "support.local-reporting-fallback",
             ),
             idsWithState(states, "planned"),
@@ -85,6 +86,32 @@ class ProductCapabilityManifestTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun watchOriginRemainsPlannedOnBothPlatformsWithoutDailyProfileClaims() {
+        val inventory = Json.parseToJsonElement(manifestFile().readText()).jsonObject
+        val watch = inventory.getValue("capabilities").jsonArray.map { it.jsonObject }.single {
+            it.getValue("id").jsonPrimitive.content == "export.watch-origin-manual-api"
+        }
+        assertEquals("planned", watch.getValue("classification").jsonPrimitive.content)
+        assertTrue("Watch snapshot is not a daily profile", watch.getValue("profiles").jsonArray.isEmpty())
+        val platforms = watch.getValue("platforms").jsonObject
+        val apple = platforms.getValue("apple").jsonObject
+        val android = platforms.getValue("android").jsonObject
+        assertEquals("planned", apple.getValue("state").jsonPrimitive.content)
+        assertEquals("planned", android.getValue("state").jsonPrimitive.content)
+        assertEquals(
+            "Qualify the healthmd.watch_snapshot v1 source path with physical Watch Wi-Fi/cellular uploads while the iPhone is unavailable, interruption/authorization checks, and backend account-bound idempotency receipts before release.",
+            apple.getValue("target").jsonPrimitive.content,
+        )
+        assertEquals(
+            "Wear OS watch-origin API export milestone: add reviewed local Health Services capture, secure destination setup, direct HTTPS delivery and retry; preserve the current phone-authoritative Wear snapshot and keep non-equivalent exercise/sensor statistics distinct.",
+            android.getValue("target").jsonPrimitive.content,
+        )
+        val evidence = watch.getValue("evidence").jsonArray.map { it.jsonPrimitive.content }
+        assertTrue(evidence.contains("packages/contracts/watch-snapshot/v1/contract.md"))
+        assertTrue(evidence.contains("apps/android/docs/features/wear-os.md"))
     }
 
     @Test
@@ -172,6 +199,7 @@ class ProductCapabilityManifestTest {
             "export.range-summary",
             "setup.share-portable-configuration",
             "account.myself_lifetime_claim",
+            "export.watch-origin-manual-api",
             "core.shared-rust-profile-engine",
             "support.local-reporting-fallback",
         )

@@ -217,8 +217,8 @@ final class CIQualityGateTests: XCTestCase {
         )
         XCTAssertEqual(
             content.components(separatedBy: "needs: [changes, prepare-shared-core]").count - 1,
-            3,
-            "All Xcode test jobs must consume the single prepared shared-core artifact"
+            4,
+            "The three Xcode test jobs and actual Watch build must consume one prepared artifact"
         )
         let runner = try source("scripts/ios_ui_shards.py")
         XCTAssertTrue(
@@ -288,7 +288,7 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertTrue(runner.contains("run-owned-ui.py"))
         XCTAssertTrue(content.contains("Qualify SDK27 compiler before native slice build"))
         XCTAssertTrue(content.contains("apple-shared-core-v2-"))
-        XCTAssertEqual(content.components(separatedBy: "python3 scripts/compare-history-sdk27-receipts.py").count - 1, 4)
+        XCTAssertEqual(content.components(separatedBy: "python3 scripts/compare-history-sdk27-receipts.py").count - 1, 5)
         let qualifier = try source("scripts/qualify-history-authorization-sdk27.sh")
         XCTAssertTrue(qualifier.contains("Xcode 27.0\\nBuild version 27A266a"))
         XCTAssertTrue(qualifier.contains("swiftlang-6.4.0.34.1 clang-2100.3.34.1"))
@@ -348,6 +348,226 @@ final class CIQualityGateTests: XCTestCase {
             content.contains("test-ios-ui:"),
             "UI regressions must run in a job parallel to iOS unit tests"
         )
+    }
+
+    func testWorkflow_exactFiveConsumersValidateOneSharedCoreArtifactAndRemainBlocking() throws {
+        let content = try String(contentsOfFile: appleCIWorkflowPath, encoding: .utf8)
+        let jobs = try workflowJobs(content)
+        let consumers: Set<String> = ["test-ios", "test-macos", "prepare-ui-artifacts", "ios-ui-shards", "build-watch"]
+        let artifactName = "name: apple-sdk27-shared-core\n"
+        let topology = try sharedCoreArtifactTopology(jobs)
+        XCTAssertEqual(topology.consumers, consumers.sorted(), "Consumer identities matter, not just a count")
+        XCTAssertEqual(topology.producers, ["prepare-shared-core"])
+        XCTAssertTrue(topology.isExpected, "Exactly one producer and five named consumers, without duplicates")
+        XCTAssertEqual(content.components(separatedBy: artifactName).count - 1, 6)
+        let producer = try XCTUnwrap(jobs["prepare-shared-core"])
+        XCTAssertEqual(producer.components(separatedBy: "scripts/build-apple-xcframework.sh").count - 1, 1)
+        XCTAssertTrue(producer.contains("--assemble"))
+        XCTAssertTrue(producer.contains("ci_apple_core_slices.py verify"))
+        XCTAssertTrue(producer.contains("needs: [changes, prepare-core-slices]"))
+        XCTAssertTrue(producer.contains("include-hidden-files: true"))
+        XCTAssertTrue(producer.contains("if-no-files-found: error"))
+        XCTAssertTrue(producer.contains("Artifacts/.healthmd-core-source.sha256"))
+
+        let invocations = [
+            "test-ios": "make test-ios CORE_RUST_PREPARE=:",
+            "test-macos": "make coverage CORE_RUST_PREPARE=:",
+            "ios-ui-shards": "python3 scripts/ios_ui_shards.py run",
+            "prepare-ui-artifacts": "xcodebuild build-for-testing",
+            "build-watch": "xcodebuild build -project HealthMd.xcodeproj -scheme HealthMdWatch",
+        ]
+        let resultVariables = [
+            "test-ios": "IOS_RESULT", "test-macos": "MACOS_RESULT",
+            "ios-ui-shards": "IOS_UI_RESULT", "prepare-ui-artifacts": "PREPARE_UI_RESULT", "build-watch": "WATCH_RESULT",
+        ]
+        let selectionOutputs = ["test-ios": "ios", "test-macos": "macos", "ios-ui-shards": "ios_ui", "prepare-ui-artifacts": "ios_ui", "build-watch": "watch"]
+        let gate = try XCTUnwrap(jobs["gate"])
+        XCTAssertTrue(gate.contains("if: ${{ always() }}"))
+        // The shard worker consumes the binary; the blocking aggregate qualifies
+        // every shard before contributing the UI result to the final gate.
+        let aggregate = try XCTUnwrap(jobs["test-ios-ui"])
+        XCTAssertTrue(aggregate.contains("needs: [changes, prepare-ui-artifacts, ios-ui-shards]"))
+        XCTAssertTrue(aggregate.contains("if: ${{ always() && needs.changes.outputs.ios_ui == 'true' }}"))
+        XCTAssertTrue(aggregate.contains("SHARDS_RESULT: ${{ needs.ios-ui-shards.result }}"))
+        XCTAssertTrue(aggregate.contains("test \"$SHARDS_RESULT\" = success"))
+        XCTAssertTrue(aggregate.contains("ios_ui_shards.py verify"))
+        for id in consumers.sorted() {
+            let job = try XCTUnwrap(jobs[id])
+            let dependencies = id == "ios-ui-shards"
+                ? "needs: [changes, prepare-shared-core, prepare-ui-artifacts]"
+                : "needs: [changes, prepare-shared-core]"
+            XCTAssertTrue(job.contains(dependencies), id)
+            let selectedOutput = try XCTUnwrap(selectionOutputs[id])
+            XCTAssertTrue(job.contains("if: ${{ needs.changes.outputs.\(selectedOutput) == 'true' }}"), id)
+            XCTAssertTrue(job.contains("ref: ${{ inputs.release_sha || github.sha }}"), id)
+            XCTAssertEqual(job.components(separatedBy: "actions/download-artifact@v4").count - 1, id == "ios-ui-shards" ? 2 : 1, id)
+            XCTAssertEqual(job.components(separatedBy: artifactName).count - 1, 1, id)
+            XCTAssertTrue(job.contains("path: apps/apple/Packages/HealthMdCoreRust/Artifacts"), id)
+            XCTAssertTrue(job.contains("test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256"), id)
+            let validation = try XCTUnwrap(job.range(of: "scripts/validate-apple-xcframework.sh"), id)
+            let invocation = try XCTUnwrap(job.range(of: try XCTUnwrap(invocations[id])), id)
+            XCTAssertLessThan(validation.lowerBound, invocation.lowerBound, id)
+            XCTAssertFalse(job.contains("run: make prepare-healthmd-core-rust"), id)
+            XCTAssertFalse(job.contains("continue-on-error: true"), id)
+            let resultID = id == "ios-ui-shards" ? "test-ios-ui" : id
+            XCTAssertTrue(gate.contains("      - \(resultID)\n"), id)
+            let variable = try XCTUnwrap(resultVariables[id])
+            XCTAssertTrue(gate.contains("\(variable): ${{ needs.\(resultID).result }}"), id)
+            let selectedVariable = id == "prepare-ui-artifacts"
+                ? "IOS_UI_SELECTED"
+                : variable.replacingOccurrences(of: "_RESULT", with: "_SELECTED")
+            XCTAssertTrue(gate.contains("\(selectedVariable): ${{ needs.changes.outputs.\(selectedOutput) }}"), id)
+            XCTAssertTrue(gate.contains("require_job \"$\(selectedVariable)\" \"$\(variable)\""), id)
+        }
+        let watch = try XCTUnwrap(jobs["build-watch"])
+        XCTAssertTrue(watch.contains("runs-on: xcode-27"))
+        XCTAssertTrue(watch.contains("xcode-version: '27.0'"))
+        XCTAssertTrue(watch.contains("Verify SDK27 consumer provenance (Watch)"))
+        XCTAssertTrue(watch.contains("timeout-minutes: 25"))
+        XCTAssertTrue(watch.contains("generic/platform=watchOS Simulator"))
+        XCTAssertTrue(watch.contains("-jobs 2"))
+        XCTAssertTrue(watch.contains("set -euo pipefail"))
+        XCTAssertTrue(watch.contains("tee build/watch-ci/build.log"))
+    }
+
+    func testWatchWorkflow_preservesFullBehaviorContractAndProjectionChecks() throws {
+        let content = try String(
+            contentsOf: monorepoRoot.appendingPathComponent(".github/workflows/apple-watch-ci.yml"),
+            encoding: .utf8
+        )
+        let jobs = try workflowJobs(content)
+        let behavior = try XCTUnwrap(jobs["capture-upload-and-build"])
+        XCTAssertTrue(behavior.contains("python3 packages/contracts/validate.py"))
+        XCTAssertTrue(behavior.contains("python3 packages/contracts/test_watch_capability_governance.py"))
+        XCTAssertTrue(behavior.contains("swift test --package-path apps/apple/Packages/HealthMdWatchExport --jobs 2"))
+        XCTAssertFalse(behavior.contains("--filter"), "All 22 Watch behavior tests must remain registered")
+        XCTAssertFalse(behavior.contains("--skip"))
+        XCTAssertFalse(behavior.contains("continue-on-error: true"))
+        let projections = try XCTUnwrap(jobs["registry-projections"])
+        XCTAssertTrue(projections.contains("python3 packages/healthmd-core-rust/scripts/tests/test_registry_capability_scope.py"))
+        XCTAssertTrue(projections.contains("python3 packages/healthmd-core-rust/scripts/import-native-registry.py"))
+        XCTAssertTrue(projections.contains("python3 packages/healthmd-core-rust/scripts/generate-registry-adapters.py"))
+        XCTAssertTrue(projections.contains("git diff --exit-code"))
+        XCTAssertFalse(projections.contains("continue-on-error: true"))
+    }
+
+    func testSharedCoreArtifactTopology_diagnosticUploadsAreNotProducers() throws {
+        let topology = try sharedCoreArtifactTopology(artifactFixtureJobs())
+        XCTAssertEqual(topology.producers, ["prepare-shared-core"])
+        XCTAssertEqual(topology.consumers, ["build-watch", "ios-ui-shards", "prepare-ui-artifacts", "test-ios", "test-macos"])
+        XCTAssertTrue(topology.isExpected)
+    }
+
+    func testSharedCoreArtifactTopology_extraSharedCoreUploadOrMissingConsumerFails() throws {
+        var extraProducer = artifactFixtureJobs()
+        extraProducer["unexpected-producer"] = "    steps:\n" + artifactFixtureStep("upload", name: "apple-sdk27-shared-core")
+        XCTAssertFalse(try sharedCoreArtifactTopology(extraProducer).isExpected)
+        var duplicateUpload = artifactFixtureJobs()
+        duplicateUpload["prepare-shared-core", default: ""] += artifactFixtureStep("upload", name: "apple-sdk27-shared-core")
+        XCTAssertFalse(try sharedCoreArtifactTopology(duplicateUpload).isExpected)
+        var missingConsumer = artifactFixtureJobs()
+        missingConsumer.removeValue(forKey: "build-watch")
+        XCTAssertFalse(try sharedCoreArtifactTopology(missingConsumer).isExpected)
+    }
+
+    func testSharedCoreArtifactTopology_requiresNameInsideTheSameActionsWithBlock() throws {
+        var jobs = artifactFixtureJobs()
+        jobs["build-watch"] = """
+            steps:
+              - name: apple-sdk27-shared-core
+                uses: actions/download-artifact@v4
+                with:
+                  name: diagnostics
+                env:
+                  name: apple-sdk27-shared-core
+              - uses: actions/upload-artifact@v4
+                with:
+                  name: apple-watch-build-diagnostics
+
+        """
+        let topology = try sharedCoreArtifactTopology(jobs)
+        XCTAssertEqual(topology.producers, ["prepare-shared-core"])
+        XCTAssertFalse(topology.consumers.contains("build-watch"))
+        XCTAssertFalse(topology.isExpected)
+    }
+
+    private struct SharedCoreArtifactTopology {
+        var producers: [String] = []
+        var consumers: [String] = []
+
+        var isExpected: Bool {
+            producers == ["prepare-shared-core"] &&
+                consumers == ["build-watch", "ios-ui-shards", "prepare-ui-artifacts", "test-ios", "test-macos"]
+        }
+    }
+
+    // Parse the current explicit workflow style only: steps at six spaces,
+    // action fields at eight, and with fields at ten. Never combine fields
+    // from different steps or confuse a display/env name with with.name.
+    private func sharedCoreArtifactTopology(_ jobs: [String: String]) throws -> SharedCoreArtifactTopology {
+        let stepHeader = try NSRegularExpression(pattern: "^      - [a-z][a-z-]*:", options: .anchorsMatchLines)
+        var topology = SharedCoreArtifactTopology()
+        for (id, job) in jobs {
+            guard let stepsRange = job.range(of: "    steps:\n") else { continue }
+            let steps = String(job[stepsRange.upperBound...])
+            let source = steps as NSString
+            let headers = stepHeader.matches(in: steps, range: NSRange(location: 0, length: source.length))
+            for (index, header) in headers.enumerated() {
+                let end = index + 1 < headers.count ? headers[index + 1].range.location : source.length
+                let lines = source.substring(with: NSRange(location: header.range.location, length: end - header.range.location))
+                    .components(separatedBy: "\n")
+                let uses = lines.compactMap { line -> String? in
+                    for prefix in ["      - uses: ", "        uses: "] where line.hasPrefix(prefix) {
+                        return String(line.dropFirst(prefix.count))
+                    }
+                    return nil
+                }
+                guard uses.count == 1, let action = uses.first,
+                      ["actions/upload-artifact@v4", "actions/download-artifact@v4"].contains(action),
+                      let withIndex = lines.firstIndex(of: "        with:") else { continue }
+                let fields = lines.dropFirst(withIndex + 1).prefix { $0.isEmpty || $0.hasPrefix("          ") }
+                let names = fields.filter { $0.hasPrefix("          name: ") }
+                    .map { String($0.dropFirst("          name: ".count)) }
+                guard names == ["apple-sdk27-shared-core"] else { continue }
+                if action == "actions/upload-artifact@v4" { topology.producers.append(id) }
+                else { topology.consumers.append(id) }
+            }
+        }
+        topology.producers.sort()
+        topology.consumers.sort()
+        return topology
+    }
+
+    private func artifactFixtureStep(_ direction: String, name: String) -> String {
+        "      - uses: actions/\(direction)-artifact@v4\n        with:\n          name: \(name)\n"
+    }
+
+    private func artifactFixtureJobs() -> [String: String] {
+        var jobs = ["prepare-shared-core": "    steps:\n" + artifactFixtureStep("upload", name: "apple-sdk27-shared-core")]
+        for id in ["test-ios", "test-macos", "prepare-ui-artifacts", "ios-ui-shards", "build-watch"] {
+            // A named download step followed by a uses-first diagnostic upload.
+            jobs[id] = "    steps:\n      - name: Restore shared core\n        uses: actions/download-artifact@v4\n        with:\n          name: apple-sdk27-shared-core\n" +
+                artifactFixtureStep("upload", name: "\(id)-diagnostics")
+        }
+        return jobs
+    }
+
+    // Inspect anchored job sections in the repository's explicit workflow format.
+    // This is a source-wiring guard, not a replacement for executing hosted jobs.
+    private func workflowJobs(_ content: String) throws -> [String: String] {
+        let jobSection = try XCTUnwrap(content.components(separatedBy: "\njobs:\n").last)
+        XCTAssertEqual(content.components(separatedBy: "\njobs:\n").count, 2)
+        let regex = try NSRegularExpression(pattern: "^  ([a-z][a-z0-9-]*):$", options: .anchorsMatchLines)
+        let source = jobSection as NSString
+        let matches = regex.matches(in: jobSection, range: NSRange(location: 0, length: source.length))
+        var jobs: [String: String] = [:]
+        for (index, match) in matches.enumerated() {
+            let id = source.substring(with: match.range(at: 1))
+            XCTAssertNil(jobs[id], "Duplicate workflow job \(id)")
+            let end = index + 1 < matches.count ? matches[index + 1].range.location : source.length
+            jobs[id] = source.substring(with: NSRange(location: match.range.location, length: end - match.range.location))
+        }
+        return jobs
     }
 
     func testWorkflow_preservesConcurrency() throws {

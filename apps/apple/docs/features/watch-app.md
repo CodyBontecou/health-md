@@ -11,6 +11,8 @@
 
 A lightweight watchOS dashboard puts today's health metrics on your wrist, and ten watch widgets (complications) put individual metrics — steps, rings, sleep, heart, HRV, blood oxygen — into watch faces and the Smart Stack. The watch reads directly from watchOS HealthKit; nothing syncs from the phone app.
 
+A draft, not-yet-device-qualified **API Sync / Sync Now** source path now uploads a separate bounded local activity snapshot to a compatible user-configured backend. **Refresh still only refreshes the dashboard**. See [Manual Watch API Sync](./watch-api-sync.md) for setup, supported scope, receiver contract, retry, and outstanding physical Wi-Fi/cellular gates. Independent installation remains unchanged.
+
 ## Who it is for
 
 - Apple Watch owners who want a one-tap wrist dashboard instead of the rings app.
