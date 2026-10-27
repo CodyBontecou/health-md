@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v6
         with:
-          ref: 6f5b3fb8ebc6feb93472c52d183bc9dc2d741598
+          ref: 7074d1fec491e939f8156d4d2b3b8a693669dfc5
           path: candidate
           persist-credentials: false
       - uses: maxim-lobanov/setup-xcode@v1
@@ -28,8 +28,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 6f5b3fb8ebc6feb93472c52d183bc9dc2d741598
-          test "$(git rev-parse HEAD^{tree})" = ca9079e43554f10614e5eedd0edeaf6239c7dc69
+          test "$(git rev-parse HEAD)" = 7074d1fec491e939f8156d4d2b3b8a693669dfc5
+          test "$(git rev-parse HEAD^{tree})" = e8c80ee2dc9abd041ae9d7e0bc086aa67ad908bc
           git diff --exit-code
           mkdir -p build/logs/pr189-resume-sdk27
           {
