@@ -23,13 +23,6 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '27.0'
-      - uses: actions/download-artifact@v4
-        with:
-          artifact-ids: 12736267311
-          path: candidate/apps/apple/Packages/HealthMdCoreRust/Artifacts
-          run-id: 40505871061
-          github-token: ${{ github.token }}
-          merge-multiple: true
       - name: Verify pinned source and SDK27 native core
         working-directory: candidate/apps/apple
         shell: bash
@@ -46,6 +39,8 @@ jobs:
             uname -m
           } | tee build/logs/pr189-resume-sdk27/identity.txt
           bash scripts/qualify-history-authorization-sdk27.sh
+          ../../packages/healthmd-core-rust/scripts/prepare-apple-xcframework.sh
+          cp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
           python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
           actual=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)
           test "$actual" = "$(cat Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256)"
