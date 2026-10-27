@@ -1,6 +1,8 @@
 use super::*;
+use crate::packet::PacketConnection;
 use healthmd_protocol::wire::Empty;
 use tokio::net::{TcpListener, TcpStream};
+use uuid::Uuid;
 
 fn negotiation(base: u16) -> v4::Negotiation {
     v4::Negotiation {
@@ -82,8 +84,8 @@ fn mixed_channel_never_falls_back_after_ambiguous_or_invalid_versioned_input() {
         r#"{"ping":{},"ping":{}}"#,
         r#"{"protocol_version":2,"type":"ping","payload":{"nested":{"x":1,"x":2}}}"#,
         r#"{"unknown":{}}"#,
-        r#"[]"#,
-        r#"null"#,
+        r"[]",
+        r"null",
     ];
     for base in [1, 2] {
         for raw in bad {

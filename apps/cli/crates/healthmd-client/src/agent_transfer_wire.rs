@@ -82,117 +82,7 @@ impl HostExecution<'_, '_, '_> {
             .channel
             .receive_agent_payload(self.bridge.negotiation)
             .await?;
-        let message = if self.binding.request.plan.intent.peer.platform == v4::PeerPlatform::Apple {
-            match payload {
-                AgentPayload::BinaryTransferFrame(bytes) => Incoming::Chunk(
-                    healthmd_protocol::transfer::decode_binary_chunk(&bytes)
-                        .map_err(|_| Error::BindingChanged)?,
-                ),
-                AgentPayload::Apple(message) => match *message {
-                    DirectMessage::TransferSession(Unlabeled { value }) => {
-                        Incoming::Session(session(value)?)
-                    }
-                    DirectMessage::FileManifest(Unlabeled { value }) => {
-                        if value.job_id.0.to_string() != self.binding.request.job_id.0 {
-                            return Err(Error::BindingChanged.into());
-                        }
-                        Incoming::Manifest {
-                            id: ControlUuid(value.file_id.0.to_string()),
-                            path: value.relative_path,
-                            bytes: number(value.byte_count)?,
-                            sha256: value.sha256,
-                            mode: mode(value.write_mode),
-                            android: None,
-                        }
-                    }
-                    DirectMessage::TransferOpen(Unlabeled { value }) => {
-                        let segment = value.partition.item_segment.ok_or(Error::BindingChanged)?;
-                        let id = ControlUuid(segment.item_id.clone());
-                        id.validate_shape()?;
-                        if value.partition.source_dates != [segment.item_id.clone()] {
-                            return Err(Error::BindingChanged.into());
-                        }
-                        Incoming::Open {
-                            session: session(value.session)?,
-                            partition: v2::TransferPartition {
-                                index: number(value.partition.index)?,
-                                transfer_id: value.partition.transfer_id.0,
-                                artifact_id: Uuid::parse_str(&id.0)
-                                    .map_err(private::unavailable)?,
-                                artifact_offset: number(segment.offset)?,
-                                byte_count: number(value.partition.byte_count)?,
-                                chunk_count: number(value.partition.chunk_count)?,
-                                sha256: value.partition.sha256,
-                                previous_sha256: value.partition.previous_sha256,
-                            },
-                            apple_segment: Some(segment),
-                        }
-                    }
-                    DirectMessage::TransferPartitionComplete(Unlabeled { value }) => {
-                        Incoming::Complete(v2::TransferPartitionComplete {
-                            session_id: value.session_id.0,
-                            job_id: value.job_id.0,
-                            partition_index: number(value.partition_index)?,
-                            transfer_id: value.transfer_id.0,
-                            partition_sha256: value.partition_sha256,
-                        })
-                    }
-                    DirectMessage::CompletionConfirmed(value) => {
-                        Incoming::Confirmation(ControlUuid(value.job_id.0.to_string()))
-                    }
-                    DirectMessage::TransferFinalize(Unlabeled { value }) => {
-                        if value.request_fingerprint.version != 1 {
-                            return Err(Error::BindingChanged.into());
-                        }
-                        Incoming::Finalize(v2::TransferFinalize {
-                            session_id: value.session_id.0,
-                            job_id: value.job_id.0,
-                            request_fingerprint: value.request_fingerprint.sha256,
-                            total_partitions: number(value.total_partitions)?,
-                            total_bytes: number(value.total_bytes)?,
-                            final_partition_sha256: value.final_partition_sha256,
-                        })
-                    }
-                    _ => return Err(ClientError::UnexpectedMessage),
-                },
-                _ => return Err(ClientError::UnexpectedMessage),
-            }
-        } else {
-            match payload {
-                AgentPayload::BinaryTransferFrame(bytes) => Incoming::Chunk(
-                    healthmd_protocol::transfer::decode_binary_chunk(&bytes)
-                        .map_err(|_| Error::BindingChanged)?,
-                ),
-                AgentPayload::Android(message) => match message.message {
-                    v2::Message::TransferSession(value) => Incoming::Session(Session(value)),
-                    v2::Message::ArtifactManifest(value) => {
-                        if value.job_id.to_string() != self.binding.request.job_id.0 {
-                            return Err(Error::BindingChanged.into());
-                        }
-                        Incoming::Manifest {
-                            id: ControlUuid(value.artifact_id.to_string()),
-                            path: value.relative_path.clone().ok_or(Error::BindingChanged)?,
-                            bytes: value.byte_count,
-                            sha256: value.sha256.clone(),
-                            mode: value.write_mode.ok_or(Error::BindingChanged)?,
-                            android: Some(value),
-                        }
-                    }
-                    v2::Message::TransferOpen(value) => Incoming::Open {
-                        session: Session(value.session),
-                        partition: value.partition,
-                        apple_segment: None,
-                    },
-                    v2::Message::TransferPartitionComplete(value) => Incoming::Complete(value),
-                    v2::Message::TransferFinalize(value) => Incoming::Finalize(value),
-                    v2::Message::CompletionConfirmed(value) => {
-                        Incoming::Confirmation(ControlUuid(value.job_id.to_string()))
-                    }
-                    _ => return Err(ClientError::UnexpectedMessage),
-                },
-                _ => return Err(ClientError::UnexpectedMessage),
-            }
-        };
+        let message = decode_base_payload(payload, &self.binding)?;
         self.require_current().await?;
         transaction.require_current()?;
         Ok(message)
@@ -341,4 +231,126 @@ impl HostExecution<'_, '_, '_> {
             })
             .await
     }
+}
+
+pub(in crate::agent_bridge::execution) fn decode_base_payload(
+    payload: AgentPayload,
+    binding: &NativeBinding,
+) -> Result<Incoming, ClientError> {
+    let message = if binding.request.plan.intent.peer.platform == v4::PeerPlatform::Apple {
+        match payload {
+            AgentPayload::BinaryTransferFrame(bytes) => Incoming::Chunk(
+                healthmd_protocol::transfer::decode_binary_chunk(&bytes)
+                    .map_err(|_| Error::BindingChanged)?,
+            ),
+            AgentPayload::Apple(message) => decode_apple_message(*message, binding)?,
+            _ => return Err(ClientError::UnexpectedMessage),
+        }
+    } else {
+        match payload {
+            AgentPayload::BinaryTransferFrame(bytes) => Incoming::Chunk(
+                healthmd_protocol::transfer::decode_binary_chunk(&bytes)
+                    .map_err(|_| Error::BindingChanged)?,
+            ),
+            AgentPayload::Android(message) => match message.message {
+                v2::Message::TransferSession(value) => Incoming::Session(Session(value)),
+                v2::Message::ArtifactManifest(value) => {
+                    if value.job_id.to_string() != binding.request.job_id.0 {
+                        return Err(Error::BindingChanged.into());
+                    }
+                    Incoming::Manifest {
+                        id: ControlUuid(value.artifact_id.to_string()),
+                        path: value.relative_path.clone().ok_or(Error::BindingChanged)?,
+                        bytes: value.byte_count,
+                        sha256: value.sha256.clone(),
+                        mode: value.write_mode.ok_or(Error::BindingChanged)?,
+                        android: Some(value),
+                    }
+                }
+                v2::Message::TransferOpen(value) => Incoming::Open {
+                    session: Session(value.session),
+                    partition: value.partition,
+                    apple_segment: None,
+                },
+                v2::Message::TransferPartitionComplete(value) => Incoming::Complete(value),
+                v2::Message::TransferFinalize(value) => Incoming::Finalize(value),
+                v2::Message::CompletionConfirmed(value) => {
+                    Incoming::Confirmation(ControlUuid(value.job_id.to_string()))
+                }
+                _ => return Err(ClientError::UnexpectedMessage),
+            },
+            _ => return Err(ClientError::UnexpectedMessage),
+        }
+    };
+    Ok(message)
+}
+
+fn decode_apple_message(
+    message: DirectMessage,
+    binding: &NativeBinding,
+) -> Result<Incoming, ClientError> {
+    Ok(match message {
+        DirectMessage::TransferSession(Unlabeled { value }) => Incoming::Session(session(value)?),
+        DirectMessage::FileManifest(Unlabeled { value }) => {
+            if value.job_id.0.to_string() != binding.request.job_id.0 {
+                return Err(Error::BindingChanged.into());
+            }
+            Incoming::Manifest {
+                id: ControlUuid(value.file_id.0.to_string()),
+                path: value.relative_path,
+                bytes: number(value.byte_count)?,
+                sha256: value.sha256,
+                mode: mode(value.write_mode),
+                android: None,
+            }
+        }
+        DirectMessage::TransferOpen(Unlabeled { value }) => {
+            let segment = value.partition.item_segment.ok_or(Error::BindingChanged)?;
+            let id = ControlUuid(segment.item_id.clone());
+            id.validate_shape()?;
+            if value.partition.source_dates != [segment.item_id.clone()] {
+                return Err(Error::BindingChanged.into());
+            }
+            Incoming::Open {
+                session: session(value.session)?,
+                partition: v2::TransferPartition {
+                    index: number(value.partition.index)?,
+                    transfer_id: value.partition.transfer_id.0,
+                    artifact_id: Uuid::parse_str(&id.0).map_err(private::unavailable)?,
+                    artifact_offset: number(segment.offset)?,
+                    byte_count: number(value.partition.byte_count)?,
+                    chunk_count: number(value.partition.chunk_count)?,
+                    sha256: value.partition.sha256,
+                    previous_sha256: value.partition.previous_sha256,
+                },
+                apple_segment: Some(segment),
+            }
+        }
+        DirectMessage::TransferPartitionComplete(Unlabeled { value }) => {
+            Incoming::Complete(v2::TransferPartitionComplete {
+                session_id: value.session_id.0,
+                job_id: value.job_id.0,
+                partition_index: number(value.partition_index)?,
+                transfer_id: value.transfer_id.0,
+                partition_sha256: value.partition_sha256,
+            })
+        }
+        DirectMessage::CompletionConfirmed(value) => {
+            Incoming::Confirmation(ControlUuid(value.job_id.0.to_string()))
+        }
+        DirectMessage::TransferFinalize(Unlabeled { value }) => {
+            if value.request_fingerprint.version != 1 {
+                return Err(Error::BindingChanged.into());
+            }
+            Incoming::Finalize(v2::TransferFinalize {
+                session_id: value.session_id.0,
+                job_id: value.job_id.0,
+                request_fingerprint: value.request_fingerprint.sha256,
+                total_partitions: number(value.total_partitions)?,
+                total_bytes: number(value.total_bytes)?,
+                final_partition_sha256: value.final_partition_sha256,
+            })
+        }
+        _ => return Err(ClientError::UnexpectedMessage),
+    })
 }

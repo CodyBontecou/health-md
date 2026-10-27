@@ -1,5 +1,5 @@
 //! One authenticated sequence for independently negotiated agent and deployed base controls.
-use super::*;
+use super::{BINARY_FRAME_MAGIC, ClientError, DirectMessage, SecureChannel, v2};
 use healthmd_protocol::v4;
 
 #[derive(Debug, Eq, PartialEq)]

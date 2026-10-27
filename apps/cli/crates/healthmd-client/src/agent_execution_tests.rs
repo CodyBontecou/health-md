@@ -40,56 +40,58 @@ struct AcceptedFixture {
     request: ExecuteRequest,
     accepted: ExecutionReceipt,
 }
-async fn accepted_fixture(platform: PeerPlatform) -> AcceptedFixture {
-    let (temporary, client, saved, peer) = stored_pair(platform).await;
-    let (store, output) = enroll(&client.layout.root, &peer, &now()).await;
-    let clock = AdvancingClock::new();
-    let planner = HostPlanner::new(store.clone());
-    let mut native = NativeFake::new(peer.clone(), now());
-    let plan = planner
-        .plan(&mut native, input(&peer), &clock)
-        .await
-        .unwrap();
-    store
-        .record_local_decision(2, &plan.plan_id, &clock, &ExplicitFakeLocalConsent)
-        .await
-        .unwrap();
-    native.store_exact_native_decision(); // Explicit synthetic local native consent, never caller JSON.
-    let approval = planner
-        .relay_approval(
-            &mut native,
-            ApprovalRequest {
-                schema: ApprovalRequestSchema::HealthmdAgentApprovalRequest,
-                schema_version: 1,
-                plan_id: plan.plan_id.clone(),
-                request_id: id(21),
-                binding: approval_binding(&plan),
-            },
-            &clock,
-        )
-        .await
-        .unwrap();
-    let request = ExecuteRequest {
-        schema: ExecuteRequestSchema::HealthmdAgentExecuteRequest,
-        schema_version: 1,
-        plan,
-        approval,
-        request_id: id(22),
-        job_id: id(20),
-        idempotency_key: id(19),
-    };
-    let accepted = synthetic_binding(&request, platform).accepted;
-    AcceptedFixture {
-        _temporary: temporary,
-        client,
-        saved,
-        peer,
-        store,
-        output,
-        clock,
-        request,
-        accepted,
-    }
+fn accepted_fixture(platform: PeerPlatform) -> impl std::future::Future<Output = AcceptedFixture> {
+    Box::pin(async move {
+        let (temporary, client, saved, peer) = stored_pair(platform).await;
+        let (store, output) = enroll(&client.layout.root, &peer, &now()).await;
+        let clock = AdvancingClock::new();
+        let planner = HostPlanner::new(store.clone());
+        let mut native = NativeFake::new(peer.clone(), now());
+        let plan = planner
+            .plan(&mut native, input(&peer), &clock)
+            .await
+            .unwrap();
+        store
+            .record_local_decision(2, &plan.plan_id, &clock, &ExplicitFakeLocalConsent)
+            .await
+            .unwrap();
+        native.store_exact_native_decision(); // Explicit synthetic local native consent, never caller JSON.
+        let approval = planner
+            .relay_approval(
+                &mut native,
+                ApprovalRequest {
+                    schema: ApprovalRequestSchema::HealthmdAgentApprovalRequest,
+                    schema_version: 1,
+                    plan_id: plan.plan_id.clone(),
+                    request_id: id(21),
+                    binding: approval_binding(&plan),
+                },
+                &clock,
+            )
+            .await
+            .unwrap();
+        let request = ExecuteRequest {
+            schema: ExecuteRequestSchema::HealthmdAgentExecuteRequest,
+            schema_version: 1,
+            plan,
+            approval,
+            request_id: id(22),
+            job_id: id(20),
+            idempotency_key: id(19),
+        };
+        let accepted = synthetic_binding(&request, platform).accepted;
+        AcceptedFixture {
+            _temporary: temporary,
+            client,
+            saved,
+            peer,
+            store,
+            output,
+            clock,
+            request,
+            accepted,
+        }
+    })
 }
 
 struct AdversarialOutputTrust<'a> {
@@ -1811,3 +1813,9 @@ mod stop_confirmation_tests;
 
 #[path = "agent_confirmation_history_tests.rs"]
 mod confirmation_history_tests;
+
+#[path = "agent_output_stop_tests.rs"]
+mod output_stop_tests;
+
+#[path = "agent_output_cancellation_tests.rs"]
+mod output_cancellation_tests;

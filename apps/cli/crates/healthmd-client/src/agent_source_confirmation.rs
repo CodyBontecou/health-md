@@ -34,6 +34,16 @@ pub(crate) async fn read_source_confirmation(
     clock: &dyn PlanningClock,
 ) -> Result<ExecutionReceipt, ClientError> {
     job.validate_shape()?;
+    // File presence selects a decoder only; it never establishes trusted state. Both readers
+    // independently acquire the original lock and authenticate their complete evidence, then
+    // recheck it after the final protected-key await. A raced/unsafe hint fails closed rather
+    // than retrying a different format after authentication or binding failure.
+    let dir = store.directory()?;
+    match dir.symlink_metadata(format!("output-{}.json", job.0)) {
+        Ok(_) => return later_stop::read_confirmed_output_stop(store, job, clock).await,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(private::unavailable(error)),
+    }
     let key = key_bytes(&store.protected_key.load_existing(&store.host).await?)?;
     let dir = store.directory()?;
     let lock = private::open_private(&dir, OUTPUT_LOCK, true, false)?;

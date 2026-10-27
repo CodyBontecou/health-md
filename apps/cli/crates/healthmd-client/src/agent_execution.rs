@@ -883,3 +883,7 @@ pub use transfer::ReceivedArtifacts;
 
 #[path = "agent_confirmation.rs"]
 mod confirmation;
+
+#[path = "agent_output_cancellation.rs"]
+mod output_cancellation;
+pub use output_cancellation::HostPendingOutputCancellation;

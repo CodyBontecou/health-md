@@ -897,39 +897,8 @@ impl HostExecution<'_, '_, '_> {
         transaction: &OutputTransaction,
         item: &ArtifactBranch1,
     ) -> Result<(), ClientError> {
-        let Incoming::Manifest {
-            id,
-            path,
-            bytes,
-            sha256,
-            mode,
-            android,
-        } = self.receive_base(transaction).await?
-        else {
-            return Err(ClientError::UnexpectedMessage);
-        };
-        if id != item.artifact_id
-            || path != item.relative_path.0
-            || bytes != item.byte_count
-            || sha256 != item.sha256.0
-            || mode != expected_mode(&item.write_mode)
-        {
-            return Err(Error::BindingChanged.into());
-        }
-        if let Some(base) = android {
-            let media = serde_json::to_value(&item.media_type).map_err(private::unavailable)?;
-            if base.kind != v2::ArtifactKind::GeneratedFile
-                || base.schema.id != "healthmd.generated-files"
-                || base.schema.major != 1
-                || Some(base.media_type.as_str()) != media.as_str()
-                || base.logical_checksum_sha256.is_some()
-                || base.snapshot_status.is_some()
-                || base.provider_id.is_some()
-            {
-                return Err(Error::BindingChanged.into());
-            }
-        }
-        Ok(())
+        let message = self.receive_base(transaction).await?;
+        validate_base_manifest_message(item, message)
     }
 }
 
@@ -995,7 +964,7 @@ fn validate_retained_prefix(
     Ok(frontier)
 }
 
-fn validate_retained_session(
+pub(super) fn validate_retained_session(
     binding: &NativeBinding,
     session: &Session,
 ) -> Result<(), ClientError> {
@@ -1054,3 +1023,42 @@ fn verify_partition_file(
 #[cfg(all(test, unix))]
 #[path = "agent_retained_checkpoint_tests.rs"]
 mod retained_prefix_tests;
+
+pub(super) fn validate_base_manifest_message(
+    item: &ArtifactBranch1,
+    message: Incoming,
+) -> Result<(), ClientError> {
+    let Incoming::Manifest {
+        id,
+        path,
+        bytes,
+        sha256,
+        mode,
+        android,
+    } = message
+    else {
+        return Err(ClientError::UnexpectedMessage);
+    };
+    if id != item.artifact_id
+        || path != item.relative_path.0
+        || bytes != item.byte_count
+        || sha256 != item.sha256.0
+        || mode != expected_mode(&item.write_mode)
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    if let Some(base) = android {
+        let media = serde_json::to_value(&item.media_type).map_err(private::unavailable)?;
+        if base.kind != v2::ArtifactKind::GeneratedFile
+            || base.schema.id != "healthmd.generated-files"
+            || base.schema.major != 1
+            || Some(base.media_type.as_str()) != media.as_str()
+            || base.logical_checksum_sha256.is_some()
+            || base.snapshot_status.is_some()
+            || base.provider_id.is_some()
+        {
+            return Err(Error::BindingChanged.into());
+        }
+    }
+    Ok(())
+}
