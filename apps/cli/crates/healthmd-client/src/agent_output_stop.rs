@@ -111,6 +111,49 @@ impl PendingOutputStop {
         Ok(owner)
     }
 
+    /// Choose a decoder from the retained private version, then authenticate that exact
+    /// lifecycle before any mutation. A failed decoder never retries another lifecycle.
+    pub(crate) async fn prepare_or_open_retained<F, Fut>(
+        store: &HostAuthorityStore,
+        expected_peer: &v4::Peer,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        fence: F,
+    ) -> Result<Self, ClientError>
+    where
+        F: FnMut() -> Fut + Copy,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        expected_peer.validate_shape()?;
+        let transaction = read_stop_transaction(store, job).await?;
+        if transaction.binding().request.plan.intent.peer != *expected_peer {
+            return Err(Error::BindingChanged.into());
+        }
+        let bytes = transaction.attempt.as_ref().ok_or(Error::BindingChanged)?;
+        let value: serde_json::Value = private_json::decode(bytes)?;
+        match value
+            .pointer("/attempt/schema_version")
+            .and_then(serde_json::Value::as_u64)
+        {
+            Some(1 | 2) => {
+                validate_compatible_execution_attempt(
+                    bytes,
+                    &store.host,
+                    transaction.binding(),
+                    &transaction.key,
+                )?;
+                Box::pin(Self::prepare(transaction, clock, fence)).await
+            }
+            Some(5 | 7) => {
+                let signed: SignedPendingRecord = private_json::decode(bytes)?;
+                let owner = Self::from_pending(transaction, signed)?;
+                owner.require_current(clock, fence).await?;
+                Ok(owner)
+            }
+            _ => Err(Error::BindingChanged.into()),
+        }
+    }
+
     fn from_pending(
         transaction: OutputTransaction,
         pending: SignedPendingRecord,

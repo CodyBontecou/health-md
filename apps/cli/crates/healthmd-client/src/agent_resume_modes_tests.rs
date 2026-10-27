@@ -1269,3 +1269,204 @@ async fn retained_transfer_stop_rejects_completion_evidence_drift_before_publica
         b"completion callback drift"
     );
 }
+
+#[derive(Clone, Copy)]
+enum RetainedStopPeerOutcome {
+    Disconnect,
+    Confirm,
+}
+async fn retained_stop_channel(
+    f: &CompletedFixture,
+    outcome: RetainedStopPeerOutcome,
+) -> (Result<ExecutionReceipt, ClientError>, Vec<u8>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let saved = FakeMobileTrust {
+        installation_id: f.saved.installation_id,
+        display_name: f.saved.display_name.clone(),
+        reconnect_secret: f.saved.reconnect_secret.clone(),
+    };
+    let binding = f.binding.clone();
+    let receipt = transfer_stop_receipt(f);
+    let attempt = f
+        .client
+        .layout
+        .root
+        .join("agent-host-v1")
+        .join(format!("attempt-{}.json", binding.request.job_id.0));
+    let source = tokio::spawn(async move {
+        let peer = &binding.request.plan.intent.peer;
+        let platform = peer_platform(peer);
+        let (mut channel, negotiation) = output_channel(port, saved, peer, platform).await;
+        let Message::CancelRequest(cancel) = channel.receive_v4(negotiation).await.unwrap().message
+        else {
+            panic!("Only Stop permitted; no Execute, Resume or transfer ACK")
+        };
+        assert_eq!(cancel.job_id, binding.request.job_id);
+        assert_eq!(
+            cancel.request_sha256,
+            document_digest(&binding.request).unwrap()
+        );
+        let bytes = std::fs::read(attempt).unwrap();
+        let record: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(record["attempt"]["schema_version"], 7);
+        assert_eq!(
+            record["attempt"]["cancellation_request"],
+            serde_json::to_value(&*cancel).unwrap()
+        );
+        if matches!(outcome, RetainedStopPeerOutcome::Confirm) {
+            channel
+                .send_v4(
+                    &Envelope::new(Message::ExecutionReceipt(Box::new(receipt))),
+                    negotiation,
+                )
+                .await
+                .unwrap();
+            assert!(
+                tokio::time::timeout(Duration::from_millis(100), channel.receive_v4(negotiation))
+                    .await
+                    .is_err(),
+                "Stop confirmation must not emit transfer ACK or another control"
+            );
+        }
+        bytes
+    });
+    let peer = &f.binding.request.plan.intent.peer;
+    let mut bridge = connect_bound_bridge(
+        &f.client,
+        Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
+        &listener,
+        Duration::from_secs(5),
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap();
+    let clock = AdvancingClock::new();
+    let pending = Box::pin(bridge.request_retained_execution_cancellation(
+        &f.store,
+        &f.binding.request.job_id,
+        &clock,
+    ))
+    .await
+    .unwrap();
+    let result = Box::pin(pending.wait_source_confirmation())
+        .await
+        .map(|proof| proof.receipt().clone());
+    let bytes = source.await.unwrap();
+    (result, bytes)
+}
+
+#[tokio::test]
+async fn authenticated_retained_transfer_cancel_replays_pending_and_requires_native_confirmation() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let f = Box::pin(retained_stop_fixture(platform)).await;
+        let job = &f.binding.request.job_id;
+        let root = f.client.layout.root.join("agent-host-v1");
+        let attempt = root.join(format!("attempt-{}.json", job.0));
+        let transfer = root.join(format!("transfer-{}.json", job.0));
+        let original_transfer = std::fs::read(&transfer).unwrap();
+        f.store
+            .revoke_local(
+                f.store.revision().await.unwrap(),
+                &f.binding
+                    .request
+                    .plan
+                    .authority_references
+                    .host
+                    .authority_id,
+            )
+            .await
+            .unwrap();
+        let (disconnected, pending_bytes) = Box::pin(retained_stop_channel(
+            &f,
+            RetainedStopPeerOutcome::Disconnect,
+        ))
+        .await;
+        assert!(
+            disconnected.is_err(),
+            "Local disconnection cannot confirm source cancellation"
+        );
+        assert_eq!(std::fs::read(&attempt).unwrap(), pending_bytes);
+        assert!(
+            Box::pin(
+                f.store
+                    .retained_source_stop_confirmation(job, &AdvancingClock::new())
+            )
+            .await
+            .is_err()
+        );
+        let (confirmed, replayed_bytes) =
+            Box::pin(retained_stop_channel(&f, RetainedStopPeerOutcome::Confirm)).await;
+        assert_eq!(
+            replayed_bytes, pending_bytes,
+            "Retry must replay exact durable Stop intent"
+        );
+        let receipt = confirmed.unwrap();
+        assert_eq!(receipt, transfer_stop_receipt(&f));
+        assert_eq!(std::fs::read(&transfer).unwrap(), original_transfer);
+        assert_eq!(
+            Box::pin(
+                f.store
+                    .retained_source_stop_confirmation(job, &AdvancingClock::new())
+            )
+            .await
+            .unwrap()
+            .receipt(),
+            &receipt
+        );
+        for path in &f.binding.request.plan.predicted_paths {
+            assert_eq!(
+                std::fs::read(f.output.join(&path.0)).unwrap(),
+                expected_output(platform, &OutputSettingsWriteMode::Append)
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn retained_cancel_dispatch_rejects_wrong_peer_and_unknown_lifecycle_without_fallback() {
+    use crate::agent_host::output::PendingOutputStop;
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let f = Box::pin(retained_stop_fixture(platform)).await;
+        let job = &f.binding.request.job_id;
+        let peer = &f.binding.request.plan.intent.peer;
+        let path = f
+            .client
+            .layout
+            .root
+            .join("agent-host-v1")
+            .join(format!("attempt-{}.json", job.0));
+        let original = std::fs::read(&path).unwrap();
+        let clock = AdvancingClock::new();
+        let mut wrong = peer.clone();
+        wrong.source_installation_id = id(199);
+        assert!(matches!(
+            Box::pin(PendingOutputStop::prepare_or_open_retained(
+                &f.store,
+                &wrong,
+                job,
+                &clock,
+                || async { Ok(()) }
+            ))
+            .await,
+            Err(ClientError::Agent(Error::BindingChanged))
+        ));
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        let mut value: serde_json::Value = serde_json::from_slice(&original).unwrap();
+        value["attempt"]["schema_version"] = 42.into();
+        let changed = canonical_json(&value).unwrap();
+        std::fs::write(&path, &changed).unwrap();
+        assert!(
+            Box::pin(PendingOutputStop::prepare_or_open_retained(
+                &f.store,
+                peer,
+                job,
+                &clock,
+                || async { Ok(()) }
+            ))
+            .await
+            .is_err()
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), changed);
+    }
+}

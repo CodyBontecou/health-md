@@ -143,6 +143,12 @@ impl HostPendingOutputCancellation<'_, '_, '_> {
     }
 }
 
+#[derive(Clone, Copy)]
+enum RetainedStopMode {
+    ReplayOnly,
+    PrepareOrReplay,
+}
+
 impl<'trust> BridgeSession<'trust> {
     /// Replay only the original durable output Stop on a newly authenticated channel.
     /// No Execute, Resume, replacement binding or fresh export grant is admitted.
@@ -159,14 +165,33 @@ impl<'trust> BridgeSession<'trust> {
         let timeout = self.timeout;
         tokio::select! { biased;
             ()=cancellation.cancelled()=>Err(ClientError::WaitCancelled),
-            result=tokio::time::timeout(timeout,Box::pin(self.retained_output_stop_inner(store,job,clock)))=>result.map_err(|_|ClientError::TimedOut)?,
+            result=tokio::time::timeout(timeout,Box::pin(self.retained_output_stop_inner(store,job,clock,RetainedStopMode::ReplayOnly)))=>result.map_err(|_|ClientError::TimedOut)?,
         }
     }
+    /// Request or replay Stop for an existing manifest-bound job on a fresh authenticated
+    /// source channel. Durable intent precedes transmission; export grants are not renewed.
+    /// # Errors
+    /// Invalid lifecycle, changed peer/key/trust/evidence, expiry or interruption reject.
+    pub async fn request_retained_execution_cancellation<'s, 'h>(
+        &'s mut self,
+        store: &'h HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &'h dyn PlanningClock,
+    ) -> Result<HostPendingOutputCancellation<'s, 'h, 'trust>, ClientError> {
+        let cancellation = self.cancellation.clone();
+        let timeout = self.timeout;
+        tokio::select! { biased;
+            ()=cancellation.cancelled()=>Err(ClientError::WaitCancelled),
+            result=tokio::time::timeout(timeout,Box::pin(self.retained_output_stop_inner(store,job,clock,RetainedStopMode::PrepareOrReplay)))=>result.map_err(|_|ClientError::TimedOut)?,
+        }
+    }
+
     async fn retained_output_stop_inner<'s, 'h>(
         &'s mut self,
         store: &'h HostAuthorityStore,
         job: &ControlUuid,
         clock: &'h dyn PlanningClock,
+        mode: RetainedStopMode,
     ) -> Result<HostPendingOutputCancellation<'s, 'h, 'trust>, ClientError> {
         if self.send_interrupted {
             return Err(Error::BindingChanged.into());
@@ -186,7 +211,17 @@ impl<'trust> BridgeSession<'trust> {
             }
             Ok(())
         };
-        let pending = PendingOutputStop::open_retained(store, job, clock, fence).await?;
+        let pending = match mode {
+            RetainedStopMode::ReplayOnly => {
+                PendingOutputStop::open_retained(store, job, clock, fence).await?
+            }
+            RetainedStopMode::PrepareOrReplay => {
+                Box::pin(PendingOutputStop::prepare_or_open_retained(
+                    store, &self.peer, job, clock, fence,
+                ))
+                .await?
+            }
+        };
         let binding = pending.binding().clone();
         if self.peer != binding.request.plan.intent.peer {
             return Err(Error::BindingChanged.into());
