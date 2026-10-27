@@ -44,3 +44,77 @@ Caches are not qualification receipts. Keep build directories isolated between w
 Root `make test` runs the [portable CI regression suite](qa/two-minute-ci.md) without native SDKs or devices. `make test-apple` is a broad diagnostic that includes iOS simulator work and requires explicit opt-in. Use the owning component's explicit host commands, such as `make -C apps/apple test-macos`, when their scope is appropriate.
 
 Simulator/emulator QA, device installation/launch, UI automation, and Argent require explicit authorization for the current task. A request to implement, polish UI, or run tests does not authorize those workflows. Mark relevant unrun native/visual surfaces as gaps rather than claiming another platform's tests verify them.
+
+## Native integration
+
+Use three checkpoints. During edits, run focused owning tests and cheap checks. At
+handoff, run affected-module regressions once. Before merge, the integration owner
+compiles affected native apps against the combined final source. Leaf agents can
+handoff with native compilation explicitly pending for that integration build;
+pending work is not a passing native check.
+GitHub runs the complete portable regression suite on pushes; an agent need not
+repeat that whole suite after each edit. Recheck after integrating other changes
+when they affect the verified inputs. Native compilation detects compiler/linker
+and packaging integration failures; it does not prove startup or UI behavior.
+
+```bash
+make plan-native
+make verify-native
+# Narrow a known platform or select a different integration base:
+make verify-native NATIVE_ARGS="--platform apple"
+make verify-native NATIVE_ARGS="--platform android"
+make verify-native NATIVE_ARGS="--platform all"
+make plan-native NATIVE_ARGS="--base origin/main"
+```
+
+Automatic selection compares the merge-base with `origin/main` to the current
+worktree, including staged, unstaged, deleted and nonignored new files. Apple or
+Android paths select that platform. Shared packages, scripts, root configuration
+and unknown ownership select both conservatively. Documentation-only changes and
+known CLI/web/Practice/Wake-only paths select neither. Inspect the plan; override
+selection for dependencies the path rules cannot identify. A missing base fails
+rather than skipping compilation. CLI executable changes still need their owning
+Cargo build/tests even though they select no mobile build.
+
+The coordinator waits on an OS file lock in the repository's common Git directory,
+so linked worktrees serialize their native builds. Start one invocation for a
+finished batch of changes and allow it to finish before editing those inputs.
+After acquiring the lock it recomputes selection and source identity. Waiting
+and each build step default to 30 minutes; `--wait-seconds` and `--step-timeout`
+set bounds. Cancellation/timeout terminates the owned build process group before
+releasing the lock. This coordinates cooperating invocations; direct Xcode/Gradle
+commands and separate clones do not participate. Use this entry point for heavy
+agent builds rather than launching competing native sweeps.
+
+On an arm64 Mac, Apple verification prepares source-matched Rust bindings/artifacts
+with the existing reduced `ci-arm64` scope, then compiles unsigned Debug iOS
+(simulator SDK, generic destination) and macOS apps. It never boots a simulator.
+Android compiles the Play Debug APK with one arm64 ABI, two Gradle workers and
+a single-use Gradle process (`--no-daemon`) so cancellation owns the build lifetime.
+Both use installed SDK/toolchains; commands may download normal locked build
+dependencies. F-Droid, Wear, release architectures, signing and store packaging
+remain explicit checks when those surfaces change. Shared Rust/FFI changes select
+both platforms and still require affected boundary/consumer tests.
+
+Incremental outputs stay component-scoped and separate per worktree: Apple uses
+`apps/apple/build/native-verification`, shared Cargo uses
+`packages/healthmd-core-rust/target/native-verification`, and Android uses its
+normal component build directories. Retain these while actively iterating to keep
+builds warm; task-owned output cleanup still applies when retiring a worktree.
+The coordinator always invokes the build tools; it never substitutes a stored
+passing result for compilation.
+
+Each invocation writes logs and an atomic `receipt.json` under ignored
+`.pi/native-verification/<run>/`. Receipts identify the commit, a content digest
+covering tracked and nonignored new files (including dirty/deleted source),
+worktree, command, environment selectors, toolchain logs, timing and result.
+A source change during execution makes the invocation fail. A dirty-source pass
+applies to that exact snapshot; after committing or integrating, rerun against
+the intended final commit. Receipts are local handoff evidence, not GitHub checks
+or release qualification. They contain local paths/build logs and stay ignored.
+
+For a bug fix, add the smallest reliable regression at the owning layer. Prioritize
+startup failures, lost data, broken export/protocol bytes, unauthorized access and
+recovery. If changed lifecycle, permissions, navigation or native runtime behavior
+needs device verification, report the remaining gap and obtain the existing
+explicit QA opt-in. Compilation and portable tests cannot certify those behaviors.

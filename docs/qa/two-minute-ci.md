@@ -7,7 +7,7 @@ website/docs build is required. `make test` executes the same suite locally.
 
 | Group | Regression boundary |
 | --- | --- |
-| Contracts | Manifest/schema/fixture/mirror validation, native metric registry and generator drift, CLI/MCP shared assets, CI deadline and result failure detection |
+| Contracts | Manifest/schema/fixture/mirror validation, native metric registry and generator drift, CLI/MCP shared assets, CI deadline/result failure detection and local native coordinator queue/receipt behavior |
 | Core | Real pure-Rust export/semantic/rollup behavior and protocol/crypto vectors, including versioned Apple and Android profiles |
 | CLI | Transport-neutral operation validation, normalization, scope and backend contracts in `healthmd-operations` |
 | Practice | Locked dependencies, type checking, all unit/API authorization and privacy regressions, production asset build, synthetic scanner/canary and security inventory |

@@ -94,3 +94,12 @@ practice-build:
 
 website-build:
 	cd apps/website && npm run build
+
+# Serialize affected native compilation across linked worktrees; no device launch.
+NATIVE_ARGS ?=
+.PHONY: verify-native plan-native
+verify-native:
+	python3 scripts/native/verify.py $(NATIVE_ARGS)
+
+plan-native:
+	python3 scripts/native/verify.py --plan $(NATIVE_ARGS)

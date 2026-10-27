@@ -32,7 +32,18 @@ Before changing export or protocol behavior:
 - No runtime downloads or unpinned code generation.
 - Generated Swift/Kotlin source is never edited by hand. Compiled native binaries are build artifacts, not source.
 
-## Required checks
+## Verification selection
+
+During iteration, use the root [test selection guide](../../docs/testing-strategy.md):
+run the owning crate/filter and cheap formatting checks, then affected-module and
+consumer regressions once at handoff. Shared native integration changes require
+root `make verify-native` for both platforms. Use the coordinator queue for these
+builds. Protocol/FFI changes still require every affected boundary check.
+
+The complete diagnostic/qualification commands below apply when their surface is
+changed or full qualification is requested; they are not an every-edit checklist.
+
+## Qualification commands
 
 ```bash
 cargo fmt --all --check
