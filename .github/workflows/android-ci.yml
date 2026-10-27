@@ -414,6 +414,7 @@ jobs:
           if-no-files-found: warn
           path: |
             apps/android/build/logs/emulator-readiness.log
+            apps/android/build/logs/instrumentation-platform-failure.log
             apps/android/build/logs/instrumentation-source.json
             apps/android/app/build/reports/androidTests/connected/**
             apps/android/app/build/outputs/androidTest-results/connected/**
