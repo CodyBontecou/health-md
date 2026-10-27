@@ -128,8 +128,13 @@ class NightlyWorkflowTests(unittest.TestCase):
                 self.assertEqual((apple / "validated-slices").exists(), receipt == sha)
 
     def test_native_cache_reuses_apple_ci_key_but_preparation_still_validates_hits(self):
-        prepare = job(CI.read_text(), "prepare-shared-core")
+        prepare = job(CI.read_text(), "assemble-shared-core")
         shared_key = prepare.split("          key: >-\n", 1)[1].split("\n\n", 1)[0]
+        probe = job(CI.read_text(), "probe-shared-core")
+        hot_key = probe.split("          key: >-\n", 1)[1].split("\n\n", 1)[0]
+        self.assertEqual(" ".join(shared_key.split()), " ".join(hot_key.split()))
+        self.assertIn("generate-apple-bindings.sh --check", probe)
+        self.assertIn("validate-apple-xcframework.sh", probe)
         for block in [self.core]:
             cached = step(block, "Restore exact-source shared Rust core from Apple CI")
             self.assertIn("uses: actions/cache/restore@v4", cached)

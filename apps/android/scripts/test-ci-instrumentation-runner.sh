@@ -28,7 +28,16 @@ export MOCK_ADB_CALLS="$TEST_ROOT/adb-calls"
 cat > "$TEST_ROOT/bin/adb" <<'MOCK'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$MOCK_ADB_CALLS"
-printf '  mCurrentFocus=Window{123 u0 Synthetic platform blocker}\n'
+case "$*" in
+    '-s emulator-5554 shell getprop ro.boot.qemu') printf '1\n' ;;
+    '-s emulator-5554 shell dumpsys -t 2 window')
+        printf '  mCurrentFocus=Window{123 u0 Synthetic platform blocker}\n' ;;
+    '-s emulator-5554 shell dumpsys -t 2 activity lastanr')
+        printf 'Reason: Synthetic launcher ANR\n' ;;
+    '-s emulator-5554 logcat -d -v threadtime ActivityManager:E InputDispatcher:E WindowManager:E *:S')
+        printf 'Synthetic platform input error\n' ;;
+    *) exit 31 ;;
+esac
 MOCK
 chmod +x "$TEST_ROOT/bin/adb"
 export PATH="$TEST_ROOT/bin:$PATH"
@@ -97,9 +106,16 @@ export GITHUB_ACTIONS=true MOCK_FOCUS_EXIT=25
 run_case standard 25
 printf '%s\n' "${FOCUS_COMMAND/Diagnostics=false/Diagnostics=true}" > "$TEST_ROOT/expected"
 cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
-printf '%s\n' '-s emulator-5554 shell dumpsys -t 2 window' > "$TEST_ROOT/expected-adb"
+printf '%s\n' \
+    '-s emulator-5554 shell getprop ro.boot.qemu' \
+    '-s emulator-5554 shell dumpsys -t 2 window' \
+    '-s emulator-5554 shell dumpsys -t 2 activity lastanr' \
+    '-s emulator-5554 logcat -d -v threadtime ActivityManager:E InputDispatcher:E WindowManager:E *:S' \
+    > "$TEST_ROOT/expected-adb"
 cmp "$TEST_ROOT/expected-adb" "$MOCK_ADB_CALLS"
 grep -q 'Synthetic platform blocker' "$TEST_ROOT/result.log"
+grep -q 'Reason: Synthetic launcher ANR' "$TEST_ROOT/result.log"
+grep -q 'Synthetic platform input error' "$TEST_ROOT/android/build/logs/instrumentation-platform-failure.log"
 export GITHUB_ACTIONS=false
 unset MOCK_FOCUS_EXIT
 

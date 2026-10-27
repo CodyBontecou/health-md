@@ -39,13 +39,22 @@ pushes, manual runs, and reusable/exact-SHA qualification retain every job.
 
 ### Apple critical-path execution
 
-All five Rust targets (iOS device, both iOS Simulator architectures, and both
-macOS architectures) compile in parallel with the unchanged pinned release
-profile. Each archive is paired with a source digest, commit, toolchain and byte
-hash receipt. The preparation job requires the complete five-slice inventory,
-checks generated bindings, assembles the same three-platform XCFramework and
-runs the existing architecture/symbol validator. Exact-source archive and
-XCFramework caches include the active Xcode/SDK fingerprint; nightly uses the
+Preparation first checks the complete XCFramework cache against the exact native
+inputs and active Xcode/SDK fingerprint. A hit still checks generated binding
+drift, the source digest and the framework architecture/symbol inventory before
+publishing the final current-run artifact directly. A lightweight Linux gate
+requires exactly one complete producer path, avoiding a second SDK runner queue
+on a hit. Consumers still check source, SDK provenance and framework contents;
+only a validated hit skips native slice fanout.
+
+A cache miss builds all five Rust targets (iOS device, both iOS Simulator
+architectures, and both macOS architectures) in parallel with the unchanged
+pinned release profile. Each archive has a source digest, commit, toolchain and
+byte-hash receipt. The collector requires the complete five-slice inventory,
+checks generated bindings and assembles the same three-platform XCFramework.
+The Linux gate requires all five slices and successful assembly on this path.
+Missing or failed prerequisites reject both paths. Prepared framework artifacts
+remain available for three days to support bounded retries. Nightly uses the
 same complete-artifact key and still validates source/bindings on cache hits.
 
 The iOS unit job begins booting its selected compatible simulator before
@@ -54,8 +63,32 @@ disable the unused compiler index store. The native XCFramework still
 contains all five previously qualified target architectures. Test results are
 never restored from a cache.
 
-The fourteen existing phone UI cases plus three history cases run across three
-phone shards; a fourth shard runs four App Review/history cases on iPad. The
+Native unit tests compile once per platform. Xcode enumerates the complete
+compiled XCTest and Swift Testing method inventory; four workers per platform
+receive a balanced, exhaustive partition. Every worker restores the same
+current-run archive and checks source/run/attempt, platform and SDK provenance.
+macOS retains coverage and its 120/300-second method allowances; iOS retains its
+original disabled per-test timeouts and validates its selected simulator UUID.
+Test results are never cached. Runtime skips remain explicit in each inventory.
+
+The stable `test-macos` and `test-ios` collectors require successful preparation
+and every worker, verify actual xcresult methods against the compiled inventory,
+and merge all four results. macOS coverage thresholds, both platforms' warning
+and named automation receipts, and documentation/TDD checks remain downstream of
+the complete result. Missing, duplicate, stale, failed or unexpected methods
+reject qualification. Native-generated automation text is collected from its
+executing Mac worker; conflicting copies fail. The unsigned iOS device candidate
+build runs alongside unit shards after guarded preparation, and remains required
+for the same PR/manual events as before. Its archive and source/checksum receipt
+retain the existing name and lifetime.
+
+The shared unit-test target scopes its Mac host with `platformFilters`.
+Xcode ignored the singular `macos` filter during iOS preparation and also built
+and packaged the desktop app and CLI helpers. Both host dependencies and native
+suites remain; each producer now builds the host for its own platform.
+
+Twenty phone UI cases run across three phone shards; a fourth shard runs four
+App Review/history cases on iPad. The
 same history method intentionally runs once per device family. Entire XCTest
 classes remain together within a family to preserve shared fixture state.
 One SDK27 preparation job builds fresh app/runner/test products and publishes a
@@ -70,7 +103,7 @@ Each shard checks the authoritative xcresult case tree and summary against its
 exact selection. Missing, duplicate within a device family, failed, skipped or
 unexpected cases fail qualification. The stable `iOS UI regressions` aggregate
 requires successful preparation and all four current-run/source receipts for
-21 device-attributed executions. Compile/runtime warning gates (including
+24 device-attributed executions. Compile/runtime warning gates (including
 premature StateObject access), raw logs, process ownership records and xcresults
 remain mandatory. Fail-fast is disabled.
 
@@ -81,16 +114,27 @@ summed runner work. F-Droid and Android Wear remain paused as described below.
 
 ## Android CI selection and accessibility coverage
 
-Play JVM qualification runs debug, release, and E2E variants on separate bounded
-runners with fail-fast disabled. Each keeps the original 60-minute job ceiling,
-no-daemon/two-worker compilation policy, and forced test execution. Debug also
-runs the shared core/contract/protocol tests, lint, and APK/bundle policy checks;
-release and E2E remain full variant suites. The stable `test` context requires
-all three lanes, and the stable `Android CI` gate still requires `test`. Reports
-include the variant in their artifact name so all lane evidence is retained.
-This avoids fitting sequential variant compilation/tests plus lint/packaging
-into one 60-minute job; it does not remove checks or increase their deadlines.
+Play JVM qualification retains debug, release and E2E variants. Each variant has
+three fresh lanes: default Gradle discovery for all remaining classes, plus two
+halves of the slow native configuration class. The halves come from the live
+compiled JUnit annotations using the actual Test runtime classpath, rather than
+a hand-maintained method list. Every variant's remaining lane excludes only that
+native class. Debug's remaining lane also retains shared core, wearable-contract
+and protocol tests, lint, packaging and phone APK policy checks.
 
+The stable `test` collector requires all nine lanes, reconciles the two actual
+native XML method sets with their compiled inventory and exact source/run/attempt,
+and checks shared-module results. Missing, duplicate, stale, failed or unexpected
+cases reject qualification. All original compiler and Test profiles remain; the
+existing Gradle wrapper caches compilation while Test outputs always execute.
+Lane reports include variant and lane in their artifact names. More simultaneous
+runners trade extra preparation work for shorter wall time; full hosted results,
+including queue time, determine whether the complete target is met.
+
+The remaining-class lane uses two app-class forks within the existing two-worker
+budget; each native lane contains one class and preserves its exact method half.
+Gradle test graphs prepare all four ABIs for the actual library profile; the
+binding check does not force an unused Debug build before Release.
 
 On pull requests, `apps/android/scripts/android-ci-plan.py` selects the active Android
 jobs that consume changed files. Phone sources keep Play JVM tests and phone
@@ -229,7 +273,7 @@ Existing required hosted CI, nightly, release, and exact-SHA qualification remai
 
 [`testing-tools-ci.yml`](testing-tools-ci.yml) runs host-side command-routing, documentation build reuse, CI selection/final-gate, and website build orchestration regressions without compiling native apps or starting devices. Run `make test-testing-tools` locally after installing `scripts/testing-requirements.txt`; this is not a substitute for product or release gates. See the root [test selection guide](../../docs/testing-strategy.md) for iteration and qualification tiers.
 
-Apple's macOS job reuses coverage-enabled DerivedData for documentation checks; normal `xcodebuild test` keeps source-change detection. The nightly macOS suite executes once with coverage, rather than once normally and again for coverage. Website CI uses `build:ci` after its locked install, building and checking documentation once.
+Apple CI runs native documentation assertions within the complete coverage-enabled compiled inventory; local documentation commands retain incremental `xcodebuild test` source-change detection. The nightly macOS suite executes once with coverage, rather than once normally and again for coverage. Website CI uses `build:ci` after its locked install, building and checking documentation once.
 
 ## Android release trigger
 

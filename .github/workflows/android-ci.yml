@@ -139,7 +139,7 @@ jobs:
           scripts/test-accessibility-ui-runner.sh
 
   jvm-tests:
-    name: Play JVM (${{ matrix.variant }})
+    name: Play JVM (${{ matrix.variant }}, ${{ matrix.lane }})
     needs: changes
     if: ${{ needs.changes.outputs.test == 'true' }}
     runs-on: ubuntu-24.04
@@ -150,10 +150,31 @@ jobs:
         include:
           - variant: debug
             app-task: testPlayDebugUnitTest
+            lane: remaining
+          - variant: debug
+            app-task: testPlayDebugUnitTest
+            lane: native-0
+          - variant: debug
+            app-task: testPlayDebugUnitTest
+            lane: native-1
           - variant: release
             app-task: testPlayReleaseUnitTest
+            lane: remaining
+          - variant: release
+            app-task: testPlayReleaseUnitTest
+            lane: native-0
+          - variant: release
+            app-task: testPlayReleaseUnitTest
+            lane: native-1
           - variant: e2e
             app-task: testPlayE2eUnitTest
+            lane: remaining
+          - variant: e2e
+            app-task: testPlayE2eUnitTest
+            lane: native-0
+          - variant: e2e
+            app-task: testPlayE2eUnitTest
+            lane: native-1
     defaults:
       run:
         working-directory: apps/android
@@ -234,26 +255,32 @@ jobs:
           ./gradlew --version
           python3 scripts/test-ci-gradle-cache.py
 
-      - name: Prepare source-built Rust core
-        run: ./scripts/run-ci-gradle.sh :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
+      - name: Check committed Rust/Kotlin bindings
+        # Test graphs prepare all four ABIs for their actual profile.
+        run: ./scripts/run-ci-gradle.sh :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
 
       - name: Run Play app, shared contract, core, and protocol tests
         shell: bash
+        env:
+          HEALTHMD_CI_APP_TEST_FORKS: '2'
+          HEALTHMD_JVM_LANE: ${{ matrix.lane }}
+          HEALTHMD_JVM_VARIANT: ${{ matrix.variant }}
+          HEALTHMD_JVM_SOURCE_SHA: ${{ inputs.release_sha || github.sha }}
         run: |
           set -euo pipefail
-          # Each bounded runner compiles one variant; all three test lanes remain required.
+          # Every variant keeps default remaining-class discovery plus both exhaustive native halves.
           tasks=(":app:${{ matrix.app-task }}")
-          if [[ '${{ matrix.variant }}' == debug ]]; then
+          if [[ '${{ matrix.variant }}:${{ matrix.lane }}' == debug:remaining ]]; then
             tasks+=(":healthmd-core:testDebugUnitTest" ":wearable-contract:test" ":direct-protocol:test")
           fi
-          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 "${tasks[@]}" --stacktrace
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 --init-script scripts/ci-jvm-shards.init.gradle "${tasks[@]}" --stacktrace
 
       - name: Run Android lint
-        if: ${{ matrix.variant == 'debug' }}
+        if: ${{ matrix.variant == 'debug' && matrix.lane == 'remaining' }}
         run: ./scripts/run-ci-gradle.sh :app:lintPlayDebug --stacktrace
 
       - name: Assemble Play debug app and validate phone APK policy
-        if: ${{ matrix.variant == 'debug' }}
+        if: ${{ matrix.variant == 'debug' && matrix.lane == 'remaining' }}
         run: |
           ./scripts/run-ci-gradle.sh :app:assemblePlayDebug :app:bundlePlayDebug --stacktrace
           bash scripts/tests/test_verify_google_play_generated_apk_evidence.sh --phone-only
@@ -262,7 +289,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: android-jvm-${{ matrix.variant }}-results-${{ github.run_id }}-${{ github.run_attempt }}
+          name: android-jvm-${{ matrix.variant }}-${{ matrix.lane }}-results-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             apps/android/build/reports/ci/
             apps/android/build/reports/profile/
@@ -281,10 +308,32 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Require all Play JVM variants
+      - name: Require all Play JVM variants and exhaustive native lanes
         env:
           JVM_RESULT: ${{ needs.jvm-tests.result }}
         run: test "$JVM_RESULT" = success
+      - name: Checkout current qualification source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+      - name: Collect all current-run JVM lanes
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: android-jvm-*-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/jvm-lanes
+      - name: Require complete fresh native methods and shared module results
+        run: |
+          python3 apps/android/scripts/verify-jvm-shards.py \
+            --reports build/jvm-lanes --source-sha "$(git rev-parse HEAD)" \
+            --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}' \
+            --output build/jvm-case-inventory.json
+      - name: Retain complete JVM case inventory
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-jvm-case-inventory
+          path: build/jvm-case-inventory.json
+          if-no-files-found: error
+          retention-days: 7
 
   instrumentation-shards:
     name: Android device shard ${{ matrix.shard }}
@@ -411,6 +460,7 @@ jobs:
           if-no-files-found: warn
           path: |
             apps/android/build/logs/emulator-readiness.log
+            apps/android/build/logs/instrumentation-platform-failure.log
             apps/android/build/logs/instrumentation-source.json
             apps/android/app/build/reports/androidTests/connected/**
             apps/android/app/build/outputs/androidTest-results/connected/**
