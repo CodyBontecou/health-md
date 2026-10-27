@@ -138,7 +138,7 @@ class ExportArtifactPlanItem(
     }
 }
 
-/** Ordered immutable plan matching the UniFFI artifact-plan v1 boundary. */
+/** Ordered immutable plan; v1 stays historical and explicit wake-date v6 requires plan v2. */
 class ExportArtifactPlan(
     val schema: String,
     val artifactPlanVersion: UInt,
@@ -153,7 +153,9 @@ class ExportArtifactPlan(
 
     init {
         if (schema != SCHEMA) invalid(ExportArtifactPlanValidationIssue.SCHEMA)
-        if (artifactPlanVersion != VERSION) invalid(ExportArtifactPlanValidationIssue.VERSION)
+        if (artifactPlanVersion != profile.contractVersions.artifactPlan) {
+            invalid(ExportArtifactPlanValidationIssue.VERSION)
+        }
         validateOpaqueId(requestId, ExportArtifactPlanValidationIssue.REQUEST_ID)
         validateOpaqueId(sessionId, ExportArtifactPlanValidationIssue.SESSION_ID)
         if (this.items.size > MAX_ARTIFACTS) {
@@ -255,7 +257,10 @@ object CoreArtifactPlanConverter {
                 AndroidExportProfile.android_frozen_v4
             CoreMetricRegistryProfile.ANDROID_ANALYTICAL_V5 ->
                 AndroidExportProfile.android_analytical_v5
-            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V8 ->
+            CoreMetricRegistryProfile.ANDROID_SLEEP_V6 ->
+                AndroidExportProfile.android_sleep_v6
+            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V8,
+            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V11 ->
                 invalid(ExportArtifactPlanValidationIssue.PROFILE)
         },
         items = plan.items.map { item ->

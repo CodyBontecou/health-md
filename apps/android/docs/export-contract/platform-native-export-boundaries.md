@@ -1,7 +1,7 @@
 # Platform-Native Export Boundaries
 
 **Status:** product/export contract decision
-**Last updated:** 2026-07-25
+**Last updated:** 2026-10-09
 **Scope:** Health.md iOS/macOS HealthKit exports and Health.md Android Health Connect exports
 
 Health.md does **not** promise perfect one-to-one parity between Apple HealthKit and Android Health Connect. The product exports the data each platform exposes, preserves platform-native semantics, and avoids fabricated empty fields for metrics that do not exist on the current platform.
@@ -51,6 +51,7 @@ These are valid Android exports but should not be treated as iOS defects when He
 | Personal Health Record / FHIR resources | `medical_resources`, raw FHIR resource metadata/JSON | Not equivalent to HealthKit medication dose events. Treat as Android PHR data. |
 | Nutrition meal records | `nutrition_meals`, meal name/type/timing, `energy_from_fat` | iOS nutrition is currently aggregate nutrient quantities; meal records are not modeled. |
 | Health Connect contextual fields | glucose meal/specimen context, BP/temp measurement locations, mindfulness/sleep title/notes/source, VO2 max measurement method | iOS may preserve generic HealthKit metadata for some samples, but these are not first-class cross-platform schema fields today. |
+| Explicit sleep parent records | `sleep.sleepSessions`, title/notes/source, exact clocks and parent/client identity; Android-v6 prepared `sleep_session_details` | Classification `android_only`: the Apple producer groups HealthKit category intervals and does not model equivalent native parent title/notes/identity records. Inferred Apple groups retain their own provenance. Android-v6 production remains gated. |
 | Android skin temperature | `skin_temperature`, baseline and deltas | Not equivalent to Apple Watch `wrist_temperature`; keep separate. |
 
 ## Explicit non-equivalences

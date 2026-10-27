@@ -21,17 +21,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
     }
 
     private func openSettingsTab(_ app: XCUIApplication) {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        // Use XCTest's normal wait for the first navigation after launch.
-        // A hosted failure stayed on Export after this action; verify the tab
-        // selection before looking for controls belonging to Settings.
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        if !settingsTab.isSelected { settingsTab.tap() }
-        let selected = expectation(
-            for: NSPredicate(format: "selected == true"),
-            evaluatedWith: settingsTab
-        )
-        wait(for: [selected], timeout: 10)
+        UITestLaunchHelper.openSettingsTab(in: app)
     }
 
     /// Opens the Export Profiles management sheet from Settings.
@@ -383,6 +373,13 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         field.coordinate(withNormalizedOffset: .zero).withOffset(
             CGVector(dx: pasteFrame.midX - fieldFrame.minX, dy: pasteFrame.midY - fieldFrame.minY)
         ).tap()
+        // Observe the clipboard edit's completion before asserting its exact UUID.
+        // Closing the menu alone does not prove that the field has received the paste.
+        let pastedID = expectation(
+            for: NSPredicate(format: "value == %@", expectedCopiedID),
+            evaluatedWith: field
+        )
+        wait(for: [pastedID], timeout: 10)
         XCTAssertEqual(field.value as? String, expectedCopiedID, "Copy must place this profile's exact UUID on the clipboard")
         snap("13a-copied-id-pasted")
         field.typeText(String(repeating: "\u{8}", count: expectedCopiedID.count) + "Daily Everything")

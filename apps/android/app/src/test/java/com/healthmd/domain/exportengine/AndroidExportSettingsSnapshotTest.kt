@@ -1,6 +1,8 @@
 package com.healthmd.domain.exportengine
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.CustomFrontmatterField
 import com.healthmd.domain.model.DailyNoteInjectionSettings
@@ -32,6 +34,63 @@ import org.junit.Test
 
 class AndroidExportSettingsSnapshotTest {
     private val zone = ZoneId.of("America/Los_Angeles")
+
+    @Test
+    fun explicitNightCaptureAuthoritySurvivesCanonicalStorage() {
+        val settings = ExportSettings()
+        val original = AndroidCaptureContext(zone, SleepDayAttribution.NIGHT_BEGINS)
+        val snapshot = AndroidExportSettingsSnapshot.capture(settings, pin = null, zone = zone,
+            captureContext = original)
+        val encoded = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+        assertThat(snapshot.version).isEqualTo(2)
+        assertThat(encoded).contains("\"sleepDayAttribution\":\"night_begins\"")
+        val restored = AndroidExportSettingsSnapshotCodec.decode(encoded).restoreOnto(settings)
+        assertThat(restored.executionSleepCaptureContext).isEqualTo(original)
+        assertThat(restored.executionSleepCaptureAuthorityIsFrozen).isTrue()
+        assertThat(restored.executionSleepCaptureContext!!.zoneId.id).isEqualTo("America/Los_Angeles")
+        assertThat(AndroidExportSettingsSnapshotCodec.encodeCanonical(AndroidExportSettingsSnapshotCodec.decode(encoded)))
+            .isEqualTo(encoded)
+    }
+
+    @Test
+    fun legacySnapshotBytesRemainAuthoritativeButMissingCaptureNeverUsesCurrentPreferences() {
+        val legacy = AndroidExportSettingsSnapshot.capture(ExportSettings(), null, zone)
+        val originalBytes = AndroidExportSettingsSnapshotCodec.encodeCanonical(legacy)
+        assertThat(legacy.version).isEqualTo(1)
+        assertThat(originalBytes).doesNotContain("sleepCaptureContext")
+        val decoded = AndroidExportSettingsSnapshotCodec.decode(originalBytes)
+        assertThat(AndroidExportSettingsSnapshotCodec.encodeCanonical(decoded)).isEqualTo(originalBytes)
+        val current = ExportSettings(executionSleepCaptureContext = AndroidCaptureContext(
+            ZoneId.of("Europe/Berlin"), SleepDayAttribution.MORNING_ENDS))
+        val restored = decoded.restoreOnto(current)
+        assertThat(restored.executionSleepCaptureContext).isNull()
+        assertThat(restored.executionSleepCaptureAuthorityIsFrozen).isTrue()
+        val error = assertThrows(com.healthmd.domain.model.SleepAttributionUnavailableException::class.java) {
+            AndroidCaptureContext.recovered(restored.executionSleepCaptureContext)
+        }
+        assertThat(error.reason).isEqualTo(com.healthmd.domain.model.SleepCaptureAuthorityError.MISSING_DURABLE_ATTRIBUTION)
+    }
+
+    @Test
+    fun snapshotVersionProfileAndCapturedClockMustRemainAtomic() {
+        val context = AndroidCaptureContext(zone, SleepDayAttribution.NIGHT_BEGINS)
+        val valid = AndroidExportSettingsSnapshot.capture(ExportSettings(), null, zone, context)
+        for (invalid in listOf(
+            valid.copy(version = 1),
+            valid.copy(sleepCaptureContext = null),
+            valid.copy(ianaTimeZone = "Europe/Berlin"),
+            valid.copy(sleepCaptureContext = AndroidCaptureContext(zone, SleepDayAttribution.MORNING_ENDS)),
+        )) {
+            val error = assertThrows(AndroidExportSettingsSnapshotException::class.java) {
+                AndroidExportSettingsSnapshotCodec.encodeCanonical(invalid)
+            }
+            assertThat(error.reason).isEqualTo(AndroidExportSettingsSnapshotError.INVALID_STRUCTURE)
+        }
+        val operational = ExportSettings(executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true)
+        val settingsBytes = kotlinx.serialization.json.Json.encodeToString(ExportSettings.serializer(), operational)
+        assertThat(settingsBytes).doesNotContain("executionSleepCapture")
+    }
 
     @Test
     fun deepCanonicalRoundTripRestoresOutputAndPreservesMutablePlumbing() {

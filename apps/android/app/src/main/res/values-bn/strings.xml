@@ -280,6 +280,12 @@
     </plurals>
     <string name="granular_data_title">বিস্তারিত সময়-সিরিজ অন্তর্ভুক্ত করুন</string>
     <string name="granular_data_description">সামঞ্জস্য রপ্তানিতে হার্ট রেট এবং ঘুমের পর্যায়ের মতো টাইমস্ট্যাম্পযুক্ত নমুনাগুলি যোগ করুন। একটি API-সম্পূর্ণ অনুলিপির জন্য, Raw API Snapshot ব্যবহার করুন।</string>
+    <string name="sleep_attribution_title">ঘুমের দিন নির্ধারণ</string>
+    <string name="sleep_attribution_night_begins">রাত শুরু</string>
+    <string name="sleep_attribution_morning_ends">সকাল শেষ</string>
+    <string name="sleep_attribution_night_begins_description">ঘুম দৈনিক নোটের দুপুর থেকে পরের দিনের দুপুর পর্যন্ত সময়সীমা ব্যবহার করে। এটিই ডিফল্ট এবং আগের রপ্তানির সাথে মেলে।</string>
+    <string name="sleep_attribution_morning_ends_description">বর্তমান রপ্তানি প্রোফাইলে সকাল শেষ বিকল্পটি উপলব্ধ নয়। নতুন রপ্তানির জন্য রাত শুরু বেছে নিন।</string>
+
     <!-- Metric selection screen -->
     <string name="metric_selection_title">স্বাস্থ্য মেট্রিক্স</string>
     <string name="search_metrics_hint">মেট্রিক্স অনুসন্ধান করুন…</string>

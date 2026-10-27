@@ -53,9 +53,31 @@ class ExportEnginePolicyResolverTest {
             isDebugOrTestBuild = false,
             compatibility = ExportEngineCompatibility { _, _ -> false },
         )
-        ExportEnginePolicyTarget.entries.forEach { target ->
+        ExportEnginePolicyTarget.entries.filter { it != ExportEnginePolicyTarget.ANDROID_SLEEP_V6 }.forEach { target ->
             assertThat(incompatible.resolve(target).mode).isEqualTo(ExportEngineMode.legacy)
         }
+    }
+
+    @Test
+    fun wakeDateCandidateNeverFallsBackToLegacyOrUnqualifiedProductionPolicy() {
+        val compatibility = HealthMdCoreEngineCompatibility()
+        assertThat(compatibility.isCompatible(ExportEngineMode.legacy, AndroidExportProfile.android_sleep_v6))
+            .isFalse()
+        assertThat(compatibility.isCompatible(ExportEngineMode.legacy, AndroidExportProfile.android_frozen_v4))
+            .isTrue()
+        val resolver = ExportEnginePolicyResolver(
+            defaults = ExportEngineBuildDefaults("rust", "rust", "rust"),
+            isDebugOrTestBuild = false,
+            compatibility = allowCompatible,
+        )
+        val error = org.junit.Assert.assertThrows(IllegalStateException::class.java) {
+            resolver.resolveLocal(AndroidExportProfile.android_sleep_v6)
+        }
+        assertThat(error.message).isEqualTo("wake-date production policy is not qualified")
+        val directError = org.junit.Assert.assertThrows(IllegalStateException::class.java) {
+            resolver.resolve(ExportEnginePolicyTarget.ANDROID_SLEEP_V6)
+        }
+        assertThat(directError.message).isEqualTo(error.message)
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.healthmd.core.CoreMetricRegistryProfile
 import com.healthmd.core.CoreMetricRegistrySnapshot
 import com.healthmd.core.HealthMdCoreReadiness
 import com.healthmd.core.HealthMdCoreService
+import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
 import java.time.ZoneId
 import java.util.Collections
 import kotlinx.serialization.EncodeDefault
@@ -64,6 +65,31 @@ enum class AndroidExportProfile(
         "android-analytical-v5",
         5u,
     ),
+    android_sleep_v6(
+        CoreMetricRegistryProfile.ANDROID_SLEEP_V6,
+        "android-sleep-v6",
+        6u,
+    );
+
+    /** Independently selected handoffs; packaged build-info still describes historical defaults. */
+    internal val contractVersions: AndroidExportContractVersions
+        get() = when (this) {
+            android_frozen_v4, android_analytical_v5 -> AndroidExportContractVersions.HISTORICAL
+            android_sleep_v6 -> AndroidExportContractVersions.WAKE_DATE
+        }
+}
+
+internal data class AndroidExportContractVersions(
+    val semanticInput: UInt,
+    val canonicalModel: UInt,
+    val renderInput: UInt,
+    val artifactPlan: UInt,
+    val registry: UInt,
+) {
+    companion object {
+        val HISTORICAL = AndroidExportContractVersions(1u, 1u, 1u, 1u, 1u)
+        val WAKE_DATE = AndroidExportContractVersions(2u, 2u, 2u, 2u, 2u)
+    }
 }
 
 /**
@@ -119,16 +145,17 @@ data class ExportEnginePin(
             registry: CoreMetricRegistrySnapshot,
         ): ExportEnginePin {
             val buildInfo = readiness.buildInfo
+            val contracts = profile.contractVersions
             val pin = ExportEnginePin(
                 engine = engine,
                 profile = profile,
                 publicSchema = registry.publicSchema,
                 publicSchemaVersion = registry.publicSchemaVersion,
                 coreApiVersion = buildInfo.coreApiVersion,
-                semanticInputVersion = buildInfo.semanticInputVersion,
-                canonicalModelVersion = buildInfo.canonicalModelVersion,
-                renderInputVersion = buildInfo.renderInputVersion,
-                artifactPlanVersion = buildInfo.artifactPlanVersion,
+                semanticInputVersion = contracts.semanticInput,
+                canonicalModelVersion = contracts.canonicalModel,
+                renderInputVersion = contracts.renderInput,
+                artifactPlanVersion = contracts.artifactPlan,
                 registryVersion = registry.registryVersion,
                 registrySha256 = registry.registrySha256,
                 semanticProfileRevision = registry.profileRevision,
@@ -148,6 +175,7 @@ data class ExportEnginePin(
 enum class ExportEnginePinIssue {
     CORE_UNAVAILABLE,
     CORE_NOT_READY,
+    ENGINE,
     PROFILE,
     PUBLIC_SCHEMA,
     PUBLIC_SCHEMA_VERSION,
@@ -188,7 +216,11 @@ class ExportEnginePinValidator {
         if (!readiness.isReady) {
             ExportEnginePinCompatibility(listOf(ExportEnginePinIssue.CORE_NOT_READY))
         } else {
-            validate(pin, readiness, service.getMetricRegistry(pin.profile.coreProfile))
+            validate(
+                pin,
+                readiness,
+                service.getMetricRegistry(pin.profile.coreProfile, pin.profile.contractVersions.registry),
+            )
         }
     } catch (error: Throwable) {
         if (error.isFatalExportEngineFailure()) throw error
@@ -201,8 +233,11 @@ class ExportEnginePinValidator {
         registry: CoreMetricRegistrySnapshot,
     ): ExportEnginePinCompatibility {
         val info = readiness.buildInfo
+        val contracts = pin.profile.contractVersions
+        val historical = pin.profile != AndroidExportProfile.android_sleep_v6
         val issues = linkedSetOf<ExportEnginePinIssue>()
         if (!readiness.isReady) issues += ExportEnginePinIssue.CORE_NOT_READY
+        if (!historical && pin.engine != ExportEngineMode.rust) issues += ExportEnginePinIssue.ENGINE
         if (
             registry.profileId != pin.profile.name ||
             registry.publicProfileId != pin.profile.publicProfileId
@@ -223,30 +258,42 @@ class ExportEnginePinValidator {
         ) {
             issues += ExportEnginePinIssue.PUBLIC_SCHEMA_VERSION
         }
-        if (pin.coreApiVersion != info.coreApiVersion) {
+        if (pin.coreApiVersion != info.coreApiVersion ||
+            (!historical && pin.coreApiVersion != HealthMdCoreService.EXPECTED_CORE_API_VERSION)
+        ) {
             issues += ExportEnginePinIssue.CORE_API_VERSION
         }
-        if (pin.semanticInputVersion != info.semanticInputVersion) {
+        if (pin.semanticInputVersion != contracts.semanticInput ||
+            (historical && pin.semanticInputVersion != info.semanticInputVersion)
+        ) {
             issues += ExportEnginePinIssue.SEMANTIC_INPUT_VERSION
         }
-        if (pin.canonicalModelVersion != info.canonicalModelVersion) {
+        if (pin.canonicalModelVersion != contracts.canonicalModel ||
+            (historical && pin.canonicalModelVersion != info.canonicalModelVersion)
+        ) {
             issues += ExportEnginePinIssue.CANONICAL_MODEL_VERSION
         }
-        if (pin.renderInputVersion != info.renderInputVersion) {
+        if (pin.renderInputVersion != contracts.renderInput ||
+            (historical && pin.renderInputVersion != info.renderInputVersion)
+        ) {
             issues += ExportEnginePinIssue.RENDER_INPUT_VERSION
         }
-        if (pin.artifactPlanVersion != info.artifactPlanVersion) {
+        if (pin.artifactPlanVersion != contracts.artifactPlan ||
+            (historical && pin.artifactPlanVersion != info.artifactPlanVersion)
+        ) {
             issues += ExportEnginePinIssue.ARTIFACT_PLAN_VERSION
         }
         if (
-            pin.registryVersion != info.registryVersion ||
-            pin.registryVersion != registry.registryVersion
+            pin.registryVersion != contracts.registry ||
+            pin.registryVersion != registry.registryVersion ||
+            (historical && pin.registryVersion != info.registryVersion)
         ) {
             issues += ExportEnginePinIssue.REGISTRY_VERSION
         }
         if (
-            pin.registrySha256 != info.registrySha256 ||
+            (historical && pin.registrySha256 != info.registrySha256) ||
             pin.registrySha256 != registry.registrySha256 ||
+            (!historical && pin.registrySha256 != HEALTHMD_SLEEP_REGISTRY_SHA256) ||
             !pin.registrySha256.isLowercaseSha256()
         ) {
             issues += ExportEnginePinIssue.REGISTRY_SHA256

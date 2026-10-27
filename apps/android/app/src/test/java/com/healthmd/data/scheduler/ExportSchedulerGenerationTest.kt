@@ -658,6 +658,7 @@ class ExportSchedulerGenerationTest {
     ): ExportScheduler {
         val settingsRepository = mockk<SettingsRepository>(relaxed = true)
         coEvery { settingsRepository.getExportSettings() } answers { currentSettings() }
+        coEvery { settingsRepository.getSleepDayAttribution() } returns com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS
         val credentialStore = mockk<APIExportCredentialStore>(relaxed = true)
         coEvery { credentialStore.destinationFingerprint(any()) } answers {
             fingerprintForEndpoint(firstArg())

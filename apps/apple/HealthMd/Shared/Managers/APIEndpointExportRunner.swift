@@ -233,12 +233,20 @@ struct APIEndpointExportRunner {
         let awakeActivityID = UUID()
         IdleTimerCoordinator.shared.beginActivity(awakeActivityID)
         defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
+        let captureContext: AppleSleepCaptureContext
+        do {
+            captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+        } catch {
+            return ExportOrchestrator.ExportResult(successCount: 0, totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .unknown, errorDetails: error.localizedDescription) },
+                completedDates: [])
+        }
 
         externalIntegrations?.beginExportAction()
 
         // Freeze process-global/provider decisions and the HealthKit calendar before any capture.
         let connectedAppsEnabled = ConnectedAppsFeature.isEnabled
-        let calendarTimeZone = settings.exportTimeZoneOverride ?? .current
+        let calendarTimeZone = captureContext.timeZone
         let externalFetcher: ExternalDailyRecordFetcher?
         if connectedAppsEnabled,
            let externalIntegrations,
@@ -256,37 +264,40 @@ struct APIEndpointExportRunner {
         }
 
         let apiClient = APIExportClient()
-        let result = await HealthKitQueryExecutionController.withController {
-            await exportEngineAware(
-                dates: dates,
-                settings: settings,
-                destination: destination,
-                calendarTimeZone: calendarTimeZone,
-                connectedAppsEnabled: connectedAppsEnabled,
-                fetchHealthData: { date, detailPolicy, metricSelection in
-                    try await healthKitManager.fetchHealthData(
-                        for: date,
-                        detailPolicy: detailPolicy,
-                        metricSelection: metricSelection,
-                        timeZone: calendarTimeZone
-                    )
-                },
-                fetchExternalDailyRecords: externalFetcher,
-                upload: { batch, destination in
-                    try await apiClient.upload(
-                        payloadArtifact: batch.bodyArtifact,
-                        destination: destination
-                    )
-                },
-                maxBatchDaySpan: defaultMaxBatchDaySpan,
-                maxBatchPayloadBytes: defaultMaxBatchPayloadBytes,
-                policyResolver: policyResolver,
-                coreExecutor: coreExecutor,
-                identitySource: identitySource,
-                comparisonOptions: comparisonOptions,
-                diagnosticSink: diagnosticSink,
-                onProgress: onProgress
-            )
+        let result = await AppleSleepCaptureContext.pinned.withValue(captureContext) {
+            await HealthKitQueryExecutionController.withController {
+                await exportEngineAware(
+                    dates: dates,
+                    settings: settings,
+                    destination: destination,
+                    calendarTimeZone: calendarTimeZone,
+                    connectedAppsEnabled: connectedAppsEnabled,
+                    fetchHealthData: { date, detailPolicy, metricSelection in
+                        try await healthKitManager.fetchHealthData(
+                            for: date,
+                            detailPolicy: detailPolicy,
+                            metricSelection: metricSelection,
+                            timeZone: calendarTimeZone,
+                            captureContext: captureContext
+                        )
+                    },
+                    fetchExternalDailyRecords: externalFetcher,
+                    upload: { batch, destination in
+                        try await apiClient.upload(
+                            payloadArtifact: batch.bodyArtifact,
+                            destination: destination
+                        )
+                    },
+                    maxBatchDaySpan: defaultMaxBatchDaySpan,
+                    maxBatchPayloadBytes: defaultMaxBatchPayloadBytes,
+                    policyResolver: policyResolver,
+                    coreExecutor: coreExecutor,
+                    identitySource: identitySource,
+                    comparisonOptions: comparisonOptions,
+                    diagnosticSink: diagnosticSink,
+                    onProgress: onProgress
+                )
+            }
         }
         externalIntegrations?.endExportAction(
             succeeded: result.didCompleteAllRequestedDates && !result.wasCancelled

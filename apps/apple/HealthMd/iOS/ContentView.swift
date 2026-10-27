@@ -1833,6 +1833,7 @@ struct ContentView: View {
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
                 let providerTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+                let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: advancedSettings, timeZone: providerTimeZone)
                 var providerCalendar = Calendar(identifier: .gregorian)
                 providerCalendar.timeZone = providerTimeZone
                 let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
@@ -1887,6 +1888,7 @@ struct ContentView: View {
                             destinationName: destinationName,
                             dateFormatter: dateFormatter,
                             externalRecordFetcher: externalRecordFetcher,
+                            captureContext: captureContext,
                             selection: selection,
                             frozenSettings: advancedSettings
                         )
@@ -1908,7 +1910,8 @@ struct ContentView: View {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: advancedSettings.metricSelection,
-                            timeZone: providerTimeZone
+                            timeZone: providerTimeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: externalRecordFetcher,
@@ -2043,6 +2046,7 @@ struct ContentView: View {
         destinationName: String,
         dateFormatter: DateFormatter,
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        captureContext: AppleSleepCaptureContext,
         selection: HealthHistoryExecutionSelection,
         frozenSettings: AdvancedExportSettings
     ) async throws {
@@ -2152,7 +2156,8 @@ struct ContentView: View {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: advancedSettings.metricSelection,
-                        timeZone: sourceTimeZone
+                        timeZone: sourceTimeZone,
+                        captureContext: captureContext
                     )
                     var record = ConnectedExportDetailPolicy.sanitized(
                         fetchedRecord,

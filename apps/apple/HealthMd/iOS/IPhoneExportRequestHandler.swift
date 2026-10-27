@@ -173,6 +173,13 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 savedSettings: AdvancedExportSettings()
             )
         if let automationTimeZone { settings.exportTimeZoneOverride = automationTimeZone }
+        do {
+            settings.executionSleepCaptureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+        } catch {
+            syncService.send(.iphoneExportRejected(IPhoneExportFailure(jobID: request.jobID,
+                reason: .healthKitFetchFailed, message: error.localizedDescription)))
+            return
+        }
         let healthSubfolder = VaultManager.savedHealthSubfolder()
         let sourceTimeZone = settings.exportTimeZoneOverride ?? .current
         var sourceCalendar = Calendar(identifier: .gregorian)
@@ -494,7 +501,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: settings.metricSelection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: settings.executionSleepCaptureContext
                         )
                         guard !self.cancelledRequestIDs.contains(request.jobID),
                               self.activeRequestID == request.jobID else {
@@ -1044,7 +1052,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: settings.executionSleepCaptureContext
                         )
                     },
                     fetchExternalDailyRecords: request.canonicalSelection == nil
@@ -1092,7 +1101,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                                 for: date,
                                 detailPolicy: detailPolicy,
                                 metricSelection: metricSelection,
-                                timeZone: sourceTimeZone
+                                timeZone: sourceTimeZone,
+                                captureContext: settings.executionSleepCaptureContext
                             )
                         }
                         return HealthData(
@@ -1136,7 +1146,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: settings.executionSleepCaptureContext
                         )
                     },
                     fetchExternalDailyRecords: nil
@@ -1353,7 +1364,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     for: date,
                     detailPolicy: detailPolicy,
                     metricSelection: settings.metricSelection,
-                    timeZone: sourceTimeZone
+                    timeZone: sourceTimeZone,
+                    captureContext: settings.executionSleepCaptureContext
                 )
             },
             fetchExternalDailyRecords: externalRecordFetcher,
@@ -1508,7 +1520,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: settings.executionSleepCaptureContext
                         )
                     },
                     fetchExternalDailyRecords: externalRecordFetcher
@@ -1655,7 +1668,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: metricSelection,
-                        timeZone: sourceTimeZone
+                        timeZone: sourceTimeZone,
+                        captureContext: settings.executionSleepCaptureContext
                     )
                 },
                 fetchExternalDailyRecords: { date in

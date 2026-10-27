@@ -463,18 +463,24 @@ struct ExportOrchestrator {
         captureCalendar: Calendar? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
-        // Explicit opt-in only. Existing callers retain their actual calendar
-        // behavior and the established forNewAppleOperation engine authority.
-        await HealthKitQueryExecutionController.withController {
-            await exportDatesWithQueryController(
-                dates,
-                healthKitManager: healthKitManager,
-                vaultManager: vaultManager,
-                settings: settings,
-                externalIntegrations: externalIntegrations,
-                captureCalendar: captureCalendar,
-                onProgress: onProgress
-            )
+        let context: AppleSleepCaptureContext
+        do {
+            context = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+        } catch {
+            return unavailableSleepContextResult(dates: dates, settings: settings, error: error)
+        }
+        return await AppleSleepCaptureContext.pinned.withValue(context) {
+            await HealthKitQueryExecutionController.withController {
+                await exportDatesWithQueryController(
+                    dates,
+                    healthKitManager: healthKitManager,
+                    vaultManager: vaultManager,
+                    settings: settings,
+                    externalIntegrations: externalIntegrations,
+                    captureCalendar: captureCalendar,
+                    onProgress: onProgress
+                )
+            }
         }
     }
 
@@ -525,7 +531,7 @@ struct ExportOrchestrator {
         let operationSurface: AppleExportOperationSurface = hasProviderSideEffects
             ? .legacyOnly
             : .localVaultRangeWithoutSideEffects
-        let sourceTimeZone = settings.exportTimeZoneOverride ?? .current
+        let sourceTimeZone = AppleSleepCaptureContext.pinned.wrappedValue?.timeZone ?? settings.exportTimeZoneOverride ?? .current
         // Foreground ranges freeze renderer authority and calendar ownership once before the first
         // HealthKit read. Per-day planning must never inherit a flag or timezone changed mid-run.
         let operationSettingsSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
@@ -1200,18 +1206,30 @@ struct ExportOrchestrator {
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
-        await HealthKitQueryExecutionController.withController {
-            await exportDatesBackgroundWithQueryController(
-                dates,
-                healthKitManager: healthKitManager,
-                vaultManager: vaultManager,
-                settings: settings,
-                frozenSettingsSnapshot: frozenSettingsSnapshot,
-                requestedRollupDates: requestedRollupDates,
-                operationSurface: operationSurface,
-                externalIntegrations: externalIntegrations,
-                onProgress: onProgress
-            )
+        let context: AppleSleepCaptureContext
+        do {
+            if let frozenSettingsSnapshot {
+                context = try frozenSettingsSnapshot.recoveredSleepCaptureContext()
+            } else {
+                context = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+            }
+        } catch {
+            return unavailableSleepContextResult(dates: dates, settings: settings, error: error)
+        }
+        return await AppleSleepCaptureContext.pinned.withValue(context) {
+            await HealthKitQueryExecutionController.withController {
+                await exportDatesBackgroundWithQueryController(
+                    dates,
+                    healthKitManager: healthKitManager,
+                    vaultManager: vaultManager,
+                    settings: settings,
+                    frozenSettingsSnapshot: frozenSettingsSnapshot,
+                    requestedRollupDates: requestedRollupDates,
+                    operationSurface: operationSurface,
+                    externalIntegrations: externalIntegrations,
+                    onProgress: onProgress
+                )
+            }
         }
     }
 
@@ -1327,7 +1345,7 @@ struct ExportOrchestrator {
 
         let progressFormatter = DateFormatter()
         progressFormatter.dateFormat = "yyyy-MM-dd"
-        progressFormatter.timeZone = settings.exportTimeZoneOverride ?? .current
+        progressFormatter.timeZone = AppleSleepCaptureContext.pinned.wrappedValue?.timeZone ?? settings.exportTimeZoneOverride ?? .current
 
         for (index, date) in dates.enumerated() {
             // Check for cancellation before each date
@@ -2098,6 +2116,12 @@ struct ExportOrchestrator {
             guard detail.reason == .noHealthData else { return nil }
             return calendar.startOfDay(for: detail.date)
         })).sorted()
+    }
+
+    private static func unavailableSleepContextResult(dates: [Date], settings: AdvancedExportSettings, error: Error) -> ExportResult {
+        ExportResult(successCount: 0, totalCount: dates.count,
+            failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .unknown, errorDetails: error.localizedDescription) },
+            formatsPerDate: looseFormatsPerDate(settings: settings), completedDates: [])
     }
 
     private static func failureReason(for error: HealthKitManager.HealthKitError) -> ExportFailureReason {

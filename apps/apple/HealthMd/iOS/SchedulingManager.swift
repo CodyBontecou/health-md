@@ -679,7 +679,14 @@ class SchedulingManager: ObservableObject {
 
         let requestCalendar = pendingExportCalendar(for: request)
         let outcome = await runCancellableNotificationExport(operationID: request.id) {
-            await self.shortcutExportRunner(request.dates, requestCalendar)
+            do {
+                let context = try request.recoveredSleepCaptureContext()
+                return await AppleSleepCaptureContext.pinned.withValue(context) {
+                    await self.shortcutExportRunner(request.dates, requestCalendar)
+                }
+            } catch {
+                return .failure(reason: error.localizedDescription)
+            }
         }
 
         switch outcome {
@@ -1473,7 +1480,12 @@ class SchedulingManager: ObservableObject {
         notificationOperationID: UUID? = nil,
         expectedRequest: PendingExportRequest? = nil
     ) async -> ExportOrchestrator.ExportResult {
-        let pending = expectedRequest ?? loadPendingScheduledExportRequest(id: quotaJobID)
+        let pending: PendingExportRequest?
+        do {
+            pending = try expectedRequest ?? pendingExportStore.loadAll().first { $0.id == quotaJobID }
+        } catch {
+            return scheduledFailureResult(dates: dates, reason: .unknown, message: error.localizedDescription)
+        }
         if Task.isCancelled || pending.map({ !isPendingExportRequestStillStored($0) }) == true {
             return scheduledFailureResult(dates: dates, reason: .unknown,
                 message: "Scheduled recovery was invalidated.", wasCancelled: true)
@@ -1493,6 +1505,40 @@ class SchedulingManager: ObservableObject {
             return scheduledFailureResult(dates: dates, reason: .unknown,
                 message: Self.apiRecoveryDestinationChangedMessage)
         }
+        let context: AppleSleepCaptureContext
+        do {
+            if let pending {
+                context = try pending.recoveredSleepCaptureContext()
+            } else if let settingsSnapshot {
+                context = try settingsSnapshot.recoveredSleepCaptureContext()
+            } else {
+                context = AppleSleepCaptureContext.resolve(attribution: HealthKitManager.shared.sleepDayAttribution)
+                try context.requireShippedProfile()
+            }
+        } catch {
+            return scheduledFailureResult(dates: dates, reason: .unknown, message: error.localizedDescription)
+        }
+        // A profile snapshot can remain portable configuration; only this local
+        // execution copy receives the separately persisted capture authority.
+        var operationSnapshot = settingsSnapshot
+        operationSnapshot?.sleepCaptureContext = context
+        return await AppleSleepCaptureContext.pinned.withValue(context) {
+            await runScheduledExportWithCaptureContext(dates: dates, target: target,
+                settingsSnapshot: operationSnapshot, originalRequestedDates: originalRequestedDates,
+                originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
+                quotaJobID: quotaJobID, notificationOperationID: notificationOperationID,
+                resolvedAPIDestination: resolvedAPIDestination)
+        }
+    }
+
+    @MainActor
+    private func runScheduledExportWithCaptureContext(
+        dates: [Date], target: ExportTargetSelection,
+        settingsSnapshot: ExportSettingsSnapshot?, originalRequestedDates: [Date]?,
+        originalCalendarTimeZoneIdentifier: String?, quotaJobID: UUID?,
+        notificationOperationID: UUID?,
+        resolvedAPIDestination: APIExportDestinationSnapshot?
+    ) async -> ExportOrchestrator.ExportResult {
         var diagnosticFields: [DiagnosticField: DiagnosticValue] = [.dayCount: .integer(Int64(dates.count))]
         if let quotaJobID { diagnosticFields[.operationId] = .text(quotaJobID.uuidString.lowercased()) }
         DiagnosticRecorder.shared.record(.attemptStarted, fields: diagnosticFields)
@@ -1732,6 +1778,7 @@ class SchedulingManager: ObservableObject {
         scheduledExternalIntegrations?.beginExportAction()
         defer { scheduledExternalIntegrations?.endExportAction() }
         do {
+            let captureContext = try HealthKitManager.shared.resolveSleepCaptureContext(settings: settings, timeZone: providerTimeZone)
             if let remote = syncService.remoteCapabilities,
                let negotiation = SyncPeerCapabilities.current(platform: .iOS)
                     .negotiateConnectedCorpusTransfer(with: remote) {
@@ -1768,7 +1815,8 @@ class SchedulingManager: ObservableObject {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: settings.metricSelection,
-                        timeZone: providerTimeZone
+                        timeZone: providerTimeZone,
+                        captureContext: captureContext
                     )
                 },
                 fetchExternalDailyRecords: externalRecordFetcher,

@@ -146,7 +146,10 @@ class ExportProfilesViewModelTest {
             coEvery { removeEntry(any()) } just Runs
         }
         val snapshotFactory = ScheduledProfileSnapshotFactory(
-            mockk<ExportEnginePinPlanner> {
+            settingsRepository = mockk<SettingsRepository> {
+                coEvery { getSleepDayAttribution() } returns com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS
+            },
+            enginePinPlanner = mockk<ExportEnginePinPlanner> {
                 every { forScheduledExport(any(), any(), any()) } answers {
                     val settings = firstArg<ExportSettings>()
                     val target = secondArg<ExportTarget>()

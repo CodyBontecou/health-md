@@ -78,6 +78,8 @@ A visible data-sync notification ("Waiting for Health.md CLI" → transfer progr
 
 ## Implementation notes
 
+The gated Android-v6 successor store verifies retained artifact and partition SHA-256 digests before recovery or accepted-lease admission and before terminal accounting/completion. It streams each artifact through a fixed 128 KiB buffer, including zero-length artifacts, and rejects same-length corruption or contradictory stored digests. Invalid expired successor spools remain intact for inspection; unexpired spools are not fully read during unrelated expiry scans. Lightweight per-frame ownership checks remain unchanged. This does not qualify complete production successor admission, OS-kill/power-loss recovery or mutation after a lease was admitted; the receiver still validates transferred bytes. Historical stores, public export profiles and protocol/journal grammar are unchanged.
+
 The portable CLI's RFC-0005 P1 wake window keeps an unavailable export/resume/cancel request open
 for 120 seconds while the user opens this screen and restarts the direct session. It is host-only,
 uses no new protocol bytes, and can be disabled with `--wake-timeout 0`. The deployed P2 APNs
@@ -85,3 +87,11 @@ doorbell is Apple-only. Android FCM enrollment remains the explicit RFC-0005 P3 
 sends no new wake notification yet; the existing foreground-service notification is unchanged.
 
 New pairing uses shared selector 3 and its domain-separated 20-digit transcript (`packages/contracts/direct-protocol/pairing-v3/`). Selector 2 remains as a high-entropy fallback for older CLIs; trusted reconnect keeps selector 2. The strict QR parser accepts only the exact in-app handoff, canonical private-LAN/Tailscale IPv4, a valid port, and exactly 20 ASCII digits. The session uses authenticated encryption with Android Keystore-backed trust, a `dataSync` foreground service (`FOREGROUND_SERVICE_DATA_SYNC`), private no-backup spools, partitioned resumable seven-day jobs, and exact artifact checksums (application protocol v2: `direct-protocol/` Kotlin + `packages/contracts/direct-protocol/v2/`). Failure states map to user copy (`CONNECTION_FAILED`, `SESSION_TIMEOUT`, `QUOTA_EXHAUSTED`, `DEVICE_LOCKED`, …). Destination strategy and topology: [Android desktop destination strategy](../android-desktop-destination.md).
+
+### Versioned recovery storage
+
+Recognized historical v4/v5 jobs retain the existing private `direct-cli/jobs` location. Explicit, complete Android-v6 authority selects the sibling `jobs-sleep-attribution-v6` store. A shared coordination lock remains outside both purge roots, and live preparation/accepted leases retain their namespace. Duplicate IDs, misplaced authority and incomplete successor pins cannot select or migrate an operation. Looking up a missing job creates no job directories or ownership state. Current **Forget paired CLI** cleanup covers both stores.
+
+Successor expiry requires recognized current metadata and ownership, the existing generated-files v1 transfer envelope, matching peer/request/session identity, complete partition coverage and contained regular artifact files. Unknown, unreadable, misplaced or incomplete recovery state is retained rather than deleted using its filesystem age; **Forget paired CLI** explicitly removes that state. Expiry synchronizes directory changes before inspection and after removal; a retry also synchronizes an empty root after an uncertain removal. Recursive cleanup unlinks symlinks without following their targets.
+
+This storage support does not enable Morning ends capture or advertise new Direct products. The setting remains unavailable in production pending Issue #104 acceptance. Journal/protocol grammars and historical profile meanings are unchanged. Full process-death, power-loss, downgrade, provider, live CLI and user-flow acceptance remain required.

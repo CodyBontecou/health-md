@@ -15,6 +15,35 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         }
     }
 
+    /// XCUITest can report a partly exposed preset as hittable while its tap
+    /// point is covered by the floating export actions. Scroll only inside the
+    /// unobscured content and require the whole preset to clear those actions.
+    private func scrollPresetAboveExportActions(_ preset: XCUIElement, in app: XCUIApplication) -> Bool {
+        let scrollView = app.scrollViews.firstMatch
+        for attempt in 0...6 {
+            let viewport = scrollView.frame.intersection(app.frame)
+            let actionTop = [
+                app.buttons[UITestLaunchHelper.Export.previewButton],
+                app.buttons[UITestLaunchHelper.Export.exportButton]
+            ].filter { $0.exists }.map { $0.frame.minY }.min() ?? viewport.maxY
+            let visible = CGRect(
+                x: viewport.minX, y: viewport.minY,
+                width: viewport.width, height: max(0, min(viewport.maxY, actionTop) - viewport.minY)
+            ).insetBy(dx: 0, dy: 8)
+            guard !visible.isEmpty else { return false }
+            if preset.exists && !preset.frame.isEmpty && visible.contains(preset.frame) && preset.isHittable {
+                return true
+            }
+            guard attempt < 6 else { return false }
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: visible.midX, dy: visible.minY + visible.height * 0.8)).press(
+                forDuration: 0.05,
+                thenDragTo: origin.withOffset(CGVector(dx: visible.midX, dy: visible.minY + visible.height * 0.3))
+            )
+        }
+        return false
+    }
+
     /// The sheet-local toast is duplicated by the app-level one behind the
     /// sheet. Poll the live query and return the same tappable instance that
     /// callers will interact with, rather than selecting a stale/fallback
@@ -72,9 +101,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
     }
 
     private func openProfilesManagementSheet(_ app: XCUIApplication) {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
+        UITestLaunchHelper.openSettingsTab(in: app)
 
         let profilesRow = app.buttons["export.profiles.entry"]
         XCTAssertTrue(profilesRow.waitForExistence(timeout: 5), "Export Profiles row should exist in Settings")
@@ -227,9 +254,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        let scheduleTab = app.tabBars.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        guard UITestLaunchHelper.openScheduleTab(in: app) else { return }
 
         let card = app.staticTexts["Profile Schedules"]
         XCTAssertTrue(card.waitForExistence(timeout: 5), "Profile Schedules card should exist")

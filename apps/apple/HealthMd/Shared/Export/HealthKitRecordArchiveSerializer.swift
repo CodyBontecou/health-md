@@ -282,6 +282,25 @@ nonisolated enum CanonicalRFC3339UTC {
         return String(format: "%@.%09dZ", prefix, nanoseconds)
     }
 
+    /// Successor-only UTC encoding. Splitting Foundation's reference interval first avoids
+    /// losing one fractional bit when adding the Unix epoch offset near a calendar boundary.
+    /// A source Date that cannot round-trip through the public nanosecond grammar is unavailable.
+    static func stringPreservingReferencePrecision(from date: Date) -> String? {
+        let interval = date.timeIntervalSinceReferenceDate
+        guard interval.isFinite else { return nil }
+        var wholeSeconds = floor(interval)
+        var nanoseconds = Int(((interval - wholeSeconds) * 1_000_000_000).rounded())
+        if nanoseconds == 1_000_000_000 {
+            wholeSeconds += 1
+            nanoseconds = 0
+        }
+        let wholeDate = Date(timeIntervalSinceReferenceDate: wholeSeconds)
+        guard wholeDate.addingTimeInterval(Double(nanoseconds) / 1_000_000_000) == date else { return nil }
+        let whole = cachedFormatterForCurrentThread().string(from: wholeDate)
+        guard whole.count == 20, whole.hasSuffix("Z") else { return nil }
+        return String(format: "%@.%09dZ", String(whole.dropLast()), nanoseconds)
+    }
+
     /// Parses only timestamps emitted by `string(from:)` and verifies that Foundation's
     /// floating-point `Date` representation can reproduce the exact canonical bytes.
     static func date(from value: String) -> Date? {

@@ -1,10 +1,51 @@
 import Foundation
+import Darwin
 import XCTest
 @testable import HealthMd
 
 final class ExportArtifactIOTests: XCTestCase {
     private enum FixtureError: Error {
         case injected
+    }
+
+    func testFirstPublicationLockSupportsNestedMarkerAndJournalWrites() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let lock = root.appendingPathComponent(".publication.lock")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: lock.path))
+        let lease = try AtomicFileWriter.beginPublicationTransaction(at: lock)
+        defer { lease.close() }
+        let marker = root.appendingPathComponent(".generation")
+        let journal = root.appendingPathComponent("journal.json")
+        try AtomicFileWriter.writeData(Data("generation".utf8), to: marker, transactionLockURL: lock)
+        try AtomicFileWriter.writeData(Data("journal".utf8), to: journal, transactionLockURL: lock)
+        XCTAssertEqual(try Data(contentsOf: marker), Data("generation".utf8))
+        XCTAssertEqual(try Data(contentsOf: journal), Data("journal".utf8))
+        let mode = try FileManager.default.attributesOfItem(atPath: lock.path)[.posixPermissions] as? NSNumber
+        XCTAssertEqual(mode?.intValue, 0o600)
+    }
+
+    func testPublicationLockHardLinkSharesLeaseWithoutReleasingOuterKernelLock() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let lock = root.appendingPathComponent(".publication.lock")
+        let alias = root.appendingPathComponent(".lock-alias")
+        let lease = try AtomicFileWriter.beginPublicationTransaction(at: lock)
+        defer { lease.close() }
+        try FileManager.default.linkItem(at: lock, to: alias)
+        let nested = try AtomicFileWriter.beginPublicationTransaction(at: alias)
+        nested.close()
+        let probe = try FileHandle(forUpdating: alias)
+        defer { try? probe.close() }
+        let lockedResult = flock(probe.fileDescriptor, LOCK_EX | LOCK_NB)
+        let lockedError = errno
+        XCTAssertEqual(lockedResult, -1)
+        XCTAssertEqual(lockedError, EWOULDBLOCK, "Closing the nested alias must retain the outer OS lock")
+        lease.close()
+        XCTAssertEqual(flock(probe.fileDescriptor, LOCK_EX | LOCK_NB), 0)
+        XCTAssertEqual(flock(probe.fileDescriptor, LOCK_UN), 0)
     }
 
     func testCanonicalStringEscapingMatchesFoundationForScalarBoundaries() throws {

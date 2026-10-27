@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import path from "node:path";
+import vm from "node:vm";
+import { marked } from "marked";
 
 const expectedV7Visualizations = [
   "metric-trend",
@@ -29,6 +31,8 @@ test("generated website catalog includes every plugin visualization exactly once
   const catalog = await readJson("../assets/visualizations-catalog.json");
   assert.equal(catalog.schema, "healthmd.visualization_catalog");
   assert.equal(catalog.schemaVersion, 1);
+  const externalSources = await readJson("../external-sources.json");
+  assert.equal(catalog.sourceRevision, externalSources.obsidian_plugin.revision);
   assert.ok(Array.isArray(catalog.visualizations));
   const ids = catalog.visualizations.map((item) => item.type);
   assert.equal(new Set(ids).size, ids.length);
@@ -121,9 +125,9 @@ test("plugin-generated preview fixtures pair daily v8 with range v9 sourced from
 });
 
 test("Apple onboarding resources stay byte-identical to pinned website plugin assets and samples", async () => {
+  const externalSources = await readJson("../external-sources.json");
   const appleResourceRoot = new URL("../../apple/HealthMd/iOS/Resources/PluginVisualization/", import.meta.url);
-  const [externalSources, websiteBundle, appleBundle, websiteDays, websiteRollups, appleDays, appleRollups, previewHTML] = await Promise.all([
-    readJson("../external-sources.json"),
+  const [websiteBundle, appleBundle, websiteDays, websiteRollups, appleDays, appleRollups, previewHTML] = await Promise.all([
     readFile(new URL("../assets/healthmd-plugin-visualizations.js", import.meta.url)),
     readFile(new URL("healthmd-plugin-visualizations.js", appleResourceRoot)),
     readFile(new URL("../assets/visualizations-data/health-sample.json", import.meta.url), "utf8"),
@@ -133,7 +137,7 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
     readFile(new URL("plugin-activity-rings-preview.html", appleResourceRoot), "utf8"),
   ]);
 
-  assert.equal(externalSources.obsidian_plugin.revision, "368dba1ae80adb967e21fb887f52c8115c170b8c");
+  assert.equal(externalSources.obsidian_plugin.revision, "06c366ed9bfc60bb9d6fe2d60a6520bbd12ba295");
   assert.deepEqual(appleBundle, websiteBundle);
   assert.equal(appleDays, `window.HealthMdSampleData = ${websiteDays.trim()};\n`);
   assert.equal(appleRollups, `window.HealthMdRollupSampleData = ${websiteRollups.trim()};\n`);
@@ -168,4 +172,210 @@ test("generated plugin source map is reproducible and contains no local checkout
   assert.ok(!serialized.includes("/Users/"));
   assert.ok(!serialized.includes("/private/var/"));
   assert.ok(!serialized.includes("github.workspace"));
+});
+
+
+test("pinned browser bundle parses actual Apple and Android successor files", {
+  skip: !process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+}, async () => {
+  const element = () => ({ style: {}, getContext: () => ({}), appendChild() {}, setAttribute() {} });
+  const document = { documentElement: element(), createElement: element, addEventListener() {} };
+  const window = { document, screen: {}, devicePixelRatio: 1, addEventListener() {} };
+  const context = vm.createContext({ window, document, navigator: { userAgent: "", platform: "" },
+    console, setTimeout, clearTimeout, Intl });
+  vm.runInContext(await readFile(new URL("../assets/healthmd-plugin-visualizations.js", import.meta.url), "utf8"), context);
+  const api = window.HealthMdPluginVisualizations;
+  const pin = await readJson("../external-sources.json");
+  assert.equal(api.sourceRevision, pin.obsidian_plugin.revision);
+  for (const [profile, nativeStage, unsupportedStage] of [["apple-v11", "coreSleep", "lightSleep"], ["android-sleep-v6", "lightSleep", "coreSleep"]]) {
+    const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+      "tests/fixtures/sleep-successor", `${profile}-dst`, "2026-11-01.json"), "utf8");
+    const day = api.parseHealthDay(input);
+    assert.equal(day.schema_profile, profile);
+    assert.equal(day.timeContext.sleep_day_attribution, "morning_ends");
+    assert.equal(day.timeContext.calendar_timezone, "America/New_York");
+    assert.ok(day.sleep[nativeStage] > 0);
+    assert.equal(day.sleep[unsupportedStage], undefined);
+    assert.equal(day.sleep.sleepStages.length, 0);
+  }
+  for (const [variant, date, identity] of [["apple-v11-quantities", "2026-03-15", "hrv_sdnn"], ["android-v6-quantities", "2026-11-01", "hrv_rmssd"]]) {
+    const quantities = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+      "tests/fixtures/native-quantity-details", variant, `${date}.json`), "utf8");
+    const day = api.parseHealthDay(quantities);
+    assert.equal(day.nativeQuantityDetails.length, 5);
+    assert.equal(day.heart.averageHeartRate, undefined);
+    assert.equal(day.heart.heartRateSamples[0].value, 72.125);
+    assert.ok(day.nativeQuantityDetails.some(record => record.metric === identity && record.unit === "ms"));
+    const oxygen = day.nativeQuantityDetails.find(record => record.metric === "blood_oxygen");
+    assert.equal(oxygen.unit, "ratio_0_1");
+    assert.equal(oxygen.sample.value, 0.97125);
+    assert.equal(day.vitals.bloodOxygenSamples[0].value, 97.125);
+    assert.ok(oxygen.sample.metadata.synthetic.includes("quantity"));
+    if (variant.startsWith("android")) {
+      assert.equal(day.heart.heartRateSamples[0].exactTime.nano, 123456789);
+      assert.equal(day.heart.heartRateSamples[0].identity.nativeId, "synthetic-quantity");
+    }
+  }
+  for (const [variant, date] of [["apple-v11-blood-pressure", "2026-03-15"], ["android-v6-blood-pressure", "2026-11-01"]]) {
+    const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+      "tests/fixtures/native-blood-pressure", variant, `${date}.json`), "utf8");
+    const day = api.parseHealthDay(input);
+    assert.equal(day.nativeCorrelationDetails.length, 1);
+    assert.equal(day.nativeCorrelationDetails[0].unit, "mmHg");
+    assert.deepEqual(JSON.parse(JSON.stringify(day.vitals.bloodPressureSamples)), JSON.parse(input).vitals.bloodPressureSamples);
+    assert.equal(day.canonicalMetrics?.blood_pressure_systolic, undefined);
+    assert.equal(day.canonicalMetrics?.blood_pressure_diastolic, undefined);
+    if (variant.startsWith("android")) {
+      const invalid = JSON.parse(input);
+      invalid.vitals.bloodPressureSamples[0].exactTime.iso8601 = "2026-11-01T01:30:00.123456788Z";
+      assert.equal(api.parseHealthDay(JSON.stringify(invalid)), null);
+    }
+  }
+  for (const available of [true, false]) {
+    const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+      "tests/fixtures/native-activity", `android-v6-activity-captured-${available}`, "2026-11-01.json"), "utf8");
+    const source = JSON.parse(input);
+    const day = api.parseHealthDay(input);
+    assert.equal(day.nativeActivityDetails.length, available ? 2 : 1);
+    assert.deepEqual(JSON.parse(JSON.stringify(day.activity.stepSamples)), source.activity.stepSamples);
+    assert.equal(day.activity.steps, undefined);
+    assert.equal(day.activity.activityIntensityMinutes, undefined);
+    if (available) {
+      assert.deepEqual(JSON.parse(JSON.stringify(day.activity.activityIntensity)), source.activity.activityIntensity);
+      assert.equal(day.activity.activityIntensity[0].duration, 3600.864197532);
+      const rounded = JSON.parse(input);
+      rounded.activity.activityIntensity[0].duration = 3600;
+      assert.equal(api.parseHealthDay(JSON.stringify(rounded)), null);
+    } else {
+      assert.equal(day.activity.activityIntensity, undefined);
+    }
+  }
+  const workoutRoot = path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/native-workouts");
+  const workoutVariants = (await readdir(workoutRoot, { withFileTypes: true }))
+    .filter(entry => entry.isDirectory());
+  assert.equal(workoutVariants.length, 11);
+  for (const variant of workoutVariants) {
+    const folder = path.join(workoutRoot, variant.name,
+      variant.name.startsWith("apple") ? "Health" : "health");
+    const filename = (await readdir(folder)).find(name => name.endsWith(".json"));
+    const source = JSON.parse(await readFile(path.join(folder, filename), "utf8"));
+    const day = api.parseHealthDay(source);
+    assert.ok(day, variant.name);
+    assert.deepEqual(JSON.parse(JSON.stringify(day.nativeWorkoutDetails.map(record => record.sample))),
+      source.workouts, variant.name);
+    assert.deepEqual(JSON.parse(JSON.stringify(day.workouts)), source.workouts.map(sample => ({
+      ...sample, ...(typeof sample.distance === "number" ? { distanceMeters: sample.distance } : {}),
+    })), variant.name);
+    const inconsistent = structuredClone(source);
+    inconsistent.workouts[0].elapsedDuration += 1;
+    assert.equal(api.parseHealthDay(inconsistent), null, variant.name);
+    if (source.schema_profile === "android-sleep-v6") {
+      const imprecise = structuredClone(source);
+      imprecise.workouts[0].exactStartTime.nano += 1;
+      assert.equal(api.parseHealthDay(imprecise), null, variant.name);
+    }
+  }
+  const mindfulnessRoot = path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO, "tests/fixtures/native-mindfulness");
+  const mindfulnessVariants = (await readdir(mindfulnessRoot, { withFileTypes: true })).filter(item => item.isDirectory());
+  assert.equal(mindfulnessVariants.length, 4);
+  for (const variant of mindfulnessVariants) {
+    const apple = variant.name.startsWith("apple");
+    const folder = path.join(mindfulnessRoot, variant.name, apple ? "Health" : "health");
+    const name = (await readdir(folder)).find(file => file.endsWith(".json"));
+    const source = JSON.parse(await readFile(path.join(folder, name), "utf8"));
+    const day = api.parseHealthDay(source);
+    assert.ok(day, variant.name);
+    const samples = source.mindfulness[apple ? "stateOfMindEntries" : "sessions"];
+    const markdown = await readFile(path.join(folder, name.replace(/\.json$/, ".md")), "utf8");
+    const table = marked.lexer(markdown).find(token => token.type === "table"
+      && token.header[0]?.text === "Native Record (JSON)");
+    assert.ok(table, variant.name);
+    const cell = table.rows[0][0].tokens;
+    assert.equal(cell.length, 1, variant.name);
+    assert.equal(cell[0].type, "codespan", variant.name);
+    assert.deepEqual(JSON.parse(cell[0].text).sample, samples[0], variant.name);
+    assert.deepEqual(JSON.parse(JSON.stringify(day.nativeMindfulnessDetails.map(record => record.sample))), samples);
+    assert.equal(day.nativeMindfulnessDetails[0].metric, apple ? "state_of_mind" : "mindfulness_session");
+    const changed = structuredClone(source);
+    const record = changed.mindfulness[apple ? "stateOfMindEntries" : "sessions"][0];
+    if (apple) record.valence = 2;
+    else record.exactStartTime.nano++;
+    assert.equal(api.parseHealthDay(changed), null, variant.name);
+  }
+  const completeSleepRoot = path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/native-sleep-complete");
+  const completeSleepVariants = (await readdir(completeSleepRoot, { withFileTypes: true }))
+    .filter(item => item.isDirectory());
+  assert.equal(completeSleepVariants.length, 6);
+  for (const variant of completeSleepVariants) {
+    const apple = variant.name.startsWith("apple");
+    const folder = path.join(completeSleepRoot, variant.name, apple ? "Health" : "health");
+    const source = JSON.parse(await readFile(path.join(folder, "2026-11-01.json"), "utf8"));
+    const day = api.parseHealthDay(source);
+    assert.ok(day, variant.name);
+    for (const field of ["sleepStages", "sleepSessions"]) {
+      if (!source.sleep[field]) continue;
+      assert.deepEqual(JSON.parse(JSON.stringify(day.sleep[field])), source.sleep[field], variant.name);
+    }
+    const markdown = await readFile(path.join(folder, "2026-11-01.md"), "utf8");
+    const tables = marked.lexer(markdown).filter(token => token.type === "table");
+    for (const [field, columns] of [["sleepStages", 4], ["sleepSessions", 3]]) {
+      if (!source.sleep[field]?.length) continue;
+      const table = tables.find(token => token.header.length === columns
+        && token.header.at(-1)?.text === "Native Record (JSON)");
+      assert.ok(table, `${variant.name}/${field}`);
+      const records = table.rows.map(row => {
+        const tokens = row.at(-1).tokens;
+        assert.equal(tokens.length, 1);
+        assert.equal(tokens[0].type, "codespan");
+        return JSON.parse(tokens[0].text);
+      });
+      assert.deepEqual(records, source.sleep[field], `${variant.name}/${field}`);
+    }
+    const foreign = structuredClone(source);
+    foreign.sleep.sleepStages[0].stage = apple ? "light" : "core";
+    assert.equal(api.parseHealthDay(foreign), null, variant.name);
+  }
+  const parentInput = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/sleep-native-parents/2026-11-01.json"), "utf8");
+  const parentDay = api.parseHealthDay(parentInput);
+  assert.equal(parentDay.sleep.sleepStages.length, 1);
+  assert.equal(parentDay.sleep.sleepSessions.length, 2);
+  assert.equal(parentDay.sleep.sleepStages[0].startDate, "2026-11-01T02:00:00.123456789Z");
+  assert.equal(parentDay.sleep.sleepSessions[0].exactEndTime.offset, "-05:00");
+  assert.equal(parentDay.sleep.sleepSessions[0].identity.clientRecordId, "synthetic-parent-overnight");
+  const workoutRangeRoot = path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/workout-range-rules-v12");
+  const workoutRangeVariants = (await readdir(workoutRangeRoot, { withFileTypes: true })).filter(item => item.isDirectory());
+  assert.equal(workoutRangeVariants.length, 8);
+  for (const variant of workoutRangeVariants) {
+    const directory = path.join(workoutRangeRoot, variant.name, "Health/Rollups/Range");
+    const filename = (await readdir(directory)).find(name => name.endsWith(".json"));
+    const source = JSON.parse(await readFile(path.join(directory, filename), "utf8"));
+    const parsed = api.parseRollup(source);
+    assert.ok(parsed, variant.name);
+    assert.equal(parsed.rollupRulesVersion, 12);
+    assert.equal(parsed.schemaVersion, 11);
+    assert.equal(parsed.metrics.workout_avg_heart_rate.primaryValue, 175);
+    assert.equal(parsed.metrics.workout_avg_power.primaryValue, 150);
+    assert.equal(parsed.metrics.workout_cycling_cadence.primaryValue, 260 / 3);
+    assert.equal(parsed.metrics.workout_max_heart_rate.primaryValue, 260);
+    assert.equal(parsed.metrics.workout_min_heart_rate.primaryValue, 50);
+    assert.equal(parsed.metrics.workout_max_power.primaryValue, 900);
+    assert.equal(api.parseRollup({ ...source, rollup_rules_version: 13 }), null);
+  }
+  const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/rollup-summary-v11/native-apple-v11.json"), "utf8");
+  const range = api.parseRollup(input);
+  assert.equal(range.schema_profile, "apple-rollup-v11");
+  assert.equal(range.source_schema_profile, "apple-v11");
+  assert.equal(range.timeContext.sleep_day_attribution, "morning_ends");
+  assert.equal(range.timeContext.calendar_timezone, "America/New_York");
+  assert.equal(range.daysExpected, 4);
+  assert.equal(range.daysCounted, 2);
+  assert.equal(range.coveragePercent, 50);
+  assert.equal(range.metrics.sleep_total_hours.primaryValue, 8.25);
+  assert.equal(range.metrics.sleep_core_hours.primaryValue, 4.25);
+  assert.equal(range.metrics.sleep_light_hours, undefined);
 });

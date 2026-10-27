@@ -177,6 +177,28 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         }
     }
 
+    func testSleepCaptureAuditDoesNotGrantPortableAuthority() throws {
+        XCTAssertEqual(Self.sleepCapturePersistenceFields.count, 1)
+        let row = try XCTUnwrap(Self.sleepCapturePersistenceFields.first)
+        XCTAssertEqual(row.sourceType, "ExportSettingsSnapshot")
+        XCTAssertEqual(row.field, "sleepCaptureContext")
+        XCTAssertEqual(row.serializedKey, row.field)
+        XCTAssertEqual(row.fieldKind, .stored)
+        XCTAssertEqual(row.disposition, .prohibited)
+        XCTAssertNil(row.contractPath)
+    }
+
+    // A frozen job's sleep authority belongs only to its durable journal.
+    // Ordinary profile/wire exclusion is exercised by AppleSleepCaptureContextTests.
+    private static let sleepCapturePersistenceFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "ExportSettingsSnapshot", field: "sleepCaptureContext",
+            fieldKind: .stored, serializedKey: "sleepCaptureContext",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Immutable native job capture authority is journal-only and cannot be imported as portable profile authority."
+        ),
+    ]
+
     // Native minute scheduling adds no authority to frozen Shared Setup v2.
     // Audit its exact persistence fields alongside the unchanged historical ledger.
     private static let minuteRefreshPersistenceFields: [CoverageLedger.Field] = [
@@ -209,7 +231,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             schema: historical.schema, schemaVersion: historical.schemaVersion,
             targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
             dispositions: historical.dispositions,
-            fields: historical.fields + Self.minuteRefreshPersistenceFields
+            fields: historical.fields + Self.minuteRefreshPersistenceFields + Self.sleepCapturePersistenceFields
         )
     }
 
@@ -313,7 +335,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let enginePin = try makeSyntheticAppleExportEnginePin(
             calendarTimeZoneIdentifier: "America/Los_Angeles"
         )
-        let snapshot = ExportSettingsSnapshot(
+        var snapshot = ExportSettingsSnapshot(
             exportFormats: [.markdown, .obsidianBases, .json, .csv],
             includeMetadata: false,
             groupByCategory: false,
@@ -336,6 +358,9 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             appleExportEnginePin: enginePin,
             appleExportEngineAuthorityIsFrozen: true,
             calendarTimeZoneIdentifier: "America/Los_Angeles"
+        )
+        snapshot.sleepCaptureContext = AppleSleepCaptureContext(
+            timeZone: TimeZone(identifier: "America/Los_Angeles")!, sleepDayAttribution: .nightBegins
         )
         let profile = ExportProfile(
             id: profileID,
@@ -413,7 +438,14 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let storedFields = Set(
             Mirror(reflecting: value).children.compactMap(\.label)
         )
-        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
+        let encoder = JSONEncoder()
+        if value is ExportSettingsSnapshot {
+            // Inventory includes internal durable fields. Their ledger rows are
+            // prohibited, and ordinary profile/wire omission is checked by the
+            // dedicated sleep-authority serialization controls.
+            encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        }
+        let object = try JSONSerialization.jsonObject(with: encoder.encode(value))
         let encoded = try XCTUnwrap(
             object as? [String: Any],
             "Synthetic \(sourceType) must encode as a keyed object."

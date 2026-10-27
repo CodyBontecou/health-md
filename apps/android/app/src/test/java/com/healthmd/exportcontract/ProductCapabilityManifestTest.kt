@@ -45,6 +45,7 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
+                "settings.sleep-attribution",
                 "support.local-reporting-fallback",
             ),
             idsWithState(states, "planned"),
@@ -64,6 +65,15 @@ class ProductCapabilityManifestTest {
             "planned",
             pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
+
+        val sleepAttributionCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "settings.sleep-attribution"
+        }
+        assertEquals(
+            "planned",
+            sleepAttributionCapability.getValue("classification").jsonPrimitive.content,
+        )
+        assertTrue(sleepAttributionCapability.getValue("profiles").jsonArray.isEmpty())
 
         val claimCapability = capabilities.single {
             it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
@@ -173,6 +183,7 @@ class ProductCapabilityManifestTest {
             "setup.share-portable-configuration",
             "account.myself_lifetime_claim",
             "core.shared-rust-profile-engine",
+            "settings.sleep-attribution",
             "support.local-reporting-fallback",
         )
     }

@@ -2,10 +2,20 @@ package com.healthmd.export
 
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.health.HealthConnectDataProvider
+import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.HealthProviderRegistry
+import com.healthmd.data.health.HealthRepositoryImpl
+import com.healthmd.data.health.SleepAttributionCaptureFixture
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportSettings
@@ -13,6 +23,10 @@ import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepData
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.SettingsRepository
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
 import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
 import com.healthmd.rawexport.ExerciseRouteConsentGateway
 import com.healthmd.rawexport.PendingExerciseRouteConsent
@@ -21,9 +35,88 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.TimeZone
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 class ExportOrchestratorRangeTest {
+
+    @Test
+    fun `missing draft and unqualified recovered authority cannot recapture render or write`() = runTest {
+        val dates = listOf(LocalDate.of(2026, 3, 15))
+        for (context in listOf(null,
+            AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS, null),
+            AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS))) {
+            val health = mockk<HealthRepository>()
+            val destination = mockk<ExportRepository>()
+            val settings = ExportSettings(executionSleepCaptureContext = context,
+                executionSleepCaptureAuthorityIsFrozen = true)
+            val orchestrator = ExportOrchestrator(health, destination)
+            val result = orchestrator.exportDates(dates, settings)
+            assertThat(result.successCount).isEqualTo(0)
+            assertThat(result.failedDateDetails).hasSize(1)
+            assertThat(result.failedDateDetails.single().reason).isEqualTo(ExportFailureReason.UNKNOWN)
+            assertThat(result.failedDateDetails.single().errorDetails).isNotNull()
+            val preview = orchestrator.previewDates(dates, settings)
+            assertThat(preview.previewedDateCount).isEqualTo(0)
+            io.mockk.coVerify(exactly = 0) { health.resolveCaptureContext(any(), any()) }
+            io.mockk.coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            io.mockk.coVerify(exactly = 0) { destination.exportHealthData(any(), any()) }
+            io.mockk.coVerify(exactly = 0) { destination.previewHealthData(any(), any()) }
+        }
+    }
+
+    @Test
+    fun `recovered capture authority bypasses live preferences and reaches native range capture`() = runTest {
+        val dates = listOf(LocalDate.of(2026, 3, 15), LocalDate.of(2026, 3, 16))
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.NIGHT_BEGINS)
+        val base = ExportSettings(exportFormats = setOf(ExportFormat.JSON))
+        val accepted = AndroidExportSettingsSnapshot.capture(base, null, context.zoneId, context)
+        val current = base.copy(executionSleepCaptureContext = AndroidCaptureContext(
+            ZoneId.of("Europe/Berlin"), SleepDayAttribution.MORNING_ENDS))
+        val restored = AndroidExportSettingsSnapshotCodec.decode(
+            AndroidExportSettingsSnapshotCodec.encodeCanonical(accepted)).restoreOnto(current)
+        val health = mockk<HealthRepository>()
+        every { health.isBeforeFirstUnlock() } returns false
+        coEvery { health.resolveCaptureContext(any(), any()) } throws IllegalStateException("must not consult live capture preferences")
+        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            assertThat(arg<ZoneId>(3)).isEqualTo(ZoneId.of("Asia/Kathmandu"))
+            assertThat(arg<SleepDayAttributionOverride>(5)).isEqualTo(SleepDayAttributionOverride.Value(SleepDayAttribution.NIGHT_BEGINS))
+            firstArg<List<LocalDate>>().map { dataFor(it) }
+        }
+        val destination = RecordingExportRepository()
+        val result = ExportOrchestrator(health, destination).exportDates(dates, restored)
+        assertThat(result.successCount).isEqualTo(2)
+        assertThat(destination.exported.map { it.date }).containsExactlyElementsIn(dates).inOrder()
+        io.mockk.coVerify(exactly = 0) { health.resolveCaptureContext(any(), any()) }
+    }
+
+    @Test
+    fun `fresh capture authority reaches every export and preview planner without changing saved settings`() = runTest {
+        val dates = listOf(LocalDate.of(2026, 3, 15), LocalDate.of(2026, 3, 16))
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.NIGHT_BEGINS)
+        val settings = ExportSettings(exportFormats = setOf(ExportFormat.JSON))
+        val health = mockk<HealthRepository>()
+        every { health.isBeforeFirstUnlock() } returns false
+        coEvery { health.resolveCaptureContext(any(), any()) } returns context
+        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            assertThat(arg<ZoneId>(3)).isEqualTo(context.zoneId)
+            assertThat(arg<SleepDayAttributionOverride>(5)).isEqualTo(context.explicitSleepDayAttributionOverride)
+            firstArg<List<LocalDate>>().map { dataFor(it) }
+        }
+        val destination = RecordingExportRepository()
+        val orchestrator = ExportOrchestrator(health, destination)
+        assertThat(orchestrator.exportDates(dates, settings).successCount).isEqualTo(2)
+        assertThat(orchestrator.previewDates(dates, settings).previewedDateCount).isEqualTo(2)
+        assertThat(destination.receivedSettings).hasSize(4)
+        for (received in destination.receivedSettings) {
+            assertThat(received.executionSleepCaptureContext).isEqualTo(context)
+            assertThat(received.executionSleepCaptureAuthorityIsFrozen).isTrue()
+        }
+        assertThat(settings.executionSleepCaptureContext).isNull()
+        assertThat(settings.executionSleepCaptureAuthorityIsFrozen).isFalse()
+        io.mockk.coVerify(exactly = 2) { health.resolveCaptureContext(any(), any()) }
+    }
 
     @Test
     fun `ninety day export uses bounded range fetches instead of per day fetches`() = runTest {
@@ -208,26 +301,134 @@ class ExportOrchestratorRangeTest {
     }
 
     @Test
-    fun `range export retries empty range days with single day reads before skipping`() = runTest {
-        val dates = listOf(
-            LocalDate.of(2026, 5, 4),
-            LocalDate.of(2026, 5, 5),
-            LocalDate.of(2026, 5, 6),
-        )
+    fun `manual folder operation pins shipped night context across chunks and a change to morning preference`() = runTest {
+        val previousZone = TimeZone.getDefault()
+        val capturedZone = ZoneId.of("America/Los_Angeles")
+        val changedZone = ZoneId.of("Europe/Berlin")
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(capturedZone))
+            val wakeDate = LocalDate.of(2026, 5, 31)
+            val dates = (0 until 31).map { wakeDate.minusDays(it.toLong()) }
+            val sessionStartDate = dates.last()
+            val sessionWakeDate = dates[dates.lastIndex - 1]
+            var storedAttribution = SleepDayAttribution.NIGHT_BEGINS
+            val observedContexts = mutableListOf<Pair<ZoneId, SleepDayAttribution>>()
+            val manager = mockk<HealthConnectManager>()
+            val provider = HealthConnectDataProvider(manager)
+            val registry = mockk<HealthProviderRegistry>()
+            val settingsRepository = mockk<SettingsRepository>()
+            coEvery { settingsRepository.getSelectedHealthProviderId() } returns "health_connect"
+            coEvery { settingsRepository.getSleepDayAttribution() } answers { storedAttribution }
+            every { registry.providerFor("health_connect") } returns provider
+            every { registry.primaryExportProvider() } returns provider
+            every { manager.isBeforeFirstUnlock() } returns false
+            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+                val requested = firstArg<List<LocalDate>>()
+                val zone = arg<ZoneId>(3)
+                val attribution = arg<SleepDayAttribution>(5)
+                observedContexts += zone to attribution
+                val owner = if (attribution == SleepDayAttribution.MORNING_ENDS) sessionWakeDate else sessionStartDate
+                if (observedContexts.size == 1) {
+                    storedAttribution = SleepDayAttribution.MORNING_ENDS
+                    TimeZone.setDefault(TimeZone.getTimeZone(changedZone))
+                }
+                requested.map { date ->
+                    HealthData(
+                        date = date,
+                        activity = ActivityData(steps = 1),
+                        sleep = if (date == owner) SleepData(totalDuration = 8.hours) else SleepData(),
+                    )
+                }
+            }
+            val exportRepository = RecordingExportRepository()
+
+            val result = ExportOrchestrator(
+                HealthRepositoryImpl(registry, settingsRepository),
+                exportRepository,
+            ).exportDates(dates, ExportSettings(exportFormat = ExportFormat.JSON))
+
+            assertThat(result.successCount).isEqualTo(31)
+            assertThat(observedContexts).containsExactly(
+                capturedZone to SleepDayAttribution.NIGHT_BEGINS,
+                capturedZone to SleepDayAttribution.NIGHT_BEGINS,
+            ).inOrder()
+            assertThat(exportRepository.exported.count { it.sleep.hasData }).isEqualTo(1)
+            assertThat(exportRepository.exported.single { it.sleep.hasData }.date).isEqualTo(sessionStartDate)
+        } finally {
+            TimeZone.setDefault(previousZone)
+        }
+    }
+
+    @Test
+    fun `empty authoritative range is not retried through stale single day semantics`() = runTest {
+        val dates = listOf(LocalDate.of(2026, 5, 4), LocalDate.of(2026, 5, 5))
         val healthRepository = FakeHealthRepository(
             singleDayData = dates.associateWith { dataFor(it) },
             rangeReturnsEmptyData = true,
         )
-        val exportRepository = RecordingExportRepository()
-        val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+        val result = ExportOrchestrator(healthRepository, RecordingExportRepository())
+            .exportDates(dates, ExportSettings(exportFormat = ExportFormat.JSON))
 
-        val result = orchestrator.exportDates(dates, ExportSettings(exportFormat = ExportFormat.JSON))
-
-        assertThat(result.successCount).isEqualTo(3)
-        assertThat(result.failedDateDetails).isEmpty()
+        assertThat(result.successCount).isEqualTo(0)
+        assertThat(result.failedDateDetails.map { it.reason })
+            .containsExactly(ExportFailureReason.NO_HEALTH_DATA, ExportFailureReason.NO_HEALTH_DATA)
         assertThat(healthRepository.rangeCalls).isEqualTo(1)
-        assertThat(healthRepository.singleDayCalls).isEqualTo(3)
-        assertThat(exportRepository.exported.map { it.date }).containsExactlyElementsIn(dates).inOrder()
+        assertThat(healthRepository.singleDayCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `shipped sleep only export and preview never retry the empty wake day`() = runTest {
+        val fixture = SleepAttributionCaptureFixture()
+        fixture.storedAttribution = SleepDayAttribution.NIGHT_BEGINS
+        val previousZone = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(fixture.zone))
+            val exportRepository = RecordingExportRepository()
+            val orchestrator = ExportOrchestrator(fixture.repository, exportRepository)
+            val dates = listOf(fixture.startDay, fixture.wakeDay)
+            val settings = ExportSettings(
+                exportFormat = ExportFormat.JSON,
+                exportFormats = setOf(ExportFormat.JSON),
+                dataTypes = fixture.selection,
+            )
+
+            val result = orchestrator.exportDates(dates, settings)
+            val preview = orchestrator.previewDates(dates, settings)
+
+            assertThat(result.successCount).isEqualTo(1)
+            assertThat(result.failedDateDetails.single().date).isEqualTo(fixture.wakeDay)
+            assertThat(result.failedDateDetails.single().reason).isEqualTo(ExportFailureReason.NO_HEALTH_DATA)
+            assertThat(exportRepository.exported.map { it.date }).containsExactly(fixture.startDay)
+            assertThat(exportRepository.exported.single().sleep.awakeTime).isEqualTo(30.minutes)
+            assertThat(preview.previewedDateCount).isEqualTo(1)
+            assertThat(exportRepository.previewed.map { it.date }).containsExactly(fixture.startDay)
+            assertThat(fixture.singleDayReads).isEmpty()
+            assertThat(fixture.observedContexts).hasSize(3)
+            assertThat(fixture.observedContexts.distinct()).containsExactly(fixture.zone to SleepDayAttribution.NIGHT_BEGINS)
+        } finally {
+            TimeZone.setDefault(previousZone)
+        }
+    }
+
+    @Test
+    fun `unapproved ownership is unavailable for every format and preview without provider or destination work`() = runTest {
+        val fixture = SleepAttributionCaptureFixture()
+        val destination = RecordingExportRepository()
+        val orchestrator = ExportOrchestrator(fixture.repository, destination)
+        val dates = listOf(fixture.startDay, fixture.wakeDay)
+        for (format in ExportFormat.entries) {
+            val settings = ExportSettings(exportFormat = format, exportFormats = setOf(format), dataTypes = fixture.selection)
+            val result = orchestrator.exportDates(dates, settings)
+            assertThat(result.successCount).isEqualTo(0)
+            assertThat(result.failedDateDetails.map { it.reason }).containsExactly(ExportFailureReason.UNKNOWN, ExportFailureReason.UNKNOWN)
+            val preview = orchestrator.previewDates(dates, settings)
+            assertThat(preview.totalFileCount).isEqualTo(0)
+            assertThat(preview.days.map { it.failureReason }).containsExactly(ExportFailureReason.UNKNOWN, ExportFailureReason.UNKNOWN)
+        }
+        assertThat(destination.exported).isEmpty()
+        assertThat(destination.previewed).isEmpty()
+        assertThat(fixture.observedContexts).isEmpty()
+        assertThat(fixture.storedAttribution).isEqualTo(SleepDayAttribution.MORNING_ENDS)
     }
 
     private fun ninetyDays(): List<LocalDate> {
@@ -255,6 +456,15 @@ class ExportOrchestratorRangeTest {
         val rangeIncludeGranularFlags = mutableListOf<Boolean>()
         val authorizedDateScopes = mutableListOf<List<LocalDate>>()
 
+        override suspend fun resolveCaptureContext(
+            zoneId: ZoneId,
+            sleepDayAttributionOverride: SleepDayAttributionOverride,
+        ) = AndroidCaptureContext(
+            zoneId,
+            (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution
+                ?: SleepDayAttribution.DEFAULT,
+        )
+
         override suspend fun fetchHealthData(date: LocalDate): HealthData {
             singleDayCalls++
             return singleDayData[date] ?: rangeData[date] ?: HealthData(
@@ -269,6 +479,7 @@ class ExportOrchestratorRangeTest {
             includeGranularData: Boolean,
             zoneId: ZoneId,
             pinnedCalendarDays: Boolean,
+            sleepDayAttributionOverride: SleepDayAttributionOverride,
         ): List<HealthData> {
             rangeCalls++
             rangeCallSizes += dates.size
@@ -321,14 +532,17 @@ class ExportOrchestratorRangeTest {
     private class RecordingExportRepository : ExportRepository {
         val exported = mutableListOf<HealthData>()
         val previewed = mutableListOf<HealthData>()
+        val receivedSettings = mutableListOf<ExportSettings>()
 
         override suspend fun exportHealthData(data: HealthData, settings: ExportSettings): Boolean {
             exported += data
+            receivedSettings += settings
             return true
         }
 
         override suspend fun previewHealthData(data: HealthData, settings: ExportSettings): ExportPreviewDay {
             previewed += data
+            receivedSettings += settings
             val content = "preview-${data.date}"
             return ExportPreviewDay(
                 date = data.date,

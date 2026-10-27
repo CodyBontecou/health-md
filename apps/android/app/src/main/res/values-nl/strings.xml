@@ -534,6 +534,12 @@
     <string name="feedback_no_app_available">Geen app beschikbaar om deze link te openen</string>
     <string name="granular_data_title">Gedetailleerde tijdreeksen opnemen</string>
     <string name="granular_data_description">Voeg meetwaarden met tijdstempel, zoals hartslag en slaapfasen, toe aan compatibiliteitsexports. Gebruik de ruwe API-snapshot voor een API-volledige kopie.</string>
+    <string name="sleep_attribution_title">Toewijzing slaapdag</string>
+    <string name="sleep_attribution_night_begins">Nacht begint</string>
+    <string name="sleep_attribution_morning_ends">Ochtend eindigt</string>
+    <string name="sleep_attribution_night_begins_description">Slaap gebruikt het venster van middag tot middag van de dagnotitie. Dit is de standaard en komt overeen met eerdere exports.</string>
+    <string name="sleep_attribution_morning_ends_description">Ochtend eindigt is niet beschikbaar voor de huidige exportprofielen. Kies Nacht begint voor een nieuwe export.</string>
+
     <string name="metric_category_cycling">Fietsen</string>
     <string name="metric_category_medications">Medicijnen</string>
     <string name="metric_category_other">Overig</string>

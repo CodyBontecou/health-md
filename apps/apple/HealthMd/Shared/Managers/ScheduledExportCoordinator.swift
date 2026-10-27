@@ -171,11 +171,16 @@ final class ScheduledExportCoordinator {
             try discard(existingRequest)
         }
 
+        let captureContext = AppleSleepCaptureContext.resolve(
+            timeZone: profile?.settings.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:)) ?? calendar.timeZone,
+            attribution: HealthKitManager.shared.sleepDayAttribution)
         let frozenSettings: ExportSettingsSnapshot?
         if let profile {
             frozenSettings = profile.settings
         } else {
-            frozenSettings = await makeSettingsSnapshot()
+            frozenSettings = await AppleSleepCaptureContext.pinned.withValue(captureContext) {
+                await makeSettingsSnapshot()
+            }
         }
 
         let requestCalendar = frozenCalendar(
@@ -196,6 +201,7 @@ final class ScheduledExportCoordinator {
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: profile?.target ?? schedule.target,
             settingsSnapshot: frozenSettings,
+            sleepCaptureContext: frozenSettings?.sleepCaptureContext ?? captureContext,
             profileID: profile?.profileID,
             profileName: profile?.profileName,
             recoveryGeneration: profile?.recoveryGeneration ?? 0,

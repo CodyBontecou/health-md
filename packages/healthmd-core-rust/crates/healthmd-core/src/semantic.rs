@@ -11,8 +11,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
-    CANONICAL_MODEL_VERSION, CoreError, REGISTRY_SHA256, REGISTRY_VERSION, SEMANTIC_INPUT_VERSION,
-    SEMANTIC_RESULT_CORE_API_VERSION,
+    CANONICAL_MODEL_VERSION, CORE_API_VERSION, CoreError, REGISTRY_VERSION, SEMANTIC_INPUT_VERSION,
+    SEMANTIC_RESULT_CORE_API_VERSION, SLEEP_CANONICAL_MODEL_VERSION, SLEEP_REGISTRY_VERSION,
+    SLEEP_SEMANTIC_INPUT_VERSION, WORKOUT_RANGE_REGISTRY_VERSION,
 };
 
 /// Maximum semantic-session configuration size.
@@ -37,6 +38,8 @@ pub const MAX_EXTENSIONS_PER_RECORD: usize = 32;
 pub const MAX_EXTENSION_TOKEN_BYTES: usize = 128;
 
 const REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.json");
+const SLEEP_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v2.json");
+const WORKOUT_RANGE_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v3.json");
 
 /// Closed output profiles. Profiles are never inferred from platform or app version.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -45,6 +48,8 @@ pub enum SemanticProfile {
     AppleHealthDataV8,
     AndroidFrozenV4,
     AndroidAnalyticalV5,
+    AppleHealthDataV11,
+    AndroidSleepV6,
 }
 
 impl SemanticProfile {
@@ -53,14 +58,70 @@ impl SemanticProfile {
             Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
+            Self::AppleHealthDataV11 => "apple_health_data_v11",
+            Self::AndroidSleepV6 => "android_sleep_v6",
         }
     }
 
     fn platform(self) -> &'static str {
+        if self.is_apple() { "apple" } else { "android" }
+    }
+
+    pub(crate) const fn is_apple(self) -> bool {
+        matches!(self, Self::AppleHealthDataV8 | Self::AppleHealthDataV11)
+    }
+
+    pub(crate) const fn is_wake_date(self) -> bool {
+        matches!(self, Self::AppleHealthDataV11 | Self::AndroidSleepV6)
+    }
+
+    pub(crate) const fn public_schema_version(self) -> u32 {
         match self {
-            Self::AppleHealthDataV8 => "apple",
-            Self::AndroidFrozenV4 | Self::AndroidAnalyticalV5 => "android",
+            Self::AppleHealthDataV8 => 8,
+            Self::AndroidFrozenV4 => 4,
+            Self::AndroidAnalyticalV5 => 5,
+            Self::AppleHealthDataV11 => 11,
+            Self::AndroidSleepV6 => 6,
         }
+    }
+
+    pub(crate) const fn public_profile_id(self) -> &'static str {
+        match self {
+            Self::AppleHealthDataV8 => "apple-v8",
+            Self::AndroidFrozenV4 => "android-frozen-v4",
+            Self::AndroidAnalyticalV5 => "android-analytical-v5",
+            Self::AppleHealthDataV11 => "apple-v11",
+            Self::AndroidSleepV6 => "android-sleep-v6",
+        }
+    }
+
+    pub(crate) const fn semantic_input_version(self) -> u32 {
+        if self.is_wake_date() {
+            SLEEP_SEMANTIC_INPUT_VERSION
+        } else {
+            SEMANTIC_INPUT_VERSION
+        }
+    }
+
+    pub(crate) const fn canonical_model_version(self) -> u32 {
+        if self.is_wake_date() {
+            SLEEP_CANONICAL_MODEL_VERSION
+        } else {
+            CANONICAL_MODEL_VERSION
+        }
+    }
+
+    pub(crate) const fn registry_version(self) -> u32 {
+        if self.is_wake_date() {
+            SLEEP_REGISTRY_VERSION
+        } else {
+            REGISTRY_VERSION
+        }
+    }
+
+    pub(crate) const fn supports_registry_version(self, version: u32) -> bool {
+        version == self.registry_version()
+            || (self.is_wake_date() && version == WORKOUT_RANGE_REGISTRY_VERSION)
     }
 }
 
@@ -293,6 +354,33 @@ pub struct RetainedSemanticExtension {
     pub extension: SemanticExtensionRef,
 }
 
+/// Frozen owner-date authority carried only by successor semantic results.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticSleepCaptureContext {
+    pub schema_profile: String,
+    pub calendar_timezone: String,
+    pub sleep_day_attribution: String,
+    pub sleep_owner_day_rule: String,
+    pub sleep_interval_clipping: String,
+}
+
+impl SemanticSleepCaptureContext {
+    pub(crate) fn for_profile(profile: SemanticProfile, timezone: &str) -> Option<Self> {
+        if !profile.is_wake_date() {
+            return None;
+        }
+        let schema_profile = profile.public_profile_id();
+        Some(Self {
+            schema_profile: schema_profile.to_owned(),
+            calendar_timezone: timezone.to_owned(),
+            sleep_day_attribution: "morning_ends".to_owned(),
+            sleep_owner_day_rule: "session_end_date".to_owned(),
+            sleep_interval_clipping: "none".to_owned(),
+        })
+    }
+}
+
 /// Canonical, health-data-bearing internal result. Production diagnostics use hashes/counts only.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -309,6 +397,12 @@ pub struct SemanticResult {
     pub next_batch_index: u32,
     pub records_accepted: u64,
     pub records_filtered: u64,
+    /// Absent from historical results; mandatory for successor owner-date authority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sleep_capture_context: Option<SemanticSleepCaptureContext>,
+    /// Frozen successor selection, independently of whether a reduced value is available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected_output_keys: Option<Vec<String>>,
     pub days: Vec<SemanticDayResult>,
     pub rollups: Vec<SemanticRollupResult>,
     pub retained_extensions: Vec<RetainedSemanticExtension>,
@@ -408,7 +502,7 @@ impl SemanticSession {
         let config: SemanticSessionConfig =
             serde_json::from_slice(config_bytes).map_err(|_| CoreError::InvalidSemanticConfig)?;
         validate_config(&config)?;
-        let profile = build_profile_index(config.profile)?;
+        let profile = build_profile_index(config.profile, config.registry_version)?;
         if config
             .selected_selection_ids
             .iter()
@@ -420,8 +514,7 @@ impl SemanticSession {
         {
             return Err(CoreError::InvalidSemanticConfig);
         }
-        if config.profile != SemanticProfile::AppleHealthDataV8 && !config.rollup_periods.is_empty()
-        {
+        if !config.profile.is_apple() && !config.rollup_periods.is_empty() {
             return Err(CoreError::UnsupportedSemanticOperation);
         }
         Ok(Self {
@@ -540,7 +633,7 @@ impl SemanticSession {
 
     fn validate_batch_header(&self, batch: &SemanticBatch) -> Result<(), CoreError> {
         if batch.schema != "healthmd.semantic_input"
-            || batch.semantic_input_version != SEMANTIC_INPUT_VERSION
+            || batch.semantic_input_version != self.config.profile.semantic_input_version()
             || batch.session_id != self.config.session_id
         {
             return Err(CoreError::InvalidSemanticBatch);
@@ -694,6 +787,18 @@ impl SemanticSession {
             if !output.selection_ids.contains(expected_selection)
                 || (!record_selections.is_subset(&output.selection_ids) && !blood_pressure_pair)
                 || record.value.is_none()
+            {
+                return Err(CoreError::InvalidSemanticBatch);
+            }
+            if self.config.registry_version == WORKOUT_RANGE_REGISTRY_VERSION
+                && output_key.starts_with("workout_")
+                && output.rollup == "weighted_average"
+                && record
+                    .weight
+                    .as_ref()
+                    .map(number_f64)
+                    .transpose()?
+                    .is_none_or(|weight| weight <= 0.0)
             {
                 return Err(CoreError::InvalidSemanticBatch);
             }
@@ -875,9 +980,14 @@ impl SemanticSession {
         if self.config.rollup_periods.is_empty() {
             return Ok(Some(Vec::new()));
         }
-        if self.config.profile != SemanticProfile::AppleHealthDataV8 {
+        if !self.config.profile.is_apple() {
             return Err(CoreError::UnsupportedSemanticOperation);
         }
+        let records_by_id = self
+            .records
+            .iter()
+            .map(|record| (record.record.record_id.as_str(), record))
+            .collect::<HashMap<_, _>>();
         let mut results = Vec::new();
         for period in &self.config.rollup_periods {
             if is_cancelled() {
@@ -913,32 +1023,7 @@ impl SemanticSession {
                 if is_cancelled() {
                     return Ok(None);
                 }
-                let mut by_key: BTreeMap<String, Vec<(&str, &SemanticDailyValue)>> =
-                    BTreeMap::new();
-                for day in &source_days {
-                    for value in &day.values {
-                        by_key
-                            .entry(value.output_key.clone())
-                            .or_default()
-                            .push((&day.owner_date, value));
-                    }
-                }
-                let mut values = Vec::new();
-                for (key, daily) in by_key {
-                    let rule = self
-                        .profile
-                        .outputs
-                        .get(&key)
-                        .map(|output| output.rollup.as_str())
-                        .ok_or(CoreError::InvalidSemanticBatch)?;
-                    values.push(reduce_rollup_value(&key, rule, &daily, &source_days)?);
-                }
-                values.sort_by_key(|value| {
-                    self.profile
-                        .outputs
-                        .get(&value.output_key)
-                        .map_or(usize::MAX, |output| output.ordinal)
-                });
+                let values = self.reduce_window_values(&source_days, &records_by_id)?;
                 if values.is_empty() {
                     continue;
                 }
@@ -1017,10 +1102,14 @@ impl SemanticSession {
     ) -> SemanticResult {
         SemanticResult {
             schema: "healthmd.semantic_result".to_owned(),
-            semantic_input_version: SEMANTIC_INPUT_VERSION,
-            canonical_model_version: CANONICAL_MODEL_VERSION,
-            core_api_version: SEMANTIC_RESULT_CORE_API_VERSION,
-            registry_sha256: REGISTRY_SHA256.to_owned(),
+            semantic_input_version: self.config.profile.semantic_input_version(),
+            canonical_model_version: self.config.profile.canonical_model_version(),
+            core_api_version: if self.config.profile.is_wake_date() {
+                CORE_API_VERSION
+            } else {
+                SEMANTIC_RESULT_CORE_API_VERSION
+            },
+            registry_sha256: self.config.registry_sha256.clone(),
             profile_revision: self.config.profile_revision,
             session_id: self.config.session_id.clone(),
             profile: self.config.profile,
@@ -1028,10 +1117,99 @@ impl SemanticSession {
             next_batch_index: self.next_batch_index,
             records_accepted: u64::try_from(self.records.len()).unwrap_or(u64::MAX),
             records_filtered: self.records_filtered,
+            sleep_capture_context: SemanticSleepCaptureContext::for_profile(
+                self.config.profile,
+                &self.config.calendar_time_zone,
+            ),
+            selected_output_keys: self.config.profile.is_wake_date().then(|| {
+                let selected = self
+                    .config
+                    .selected_selection_ids
+                    .iter()
+                    .cloned()
+                    .collect::<BTreeSet<_>>();
+                self.profile
+                    .outputs
+                    .iter()
+                    .filter(|(key, output)| {
+                        !self.config.disabled_output_keys.contains(key)
+                            && !output.selection_ids.is_disjoint(&selected)
+                    })
+                    .map(|(key, _)| key.clone())
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
+                    .collect()
+            }),
             days,
             rollups,
             retained_extensions,
         }
+    }
+
+    fn reduce_window_values(
+        &self,
+        source_days: &[&SemanticDayResult],
+        records_by_id: &HashMap<&str, &StoredRecord>,
+    ) -> Result<Vec<SemanticRollupValue>, CoreError> {
+        let mut by_key: BTreeMap<String, Vec<(&str, &SemanticDailyValue)>> = BTreeMap::new();
+        for day in source_days {
+            for value in &day.values {
+                by_key
+                    .entry(value.output_key.clone())
+                    .or_default()
+                    .push((&day.owner_date, value));
+            }
+        }
+        let mut values = Vec::new();
+        for (key, daily) in by_key {
+            let rule = self
+                .profile
+                .outputs
+                .get(&key)
+                .map(|output| output.rollup.as_str())
+                .ok_or(CoreError::InvalidSemanticBatch)?;
+            let metric_weights = if self.config.registry_version == WORKOUT_RANGE_REGISTRY_VERSION
+                && key.starts_with("workout_")
+                && rule == "weighted_average"
+            {
+                let mut weights = HashMap::new();
+                for (date, value) in &daily {
+                    let mut total = 0.0;
+                    for id in &value.source_record_ids {
+                        let record = records_by_id
+                            .get(id.as_str())
+                            .ok_or(CoreError::InvalidSemanticBatch)?;
+                        let weight = record
+                            .record
+                            .weight
+                            .as_ref()
+                            .ok_or(CoreError::InvalidSemanticBatch)?;
+                        total += number_f64(weight)?;
+                    }
+                    if !total.is_finite() || total <= 0.0 {
+                        return Err(CoreError::InvalidSemanticBatch);
+                    }
+                    weights.insert(*date, total);
+                }
+                Some(weights)
+            } else {
+                None
+            };
+            values.push(reduce_rollup_value(
+                &key,
+                rule,
+                &daily,
+                source_days,
+                metric_weights.as_ref(),
+            )?);
+        }
+        values.sort_by_key(|value| {
+            self.profile
+                .outputs
+                .get(&value.output_key)
+                .map_or(usize::MAX, |output| output.ordinal)
+        });
+        Ok(values)
     }
 
     fn cancel_result(&mut self) -> Result<Vec<u8>, CoreError> {
@@ -1044,10 +1222,12 @@ impl SemanticSession {
 
 fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
     if config.schema != "healthmd.semantic_session_config"
-        || config.semantic_input_version != SEMANTIC_INPUT_VERSION
-        || config.canonical_model_version != CANONICAL_MODEL_VERSION
-        || config.registry_version != REGISTRY_VERSION
-        || config.registry_sha256 != REGISTRY_SHA256
+        || config.semantic_input_version != config.profile.semantic_input_version()
+        || config.canonical_model_version != config.profile.canonical_model_version()
+        || !config
+            .profile
+            .supports_registry_version(config.registry_version)
+        || config.registry_sha256 != crate::registry::registry_hash(config.registry_version)?
         || !matches!(config.profile_revision, 1 | 2)
         || !valid_identifier(&config.session_id, 128)
         || config.calendar_time_zone.len() > 64
@@ -1083,11 +1263,17 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
     if contains_range != config.rollup_range.is_some()
         || (contains_range
             && (config.rollup_periods.len() != 1
-                || config.semantic_input_version != SEMANTIC_INPUT_VERSION
+                || config.semantic_input_version != config.profile.semantic_input_version()
                 || config.profile_revision != 2
-                || config.profile != SemanticProfile::AppleHealthDataV8))
+                || !config.profile.is_apple()))
     {
         return Err(CoreError::InvalidSemanticConfig);
+    }
+    if config.profile == SemanticProfile::AppleHealthDataV11
+        && !config.rollup_periods.is_empty()
+        && !contains_range
+    {
+        return Err(CoreError::UnsupportedSemanticOperation);
     }
     if !contains_range && config.profile_revision != 1 {
         return Err(CoreError::InvalidSemanticConfig);
@@ -1105,9 +1291,18 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
     Ok(())
 }
 
-fn build_profile_index(profile: SemanticProfile) -> Result<ProfileIndex, CoreError> {
+fn build_profile_index(
+    profile: SemanticProfile,
+    registry_version: u32,
+) -> Result<ProfileIndex, CoreError> {
+    let bytes = match registry_version {
+        WORKOUT_RANGE_REGISTRY_VERSION => WORKOUT_RANGE_REGISTRY_BYTES,
+        SLEEP_REGISTRY_VERSION => SLEEP_REGISTRY_BYTES,
+        REGISTRY_VERSION => REGISTRY_BYTES,
+        _ => return Err(CoreError::UnsupportedRegistryVersion),
+    };
     let registry: RawRegistry =
-        serde_json::from_slice(REGISTRY_BYTES).map_err(|_| CoreError::InvalidRegistry)?;
+        serde_json::from_slice(bytes).map_err(|_| CoreError::InvalidRegistry)?;
     let mut semantic_to_selection = HashMap::new();
     let mut valid_selections = HashSet::new();
     let mut aggregation_by_selection = HashMap::new();
@@ -1652,7 +1847,7 @@ fn normalized_value(value: &SemanticValue, target_unit: &str) -> Result<Semantic
     binary_value(number_f64(number)? * factor, expected_unit)
 }
 
-fn target_internal_unit(target: &str) -> Option<&'static str> {
+pub(crate) fn target_internal_unit(target: &str) -> Option<&'static str> {
     match target {
         "unitless" | "kg/m²" => Some(if target == "kg/m²" {
             "kilogram_per_square_meter"
@@ -2054,6 +2249,7 @@ fn reduce_rollup_value(
     rule: &str,
     daily: &[(&str, &SemanticDailyValue)],
     source_days: &[&SemanticDayResult],
+    metric_weights: Option<&HashMap<&str, f64>>,
 ) -> Result<SemanticRollupValue, CoreError> {
     let values = daily
         .iter()
@@ -2085,7 +2281,10 @@ fn reduce_rollup_value(
                     .iter()
                     .position(|day| day.owner_date == *date)
                     .ok_or(CoreError::InvalidSemanticBatch)?;
-                let weight = weights[index];
+                let weight = match metric_weights {
+                    Some(weights) => *weights.get(date).ok_or(CoreError::InvalidSemanticBatch)?,
+                    None => weights[index],
+                };
                 weighted += number * weight;
                 total += weight;
                 let _ = value;
@@ -2286,7 +2485,7 @@ mod tests {
             semantic_input_version: 1,
             canonical_model_version: 1,
             registry_version: 1,
-            registry_sha256: REGISTRY_SHA256.to_owned(),
+            registry_sha256: crate::REGISTRY_SHA256.to_owned(),
             profile_revision: 1,
             session_id: "semantic-test".to_owned(),
             profile: SemanticProfile::AppleHealthDataV8,
@@ -2946,7 +3145,7 @@ mod tests {
             (first_day.owner_date.as_str(), &first_day.values[0]),
             (latest_day.owner_date.as_str(), &latest_day.values[0]),
         ];
-        let rollup = reduce_rollup_value("menstrual_flow", "histogram", &daily, &source_days)
+        let rollup = reduce_rollup_value("menstrual_flow", "histogram", &daily, &source_days, None)
             .expect("histogram");
         assert_eq!(
             rollup.primary_value,
