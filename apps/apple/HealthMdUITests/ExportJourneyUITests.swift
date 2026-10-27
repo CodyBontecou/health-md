@@ -238,9 +238,15 @@ final class ExportJourneyUITests: XCTestCase {
             XCTFail("Files must expose the synthetic TestVault folder")
             return
         }
-        // Tapping a filename in the provider's icon view need not enter its folder.
-        // Select the cell and observe navigation before Open can select a parent.
-        testVault.tap()
+        // SDK27 Files exposes the filename separately from the folder icon. The
+        // retained failure hierarchy stayed in Health.md after tapping that text.
+        let testVaultCell = setupFiles.cells.containing(.staticText, identifier: "TestVault").firstMatch
+        let testVaultIcon = testVaultCell.images.firstMatch
+        guard testVaultIcon.waitForExistence(timeout: 5) else {
+            XCTFail("Files must expose the synthetic TestVault folder icon")
+            return
+        }
+        testVaultIcon.tap()
         // SDK27 Files exposes the current folder as an actions-menu button.
         let selectedFolderTitle = app.navigationBars.buttons["TestVault, Actions Menu"].firstMatch
         guard selectedFolderTitle.waitForExistence(timeout: 10) else {
