@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Use Apple Health with Claude, ChatGPT &amp; Codex | Health.md</title>
-  <meta name="description" content="Query Apple Health with Claude, ChatGPT, or Codex: drop in a CSV/JSON export or connect the scoped MCP server. Local-first — you control what the agent sees.">
+  <meta name="description" content="Use Apple Health with AI: upload CSV/JSON, query encrypted Mac context, or use a standalone CLI/MCP preview. Check requirements, coverage, units and freshness.">
   <link rel="canonical" href="https://healthmd.app/health-data-for-ai/">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#fafaf8">
@@ -12,13 +12,13 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="Use Apple Health with Claude, ChatGPT &amp; Codex">
-  <meta property="og:description" content="Two ways to bring your health data to AI: export a CSV/JSON file, or let an agent ask scoped questions through Health.md's MCP server.">
+  <meta property="og:description" content="Use Apple Health with AI: upload CSV/JSON, query encrypted Mac context, or use a standalone CLI/MCP preview. Check requirements, coverage, units and freshness.">
   <meta property="og:url" content="https://healthmd.app/health-data-for-ai/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Use Apple Health with Claude, ChatGPT &amp; Codex">
-  <meta name="twitter:description" content="Your health data, ready for AI: file exports or scoped MCP queries. Local-first and private.">
+  <meta name="twitter:description" content="Use Apple Health with AI: upload CSV/JSON, query encrypted Mac context, or use a standalone CLI/MCP preview. Check requirements, coverage, units and freshness.">
   <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
 
   <link rel="icon" href="/favicon.ico" sizes="any">
@@ -37,7 +37,7 @@
         "@id": "https://healthmd.app/health-data-for-ai/#page",
         "url": "https://healthmd.app/health-data-for-ai/",
         "name": "Use Apple Health with Claude, ChatGPT & Codex",
-        "description": "Query Apple Health with Claude, ChatGPT, or Codex: drop in a CSV/JSON export or connect the scoped MCP server. Local-first — you control what the agent sees.",
+        "description": "Use Apple Health with AI: upload CSV/JSON, query encrypted Mac context, or use a standalone CLI/MCP preview. Check requirements, coverage, units and freshness.",
         "inLanguage": "en",
         "publisher": { "@id": "https://healthmd.app/about/#organization" }
       },
@@ -50,7 +50,7 @@
             "name": "Which AI assistants work with Health.md?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Claude and Codex can query Health.md directly through its MCP server. Any assistant — including ChatGPT — can analyze exported CSV or JSON files you provide."
+              "text": "Claude, Codex, and compatible MCP hosts can use the chosen Health.md MCP surface. Assistants that accept CSV or JSON can analyze files you provide. Available tools and inline rendering depend on the host; inspect capabilities before choosing a workflow."
             }
           },
           {
@@ -58,7 +58,7 @@
             "name": "Do I need the Mac app to use MCP?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "For the bundled MCP helper, yes: Health.md for Mac ships a signed healthmd-mcp helper, and it works while the Mac app is open with your iPhone connected. File exports work from the iPhone app alone."
+              "text": "The bundled healthmd-mcp helper requires Health.md for Mac open; existing encrypted context can be queried without a live iPhone, while fresh acquisition needs the connected source. The separate healthmd mcp serve preview does not require the Mac app and pairs with a compatible foreground iPhone. It remains unqualified for stable 1.0. File uploads require neither MCP setup."
             }
           },
           {
@@ -66,7 +66,7 @@
             "name": "Does the agent see all of my health data?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. Every request carries its own scope — you approve what the agent may ask about, and queries return bounded results with explicit coverage and missingness."
+              "text": "File uploads provide the selected snapshot. MCP queries use explicit dates and metrics and return bounded results with coverage and limitations. Check source authorization, acquired scope, pagination, and freshness; tool success does not prove complete history or complete traversal."
             }
           },
           {
@@ -114,7 +114,7 @@
       <div class="about-hero-inner">
         <p class="about-eyebrow">Health data × AI</p>
         <h1 id="ai-title">Put your health data to work with AI.</h1>
-        <p class="about-value-prop"><strong>Two paths from your Apple Health records to an AI assistant: hand it a file, or let it ask scoped questions through Health.md's MCP server.</strong></p>
+        <p class="about-value-prop"><strong>Choose a file upload, the bundled Mac MCP helper, or the standalone CLI/MCP preview. Each gives an assistant a different path to selected Apple Health data.</strong></p>
         <p class="about-intro">These local-first paths do not create a Health.md server copy by default. Agent hosts and model providers may process the files or returned values you share under their own policies.</p>
         <div class="hero-actions" aria-label="Download Health.md">
           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
@@ -130,19 +130,25 @@
     <div class="about-layout">
       <article class="about-content">
         <section class="about-section" id="two-paths">
-          <p class="section-kicker">Two paths</p>
-          <h2>File drop or agent access</h2>
+          <p class="section-kicker">Choose your workflow</p>
+          <h2>Files, Mac context, or direct-phone preview</h2>
           <div class="about-card-grid">
             <div class="about-card">
-              <h3>1. Export a file, drop it in</h3>
-              <p>Export the metrics and date range you want as CSV or JSON, then attach the file to a Claude Project, a ChatGPT conversation, or your Codex session. The assistant analyzes exactly what you gave it — nothing more.</p>
+              <h3>1. Upload a selected file</h3>
+              <p>Export selected dates and metrics as CSV or JSON on iPhone, then attach the files to an assistant that supports them. This is a snapshot; later exports need another upload. Follow the <a href="/blog/analyze-apple-health-with-claude/">Claude guide</a> or <a href="/blog/apple-health-to-chatgpt/">ChatGPT guide</a> to inspect source values before asking for trends.</p>
             </div>
             <div class="about-card">
-              <h3>2. Let an agent ask directly</h3>
-              <p>Health.md for Mac ships a signed <code>healthmd-mcp</code> helper. Codex, Claude, and other MCP hosts use it to run scoped queries — metric charts, sleep sessions, workouts, coverage — and get back factual answers with units, evidence, and explicit missingness instead of guesses.</p>
+              <h3>2. Query the bundled Mac context</h3>
+              <p>The released Mac app includes a signed <code>healthmd-mcp</code> helper. Keep Health.md for Mac open. Queries can use previously acquired encrypted context without a live iPhone connection; a fresh acquisition needs the authorized, reachable iPhone and the required foreground state. Check freshness and scope before answering.</p>
+              <p><a href="/docs/guides/connect-agent/">Connect the bundled Mac helper</a></p>
+            </div>
+            <div class="about-card">
+              <h3>3. Use the standalone preview</h3>
+              <p>The separate <code>healthmd</code> CLI provides <code>healthmd mcp serve</code> on macOS, Linux, and Windows without the Health.md Mac app. It pairs directly with a compatible iPhone; keep Health.md foreground on the phone for fresh typed queries. This remains an explicitly unqualified preview, not a stable 1.0 release.</p>
+              <p><a href="/blog/query-apple-health-with-claude-or-codex/">Follow the standalone query guide</a> and check <a href="/docs/release-status/">release status and compatibility</a> before installing.</p>
             </div>
           </div>
-          <p class="section-lede">File export works from the iPhone app alone. The MCP path needs Health.md for Mac open with your iPhone connected, plus a local MCP host. <a href="/docs/mcp/">Read the MCP setup guide</a></p>
+          <p class="section-lede">Choose the connection before copying an MCP configuration. The bundled helper and standalone CLI have separate pairing, credentials, context, and jobs. A successful readiness check is not release or OS qualification. For Android files, start with the <a href="/health-connect-export/">Health Connect export guide</a>; the documented standalone typed-query preview requires iPhone.</p>
         </section>
 
         <section class="about-section" id="per-assistant">
@@ -152,27 +158,40 @@
             <div>
               <span>01</span>
               <h3>Claude</h3>
-              <p>Add the <code>healthmd-mcp</code> helper to Claude Desktop's MCP configuration or a Claude Code <code>.mcp.json</code>. Hosts that support MCP Apps render Health.md's interactive charts inline; text-first clients get exact JSON with image fallbacks.</p>
+              <p>For a file upload, use the <a href="/blog/analyze-apple-health-with-claude/">Claude walkthrough</a>. For MCP, choose the bundled Mac or standalone preview instructions above and configure that surface's executable. Inline chart support depends on the host and available tools; inspect capabilities rather than assuming every client renders the same result.</p>
             </div>
             <div>
               <span>02</span>
               <h3>Codex</h3>
-              <p>Register the helper under <code>mcp_servers.healthmd</code> in <code>~/.codex/config.toml</code>, restart Codex, then run <code>healthmd_doctor</code> and list metrics with <code>healthmd_metrics</code>. Export and refresh tools stay approval-gated.</p>
+              <p>Use the <a href="/docs/guides/connect-agent/">bundled Mac setup</a> for encrypted-context queries, or the <a href="/blog/query-apple-health-with-claude-or-codex/">standalone preview guide</a> for direct-phone access. Keep their configuration and pairing steps separate. Run readiness and capability discovery before selecting a query.</p>
             </div>
             <div>
               <span>03</span>
               <h3>ChatGPT</h3>
-              <p>Use the file path: export a CSV or JSON of the metrics and dates you want analyzed, then upload or attach it to your conversation. You decide the scope by choosing what to export.</p>
+              <p>The <a href="/blog/apple-health-to-chatgpt/">ChatGPT file-upload guide</a> starts with a synthetic CSV sample and source-row checks. That tutorial supplies a manual snapshot; it does not configure a live device or MCP connection. This describes the tutorial's path, not every integration a host may support.</p>
             </div>
           </div>
+        </section>
+
+        <section class="about-section" id="verify-agent-output">
+          <p class="section-kicker">Verify before interpreting</p>
+          <h2>Check readiness, freshness, and complete coverage</h2>
+          <ol>
+            <li>For MCP, call <code>healthmd_doctor</code> and inspect <code>healthmd_capabilities</code>. Read their checks and next actions; ready does not mean every historical date is authorized or cached data is current.</li>
+            <li>Use explicit dates, metrics, sources, and detail. For Mac context, inspect the acquired scope and refresh status. For the direct preview, verify the paired phone and its reported query support.</li>
+            <li>Preserve units, source evidence, recorded-day counts, missing intervals, and limitations. An empty or failed interval is not zero.</li>
+            <li>Check remaining cursors and page/byte ceilings. A successful request can still leave additional pages or partial coverage.</li>
+            <li>For uploaded files, check the filenames and source rows used. For every path, review calculations and charts before relying on the answer.</li>
+          </ol>
+          <p>Follow approval prompts for acquisition and writes. Keep a durable job identifier after an accepted refresh, and inspect its status before retrying a timeout. The <a href="/docs/guides/connect-agent/">bundled Mac guide</a> explains partial results and refresh recovery; the <a href="/docs/release-status/">compatibility reference</a> distinguishes operational readiness from release qualification.</p>
         </section>
 
         <section class="about-section" id="scoped">
           <p class="section-kicker">Privacy</p>
           <h2>Scoped by default</h2>
-          <p class="section-lede"><strong>Every request carries its own scope.</strong> An agent can only ask about what you approve — queries return bounded pages with coverage, missing intervals, and limitations spelled out, so nothing is silently extrapolated.</p>
-          <p>Generated-file writes are approval-gated operations, and Health.md reports factual observations only: units, provenance, coverage, missingness. It does not diagnose or recommend treatment. Direct device queries do not automatically upload results to Health.md.</p>
-          <p>The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it. A separately authorized read-only cloud MCP endpoint can return retained fields to an agent. There is no public signup and no automatic device sync. Cloud MCP is distinct from the local Mac helper described above. Review the <a href="/privacy-policy.html#retention">privacy policy</a> for retention, deletion, and the pilot's unbacked storage limits; your agent or model provider's policies govern its copy.</p>
+          <p class="section-lede"><strong>Choose an explicit scope and inspect what came back.</strong> File uploads share selected snapshots. MCP queries return bounded results with coverage, missing intervals, and limitations; preserve those details in the answer rather than treating an assistant's summary as proof of completeness.</p>
+          <p>Acquisition and file-writing actions have their own authorization and host approval controls. Health.md reports factual observations with units, provenance, coverage, and missingness. It does not diagnose or recommend treatment. Direct device queries do not automatically upload results to Health.md.</p>
+          <p>The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it. A separately authorized read-only cloud MCP endpoint can return retained fields to an agent. There is no public signup and no automatic device sync. Cloud MCP is distinct from both local MCP paths described above. Review the <a href="/privacy-policy.html#retention">privacy policy</a> for retention, deletion, and the pilot's unbacked storage limits; your agent or model provider's policies govern its copy.</p>
         </section>
 
         <section class="about-section" id="keep-going">
@@ -201,15 +220,15 @@
           <div class="faq-list">
             <div>
               <h3>Which AI assistants work with Health.md?</h3>
-              <p>Claude and Codex can query Health.md directly through its MCP server. Any assistant — including ChatGPT — can analyze exported CSV or JSON files you provide.</p>
+              <p>Claude, Codex, and compatible MCP hosts can use the chosen Health.md MCP surface. Assistants that accept CSV or JSON can analyze files you provide. Available tools and inline rendering depend on the host; inspect capabilities before choosing a workflow.</p>
             </div>
             <div>
               <h3>Do I need the Mac app to use MCP?</h3>
-              <p>For the bundled MCP helper, yes: Health.md for Mac ships a signed <code>healthmd-mcp</code> helper, and it works while the Mac app is open with your iPhone connected. File exports work from the iPhone app alone.</p>
+              <p>The bundled healthmd-mcp helper requires Health.md for Mac open; existing encrypted context can be queried without a live iPhone, while fresh acquisition needs the connected source. The separate healthmd mcp serve preview does not require the Mac app and pairs with a compatible foreground iPhone. It remains unqualified for stable 1.0. File uploads require neither MCP setup.</p>
             </div>
             <div>
               <h3>Does the agent see all of my health data?</h3>
-              <p>No. Every request carries its own scope — you approve what the agent may ask about, and queries return bounded results with explicit coverage and missingness.</p>
+              <p>File uploads provide the selected snapshot. MCP queries use explicit dates and metrics and return bounded results with coverage and limitations. Check source authorization, acquired scope, pagination, and freshness; tool success does not prove complete history or complete traversal.</p>
             </div>
             <div>
               <h3>Can Health.md or the AI diagnose me?</h3>

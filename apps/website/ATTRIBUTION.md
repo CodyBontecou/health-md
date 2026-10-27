@@ -1,5 +1,10 @@
 # Health.md short-form attribution on Cloudflare
 
+The same Worker also serves the bounded website action collector. Its schema,
+reporting command, privacy limits, and migration/deployment order are maintained in
+[SEO measurement](SEO.md#website-action-counters). Website counters remain separate
+from campaign redirect clicks and attributed installs.
+
 This repo is set up for first-party campaign shortlinks on Cloudflare:
 
 ```text
@@ -255,6 +260,21 @@ Pre-existing Custom Product Page:
 Ads Exploration
 ppid=e9f90675-b5b1-4813-9e44-004cd1c84f90
 ```
+
+## Legacy short links
+
+The exact `LEGACY_GUIDE_REDIRECTS` allowlist in the Worker recovers known old
+date-style YouTube URLs with a permanent redirect to the relevant CSV or
+Obsidian guide. GET and HEAD are supported, including one trailing slash.
+These are content recovery links, not current-format campaign aliases: they
+do not create campaign-click records or store/install attribution. Incoming
+query parameters are discarded and destinations are fixed Health.md URLs.
+Unknown links still return 404; do not infer arbitrary legacy campaign tokens
+or redirect all unknown short links to the homepage.
+
+After deploying a change, verify each recovered URL reaches its canonical guide
+in one redirect and that the guide returns 200. Check a normal current-format
+campaign with HEAD to avoid adding synthetic campaign-click records.
 
 ## Test after deploy
 
