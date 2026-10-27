@@ -568,6 +568,10 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                 } == true
                 val now = SystemClock.uptimeMillis()
                 if (!fullyVisible) {
+                    // Native IME relocation can scroll the focused field back after
+                    // the initial reveal. Repeat the ordinary reveal within this
+                    // same deadline; never clear focus or bypass visibility checks.
+                    control.scrollIfPossible()
                     previous = null
                     stableSince = now
                     false
