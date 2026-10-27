@@ -17,12 +17,14 @@ final class WindowManager {
 class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !TestMode.isUnitTesting else { return }
         DiagnosticRecorder.shared.record(.appStarted)
         UNUserNotificationCenter.current().delegate = self
         // Notification permission is requested when the user enables a schedule.
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
+        guard !TestMode.isUnitTesting else { return }
         DiagnosticRecorder.shared.record(.nativeLifecycle, fields: [.nativeCallback: .text("macos_application_did_become_active")])
         // Perform catch-up export if the schedule was missed while the app was inactive
         Task { @MainActor in
@@ -31,6 +33,7 @@ class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
     }
 
     func applicationDidResignActive(_ notification: Notification) {
+        guard !TestMode.isUnitTesting else { return }
         DiagnosticRecorder.shared.record(.nativeLifecycle, fields: [.nativeCallback: .text("macos_application_did_resign_active")])
     }
 
@@ -82,6 +85,7 @@ class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
 
     func application(_ application: NSApplication,
                      didReceiveRemoteNotification userInfo: [String: Any]) {
+        guard !TestMode.isUnitTesting else { return }
         guard userInfo["type"] as? String == "scheduled-export" else { return }
         DiagnosticRecorder.shared.record(.triggerReceived, fields: [.trigger: .text("silent_push")])
         Task { @MainActor in
@@ -297,7 +301,9 @@ struct HealthMdApp: App {
     )
 
     init() {
-        LegacyLocalAgentArtifactCleanup.runIfNeeded()
+        if !TestMode.isUnitTesting {
+            LegacyLocalAgentArtifactCleanup.runIfNeeded()
+        }
         let contextStore = EncryptedHealthContextStore()
         encryptedHealthContextStore = contextStore
         encryptedHealthContextQueryExecutor = EncryptedHealthContextQueryExecutor(store: contextStore)
@@ -307,6 +313,9 @@ struct HealthMdApp: App {
         macCorpusExportSessionManager = MacCorpusExportSessionManager(
             queryContextStore: contextStore
         )
+        // Unit tests own their service instances; the app host must not start
+        // unrelated discovery, export timers, or debug monitoring alongside them.
+        guard !TestMode.isUnitTesting else { return }
         #if DEBUG
         Task { @MainActor in
             MacExportPerformanceLabController.shared.startMonitoring()
@@ -334,6 +343,7 @@ struct HealthMdApp: App {
                 .preferredColorScheme(MacMarketingCapture.isActive ? .light : nil)
                 #endif
                 .task {
+                    guard !TestMode.isUnitTesting else { return }
                     #if DEBUG
                     if MacMarketingCapture.isActive {
                         MacMarketingCapture.configure(
@@ -370,6 +380,7 @@ struct HealthMdApp: App {
                     scheduleMacDestinationStatusPublication()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    guard !TestMode.isUnitTesting else { return }
                     vaultManager.refreshVaultAccess()
                 }
                 .onChange(of: syncService.lastError) { _, _ in
