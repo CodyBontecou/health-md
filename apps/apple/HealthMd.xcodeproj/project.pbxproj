@@ -996,7 +996,9 @@
 		};
 		62A1B0082F50A00100000008 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilter = macos;
+			platformFilters = (
+				macos,
+			);
 			target = 62CC00052F15D70300F9103F /* HealthMd-macOS */;
 			targetProxy = 62A1B0012F50A00100000001 /* PBXContainerItemProxy */;
 		};

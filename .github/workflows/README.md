@@ -82,6 +82,11 @@ build runs alongside unit shards after guarded preparation, and remains required
 for the same PR/manual events as before. Its archive and source/checksum receipt
 retain the existing name and lifetime.
 
+The shared unit-test target scopes its Mac host with `platformFilters`.
+Xcode ignored the singular `macos` filter during iOS preparation and also built
+and packaged the desktop app and CLI helpers. Both host dependencies and native
+suites remain; each producer now builds the host for its own platform.
+
 Twenty phone UI cases run across three phone shards; a fourth shard runs four
 App Review/history cases on iPad. The
 same history method intentionally runs once per device family. Entire XCTest
