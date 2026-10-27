@@ -489,6 +489,7 @@ jobs:
             IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO -showBuildTimingSummary" \
             IOS_SIM="${{ steps.simulator.outputs.ios_destination }}" \
             2>&1 | tee build/logs/build-ios.log
+          python3 scripts/check-native-test-targets.py --platform iOS --log build/logs/build-ios.log
       - name: Enumerate and retain complete qualified iOS unit products
         id: package
         run: |
@@ -900,6 +901,7 @@ jobs:
           set -euo pipefail
           mkdir -p build/logs
           make build-macos-tests CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/macos-qa-derived MACOS_CODE_COVERAGE=YES 2>&1 | tee build/logs/build-macos.log
+          python3 scripts/check-native-test-targets.py --platform macOS --log build/logs/build-macos.log
       - name: Enumerate and retain complete qualified native products
         id: package
         run: |

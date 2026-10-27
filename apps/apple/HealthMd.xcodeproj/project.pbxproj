@@ -736,7 +736,6 @@
 					};
 					62A1B0052F50A00100000005 = {
 						CreatedOnToolsVersion = 26.2;
-						TestTargetID = 62CC00052F15D70300F9103F;
 					};
 					62CC00052F15D70300F9103F = {
 						CreatedOnToolsVersion = 26.2;

@@ -1,5 +1,6 @@
 """Keep both native suites while scoping the shared test target's app hosts."""
 from pathlib import Path
+import importlib.util
 import re
 import unittest
 import xml.etree.ElementTree as ET
@@ -9,9 +10,23 @@ PROJECT = ROOT / 'apps/apple/HealthMd.xcodeproj'
 MAC_DEPENDENCY = '62A1B0082F50A00100000008'
 IOS_DEPENDENCY = 'EE11BB000000000000000004'
 TEST_TARGET = '62A1B0052F50A00100000005'
+spec = importlib.util.spec_from_file_location('native_targets', PROJECT.parent / 'scripts/check-native-test-targets.py')
+native_targets = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(native_targets)
 
 
 class NativeDependencyTests(unittest.TestCase):
+    def test_complete_target_graph_rejects_extra_host_even_without_dependency_edge(self):
+        ios = "    Target 'HealthMdTests' in project 'HealthMd'\n    Target 'HealthMd' in project 'HealthMd'\n"
+        mac = "    Target 'HealthMdTests' in project 'HealthMd'\n    Target 'HealthMd-macOS' in project 'HealthMd'\n"
+        self.assertEqual(['HealthMd', 'HealthMdTests'], native_targets.qualify_targets(ios, 'iOS'))
+        self.assertEqual(['HealthMd-macOS', 'HealthMdTests'], native_targets.qualify_targets(mac, 'macOS'))
+        for platform, invalid in [('iOS', ios + mac), ('macOS', mac + ios),
+                                  ('iOS', "    Target 'HealthMd' in project 'HealthMd'\n"),
+                                  ('macOS', '')]:
+            with self.subTest(platform=platform, invalid=invalid), self.assertRaises(ValueError):
+                native_targets.qualify_targets(invalid, platform)
+
     def block(self, identifier):
         match = re.search(r'^\t\t' + identifier + r' /\*[^\n]+\*/ = \{\n(.*?)^\t\t\};',
                           (PROJECT / 'project.pbxproj').read_text(), re.M | re.S)
@@ -20,11 +35,25 @@ class NativeDependencyTests(unittest.TestCase):
 
     def test_native_mac_host_uses_the_effective_platform_list(self):
         dependency = self.block(MAC_DEPENDENCY)
-        # Xcode's observed iOS build plan ignored the singular macos filter,
-        # building the Mac app and its CLI helpers as well as the iOS host.
+        # The plural field scopes the explicit edge. Independent inferred roots
+        # require a separate complete-graph check, not just an edge inventory.
         self.assertNotRegex(dependency, r'\bplatformFilter\s*=')
         self.assertRegex(dependency, r'platformFilters\s*=\s*\(\s*macos,?\s*\);')
         self.assertIn('target = 62CC00052F15D70300F9103F', dependency)
+
+    def test_shared_bundle_does_not_infer_an_unconditional_mac_test_host(self):
+        text = (PROJECT / 'project.pbxproj').read_text()
+        attributes = text.split('TargetAttributes = {', 1)[1].split('\n\t\t\t\t};', 1)[0]
+        target = re.search(r'^\t{5}' + TEST_TARGET + r' = \{\n(.*?)^\t{5}\};', attributes, re.M | re.S)
+        self.assertIsNotNone(target)
+        self.assertNotIn('TestTargetID', target.group(1),
+                         'A shared test bundle must select its host through the platform configuration')
+        for identifier, host in [('62A1B0092F50A00100000009', 'Health.md.app/Contents/MacOS/Health.md'),
+                                 ('62A1B00A2F50A00100000010', 'Health.md.app/Contents/MacOS/Health.md'),
+                                 ('1BAC721C5C094A2F9BA90F1D', 'HealthMd.app/HealthMd')]:
+            config = self.block(identifier)
+            self.assertIn(f'TEST_HOST = "$(BUILT_PRODUCTS_DIR)/{host}";', config)
+            self.assertIn('BUNDLE_LOADER = "$(TEST_HOST)";', config)
 
     def test_both_hosts_and_the_complete_shared_test_target_remain(self):
         target = self.block(TEST_TARGET)

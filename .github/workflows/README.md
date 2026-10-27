@@ -85,10 +85,11 @@ build runs alongside unit shards after guarded preparation, and remains required
 for the same PR/manual events as before. Its archive and source/checksum receipt
 retain the existing name and lifetime.
 
-The shared unit-test target scopes its Mac host with `platformFilters`.
-Xcode ignored the singular `macos` filter during iOS preparation and also built
-and packaged the desktop app and CLI helpers. Both host dependencies and native
-suites remain; each producer now builds the host for its own platform.
+The shared unit-test target retains both platform-filtered host dependencies and
+configuration-specific `TEST_HOST`/`BUNDLE_LOADER` paths. It has no platform-global
+`TestTargetID` selecting the desktop host. Validate complete target graphs and
+generated test-host metadata: checking dependency edges alone can miss an extra
+independent root target. Both native suites and their hosted test bundle remain.
 
 Twenty phone UI cases run across three phone shards; a fourth shard runs four
 App Review/history cases on iPad. The
