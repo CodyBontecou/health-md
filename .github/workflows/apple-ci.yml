@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v6
         with:
-          ref: 17a08f0c7d2dec7af42dc726af2470377203a5a8
+          ref: 3559db0d87849d7c4ccf1e0a711f88fd043aa44e
           path: candidate
           persist-credentials: false
       - uses: maxim-lobanov/setup-xcode@v1
@@ -28,8 +28,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 17a08f0c7d2dec7af42dc726af2470377203a5a8
-          test "$(git rev-parse HEAD^{tree})" = c6084ed4409ada1ed5f368f8a58af69100020786
+          test "$(git rev-parse HEAD)" = 3559db0d87849d7c4ccf1e0a711f88fd043aa44e
+          test "$(git rev-parse HEAD^{tree})" = 179692354bdc0110ee828b72c4395eeead8727ac
           git diff --exit-code
           mkdir -p build/logs/pr189-resume-sdk27
           {
@@ -45,6 +45,23 @@ jobs:
           actual=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)
           test "$actual" = "$(cat Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256)"
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+      - name: Compile installed iPhone controller against SDK27
+        working-directory: candidate/apps/apple
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild build -project HealthMd.xcodeproj -scheme HealthMd \
+            -configuration Debug -destination 'generic/platform=iOS' \
+            -derivedDataPath build/pr189-resume-ios-derived \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee build/logs/pr189-resume-sdk27/iphone-build.log
+          app=build/pr189-resume-ios-derived/Build/Products/Debug-iphoneos/HealthMd.app
+          test -f "$app/HealthMd"
+          xcrun lipo -verify_arch arm64 "$app/HealthMd"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
+          git diff --exit-code
       - name: Compile and run owning Resume controls
         working-directory: candidate/apps/apple
         shell: bash
@@ -57,7 +74,9 @@ jobs:
           text=Path('HealthMdTests/Export/AgentBridgeExportPlanningTests.swift').read_text()
           names=re.findall(r'^\s*func (testNative\w*Resume\w*)\(',text,re.M)
           assert len(names)==len(set(names)) and len(names)>=30
-          assert len([n for n in names if n.startswith('testNativeWireResume')])==7
+          assert len([n for n in names if n.startswith('testNativeWireResume')])==8
+          names.append('testNativeTransferOrdinaryCancelledErrorsCannotImpersonateConfirmedSourceStop')
+          assert len(names)==35 and all('func '+n+'(' in text for n in names)
           Path('build/logs/pr189-resume-sdk27/expected-cases.txt').write_text('\n'.join(names)+'\n')
           PY
           args=()
