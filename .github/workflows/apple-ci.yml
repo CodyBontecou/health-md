@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v6
         with:
-          ref: 221c84b6713f1920eb00b6807ca3960e45a01283
+          ref: f481cfa135f938b9a7d831f6aa0f9537ac3a5648
           path: candidate
           persist-credentials: false
       - uses: maxim-lobanov/setup-xcode@v1
@@ -28,12 +28,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 221c84b6713f1920eb00b6807ca3960e45a01283
-          test "$(git rev-parse HEAD^{tree})" = d8b82efe201e6359e905b8a7842ddf92741c21e2
+          test "$(git rev-parse HEAD)" = f481cfa135f938b9a7d831f6aa0f9537ac3a5648
+          test "$(git rev-parse 'HEAD^{tree}')" = 6929fd5841fc7c5f8fd301f994ac4f8790de25ee
           git diff --exit-code
           mkdir -p build/logs/pr189-resume-sdk27
           {
-            git rev-parse HEAD HEAD^{tree}
+            git rev-parse HEAD 'HEAD^{tree}'
             xcodebuild -version
             xcrun swiftc --version
             uname -m
@@ -80,7 +80,8 @@ jobs:
           assert len(execute)==5
           names+=execute
           names.append('testNativeTransferOrdinaryCancelledErrorsCannotImpersonateConfirmedSourceStop')
-          assert len(names)==40 and len(names)==len(set(names)) and all('func '+n+'(' in text for n in names)
+          names.append('testAcceptedOnlyResumePreservesSpoolAndCannotRewindNativeAcknowledgements')
+          assert len(names)==41 and len(names)==len(set(names)) and all('func '+n+'(' in text for n in names)
           Path('build/logs/pr189-resume-sdk27/expected-cases.txt').write_text('\n'.join(names)+'\n')
           PY
           args=()
