@@ -1,0 +1,30 @@
+--- a/apps/apple/HealthMd/Shared/Sync/ConnectedCorpusApplicationItem.swift
++++ b/apps/apple/HealthMd/Shared/Sync/ConnectedCorpusApplicationItem.swift
+@@ -296,6 +296,8 @@
+               expected.map({ $0.totalBytes == Int64(initial.st_size) }) ?? true else {
+             throw CocoaError(.fileReadCorruptFile)
+         }
++        let traceLargeCopy = initial.st_size >= 64 * 1_024 * 1_024
++        if traceLargeCopy { traceMemory("before-large-file-copy") }
+         var hasher = SHA256()
+         var copied: Int64 = 0
+         var buffer = [UInt8](repeating: 0, count: copyBufferBytes)
+@@ -317,6 +319,7 @@
+             try write(data, to: output)
+             copied = next.partialValue
+         }
++        if traceLargeCopy { traceMemory("after-large-file-copy") }
+         var final = stat()
+         guard Darwin.fstat(inputDescriptor, &final) == 0,
+               final.st_mode & S_IFMT == S_IFREG,
+@@ -1179,7 +1182,10 @@
+                         to: output
+                     )
+                 case .data(let value):
++                    let traceLargeData = value.count >= 64 * 1_024 * 1_024
++                    if traceLargeData { traceMemory("before-large-data-write") }
+                     try write(value, to: output)
++                    if traceLargeData { traceMemory("after-large-data-write") }
+                 case .fileBackedData(let value):
+                     guard value.byteCount <= UInt64(Int64.max) else {
+                         throw CodecError.malformedToken

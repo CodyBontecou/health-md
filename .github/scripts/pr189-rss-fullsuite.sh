@@ -13,6 +13,8 @@ mkdir -p "$out"
 git diff --exit-code a130bb5b2f0bb74fe319003bac9169dfafdc5bfd -- HealthMd HealthMdTests
 git apply --check ../../.github/scripts/pr189-rss-diagnostic.patch
 git apply ../../.github/scripts/pr189-rss-diagnostic.patch
+git apply --check ../../.github/scripts/pr189-rss-fine-phases.patch
+git apply ../../.github/scripts/pr189-rss-fine-phases.patch
 git diff -- HealthMd/Shared/Sync/ConnectedCorpusApplicationItem.swift HealthMdTests/Sync/ConnectedCorpusPartitionFileTests.swift > "$out/applied.patch"
 make build-macos-tests CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/pr189-rss-derived MACOS_CODE_COVERAGE=YES 2>&1 | tee "$out/instrumented-build.log"
 status=0
