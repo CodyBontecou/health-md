@@ -5,9 +5,9 @@ use healthmd_protocol::v4::{
     Approval, ApprovalRequest, Archive, AuthorityReference, AuthorityReferenceIssuer,
     AuthorityReferences, CalendarZone, Capture, CaptureCompatibilityDetail, ConfigurationContext,
     ControlUuid, Dates, Discovery, DiscoveryEntitlement, DiscoveryFeaturesItem,
-    DiscoverySettingsPoliciesItem, Error, ExecuteRequest, ExportDelegationRightsItem, ExportIntent,
-    ExportIntentProduct, ExportIntentProductType, ExportIntentSchema,
-    ExportIntentTimestampTimezone, ExportPlan, MetricSupport, OutputSettings,
+    DiscoverySettingsPoliciesItem, Error, ExecuteRequest, ExecuteRequestSchema,
+    ExportDelegationRightsItem, ExportIntent, ExportIntentProduct, ExportIntentProductType,
+    ExportIntentSchema, ExportIntentTimestampTimezone, ExportPlan, MetricSupport, OutputSettings,
     OutputSupportNativeArchiveProductsItem, OutputSupportPathTokensItem, Peer, PeerPlatform,
     PlanRequest, PlanRequestSchema, Policy, Selection, SemanticId, UtcTimestamp, ValidateShape,
     approval_binding, derived_export_authority, predicted_paths, resolve_dates, setting_origins,
@@ -406,6 +406,49 @@ impl HostPlanner {
             .require_issued_current(&plan, Some(&approval), true, clock, Some(source))
             .await?;
         Ok(approval)
+    }
+
+    /// Reconstruct an execution request from the signed issued plan and separately stored
+    /// host/native decisions. The caller supplies identifiers only, never approval, authority
+    /// descriptions, output paths or replacement plan bytes. No listener, capture, journal,
+    /// consent issuance or acceptance occurs here; the original bridge must revalidate every
+    /// live fence before sending and receiving an export.
+    /// # Errors
+    /// Invalid identifiers, missing decisions, stale/revoked authority, expired plans or
+    /// substituted destinations reject without creating or changing issuer state.
+    pub async fn prepare_approved_execution(
+        &self,
+        plan_id: &ControlUuid,
+        job_id: ControlUuid,
+        idempotency_key: ControlUuid,
+        request_id: ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<ExecuteRequest, ClientError> {
+        plan_id.validate_shape()?;
+        job_id.validate_shape()?;
+        idempotency_key.validate_shape()?;
+        request_id.validate_shape()?;
+        let (_, plan, _, decision, native_approval) = self.store.issued_plan(plan_id).await?;
+        let binding = approval_binding(&plan);
+        if decision.as_ref() != Some(&binding) {
+            return Err(Error::ApprovalRequired.into());
+        }
+        let approval = native_approval.ok_or(Error::ApprovalRequired)?;
+        let request = ExecuteRequest {
+            schema: ExecuteRequestSchema::HealthmdAgentExecuteRequest,
+            schema_version: 1,
+            plan,
+            approval,
+            request_id,
+            job_id,
+            idempotency_key,
+        };
+        // Read-only local preflight, never a substitute for the authenticated original
+        // session's fresh trust/key/root/expiry fences and durable single-attempt admission.
+        self.store
+            .require_output_current(&request, None, clock, || async { Ok(()) })
+            .await?;
+        Ok(request)
     }
 
     /// No accepted receipt, old export conversion or fake execution until a genuine source
