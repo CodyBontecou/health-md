@@ -4,69 +4,18 @@ on:
   workflow_call:
     inputs:
       release_sha:
-        description: Exact source commit to qualify
         type: string
         required: false
       full_qualification:
-        description: Compatibility input; the reduced lane always runs in full
         type: boolean
-        default: true
         required: false
+        default: true
 permissions:
   contents: read
+  actions: read
 jobs:
   test:
-    name: Web CI
-    runs-on: ubuntu-24.04
-    timeout-minutes: 2
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.release_sha || github.sha }}
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: |
-            apps/practice/package-lock.json
-            apps/wake/package-lock.json
-            apps/website/package-lock.json
-            apps/website/docs-src/package-lock.json
-      - name: Resolve pinned consumer
-        id: consumer
-        run: |
-          # shellcheck disable=SC2016
-          node -e 'const s=require("./apps/website/external-sources.json").obsidian_plugin;require("fs").appendFileSync(process.env.GITHUB_OUTPUT,`repository=${s.repository}\nrevision=${s.revision}\n`)'
-      - uses: actions/checkout@v4
-        with:
-          repository: ${{ steps.consumer.outputs.repository }}
-          ref: ${{ steps.consumer.outputs.revision }}
-          path: .external/health-md-visualizations
-          persist-credentials: false
-      - name: Install component dependencies
-        run: |
-          for component in apps/practice apps/wake apps/website apps/website/docs-src .external/health-md-visualizations; do
-            npm --prefix "$component" ci --ignore-scripts &
-          done
-          failed=0
-          for pid in $(jobs -p); do wait "$pid" || failed=1; done
-          test "$failed" = 0
-          cd apps/practice && npx playwright install --with-deps chromium
-      - name: Run retained regression lane (90-second hard deadline)
-        run: python3 scripts/ci/budget.py --lane web --budget-seconds 90 --receipt .pi/ci/web.json -- bash scripts/ci/web.sh
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() }}
-        with:
-          name: ci-receipt-web-${{ github.run_attempt }}
-          path: .pi/ci/web.json
-          if-no-files-found: error
-          retention-days: 7
-      - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
-        with:
-          name: ci-diagnostics-web-${{ github.run_attempt }}
-          path: |
-            apps/practice/test-results
-            apps/practice/playwright-report
-          retention-days: 7
+    uses: ./.github/workflows/ci.yml
+    with:
+      release_sha: ${{ inputs.release_sha || github.sha }}
+      full_qualification: true

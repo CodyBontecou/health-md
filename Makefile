@@ -12,7 +12,7 @@ CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
         android-build android-play-debug android-fdroid-debug android-fdroid-release \
         practice-build website-build
 
-# Same four retained lanes as pull-request CI. Toolchains/dependencies must be ready.
+# Same six portable regression groups as CI; only Node, Rust and Python are required.
 test:
 	python3 scripts/ci/run.py
 

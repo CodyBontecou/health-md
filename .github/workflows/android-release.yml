@@ -140,7 +140,7 @@ jobs:
             .run_attempt == $attempt and .status == "completed" and .conclusion == "success"
           ' "$RUNNER_TEMP/run.json" >/dev/null
           jq -e --argjson attempt "$RUN_ATTEMPT" '
-            ["android / Android CI", "CI"] as $required |
+            ["CI"] as $required |
             ([.jobs[] | select(.run_attempt == $attempt and .status == "completed" and
               .conclusion == "success") | .name] | unique) as $passed |
             all($required[]; . as $name | $passed | index($name) != null)

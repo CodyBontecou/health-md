@@ -53,7 +53,7 @@ make test-wake
 make test-website
 ```
 
-`make test` runs the same four retained CI lanes concurrently, with a 90-second deadline per lane and a 120-second overall limit. Install component dependencies, the pinned external consumer, and native toolchains first. Select an already booted isolated Android target with `ANDROID_SERIAL` and its ABI with `HEALTHMD_CI_ANDROID_ABI`. Logs and timing receipts are written to a unique ignored `.pi/ci/local-*` directory. See [the test strategy](docs/qa/two-minute-ci.md). Explicit component commands remain available for diagnosis and are not additional PR gates.
+`make test` runs the six retained portable regression groups concurrently, including locked npm installation. It requires Node 24, Rust 1.88, Python, and the pinned consumer checkout described in [the test strategy](docs/qa/two-minute-ci.md). CI uses one Linux runner and a source-only checkout to fit a 120-second end-to-end budget. Logs and receipts are retained under ignored `.pi/`. Native SDK builds and device/browser QA are explicit diagnostics rather than additional CI regression gates.
 
 Additional Gradle options can be supplied with `ANDROID_TEST_ARGS='--max-workers=2 --init-script scripts/ci-gradle.init.gradle --info'`. These arguments are evaluated from `apps/android`.
 

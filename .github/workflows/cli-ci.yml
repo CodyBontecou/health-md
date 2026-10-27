@@ -4,47 +4,18 @@ on:
   workflow_call:
     inputs:
       release_sha:
-        description: Exact source commit to qualify
         type: string
         required: false
       full_qualification:
-        description: Compatibility input; the reduced lane always runs in full
         type: boolean
-        default: true
         required: false
+        default: true
 permissions:
   contents: read
+  actions: read
 jobs:
   test:
-    name: Rust CI
-    runs-on: ubuntu-24.04
-    timeout-minutes: 2
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.release_sha || github.sha }}
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@1.88.0
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            packages/healthmd-core-rust -> target
-            apps/cli -> target
-      - name: Run retained regression lane (90-second hard deadline)
-        run: python3 scripts/ci/budget.py --lane rust --budget-seconds 90 --receipt .pi/ci/rust.json -- bash scripts/ci/rust.sh
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() }}
-        with:
-          name: ci-receipt-rust-${{ github.run_attempt }}
-          path: .pi/ci/rust.json
-          if-no-files-found: error
-          retention-days: 7
-      - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
-        with:
-          name: ci-diagnostics-rust-${{ github.run_attempt }}
-          path: |
-            .pi/ci
-          retention-days: 7
+    uses: ./.github/workflows/ci.yml
+    with:
+      release_sha: ${{ inputs.release_sha || github.sha }}
+      full_qualification: true

@@ -1526,7 +1526,7 @@
       },
       "evidenceLayer": "static-policy",
       "declaration": {
-        "normalizedAstSha256": "2d189b1aae8b8ebd7c3685ded448161eba14ea223eaa4e9fe79fb8d75b4430f9",
+        "normalizedAstSha256": "8420b048b4edf7129158594e5e25f9fef1868be899b30e2ec60bd84e94523b7e",
         "line": 25
       },
       "assertions": [
@@ -1540,8 +1540,8 @@
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-028",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "49b767461818e10b41d7b79f449c4eb882fa992ffc1ed68dc8da6a295453b32c",
-          "excerpt": "expect(lane).toContain(\"npm run check:ci\")",
+          "normalizedAstSha256": "50b61d3e590878b594cfe271aacc367bb8367096f6d4992b698e4d9006808253",
+          "excerpt": "expect(lane).toContain(\"npm exec -- vitest run\")",
           "line": 28
         },
         {
@@ -1561,15 +1561,15 @@
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-103",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "74309cd15a863d7f14acd7e43d9a6539fbd534bfe990ceb87b8227053df11d1d",
-          "excerpt": "expect(workflow).toContain(\"uses: ./.github/workflows/practice-ci.yml\")",
+          "normalizedAstSha256": "7f0710b31559cd0554082c6fee04f4e0e0837f444dc491fb528906dd179a0da9",
+          "excerpt": "expect(workflow).toContain(\"python3 scripts/ci/run.py\")",
           "line": 32
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-027",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "dc6257bd139f2e5670cad7528cba7114e9685e735d6b477e1a494bac93c604bf",
-          "excerpt": "expect(web).toContain('npm --prefix \"$component\" ci --ignore-scripts')",
+          "normalizedAstSha256": "eefe81818da045b9fe9acb1d7f41935e3d9c9a4a6d077588807ef9598790fd43",
+          "excerpt": "expect(web).toContain(\"npm ci --ignore-scripts\")",
           "line": 34
         },
         {

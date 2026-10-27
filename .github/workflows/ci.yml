@@ -6,39 +6,94 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [healthmd-reference-updated]
+  workflow_call:
+    inputs:
+      release_sha:
+        type: string
+        required: false
+      full_qualification:
+        type: boolean
+        required: false
+        default: true
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: portable-ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.release_sha && github.run_id || 'branch' }}
+  cancel-in-progress: ${{ !inputs.release_sha }}
 jobs:
-  rust:
-    uses: ./.github/workflows/cli-ci.yml
-  apple:
-    uses: ./.github/workflows/apple-ci.yml
-  android:
-    uses: ./.github/workflows/android-ci.yml
-  web:
-    uses: ./.github/workflows/practice-ci.yml
-  gate:
+  test:
     name: CI
-    if: ${{ always() }}
-    needs: [rust, apple, android, web]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
+    env:
+      SOURCE_REVISION: ${{ inputs.release_sha || github.sha }}
+      HEALTHMD_CI_RESULTS: .pi/ci-receipts
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out source and fixtures without media or Git history
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          git init -q
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git config core.sparseCheckout true
+          mkdir -p .git/info
+          cat > .git/info/sparse-checkout <<'PATTERNS'
+          /*
+          !*.png
+          !*.jpg
+          !*.jpeg
+          !*.webp
+          !*.mp4
+          !*.mov
+          !*.gif
+          !*.zip
+          !*.xlsx
+          !*.ttf
+          !*.woff2
+          PATTERNS
+          git -c protocol.version=2 fetch -q --filter=blob:none --depth=1 origin "$SOURCE_REVISION"
+          git checkout -q --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$SOURCE_REVISION"
+      - uses: actions/setup-node@v4
         with:
-          persist-credentials: false
-      - uses: actions/download-artifact@v4
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Check out the pinned Obsidian consumer
+        shell: bash
+        run: |
+          repository=$(node -p "require('./apps/website/external-sources.json').obsidian_plugin.repository")
+          revision=$(node -p "require('./apps/website/external-sources.json').obsidian_plugin.revision")
+          git init -q .external/health-md-visualizations
+          git -C .external/health-md-visualizations remote add origin "$GITHUB_SERVER_URL/$repository.git"
+          git -C .external/health-md-visualizations fetch -q --depth=1 origin "$revision"
+          git -C .external/health-md-visualizations checkout -q --detach FETCH_HEAD
+      - uses: actions/cache/restore@v4
+        id: cargo-cache
         with:
-          pattern: ci-receipt-*
-          path: .pi/ci-receipts
-      - name: Require every lane and the complete wall-clock budget
+          key: portable-ci-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            portable-ci-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/healthmd-core-rust/target
+            apps/cli/target
+      - name: Run fresh regression groups concurrently
+        run: python3 scripts/ci/run.py
+      - uses: actions/cache/save@v4
+        if: ${{ success() && steps.cargo-cache.outputs.cache-hit != 'true' }}
+        with:
+          key: ${{ steps.cargo-cache.outputs.cache-primary-key }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/healthmd-core-rust/target
+            apps/cli/target
+      - name: Require every group and the complete wall-clock budget
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
-          RESULTS: ${{ toJSON(needs) }}
-        run: |
-          python3 -c 'import json,os; r=json.loads(os.environ["RESULTS"]); assert len(r)==4 and all(v["result"]=="success" for v in r.values()),r'
-          python3 scripts/ci/verify_run.py
+          HEALTHMD_CI_SOURCE_SHA: ${{ env.SOURCE_REVISION }}
+        run: python3 scripts/ci/verify_run.py

@@ -4,78 +4,18 @@ on:
   workflow_call:
     inputs:
       release_sha:
-        description: Exact source commit to qualify
         type: string
         required: false
       full_qualification:
-        description: Compatibility input; the reduced lane always runs in full
         type: boolean
-        default: true
         required: false
+        default: true
 permissions:
   contents: read
+  actions: read
 jobs:
   test:
-    name: Android CI
-    runs-on: ubuntu-24.04
-    timeout-minutes: 2
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.release_sha || github.sha }}
-          persist-credentials: false
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-      - uses: dtolnay/rust-toolchain@1.88.0
-        with:
-          targets: x86_64-linux-android
-      - uses: gradle/actions/setup-gradle@v4
-      - uses: actions/cache@v4
-        with:
-          key: android-ci-v1-${{ runner.os }}-${{ hashFiles('apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties', 'packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-${{ github.sha }}
-          restore-keys: |
-            android-ci-v1-${{ runner.os }}-${{ hashFiles('apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties', 'packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-
-          path: |
-            ~/.cargo/bin/cargo-ndk
-            ~/.cargo/registry
-            ~/.cargo/git
-            apps/cli/target
-            packages/healthmd-core-rust/target
-            packages/healthmd-core-rust/dist
-            apps/android/.gradle
-            apps/android/app/build
-            apps/android/healthmd-core/build
-            apps/android/direct-protocol/build
-      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
-      - name: Ensure pinned NDK and native builder
-        run: |
-          sdkmanager 'ndk;27.1.12297006' >/dev/null
-          command -v cargo-ndk || cargo install cargo-ndk --version 4.1.2 --locked
-      - name: Enable KVM
-        run: sudo chmod 666 /dev/kvm
-      - name: Run retained regression lane on one emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          arch: x86_64
-          profile: pixel_7
-          disable-animations: true
-          script: ANDROID_SERIAL=emulator-5554 python3 scripts/ci/budget.py --lane android --budget-seconds 90 --receipt .pi/ci/android.json -- bash scripts/ci/android.sh
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() }}
-        with:
-          name: ci-receipt-android-${{ github.run_attempt }}
-          path: .pi/ci/android.json
-          if-no-files-found: error
-          retention-days: 7
-      - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
-        with:
-          name: ci-diagnostics-android-${{ github.run_attempt }}
-          path: |
-            apps/android/**/build/outputs/androidTest-results
-            apps/android/**/build/test-results
-            apps/android/build/ci-results
-          retention-days: 7
+    uses: ./.github/workflows/ci.yml
+    with:
+      release_sha: ${{ inputs.release_sha || github.sha }}
+      full_qualification: true

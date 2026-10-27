@@ -75,8 +75,8 @@ For Apple App Store releases, follow the complete synchronization contract in `a
 
 ## CI and paths
 
-The default regression strategy is `make test` / `.github/workflows/ci.yml`: four
-parallel retained lanes, 90 seconds each and 120 seconds overall. Read
+The default regression strategy is `make test` / `.github/workflows/ci.yml`: six
+portable regression groups in one hosted job, 90 seconds each and 120 seconds overall. Read
 `docs/qa/two-minute-ci.md` before adding coverage. Prefer a boundary assertion in an
 existing journey; replacing redundant coverage is allowed to preserve the budget.
 Broad historical suites are diagnostic tools, not extra PR/nightly/release regression

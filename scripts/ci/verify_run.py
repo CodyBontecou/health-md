@@ -7,9 +7,9 @@ import urllib.request
 
 
 def verify(receipts, sha, started, now):
-    expected = {"rust", "apple", "android", "web"}
-    if len(receipts) != 4 or {r.get("lane") for r in receipts} != expected:
-        raise ValueError("Exactly four distinct lane receipts are required")
+    expected = {"contracts", "core", "cli", "practice", "wake", "consumer"}
+    if len(receipts) != 6 or {r.get("lane") for r in receipts} != expected:
+        raise ValueError("Exactly six distinct group receipts are required")
     elapsed = (now - started).total_seconds()
     for r in receipts:
         if r.get("status") != "passed" or r.get("exit_code") != 0 or r.get("source_sha") != sha or r.get("working_tree_dirty"):
@@ -34,5 +34,5 @@ if __name__ == "__main__":
     start = run["created_at"] if run["run_attempt"] == 1 else run["run_started_at"]
     started = dt.datetime.fromisoformat(start.replace("Z", "+00:00"))
     receipts = [json.loads(p.read_text()) for p in Path(".pi/ci-receipts").rglob("*.json")]
-    elapsed = verify(receipts, os.environ["GITHUB_SHA"], started, dt.datetime.now(dt.timezone.utc))
-    print(f"All four lanes passed in {elapsed:.3f}s including orchestration")
+    elapsed = verify(receipts, os.environ.get("HEALTHMD_CI_SOURCE_SHA", os.environ["GITHUB_SHA"]), started, dt.datetime.now(dt.timezone.utc))
+    print(f"All six groups passed in {elapsed:.3f}s including orchestration")

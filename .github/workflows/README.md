@@ -8,48 +8,28 @@ separate PR workflows. Branch protection is external configuration and is not ch
 by this patch. Keep the existing requirements until the replacement workflow is
 available, then switch them together to avoid pending checks or an unprotected gap.
 
-`.github/workflows/ci.yml` runs Rust, Apple, Android and Web concurrently on every PR
-and every main/testing push, without a change-planning prerequisite or path skips.
-The final gate requires all four jobs and exactly four passing, clean-tree receipts
-for the current SHA. It rejects missing, stale, skipped, failed and over-budget results.
-Each regression command has a 90-second process deadline. The final gate measures
-120 seconds from workflow creation through setup, queueing, tests, cache post-actions,
-artifact transfer and final reporting. Reruns use the new attempt start and fresh
-attempt-specific artifacts. Slow infrastructure is a failed budget, never a pass.
+`.github/workflows/ci.yml` uses one Linux runner and runs six portable regression groups
+concurrently on every PR and main/testing push. Every group must pass from current,
+clean source within 90 seconds, and the complete workflow must fit 120 seconds including
+queue, checkout, toolchain setup, dependencies, caches and reporting. The final gate
+runs in the same job, avoiding a fifth runner assignment and artifact transfers.
 
-See [the retained test strategy](../../docs/qa/two-minute-ci.md) for coverage, local
-commands, measurements and limitations. Removed matrices are not relocated to nightly.
-`apple-ci.yml`, `android-ci.yml`, `cli-ci.yml` and `practice-ci.yml` are reusable lanes
-and manual diagnostics; release callers keep their exact-SHA inputs. The compatibility
-`full_qualification` input does not revive the retired suite. CLI release qualification
-now requires the unified CI run. Android recovery verifies the unified CI gate and
-its Android job. Signing, packaging, publication and protected deployment boundaries
-remain separate release work, outside the PR regression timing claim.
+See [the retained test strategy](../../docs/qa/two-minute-ci.md) for exact coverage,
+retired native/browser/build surfaces, local commands and timing evidence. No retired
+regression matrix is moved to nightly or hidden in release qualification. Compatibility
+wrappers preserve `release_sha` and `full_qualification` interfaces while invoking this
+same portable gate. Store signing/packaging and release identity checks remain intact.
 
-## Runner assumptions
-
-Use GitHub-hosted `macos-26` arm64 for Apple and `ubuntu-24.04` for other lanes. Never
-register an everyday development Mac as a public-PR runner. Toolchain and component
-compilation caches save work; Cargo, Xcode and Gradle still validate current source.
-Gradle Test tasks explicitly disable result caching and up-to-date skipping. Native
-result directories are removed before execution, and required test identities must
-appear exactly once with no skips or failures. Apple runs hosted macOS integration tests and compiles for iOS;
-Android uses one emulator, one test-only ABI, and the isolated `.e2e` app.
-Release builds retain their full native architecture sets.
-
-A two-minute hosted run has **not** been demonstrated by local measurements. Cold
-native compilation, cache restoration, emulator startup and runner capacity can exceed
-the total budget. Validate clean-cache and warm-cache PR runs after rollout; the gate
-will remain red until the infrastructure and workload actually fit. This deliberately
-exposes the remaining capacity requirement instead of disguising a deadline as proof.
-The private local-runner pilot remains a manually invoked tooling experiment and does
-not satisfy the public PR gate.
+Checkout is shallow and blob-filtered, omitting binary media. Cargo workspaces and npm
+components remain isolated. Cached compilation never supplies a passed test result.
+Explicit cache saving occurs before the final timing gate; no cache post-action runs
+later. Hosted completion timestamps, not local runtime alone, establish success.
 
 ## Android release trigger
 
 Android `1.9.3` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
 
-`.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow re-runs the complete Android CI matrix against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
+`.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow runs the portable CI gate against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
 
 After Internal Testing succeeds, dispatch `.github/workflows/android-promote-production.yml` **from the exact annotated release tag** with the semantic version and phone version code. It requires the same tag/main/version bindings, retains a pre-mutation intent, verifies that the exact code is active on `internal` and that production has no newer code, applies the reviewed English listing while promoting that artifact to `production`, and submits the single edit for review. Success requires Google Play to report `IN_REVIEW`, `APPROVED_NOT_PUBLISHED`, or `PUBLISHED`. The workflow retains an attempt-qualified production receipt.
 

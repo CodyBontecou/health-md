@@ -13,7 +13,7 @@ class RunBudgetTests(unittest.TestCase):
         self.receipts = [dict(lane=lane, status='passed', exit_code=0, source_sha='abc',
             working_tree_dirty=False, started_at=(self.start + dt.timedelta(seconds=15)).isoformat(),
             finished_at=(self.start + dt.timedelta(seconds=85)).isoformat(), elapsed_seconds=70)
-            for lane in ('rust', 'apple', 'android', 'web')]
+            for lane in ('contracts', 'core', 'cli', 'practice', 'wake', 'consumer')]
 
     def test_complete_budget(self):
         self.assertEqual(verify_run(self.receipts, 'abc', self.start, self.now), 119)
@@ -23,7 +23,7 @@ class RunBudgetTests(unittest.TestCase):
             verify_run(self.receipts, 'abc', self.start, self.start + dt.timedelta(seconds=121))
 
     def test_missing_duplicate_old_dirty_failed_and_slow_receipts_fail(self):
-        for change in ({'lane': 'rust'}, {'source_sha': 'old'}, {'working_tree_dirty': True},
+        for change in ({'lane': 'core'}, {'source_sha': 'old'}, {'working_tree_dirty': True},
                        {'status': 'running'}, {'exit_code': 1}, {'elapsed_seconds': 91},
                        {'finished_at': (self.start - dt.timedelta(seconds=1)).isoformat()}):
             with self.subTest(change=change), self.assertRaises(ValueError):
@@ -31,7 +31,7 @@ class RunBudgetTests(unittest.TestCase):
                 receipts[-1].update(change)
                 verify_run(receipts, 'abc', self.start, self.now)
         with self.assertRaises(ValueError):
-            verify_run(self.receipts[:3], 'abc', self.start, self.now)
+            verify_run(self.receipts[:5], 'abc', self.start, self.now)
 
 
 class JUnitInventoryTests(unittest.TestCase):

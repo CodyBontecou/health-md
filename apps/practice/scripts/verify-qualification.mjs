@@ -122,8 +122,8 @@ const pendingNames = ["authoritative_backend_and_persistence", "external_securit
 if (JSON.stringify(gate.mandatoryProductionGates?.map(item => item.name)) !== JSON.stringify(pendingNames) || gate.mandatoryProductionGates.some(item => item.approved !== false || item.status !== "pending")) failures.push("exact eight mandatory production gates must remain pending/false");
 const operational = ["migration", "rollback", "backup_restore", "authoritative_purge"]; if (JSON.stringify(gate.operationalEvidence?.map(item => item.name)) !== JSON.stringify(operational) || gate.operationalEvidence.some(item => item.status !== "not_implemented")) failures.push("exact operational not-implemented list is required");
 if (gate.designation !== "synthetic-qualification-only-not-production-ready" || gate.productionEnabled !== false || gate.productionReady !== false) failures.push("production must explicitly remain disabled/not ready");
-const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8")); const workflow = await readFile(resolve(repositoryRoot, "scripts/ci/web.sh"), "utf8");
-if (packageJson.scripts["test:e2e"] !== "playwright test --project=chromium" || !packageJson.scripts["check:ci"].includes("npm audit --audit-level=moderate") || !workflow.includes("npm run check:ci")) failures.push("package/workflow isolated-browser/full-gate wiring is not exact");
+const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8")); const workflow = await readFile(resolve(repositoryRoot, "scripts/ci/practice.sh"), "utf8");
+if (packageJson.scripts["test:e2e"] !== "playwright test --project=chromium" || !packageJson.scripts["check:ci"].includes("npm audit --audit-level=moderate") || !workflow.includes("npm exec -- vitest run")) failures.push("package/workflow isolated-browser/full-gate wiring is not exact");
 const provenance = JSON.parse(await readFile(resolve(root, "qualification/generated/provenance.json"), "utf8")); const sha = bytes => createHash("sha256").update(bytes).digest("hex");
 const provenanceTimestamp = Date.parse(provenance.generatedAt);
 const provenanceAge = Date.now() - provenanceTimestamp;

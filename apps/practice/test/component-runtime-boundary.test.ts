@@ -23,15 +23,15 @@ describe("practice component and production-disabled runtime boundary", () => {
   });
 
   it("runs the isolated practice qualification in the shared web lane", async () => {
-    const lane = await readFile(resolve(root, "../..", "scripts/ci/web.sh"), "utf8");
+    const lane = await readFile(resolve(root, "../..", "scripts/ci/practice.sh"), "utf8");
     expect(lane).toContain("cd apps/practice");
-    expect(lane).toContain("npm run check:ci");
+    expect(lane).toContain("npm exec -- vitest run");
     const workflow = await readFile(resolve(root, "../..", ".github/workflows/ci.yml"), "utf8");
     expect(workflow).toContain("pull_request:");
     expect(workflow).not.toMatch(/pull_request:\s*\n\s+paths:/);
-    expect(workflow).toContain("uses: ./.github/workflows/practice-ci.yml");
-    const web = await readFile(resolve(root, "../..", ".github/workflows/practice-ci.yml"), "utf8");
-    expect(web).toContain('npm --prefix "$component" ci --ignore-scripts');
+    expect(workflow).toContain("python3 scripts/ci/run.py");
+    const web = await readFile(resolve(root, "../..", "scripts/ci/practice.sh"), "utf8");
+    expect(web).toContain("npm ci --ignore-scripts");
     expect(web).not.toContain("xcodebuild");
     expect(web).not.toContain("wrangler deploy");
   });

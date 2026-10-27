@@ -4,61 +4,18 @@ on:
   workflow_call:
     inputs:
       release_sha:
-        description: Exact source commit to qualify
         type: string
         required: false
       full_qualification:
-        description: Compatibility input; the reduced lane always runs in full
         type: boolean
-        default: true
         required: false
+        default: true
 permissions:
   contents: read
+  actions: read
 jobs:
   test:
-    name: Apple CI
-    runs-on: macos-26
-    timeout-minutes: 2
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.release_sha || github.sha }}
-          persist-credentials: false
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-      - uses: dtolnay/rust-toolchain@1.88.0
-        with:
-          targets: aarch64-apple-ios-sim,aarch64-apple-darwin
-      - name: Identify the selected Xcode compiler
-        id: xcode
-        run: echo "identity=$(xcodebuild -version | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          key: apple-ci-v1-${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.xcode.outputs.identity }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/apple/Packages/**/Package.resolved') }}-${{ github.sha }}
-          restore-keys: |
-            apple-ci-v1-${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.xcode.outputs.identity }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/apple/Packages/**/Package.resolved') }}-
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            packages/healthmd-core-rust/target
-            packages/healthmd-core-rust/dist
-            apps/apple/build/ci-derived-data
-            apps/apple/Packages/HealthMdCoreRust/.build
-            apps/apple/Packages/HealthMdConnectivity/.build
-      - name: Run retained regression lane (90-second hard deadline)
-        run: python3 scripts/ci/budget.py --lane apple --budget-seconds 90 --receipt .pi/ci/apple.json -- bash scripts/ci/apple.sh
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() }}
-        with:
-          name: ci-receipt-apple-${{ github.run_attempt }}
-          path: .pi/ci/apple.json
-          if-no-files-found: error
-          retention-days: 7
-      - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
-        with:
-          name: ci-diagnostics-apple-${{ github.run_attempt }}
-          path: |
-            apps/apple/build/ci-results
-          retention-days: 7
+    uses: ./.github/workflows/ci.yml
+    with:
+      release_sha: ${{ inputs.release_sha || github.sha }}
+      full_qualification: true
