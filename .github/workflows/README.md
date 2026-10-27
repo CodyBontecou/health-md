@@ -42,10 +42,13 @@ pushes, manual runs, and reusable/exact-SHA qualification retain every job.
 Preparation first checks the complete XCFramework cache against the exact native
 inputs and active Xcode/SDK fingerprint. A hit still checks generated binding
 drift, the source digest and the framework architecture/symbol inventory before
-publishing the final current-run artifact directly. A lightweight Linux gate
-requires exactly one complete producer path, avoiding a second SDK runner queue
-on a hit. Consumers still check source, SDK provenance and framework contents;
-only a validated hit skips native slice fanout.
+publishing the final current-run artifact directly. The existing Foundation-only
+Swift policy suite runs in this allocation before expensive preparation. Native
+product builds require exactly one complete validated producer path directly,
+so they do not wait for a separate Linux gate allocation. The stable Linux gate
+independently checks that same path and remains required by the final Apple gate.
+Consumers still check source, SDK provenance and framework contents; only a
+validated hit skips native slice fanout. Cancellation prevents new product builds.
 
 A cache miss builds all five Rust targets (iOS device, both iOS Simulator
 architectures, and both macOS architectures) in parallel with the unchanged

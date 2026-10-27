@@ -385,8 +385,8 @@ jobs:
 
   prepare-ios-artifacts:
     name: Prepare qualified iOS unit-test products once
-    needs: [changes, prepare-shared-core]
-    if: ${{ needs.changes.outputs.ios == 'true' }}
+    needs: [changes, probe-shared-core, prepare-core-slices, assemble-shared-core]
+    if: ${{ always() && !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.ios == 'true' && needs.probe-shared-core.result == 'success' && ((needs.probe-shared-core.outputs.cache-hit == 'true' && needs.prepare-core-slices.result == 'skipped' && needs.assemble-shared-core.result == 'skipped') || (needs.probe-shared-core.outputs.cache-hit == 'false' && needs.prepare-core-slices.result == 'success' && needs.assemble-shared-core.result == 'success')) }}
     runs-on: xcode-27
     timeout-minutes: 30
     outputs:
@@ -519,7 +519,7 @@ jobs:
 
   ios-device-candidate:
     name: Build unsigned iOS QA candidate alongside unit shards
-    needs: [changes, prepare-shared-core, prepare-ios-artifacts]
+    needs: [changes, prepare-ios-artifacts]
     if: ${{ needs.changes.outputs.ios == 'true' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
     runs-on: xcode-27
     timeout-minutes: 25
@@ -610,7 +610,7 @@ jobs:
 
   ios-native-shards:
     name: iOS native shard ${{ matrix.shard }}
-    needs: [changes, prepare-shared-core, prepare-ios-artifacts]
+    needs: [changes, prepare-ios-artifacts]
     if: ${{ needs.changes.outputs.ios == 'true' }}
     strategy:
       fail-fast: false
@@ -692,7 +692,7 @@ jobs:
           retention-days: 14
 
   test-ios:
-    needs: [changes, prepare-shared-core, prepare-ios-artifacts, ios-native-shards, ios-device-candidate]
+    needs: [changes, prepare-ios-artifacts, ios-native-shards, ios-device-candidate]
     if: ${{ always() && needs.changes.outputs.ios == 'true' }}
     runs-on: xcode-27
     timeout-minutes: 75
@@ -845,8 +845,8 @@ jobs:
     name: Prepare qualified macOS unit-test products once
     env:
       MACOS_CODE_COVERAGE: 'YES'
-    needs: [changes, prepare-shared-core]
-    if: ${{ needs.changes.outputs.macos == 'true' }}
+    needs: [changes, probe-shared-core, prepare-core-slices, assemble-shared-core]
+    if: ${{ always() && !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.macos == 'true' && needs.probe-shared-core.result == 'success' && ((needs.probe-shared-core.outputs.cache-hit == 'true' && needs.prepare-core-slices.result == 'skipped' && needs.assemble-shared-core.result == 'skipped') || (needs.probe-shared-core.outputs.cache-hit == 'false' && needs.prepare-core-slices.result == 'success' && needs.assemble-shared-core.result == 'success')) }}
     runs-on: xcode-27
     timeout-minutes: 30
     outputs:
@@ -929,7 +929,7 @@ jobs:
 
   macos-native-shards:
     name: macOS native shard ${{ matrix.shard }}
-    needs: [changes, prepare-shared-core, prepare-macos-artifacts]
+    needs: [changes, prepare-macos-artifacts]
     if: ${{ needs.changes.outputs.macos == 'true' }}
     strategy:
       fail-fast: false
@@ -1017,7 +1017,7 @@ jobs:
     # Documentation checks reuse the coverage build's compilation profile.
     env:
       MACOS_CODE_COVERAGE: 'YES'
-    needs: [changes, prepare-shared-core, prepare-macos-artifacts, macos-native-shards]
+    needs: [changes, prepare-macos-artifacts, macos-native-shards]
     if: ${{ always() && needs.changes.outputs.macos == 'true' }}
     # Same SDK27 toolchain and single prepared core as iOS.
     runs-on: xcode-27
@@ -1195,8 +1195,8 @@ jobs:
 
   prepare-ui-artifacts:
     name: Prepare qualified UI products once
-    needs: [changes, prepare-shared-core]
-    if: ${{ needs.changes.outputs.ios_ui == 'true' }}
+    needs: [changes, probe-shared-core, prepare-core-slices, assemble-shared-core]
+    if: ${{ always() && !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.ios_ui == 'true' && needs.probe-shared-core.result == 'success' && ((needs.probe-shared-core.outputs.cache-hit == 'true' && needs.prepare-core-slices.result == 'skipped' && needs.assemble-shared-core.result == 'skipped') || (needs.probe-shared-core.outputs.cache-hit == 'false' && needs.prepare-core-slices.result == 'success' && needs.assemble-shared-core.result == 'success')) }}
     runs-on: xcode-27
     timeout-minutes: 20
     outputs:
@@ -1314,7 +1314,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: [0, 1, 2, 3]
-    needs: [changes, prepare-shared-core, prepare-ui-artifacts]
+    needs: [changes, prepare-ui-artifacts]
     if: ${{ needs.changes.outputs.ios_ui == 'true' }}
     runs-on: xcode-27
     timeout-minutes: 60

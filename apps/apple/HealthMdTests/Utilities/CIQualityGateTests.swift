@@ -211,7 +211,7 @@ final class CIQualityGateTests: XCTestCase {
                           "\(name) must retain its bounded build or execution allowance")
         }
         XCTAssertTrue(
-            content.contains("ios-ui-shards:\n    name: iOS UI shard ${{ matrix.shard }}\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [0, 1, 2, 3]\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
+            content.contains("ios-ui-shards:\n    name: iOS UI shard ${{ matrix.shard }}\n    strategy:\n      fail-fast: false\n      matrix:\n        shard: [0, 1, 2, 3]\n    needs: [changes, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.ios_ui == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
             "The split UI job must allow at least 60 minutes for clean builds"
         )
         XCTAssertEqual(
@@ -219,11 +219,14 @@ final class CIQualityGateTests: XCTestCase {
             1,
             "Apple CI must build the exact shared-core XCFramework only once"
         )
-        XCTAssertEqual(
-            content.components(separatedBy: "needs: [changes, prepare-shared-core]").count - 1,
-            3,
-            "All Xcode test jobs must consume the single prepared shared-core artifact"
-        )
+        for name in ["prepare-ios-artifacts", "prepare-macos-artifacts", "prepare-ui-artifacts"] {
+            let producer = try workflowJob(name, in: content)
+            XCTAssertTrue(producer.contains("needs: [changes, probe-shared-core, prepare-core-slices, assemble-shared-core]"))
+            XCTAssertTrue(producer.contains("name: apple-sdk27-shared-core"),
+                          "All Xcode products must consume the single validated shared-core artifact")
+        }
+        XCTAssertTrue(try workflowJob("gate", in: content).contains("      - prepare-shared-core\n"),
+                      "The complete shared-core gate must remain required before merge")
         let runner = try source("scripts/ios_ui_shards.py")
         XCTAssertTrue(
             runner.contains("\"-test-timeouts-enabled\", \"YES\"") &&

@@ -49,12 +49,12 @@ class WorkflowRoutingTests(unittest.TestCase):
                     self.assertIn("ios_ui_shards.py verify", blocks[job])
                 elif output == "ios":
                     self.assertIn("if: ${{ always() && needs.changes.outputs.ios == 'true' }}", blocks[job])
-                    self.assertIn("needs: [changes, prepare-shared-core, prepare-ios-artifacts, ios-native-shards, ios-device-candidate]", blocks[job])
+                    self.assertIn("needs: [changes, prepare-ios-artifacts, ios-native-shards, ios-device-candidate]", blocks[job])
                     self.assertIn('test "$SHARDS_RESULT" = success', blocks[job])
                     self.assertIn('test "$PRODUCTS_RESULT" = success', blocks[job])
                 elif output == "macos":
                     self.assertIn("if: ${{ always() && needs.changes.outputs.macos == 'true' }}", blocks[job])
-                    self.assertIn("needs: [changes, prepare-shared-core, prepare-macos-artifacts, macos-native-shards]", blocks[job])
+                    self.assertIn("needs: [changes, prepare-macos-artifacts, macos-native-shards]", blocks[job])
                     self.assertIn('test "$SHARDS_RESULT" = success', blocks[job])
                     self.assertIn('test "$PRODUCTS_RESULT" = success', blocks[job])
                 elif output == "prepare":
@@ -113,7 +113,7 @@ class WorkflowRoutingTests(unittest.TestCase):
         workers = jobs()["ios-ui-shards"]
         self.assertIn("shard: [0, 1, 2, 3]", workers)
         self.assertIn("fail-fast: false", workers)
-        self.assertIn("needs: [changes, prepare-shared-core, prepare-ui-artifacts]", workers)
+        self.assertIn("needs: [changes, prepare-ui-artifacts]", workers)
         self.assertIn("name: apple-sdk27-shared-core", workers)
         self.assertIn("ios_ui_shards.py run", workers)
         self.assertNotIn("continue-on-error", workflow)
@@ -192,6 +192,35 @@ class WorkflowRoutingTests(unittest.TestCase):
             admitted = eval(compile(tree, "<workflow admission>", "eval"), {"__builtins__": {}})
             self.assertEqual(admitted, selected == "true" and probe == "success" and cached == "false" and slices == "success", values)
 
+    def test_native_products_start_from_exact_validated_path_without_gate_handoff(self):
+        blocks = jobs()
+        statuses = ('success', 'failure', 'cancelled', 'skipped', '')
+        for job, output in [('prepare-ios-artifacts', 'ios'), ('prepare-macos-artifacts', 'macos'),
+                            ('prepare-ui-artifacts', 'ios_ui')]:
+            producer = blocks[job]
+            self.assertIn('needs: [changes, probe-shared-core, prepare-core-slices, assemble-shared-core]', producer)
+            self.assertNotIn('prepare-shared-core', producer)
+            expression = re.search(r'^    if: \$\{\{ (.+) \}\}$', producer, re.MULTILINE).group(1)
+            for cancelled, selected, changes, probe, slices, assembly, cached in itertools.product(
+                    (True, False), ('true', 'false'), statuses, statuses, statuses, statuses, ('true', 'false', '')):
+                values = {f'needs.changes.outputs.{output}': selected, 'needs.changes.result': changes,
+                          'needs.probe-shared-core.result': probe, 'needs.prepare-core-slices.result': slices,
+                          'needs.assemble-shared-core.result': assembly, 'needs.probe-shared-core.outputs.cache-hit': cached}
+                actual = expression.replace('always()', 'True').replace('!cancelled()', repr(not cancelled)).replace('&&', ' and ').replace('||', ' or ')
+                for key, value in values.items(): actual = actual.replace(key, repr(value))
+                tree = ast.parse(actual, mode='eval')
+                allowed = (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.Compare, ast.Eq, ast.Constant)
+                self.assertTrue(all(isinstance(node, allowed) for node in ast.walk(tree)))
+                admitted = eval(compile(tree, '<native producer admission>', 'eval'), {'__builtins__': {}})
+                expected = not cancelled and selected == 'true' and changes == probe == 'success' and (
+                    cached, slices, assembly) in {('true', 'skipped', 'skipped'), ('false', 'success', 'success')}
+                self.assertEqual(admitted, expected, (job, values))
+        # The required stable gate still independently rejects inconsistent paths.
+        self.assertIn('      - prepare-shared-core\n', blocks['gate'])
+        for downstream in ('ios-native-shards', 'ios-device-candidate', 'test-ios',
+                           'macos-native-shards', 'test-macos', 'ios-ui-shards'):
+            self.assertNotIn('needs: [changes, prepare-shared-core', blocks[downstream])
+
     def test_lightweight_core_gate_requires_exactly_one_complete_producer_path(self):
         gate = jobs()['prepare-shared-core']
         self.assertIn('needs: [changes, probe-shared-core, prepare-core-slices, assemble-shared-core]', gate)
@@ -246,7 +275,7 @@ class WorkflowRoutingTests(unittest.TestCase):
     def test_ios_device_candidate_runs_alongside_shards_after_guarded_preparation(self):
         blocks = jobs()
         candidate = blocks['ios-device-candidate']
-        self.assertIn('needs: [changes, prepare-shared-core, prepare-ios-artifacts]', candidate)
+        self.assertIn('needs: [changes, prepare-ios-artifacts]', candidate)
         self.assertNotIn('ios-native-shards', candidate)
         self.assertIn("github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'", candidate)
         for command in ('xcodebuild build', '-configuration Debug', "-destination 'generic/platform=iOS'", 'verify-device --plist', 'xcrun lipo -verify_arch arm64', 'ios-unsigned-device-candidate'):
@@ -304,7 +333,7 @@ class WorkflowRoutingTests(unittest.TestCase):
         self.assertIn('fail-fast: false', worker)
         self.assertIn('native_test_shards.py run', execution)
         self.assertIn('--prepared-sha256', execution)
-        self.assertIn("needs: [changes, prepare-shared-core, prepare-macos-artifacts]", worker)
+        self.assertIn("needs: [changes, prepare-macos-artifacts]", worker)
         for job in (producer, worker, native):
             self.assertIn('name: apple-sdk27-shared-core', job)
             self.assertIn('compare-history-sdk27-receipts.py', job)
