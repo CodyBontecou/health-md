@@ -193,3 +193,29 @@ artifact parity and the customizer's canonical versus share URL behavior.
 - [Data limitations and daily extraction guidance](https://developers.google.com/webmaster-tools/v1/how-tos/all-your-data)
 
 - [Google canonical consolidation guidance](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls)
+
+## Local CSV combiner
+
+The existing CSV acquisition page embeds a free combiner at
+`/apple-health-to-csv/#combine-csv-files`. Its engine and limits are owned by
+`assets/csv-combiner-core.js`; the controller is `assets/csv-combiner.js`.
+It reads explicitly selected files in the tab and creates a Blob download.
+No endpoint, browser storage, file upload, or third-party parser is involved.
+
+This is an append utility for the existing Health.md CSV header, including
+five-field rows with omitted Timestamp. It preserves cell strings, row shape,
+metadata and duplicates. It does not normalize schemas/units, reconcile sources,
+sort dates, deduplicate records or calculate health statistics. Formula-like
+fields and malformed/oversized inputs fail without creating a partial download.
+The page explains the supported scope and directs users to retain their originals.
+
+Selected filenames, contents and row/file counts must remain outside analytics.
+Generated Blob links are deliberately excluded by the existing HTTPS destination
+allowlist; do not treat user-file downloads as synthetic sample downloads.
+The existing page view, public sample, and store counters remain the acquisition
+measurements. Clear releases the controller's object URL and selection; it does
+not delete files saved by the user. The demo is explicitly fictional.
+
+`test/csv-combiner.test.mjs` round-trips the existing Apple daily fixtures and
+Android excerpt and covers resource limits, quoted/multiline fields, cancellation,
+errors, URL cleanup, formula prefixes and the absence of network/storage sinks.

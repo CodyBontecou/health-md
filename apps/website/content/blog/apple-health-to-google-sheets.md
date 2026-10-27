@@ -83,3 +83,5 @@ After importing more daily files, rebuild the filtered analysis copy, extend the
 - **New days do not appear:** check the analysis copy, helper formulas, pivot source range, and chart range. Uploads are snapshots, not live synchronization.
 
 For the CSV contract and other spreadsheet apps, see [Apple Health to CSV](/apple-health-to-csv/). If you prefer a desktop workbook, follow [Apple Health to Excel](/blog/apple-health-to-excel/). For Apple's native XML archive and other export methods, see [how to export Apple Health data](/apple-health-export/).
+
+To append daily Health.md files before importing, use the free [browser CSV combiner](/apple-health-to-csv/#combine-csv-files). It keeps one header and preserves values and duplicate rows. Review overlapping dates before calculating totals; your files are processed in the browser rather than uploaded.

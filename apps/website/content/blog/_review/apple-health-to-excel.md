@@ -20,3 +20,7 @@ No Excel click-through, formula execution in Excel, device export, or visual QA 
 ## Sleep-date clarification — 2026-10-27
 
 - [x] Supersedes earlier unconditional local-start-date shorthand. Daily compatibility sleep summaries use a local noon-to-noon journal window; after-midnight sleep can belong to the previous journal date. Raw/canonical ownership and typed session timestamps are separate. Evidence: Apple HealthKitManager sleepWindow/fetchSleepData and Apple export-schema Day ownership; Android SleepJournalSummary and android-sleep-journal-summary.md; the reusable sleep registry entry. Existing CSV/JSON fixtures, calculations, app behavior and other article validation are unchanged. This correction was source-traced, not a new device or third-party app execution.
+
+## Local CSV utility — 2026-10-27
+
+- [x] The linked browser combiner appends supported five/six-field Health.md CSV rows, retains duplicate rows, leaves units and values unchanged, and handles files in the tab without network/storage sinks. Apple summary/lossless/provider fixtures and the Android excerpt round-trip in test/csv-combiner.test.mjs. The existing spreadsheet calculations and producer fixtures are unchanged. This is website verification, not a new Excel/Sheets or device execution.

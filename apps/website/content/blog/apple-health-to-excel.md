@@ -117,3 +117,5 @@ The core folder workflow needs no Health.md account. Health.md reads authorized 
 The separate optional single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it. It has no public signup and no automatic device sync. This folder-to-Excel workflow does not upload files to that pilot. See [retention and destination boundaries](/privacy-policy.html#retention).
 
 For the file contract and other spreadsheet apps, return to [Apple Health to CSV](/apple-health-to-csv/). For Apple's native XML archive and other export methods, see [how to export Apple Health data](/apple-health-export/).
+
+To append daily Health.md files before importing, use the free [browser CSV combiner](/apple-health-to-csv/#combine-csv-files). It keeps one header and preserves values and duplicate rows. Review overlapping dates before calculating totals; your files are processed in the browser rather than uploaded.

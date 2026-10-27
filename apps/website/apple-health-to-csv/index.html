@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Export Apple Health to CSV for Excel and Google Sheets | Health.md</title>
-  <meta name="description" content="Export Apple Health to CSV for Excel, Google Sheets, or AI analysis. Pick your metrics and dates in the app — no Xcode project, no scripts, no XML wrangling.">
+  <meta name="description" content="Export Apple Health to CSV for Excel, Sheets, or Numbers. Combine daily Health.md CSV files in your browser with a free tool that does not upload your data.">
   <link rel="canonical" href="https://healthmd.app/apple-health-to-csv/">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#fafaf8">
@@ -12,13 +12,13 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="Export Apple Health to CSV for Excel and Google Sheets">
-  <meta property="og:description" content="Apple Health to CSV for Excel, Google Sheets, and AI tools. Choose metrics and dates in the app — no building, no scripts.">
+  <meta property="og:description" content="Export Apple Health to CSV for Excel, Sheets, or Numbers. Combine daily Health.md CSV files in your browser with a free tool that does not upload your data.">
   <meta property="og:url" content="https://healthmd.app/apple-health-to-csv/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Export Apple Health to CSV for Excel and Google Sheets">
-  <meta name="twitter:description" content="Your Apple Health data as CSV: pick metrics and dates, open anywhere.">
+  <meta name="twitter:description" content="Export Apple Health to CSV for Excel, Sheets, or Numbers. Combine daily Health.md CSV files in your browser with a free tool that does not upload your data.">
   <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
 
   <link rel="icon" href="/favicon.ico" sizes="any">
@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="/assets/landing.css">
   <link rel="stylesheet" href="/assets/about.css">
   <link rel="stylesheet" href="/assets/export-proof.css">
+  <link rel="stylesheet" href="/assets/csv-combiner.css">
 
   <script type="application/ld+json">
   {
@@ -38,7 +39,7 @@
         "@id": "https://healthmd.app/apple-health-to-csv/#page",
         "url": "https://healthmd.app/apple-health-to-csv/",
         "name": "Export Apple Health to CSV for Excel and Google Sheets",
-        "description": "Export Apple Health to CSV for Excel, Google Sheets, or AI analysis. Pick your metrics and dates in the app — no Xcode project, no scripts, no XML wrangling.",
+        "description": "Export Apple Health to CSV for Excel, Sheets, or Numbers. Combine daily Health.md CSV files in your browser with a free tool that does not upload your data.",
         "inLanguage": "en",
         "publisher": { "@id": "https://healthmd.app/about/#organization" }
       },
@@ -77,6 +78,11 @@
               "@type": "Answer",
               "text": "Yes. Start with Summary for daily totals, export one day, and import the CSV into Excel, Google Sheets, or Numbers. Lossless Health Records adds nested JSON cells for source records; use a CSV-aware tool to preserve those values."
             }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I combine multiple daily CSV files?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. The free combiner on this page appends supported Health.md CSV files in your browser with one header. It preserves values and duplicate rows, does not calculate totals, and does not upload your files. It does not convert Apple XML archives." }
           },
           {
             "@type": "Question",
@@ -123,7 +129,7 @@
             <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
           </a>
         </div>
-        <p class="csv-jump-link"><a href="#how-it-works">Follow your first CSV export <span aria-hidden="true">↓</span></a></p>
+        <p class="csv-jump-link"><a href="#how-it-works">Follow your first CSV export <span aria-hidden="true">↓</span></a> or <a href="#combine-csv-files">combine daily CSV files</a>.</p>
         </div>
         <aside class="csv-sample-card" aria-labelledby="sample-title">
           <p class="section-kicker">Try the output first</p>
@@ -235,6 +241,29 @@
           <p>Ready to use your own data? <a href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>, authorize the metrics you need, and export one day as CSV.</p>
         </section>
 
+        <section class="about-section" id="combine-csv-files">
+          <p class="section-kicker">Free browser tool</p>
+          <h2>Combine daily Health.md CSV files</h2>
+          <p>Append daily exports into one CSV with a single header before importing into a spreadsheet. Files are processed in this tab; the combiner does not upload them or send filenames, values, or row counts to analytics.</p>
+          <p>Choose up to 31 UTF-8 CSV files, at most 1 MiB each and 5 MiB total, with up to 50,000 combined rows. Each file must use <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Both five-field rows with an omitted Timestamp and six-field rows are kept as provided. Apple XML archives and other column layouts are not supported.</p>
+          <div class="csv-combiner" data-csv-combiner hidden>
+            <label for="csv-combine-files">Choose Health.md CSV exports</label>
+            <input id="csv-combine-files" data-csv-files type="file" accept=".csv,text/csv" multiple aria-describedby="csv-combine-limits csv-combine-privacy">
+            <p id="csv-combine-limits">Up to 31 files · 1 MiB per file · 5 MiB total · 50,000 rows</p>
+            <div class="csv-combiner-actions">
+              <button type="button" data-csv-combine disabled>Combine selected CSVs</button>
+              <button type="button" data-csv-demo>Try a fictional example</button>
+              <button type="button" data-csv-clear disabled>Clear files and result</button>
+            </div>
+            <p data-csv-status role="status" aria-live="polite">Choose daily CSV exports, or try the fictional example.</p>
+            <p data-csv-error role="alert" hidden></p>
+            <a class="csv-combiner-download" data-csv-download download="healthmd-combined.csv" hidden>Download combined CSV</a>
+          </div>
+          <noscript><p>Enable JavaScript to combine files in this browser. You can still download the public sample and follow the spreadsheet instructions.</p></noscript>
+          <p>Use files from the same export profile and format settings. Metadata rows stay in the output. Files are appended in the order supplied by your browser; no date sorting is performed. Values, dates, and units are preserved; duplicate or overlapping rows remain. The tool does not calculate totals or reconcile changed exports. Review your selection before charting so repeated days are not counted twice. Formula-like cells are not accepted.</p>
+          <p id="csv-combine-privacy">Clear removes the tool's current selection and download link. It does not delete saved downloads. Original files stay unchanged; downloaded output and backups follow your browser and storage settings.</p>
+        </section>
+
         <section class="about-section" id="verify-export">
           <p class="section-kicker">Check your first file</p>
           <h2>Verify dates, units, and missing data</h2>
@@ -323,6 +352,10 @@
               <p>Yes. Start with Summary for daily totals, export one day, and import the CSV into Excel, Google Sheets, or Numbers. Lossless Health Records adds nested JSON cells for source records; use a CSV-aware tool to preserve those values.</p>
             </div>
             <div>
+              <h3>Can I combine multiple daily CSV files?</h3>
+              <p>Yes. The free combiner on this page appends supported Health.md CSV files in your browser with one header. It preserves values and duplicate rows, does not calculate totals, and does not upload your files. It does not convert Apple XML archives.</p>
+            </div>
+            <div>
               <h3>Is it free?</h3>
               <p>The app includes 5 free export actions. One action can include multiple dates and formats. After that, a one-time lifetime unlock removes the limit — no subscription. The App Store shows your current localized purchase price.</p>
             </div>
@@ -346,6 +379,7 @@
     </div>
   </footer>
 
+  <script type="module" src="/assets/csv-combiner.js"></script>
   <script src="/assets/analytics.js" defer></script>
 </body>
 </html>
