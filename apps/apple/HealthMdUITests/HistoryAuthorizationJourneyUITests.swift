@@ -25,13 +25,14 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
     func testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "limited"
+        app.launchEnvironment["UITEST_EARLIEST_SAMPLE_DATE"] = "failure"
         app.launch()
         let allTime = app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton]
         reveal(allTime, in: app)
         allTime.tap()
-        // The default metric set includes unresolved readable-range types. The
-        // real All Time resolver correctly rejects that range independently of
-        // the advisory limited-history warning. Finish its dialog before tapping
+        // The selected Steps query explicitly fails while its independent
+        // history-boundary assessment is limited. The real All Time resolver
+        // must reject the incomplete range. Finish its dialog before tapping
         // controls behind it; XCTest otherwise consumes Details to dismiss it.
         let unavailable = app.staticTexts["All Time Unavailable"]
         XCTAssertTrue(unavailable.waitForExistence(timeout: 5))
