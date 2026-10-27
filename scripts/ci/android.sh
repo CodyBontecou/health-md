@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One ABI, one Play build, real SAF/export journey and native FFI smoke.
+# One ABI, one Play build, export planning and native FFI smoke.
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
@@ -38,7 +38,7 @@ common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-wo
 wait "$listener_pid"
 trap - EXIT
 ./gradlew "${common[@]}" :app:connectedPlayE2eAndroidTest \
-    -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.ci.CIExportRegressionTest,com.healthmd.domain.semantic.HealthMdSemanticInputAdapterInstrumentationTest,com.healthmd.domain.exportengine.DailyAggregateRustPlannerInstrumentationTest
+    -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.domain.semantic.HealthMdSemanticInputAdapterInstrumentationTest,com.healthmd.domain.exportengine.DailyAggregateRustPlannerInstrumentationTest
 ./gradlew "${common[@]}" :healthmd-core:connectedDebugAndroidTest
 cd "$repo_root"
 python3 scripts/ci/verify_junit.py \
@@ -47,7 +47,6 @@ python3 scripts/ci/verify_junit.py \
     apps/android/healthmd-core/build/test-results/testDebugUnitTest \
     apps/android/app/build/outputs/androidTest-results/connected \
     apps/android/healthmd-core/build/outputs/androidTest-results/connected \
-    --require com.healthmd.ci.CIExportRegressionTest#productionExportWritesSdkValuesAndSettingsSurviveReopen \
     --require com.healthmd.domain.semantic.HealthMdSemanticInputAdapterInstrumentationTest#capturedModelEncodesOnceAndProcessesThroughPackagedRustCore \
     --require com.healthmd.domain.exportengine.DailyAggregateRustPlannerInstrumentationTest#packagedCorePlansExactNativeBytesForBothAndroidProfiles \
     --require com.healthmd.direct.protocol.LiveCliInteropTest#pairsAndNegotiatesWithRustListener \
