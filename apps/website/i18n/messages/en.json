@@ -2,10 +2,10 @@
   "locale": "en",
   "landing": {
     "static": {
-      "meta.title": "Health.md | Move Your Health Forward",
-      "meta.description": "A local-first bridge from Apple Health and Health Connect to files, scripts, and agents. The optional single-owner Health.md Cloud pilot retains only intentionally uploaded exports; no public signup.",
-      "meta.ogTitle": "Move Your Health Forward",
-      "meta.twitterDescription": "A private, local bridge from Apple Health and Health Connect to the tools you already use.",
+      "meta.title": "Export Apple Health and Health Connect | Health.md",
+      "meta.description": "Export selected Apple Health and Health Connect data to CSV, JSON, Markdown, or Obsidian Bases. Choose your metrics, dates, and destination folder.",
+      "meta.ogTitle": "Apple Health and Health Connect exports",
+      "meta.twitterDescription": "Your Apple Health and Health Connect data as CSV, JSON, Markdown, or Obsidian Bases files. Select metrics and dates, then save to a folder you choose.",
       "schema.description": "Health.md is a private bridge from Apple Health and Android Health Connect to local files, automation, CLI workflows, and local agents.",
       "schema.offerDescription": "Google Play offers a free trial and one-time purchase; F-Droid includes Full Access.",
       "schema.featureExport": "Export Apple Health and Health Connect data to Markdown, CSV, and JSON",

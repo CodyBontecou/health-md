@@ -2,10 +2,10 @@
   "locale": "fr",
   "landing": {
     "static": {
-      "meta.title": "Health.md | Prenez votre santé en main",
-      "meta.description": "Une passerelle locale d’Apple Health et Health Connect vers des fichiers, scripts et agents. Le pilote Health.md Cloud facultatif est réservé à un seul propriétaire et conserve uniquement les exports envoyés volontairement ; pas d’inscription publique.",
-      "meta.ogTitle": "Prenez votre santé en main",
-      "meta.twitterDescription": "Une passerelle privée et locale entre Apple Health, Health Connect et les outils que vous utilisez déjà.",
+      "meta.title": "Exporter Apple Health et Health Connect | Health.md",
+      "meta.description": "Exportez les données choisies dans Apple Health et Health Connect en CSV, JSON, Markdown ou Obsidian Bases. Choisissez métriques, dates et dossier.",
+      "meta.ogTitle": "Exports Apple Health et Health Connect",
+      "meta.twitterDescription": "Vos données Apple Health et Health Connect en fichiers CSV, JSON, Markdown ou Obsidian Bases. Sélectionnez métriques et dates, puis votre dossier.",
       "schema.description": "Health.md est une passerelle privée reliant Apple Health et Android Health Connect aux fichiers locaux, aux automatisations, aux flux de travail CLI et aux agents locaux.",
       "schema.offerDescription": "Google Play propose un essai gratuit et un achat unique ; F-Droid inclut Full Access.",
       "schema.featureExport": "Exportez les données d’Apple Health et de Health Connect vers Markdown, CSV et JSON",

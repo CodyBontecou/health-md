@@ -2,10 +2,10 @@
   "locale": "it",
   "landing": {
     "static": {
-      "meta.title": "Health.md | La tua salute, un passo avanti",
-      "meta.description": "Un ponte locale da Apple Health e Health Connect a file, script e agenti. Il progetto pilota Health.md Cloud facoltativo è riservato a un solo proprietario e conserva solo esportazioni inviate intenzionalmente; nessuna registrazione pubblica.",
-      "meta.ogTitle": "La tua salute, un passo avanti",
-      "meta.twitterDescription": "Un ponte privato e locale tra Apple Health e Health Connect e gli strumenti che usi già.",
+      "meta.title": "Esporta Apple Health e Health Connect | Health.md",
+      "meta.description": "Esporta dati selezionati da Apple Health e Health Connect in CSV, JSON, Markdown o Obsidian Bases. Scegli metriche, date e cartella di destinazione.",
+      "meta.ogTitle": "Esportazioni Apple Health e Health Connect",
+      "meta.twitterDescription": "I tuoi dati Apple Health e Health Connect in file CSV, JSON, Markdown o Obsidian Bases. Seleziona metriche e date e salvali nella cartella che scegli.",
       "schema.description": "Health.md è un ponte privato tra Apple Health e Android Health Connect e file locali, automazioni, flussi di lavoro CLI e agenti locali.",
       "schema.offerDescription": "Google Play offre una prova gratuita e un acquisto una tantum; F-Droid include Full Access.",
       "schema.featureExport": "Esporta i dati di Apple Health e Health Connect in Markdown, CSV e JSON",

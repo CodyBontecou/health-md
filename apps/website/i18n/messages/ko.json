@@ -2,10 +2,10 @@
   "locale": "ko",
   "landing": {
     "static": {
-      "meta.title": "Health.md | 건강 데이터를 더 유용하게",
-      "meta.description": "Apple Health와 Health Connect를 파일, 스크립트, 에이전트로 연결하는 로컬 우선 브리지입니다. 선택형 Health.md Cloud 파일럿은 단일 소유자 전용이며 의도적으로 업로드한 내보내기만 보관합니다. 공개 가입은 없습니다.",
-      "meta.ogTitle": "건강 데이터를 더 유용하게",
-      "meta.twitterDescription": "Apple Health와 Health Connect를 이미 사용하는 도구에 연결하는 개인정보 보호 중심의 로컬 브리지입니다.",
+      "meta.title": "Apple Health·Health Connect 내보내기 | Health.md",
+      "meta.description": "Apple Health와 Health Connect에서 선택한 데이터를 CSV, JSON, Markdown, Obsidian Bases로 내보내세요. 지표, 날짜와 대상 폴더를 선택할 수 있습니다.",
+      "meta.ogTitle": "Apple Health·Health Connect 데이터 내보내기",
+      "meta.twitterDescription": "Apple Health와 Health Connect 데이터를 CSV, JSON, Markdown, Obsidian Bases 파일로 저장하세요. 지표와 날짜를 고르고 원하는 폴더에 저장할 수 있습니다.",
       "schema.description": "Health.md는 Apple Health와 Android Health Connect를 로컬 파일, 자동화, CLI 워크플로 및 로컬 에이전트에 연결하는 개인정보 보호 중심의 브리지입니다.",
       "schema.offerDescription": "Google Play는 무료 체험과 일회성 구매를 제공하며, F-Droid에는 Full Access가 포함됩니다.",
       "schema.featureExport": "Apple Health와 Health Connect 데이터를 Markdown, CSV, JSON으로 내보내기",

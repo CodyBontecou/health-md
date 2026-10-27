@@ -2,10 +2,10 @@
   "locale": "pt-br",
   "landing": {
     "static": {
-      "meta.title": "Health.md | Leve sua saúde mais longe",
-      "meta.description": "Uma ponte local do Apple Health e do Health Connect para arquivos, scripts e agentes. O piloto opcional do Health.md Cloud é restrito a um único proprietário e guarda apenas exportações enviadas intencionalmente; não há cadastro público.",
-      "meta.ogTitle": "Leve sua saúde mais longe",
-      "meta.twitterDescription": "Uma ponte privada e local que conecta o Apple Health e o Health Connect às ferramentas que você já usa.",
+      "meta.title": "Exporte Apple Health e Health Connect | Health.md",
+      "meta.description": "Exporte dados selecionados do Apple Health e Health Connect em CSV, JSON, Markdown ou Obsidian Bases. Escolha métricas, datas e pasta de destino.",
+      "meta.ogTitle": "Exportações do Apple Health e Health Connect",
+      "meta.twitterDescription": "Seus dados do Apple Health e Health Connect em arquivos CSV, JSON, Markdown ou Obsidian Bases. Selecione métricas e datas e salve na pasta escolhida.",
       "schema.description": "O Health.md é uma ponte privada que conecta o Apple Health e o Health Connect no Android a arquivos locais, automações, fluxos de trabalho com CLI e agentes locais.",
       "schema.offerDescription": "O Google Play oferece teste grátis e compra única; o F-Droid inclui Full Access.",
       "schema.featureExport": "Exporte dados do Apple Health e do Health Connect para Markdown, CSV e JSON",

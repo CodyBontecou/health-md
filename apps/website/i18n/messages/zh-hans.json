@@ -2,10 +2,10 @@
   "locale": "zh-hans",
   "landing": {
     "static": {
-      "meta.title": "Health.md | 让健康数据发挥价值",
-      "meta.description": "以本地优先的方式，将 Apple Health 和 Health Connect 连接到文件、脚本和智能体。可选的 Health.md Cloud 试点仅供单一所有者使用，只保留主动上传的导出内容，不开放公众注册。",
-      "meta.ogTitle": "让健康数据发挥价值",
-      "meta.twitterDescription": "将 Apple Health 和 Health Connect 私密地连接到您常用的工具。",
+      "meta.title": "导出 Apple Health 与 Health Connect | Health.md",
+      "meta.description": "将选定的 Apple Health 和 Health Connect 数据导出为 CSV、JSON、Markdown 或 Obsidian Bases。选择指标、日期和目标文件夹。",
+      "meta.ogTitle": "Apple Health 与 Health Connect 数据导出",
+      "meta.twitterDescription": "把 Apple Health 和 Health Connect 数据保存为 CSV、JSON、Markdown 或 Obsidian Bases 文件。选择指标和日期，保存到你指定的文件夹。",
       "schema.description": "Health.md 是连接 Apple Health、Android Health Connect 与本地文件、自动化、CLI 工作流及本地智能体的私密桥梁。",
       "schema.offerDescription": "Google Play 提供免费试用和一次性购买；F-Droid 已包含 Full Access。",
       "schema.featureExport": "将 Apple Health 和 Health Connect 数据导出为 Markdown、CSV 和 JSON",

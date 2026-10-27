@@ -2,10 +2,10 @@
   "locale": "nl",
   "landing": {
     "static": {
-      "meta.title": "Health.md | Zet de volgende stap met je gezondheid",
-      "meta.description": "Een lokale brug van Apple Health en Health Connect naar bestanden, scripts en agents. De optionele Health.md Cloud-pilot is uitsluitend voor één eigenaar en bewaart alleen bewust geüploade exports; geen openbare registratie.",
-      "meta.ogTitle": "Zet de volgende stap met je gezondheid",
-      "meta.twitterDescription": "Een lokale privéverbinding van Apple Health en Health Connect naar de tools die je al gebruikt.",
+      "meta.title": "Apple Health en Health Connect exporteren | Health.md",
+      "meta.description": "Exporteer geselecteerde gegevens uit Apple Health en Health Connect naar CSV, JSON, Markdown of Obsidian Bases. Kies meetwaarden, datums en doelmap.",
+      "meta.ogTitle": "Exports uit Apple Health en Health Connect",
+      "meta.twitterDescription": "Je Apple Health- en Health Connect-gegevens als CSV, JSON, Markdown of Obsidian Bases. Selecteer meetwaarden en datums en sla ze op in je eigen map.",
       "schema.description": "Health.md is een privéverbinding van Apple Health en Android Health Connect naar lokale bestanden, automatisering, CLI-workflows en lokale agents.",
       "schema.offerDescription": "Google Play biedt een gratis proefperiode en een eenmalige aankoop; F-Droid bevat Full Access.",
       "schema.featureExport": "Exporteer gegevens uit Apple Health en Health Connect naar Markdown, CSV en JSON",

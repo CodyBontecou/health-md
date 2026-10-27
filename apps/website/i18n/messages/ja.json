@@ -2,10 +2,10 @@
   "locale": "ja",
   "landing": {
     "static": {
-      "meta.title": "Health.md | 健康管理を、さらに一歩先へ",
-      "meta.description": "Apple HealthとHealth Connectをファイル、スクリプト、エージェントにつなぐローカルファーストの橋渡しです。任意のHealth.md Cloudパイロットは単一所有者向けで、意図的にアップロードしたエクスポートのみを保存します。一般公開の登録はありません。",
-      "meta.ogTitle": "健康管理を、さらに一歩先へ",
-      "meta.twitterDescription": "Apple HealthとHealth Connectのデータを、いつものツールにつなぐプライベートなローカルブリッジです。",
+      "meta.title": "Apple Health・Health Connectを書き出す | Health.md",
+      "meta.description": "Apple HealthとHealth Connectで選んだデータをCSV、JSON、Markdown、Obsidian Basesに書き出し。指標、日付、保存先フォルダを選べます。",
+      "meta.ogTitle": "Apple Health・Health Connectの書き出し",
+      "meta.twitterDescription": "Apple HealthとHealth ConnectのデータをCSV、JSON、Markdown、Obsidian Basesのファイルに。指標と日付を選び、指定したフォルダに保存できます。",
       "schema.description": "Health.mdは、Apple HealthとAndroid Health Connectをローカルファイル、自動化、CLIワークフロー、ローカルエージェントにつなぐプライベートな橋渡しです。",
       "schema.offerDescription": "Google Playでは無料体験後に一度だけ購入できます。F-DroidではFull Accessが含まれます。",
       "schema.featureExport": "Apple HealthとHealth ConnectのデータをMarkdown、CSV、JSONにエクスポート",

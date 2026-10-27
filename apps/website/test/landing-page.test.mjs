@@ -38,7 +38,7 @@ const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/componen
 const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/vertical-tables.js"), "utf8");
 
 test("landing page makes local-first health data movement the primary message", () => {
-  assert.match(index, /Move Your Health Forward/);
+  assert.match(index, /<title>Export Apple Health and Health Connect \| Health\.md<\/title>/);
   assert.match(index, /Move your<br>health forward\./);
   assert.match(index, /A private bridge for your health data<br>to your files, scripts, and agents\./);
   assert.match(index, /Your data\. Your rules\./);
