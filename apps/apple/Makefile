@@ -57,6 +57,9 @@ MACOS_DERIVED_DATA_FLAGS = $(if $(MACOS_DERIVED_DATA_DIR),-derivedDataPath "$(MA
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 300
 # Keep prebuild and execution on the same test products and compilation profile.
+IOS_TEST_PRODUCT_FLAGS = -project $(PROJECT) -scheme HealthMd-Tests-iOS \
+  $(IOS_DERIVED_DATA_FLAGS) -configuration Debug-iOS \
+  $(IOS_TEST_BUILD_FLAGS) $(XCODE_TEST_SIGNING_FLAGS)
 MACOS_TEST_PRODUCT_FLAGS = -project $(PROJECT) -scheme HealthMd-Tests-macOS \
   $(MACOS_DERIVED_DATA_FLAGS) -destination '$(MACOS_DEST)' \
   $(if $(MACOS_DERIVED_DATA_DIR),,-derivedDataPath "$(DERIVED_DATA_PATH)") \
@@ -70,7 +73,7 @@ IOS_TEST_RAW_LOG   ?= build/logs/xcodebuild-ios-raw.log
 COVERAGE_DIR       := build/coverage
 XCRESULT_PATH      := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: help build-macos-tests test test-platforms test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs check-export-docs-after-tests test-cli cli install-cli test-export-lab-tools check-export-lab-release
+.PHONY: help build-ios-tests build-macos-tests test test-platforms test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs check-export-docs-after-tests test-cli cli install-cli test-export-lab-tools check-export-lab-release
 
 help:
 	@awk '/^##/ { sub(/^## ?/, ""); print }' Makefile
@@ -86,6 +89,14 @@ check-macos-localizations:
 	@python3 -m unittest discover -s scripts/tests -p 'test_validate_macos_localizations.py'
 	@python3 scripts/validate-macos-localizations.py
 
+build-ios-tests: prepare-healthmd-core-rust
+	@set -o pipefail; \
+	  ios_sim='$(IOS_SIM)'; \
+	  if [[ -z "$$ios_sim" ]]; then \
+	    ios_sim="$$(scripts/select-ios-simulator.sh)"; \
+	  fi; \
+	  xcodebuild build-for-testing $(IOS_TEST_PRODUCT_FLAGS) -destination "$$ios_sim"
+
 test-ios: prepare-healthmd-core-rust
 	@echo "\n━━━  iOS Tests  ━━━"
 	@mkdir -p $(TEST_RESULTS_DIR) "$(dir $(IOS_TEST_RAW_LOG))"
@@ -97,16 +108,11 @@ test-ios: prepare-healthmd-core-rust
 	  fi; \
 	  echo "Using iOS Simulator destination: $$ios_sim"; \
 	  xcodebuild test \
-	  -project $(PROJECT) \
-	  -scheme HealthMd-Tests-iOS \
-	  $(IOS_DERIVED_DATA_FLAGS) \
+	  $(IOS_TEST_PRODUCT_FLAGS) \
 	  -destination "$$ios_sim" \
-	  -configuration Debug-iOS \
-	  $(IOS_TEST_BUILD_FLAGS) \
 	  -resultBundlePath "$(IOS_XCRESULT_PATH)" \
 	  -test-timeouts-enabled NO \
 	  $(XCODE_TEST_FILTER) \
-	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  2>&1 | tee "$(IOS_TEST_RAW_LOG)" | \
 	  if command -v xcpretty >/dev/null 2>&1; then \
 	    xcpretty --color; \

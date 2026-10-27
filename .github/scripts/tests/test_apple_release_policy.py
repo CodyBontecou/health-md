@@ -43,7 +43,12 @@ class AppleReleasePolicyTests(unittest.TestCase):
         ci = workflow("apple-ci.yml")
         event = context("Apple Release iOS", release_tag="v3.0")
         event["inputs"]["release_sha"] = "old-tag-sha"
-        source_jobs = set(ci["jobs"]["gate"]["needs"]) - {"changes", "workflow-policy"}
+        source_jobs = set(ci["jobs"]["gate"]["needs"]) - {"changes", "workflow-policy", "prepare-shared-core"}
+        # The stable core gate only combines qualified producer statuses. Every
+        # actual native producer/worker still checks out the exact release SHA.
+        self.assertEqual(ci["jobs"]["prepare-shared-core"]["runs-on"], "ubuntu-24.04")
+        source_jobs.update(name for name, job in ci["jobs"].items()
+                           if isinstance(job.get("runs-on"), str) and job["runs-on"].startswith(("xcode-", "macos-")))
         for name in sorted(source_jobs):
             step = next(step for step in ci["jobs"][name]["steps"]
                         if step.get("uses", "").startswith("actions/checkout@"))

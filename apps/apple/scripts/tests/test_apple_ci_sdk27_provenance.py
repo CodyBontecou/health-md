@@ -73,9 +73,9 @@ class SDK27ProvenanceTests(unittest.TestCase):
     def test_workflow_consumers_all_use_the_comparator_after_qualification(self):
         workflow = SCRIPT.parents[3] / ".github/workflows/apple-ci.yml"
         text = workflow.read_text()
-        self.assertEqual(text.count("python3 scripts/compare-history-sdk27-receipts.py"), 7)
+        self.assertEqual(text.count("python3 scripts/compare-history-sdk27-receipts.py"), 10)
         self.assertNotIn("cmp build/logs/history-sdk27-receipt.txt", text)
-        self.assertEqual(text.count("bash scripts/qualify-history-authorization-sdk27.sh"), 9)
+        self.assertEqual(text.count("bash scripts/qualify-history-authorization-sdk27.sh"), 12)
         lines = text.splitlines()
         for index, line in enumerate(lines):
             if "python3 scripts/compare-history-sdk27-receipts.py" in line:

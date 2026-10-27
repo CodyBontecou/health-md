@@ -140,6 +140,56 @@ class NativeShardTests(unittest.TestCase):
             with self.subTest(mode=mode), self.assertRaises(ValueError): shards.verify_receipts(self.plan, receipts)
 
 
+class IOSNativeTests(unittest.TestCase):
+    UUID = "EDEEE952-145B-48B2-BFB4-A31429F8FB04"
+    DESTINATION = "platform=iOS Simulator,id=" + UUID
+
+    def plan(self, platform="iOS Simulator"):
+        return shards.make_plan(inventory(["NativeTests/Probe/testFirst()", "NativeTests/Probe/testSecond()"]), SHA, "123", "2", 2, platform)
+
+    def test_original_ios_and_macos_execution_profiles_are_preserved(self):
+        ios = shards.test_command(self.plan(), Path('native.xctestrun'), self.DESTINATION, Path('native.xcresult'), 0)
+        mac = shards.test_command(self.plan('macOS'), Path('native.xctestrun'), 'platform=macOS,arch=arm64', Path('native.xcresult'), 0)
+        self.assertEqual(ios[ios.index('-test-timeouts-enabled') + 1], 'NO')
+        self.assertNotIn('-enableCodeCoverage', ios)
+        self.assertNotIn('-default-test-execution-time-allowance', ios)
+        self.assertEqual(mac[mac.index('-test-timeouts-enabled') + 1], 'YES')
+        self.assertEqual(mac[mac.index('-enableCodeCoverage') + 1], 'YES')
+        self.assertEqual(mac[mac.index('-default-test-execution-time-allowance') + 1], '120')
+        self.assertEqual(mac[mac.index('-maximum-test-execution-time-allowance') + 1], '300')
+        for command in (ios, mac):
+            self.assertEqual([arg for arg in command if arg.startswith('-only-testing:')], ['-only-testing:NativeTests/Probe/testFirst()'])
+            self.assertFalse(any(arg.startswith('-skip-testing:') for arg in command))
+
+    def test_destination_must_be_one_exact_simulator_uuid(self):
+        self.assertEqual(shards.execution_destination('iOS Simulator', self.DESTINATION), self.DESTINATION)
+        for destination in ['platform=iOS', 'platform=iOS Simulator,name=iPhone', self.DESTINATION + ',name=other', 'platform=macOS,arch=arm64']:
+            with self.subTest(destination=destination), self.assertRaises(ValueError): shards.execution_destination('iOS Simulator', destination)
+
+    def test_selected_runtime_must_be_available_ios_and_unambiguous(self):
+        entry = {'udid': self.UUID, 'isAvailable': True}
+        payload = {'devices': {'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [entry]}}
+        self.assertEqual(shards.qualify_simulator(payload, self.DESTINATION), self.UUID)
+        for value in [
+            {'devices': {}}, {'devices': []},
+            {'devices': {'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [entry | {'isAvailable': False}]}},
+            {'devices': {'com.apple.CoreSimulator.SimRuntime.tvOS-27-0': [entry]}},
+            {'devices': {'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [entry, entry]}},
+        ]:
+            with self.subTest(payload=value), self.assertRaises(ValueError): shards.qualify_simulator(value, self.DESTINATION)
+
+    def test_actual_ios_result_must_match_selected_simulator_and_compiled_platform(self):
+        plan = self.plan()
+        tree, summary = result(plan['shards'][0])
+        tree['devices'] = [{'platform': 'iOS Simulator', 'architecture': 'arm64', 'deviceId': self.UUID}]
+        receipt = shards.qualify_results(plan, 0, tree, summary, expected_device_id=self.UUID)
+        self.assertEqual(receipt['platform'], 'iOS Simulator')
+        with self.assertRaises(ValueError): shards.qualify_results(plan, 0, tree, summary, expected_device_id='00000000-0000-0000-0000-000000000001')
+        with self.assertRaises(ValueError): shards.qualify_results(self.plan('macOS'), 0, tree, summary)
+        tree['devices'][0]['platform'] = 'iOS'
+        with self.assertRaises(ValueError): shards.qualify_results(plan, 0, tree, summary)
+
+
 class ProductRestoreTests(unittest.TestCase):
     def fixture(self, root, malicious=None):
         import io
@@ -153,14 +203,14 @@ class ProductRestoreTests(unittest.TestCase):
         payload = inventory(["NativeTests/Probe/testFirst()", "NativeTests/Probe/testSecond()"])
         plan = shards.make_plan(payload, SHA, "123", "2", 2)
         (products / "native-test-plan.json").write_text(json.dumps(plan))
-        archive = products / "macos-products.tar.gz"
+        archive = products / "native-products.tar.gz"
         with tarfile.open(archive, "w:gz") as output:
             name = malicious if malicious else "Build/Products/native.xctestrun"
             member = tarfile.TarInfo(name)
             data = b"manifest"
             member.size = len(data)
             output.addfile(member, io.BytesIO(data))
-        receipt = {"source_sha": SHA, "run_id": "123", "attempt": "2",
+        receipt = {"source_sha": SHA, "run_id": "123", "attempt": "2", "platform": "macOS",
                    "prepared_archive_sha256": shards.file_digest(archive),
                    "xctestrun": "Build/Products/native.xctestrun", "sdk_receipt_sha256": shards.sdk_digest(sdk)}
         (products / "native-products-receipt.json").write_text(json.dumps(receipt))
@@ -214,7 +264,7 @@ class ProductRestoreTests(unittest.TestCase):
         for target in ("../../../../escape", "/tmp/escape"):
             with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
                 args = self.fixture(Path(directory))
-                archive = args.products / "macos-products.tar.gz"
+                archive = args.products / "native-products.tar.gz"
                 with tarfile.open(archive, "w:gz") as output:
                     member = tarfile.TarInfo("Build/Products/link")
                     member.type, member.linkname = tarfile.SYMTYPE, target
