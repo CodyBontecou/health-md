@@ -202,7 +202,7 @@ internal suspend fun AgentBridgeNativePlanningSession.sendResumedExecutionExport
 internal suspend fun AgentBridgeNativePlanningSession.receiveAndHandleExecutionNext(channel: DirectSecureChannel,
     manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer(),
     confirmedStopIsHandled: Boolean = false): ReceivedAgentBridgePayload? =
-    receiveAndHandleResumedNext(channel, kotlinx.coroutines.currentCoroutineContext().job, confirmedStopIsHandled = confirmedStopIsHandled) { request, context ->
+    receiveAndHandleExportNext(channel, kotlinx.coroutines.currentCoroutineContext().job, confirmedStopIsHandled = confirmedStopIsHandled) { request, context ->
         AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer)
     }
 
