@@ -227,6 +227,8 @@ enum ExecutionPeerOutcome {
     DisconnectThenCancel,
     AcceptedThenCancel,
     AcceptedThenResume,
+    UncertainThenResume,
+    UncertainThenStop,
     DisconnectAfterFirstPartition,
 }
 
@@ -284,13 +286,18 @@ async fn answer_approved_execute(
         source_acknowledged: false,
         status: ExecutionReceiptStatus::Accepted,
     };
-    channel
-        .send_v4(
-            &Envelope::new(Message::ExecutionReceipt(Box::new(accepted.clone()))),
-            negotiation,
-        )
-        .await
-        .unwrap();
+    if !matches!(
+        outcome,
+        ExecutionPeerOutcome::UncertainThenResume | ExecutionPeerOutcome::UncertainThenStop
+    ) {
+        channel
+            .send_v4(
+                &Envelope::new(Message::ExecutionReceipt(Box::new(accepted.clone()))),
+                negotiation,
+            )
+            .await
+            .unwrap();
+    }
     assert_eq!(request.plan.predicted_paths.len(), 2);
     let manifest = ArtifactManifest {
         schema: ArtifactManifestSchema::HealthmdAgentArtifactManifest,
@@ -335,7 +342,10 @@ async fn answer_approved_execute(
     };
     if matches!(
         outcome,
-        ExecutionPeerOutcome::AcceptedThenCancel | ExecutionPeerOutcome::AcceptedThenResume
+        ExecutionPeerOutcome::AcceptedThenCancel
+            | ExecutionPeerOutcome::AcceptedThenResume
+            | ExecutionPeerOutcome::UncertainThenResume
+            | ExecutionPeerOutcome::UncertainThenStop
     ) {
         // No manifest or base transfer message has crossed this channel. The retained
         // accepted owner must support public Cancel without fabricated output proof.
@@ -772,6 +782,7 @@ async fn answer_retained_resume(
     channel: &mut SecureChannel,
     negotiation: Negotiation,
     state: ExecutedPeerSnapshot,
+    acceptance_only: bool,
 ) -> ExecutedPeerSnapshot {
     use healthmd_protocol::models as a;
     let ExecutedPeerSnapshot {
@@ -842,6 +853,23 @@ async fn answer_retained_resume(
         )
         .await
         .unwrap();
+    if acceptance_only {
+        assert_eq!(completed.committed_partition_count, 0);
+        // Acceptance has crossed this channel; no manifest or transfer follows. The host
+        // must retain that fact despite Resume failing, then permit explicit same-job Stop.
+        return ExecutedPeerSnapshot {
+            request,
+            manifest,
+            session,
+            last_transfer,
+            completed: ExecutionReceipt {
+                status: ExecutionReceiptStatus::Cancelled,
+                source_acknowledged: true,
+                ..accepted.clone()
+            },
+            accepted,
+        };
+    }
     channel
         .send_v4(
             &Envelope::new(Message::ArtifactManifest(Box::new(manifest.clone()))),
@@ -1317,6 +1345,8 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 ExecutionPeerOutcome::DisconnectThenCancel,
                 ExecutionPeerOutcome::AcceptedThenCancel,
                 ExecutionPeerOutcome::AcceptedThenResume,
+                ExecutionPeerOutcome::UncertainThenResume,
+                ExecutionPeerOutcome::UncertainThenStop,
                 ExecutionPeerOutcome::DisconnectAfterFirstPartition,
             ]
             .map(|outcome| (platform.clone(), outcome))
@@ -1515,8 +1545,13 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
             ) {
                 for execution in &mut executions {
                     let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
-                    *execution =
-                        answer_retained_resume(&mut channel, negotiation, execution.clone()).await;
+                    *execution = answer_retained_resume(
+                        &mut channel,
+                        negotiation,
+                        execution.clone(),
+                        outcome == ExecutionPeerOutcome::UncertainThenStop,
+                    )
+                    .await;
                 }
             }
             for execution in executions {
@@ -1618,6 +1653,8 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                     outcome,
                     ExecutionPeerOutcome::AcceptedThenCancel
                         | ExecutionPeerOutcome::AcceptedThenResume
+                        | ExecutionPeerOutcome::UncertainThenResume
+                        | ExecutionPeerOutcome::UncertainThenStop
                 ) || (outcome == ExecutionPeerOutcome::DisconnectAfterFirstPartition
                     && index == 1)
                 {
@@ -1633,6 +1670,26 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 }
             })
             .collect();
+        if matches!(
+            outcome,
+            ExecutionPeerOutcome::UncertainThenResume | ExecutionPeerOutcome::UncertainThenStop
+        ) {
+            for job in [id(200), id(203)] {
+                let value: Value = serde_json::from_slice(
+                    &std::fs::read(
+                        root.join("agent-host-v1")
+                            .join(format!("attempt-{}.json", job.0)),
+                    )
+                    .unwrap(),
+                )
+                .unwrap();
+                assert_eq!(value["attempt"]["schema_version"], 1);
+                assert!(
+                    value["attempt"].get("accepted_receipt").is_none(),
+                    "Lost acceptance cannot be invented locally"
+                );
+            }
+        }
         if !matches!(
             outcome,
             ExecutionPeerOutcome::DisconnectThenCancel | ExecutionPeerOutcome::AcceptedThenCancel
@@ -1643,25 +1700,53 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 &serde_json::to_vec(&serde_json::json!({"job_id":id(200)})).unwrap(),
                 CancellationToken::new(),
             )
-            .await
-            .unwrap();
-            let mcp_resume = rpc_call(
-                &rpc,
-                "healthmd_export_execution_resume",
-                serde_json::json!({"job_id":id(203)}),
-                4,
-            )
             .await;
-            if outcome == ExecutionPeerOutcome::Complete {
-                assert_eq!(cli_resume, cli_execution);
-                assert_eq!(mcp_resume, mcp_execution);
+            if outcome == ExecutionPeerOutcome::UncertainThenStop {
+                assert!(cli_resume.is_err(), "Acceptance is not completed recovery");
+                let raw = serde_json::json!({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"healthmd_export_execution_resume","arguments":{"job_id":id(203)}}}).to_string();
+                let response: Value = serde_json::from_str(
+                    &rpc.handle(&raw, CancellationToken::new()).await.unwrap(),
+                )
+                .unwrap();
+                assert!(response.get("error").is_none());
+                assert_eq!(response["result"]["isError"], true);
+            } else {
+                let cli_resume = cli_resume.unwrap();
+                let mcp_resume = rpc_call(
+                    &rpc,
+                    "healthmd_export_execution_resume",
+                    serde_json::json!({"job_id":id(203)}),
+                    4,
+                )
+                .await;
+                if outcome == ExecutionPeerOutcome::Complete {
+                    assert_eq!(cli_resume, cli_execution);
+                    assert_eq!(mcp_resume, mcp_execution);
+                }
+                for result in [&cli_resume, &mcp_resume] {
+                    assert_eq!(result["status"], "complete");
+                    assert_eq!(result["source_acknowledged"], true);
+                    assert_eq!(result["artifact_count"], 2);
+                    assert_eq!(result["committed_partition_count"], 2);
+                    assert_eq!(result["binding"], cli_approval["binding"]);
+                }
             }
-            for result in [&cli_resume, &mcp_resume] {
-                assert_eq!(result["status"], "complete");
-                assert_eq!(result["source_acknowledged"], true);
-                assert_eq!(result["artifact_count"], 2);
-                assert_eq!(result["committed_partition_count"], 2);
-                assert_eq!(result["binding"], cli_approval["binding"]);
+        }
+        if matches!(
+            outcome,
+            ExecutionPeerOutcome::UncertainThenResume | ExecutionPeerOutcome::UncertainThenStop
+        ) {
+            for job in [id(200), id(203)] {
+                let value: Value = serde_json::from_slice(
+                    &std::fs::read(
+                        root.join("agent-host-v1")
+                            .join(format!("attempt-{}.json", job.0)),
+                    )
+                    .unwrap(),
+                )
+                .unwrap();
+                assert_eq!(value["attempt"]["schema_version"], 2);
+                assert_eq!(value["attempt"]["accepted_receipt"]["status"], "accepted");
             }
         }
         let cli_cancel = crate::mcp::execute_agent_operation(
@@ -1689,6 +1774,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                     outcome,
                     ExecutionPeerOutcome::DisconnectThenCancel
                         | ExecutionPeerOutcome::AcceptedThenCancel
+                        | ExecutionPeerOutcome::UncertainThenStop
                 ) {
                     "cancelled"
                 } else {
@@ -1721,7 +1807,12 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
         for (path, before) in execution_paths.iter().zip(&before_recovery) {
             match before {
                 Some(bytes) => assert_eq!(&std::fs::read(output.join(&path.0)).unwrap(), bytes),
-                None if outcome == ExecutionPeerOutcome::AcceptedThenCancel => {
+                None if matches!(
+                    outcome,
+                    ExecutionPeerOutcome::AcceptedThenCancel
+                        | ExecutionPeerOutcome::UncertainThenStop
+                ) =>
+                {
                     assert!(!output.join(&path.0).exists());
                 }
                 None => assert_eq!(
@@ -1740,7 +1831,10 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
         assert_eq!(credentials.0.writes.load(Ordering::SeqCst), writes);
         assert!(credentials.0.reads.load(Ordering::SeqCst) >= 16);
         assert!(key.0.load(Ordering::SeqCst) > 0);
-        if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+        if matches!(
+            outcome,
+            ExecutionPeerOutcome::AcceptedThenCancel | ExecutionPeerOutcome::UncertainThenStop
+        ) {
             assert_eq!(std::fs::read_dir(&output).unwrap().count(), 0);
             for result in [&cli_cancel, &mcp_cancel] {
                 assert_eq!(result["source_receipt"]["artifact_count"], 0);

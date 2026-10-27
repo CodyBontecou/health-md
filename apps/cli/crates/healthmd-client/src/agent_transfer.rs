@@ -295,13 +295,14 @@ impl<'trust> BridgeSession<'trust> {
         // Decoder selection only; corrupt later-state evidence must never fall back
         // to the accepted reader or synthesize a missing transfer journal.
         if !store.has_retained_output(job)? {
-            let admission = OutputAdmission::open_retained_accepted(store, job, clock).await?;
-            let (request, accepted) = admission.resumable_accepted_binding()?;
+            let admission = OutputAdmission::open_retained_for_resume(store, job, clock).await?;
+            let (request, _) = admission.resumable_binding()?;
+            let expiry = admission.resume_observation_expiry()?;
             if request.plan.intent.peer != *expected_peer {
                 return Err(Error::BindingChanged.into());
             }
             store
-                .require_output_current(&request, Some(&accepted.expires_at), clock, || async {
+                .require_output_current(&request, Some(&expiry), clock, || async {
                     if cancellation.is_cancelled() {
                         return Err(ClientError::WaitCancelled);
                     }
@@ -373,7 +374,7 @@ impl<'trust> BridgeSession<'trust> {
         clock: &'h dyn PlanningClock,
     ) -> Result<HostExecution<'s, 'h, 'trust>, ClientError> {
         if !store.has_retained_output(&job)? {
-            return Box::pin(self.resume_accepted_execution_inner(store, &job, clock)).await;
+            return Box::pin(self.resume_pre_manifest_execution_inner(store, &job, clock)).await;
         }
         Box::pin(self.resume_output_execution_inner(store, job, clock)).await
     }

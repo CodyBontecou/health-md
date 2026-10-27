@@ -311,8 +311,15 @@ final class AgentBridgeNativePlanningSession {
             }
             if case .agent(let envelope) = incoming, case .resume(let resume) = envelope.payload {
                 selectedStopBinding = (resume.jobId.rawValue, resume.requestSha256.rawValue)
+                let acceptanceOnly = resume.committedPartitionCount == 0 &&
+                    resume.manifestSha256.rawValue == String(repeating: "0", count: 64) &&
+                    resume.frontierSha256.rawValue == String(repeating: "0", count: 64)
+                if acceptanceOnly {
+                    guard acknowledgement == nil else { throw AgentBridgeValidationError.bindingChanged }
+                    try await sendRetainedAcceptance(resume)
+                }
                 try await resumedCaptureContextOwned(resume, acknowledging: acknowledgement) { [self] request, context, job in
-                    try await sendResumeAcceptance(job, resume: resume, context: context)
+                    if !acceptanceOnly { try await sendResumeAcceptance(job, resume: resume, context: context) }
                     try await sendPreparedTransfer(request, context: context, confirmCompletion: confirmCompletion) {
                         try await prepare(request, $0)
                     }
@@ -373,6 +380,30 @@ final class AgentBridgeNativePlanningSession {
         } onCancel: { channel.cancel() }
         lastInboundActivityAt = ContinuousClock().now
         return incoming
+    }
+
+    /// Reconcile a lost acceptance before touching capture/spool state. The subsequent
+    /// Resume admission may still reject missing spool; this receipt is not transfer authority.
+    private func sendRetainedAcceptance(_ resume: AgentBridgeResume) async throws {
+        guard let responseChannel, let responseNegotiation else { throw AgentBridgeValidationError.unsupportedCapability }
+        let publication = try requireCurrent()
+        let job = try service.retainedAcceptance(resume, authenticatedPeer: peer)
+        let validate: @MainActor @Sendable () throws -> Void = { [self] in
+            try Task.checkCancellation()
+            guard try requireCurrent() == publication,
+                  try service.retainedAcceptance(resume, authenticatedPeer: peer) == job,
+                  !wireAbandoned, try lifecycle.currentPublication() == publication else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            try Task.checkCancellation()
+        }
+        try await withTaskCancellationHandler {
+            try validate()
+            try await responseChannel.sendAgentBridge(.init(payload: .receipt(job.acceptedReceipt())), negotiation: responseNegotiation) {
+                try await MainActor.run { try validate() }
+            }
+            try validate()
+        } onCancel: { responseChannel.cancel() }
     }
 
     private func sendResumeAcceptance(_ job: AgentBridgeExportAcceptedJob, resume: AgentBridgeResume,

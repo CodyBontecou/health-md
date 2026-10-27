@@ -141,6 +141,39 @@ internal class AgentBridgeExportPlanningService(
         }
     }
 
+    /** Existing acceptance facts only, without accepting, claiming, resolving settings or reading SDK data. */
+    fun retainedAcceptance(authenticated: AgentBridgeExportAuthenticatedPeer,
+        supplied: AgentBridgeResumeRequest): AgentBridgeExportAcceptedJob {
+        val resume = AgentBridgeCodec.decode(AgentBridgeCodec.encode(supplied)) as AgentBridgeResumeRequest
+        require(resume.committedPartitionCount == 0 && resume.manifestSha256 == "0".repeat(64) &&
+            resume.frontierSha256 == "0".repeat(64), AgentBridgeErrorCode.BINDING_CHANGED)
+        val expected = peer(authenticated, resume.peer)
+        var selected: AgentBridgeExportAcceptedJob? = null
+        fun validate(transaction: AgentBridgeExportAuthorityTransaction?): AgentBridgeExportAcceptedJob {
+            val tx = transaction ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            peer(authenticated, expected)
+            val job = tx.state.acceptedJobs?.singleOrNull {
+                val request = it.request()
+                request.jobId == resume.jobId && (request.plan as AgentBridgeGeneratedPlan).intent.peer == expected
+            } ?: throw AgentBridgeException(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED)
+            val request = job.request()
+            val plan = request.plan as AgentBridgeGeneratedPlan
+            require(resume.binding == AgentBridgeValidation.bindingFor(plan) && resume.destination == plan.intent.destination &&
+                resume.requestSha256 == job.requestSha256, AgentBridgeErrorCode.BINDING_CHANGED)
+            peer(authenticated, expected)
+            val instant = now()
+            val ref = plan.authorityReferences.native
+            val parent = tx.grant(expected, ref.authorityId, ref.grantRevision, instant)
+            require(AgentBridgeExportAuthorityStore.reference(parent) == ref, AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            require(instant >= Instant.parse(job.acceptedAt) && instant < Instant.parse(job.expiresAt) &&
+                instant < Instant.parse(parent.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
+            return job
+        }
+        return store.access(fence = {
+            require(validate(it) == selected, AgentBridgeErrorCode.BINDING_CHANGED)
+        }) { validate(it).also { job -> selected = job } }
+    }
+
     /** Exact accepted-job stop authority only. An expired planning approval/revoked read grant
      * does not prevent its authenticated peer requesting a stop. No terminal receipt is implied. */
     fun requestCancellation(authenticated: AgentBridgeExportAuthenticatedPeer,

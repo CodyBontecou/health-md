@@ -156,9 +156,9 @@ impl<'trust> BridgeSession<'trust> {
         Box::pin(owner.request_cancellation_inner()).await
     }
 
-    /// Recover the original accepted owner without inventing a manifest or sending Execute.
-    /// The native source must return that exact acceptance, then its preserved manifest.
-    pub(super) async fn resume_accepted_execution_inner<'s, 'h>(
+    /// Reconcile an existing accepted owner or uncertain original send intent. Only an
+    /// authenticated native acceptance may promote intent; no Execute or new job is sent.
+    pub(super) async fn resume_pre_manifest_execution_inner<'s, 'h>(
         &'s mut self,
         store: &'h HostAuthorityStore,
         job: &ControlUuid,
@@ -168,48 +168,39 @@ impl<'trust> BridgeSession<'trust> {
             return Err(Error::BindingChanged.into());
         }
         self.send_interrupted = true;
-        let admission = OutputAdmission::open_retained_accepted(store, job, clock).await?;
-        let (request, accepted) = admission.resumable_accepted_binding()?;
-        let owner = HostAcceptedExecution {
-            bridge: self,
-            store,
-            clock,
-            request,
-            accepted,
-            admission,
-        };
-        owner.require_current().await?;
-        let resume = v4::ResumeRequest {
-            schema: v4::ResumeRequestSchema::HealthmdAgentResumeRequest,
-            schema_version: 1,
-            job_id: owner.request.job_id.clone(),
-            request_sha256: document_digest(&owner.request)?,
-            manifest_sha256: Digest("0".repeat(64)),
-            frontier_sha256: Digest("0".repeat(64)),
-            committed_partition_count: 0,
-            peer: owner.request.plan.intent.peer.clone(),
-            binding: approval_binding(&owner.request.plan),
-            destination: owner.request.plan.intent.destination.clone(),
-        };
-        resume.validate_shape()?;
-        {
-            let admission = &owner.admission;
-            let request = &owner.request;
-            let accepted = &owner.accepted;
-            let cancellation = &owner.bridge.cancellation;
-            let trust = owner.bridge.trust_fence;
-            let expected = &owner.bridge.expected_trust;
-            let selected = owner.bridge.requested_device;
-            owner
-                .bridge
-                .channel
-                .send_v4_guarded(
-                    &Envelope::new(Message::ResumeRequest(Box::new(resume))),
-                    owner.bridge.negotiation,
+        let mut admission = OutputAdmission::open_retained_for_resume(store, job, clock).await?;
+        let (request, expected) = admission.resumable_binding()?;
+        let expiry = admission.resume_observation_expiry()?;
+        let accepted = self
+            .read_retained_acceptance(store, &request, &admission, &expiry, clock)
+            .await?;
+        if let Some(original) = expected {
+            if accepted != original {
+                return Err(Error::BindingChanged.into());
+            }
+        } else {
+            let trust = self.trust_fence;
+            let expected = &self.expected_trust;
+            let selected = self.requested_device;
+            let cancellation = &self.cancellation;
+            let host = store
+                .authorization(
+                    &request.plan.intent.peer,
+                    &request.plan.intent.destination.binding_id,
+                    Some(&request.plan.authority_references.host),
+                    clock,
+                )
+                .await?;
+            admission
+                .persist_reconciled_acceptance(
+                    &accepted,
+                    clock,
+                    cancellation,
+                    &host.delegation.expires_at,
                     || async {
                         store
                             .require_output_current(
-                                request,
+                                &request,
                                 Some(&accepted.expires_at),
                                 clock,
                                 || async {
@@ -223,29 +214,83 @@ impl<'trust> BridgeSession<'trust> {
                                     Ok(())
                                 },
                             )
-                            .await?;
-                        admission.require_resumable_current(clock, cancellation)
+                            .await
                     },
                 )
                 .await?;
         }
+        admission.require_resumable_current(clock, &self.cancellation)?;
+        let owner = HostAcceptedExecution {
+            bridge: self,
+            store,
+            clock,
+            request,
+            accepted,
+            admission,
+        };
         owner.require_current().await?;
-        let received = owner
-            .bridge
-            .channel
-            .receive_v4(owner.bridge.negotiation)
-            .await?
-            .message;
-        owner.require_current().await?;
-        let Message::ExecutionReceipt(replayed) =
-            execution_response(received, &owner.request.request_id)?
+        Box::pin(owner.wait_manifest_inner()).await
+    }
+
+    async fn read_retained_acceptance(
+        &mut self,
+        store: &HostAuthorityStore,
+        request: &ExecuteRequest,
+        admission: &OutputAdmission,
+        expiry: &v4::UtcTimestamp,
+        clock: &dyn PlanningClock,
+    ) -> Result<ExecutionReceipt, ClientError> {
+        if self.peer != request.plan.intent.peer {
+            return Err(Error::BindingChanged.into());
+        }
+        let resume = v4::ResumeRequest {
+            schema: v4::ResumeRequestSchema::HealthmdAgentResumeRequest,
+            schema_version: 1,
+            job_id: request.job_id.clone(),
+            request_sha256: document_digest(request)?,
+            manifest_sha256: Digest("0".repeat(64)),
+            frontier_sha256: Digest("0".repeat(64)),
+            committed_partition_count: 0,
+            peer: request.plan.intent.peer.clone(),
+            binding: approval_binding(&request.plan),
+            destination: request.plan.intent.destination.clone(),
+        };
+        resume.validate_shape()?;
+        let cancellation = &self.cancellation;
+        let trust = self.trust_fence;
+        let expected = &self.expected_trust;
+        let selected = self.requested_device;
+        let current = || async {
+            store
+                .require_output_current(request, Some(expiry), clock, || async {
+                    if cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    trust.require_current(selected, expected).await?;
+                    if cancellation.is_cancelled() {
+                        return Err(ClientError::WaitCancelled);
+                    }
+                    Ok(())
+                })
+                .await?;
+            admission.require_resumable_current(clock, cancellation)
+        };
+        current().await?;
+        self.channel
+            .send_v4_guarded(
+                &Envelope::new(Message::ResumeRequest(Box::new(resume))),
+                self.negotiation,
+                current,
+            )
+            .await?;
+        current().await?;
+        let received = self.channel.receive_v4(self.negotiation).await?.message;
+        current().await?;
+        let Message::ExecutionReceipt(receipt) = execution_response(received, &request.request_id)?
         else {
             return Err(ClientError::UnexpectedMessage);
         };
-        if *replayed != owner.accepted {
-            return Err(Error::BindingChanged.into());
-        }
-        Box::pin(owner.wait_manifest_inner()).await
+        Ok(*receipt)
     }
 
     async fn begin_accepted_execution_inner<'s, 'h>(

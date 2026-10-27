@@ -325,14 +325,23 @@ Host commit receipts and final source confirmation remain independently required
 
 Pre-capture `accepted` receipts retain their existing zero manifest/frontier digests; they are not `F0`.
 An accepted-only host with an authenticated original acceptance and no output/transfer journal may
-send Resume with zero manifest/frontier digests and zero committed partitions. These zeroes identify
-its retained observation, not a new frontier or permission to reconstruct missing evidence. The source
-must retain the exact original job, complete immutable manifest/spool/session/checkpoint and an empty
-acknowledged prefix; no ACK prelude is allowed in this mode. It returns the exact original acceptance,
-then the preserved manifest and transfer. Missing or ambiguous capture state requires a fresh approved
-job; Resume never repeats capture. Any native acknowledged prefix rejects this mode. A host with later
-output/transfer state must use its exact bound frontier and must never fall back to accepted-only
-recovery after a failed decoder. A retained pending Stop cannot resume export work.
+send Resume with zero manifest/frontier digests and zero committed partitions. A separately authenticated
+original send intent may request the same existing-job reconciliation when acceptance delivery was
+uncertain. The intent is not acceptance: only the original authenticated source's exact stored receipt
+may promote that same host record. Neither path sends Execute, creates a native job/claim, renews an
+expiry or treats a missing native job as permission to start one. Until a real receipt is recovered,
+lookup is bounded by the original approved plan deadline plus the maximum seven-day native job
+lifetime; that bound is not a native expiry or a returned receipt.
+
+The source returns its original stored acceptance before spool admission, even when a claim or manifest
+is absent. This is source fact recovery, not capture/transfer readiness. It rechecks the original peer,
+request/approval/destination, current parent and original job lifetime without settings or SDK reads.
+A host persists that receipt before waiting for a manifest, so a later missing-spool failure preserves
+known acceptance and allows an explicit original-job Stop. Missing/ambiguous capture cannot be recaptured.
+To transfer in this mode, the source must retain the exact complete immutable manifest/spool/session/
+checkpoint and an empty acknowledged prefix; no ACK prelude is allowed. Any native acknowledged prefix
+rejects zero-digest transfer admission. A host with later output/transfer state uses its exact bound
+frontier and never falls back after a failed decoder. A retained pending Stop cannot resume export work.
 
 After a real manifest is published, even an empty prefix uses its bound seed. Frontier1 adds semantics
 to this deferred extension without changing deployed base messages, frames, envelope schemas or health

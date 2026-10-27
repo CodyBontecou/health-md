@@ -372,8 +372,14 @@ internal class AgentBridgeNativePlanningSession(
             if (message?.type == "resume_request") {
                 val resume = message.payload as? AgentBridgeResumeRequest ?: throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
                 selectedStopBinding = resume.jobId to resume.requestSha256
+                val acceptanceOnly = resume.committedPartitionCount == 0 && resume.manifestSha256 == "0".repeat(64) &&
+                    resume.frontierSha256 == "0".repeat(64)
+                if (acceptanceOnly) {
+                    if (acknowledgement != null) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                    sendRetainedAcceptance(resume, caller)
+                }
                 resumedCaptureContextOwned(resume, acknowledgement) { request, context, job ->
-                    sendResumeAcceptance(job, resume, context, caller)
+                    if (!acceptanceOnly) sendResumeAcceptance(job, resume, context, caller)
                     sendPreparedTransfer(request, context, confirmCompletion) { prepare(request, it) }
                 }
                 return null
@@ -424,6 +430,26 @@ internal class AgentBridgeNativePlanningSession(
                 }
             }
         }
+
+    /** Recover only the stored acceptance before spool admission, never new acceptance or capture authority. */
+    private fun sendRetainedAcceptance(resume: AgentBridgeResumeRequest, caller: Job) {
+        val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val publication = requireCurrent()
+        val job = service.retainedAcceptance(peer, resume)
+        val validate = {
+            caller.ensureActive()
+            requireSamePublication(publication)
+            if (service.retainedAcceptance(peer, resume) != job || wireAbandoned || lifecycle.currentPublication() != publication)
+                throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+            caller.ensureActive()
+        }
+        withTransportCancellation(caller, channel) {
+            validate()
+            channel.sendAgentBridge(AgentBridgeMessage("execution_receipt", job.acceptedReceipt()), negotiation, validate)
+            validate()
+        }
+    }
 
     private fun sendResumeAcceptance(job: AgentBridgeExportAcceptedJob, resume: AgentBridgeResumeRequest,
         context: AgentBridgeNativeCaptureContext, caller: Job) {

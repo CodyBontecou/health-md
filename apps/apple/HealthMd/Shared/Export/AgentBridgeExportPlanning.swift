@@ -208,6 +208,40 @@ final class AgentBridgeExportPlanningService {
         })
     }
 
+    /// Existing acceptance facts only, even before a capture claim or manifest exists.
+    /// This never calls acceptance, claims capture, reads settings or grants transfer authority.
+    func retainedAcceptance(_ supplied: AgentBridgeResume,
+                            authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeExportAcceptedJob {
+        let resume = try AgentBridgeV4Codec.decode(AgentBridgeResume.self, from: AgentBridgeV4Codec.encode(supplied))
+        let zero = String(repeating: "0", count: 64)
+        guard resume.committedPartitionCount == 0, resume.manifestSha256.rawValue == zero,
+              resume.frontierSha256.rawValue == zero else { throw AgentBridgeValidationError.bindingChanged }
+        func validate(_ state: AgentBridgeExportAuthoritySnapshot) throws -> AgentBridgeExportAcceptedJob {
+            try authenticatedPeer.requireCurrent(); try self.requirePeer(resume.peer, authenticatedPeer)
+            guard let job = try state.acceptedJobs?.first(where: {
+                let request = try $0.request()
+                return request.jobId == resume.jobId && request.plan.intent.peer == authenticatedPeer.peer
+            }) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+            let request = try job.request()
+            guard resume.binding == AgentBridgeSemantics.binding(request.plan),
+                  resume.destination == request.plan.intent.destination,
+                  resume.requestSha256 == job.requestSHA256 else { throw AgentBridgeValidationError.bindingChanged }
+            // The last delaying peer callback precedes current grant/job lifetime checks.
+            try authenticatedPeer.requireCurrent()
+            let instant = self.clock.now()
+            let parent = try self.currentParent(for: request.plan, state: state, peer: authenticatedPeer, now: instant)
+            let now = try self.utc(instant)
+            guard job.acceptedAt.rawValue <= now.rawValue, job.expiresAt.rawValue > now.rawValue,
+                  parent.expiresAt.rawValue > now.rawValue else { throw AgentBridgeValidationError.planExpired }
+            return job
+        }
+        let original = try store.inspectCurrent { try validate($0) }
+        try authenticatedPeer.requireCurrent()
+        let current = try store.inspectCurrent { try validate($0) }
+        guard current == original else { throw AgentBridgeValidationError.bindingChanged }
+        return current
+    }
+
     /// Stop authority is limited to the authenticated peer's exact accepted request. An expired
     /// planning approval or revoked export grant cannot prevent that peer from requesting a stop;
     /// this creates no read permission and does not declare terminal cancellation/completion.

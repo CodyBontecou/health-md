@@ -630,7 +630,7 @@ async fn accepted_resume_preflight_preserves_evidence_and_never_reverses_stop() 
                 .await;
             assert_eq!(
                 result.is_ok(),
-                matches!(case, Case::Accepted | Case::PlanExpired),
+                matches!(case, Case::Accepted | Case::PlanExpired | Case::PreSend),
                 "{platform:?}/{case:?}"
             );
             assert_eq!(
@@ -730,6 +730,180 @@ async fn accepted_resume_preflight_rechecks_final_clock_cancellation_and_rollbac
             assert_eq!(
                 inventory(&f.client.layout.root.join("agent-host-v1")),
                 before
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn uncertain_intent_requires_original_native_acceptance_before_stop_and_rejects_forged_proofs()
+ {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for mode in [
+            "valid", "job", "request", "binding", "terminal", "count", "expiry", "renewed",
+        ] {
+            let f = Box::pin(accepted_fixture(platform)).await;
+            let admission = OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+                Ok(f.output.clone())
+            })
+            .await
+            .unwrap();
+            drop(admission);
+            assert!(
+                OutputAdmission::open_retained_accepted(&f.store, &f.request.job_id, &f.clock)
+                    .await
+                    .is_err(),
+                "An intent alone must not authorize Stop"
+            );
+            let mut admission =
+                OutputAdmission::open_retained_for_resume(&f.store, &f.request.job_id, &f.clock)
+                    .await
+                    .unwrap();
+            let (request, receipt) = admission.resumable_binding().unwrap();
+            assert_eq!(request, f.request);
+            assert!(receipt.is_none());
+            let mut proof = f.accepted.clone();
+            match mode {
+                "job" => proof.job_id = id(99),
+                "request" => proof.request_sha256 = Digest("f".repeat(64)),
+                "binding" => proof.binding.plan_sha256 = Digest("f".repeat(64)),
+                "terminal" => {
+                    proof.status = ExecutionReceiptStatus::Cancelled;
+                    proof.source_acknowledged = true;
+                }
+                "count" => proof.artifact_count = 1,
+                "expiry" => proof.expires_at = f.clock.now(),
+                "renewed" => {
+                    f.clock.advance_to(86_400);
+                    proof.expires_at = UtcTimestamp(
+                        chrono::DateTime::from_timestamp(
+                            f.clock.now().seconds().unwrap() + 604_800,
+                            0,
+                        )
+                        .unwrap()
+                        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    );
+                }
+                _ => {}
+            }
+            let before = inventory(&f.client.layout.root.join("agent-host-v1"));
+            let result = admission
+                .persist_reconciled_acceptance(
+                    &proof,
+                    &f.clock,
+                    &CancellationToken::new(),
+                    &f.accepted.expires_at,
+                    || async { Ok(f.output.clone()) },
+                )
+                .await;
+            assert_eq!(result.is_ok(), mode == "valid", "{platform:?}/{mode}");
+            drop(admission);
+            if mode == "valid" {
+                let original =
+                    OutputAdmission::open_retained_accepted(&f.store, &f.request.job_id, &f.clock)
+                        .await
+                        .unwrap();
+                assert_eq!(
+                    original.accepted_binding().unwrap(),
+                    (f.request.clone(), f.accepted.clone())
+                );
+            } else {
+                assert_eq!(
+                    inventory(&f.client.layout.root.join("agent-host-v1")),
+                    before
+                );
+                assert!(
+                    OutputAdmission::open_retained_accepted(&f.store, &f.request.job_id, &f.clock)
+                        .await
+                        .is_err()
+                );
+            }
+            assert_eq!(std::fs::read_dir(&f.output).unwrap().count(), 0);
+        }
+    }
+}
+
+#[tokio::test]
+async fn reconciled_acceptance_final_publication_clock_preserves_uncertain_intent() {
+    struct PublicationClock {
+        time: UtcTimestamp,
+        calls: AtomicUsize,
+        cancellation: CancellationToken,
+        cancel: bool,
+        replacement: Option<UtcTimestamp>,
+    }
+    impl crate::agent_planning::PlanningClock for PublicationClock {
+        fn now(&self) -> UtcTimestamp {
+            if self.calls.fetch_add(1, Ordering::SeqCst) + 1 == 2 {
+                if self.cancel {
+                    self.cancellation.cancel();
+                }
+                if let Some(time) = &self.replacement {
+                    return time.clone();
+                }
+            }
+            self.time.clone()
+        }
+    }
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for mode in ["cancel", "rollback", "native_expiry", "host_expiry"] {
+            let f = Box::pin(accepted_fixture(platform)).await;
+            drop(
+                OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+                    Ok(f.output.clone())
+                })
+                .await
+                .unwrap(),
+            );
+            let mut admission =
+                OutputAdmission::open_retained_for_resume(&f.store, &f.request.job_id, &f.clock)
+                    .await
+                    .unwrap();
+            let cancellation = CancellationToken::new();
+            let time = f.clock.now();
+            let host_expiry = UtcTimestamp(
+                chrono::DateTime::from_timestamp(time.seconds().unwrap() + 3600, 0)
+                    .unwrap()
+                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            );
+            let replacement = match mode {
+                "rollback" => Some(UtcTimestamp(
+                    chrono::DateTime::from_timestamp(time.seconds().unwrap() - 1, 0)
+                        .unwrap()
+                        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                )),
+                "native_expiry" => Some(f.accepted.expires_at.clone()),
+                "host_expiry" => Some(host_expiry.clone()),
+                _ => None,
+            };
+            let clock = PublicationClock {
+                time,
+                calls: AtomicUsize::new(0),
+                cancellation: cancellation.clone(),
+                cancel: mode == "cancel",
+                replacement,
+            };
+            let issuer = f.client.layout.root.join("agent-host-v1");
+            let before = inventory(&issuer);
+            let result = admission
+                .persist_reconciled_acceptance(
+                    &f.accepted,
+                    &clock,
+                    &cancellation,
+                    &host_expiry,
+                    || async {
+                        if cancellation.is_cancelled() {
+                            return Err(ClientError::WaitCancelled);
+                        }
+                        Ok(f.output.clone())
+                    },
+                )
+                .await;
+            assert!(result.is_err(), "{platform:?}/{mode}");
+            drop(admission);
+            assert!(
+                inventory(&issuer) == before,
+                "Rejected publication must leave signed send intent unchanged: {mode}"
             );
         }
     }

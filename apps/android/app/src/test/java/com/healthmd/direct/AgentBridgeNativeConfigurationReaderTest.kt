@@ -2594,6 +2594,40 @@ class AgentBridgeNativeConfigurationReaderTest {
             request.jobId, plan.intent.peer, AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)), "healthmd.agent_cancel_request", 1)
     }
 
+    @Test fun `native wire Resume recovers acceptance before missing spool without capture`() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val request = acceptedStopExecution(f)
+            val plan = request.plan as AgentBridgeGeneratedPlan
+            val original = f.store.access { it!!.state.acceptedJobs!!.single() }
+            val resume = AgentBridgeResumeRequest(AgentBridgeValidation.bindingFor(plan), 0, plan.intent.destination,
+                "0".repeat(64), request.jobId, "0".repeat(64), plan.intent.peer,
+                AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)), "healthmd.agent_resume_request", 1)
+            val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                secondArg<() -> Unit>()()
+                ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("resume_request", resume))
+            }
+            val receipts = mutableListOf<AgentBridgeExecutionReceipt>()
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                thirdArg<() -> Unit>()()
+                receipts += firstArg<AgentBridgeMessage>().payload as AgentBridgeExecutionReceipt
+                thirdArg<() -> Unit>()()
+            }
+            val planner = ownedPlanner(f, lifecycle, channel, beforeNativeRead = { error("Unclaimed job must not resolve settings or read SDK") })
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val before = Files.readAllBytes(path)
+            try {
+                planner.receiveAndHandleExportNext(channel, currentCoroutineContext().job) { _, _ -> error("Missing spool cannot capture") }
+                throw AssertionError("Missing spool cannot become transfer readiness")
+            } catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.SPOOL_MISSING_RESTART_REQUIRED) }
+            assertThat(receipts).containsExactly(original.acceptedReceipt())
+            assertThat(Files.readAllBytes(path)).isEqualTo(before)
+            assertThat(f.store.access { it!!.state.captureClaims.orEmpty() }).isEmpty()
+            verify(exactly = 1) { channel.receiveAllowingAgentBridge(any(), any()) }
+        }
+    }
+
     @Test fun `native receive cancels original retained jobs without catalog or read permission and replays exact receipt`() {
         for (captured in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
             val request = acceptedStopExecution(f); val stop = stopRequest(request)

@@ -636,6 +636,66 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual((try JSONSerialization.jsonObject(with: bytes) as? [String: Any])?["version"] as? Int, 4)
     }
 
+    private func acceptanceObservation(_ request: AgentBridgeExecute) throws -> AgentBridgeResume {
+        let zero = try AgentBridgeDigest(String(repeating: "0", count: 64))
+        return .init(binding: AgentBridgeSemantics.binding(request.plan), committedPartitionCount: 0,
+            destination: request.plan.intent.destination, frontierSha256: zero, jobId: request.jobId,
+            manifestSha256: zero, peer: request.plan.intent.peer,
+            requestSha256: try AgentBridgeDigest(AgentBridgeV4Codec.digest(request)))
+    }
+
+    func testRetainedAcceptanceObservationNeedsNoCaptureAndNeverRenewsOrReadsSettings() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try executionRequest(rig)
+        let original = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer).job
+        let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        rig.clock.advance(seconds: 600)
+        rig.reader.catalogRevision += 1; rig.reader.entitlement = .required
+        let reads = rig.reader.calls.count
+        let observed = try rig.restartedService().retainedAcceptance(acceptanceObservation(request), authenticatedPeer: rig.peer)
+        XCTAssertEqual(observed, original)
+        XCTAssertEqual(try observed.acceptedReceipt(), try original.acceptedReceipt())
+        XCTAssertEqual(rig.reader.calls.count, reads)
+        XCTAssertEqual(try rig.store.snapshot().captureClaims?.count ?? 0, 0)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), bytes)
+    }
+
+    func testRetainedAcceptanceObservationRejectsMissingChangedExpiredAndRevokedJobsWithoutRepair() throws {
+        for mode in ["unaccepted", "job", "peer", "destination", "binding", "request", "manifest", "frontier", "count", "expired", "trust", "delayed_key", "delayed_trust", "grant"] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try executionRequest(rig)
+            if mode != "unaccepted" { _ = try rig.service.acceptExecution(request, authenticatedPeer: rig.peer) }
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(acceptanceObservation(request))) as? [String: Any])
+            switch mode {
+            case "job": object["job_id"] = try id(99).rawValue
+            case "peer":
+                var value = try XCTUnwrap(object["peer"] as? [String: Any]); value["source_installation_id"] = try id(99).rawValue; object["peer"] = value
+            case "destination":
+                var value = try XCTUnwrap(object["destination"] as? [String: Any]); value["binding_id"] = try id(99).rawValue; object["destination"] = value
+            case "binding":
+                var value = try XCTUnwrap(object["binding"] as? [String: Any]); value["plan_sha256"] = String(repeating: "f", count: 64); object["binding"] = value
+            case "request": object["request_sha256"] = String(repeating: "f", count: 64)
+            case "manifest": object["manifest_sha256"] = String(repeating: "f", count: 64)
+            case "frontier": object["frontier_sha256"] = String(repeating: "f", count: 64)
+            case "count": object["committed_partition_count"] = 1
+            case "expired": rig.clock.advance(seconds: 604800)
+            case "trust": rig.session.revoke()
+            case "delayed_key": rig.keys.onNextLoad { rig.clock.advance(seconds: 604800) }
+            case "delayed_trust": rig.keys.onNextLoad { rig.session.revoke() }
+            case "grant": try rig.store.revokeNativeDelegation(request.plan.authorityReferences.native, expectedGeneration: rig.store.snapshot().generation, authorization: FakeNativeAuthorization())
+            default: break
+            }
+            let resume = try AgentBridgeV4Codec.decode(AgentBridgeResume.self, from: JSONSerialization.data(withJSONObject: object))
+            let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            let reads = rig.reader.calls.count
+            XCTAssertThrowsError(try rig.service.retainedAcceptance(resume, authenticatedPeer: rig.peer), mode) {
+                XCTAssertNotNil($0 as? AgentBridgeValidationError)
+            }
+            XCTAssertEqual(rig.reader.calls.count, reads)
+            XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), bytes)
+        }
+    }
+
     func testDurableAcceptanceReplaysExactStoredJobAfterPlanExpiryWithoutResolvingChangedSettings() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try executionRequest(rig)
@@ -3442,6 +3502,37 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired) }
     }
     #endif
+
+    func testNativeWireResumeRecoversAcceptanceBeforeMissingSpoolWithoutCapture() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let wire = NativePlanningResponsePackets(), key = SymmetricKey(data: Data(repeating: 7, count: 32))
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic reconciliation")
+        defer { channel.cancel() }
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner)
+        let original = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        let incoming = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .resume(acceptanceObservation(request))))
+        wire.appendInbound(try nativeResponsePacket(incoming, sequence: 0, key: key))
+        do {
+            _ = try await planner.receiveAndHandleExportNext(on: channel) { _, _ in
+                XCTFail("Missing spool must not invoke preparation or SDK capture")
+                throw AgentBridgeValidationError.spoolMissingRestartRequired
+            }
+            XCTFail("Missing spool cannot become transfer readiness")
+        } catch { XCTAssertEqual(error as? AgentBridgeValidationError, .spoolMissingRestartRequired) }
+        XCTAssertEqual(wire.receiveCount, 1)
+        XCTAssertEqual(wire.packets.count, 1)
+        guard case .encrypted(let frame) = try XCTUnwrap(wire.packets.first) else { return XCTFail("Expected encrypted original acceptance") }
+        let bytes = Data(try ManualIPSyncSecurity.open(frame, using: key).dropFirst(16))
+        let envelope = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes)
+        guard case .receipt(let receipt) = envelope.payload else { return XCTFail("Expected stored acceptance only") }
+        XCTAssertEqual(receipt, try original.acceptedReceipt())
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try rig.store.snapshot().captureClaims?.count, 1)
+    }
 
     func testNativeAcceptedReceiptPrecedesCaptureAndReplaysOriginalBytes() async throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
