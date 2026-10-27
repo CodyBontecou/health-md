@@ -74,5 +74,7 @@ alone is not evidence that the complete CI met two minutes.
 
 The four-runner predecessor passed locally in 43.1/34.6 seconds but failed in hosted
 CI: Apple exhausted 90 seconds on cold native compilation, Web took 85 seconds before
-setup/reporting, and runner queues alone exceeded the target. This single-runner suite
-is being measured against cold and warm hosted runs; inspect PR evidence for results.
+setup/reporting, and runner queues alone exceeded the target. The single-runner replacement passed a cold-cache hosted run in **114 seconds**
+including 18 seconds queued and 96 seconds assigned-runner time. All six current-source
+groups passed; cache saving and final reporting were included. See PR #259 and run
+40584677019 for the hosted evidence. Further final-revision runs verify repeatability.

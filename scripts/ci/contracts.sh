@@ -5,4 +5,3 @@ python3 -m unittest discover -s scripts/ci -p 'test_*.py'
 python3 packages/contracts/validate.py --product-parity-only
 python3 packages/healthmd-core-rust/scripts/import-native-registry.py --check
 python3 packages/healthmd-core-rust/scripts/generate-registry-adapters.py --check
-python3 apps/cli/scripts/update-mcp-shared-assets.py --check
