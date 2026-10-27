@@ -89,6 +89,7 @@ echo "Prebuilding isolated Direct CLI UI E2E artifacts before opening the bounde
 
 TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/healthmd-android-ui-e2e.XXXXXX")"
 RUST_LOG="$TEMP_DIR/rust-listener.log"
+START_GATE="$TEMP_DIR/instrumentation.ready"
 LISTENER_PID=""
 
 cleanup() {
@@ -118,7 +119,18 @@ echo "Running isolated Direct CLI UI E2E on $MODEL ($SERIAL), target $E2E_APP_ID
 echo "The gate covers wrong-code rejection, pair, reconnect, disconnect, status, forget, and selector-2 fallback."
 
 (
+    # Gradle configuration and task dependencies must finish before the Rust
+    # listener begins its unchanged 60-second first-connection window.
+    for _ in $(seq 1 300); do
+        [[ -f "$START_GATE" ]] && break
+        sleep 1
+    done
+    if [[ ! -f "$START_GATE" ]]; then
+        echo "Native E2E task did not reach the listener startup boundary." >&2
+        exit 1
+    fi
     cd "$CLI_ROOT"
+    exec env HEALTHMD_ANDROID_UI_E2E_GATE="$START_GATE" \
     HEALTHMD_ANDROID_UI_E2E_BIND="$BIND_ADDRESS" \
     HEALTHMD_ANDROID_UI_E2E_PORT="$PORT" \
     HEALTHMD_ANDROID_UI_E2E_PAIRING_CODE="$PAIRING_CODE" \
@@ -131,30 +143,16 @@ echo "The gate covers wrong-code rejection, pair, reconnect, disconnect, status,
 ) >"$RUST_LOG" 2>&1 &
 LISTENER_PID=$!
 
-ready=false
-for _ in $(seq 1 300); do
-    if grep -q "ANDROID_UI_E2E_LISTENER_READY:$PORT" "$RUST_LOG"; then
-        ready=true
-        break
-    fi
-    if ! kill -0 "$LISTENER_PID" 2>/dev/null; then
-        echo "Rust Direct CLI UI E2E listener exited before becoming ready." >&2
-        head -200 "$RUST_LOG" >&2
-        wait "$LISTENER_PID" || true
-        exit 1
-    fi
-    sleep 1
-done
-if [[ "$ready" != true ]]; then
-    echo "Rust Direct CLI UI E2E listener did not become ready within 300 seconds." >&2
-    head -200 "$RUST_LOG" >&2
-    exit 1
-fi
-
 set +e
 (
     cd "$ANDROID_ROOT"
+    HEALTHMD_ANDROID_UI_E2E_TASK=":app:connected${FLAVOR_TASK}E2eAndroidTest" \
+    HEALTHMD_ANDROID_UI_E2E_GATE="$START_GATE" \
+    HEALTHMD_ANDROID_UI_E2E_LOG="$RUST_LOG" \
+    HEALTHMD_ANDROID_UI_E2E_PID="$LISTENER_PID" \
+    HEALTHMD_ANDROID_UI_E2E_PORT="$PORT" \
     ANDROID_SERIAL="$SERIAL" NO_COLOR=1 TERM=dumb timeout 600 ./gradlew \
+        --init-script "$SCRIPT_DIR/direct-cli-ui-listener.init.gradle" \
         --no-daemon \
         -Pkotlin.compiler.execution.strategy=in-process \
         -PhealthmdInstrumentedTestBuildType=e2e \

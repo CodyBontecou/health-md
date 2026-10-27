@@ -1,0 +1,31 @@
+// Start the protocol lease at native-task admission, after Gradle configuration
+// and build dependencies. The Rust listener's connection deadlines are unchanged.
+def required = { name ->
+    def value = System.getenv(name)
+    if (!value) throw new GradleException("Missing isolated E2E listener boundary: ${name}")
+    value
+}
+def target = required('HEALTHMD_ANDROID_UI_E2E_TASK')
+def gate = new File(required('HEALTHMD_ANDROID_UI_E2E_GATE'))
+def log = new File(required('HEALTHMD_ANDROID_UI_E2E_LOG'))
+def listener = ProcessHandle.of(Long.parseLong(required('HEALTHMD_ANDROID_UI_E2E_PID')))
+def alive = { listener.isPresent() && listener.get().isAlive() }
+def marker = "ANDROID_UI_E2E_LISTENER_READY:${required('HEALTHMD_ANDROID_UI_E2E_PORT')}"
+gradle.taskGraph.whenReady { graph ->
+    def selected = graph.allTasks.findAll { it.path == target }
+    if (selected.size() != 1) throw new GradleException('Expected exactly one isolated E2E native task')
+    selected[0].outputs.upToDateWhen { false }
+    selected[0].outputs.doNotCacheIf('Live E2E requires fresh execution') { true }
+    selected[0].doFirst {
+        gate.text = 'ready\n'
+        // Same 300-second listener-start allowance as the shell runner used
+        // before this boundary; no protocol, UI or outer deadline is increased.
+        def deadline = System.nanoTime() + 300_000_000_000L
+        while (alive() && !(log.exists() && log.text.contains(marker)) && System.nanoTime() < deadline) {
+            Thread.sleep(100)
+        }
+        if (!alive() || !log.exists() || !log.text.contains(marker)) {
+            throw new GradleException('Isolated E2E listener failed to become ready')
+        }
+    }
+}
