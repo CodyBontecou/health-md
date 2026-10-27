@@ -220,6 +220,12 @@ async fn execute_expect_base(
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ExecutionPeerOutcome {
+    Complete,
+    DisconnectBeforeFinalize,
+}
+
 struct ExecutedPeerSnapshot {
     request: ExecuteRequest,
     accepted: ExecutionReceipt,
@@ -236,6 +242,7 @@ async fn answer_approved_execute(
     channel: &mut SecureChannel,
     negotiation: Negotiation,
     native: &mut NativeFake,
+    outcome: ExecutionPeerOutcome,
 ) -> ExecutedPeerSnapshot {
     use healthmd_protocol::models as a;
     let Message::ExecuteRequest(request) = channel.receive_v4(negotiation).await.unwrap().message
@@ -569,6 +576,27 @@ async fn answer_approved_execute(
             })
             .unwrap();
         previous = Some(digest.0.clone());
+    }
+    if outcome == ExecutionPeerOutcome::DisconnectBeforeFinalize {
+        // Both partitions are durably acknowledged, but neither finalization nor any
+        // source completion has been sent. Dropping this channel must fail Execute.
+        let completed = ExecutionReceipt {
+            artifact_count: 2,
+            committed_partition_count: 2,
+            frontier_sha256: frontier.sha256().clone(),
+            manifest_sha256: manifest_digest,
+            source_acknowledged: true,
+            status: ExecutionReceiptStatus::Complete,
+            ..accepted.clone()
+        };
+        return ExecutedPeerSnapshot {
+            request,
+            accepted,
+            manifest,
+            session,
+            last_transfer,
+            completed,
+        };
     }
     execute_send_base(
         channel,
@@ -1042,8 +1070,17 @@ async fn actual_resume_backend_rejects_missing_job_before_listener_or_output() {
 // Keep both public transports and exact independently established decisions in one tracer.
 #[allow(clippy::too_many_lines)]
 #[tokio::test]
-async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_both_platforms() {
-    for platform in [PeerPlatform::Apple, PeerPlatform::Android] {
+async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
+    for (platform, outcome) in [PeerPlatform::Apple, PeerPlatform::Android]
+        .into_iter()
+        .flat_map(|platform| {
+            [
+                ExecutionPeerOutcome::Complete,
+                ExecutionPeerOutcome::DisconnectBeforeFinalize,
+            ]
+            .map(|outcome| (platform.clone(), outcome))
+        })
+    {
         let temporary = tempfile::TempDir::new().unwrap();
         let root = std::fs::canonicalize(temporary.path()).unwrap();
         let credentials = InjectedCredentials::default();
@@ -1225,8 +1262,9 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
             let mut executions = Vec::new();
             for _ in 0..2 {
                 let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
-                executions
-                    .push(answer_approved_execute(&mut channel, negotiation, &mut native).await);
+                executions.push(
+                    answer_approved_execute(&mut channel, negotiation, &mut native, outcome).await,
+                );
             }
             for execution in executions {
                 let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
@@ -1285,16 +1323,47 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
         .await;
         assert_eq!(cli_approval, mcp_approval);
         let cli_input = serde_json::json!({"plan_id":execution_plan_id,"job_id":id(200),"idempotency_key":id(201),"request_id":id(202)});
-        let cli_execution = crate::mcp::execute_agent_operation(
+        let cli_result = crate::mcp::execute_agent_operation(
             Arc::clone(&backend),
             "healthmd_export_execute",
             &serde_json::to_vec(&cli_input).unwrap(),
             CancellationToken::new(),
         )
-        .await
-        .unwrap();
+        .await;
+        let cli_execution = if outcome == ExecutionPeerOutcome::Complete {
+            cli_result.unwrap()
+        } else {
+            assert!(
+                cli_result.is_err(),
+                "Interrupted Execute cannot report completion"
+            );
+            Value::Null
+        };
         let mcp_input = serde_json::json!({"plan_id":execution_plan_id,"job_id":id(203),"idempotency_key":id(204),"request_id":id(205)});
-        let mcp_execution = rpc_call(&rpc, "healthmd_export_execute", mcp_input, 3).await;
+        let mcp_execution = if outcome == ExecutionPeerOutcome::Complete {
+            rpc_call(&rpc, "healthmd_export_execute", mcp_input, 3).await
+        } else {
+            let raw = serde_json::json!({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"healthmd_export_execute","arguments":mcp_input}}).to_string();
+            let response: Value =
+                serde_json::from_str(&rpc.handle(&raw, CancellationToken::new()).await.unwrap())
+                    .unwrap();
+            assert!(response.get("error").is_none());
+            assert_eq!(
+                response["result"]["isError"], true,
+                "Interrupted MCP Execute cannot report completion"
+            );
+            Value::Null
+        };
+        // Durable host commits can precede source completion. Preserve their exact bytes
+        // across reconnect; an interrupted call still cannot return a terminal receipt.
+        let before_recovery: Vec<_> = execution_paths
+            .iter()
+            .map(|path| {
+                let bytes = std::fs::read(output.join(&path.0)).unwrap();
+                assert_eq!(bytes, b"{\"synthetic\":true}");
+                bytes
+            })
+            .collect();
         let cli_resume = crate::mcp::execute_agent_operation(
             Arc::clone(&backend),
             "healthmd_export_execution_resume",
@@ -1310,20 +1379,19 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
             4,
         )
         .await;
-        assert_eq!(cli_resume, cli_execution);
-        assert_eq!(mcp_resume, mcp_execution);
-        for result in [&cli_execution, &mcp_execution] {
+        if outcome == ExecutionPeerOutcome::Complete {
+            assert_eq!(cli_resume, cli_execution);
+            assert_eq!(mcp_resume, mcp_execution);
+        }
+        for result in [&cli_resume, &mcp_resume] {
             assert_eq!(result["status"], "complete");
             assert_eq!(result["source_acknowledged"], true);
             assert_eq!(result["artifact_count"], 2);
             assert_eq!(result["committed_partition_count"], 2);
             assert_eq!(result["binding"], cli_approval["binding"]);
         }
-        for path in execution_paths {
-            assert_eq!(
-                std::fs::read(output.join(path.0)).unwrap(),
-                b"{\"synthetic\":true}"
-            );
+        for (path, before) in execution_paths.iter().zip(&before_recovery) {
+            assert_eq!(&std::fs::read(output.join(&path.0)).unwrap(), before);
         }
         source.await.unwrap();
         assert_eq!(
