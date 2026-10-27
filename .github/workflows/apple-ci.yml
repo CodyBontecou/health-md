@@ -493,6 +493,9 @@ jobs:
           retention-days: 14
 
   test-macos:
+    # Documentation checks reuse the coverage build's compilation profile.
+    env:
+      MACOS_CODE_COVERAGE: 'YES'
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.macos == 'true' }}
     # Same SDK27 toolchain and single prepared core as iOS.

@@ -27,12 +27,13 @@ Health.md uses public HealthKit/WorkoutKit APIs only. Normal local exports do no
 
 For many read types, HealthKit intentionally does not tell an app whether access was denied. A denied read can look like a successful query with zero records. Health.md reports the public result and cannot bypass or reliably distinguish that privacy behavior.
 
-Therefore:
+On OS 27 and later, the production adapter uses HealthKit's [`earliestAuthorizedSampleDate(for:)`](https://developer.apple.com/documentation/healthkit/hkhealthstore/earliestauthorizedsampledate(for:)) API to assess the exact selected types and their dependencies. Returned dates limit sample **end** dates. Omitted types, an empty response, failures, unavailable APIs and unassessed types remain explicit uncertainty; they never prove unrestricted history or a denied read.
 
-- `success` + `record_count: 0` means the query completed empty from the app's perspective;
-- it is not proof the user has no Health data;
-- `failure`, `unsupported`, `skipped`, and `cancelled` remain distinct diagnostics;
-- partial capture is never labeled complete.
+**All Time** means all readable data in the selected scope. Earliest-date discovery must complete for every selected metric; a partial query cannot supply a successful sibling's range. Discovery freezes the export time zone, rejects changed selections and cancellation, and does not turn failed or empty discovery into Today with an All Time label.
+
+The separate capture-time assessment binds historical-access evidence to the exact selection and operation. Known limitations and unknown coverage remain visible in native warnings and the existing query/export history extensions. Interactive exports retain the explicit Continue Unverified/Cancel decision for a slow assessment and revalidate readiness before capture. Portable and paired-Mac operations retain their existing request/peer/scope-bound observations and recovery validation. Date discovery itself makes no full-history completeness claim.
+
+The legacy compatibility assessment reserves `full_history` for affirmative evidence; its boundary-only adapter cannot produce that state. Current native and transport behavior follows the [history assessment implementation](../testing/history-authorization-implementation.md) and [export-history contract](../../../../packages/contracts/export-history/v1/README.md).
 
 ## Separate authorization and capabilities
 
@@ -71,6 +72,9 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 |---|---|---|
 | Ordinary metric missing | Permission off, metric off, no data, or read hidden | Check Health app, selection, and manifest. |
 | Empty query despite known data | HealthKit may be hiding denied read access | Revisit Apple Health permissions; Health.md cannot distinguish denial. |
+| History warning reports a limited boundary | OS 27 reports an earliest readable sample-end date for a selected type | Review Health access or export the readable scope with its limitation retained. Earlier data remains unknown. |
+| History warning reports unknown or unavailable evidence | The API cannot establish unrestricted history for this selected scope | Review Health access. A slow interactive assessment retains Continue Unverified/Cancel; no result becomes proof of full history. |
+| History state is `api_unavailable` | The runtime or app build cannot call the history-boundary API, or the query is local to Mac | Treat full-history completeness as unverified and use explicit ranges. OS 27 alone is insufficient; the iPhone app must also be built with a supported SDK. |
 | Medication/Vision locked | Unsupported OS or selector incomplete | Use supported OS and complete separate selection. |
 | Clinical record metric unavailable | Clinical Health Records are omitted from this App Store build | Use an ordinary Apple Health metric; clinical access may return in a future reviewed release. |
 | Archive partial | One requested branch failed/skipped/unsupported/cancelled | Inspect manifest and retry recoverable paths. |
@@ -86,5 +90,7 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 
 - `HealthKitRecordCatalog` derives standard authorization from reviewed runtime-available descriptors.
 - `HealthKitManager` keeps standard, medication, vision, document, verifiable, and WorkoutKit paths separate; the document/clinical paths are source-gated off in current App Store builds.
+- Native iPhone/iPad **All Time** range resolution uses `NativeExportDateRangeResolver` for complete selected-query discovery in the frozen time zone. The existing execution-selection coordinator independently assesses and binds history evidence before capture. Saved dates, Preview, Connected Mac and API exports preserve selection identity, ordinary readiness/quota checks and request-bound historical-access evidence.
 - Errors are isolated and safely described without logging clinical content/PHI.
 - macOS does not query HealthKit; iPhone prepares local/API/Connected Mac records.
+- Production history assessment uses the SDK 27-qualified adapter with runtime availability checks. The older compatibility adapter retains its explicit `HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION` SDK-family gate; an unavailable adapter reports uncertainty. Neither path turns an omitted boundary into unrestricted-history proof. Native qualification must use the supported SDK; do not disable that requirement to make an older local SDK pass.

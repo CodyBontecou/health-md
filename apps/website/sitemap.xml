@@ -240,6 +240,26 @@
   <!-- END GENERATED LOCALIZED LEGAL URLS -->
   <!-- BEGIN GENERATED VISUALIZATION URLS -->
   <url>
+    <loc>https://healthmd.app/visualizations/whoop/whoop-recovery-strain/theme-colors/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/visualizations/whoop/whoop-sleep-need/theme-colors/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/visualizations/whoop/whoop-sleep-trends/theme-colors/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/visualizations/whoop/whoop-workout-strain/theme-colors/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://healthmd.app/visualizations/overview-trends/intro-stats/theme-colors/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

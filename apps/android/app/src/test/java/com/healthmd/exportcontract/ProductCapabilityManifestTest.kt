@@ -153,6 +153,7 @@ class ProductCapabilityManifestTest {
             "apple.wrist-temperature",
             "apple.hearing-and-symptoms",
             "apple.typed-whoop-provider-section",
+            "authorization.history-window-detection",
         )
 
         val androidCapabilities = setOf(

@@ -1467,6 +1467,8 @@ final class IPhoneDirectFileExportProducer {
                     "The iPhone could not prove complete earliest-date coverage."
                 )
             }
+            // Range discovery covers readable queries. The existing capture-time
+            // history observation separately binds permission uncertainty to this request.
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = sourceTimeZone
             let end = calendar.startOfDay(for: Date())

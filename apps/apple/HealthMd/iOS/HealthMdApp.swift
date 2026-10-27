@@ -400,6 +400,36 @@ struct HealthMdApp: App {
         }
     }
 
+    /// Keep the status subtree independently type-checked from the root scene.
+    @ViewBuilder
+    private var iPadBottomStatus: some View {
+        if UIDevice.current.userInterfaceIdiom == .pad,
+           (configurationProtection.blockedChangeToastID != nil
+            || notificationExportActivity.snapshot != nil
+            || cliExportActivity.snapshot != nil) {
+            VStack(spacing: Spacing.s2) {
+                ConfigurationProtectionToast(configurationProtection: configurationProtection)
+
+                Group {
+                    if let snapshot = notificationExportActivity.snapshot {
+                        NotificationExportActivityBanner(
+                            snapshot: snapshot,
+                            onCancel: snapshot.phase.allowsCancellation
+                                ? { schedulingManager.cancelNotificationExport(operationID: snapshot.operationID) }
+                                : nil
+                        )
+                    } else if let snapshot = cliExportActivity.snapshot {
+                        CLIExportActivityBanner(snapshot: snapshot)
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.top, Spacing.s2)
+            .padding(.bottom, Spacing.s2)
+            .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -434,27 +464,12 @@ struct HealthMdApp: App {
             } message: {
                 Text(sharedSetupCoordinator.errorMessage ?? "")
             }
-                        .environmentObject(configurationProtection)
+            .environmentObject(configurationProtection)
             // Keep native bordered controls aligned with the 6px Geist control radius
             // instead of SwiftUI's default capsule shape.
             .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Group {
-                    if let snapshot = notificationExportActivity.snapshot {
-                        NotificationExportActivityBanner(
-                            snapshot: snapshot,
-                            onCancel: snapshot.phase.allowsCancellation
-                                ? { schedulingManager.cancelNotificationExport(operationID: snapshot.operationID) }
-                                : nil
-                        )
-                    } else if let snapshot = cliExportActivity.snapshot {
-                        CLIExportActivityBanner(snapshot: snapshot)
-                    }
-                }
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.s2)
-                .padding(.bottom, Spacing.s1)
-                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                iPadBottomStatus
             }
             .animation(
                 reduceMotion ? nil : AnimationTimings.standard,
@@ -464,16 +479,10 @@ struct HealthMdApp: App {
                 reduceMotion ? nil : AnimationTimings.standard,
                 value: cliExportActivity.snapshot?.jobID
             )
-            .overlay(alignment: .top) {
-                ConfigurationProtectionToast(configurationProtection: configurationProtection)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.top, Spacing.s2)
-                    .animation(
-                        reduceMotion ? nil : AnimationTimings.standard,
-                        value: configurationProtection.blockedChangeToastID
-                    )
-            }
-            .zIndex(configurationProtection.blockedChangeToastID == nil ? 0 : 1)
+            .animation(
+                reduceMotion ? nil : AnimationTimings.standard,
+                value: configurationProtection.blockedChangeToastID
+            )
             #if DEBUG
             .sheet(isPresented: $exportPerformanceLab.isConfirmationPresented) {
                 IPhoneExportPerformanceLabConfirmationView(

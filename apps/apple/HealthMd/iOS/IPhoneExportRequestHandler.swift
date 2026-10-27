@@ -277,6 +277,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         )))
                         return
                     }
+                    // Preserve main's readable-range resolution. The durable capture
+                    // observation below carries history uncertainty for the exact job.
                     if let earliestDate = discovery.earliestDate {
                         earliestCandidates.append(earliestDate)
                     }

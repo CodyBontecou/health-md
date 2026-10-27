@@ -882,6 +882,29 @@
       ]
     },
     {
+      "id": "authorization.history-window-detection",
+      "name": "Authorized history window detection",
+      "classification": "apple_only",
+      "summary": "On OS 27+ with a supported HealthKit SDK build, report per-type earliest readable sample-end boundaries and preserve earlier history as unknown. All Time resolves complete readable query coverage without claiming unrestricted history; separate request-bound capture evidence retains limited, unknown, failed, unavailable and unassessed outcomes. Older runtimes and local Mac assessment remain unavailable, while connected iPhone exports preserve their existing scoped history observations.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Health Connect permission and history-access APIs do not expose a per-record-type user-selected earliest readable date equivalent to HealthKit earliestAuthorizedSampleDate(for:). Android continues to report its independently defined permission/history status without an Apple-shaped placeholder."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/HealthHistoryAuthorization.swift",
+        "apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift",
+        "apps/apple/HealthMd/Shared/Protocols/SystemHealthStoreAdapter.swift",
+        "apps/apple/HealthMd.xcodeproj/project.pbxproj",
+        "apps/apple/docs/features/healthkit-permissions.md"
+      ]
+    },
+    {
       "id": "setup.share-portable-configuration",
       "name": "Share My Setup",
       "classification": "planned",

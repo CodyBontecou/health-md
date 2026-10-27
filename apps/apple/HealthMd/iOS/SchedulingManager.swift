@@ -2823,6 +2823,7 @@ class SchedulingManager: ObservableObject {
                             && request.profileID == occurrence.profileID
                             && request.scheduledFireDate == occurrence.fireDate
                             && request.scheduledKind == occurrence.kind
+                            && request.recoveryGeneration == occurrence.recoveryGeneration
                     }
                 }
             } catch {

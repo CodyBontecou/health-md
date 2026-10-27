@@ -105,7 +105,7 @@ nonisolated enum AppleExportDetailPreset: String, CaseIterable, Identifiable, Se
         case .detailedTimeSeries:
             String(localized: "Detailed Time-Series", comment: "Export data-detail preset")
         case .losslessHealthRecords:
-            String(localized: "Lossless Health Records", comment: "Export data-detail preset")
+            String(localized: "Lossless", comment: "Export data-detail preset")
         case .archiveOnly:
             String(localized: "HealthKit Archive Only", comment: "Advanced export data-detail preset")
         }

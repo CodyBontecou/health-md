@@ -188,6 +188,7 @@ canvas { display: block; max-width: 100%; border: 1px solid var(--color-gray-alp
 .html-preview { width: min(960px, 100%); justify-self: center; border: 1px solid var(--color-gray-alpha-200); border-radius: var(--radius-sm); padding: var(--space-4); background: var(--color-background-100); color: var(--color-primary); }
 .render-error { width: 100%; border: 1px solid var(--color-red-800); border-radius: var(--radius-sm); padding: var(--space-4); color: var(--color-red-800); font-size: 14px; }
 .health-md-viz-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); border-top: 1px solid var(--color-gray-alpha-200); padding: var(--space-4); }
+.health-md-viz-stats .health-md-whoop-note { grid-column: 1 / -1; flex: 0 0 100%; }
 .health-md-stat-box { border: 1px solid var(--color-gray-alpha-200); border-radius: var(--radius-sm); padding: var(--space-3); background: var(--color-gray-alpha-100); }
 .health-md-stat-value { color: var(--color-primary); font-family: var(--font-mono); font-size: 20px; font-weight: 600; letter-spacing: -0.04em; line-height: 26px; }
 .health-md-stat-label { margin-top: var(--space-1); color: var(--color-secondary); font-size: 12px; line-height: 16px; }
@@ -422,6 +423,8 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
   .canvas-shell { min-height: 0; padding: var(--space-2); }
   .html-preview { padding: var(--space-3); }
   .health-md-viz-stats { display: flex; grid-template-columns: none; gap: var(--space-2); overflow-x: auto; padding: var(--space-2); }
+  .health-md-viz-stats.health-md-whoop-stats { flex-wrap: wrap; overflow-x: visible; }
+  .health-md-whoop-stats .health-md-stat-box { flex: 1 1 116px; }
   .health-md-stat-box { min-width: 116px; padding: var(--space-2); }
   .health-md-stat-value { font-size: 17px; line-height: 22px; }
   .health-md-stat-label { font-size: 11px; line-height: 14px; }
