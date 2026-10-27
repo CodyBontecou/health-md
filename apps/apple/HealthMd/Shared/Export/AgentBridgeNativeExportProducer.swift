@@ -254,9 +254,10 @@ extension AgentBridgeNativePlanningSession {
 
     /// Native composition supplies its original SDK manager; wire metadata cannot replace it.
     func receiveAndHandleExecutionNext(on channel: DirectSecureChannel, manager: HealthKitManager,
+        confirmedStopIsHandled: Bool = false,
         core: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor(profile: .appleHealthDataV8)
     ) async throws -> AgentBridgeSecurePayload? {
-        try await receiveAndHandleResumedNext(on: channel) { request, context in
+        try await receiveAndHandleResumedNext(on: channel, confirmedStopIsHandled: confirmedStopIsHandled) { request, context in
             try await AgentBridgeNativeExportProducer.prepareTransfer(request: request, manager: manager, context: context, core: core)
         }
     }

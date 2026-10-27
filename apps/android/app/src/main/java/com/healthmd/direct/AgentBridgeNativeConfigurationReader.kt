@@ -351,7 +351,7 @@ internal class AgentBridgeNativePlanningSession(
 
     /** One original reader admits only an optional base ACK immediately followed by Resume.
      * No ACK by itself advances native state or supplies a replacement Execute. */
-    suspend fun receiveAndHandleResumedNext(channel: DirectSecureChannel, caller: Job, confirmCompletion: Boolean = true,
+    suspend fun receiveAndHandleResumedNext(channel: DirectSecureChannel, caller: Job, confirmCompletion: Boolean = true, confirmedStopIsHandled: Boolean = false,
         prepare: suspend (AgentBridgeExecuteRequest, AgentBridgeNativeCaptureContext) -> AgentBridgeNativePreparedTransfer): ReceivedAgentBridgePayload? {
         if (responseChannel !== channel || currentCoroutineContext().job !== caller)
             throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
@@ -392,7 +392,8 @@ internal class AgentBridgeNativePlanningSession(
             }
             // The intentional public CANCELLED from this private proof must bypass the
             // ordinary failure catch; cancellation alone never enters this branch.
-            finishConfirmedTransferStop(stop, resume.jobId, resume.requestSha256, caller)
+            if (confirmedStopIsHandled) requireConfirmedTransferStop(stop, resume.jobId, resume.requestSha256, caller)
+            else finishConfirmedTransferStop(stop, resume.jobId, resume.requestSha256, caller)
             return null
         } catch (failure: Throwable) {
             wireAbandoned = true; runCatching { channel.close() }; caller.ensureActive(); throw failure

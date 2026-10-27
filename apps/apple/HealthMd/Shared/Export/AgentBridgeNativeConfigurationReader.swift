@@ -291,7 +291,7 @@ final class AgentBridgeNativePlanningSession {
     /// One original reader consumes at most one base ACK followed immediately by Resume.
     /// The ACK is comparison metadata only; retained admission validates it with the complete
     /// signed original job before any source progress or acceptance is returned.
-    func receiveAndHandleResumedNext(on channel: DirectSecureChannel, confirmCompletion: Bool = true,
+    func receiveAndHandleResumedNext(on channel: DirectSecureChannel, confirmCompletion: Bool = true, confirmedStopIsHandled: Bool = false,
         prepare: @escaping @MainActor @Sendable (AgentBridgeExecute, AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
     ) async throws -> AgentBridgeSecurePayload? {
         guard responseChannel === channel else { throw AgentBridgeValidationError.bindingChanged }
@@ -331,7 +331,11 @@ final class AgentBridgeNativePlanningSession {
             }
             // Only the private, source-proven result bypasses ordinary abandonment. Its
             // intentional public cancelled outcome must not be caught as an unsafe failure.
-            try finishConfirmedTransferStop(stop, jobID: resume.jobId.rawValue, requestSHA256: resume.requestSha256.rawValue)
+            if confirmedStopIsHandled {
+                try requireConfirmedTransferStop(stop, jobID: resume.jobId.rawValue, requestSHA256: resume.requestSha256.rawValue)
+            } else {
+                try finishConfirmedTransferStop(stop, jobID: resume.jobId.rawValue, requestSHA256: resume.requestSha256.rawValue)
+            }
             return nil
         } catch {
             wireAbandoned = true; channel.cancel(); throw error

@@ -200,8 +200,9 @@ internal suspend fun AgentBridgeNativePlanningSession.sendResumedExecutionExport
 
 /** SDK ownership comes from native composition; no wire value selects a manager or renderer. */
 internal suspend fun AgentBridgeNativePlanningSession.receiveAndHandleExecutionNext(channel: DirectSecureChannel,
-    manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer()): ReceivedAgentBridgePayload? =
-    receiveAndHandleResumedNext(channel, kotlinx.coroutines.currentCoroutineContext().job) { request, context ->
+    manager: HealthConnectManager, renderer: AgentBridgeNativeDayRenderer = AgentBridgeNativeDayRenderer(),
+    confirmedStopIsHandled: Boolean = false): ReceivedAgentBridgePayload? =
+    receiveAndHandleResumedNext(channel, kotlinx.coroutines.currentCoroutineContext().job, confirmedStopIsHandled = confirmedStopIsHandled) { request, context ->
         AgentBridgeNativeExportProducer.prepareTransfer(request, manager, context, renderer)
     }
 

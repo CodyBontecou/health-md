@@ -1075,6 +1075,7 @@ class AgentBridgeNativeConfigurationReaderTest {
     }
     @Test fun `native wire Resume retains original acceptance after plan expiry`() = runBlocking { checkNativeTransferSender("wire-expired-plan") }
     @Test fun `native wire Resume Stop preserves channel for exact receipt replay`() = runBlocking { checkNativeTransferSender("wire-stop") }
+    @Test fun `native wire Resume handled Stop returns to controller and preserves exact receipt replay`() = runBlocking { checkNativeTransferSender("wire-stop-handled") }
 
     @Test fun `native completion rejects changed input with valid commit key`() = runBlocking { checkNativeTransferSender("complete-bad-input") }
     @Test fun `native completion rejects reordered receipts`() = runBlocking { checkNativeTransferSender("complete-order") }
@@ -1118,7 +1119,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 coVerify(exactly = 2) { client.aggregate(any()) }
                 return@withNativeExportPreparation
             }
-            val stopTransfer = mode.startsWith("stop-") || mode == "wire-stop"
+            val stopTransfer = mode.startsWith("stop-") || mode.startsWith("wire-stop")
             val keepalive = mode.contains("keepalive")
             val wireResume = mode.startsWith("wire-")
             val wireInvalid = mode in setOf("wire-bad-binding", "wire-bad-ack", "wire-double-ack")
@@ -1292,7 +1293,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 var stopped = false
                 var failure: Throwable? = null
                 try {
-                    if (wireResume) reconnect.receiveAndHandleExecutionNext(channel, manager, forbidden)
+                    if (wireResume) reconnect.receiveAndHandleExecutionNext(channel, manager, forbidden, confirmedStopIsHandled = mode == "wire-stop-handled")
                     else if (mode == "stop-resume") reconnect.sendResumedExecutionExport(requireNotNull(resumeEnvelope), manager, renderer = forbidden)
                     else if (completion) reconnect.sendExecutionExport(request, manager, true, forbidden)
                     else reconnect.sendTransferExport(request, manager, true, forbidden)
@@ -1307,7 +1308,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                     catch (_: AgentBridgeException) { assertThat(agent.size + base.size + chunks.size).isEqualTo(writes) }
                     if (mode == "stop-foreign") assertThat(f.store.access { it!!.state.cancellationIntents.orEmpty() }).isEmpty()
                 } else {
-                    if (mode == "stop-complete") { assertThat(failure).isNull(); assertThat(stopped).isFalse() }
+                    if (mode == "stop-complete" || mode == "wire-stop-handled") { assertThat(failure).isNull(); assertThat(stopped).isFalse() }
                     else { assertThat(stopped).isTrue(); assertThat(currentCoroutineContext().job.isActive).isTrue() }
                     val receipt = agent.last().payload as AgentBridgeExecutionReceipt
                     assertThat(receipt.sourceAcknowledged).isTrue()

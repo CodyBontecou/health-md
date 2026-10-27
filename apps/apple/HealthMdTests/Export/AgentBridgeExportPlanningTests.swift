@@ -1778,6 +1778,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     }
     func testNativeWireResumePreservesOriginalAcceptanceAfterPlanExpiry() async throws { try await checkNativeTransferSender("wire-expired-plan") }
     func testNativeWireResumeStopPreservesChannelForExactReceiptReplay() async throws { try await checkNativeTransferSender("wire-stop") }
+    func testNativeWireResumeHandledStopReturnsToControllerAndPreservesExactReceiptReplay() async throws { try await checkNativeTransferSender("wire-stop-handled") }
 
     func testNativeCompletionRejectsChangedInputWithValidCommitKey() async throws { try await checkNativeTransferSender("complete-bad-input") }
     func testNativeCompletionRejectsReorderedReceipts() async throws { try await checkNativeTransferSender("complete-order") }
@@ -1820,7 +1821,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 XCTAssertEqual(try Data(contentsOf: file), before); XCTAssertEqual(store.queriedSumIdentifiers.count, 2)
                 return
             }
-            let stopTransfer = mode.hasPrefix("stop-") || mode == "wire-stop"
+            let stopTransfer = mode.hasPrefix("stop-") || mode.hasPrefix("wire-stop")
             let keepalive = mode.contains("keepalive")
             let wireResume = mode.hasPrefix("wire-")
             let wireInvalid = ["wire-bad-binding", "wire-bad-ack", "wire-double-ack"].contains(mode)
@@ -2013,7 +2014,8 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             if stopTransfer {
                 var failure: Error?
                 do {
-                    if wireResume { _ = try await reconnect.receiveAndHandleExecutionNext(on: channel, manager: manager, core: BridgeRenderTamperCore(mode: "forbid")) }
+                    if wireResume { _ = try await reconnect.receiveAndHandleExecutionNext(on: channel, manager: manager,
+                        confirmedStopIsHandled: mode == "wire-stop-handled", core: BridgeRenderTamperCore(mode: "forbid")) }
                     else if mode == "stop-resume" { try await reconnect.sendResumedExecutionExport(XCTUnwrap(resumeEnvelope), manager: manager, core: BridgeRenderTamperCore(mode: "forbid")) }
                     else if completion { try await reconnect.sendExecutionExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid")) }
                     else { try await reconnect.sendTransferExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid")) }
@@ -2040,7 +2042,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                     catch { XCTAssertEqual(wire.packets.count, count) }
                     if mode == "stop-foreign" { XCTAssertTrue(try rig.store.snapshot().cancellationIntents?.isEmpty ?? true) }
                 } else {
-                    if mode == "stop-complete" { XCTAssertNil(failure) }
+                    if mode == "stop-complete" || mode == "wire-stop-handled" { XCTAssertNil(failure) }
                     else { XCTAssertEqual(failure as? AgentBridgeValidationError, .cancelled); XCTAssertFalse(Task.isCancelled) }
                     let receipt = try XCTUnwrap(receipts().last)
                     XCTAssertTrue(receipt.sourceAcknowledged); XCTAssertEqual(receipt.requestSha256.rawValue, original.export.requestSHA256)
