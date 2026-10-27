@@ -42,3 +42,13 @@
 }
 
 .csv-page .about-content a.proof-button { color: #fff; text-decoration: none; }
+
+/* Paired screenshots retain readable captions and open at full size. */
+.csv-walkthrough-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 32px; margin: 24px 0; }
+.csv-walkthrough-grid .guide-screen { width: 100%; margin: 0; }
+.csv-walkthrough-grid .guide-screen a { display: block; }
+.csv-walkthrough-grid .guide-screen img { width: 100%; max-width: 320px; height: auto; margin: 0 auto; }
+.csv-workbook-preview { margin: 24px 0; }
+.csv-workbook-preview img { display: block; width: 100%; height: auto; border: 1px solid var(--about-line); border-radius: 8px; }
+.csv-workbook-preview figcaption { margin-top: 12px; color: #64646c; font-size: 14px; line-height: 20px; }
+@media (max-width: 620px) { .csv-walkthrough-grid { grid-template-columns: minmax(0, 1fr); } }
