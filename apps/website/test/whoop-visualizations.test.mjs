@@ -154,17 +154,22 @@ test("the actual shipped browser bundle parses and renders all four WHOOP previe
   }
 });
 
-test("all WHOOP palette routes, sitemap entries, and translated examples are generated", async () => {
+test("WHOOP share routes preserve one canonical sitemap representative and translated examples", async () => {
   const sitemap = await read("../sitemap.xml");
   for (const id of ids) {
+    const canonical = `https://healthmd.app/visualizations/whoop/${id}/theme-colors/`;
+    assert.equal(sitemap.split(`<loc>${canonical}</loc>`).length - 1, 1);
     for (const category of ["whoop", "all-health-data"]) {
       for (const color of colors) {
         const route = `/visualizations/${category}/${id}/${color}-colors/`;
         const page = await read(`..${route}index.html`);
-        assert.ok(page.includes(`rel="canonical" href="https://healthmd.app${route}"`));
+        assert.ok(page.includes(`rel="canonical" href="${canonical}"`));
+        assert.ok(page.includes(`property="og:url" content="https://healthmd.app${route}"`));
+        const schema = JSON.parse(page.match(/<script type="application\/ld\+json" data-viz-schema>(.*?)<\/script>/s)[1]);
+        assert.equal(schema.url, canonical);
         assert.match(page, /WHOOP connection requirements/);
         assert.ok(page.includes("data-whoop-preview-note>"));
-        assert.ok(sitemap.includes(`https://healthmd.app${route}`));
+        assert.equal(sitemap.includes(`<loc>https://healthmd.app${route}</loc>`), `https://healthmd.app${route}` === canonical);
         assert.ok(page.includes(`https://healthmd.app/assets/visualization-og/${id}/${color}-colors-dark-theme.png`));
       }
     }

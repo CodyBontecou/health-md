@@ -38,8 +38,8 @@ const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/componen
 const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/vertical-tables.js"), "utf8");
 
 test("landing page makes local-first health data movement the primary message", () => {
-  assert.match(index, /Move Your Health Forward/);
-  assert.match(index, /Move your<br>health forward\./);
+  assert.match(index, /<title>Export Apple Health and Health Connect \| Health\.md<\/title>/);
+  assert.match(index, /Export your<br>health data\./);
   assert.match(index, /A private bridge for your health data<br>to your files, scripts, and agents\./);
   assert.match(index, /Your data\. Your rules\./);
   assert.match(index, /Local-first by default\.[\s\S]*optional single-owner Health\.md Cloud pilot[\s\S]*no public signup/);
@@ -90,12 +90,12 @@ test("landing closes with a localized download decision and compact footer", () 
   const footer = index.slice(index.indexOf('<footer class="site-footer">'));
 
   assert.match(downloadSection, /Take your health data with you\./);
-  assert.match(downloadSection, /Google Play: try 5 exports free, then make one lifetime purchase\. F-Droid: Full Access is included\./);
+  assert.match(downloadSection, /Google Play offers free manual exports, then a one-time lifetime purchase\. F-Droid catalog publication is pending\./);
   assert.match(downloadSection, /class="download-actions" aria-label="Download Health\.md"/);
   assert.equal((downloadSection.match(/class="hero-store-badge /g) ?? []).length, 3);
   assert.match(downloadSection, /href="https:\/\/apps\.apple\.com\/us\/app\/health-md\/id6757763969"/);
   assert.match(downloadSection, /href="https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.healthmd\.android"/);
-  assert.match(downloadSection, /href="https:\/\/f-droid\.org\/packages\/com\.healthmd\.android\/"/);
+  assert.match(downloadSection, /href="\/docs\/android\/#distribution-status"/);
   assert.match(downloadSection, /Switching channels requires uninstalling the app and does not migrate local app state\./);
 
   assert.match(footer, /<nav class="footer-links" aria-label="Footer navigation">/);
@@ -289,7 +289,7 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
 
 test("landing experience follows the reference's single-screen desktop composition", () => {
   assert.match(index, /<div class="header-nav">/);
-  assert.match(index, /<nav aria-label="Documentation"><a class="header-docs-link" href="docs\/">Docs<\/a><\/nav>/);
+  assert.match(index, /<nav aria-label="Main navigation">\s*<a class="header-docs-link" href="docs\/">Docs<\/a>\s*<a class="header-docs-link" href="\/blog\/" hreflang="en">Guides<\/a>\s*<\/nav>/);
   assert.doesNotMatch(index, /<!-- HEALTHMD_LANGUAGE_SELECTOR -->/);
   assert.doesNotMatch(index.slice(index.indexOf('<header'), index.indexOf('</header>')), /language-menu|language-selector/);
   assert.doesNotMatch(index, /↗/);
