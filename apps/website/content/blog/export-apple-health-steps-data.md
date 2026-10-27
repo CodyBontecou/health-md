@@ -3,12 +3,12 @@ title: "How to export Apple Health steps data"
 description: "Export Apple Health steps to CSV or JSON with Health.md. Verify daily totals, import dates into a spreadsheet, and understand source records, duplicates, and missing days."
 lead: "Enable Steps in Health.md, preview one known day, and export its daily total as CSV or JSON. Use the daily summary for trends and the canonical archive when source-record identity matters."
 date: "2026-10-26"
-updated: "2026-10-26"
+updated: "2026-10-27"
 category: "Workflow guide"
 related:
   - apple-health-to-excel
   - export-apple-health-workouts
-  - export-apple-health-data-to-obsidian
+  - apple-health-to-python
 draft: false
 verified: "2026-10-26"
 verified_by: "Codex (agent)"
