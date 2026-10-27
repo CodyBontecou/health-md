@@ -118,6 +118,8 @@ enum Command {
     Execute(AgentExecuteArgs),
     /// Recover an existing approved Agent Bridge job using its immutable retained state.
     ResumeExecution(AgentExecuteArgs),
+    /// Stop a retained Agent Bridge job and inspect native source acknowledgement.
+    CancelExecution(AgentExecuteArgs),
     /// Resume an interrupted durable direct job.
     Resume(ResumeArgs),
     /// Request cancellation of a durable direct job.
@@ -1131,34 +1133,36 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
                 .await
                 .map(CommandSuccess::json)
         }
-        Command::Execute(options) => match options.arguments {
-            Some(arguments) => direct_agent(
-                AgentArgs {
-                    arguments,
-                    timeout_seconds: options.timeout_seconds,
-                },
+        Command::Execute(options) => {
+            direct_agent_control(
+                options,
                 "healthmd_export_execute",
+                guidance::execute,
                 device,
                 port,
             )
             .await
-            .map(CommandSuccess::json),
-            None => Ok(CommandSuccess::json(guidance::execute())),
-        },
-        Command::ResumeExecution(options) => match options.arguments {
-            Some(arguments) => direct_agent(
-                AgentArgs {
-                    arguments,
-                    timeout_seconds: options.timeout_seconds,
-                },
+        }
+        Command::ResumeExecution(options) => {
+            direct_agent_control(
+                options,
                 "healthmd_export_execution_resume",
+                guidance::resume_execution,
                 device,
                 port,
             )
             .await
-            .map(CommandSuccess::json),
-            None => Ok(CommandSuccess::json(guidance::resume_execution())),
-        },
+        }
+        Command::CancelExecution(options) => {
+            direct_agent_control(
+                options,
+                "healthmd_export_execution_cancel",
+                guidance::cancel_execution,
+                device,
+                port,
+            )
+            .await
+        }
         Command::Resume(options) => direct_resume(options, device, port).await,
         Command::Cancel(options) => direct_cancel(options, device, port)
             .await
@@ -1171,6 +1175,29 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
                 command_name(&command)
             ),
         }),
+    }
+}
+
+async fn direct_agent_control(
+    options: AgentExecuteArgs,
+    operation: &'static str,
+    guidance: fn() -> Value,
+    device: Option<Uuid>,
+    port: u16,
+) -> Result<CommandSuccess, CommandError> {
+    match options.arguments {
+        Some(arguments) => direct_agent(
+            AgentArgs {
+                arguments,
+                timeout_seconds: options.timeout_seconds,
+            },
+            operation,
+            device,
+            port,
+        )
+        .await
+        .map(CommandSuccess::json),
+        None => Ok(CommandSuccess::json(guidance())),
     }
 }
 
@@ -1192,6 +1219,9 @@ fn incomplete_command_guidance(cli: &Cli) -> Option<Value> {
             Some(guidance::query(options.operation.as_deref()))
         }
         Command::Execute(options) if options.arguments.is_none() => Some(guidance::execute()),
+        Command::CancelExecution(options) if options.arguments.is_none() => {
+            Some(guidance::cancel_execution())
+        }
         Command::ResumeExecution(options) if options.arguments.is_none() => {
             Some(guidance::resume_execution())
         }
@@ -2760,6 +2790,7 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Approval(_) => "approval",
         Command::Execute(_) => "execute",
         Command::ResumeExecution(_) => "resume-execution",
+        Command::CancelExecution(_) => "cancel-execution",
         Command::Resume(_) => "resume",
         Command::Cancel(_) => "cancel",
         Command::Direct(DirectArgs {
@@ -3617,5 +3648,26 @@ mod agent_resume_parser_tests {
         };
         assert_eq!(input.arguments.as_deref(), Some(raw));
         assert!(Cli::try_parse_from(["healthmd", "resume-execution", "--approve"]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod agent_cancel_parser_tests {
+    use super::*;
+    #[test]
+    fn cancel_execution_has_local_guidance_and_explicit_strict_arguments() {
+        let missing = Cli::try_parse_from(["healthmd", "cancel-execution"]).unwrap();
+        assert_eq!(
+            incomplete_command_guidance(&missing).unwrap()["request_sent"],
+            false
+        );
+        let raw = r#"{"job_id":"00000000-0000-4000-8000-000000000002"}"#;
+        let cli =
+            Cli::try_parse_from(["healthmd", "cancel-execution", "--arguments", raw]).unwrap();
+        let Command::CancelExecution(input) = cli.command else {
+            panic!("recovery command lost")
+        };
+        assert_eq!(input.arguments.as_deref(), Some(raw));
+        assert!(Cli::try_parse_from(["healthmd", "cancel-execution", "--approve"]).is_err());
     }
 }

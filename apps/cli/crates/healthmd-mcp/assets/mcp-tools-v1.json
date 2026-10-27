@@ -3979,6 +3979,33 @@
     },
     "annotations": {
       "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Request or replay Stop using only an existing job_id and signed retained state. Returns native acknowledgement or its authenticated historical receipt; native completion wins if already complete. Output is explicitly not verified by this operation. Local request cancellation or timeout is not source cancellation. Never recaptures, changes destination or renews grants. Requires the authorized local surface.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_execution_cancel",
+    "title": "Stop a retained Agent Bridge export"
+  },
+  {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": true,
       "idempotentHint": false,
       "openWorldHint": false,
       "readOnlyHint": false

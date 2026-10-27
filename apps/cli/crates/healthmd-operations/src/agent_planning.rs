@@ -193,6 +193,15 @@ impl ValidateShape for AgentResumeInput {
 pub fn agent_resume_from_bytes(raw: &[u8]) -> Result<AgentResumeInput, Error> {
     v4::decode_typed(raw)
 }
+/// Cancellation identifies the same retained job; no caller-supplied lifecycle or receipts.
+pub type AgentCancelInput = AgentResumeInput;
+/// Decode the fixed job-only Cancel DTO with duplicate/unknown field rejection.
+/// # Errors
+/// Invalid identifiers, ambiguous JSON and replacement authority reject.
+pub fn agent_cancel_from_bytes(raw: &[u8]) -> Result<AgentCancelInput, Error> {
+    v4::decode_typed(raw)
+}
+
 pub fn resume_input_schema() -> Value {
     let uuid = json!({"type":"string","pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"});
     json!({"type":"object","additionalProperties":false,"required":["job_id"],"properties":{"job_id":uuid}})
@@ -228,6 +237,7 @@ pub fn agent_rpc_bytes_valid(raw: &[u8]) -> bool {
         Some("healthmd_export_approval") => agent_approval_from_bytes(&bytes).is_ok(),
         Some("healthmd_export_execute") => agent_execute_from_bytes(&bytes).is_ok(),
         Some("healthmd_export_execution_resume") => agent_resume_from_bytes(&bytes).is_ok(),
+        Some("healthmd_export_execution_cancel") => agent_cancel_from_bytes(&bytes).is_ok(),
         _ => false,
     }
 }

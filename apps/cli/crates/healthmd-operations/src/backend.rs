@@ -263,6 +263,18 @@ pub trait HealthDataBackend: Send + Sync {
         ))
     }
 
+    /// Stop an existing job; receipt is native source state, never destination verification.
+    async fn cancel_approved_export(
+        &self,
+        _context: &CallContext,
+        _input: crate::AgentCancelInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        Err(BackendError::new(
+            "unsupported_capability",
+            "The selected source does not support retained Agent Bridge cancellation.",
+        ))
+    }
+
     async fn start_export(
         &self,
         _context: &CallContext,

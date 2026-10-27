@@ -26,6 +26,41 @@ pub(crate) use source_confirmation::read_source_confirmation;
 mod later_stop;
 pub(crate) use later_stop::PendingOutputStop;
 
+/// Decoder selection only: each selected reader must authenticate its complete evidence.
+#[derive(Clone, Copy)]
+pub(crate) enum RetainedCancellationHint {
+    Accepted,
+    Output,
+    Confirmed,
+}
+impl HostAuthorityStore {
+    pub(crate) fn retained_cancellation_hint(
+        &self,
+        job: &ControlUuid,
+    ) -> Result<RetainedCancellationHint, ClientError> {
+        job.validate_shape()?;
+        let dir = self.directory()?;
+        let output = match dir.symlink_metadata(format!("output-{}.json", job.0)) {
+            Ok(_) => true,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+            Err(error) => return Err(private::unavailable(error)),
+        };
+        let bytes =
+            private::read_private(&dir, &format!("attempt-{}.json", job.0), MAX_OUTPUT_BYTES)?;
+        let hint: serde_json::Value = private_json::decode(&bytes)?;
+        match (
+            output,
+            hint.pointer("/attempt/schema_version")
+                .and_then(serde_json::Value::as_u64),
+        ) {
+            (false, Some(2 | 3)) => Ok(RetainedCancellationHint::Accepted),
+            (true, Some(1 | 2 | 5 | 7)) => Ok(RetainedCancellationHint::Output),
+            (false, Some(4)) | (true, Some(6 | 8)) => Ok(RetainedCancellationHint::Confirmed),
+            _ => Err(Error::BindingChanged.into()),
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct NativeBinding {

@@ -507,6 +507,112 @@ impl HostPlanner {
         execution.receive_confirmed_execution().await
     }
 
+    /// Persist or replay local Stop intent before contacting the source. This uses existing
+    /// signed issuer facts and a caller-provided live trust/cancellation fence, never export
+    /// permission renewal. A returned proof is retained historical source state only.
+    /// # Errors
+    /// Missing/ambiguous evidence, wrong peer, lost key/trust, expiry or cancellation reject.
+    pub async fn prepare_retained_cancellation<F, Fut>(
+        &self,
+        expected_peer: &Peer,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+        mut fence: F,
+    ) -> Result<Option<crate::agent_bridge::SourceStopConfirmation>, ClientError>
+    where
+        F: FnMut() -> Fut + Copy,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        use crate::agent_host::output::{
+            OutputAdmission, PendingOutputStop, RetainedCancellationHint,
+        };
+        expected_peer.validate_shape()?;
+        fence().await?;
+        match self.store.retained_cancellation_hint(job)? {
+            RetainedCancellationHint::Accepted => {
+                let mut owner =
+                    OutputAdmission::open_retained_accepted(&self.store, job, clock).await?;
+                let (request, _) = owner.accepted_binding()?;
+                if request.plan.intent.peer != *expected_peer {
+                    return Err(Error::BindingChanged.into());
+                }
+                owner.persist_cancellation(clock, fence).await?;
+                Ok(None)
+            }
+            RetainedCancellationHint::Output => {
+                let _pending = Box::pin(PendingOutputStop::prepare_or_open_retained(
+                    &self.store,
+                    expected_peer,
+                    job,
+                    clock,
+                    fence,
+                ))
+                .await?;
+                Ok(None)
+            }
+            RetainedCancellationHint::Confirmed => {
+                let proof =
+                    Box::pin(self.store.retained_source_stop_confirmation(job, clock)).await?;
+                if proof.receipt().binding.peer != *expected_peer {
+                    return Err(Error::BindingChanged.into());
+                }
+                fence().await?;
+                let current = Box::pin(
+                    self.store
+                        .retained_source_stop_confirmation_fenced(job, clock, fence),
+                )
+                .await?;
+                if current.receipt() != proof.receipt() {
+                    return Err(Error::BindingChanged.into());
+                }
+                // Historical facts confer no live grant or destination-verification authority.
+                Ok(Some(current))
+            }
+        }
+    }
+
+    /// Request Stop on a fresh authenticated source, using only existing stored job facts.
+    /// Local intent is never terminal; the source's original completion/cancellation wins.
+    /// # Errors
+    /// Invalid lifecycle, trust/key/evidence drift, expiry, interruption or missing ack reject.
+    pub async fn cancel_retained(
+        &self,
+        source: &mut crate::agent_bridge::BridgeSession<'_>,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<crate::agent_bridge::SourceStopConfirmation, ClientError> {
+        use crate::agent_host::output::RetainedCancellationHint;
+        let peer = source.peer().clone();
+        if let Some(proof) = Box::pin(
+            self.prepare_retained_cancellation(&peer, job, clock, || source.require_current()),
+        )
+        .await?
+        {
+            return Ok(proof);
+        }
+        match self.store.retained_cancellation_hint(job)? {
+            RetainedCancellationHint::Accepted => {
+                let pending = Box::pin(source.request_retained_accepted_cancellation(
+                    &self.store,
+                    job,
+                    clock,
+                ))
+                .await?;
+                Box::pin(pending.wait_source_confirmation()).await
+            }
+            RetainedCancellationHint::Output => {
+                let pending = Box::pin(source.request_retained_execution_cancellation(
+                    &self.store,
+                    job,
+                    clock,
+                ))
+                .await?;
+                Box::pin(pending.wait_source_confirmation()).await
+            }
+            RetainedCancellationHint::Confirmed => Err(Error::BindingChanged.into()),
+        }
+    }
+
     /// No accepted receipt, old export conversion or fake execution until a genuine source
     /// journal/capture adapter exists. This method never contacts the source.
     /// # Errors

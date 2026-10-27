@@ -574,11 +574,16 @@ fn validate_bound_receipt(
 
 /// Historical source facts only. No current export grant, active owner, new control or
 /// destination verification is returned; original expiry is checked at the observation.
-pub(crate) async fn read_confirmed_output_stop(
+pub(crate) async fn read_confirmed_output_stop<F, Fut>(
     store: &HostAuthorityStore,
     job: &ControlUuid,
     clock: &dyn PlanningClock,
-) -> Result<ExecutionReceipt, ClientError> {
+    mut fence: F,
+) -> Result<ExecutionReceipt, ClientError>
+where
+    F: FnMut() -> Fut + Copy,
+    Fut: std::future::Future<Output = Result<(), ClientError>>,
+{
     let transaction = read_stop_transaction(store, job).await?;
     let bytes = transaction.attempt.as_ref().ok_or(Error::BindingChanged)?;
     let signed: SignedConfirmedRecord = private_json::decode(bytes)?;
@@ -610,8 +615,14 @@ pub(crate) async fn read_confirmed_output_stop(
         guard.validate_stop_frontier(&receipt)?;
     }
     owner
-        .require_current(&ObservedAt(&confirmed_at), || async { Ok(()) })
+        .require_current(&ObservedAt(&confirmed_at), fence)
         .await?;
+    let now = clock.now();
+    now.validate_shape()?;
+    if now < confirmed_at {
+        return Err(Error::BindingChanged.into());
+    }
+    fence().await?;
     let now = clock.now();
     now.validate_shape()?;
     if now < confirmed_at {

@@ -1342,14 +1342,8 @@ async fn retained_stop_channel(
     .await
     .unwrap();
     let clock = AdvancingClock::new();
-    let pending = Box::pin(bridge.request_retained_execution_cancellation(
-        &f.store,
-        &f.binding.request.job_id,
-        &clock,
-    ))
-    .await
-    .unwrap();
-    let result = Box::pin(pending.wait_source_confirmation())
+    let planner = HostPlanner::new(f.store.clone());
+    let result = Box::pin(planner.cancel_retained(&mut bridge, &f.binding.request.job_id, &clock))
         .await
         .map(|proof| proof.receipt().clone());
     let bytes = source.await.unwrap();
@@ -1468,5 +1462,229 @@ async fn retained_cancel_dispatch_rejects_wrong_peer_and_unknown_lifecycle_witho
             .is_err()
         );
         assert_eq!(std::fs::read(&path).unwrap(), changed);
+    }
+}
+
+async fn prepared_accepted_cancel_fixture(
+    platform: PeerPlatform,
+) -> (AcceptedFixture, HostPlanner, PathBuf, Vec<u8>) {
+    use crate::agent_host::output::OutputAdmission;
+    let f = accepted_fixture(platform).await;
+    let mut admission = OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+        Ok(f.output.clone())
+    })
+    .await
+    .unwrap();
+    admission
+        .persist_accepted(&f.accepted, &f.clock, || async { Ok(f.output.clone()) })
+        .await
+        .unwrap();
+    drop(admission);
+    let planner = HostPlanner::new(f.store.clone());
+    assert!(
+        Box::pin(planner.prepare_retained_cancellation(
+            &f.peer,
+            &f.request.job_id,
+            &f.clock,
+            || async { Ok(()) }
+        ))
+        .await
+        .unwrap()
+        .is_none()
+    );
+    let attempt = f
+        .client
+        .layout
+        .root
+        .join("agent-host-v1")
+        .join(format!("attempt-{}.json", f.request.job_id.0));
+    let pending_bytes = std::fs::read(&attempt).unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&pending_bytes).unwrap();
+    assert_eq!(value["attempt"]["schema_version"], 3);
+    (f, planner, attempt, pending_bytes)
+}
+
+#[tokio::test]
+async fn host_cancel_planner_prepares_accepted_state_and_returns_exact_historical_source_facts() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let (f, planner, attempt, pending_bytes) =
+            Box::pin(prepared_accepted_cancel_fixture(platform)).await;
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let saved = FakeMobileTrust {
+            installation_id: f.saved.installation_id,
+            display_name: f.saved.display_name.clone(),
+            reconnect_secret: f.saved.reconnect_secret.clone(),
+        };
+        let peer = f.peer.clone();
+        let request = f.request.clone();
+        let receipt = ExecutionReceipt {
+            status: ExecutionReceiptStatus::Cancelled,
+            source_acknowledged: true,
+            ..f.accepted.clone()
+        };
+        let expected = receipt.clone();
+        let source = tokio::spawn(async move {
+            let (mut channel, negotiation) = output_channel(port, saved, &peer, platform).await;
+            let Message::CancelRequest(cancel) =
+                channel.receive_v4(negotiation).await.unwrap().message
+            else {
+                panic!("Only original accepted Stop is permitted")
+            };
+            assert_eq!(cancel.job_id, request.job_id);
+            assert_eq!(cancel.request_sha256, document_digest(&request).unwrap());
+            channel
+                .send_v4(
+                    &Envelope::new(Message::ExecutionReceipt(Box::new(receipt))),
+                    negotiation,
+                )
+                .await
+                .unwrap();
+        });
+        let mut bridge = connect_bound_bridge(
+            &f.client,
+            Some(Uuid::parse_str(&f.peer.source_installation_id.0).unwrap()),
+            &listener,
+            Duration::from_secs(5),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+        let proof = Box::pin(planner.cancel_retained(&mut bridge, &f.request.job_id, &f.clock))
+            .await
+            .unwrap();
+        assert_eq!(proof.receipt(), &expected);
+        source.await.unwrap();
+        let confirmed_bytes = std::fs::read(&attempt).unwrap();
+        assert_ne!(confirmed_bytes, pending_bytes);
+        f.clock.advance_to(604_800);
+        let historical = Box::pin(planner.prepare_retained_cancellation(
+            &f.peer,
+            &f.request.job_id,
+            &f.clock,
+            || async { Ok(()) },
+        ))
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(historical.receipt(), &expected);
+        assert_eq!(std::fs::read(&attempt).unwrap(), confirmed_bytes);
+        let mut wrong = f.peer.clone();
+        wrong.source_installation_id = id(199);
+        assert!(
+            Box::pin(planner.prepare_retained_cancellation(
+                &wrong,
+                &f.request.job_id,
+                &f.clock,
+                || async { Ok(()) }
+            ))
+            .await
+            .is_err()
+        );
+        assert_eq!(std::fs::read(&attempt).unwrap(), confirmed_bytes);
+    }
+}
+
+#[derive(Clone, Copy)]
+enum HistoricalCallerDrift {
+    Cancellation,
+    Pairing,
+    ClockRollback,
+}
+struct HistoricalCallbackKey {
+    armed: std::sync::atomic::AtomicBool,
+    calls: AtomicUsize,
+    cancellation: CancellationToken,
+    pairing_changed: std::sync::atomic::AtomicBool,
+    drift: HistoricalCallerDrift,
+}
+#[async_trait::async_trait]
+impl crate::agent_host::ProtectedHostKey for HistoricalCallbackKey {
+    async fn load_existing(
+        &self,
+        host: &ControlUuid,
+    ) -> Result<crate::agent_host::ProtectedHostSecret, ClientError> {
+        if self.armed.load(Ordering::SeqCst) && self.calls.fetch_add(1, Ordering::SeqCst) == 3 {
+            match self.drift {
+                HistoricalCallerDrift::Cancellation => self.cancellation.cancel(),
+                HistoricalCallerDrift::Pairing | HistoricalCallerDrift::ClockRollback => {
+                    self.pairing_changed.store(true, Ordering::SeqCst);
+                }
+            }
+        }
+        FakeProtectedKey.load_existing(host).await
+    }
+}
+#[tokio::test]
+async fn host_cancel_history_rechecks_caller_after_final_protected_key_callback() {
+    use crate::agent_host::output::PendingOutputStop;
+    for drift in [
+        HistoricalCallerDrift::Cancellation,
+        HistoricalCallerDrift::Pairing,
+        HistoricalCallerDrift::ClockRollback,
+    ] {
+        let f = Box::pin(retained_stop_fixture(PeerPlatform::Android)).await;
+        let peer = &f.binding.request.plan.intent.peer;
+        let job = &f.binding.request.job_id;
+        let clock = AdvancingClock::new();
+        let transaction = OutputTransaction::open_retained(&f.store, job)
+            .await
+            .unwrap();
+        PendingOutputStop::prepare(transaction, &clock, || async { Ok(()) })
+            .await
+            .unwrap()
+            .confirm(
+                &transfer_stop_receipt(&f),
+                &clock,
+                &CancellationToken::new(),
+                || async { Ok(()) },
+            )
+            .await
+            .unwrap();
+        let path = f.client.layout.root.join("agent-host-v1");
+        let attempt = path.join(format!("attempt-{}.json", job.0));
+        let original = std::fs::read(&attempt).unwrap();
+        let key = std::sync::Arc::new(HistoricalCallbackKey {
+            armed: std::sync::atomic::AtomicBool::new(false),
+            calls: AtomicUsize::new(0),
+            cancellation: CancellationToken::new(),
+            pairing_changed: std::sync::atomic::AtomicBool::new(false),
+            drift,
+        });
+        let store =
+            HostAuthorityStore::open_existing(path, peer.host_installation_id.clone(), key.clone())
+                .await
+                .unwrap();
+        let planner = HostPlanner::new(store);
+        key.armed.store(true, Ordering::SeqCst);
+        let result = Box::pin(
+            planner.prepare_retained_cancellation(peer, job, &clock, || async {
+                if key.cancellation.is_cancelled() {
+                    return Err(ClientError::WaitCancelled);
+                }
+                if key.pairing_changed.load(Ordering::SeqCst) {
+                    if matches!(drift, HistoricalCallerDrift::ClockRollback) {
+                        clock.advance_to(-1);
+                    } else {
+                        return Err(Error::BindingChanged.into());
+                    }
+                }
+                Ok(())
+            }),
+        )
+        .await;
+        assert!(
+            key.calls.load(Ordering::SeqCst) >= 4,
+            "must reach the final historical key callback"
+        );
+        match drift {
+            HistoricalCallerDrift::Cancellation => {
+                assert!(matches!(result, Err(ClientError::WaitCancelled)));
+            }
+            HistoricalCallerDrift::Pairing | HistoricalCallerDrift::ClockRollback => assert!(
+                matches!(result, Err(ClientError::Agent(Error::BindingChanged)))
+            ),
+        }
+        assert_eq!(std::fs::read(&attempt).unwrap(), original);
     }
 }

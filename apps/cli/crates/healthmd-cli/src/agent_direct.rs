@@ -81,6 +81,69 @@ impl<C: CredentialStore> HealthDataBackend for DirectAgentBackend<C> {
         Err(unsupported())
     }
 
+    async fn cancel_approved_export(
+        &self,
+        context: &CallContext,
+        input: healthmd_operations::AgentCancelInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        use healthmd_protocol::v4::ValidateShape as _;
+        input
+            .validate_shape()
+            .map_err(|e| agent_backend_error(e.into()))?;
+        let _gate = tokio::select! { biased;
+            () = context.cancellation.cancelled() => return Err(BackendError::new("healthmd_request_cancelled", "The local request was cancelled.")),
+            guard = self.gate.lock() => guard,
+        };
+        let expected = self
+            .client
+            .planning_peer(self.device)
+            .await
+            .map_err(agent_backend_error)?;
+        let planner = self.planner().await?;
+        let current = || async {
+            if context.cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            if self.client.planning_peer(self.device).await? != expected {
+                return Err(healthmd_protocol::v4::Error::BindingChanged.into());
+            }
+            if context.cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            Ok(())
+        };
+        let historical = Box::pin(planner.prepare_retained_cancellation(
+            &expected,
+            &input.job_id,
+            &SystemPlanningClock,
+            current,
+        ))
+        .await
+        .map_err(agent_backend_error)?;
+        if let Some(proof) = historical {
+            if context.cancellation.is_cancelled() {
+                return Err(agent_backend_error(ClientError::WaitCancelled));
+            }
+            return Ok(proof.receipt().clone());
+        }
+        current().await.map_err(agent_backend_error)?;
+        let mut source = self
+            .client
+            .connect_bridge(
+                self.device,
+                self.port,
+                self.timeout,
+                context.cancellation.clone(),
+            )
+            .await
+            .map_err(agent_backend_error)?;
+        let proof =
+            Box::pin(planner.cancel_retained(&mut source, &input.job_id, &SystemPlanningClock))
+                .await
+                .map_err(agent_backend_error)?;
+        Ok(proof.receipt().clone())
+    }
+
     async fn resume_approved_export(
         &self,
         context: &CallContext,

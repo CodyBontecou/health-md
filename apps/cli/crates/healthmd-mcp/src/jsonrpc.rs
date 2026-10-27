@@ -76,6 +76,7 @@ impl JsonRpcSession {
                     | "healthmd_export_approval"
                     | "healthmd_export_execute"
                     | "healthmd_export_execution_resume"
+                    | "healthmd_export_execution_cancel"
             )
         ) && !healthmd_operations::agent_rpc_bytes_valid(input.as_bytes())
         {

@@ -224,8 +224,10 @@ async fn execute_expect_base(
 enum ExecutionPeerOutcome {
     Complete,
     DisconnectBeforeFinalize,
+    DisconnectThenCancel,
 }
 
+#[derive(Clone)]
 struct ExecutedPeerSnapshot {
     request: ExecuteRequest,
     accepted: ExecutionReceipt,
@@ -577,7 +579,7 @@ async fn answer_approved_execute(
             .unwrap();
         previous = Some(digest.0.clone());
     }
-    if outcome == ExecutionPeerOutcome::DisconnectBeforeFinalize {
+    if outcome != ExecutionPeerOutcome::Complete {
         // Both partitions are durably acknowledged, but neither finalization nor any
         // source completion has been sent. Dropping this channel must fail Execute.
         let completed = ExecutionReceipt {
@@ -922,6 +924,41 @@ async fn answer_retained_resume(
         .unwrap();
 }
 
+async fn answer_retained_cancel(
+    channel: &mut SecureChannel,
+    negotiation: Negotiation,
+    state: ExecutedPeerSnapshot,
+    outcome: ExecutionPeerOutcome,
+) {
+    let Message::CancelRequest(cancel) = channel.receive_v4(negotiation).await.unwrap().message
+    else {
+        panic!("Only Cancel permitted; no transfer ACK, Execute or Resume")
+    };
+    assert_eq!(cancel.job_id, state.request.job_id);
+    assert_eq!(cancel.peer, state.request.plan.intent.peer);
+    assert_eq!(cancel.approval_id, state.request.approval.approval_id);
+    assert_eq!(cancel.authority_id, state.request.approval.authority_id);
+    assert_eq!(
+        cancel.request_sha256,
+        document_digest(&state.request).unwrap()
+    );
+    let receipt = if outcome == ExecutionPeerOutcome::DisconnectThenCancel {
+        ExecutionReceipt {
+            status: ExecutionReceiptStatus::Cancelled,
+            ..state.completed
+        }
+    } else {
+        state.completed
+    };
+    channel
+        .send_v4(
+            &Envelope::new(Message::ExecutionReceipt(Box::new(receipt))),
+            negotiation,
+        )
+        .await
+        .unwrap();
+}
+
 fn arguments(peer: &Peer) -> Value {
     serde_json::json!({"dates":{"type":"exact","range":{"start_date":"2026-01-01","end_date":"2026-01-02"}},"calendar_timezone":"UTC","metric_ids":["steps"],"output_profile":profile(peer),"subfolder":"","folder_template":"{year}","filename_template":"{date}","destination_binding_id":id(3)})
 }
@@ -1067,6 +1104,67 @@ async fn actual_resume_backend_rejects_missing_job_before_listener_or_output() {
     assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
 }
 
+#[tokio::test]
+async fn actual_cancel_backend_rejects_missing_job_before_listener_or_output() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let root = std::fs::canonicalize(temporary.path()).unwrap();
+    let credentials = InjectedCredentials::default();
+    let layout = StorageLayout { root: root.clone() };
+    healthmd_client::storage::IdentityStore::new(layout.clone())
+        .load_or_create(chrono::Utc::now())
+        .unwrap();
+    let client = Arc::new(
+        DirectClient::open_planning_with_credentials(layout, credentials.clone()).unwrap(),
+    );
+    let source_id = Uuid::new_v4();
+    let peer = Peer {
+        host_installation_id: ControlUuid(client.identity.installation_id.0.to_string()),
+        source_installation_id: ControlUuid(source_id.to_string()),
+        platform: PeerPlatform::Apple,
+    };
+    let (store, output) = enroll(&root, &peer, &SystemPlanningClock.now()).await;
+    let mut trust = TrustState::empty(client.identity.installation_id);
+    trust
+        .save_client(TrustedClient {
+            installation_id: SwiftUuid(source_id),
+            display_name: "Synthetic source".into(),
+            platform: Some(WirePlatform::Ios),
+            reconnect_secret: vec![13; 32],
+            paired_at: chrono::Utc::now(),
+            last_connected_at: chrono::Utc::now(),
+            wake: None,
+        })
+        .unwrap();
+    TrustStore::new(credentials.clone())
+        .save(&trust)
+        .await
+        .unwrap();
+    let writes = credentials.0.writes.load(Ordering::SeqCst);
+    let occupied = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let backend: Arc<dyn HealthDataBackend> = Arc::new(DirectAgentBackend::new(
+        client,
+        Arc::new(ExistingFakeKey(AtomicUsize::new(0))),
+        Some(source_id),
+        occupied.local_addr().unwrap().port(),
+        Duration::from_secs(5),
+        Arc::new(Mutex::new(())),
+    ));
+    let input = serde_json::json!({"job_id":id(20)});
+    let before = store.revision().await.unwrap();
+    let error = crate::mcp::execute_agent_operation(
+        backend,
+        "healthmd_export_execution_cancel",
+        &serde_json::to_vec(&input).unwrap(),
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.code, "permission_required");
+    assert_eq!(store.revision().await.unwrap(), before);
+    assert_eq!(credentials.0.writes.load(Ordering::SeqCst), writes);
+    assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
+}
+
 // Keep both public transports and exact independently established decisions in one tracer.
 #[allow(clippy::too_many_lines)]
 #[tokio::test]
@@ -1077,6 +1175,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
             [
                 ExecutionPeerOutcome::Complete,
                 ExecutionPeerOutcome::DisconnectBeforeFinalize,
+                ExecutionPeerOutcome::DisconnectThenCancel,
             ]
             .map(|outcome| (platform.clone(), outcome))
         })
@@ -1155,6 +1254,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                         | "healthmd_export_approval"
                         | "healthmd_export_execute"
                         | "healthmd_export_execution_resume"
+                        | "healthmd_export_execution_cancel"
                 )
             )));
             assert!(
@@ -1266,9 +1366,15 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                     answer_approved_execute(&mut channel, negotiation, &mut native, outcome).await,
                 );
             }
+            if outcome != ExecutionPeerOutcome::DisconnectThenCancel {
+                for execution in &executions {
+                    let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
+                    answer_retained_resume(&mut channel, negotiation, execution.clone()).await;
+                }
+            }
             for execution in executions {
                 let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
-                answer_retained_resume(&mut channel, negotiation, execution).await;
+                answer_retained_cancel(&mut channel, negotiation, execution, outcome).await;
             }
         });
         let input = arguments(&peer);
@@ -1364,36 +1470,87 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 bytes
             })
             .collect();
-        let cli_resume = crate::mcp::execute_agent_operation(
+        if outcome != ExecutionPeerOutcome::DisconnectThenCancel {
+            let cli_resume = crate::mcp::execute_agent_operation(
+                Arc::clone(&backend),
+                "healthmd_export_execution_resume",
+                &serde_json::to_vec(&serde_json::json!({"job_id":id(200)})).unwrap(),
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+            let mcp_resume = rpc_call(
+                &rpc,
+                "healthmd_export_execution_resume",
+                serde_json::json!({"job_id":id(203)}),
+                4,
+            )
+            .await;
+            if outcome == ExecutionPeerOutcome::Complete {
+                assert_eq!(cli_resume, cli_execution);
+                assert_eq!(mcp_resume, mcp_execution);
+            }
+            for result in [&cli_resume, &mcp_resume] {
+                assert_eq!(result["status"], "complete");
+                assert_eq!(result["source_acknowledged"], true);
+                assert_eq!(result["artifact_count"], 2);
+                assert_eq!(result["committed_partition_count"], 2);
+                assert_eq!(result["binding"], cli_approval["binding"]);
+            }
+        }
+        let cli_cancel = crate::mcp::execute_agent_operation(
             Arc::clone(&backend),
-            "healthmd_export_execution_resume",
+            "healthmd_export_execution_cancel",
             &serde_json::to_vec(&serde_json::json!({"job_id":id(200)})).unwrap(),
             CancellationToken::new(),
         )
         .await
         .unwrap();
-        let mcp_resume = rpc_call(
+        let mcp_cancel = rpc_call(
             &rpc,
-            "healthmd_export_execution_resume",
+            "healthmd_export_execution_cancel",
             serde_json::json!({"job_id":id(203)}),
-            4,
+            5,
         )
         .await;
-        if outcome == ExecutionPeerOutcome::Complete {
-            assert_eq!(cli_resume, cli_execution);
-            assert_eq!(mcp_resume, mcp_execution);
+        for result in [&cli_cancel, &mcp_cancel] {
+            assert_eq!(result["schema"], "healthmd.agent_source_stop_result");
+            assert_eq!(result["schema_version"], 1);
+            assert_eq!(result["output_verified"], false);
+            assert_eq!(
+                result["source_receipt"]["status"],
+                if outcome == ExecutionPeerOutcome::DisconnectThenCancel {
+                    "cancelled"
+                } else {
+                    "complete"
+                }
+            );
+            assert_eq!(result["source_receipt"]["source_acknowledged"], true);
+            assert_eq!(result["source_receipt"]["binding"], cli_approval["binding"]);
         }
-        for result in [&cli_resume, &mcp_resume] {
-            assert_eq!(result["status"], "complete");
-            assert_eq!(result["source_acknowledged"], true);
-            assert_eq!(result["artifact_count"], 2);
-            assert_eq!(result["committed_partition_count"], 2);
-            assert_eq!(result["binding"], cli_approval["binding"]);
-        }
+        source.await.unwrap();
+        // A second Cancel is a local historical read, even with its listener port occupied.
+        let _occupied = TcpListener::bind(("0.0.0.0", port)).await.unwrap();
+        let history = crate::mcp::execute_agent_operation(
+            Arc::clone(&backend),
+            "healthmd_export_execution_cancel",
+            &serde_json::to_vec(&serde_json::json!({"job_id":id(200)})).unwrap(),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(history, cli_cancel);
+        let history = rpc_call(
+            &rpc,
+            "healthmd_export_execution_cancel",
+            serde_json::json!({"job_id":id(203)}),
+            6,
+        )
+        .await;
+        assert_eq!(history, mcp_cancel);
         for (path, before) in execution_paths.iter().zip(&before_recovery) {
             assert_eq!(&std::fs::read(output.join(&path.0)).unwrap(), before);
         }
-        source.await.unwrap();
         assert_eq!(
             TrustStore::new(credentials.clone())
                 .load(client.identity.installation_id)
