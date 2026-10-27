@@ -12,6 +12,7 @@ export const FUNNEL_PAGES = Object.freeze({
   workouts: '/blog/export-apple-health-workouts/', pdf: '/blog/export-apple-health-data-pdf/',
   claude: '/blog/analyze-apple-health-with-claude/', chatgpt: '/blog/apple-health-to-chatgpt/',
   local_export: '/blog/export-health-data-without-the-cloud/',
+  auto_export_comparison: '/blog/health-md-vs-health-auto-export/',
 });
 export const FUNNEL_LOCALES = Object.freeze(['en', 'es', 'de', 'fr', 'pt-br', 'it', 'nl', 'ja', 'ko', 'zh-hans']);
 export const FUNNEL_ACTIONS = Object.freeze({
