@@ -32,8 +32,8 @@ jobs:
           actual=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)
           test "$actual" = "$(cat Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256)"
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
-      - name: Repeat unchanged production-model tests, then measure phases
-        run: bash .github/scripts/pr189-rss-diagnostic.sh
+      - name: Measure encoder phases during one full macOS suite
+        run: bash .github/scripts/pr189-rss-fullsuite.sh
       - name: Retain synthetic diagnostics only
         if: always()
         uses: actions/upload-artifact@v4
