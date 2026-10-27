@@ -90,8 +90,8 @@ jobs:
 
   prepare-core-slices:
     name: Build Apple Rust slice ${{ matrix.target }}
-    needs: changes
-    if: ${{ needs.changes.outputs.prepare == 'true' }}
+    needs: [changes, probe-shared-core]
+    if: ${{ needs.changes.outputs.prepare == 'true' && needs.probe-shared-core.result == 'success' && needs.probe-shared-core.outputs.cache-hit == 'false' }}
     strategy:
       fail-fast: false
       matrix:
@@ -172,10 +172,96 @@ jobs:
           "$RUNNER_TEMP/apple-release-policy-venv/bin/python" -m unittest discover \
             -s .github/scripts/tests -p 'test_apple_*.py' -v
 
+  probe-shared-core:
+    name: Check validated shared-core bundle before native fanout
+    needs: changes
+    if: ${{ needs.changes.outputs.prepare == 'true' }}
+    # Free standard public-repository SDK27 runner, never xlarge.
+    runs-on: xcode-27
+    timeout-minutes: 5
+    outputs:
+      cache-hit: ${{ steps.admit.outputs.ready }}
+    defaults:
+      run:
+        working-directory: apps/apple
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '27.0'
+
+      - name: Require SDK27 public history signature and record provenance
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          mkdir -p Packages/HealthMdCoreRust/Artifacts
+          cp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+
+      - name: Fingerprint active Apple toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          fingerprint=$({ xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; xcrun --sdk macosx --show-sdk-version; } | shasum -a 256 | awk '{print $1}')
+          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+      - id: shared-core-cache
+        name: Restore exact-source shared-core cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          key: >-
+            apple-shared-core-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fingerprint }}-${{ hashFiles('packages/healthmd-core-rust/vendor/**', 'packages/healthmd-core-rust/Cargo.toml', 'packages/healthmd-core-rust/Cargo.lock', 'packages/healthmd-core-rust/rust-toolchain.toml', 'packages/healthmd-core-rust/crates/**', 'packages/healthmd-core-rust/scripts/*apple*', 'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+
+      - name: Restore binding-generator compilation for a hot bundle
+        if: ${{ steps.shared-core-cache.outputs.cache-hit == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: packages/healthmd-core-rust/target/debug
+          key: apple-core-host-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fingerprint }}-${{ hashFiles('packages/healthmd-core-rust/vendor/**', 'packages/healthmd-core-rust/Cargo.lock', 'packages/healthmd-core-rust/rust-toolchain.toml') }}
+      - name: Check bindings before hot bundle admission
+        if: ${{ steps.shared-core-cache.outputs.cache-hit == 'true' }}
+        working-directory: .
+        run: packages/healthmd-core-rust/scripts/generate-apple-bindings.sh --check
+
+      - name: Admit only an exact validated bundle
+        id: admit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ '${{ steps.shared-core-cache.outputs.cache-hit }}' == 'true' ]]; then
+            actual=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)
+            test "$actual" = "$(cat Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256)"
+            ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Retain validated bundle for this exact workflow
+        if: ${{ steps.admit.outputs.ready == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-sdk27-cached-core
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+
   prepare-shared-core:
     name: Prepare shared Rust core once
-    needs: [changes, prepare-core-slices]
-    if: ${{ needs.changes.outputs.prepare == 'true' }}
+    needs: [changes, probe-shared-core, prepare-core-slices]
+    if: ${{ always() && needs.changes.outputs.prepare == 'true' && needs.probe-shared-core.result == 'success' && ((needs.probe-shared-core.outputs.cache-hit == 'true' && needs.prepare-core-slices.result == 'skipped') || (needs.probe-shared-core.outputs.cache-hit == 'false' && needs.prepare-core-slices.result == 'success')) }}
     # Free standard public-repository SDK27 runner, never xlarge.
     runs-on: xcode-27
     timeout-minutes: 20
@@ -209,7 +295,15 @@ jobs:
           set -euo pipefail
           fingerprint=$({ xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; xcrun --sdk macosx --show-sdk-version; } | shasum -a 256 | awk '{print $1}')
           echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+      - name: Restore this run's validated hot bundle
+        if: ${{ needs.probe-shared-core.outputs.cache-hit == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-sdk27-cached-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
       - id: shared-core-cache
+        if: ${{ needs.probe-shared-core.outputs.cache-hit == 'false' }}
         name: Restore exact-source shared-core cache
         uses: actions/cache@v4
         with:
@@ -220,7 +314,7 @@ jobs:
             apple-shared-core-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fingerprint }}-${{ hashFiles('packages/healthmd-core-rust/vendor/**', 'packages/healthmd-core-rust/Cargo.toml', 'packages/healthmd-core-rust/Cargo.lock', 'packages/healthmd-core-rust/rust-toolchain.toml', 'packages/healthmd-core-rust/crates/**', 'packages/healthmd-core-rust/scripts/*apple*', 'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
 
       - name: Collect all five uniquely named native slices
-        if: ${{ steps.shared-core-cache.outputs.cache-hit != 'true' }}
+        if: ${{ needs.probe-shared-core.outputs.cache-hit == 'false' && steps.shared-core-cache.outputs.cache-hit != 'true' }}
         uses: actions/download-artifact@v4
         with:
           pattern: apple-core-slice-*
@@ -228,14 +322,14 @@ jobs:
           merge-multiple: true
 
       - name: Restore pinned host binding-generator compilation
-        if: ${{ steps.shared-core-cache.outputs.cache-hit != 'true' }}
+        if: ${{ needs.probe-shared-core.outputs.cache-hit == 'false' && steps.shared-core-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache@v4
         with:
           path: packages/healthmd-core-rust/target/debug
           key: apple-core-host-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fingerprint }}-${{ hashFiles('packages/healthmd-core-rust/vendor/**', 'packages/healthmd-core-rust/Cargo.lock', 'packages/healthmd-core-rust/rust-toolchain.toml') }}
 
       - name: Prepare and validate shared Rust core for Apple
-        if: ${{ steps.shared-core-cache.outputs.cache-hit != 'true' }}
+        if: ${{ needs.probe-shared-core.outputs.cache-hit == 'false' && steps.shared-core-cache.outputs.cache-hit != 'true' }}
         working-directory: .
         run: |
           set -euo pipefail
@@ -251,7 +345,10 @@ jobs:
 
       - name: Validate cached or newly prepared shared Rust core
         run: |
-          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          actual=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)
+          test "$actual" = "$(cat Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256)"
+          bash scripts/qualify-history-authorization-sdk27.sh
+          python3 scripts/compare-history-sdk27-receipts.py build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
             Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
@@ -265,7 +362,7 @@ jobs:
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
           include-hidden-files: true
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 3
 
   test-ios:
     needs: [changes, prepare-shared-core]

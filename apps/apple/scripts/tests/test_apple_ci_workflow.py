@@ -2,7 +2,9 @@
 """Exercise the real Apple final-gate shell and PR dependency wiring without Xcode."""
 from __future__ import annotations
 
+import ast
 import itertools
+import tempfile
 import os
 import re
 import shlex
@@ -35,6 +37,8 @@ class WorkflowRoutingTests(unittest.TestCase):
                     self.assertIn("needs: [changes, prepare-ui-artifacts, ios-ui-shards]", blocks[job])
                     self.assertIn("test \"$SHARDS_RESULT\" = success", blocks[job])
                     self.assertIn("ios_ui_shards.py verify", blocks[job])
+                elif output == "prepare":
+                    self.assertIn("always() && needs.changes.outputs.prepare == 'true'", blocks[job])
                 else:
                     self.assertIn(f"if: ${{{{ needs.changes.outputs.{output} == 'true' }}}}", blocks[job])
                 if output in {"ios", "macos"}:
@@ -95,6 +99,84 @@ class WorkflowRoutingTests(unittest.TestCase):
         self.assertIn("ios_ui_shards.py run", workers)
         self.assertNotIn("continue-on-error", workflow)
 
+    def test_validated_bundle_cache_is_checked_before_native_slice_fanout(self):
+        blocks = jobs()
+        self.assertIn("probe-shared-core", blocks)
+        probe = blocks["probe-shared-core"]
+        self.assertIn("needs: changes", probe)
+        self.assertIn("uses: actions/cache/restore@v4", probe)
+        self.assertNotIn("restore-keys:", probe)
+        self.assertIn("apple-source-digest.sh", probe)
+        self.assertIn("validate-apple-xcframework.sh", probe)
+        self.assertLess(probe.index("validate-apple-xcframework.sh"), probe.index("ready=true"))
+        self.assertLess(probe.index("generate-apple-bindings.sh --check"), probe.index("ready=true"))
+        workers = blocks["prepare-core-slices"]
+        self.assertIn("needs: [changes, probe-shared-core]", workers)
+        self.assertIn("needs.probe-shared-core.outputs.cache-hit == 'false'", workers)
+        collector = blocks["prepare-shared-core"]
+        self.assertIn("always() && needs.changes.outputs.prepare == 'true'", collector)
+        self.assertIn("needs.probe-shared-core.result == 'success'", collector)
+        self.assertIn("needs.prepare-core-slices.result == 'success'", collector)
+        self.assertIn("name: apple-sdk27-cached-core", collector)
+
+    def test_hot_bundle_admission_rejects_digest_and_framework_failures(self):
+        probe = jobs()["probe-shared-core"]
+        body = probe.split("      - name: Admit only an exact validated bundle\n", 1)[1]
+        body = body.split("        run: |\n", 1)[1].split("      - name:", 1)[0]
+        body = "\n".join(line[10:] for line in body.splitlines())
+        for cached, digest, valid_framework in itertools.product(("true", "false"), (True, False), (True, False)):
+            with self.subTest(cached=cached, digest=digest, valid_framework=valid_framework), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                cwd = root / "apps/apple"
+                artifacts = cwd / "Packages/HealthMdCoreRust/Artifacts"
+                artifacts.mkdir(parents=True)
+                (artifacts / ".healthmd-core-source.sha256").write_text("synthetic" if digest else "wrong")
+                scripts = root / "packages/healthmd-core-rust/scripts"
+                scripts.mkdir(parents=True)
+                for name, script in {
+                    "apple-source-digest.sh": "#!/bin/sh\necho synthetic\n",
+                    "validate-apple-xcframework.sh": "#!/bin/sh\nexit " + ("0" if valid_framework else "1") + "\n",
+                }.items():
+                    path = scripts / name
+                    path.write_text(script)
+                    path.chmod(0o755)
+                output = root / "output"
+                command = body.replace("${{ steps.shared-core-cache.outputs.cache-hit }}", cached)
+                result = subprocess.run(["bash", "-c", command], cwd=cwd,
+                                        env=dict(os.environ, GITHUB_OUTPUT=str(output)), capture_output=True, text=True)
+                recorded = output.read_text() if output.exists() else ""
+                if cached == "false":
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(recorded, "ready=false\n")
+                elif digest and valid_framework:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(recorded, "ready=true\n")
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertNotIn("ready=true", recorded)
+
+    def test_core_collector_requires_complete_consistent_hot_or_cold_prerequisites(self):
+        collector = jobs()["prepare-shared-core"]
+        expression = re.search(r"^    if: \$\{\{ (.+) \}\}$", collector, re.MULTILINE).group(1)
+        statuses = ("success", "failure", "cancelled", "skipped")
+        for selected, probe, cached, slices in itertools.product(("true", "false"), statuses, ("true", "false", ""), statuses):
+            values = {
+                "needs.changes.outputs.prepare": selected,
+                "needs.probe-shared-core.result": probe,
+                "needs.probe-shared-core.outputs.cache-hit": cached,
+                "needs.prepare-core-slices.result": slices,
+            }
+            actual = expression.replace("always()", "True").replace("&&", " and ").replace("||", " or ")
+            for key, value in values.items():
+                actual = actual.replace(key, repr(value))
+            tree = ast.parse(actual, mode="eval")
+            allowed = (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.Compare, ast.Eq, ast.Constant)
+            self.assertTrue(all(isinstance(node, allowed) for node in ast.walk(tree)))
+            admitted = eval(compile(tree, "<workflow admission>", "eval"), {"__builtins__": {}})
+            expected = selected == "true" and probe == "success" and (
+                (cached == "true" and slices == "skipped") or (cached == "false" and slices == "success"))
+            self.assertEqual(admitted, expected, values)
+
     def test_native_parallel_slices_remain_complete_and_source_validated(self):
         blocks = jobs()
         workers = blocks['prepare-core-slices']
@@ -103,7 +185,7 @@ class WorkflowRoutingTests(unittest.TestCase):
         self.assertIn("--slice '${{ matrix.target }}'", workers)
         self.assertIn('ci_apple_core_slices.py receipt', workers)
         collector = blocks['prepare-shared-core']
-        self.assertIn('needs: [changes, prepare-core-slices]', collector)
+        self.assertIn('needs: [changes, probe-shared-core, prepare-core-slices]', collector)
         self.assertIn('ci_apple_core_slices.py verify', collector)
         self.assertIn('generate-apple-bindings.sh --check', collector)
         self.assertIn('--assemble "$PWD/build/apple-core-slices"', collector)

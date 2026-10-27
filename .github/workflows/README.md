@@ -39,13 +39,19 @@ pushes, manual runs, and reusable/exact-SHA qualification retain every job.
 
 ### Apple critical-path execution
 
-All five Rust targets (iOS device, both iOS Simulator architectures, and both
-macOS architectures) compile in parallel with the unchanged pinned release
-profile. Each archive is paired with a source digest, commit, toolchain and byte
-hash receipt. The preparation job requires the complete five-slice inventory,
-checks generated bindings, assembles the same three-platform XCFramework and
-runs the existing architecture/symbol validator. Exact-source archive and
-XCFramework caches include the active Xcode/SDK fingerprint; nightly uses the
+Preparation first checks the complete XCFramework cache against the exact native
+inputs and active Xcode/SDK fingerprint. A hit still checks generated binding
+drift, the source digest and the framework architecture/symbol inventory before
+publishing a current-run artifact. The collector checks that artifact's source
+and SDK receipt again; only a validated hit skips native slice fanout.
+
+A cache miss builds all five Rust targets (iOS device, both iOS Simulator
+architectures, and both macOS architectures) in parallel with the unchanged
+pinned release profile. Each archive has a source digest, commit, toolchain and
+byte-hash receipt. The collector requires the complete five-slice inventory,
+checks generated bindings and assembles the same three-platform XCFramework.
+Missing or failed prerequisites reject both paths. Prepared framework artifacts
+remain available for three days to support bounded retries. Nightly uses the
 same complete-artifact key and still validates source/bindings on cache hits.
 
 The iOS unit job begins booting its selected compatible simulator before
