@@ -234,8 +234,10 @@ jobs:
           ./gradlew --version
           python3 scripts/test-ci-gradle-cache.py
 
-      - name: Prepare source-built Rust core
-        run: ./scripts/run-ci-gradle.sh :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
+      - name: Check committed Rust/Kotlin bindings
+        # Each test task already prepares all four ABIs for its actual library
+        # profile. Do not also build Debug before Release's native preparation.
+        run: ./scripts/run-ci-gradle.sh :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
 
       - name: Run Play app, shared contract, core, and protocol tests
         shell: bash

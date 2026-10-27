@@ -118,6 +118,10 @@ profile. Shared core, wearable-contract and protocol tests, debug lint, packagin
 and phone APK policy remain required. Test outputs always execute and are never
 restored from a cache.
 
+Gradle's test dependency graphs prepare all four native ABIs for the variant's
+actual library profile (Debug for debug/E2E, Release for release). The separate
+binding drift check does not force an unused Debug build before Release.
+
 The stable `test` gate still requires all three variants. This avoids six extra
 native-runner preparations while allowing the slow native class to overlap other
 classes. Per-variant XML, Gradle profiles and CPU/memory diagnostics remain in the

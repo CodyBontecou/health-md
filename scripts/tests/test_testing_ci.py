@@ -95,6 +95,11 @@ class CIOrchestrationTests(unittest.TestCase):
         self.assertNotIn('--exclude-task', step['run'])
         for task in (":healthmd-core:testDebugUnitTest", ":wearable-contract:test", ":direct-protocol:test"):
             self.assertIn(task, step["run"])
+        binding_check = next(s for s in lanes['steps'] if ':healthmd-core:checkHealthMdCoreKotlinBindings' in s.get('run', ''))
+        self.assertIn(':healthmd-core:checkHealthMdCoreKotlinBindings', binding_check['run'])
+        # Gradle's real test graphs own native profile selection. Forcing Debug
+        # here made Release compile all four Debug ABIs before its Release ABIs.
+        self.assertNotIn(':healthmd-core:prepareRustDebug', binding_check['run'])
         for name in ("Run Android lint", "Assemble Play debug app and validate phone APK policy"):
             self.assertEqual(next(s for s in lanes["steps"] if s.get("name") == name)["if"], "${{ matrix.variant == 'debug' }}")
         self.assertEqual(set(JOBS["test"]["needs"]), {"changes", "jvm-tests"})
