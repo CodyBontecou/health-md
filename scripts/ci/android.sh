@@ -4,7 +4,9 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 : "${ANDROID_SERIAL:?Select exactly one already booted CI device}"
-export HEALTHMD_LIVE_DIRECT_PORT=${HEALTHMD_LIVE_DIRECT_PORT:-18647}
+# Other CLI regression tests exercise port 18647. An ephemeral listener keeps
+# concurrently running suites from connecting to each other's protocol fixture.
+export HEALTHMD_LIVE_DIRECT_PORT=${HEALTHMD_LIVE_DIRECT_PORT:-$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')}
 export HEALTHMD_LIVE_PAIRING_CODE=12345678901234567890
 abi=${HEALTHMD_CI_ANDROID_ABI:-x86_64}
 results=apps/android/build/ci-results
