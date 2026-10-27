@@ -11,7 +11,12 @@ def qualify_targets(text: str, platform: str) -> list[str]:
     if platform not in hosts:
         raise ValueError('Unknown native test platform')
     expected, unexpected = hosts[platform]
-    if not {'HealthMdTests', expected}.issubset(targets) or unexpected in targets:
+    test_target = 'HealthMdTests-iOS' if platform == 'iOS' else 'HealthMdTests'
+    other_test = 'HealthMdTests' if platform == 'iOS' else 'HealthMdTests-iOS'
+    forbidden = {unexpected, other_test}
+    if platform == 'iOS':
+        forbidden.update({'healthmd', 'healthmd-mcp'})
+    if not {test_target, expected}.issubset(targets) or targets & forbidden:
         raise ValueError(f'{platform} test graph has missing or cross-platform hosts: {sorted(targets)}')
     return sorted(targets)
 

@@ -52,7 +52,8 @@ class AppleTestingPerformanceTests(unittest.TestCase):
         for target in ("test-macos", "test-ios"):
             with self.subTest(target=target):
                 output = self.dry_run(target, "TEST_FILTER=HealthMdTests/ExampleTests/testExample")
-                self.assertIn("-only-testing:HealthMdTests/ExampleTests/testExample", output)
+                namespace = "HealthMdTests-iOS" if target == "test-ios" else "HealthMdTests"
+                self.assertIn(f"-only-testing:{namespace}/ExampleTests/testExample", output)
 
     def test_coverage_and_native_tests_share_worktree_scoped_build_directory(self):
         expected = str(APPLE / "build/DerivedData/macOS")

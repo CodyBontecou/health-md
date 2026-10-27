@@ -28,9 +28,9 @@
             buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "62A1B0052F50A00100000005"
+               BlueprintIdentifier = "A0EB5E317A10F28B08B19C34"
                BuildableName = "HealthMdTests.xctest"
-               BlueprintName = "HealthMdTests"
+               BlueprintName = "HealthMdTests-iOS"
                ReferencedContainer = "container:HealthMd.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -46,9 +46,9 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "62A1B0052F50A00100000005"
+               BlueprintIdentifier = "A0EB5E317A10F28B08B19C34"
                BuildableName = "HealthMdTests.xctest"
-               BlueprintName = "HealthMdTests"
+               BlueprintName = "HealthMdTests-iOS"
                ReferencedContainer = "container:HealthMd.xcodeproj">
             </BuildableReference>
          </TestableReference>

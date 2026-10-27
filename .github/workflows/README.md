@@ -74,7 +74,13 @@ disable the unused compiler index store. The native XCFramework still
 contains all five previously qualified target architectures. Test results are
 never restored from a cache.
 
-Native unit tests compile once per platform. Xcode enumerates the complete
+Native unit tests compile once per platform. Independent iOS and macOS test
+targets share the complete synchronized test source/resource group and original
+module/product names, with each target depending only on its own app host. The
+iOS target is `HealthMdTests-iOS`; `make test-ios TEST_FILTER=HealthMdTests/...`
+translates the legacy target prefix while preserving the selected class/method.
+Complete graph guards reject independently inferred cross-platform roots.
+Xcode enumerates the complete
 compiled XCTest and Swift Testing method inventory; four workers per platform
 receive a balanced, exhaustive partition. Every worker restores the same
 current-run archive and checks source/run/attempt, platform and SDK provenance.
@@ -163,9 +169,12 @@ skips for every JVM Test task. Cache availability never replaces test evidence.
 
 After a targeted retry, the JVM collector selects the latest artifact for every
 lane from the same workflow run and exact source, recording each producer's real
-attempt. Compiler identities must match across lanes; classpath and optional host-library
-bytes, JVM options, effective test opt-ins/update flags and fork counts must match
-within each variant. Missing or changed profiles, future attempts and latest failing results
+attempt. Compiler and plugin identities must match across lanes; resolved dependency
+inputs, provider-backed build configuration and project-property overrides,
+optional host-library bytes, JVM options, effective test opt-ins/update
+flags and fork counts must match within each variant. Tracked source must be
+unchanged from the qualified commit; generated project outputs are not used as
+dependency identities. Missing or changed profiles, future attempts and latest failing results
 reject qualification. No test results from another workflow run are reused.
 
 The remaining-class lane uses two app-class forks within the existing two-worker

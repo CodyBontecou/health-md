@@ -13,8 +13,8 @@ TASKS = {'debug': 'testPlayDebugUnitTest', 'release': 'testPlayReleaseUnitTest',
 LANES = ('remaining', 'native-0', 'native-1')
 MODULES = {'healthmd-core': 'testDebugUnitTest', 'wearable-contract': 'test', 'direct-protocol': 'test'}
 PROFILE_TEXT = {'gradle', 'ndk_revision', 'os', 'arch'}
-PROFILE_COMPILER_HASH = {'test_java_sha256', 'gradle_java_sha256', 'rustc_sha256', 'cargo_ndk_sha256'}
-PROFILE_EXECUTION_HASH = {'environment_sha256', 'classpath_sha256', 'jvm_args_sha256', 'host_core_sha256'}
+PROFILE_COMPILER_HASH = {'test_java_sha256', 'gradle_java_sha256', 'rustc_sha256', 'cargo_ndk_sha256', 'gradle_plugins_sha256', 'android_sdk_sha256'}
+PROFILE_EXECUTION_HASH = {'configuration_sha256', 'environment_sha256', 'dependency_inputs_sha256', 'jvm_args_sha256', 'host_core_sha256'}
 
 
 def ordered(values):
@@ -82,7 +82,7 @@ def verify(reports: Path, source_sha: str, run_id: str, attempt: str) -> dict:
                 raise ValueError('JVM lane source/run/task differs from current qualification')
             profile = metadata.get('qualification_profile')
             if (not isinstance(profile, dict) or set(profile) != {'version', 'compiler', 'execution'}
-                    or type(profile['version']) is not int or profile['version'] != 1):
+                    or type(profile['version']) is not int or profile['version'] != 2):
                 raise ValueError('Missing or invalid JVM qualification profile')
             compiler, execution = profile['compiler'], profile['execution']
             if (not isinstance(compiler, dict) or set(compiler) != PROFILE_TEXT | PROFILE_COMPILER_HASH

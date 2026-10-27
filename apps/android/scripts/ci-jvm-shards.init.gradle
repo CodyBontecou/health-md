@@ -1,5 +1,6 @@
 import groovy.json.JsonOutput
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
@@ -27,6 +28,12 @@ if (lane != null) {
         if (current.toString('UTF-8').trim() != sourceSha) throw new GradleException('JVM lane source SHA differs from checkout')
         rootProject.project(':app').tasks.named(taskNames[variant], Test).configure { testTask ->
             doFirst {
+                def clean = rootProject.exec {
+                    workingDir androidRoot
+                    commandLine 'git', 'diff', '--quiet', 'HEAD', '--'
+                    ignoreExitValue true
+                }
+                if (clean.exitValue != 0) throw new GradleException('JVM qualification requires unchanged tracked source')
                 if (!filter.includePatterns.empty || !filter.excludePatterns.empty) {
                     throw new GradleException('Native JVM lanes require the original unfiltered Test task')
                 }
@@ -72,25 +79,56 @@ if (lane != null) {
                 }
                 def environmentDigest = MessageDigest.getInstance('SHA-256')
                     .digest(JsonOutput.toJson(environmentInputs).getBytes(StandardCharsets.UTF_8)).encodeHex().toString()
-                def classpathDigest = MessageDigest.getInstance('SHA-256')
-                (testTask.classpath + testTask.testClassesDirs).files.eachWithIndex { entry, index ->
-                    classpathDigest.update((index.toString() + ':' + entry.name + '\u0000').getBytes(StandardCharsets.UTF_8))
-                    classpathDigest.update((entry.exists() ? 'present\u0000' : 'missing\u0000').getBytes(StandardCharsets.UTF_8))
-                    def files = !entry.exists() ? [] : entry.isDirectory() ? rootProject.fileTree(entry).files.sort { a, b ->
-                        entry.toPath().relativize(a.toPath()).toString() <=> entry.toPath().relativize(b.toPath()).toString()
-                    } : [entry]
-                    files.each { file ->
-                        def relative = entry.isDirectory() ? entry.toPath().relativize(file.toPath()).toString() : entry.name
-                        classpathDigest.update((relative + '\u0000').getBytes(StandardCharsets.UTF_8))
-                        def fileDigest = MessageDigest.getInstance('SHA-256')
-                        file.withInputStream { stream ->
+                // Only dependency INPUTS are comparable across independent builds.
+                // Generated project classes/resources can contain build-local metadata;
+                // their inputs are bound by the clean source and compiler profiles.
+                def fileInput = { scope, component, File file ->
+                    def digest = MessageDigest.getInstance('SHA-256')
+                    def files = file.isDirectory() ? rootProject.fileTree(file).files.sort { a, b ->
+                        file.toPath().relativize(a.toPath()).toString() <=> file.toPath().relativize(b.toPath()).toString()
+                    } : [file]
+                    files.each { member ->
+                        def relative = file.isDirectory() ? file.toPath().relativize(member.toPath()).toString() : file.name
+                        digest.update((relative + '\u0000').getBytes(StandardCharsets.UTF_8))
+                        def content = MessageDigest.getInstance('SHA-256')
+                        member.withInputStream { stream ->
                             byte[] buffer = new byte[65536]
                             int size
-                            while ((size = stream.read(buffer)) != -1) fileDigest.update(buffer, 0, size)
+                            while ((size = stream.read(buffer)) != -1) content.update(buffer, 0, size)
                         }
-                        classpathDigest.update(fileDigest.digest())
+                        digest.update(content.digest())
+                    }
+                    [scope: scope, component: component, name: file.name,
+                        sha256: digest.digest().encodeHex().toString()]
+                }
+                def artifactInputs = { Map<String, Object> configurations ->
+                    def records = []
+                    configurations.each { scope, configuration ->
+                        configuration.incoming.artifacts.artifacts.each { artifact ->
+                            def component = artifact.id.componentIdentifier
+                            if (!(component instanceof ProjectComponentIdentifier)) {
+                                records.add(fileInput(scope, component.displayName, artifact.file))
+                            }
+                        }
+                    }
+                    records.sort { a, b ->
+                        (a.scope + ':' + a.component + ':' + a.name) <=> (b.scope + ':' + b.component + ':' + b.name)
                     }
                 }
+                def runtimeConfigurations = [:]
+                ['RuntimeClasspath', 'CompileClasspath'].each { suffix ->
+                    def name = "play${variant.capitalize()}UnitTest${suffix}"
+                    def configuration = testTask.project.configurations.findByName(name)
+                    if (configuration == null) configuration = testTask.project.configurations.findByName("test${suffix}")
+                    if (configuration == null || !configuration.canBeResolved) throw new GradleException('Missing JVM dependency-input configuration')
+                    runtimeConfigurations[suffix] = configuration
+                }
+                def dependencies = artifactInputs(runtimeConfigurations)
+                def plugins = artifactInputs([root: rootProject.buildscript.configurations.classpath,
+                    app: testTask.project.buildscript.configurations.classpath])
+                def android = testTask.project.extensions.findByName('android')
+                def sdkInputs = android == null ? [] : android.bootClasspath.collect { fileInput('boot', 'Android SDK', it) }
+                if (android != null && sdkInputs.empty) throw new GradleException('Missing Android SDK compiler inputs')
                 def hashText = { text -> MessageDigest.getInstance('SHA-256')
                     .digest(text.getBytes(StandardCharsets.UTF_8)).encodeHex().toString() }
                 def hostCoreDigest = MessageDigest.getInstance('SHA-256')
@@ -114,16 +152,33 @@ if (lane != null) {
                     }
                     if (!found) throw new GradleException('Configured host native-core library is missing from the qualification profile')
                 }
-                def qualificationProfile = [version: 1, compiler: [
+                // Bind provider-backed generator/engine inputs, including unprefixed
+                // environment values and -P overrides. Persist only their digest.
+                def configurationNames = [] as Set
+                rootProject.fileTree(androidRoot) {
+                    include '**/*.gradle', '**/*.gradle.kts'
+                    exclude '**/build/**', '**/.gradle/**'
+                }.files.each { script ->
+                    def matcher = script.getText('UTF-8') =~ /(?:configuredValue|configuredEngineMode|gradleProperty|environmentVariable)\(["']([^"']+)["']\)/
+                    matcher.each { match -> configurationNames.add(match[1]) }
+                }
+                configurationNames.addAll(gradle.startParameter.projectProperties.keySet())
+                def configurationInputs = configurationNames.toList().sort().collectEntries { name ->
+                    [(name): testTask.project.providers.gradleProperty(name)
+                        .orElse(testTask.project.providers.environmentVariable(name)).getOrNull()]
+                }
+                def qualificationProfile = [version: 2, compiler: [
                     test_java_sha256: version([testTask.javaLauncher.get().executablePath.asFile.absolutePath, '-version']),
                     gradle_java_sha256: hashText(System.getProperty('java.runtime.version') + ' / ' + System.getProperty('java.vendor')),
-                    gradle: gradle.gradleVersion, rustc_sha256: version(['rustc', '-vV']),
+                    gradle: gradle.gradleVersion, gradle_plugins_sha256: hashText(JsonOutput.toJson(plugins)),
+                    android_sdk_sha256: hashText(JsonOutput.toJson(sdkInputs)), rustc_sha256: version(['rustc', '-vV']),
                     cargo_ndk_sha256: version(['cargo', 'ndk', '--version']),
                     ndk_revision: ndkProperties.getProperty('Pkg.Revision'),
                     os: System.getProperty('os.name'), arch: System.getProperty('os.arch')], execution: [
                     environment_sha256: environmentDigest,
+                    configuration_sha256: hashText(JsonOutput.toJson(configurationInputs)),
                     host_core_sha256: hostCoreDigest.digest().encodeHex().toString(),
-                    classpath_sha256: classpathDigest.digest().encodeHex().toString(),
+                    dependency_inputs_sha256: hashText(JsonOutput.toJson(dependencies)),
                     jvm_args_sha256: hashText(JsonOutput.toJson(testTask.allJvmArgs)),
                     max_parallel_forks: testTask.maxParallelForks]]
                 def selected = []
@@ -142,7 +197,8 @@ if (lane != null) {
                 def receipt = [source_sha: sourceSha, run_id: runId, attempt: attempt, variant: variant,
                     lane: lane, task: testTask.path, native_class: nativeClass, native_methods: methods,
                     selected_methods: selected, include_patterns: filter.includePatterns.toList().sort(),
-                    exclude_patterns: filter.excludePatterns.toList().sort(), qualification_profile: qualificationProfile]
+                    exclude_patterns: filter.excludePatterns.toList().sort(), qualification_profile: qualificationProfile,
+                    input_artifacts: [compiler_plugins: plugins, android_sdk: sdkInputs, dependencies: dependencies]]
                 def output = new File(androidRoot, "build/reports/ci/jvm-native-${variant}-${lane}.json")
                 output.parentFile.mkdirs()
                 output.text = JsonOutput.prettyPrint(JsonOutput.toJson(receipt)) + '\n'

@@ -21,9 +21,11 @@
 		C0A200000000000000000012 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = C0A200000000000000000011 /* HealthMdCoreRust */; };
 		C0A200000000000000000022 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = C0A200000000000000000021 /* HealthMdCoreRust */; };
 		C0A200000000000000000032 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = C0A200000000000000000031 /* HealthMdCoreRust */; };
+		DE36CC939B6B6ECE8226FD57 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = 0287711402F80B1F5030A9A1 /* HealthMdCoreRust */; };
 		D1EC70000000000000000012 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000011 /* HealthMdConnectionCore */; };
 		D1EC70000000000000000022 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000021 /* HealthMdConnectionCore */; };
 		D1EC70000000000000000032 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000031 /* HealthMdConnectionCore */; };
+		43BC04F2C6882881CDFCF123 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = 705F9066A082B101BBBCB8E4 /* HealthMdConnectionCore */; };
 		D1EC70000000000000000042 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000041 /* HealthMdConnectionCore */; };
 		D1EC70000000000000000043 /* HealthMdDirectClientCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000044 /* HealthMdDirectClientCore */; };
 		72C844BFA1B4E3248566F30B /* HealthMdWatchWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07707407965C680321DD221 /* HealthMdWatchWidgetBundle.swift */; };
@@ -157,6 +159,7 @@
 		5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchHealthSnapshot.swift; sourceTree = "<group>"; };
 		624B99EF2F15D70300F9103F /* HealthMd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthMd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		62A1B0022F50A00100000002 /* HealthMdTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthMdTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3798598433F8C23C49C5A5D8 /* HealthMdTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthMdTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		62CC00012F15D70300F9103F /* Health.md.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Health.md.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		711A8CDB89953F166353BE5B /* WatchDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDashboardView.swift; sourceTree = "<group>"; };
 		74CD8B25767E323E53B1E898 /* HealthMdWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWatchApp.swift; sourceTree = "<group>"; };
@@ -334,6 +337,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B1EA9E1BB0410E7E85E36C15 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE36CC939B6B6ECE8226FD57 /* HealthMdCoreRust in Frameworks */,
+				43BC04F2C6882881CDFCF123 /* HealthMdConnectionCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		62CC00032F15D70300F9103F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -471,6 +483,7 @@
 				624B99EF2F15D70300F9103F /* HealthMd.app */,
 				62CC00012F15D70300F9103F /* Health.md.app */,
 				62A1B0022F50A00100000002 /* HealthMdTests.xctest */,
+				3798598433F8C23C49C5A5D8 /* HealthMdTests.xctest */,
 				F830D69E44B7A19176A49955 /* HealthMdUITests.xctest */,
 				058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */,
 				7A94E3DD3CBA29DE5940F397 /* HealthMdWatchWidgets.appex */,
@@ -601,7 +614,6 @@
 			);
 			dependencies = (
 				62A1B0082F50A00100000008 /* PBXTargetDependency */,
-				EE11BB000000000000000004 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				62A1B0032F50A00100000003 /* HealthMdTests */,
@@ -613,6 +625,31 @@
 			);
 			productName = HealthMdTests;
 			productReference = 62A1B0022F50A00100000002 /* HealthMdTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A0EB5E317A10F28B08B19C34 /* HealthMdTests-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CB6DB1C72A7F9F6AE497B53E /* Build configuration list for PBXNativeTarget "HealthMdTests-iOS" */;
+			buildPhases = (
+				3498591AC5584D230197A8CD /* Sources */,
+				B1EA9E1BB0410E7E85E36C15 /* Frameworks */,
+				ACD7BD6F0DDCFA0DF209256F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EE11BB000000000000000004 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				62A1B0032F50A00100000003 /* HealthMdTests */,
+			);
+			name = "HealthMdTests-iOS";
+			packageProductDependencies = (
+				0287711402F80B1F5030A9A1 /* HealthMdCoreRust */,
+				705F9066A082B101BBBCB8E4 /* HealthMdConnectionCore */,
+			);
+			productName = HealthMdTests;
+			productReference = 3798598433F8C23C49C5A5D8 /* HealthMdTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		62CC00052F15D70300F9103F /* HealthMd-macOS */ = {
@@ -736,6 +773,11 @@
 					};
 					62A1B0052F50A00100000005 = {
 						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 62CC00052F15D70300F9103F;
+					};
+					A0EB5E317A10F28B08B19C34 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 624B99EE2F15D70300F9103F;
 					};
 					62CC00052F15D70300F9103F = {
 						CreatedOnToolsVersion = 26.2;
@@ -776,6 +818,7 @@
 				624B99EE2F15D70300F9103F /* HealthMd */,
 				62CC00052F15D70300F9103F /* HealthMd-macOS */,
 				62A1B0052F50A00100000005 /* HealthMdTests */,
+				A0EB5E317A10F28B08B19C34 /* HealthMdTests-iOS */,
 				51A85F3DE976312324C83BCB /* HealthMdUITests */,
 				A5FE1C5BA5ADBE0B3F09E8B0 /* HealthMdWatch */,
 				57674F2C880323EC36867BA6 /* HealthMdWatchWidgets */,
@@ -802,6 +845,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		62A1B0072F50A00100000007 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACD7BD6F0DDCFA0DF209256F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -922,6 +972,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		62A1B0062F50A00100000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3498591AC5584D230197A8CD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1138,6 +1195,31 @@
 				MARKETING_VERSION = 3.4.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_INCLUDE_PATHS = "$(CONFIGURATION_TEMP_DIR)/HealthMd.build/Objects-normal/$(CURRENT_ARCH)";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthMd.app/HealthMd";
+			};
+			name = "Debug-iOS";
+		};
+		F233CBC91B2BC2809B14F84B /* Debug-iOS */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 202610071219;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 3.4.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
+				PRODUCT_NAME = HealthMdTests;
+				PRODUCT_MODULE_NAME = HealthMdTests;
 				SDKROOT = iphonesimulator;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -1514,6 +1596,7 @@
 		62A1B0092F50A00100000009 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				SUPPORTED_PLATFORMS = macosx;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 202610071219;
@@ -1534,9 +1617,35 @@
 			};
 			name = Debug;
 		};
+		706A62A26500DCA99C796851 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 202610071219;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 3.4.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
+				PRODUCT_NAME = HealthMdTests;
+				PRODUCT_MODULE_NAME = HealthMdTests;
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_INCLUDE_PATHS = "$(CONFIGURATION_TEMP_DIR)/HealthMd.build/Objects-normal/$(CURRENT_ARCH)";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthMd.app/HealthMd";
+			};
+			name = Debug;
+		};
 		62A1B00A2F50A00100000010 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				SUPPORTED_PLATFORMS = macosx;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 202610071219;
@@ -1554,6 +1663,31 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Health.md.app/Contents/MacOS/Health.md";
+			};
+			name = Release;
+		};
+		31CB41B848E5DE02BD2C4314 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthMd.app/HealthMd";
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				SWIFT_INCLUDE_PATHS = "$(CONFIGURATION_TEMP_DIR)/HealthMd.build/Objects-normal/$(CURRENT_ARCH)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 202610071219;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 3.4.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
+				PRODUCT_NAME = HealthMdTests;
+				PRODUCT_MODULE_NAME = HealthMdTests;
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -1866,6 +2000,31 @@
 				MARKETING_VERSION = 3.4.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Release-iOS";
+		};
+		4D1B5AAC40E18EA39F1B9684 /* Release-iOS */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HealthMd.app/HealthMd";
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				SWIFT_INCLUDE_PATHS = "$(CONFIGURATION_TEMP_DIR)/HealthMd.build/Objects-normal/$(CURRENT_ARCH)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 202610071219;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 3.4.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
+				PRODUCT_NAME = HealthMdTests;
+				PRODUCT_MODULE_NAME = HealthMdTests;
 				SDKROOT = iphonesimulator;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -2343,8 +2502,17 @@
 			buildConfigurations = (
 				62A1B0092F50A00100000009 /* Debug */,
 				62A1B00A2F50A00100000010 /* Release */,
-				1BAC721C5C094A2F9BA90F1D /* Debug-iOS */,
-				8446E2E4B31C479FB9583F8D /* Release-iOS */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CB6DB1C72A7F9F6AE497B53E /* Build configuration list for PBXNativeTarget "HealthMdTests-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				706A62A26500DCA99C796851 /* Debug */,
+				31CB41B848E5DE02BD2C4314 /* Release */,
+				F233CBC91B2BC2809B14F84B /* Debug-iOS */,
+				4D1B5AAC40E18EA39F1B9684 /* Release-iOS */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -2460,6 +2628,11 @@
 			package = C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */;
 			productName = HealthMdCoreRust;
 		};
+		0287711402F80B1F5030A9A1 /* HealthMdCoreRust */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */;
+			productName = HealthMdCoreRust;
+		};
 		D1EC70000000000000000011 /* HealthMdConnectionCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */;
@@ -2471,6 +2644,11 @@
 			productName = HealthMdConnectionCore;
 		};
 		D1EC70000000000000000031 /* HealthMdConnectionCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */;
+			productName = HealthMdConnectionCore;
+		};
+		705F9066A082B101BBBCB8E4 /* HealthMdConnectionCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */;
 			productName = HealthMdConnectionCore;

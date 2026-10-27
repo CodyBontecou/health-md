@@ -12,7 +12,7 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 SHA = 'a' * 40
 METHODS = ['first', 'native ACK with spaces', 'native retry', 'stop']
-PROFILE = {'version': 1, 'compiler': {**{key: 'a' * 64 for key in m.PROFILE_COMPILER_HASH},
+PROFILE = {'version': 2, 'compiler': {**{key: 'a' * 64 for key in m.PROFILE_COMPILER_HASH},
            'gradle': '8.13', 'ndk_revision': '27.1.12297006', 'os': 'Linux', 'arch': 'amd64'},
            'execution': {**{key: 'b' * 64 for key in m.PROFILE_EXECUTION_HASH}, 'max_parallel_forks': 2}}
 
@@ -201,9 +201,9 @@ class JVMShardTests(unittest.TestCase):
         for lane in m.LANES:
             path = self.folder('release', lane) / f'build/reports/ci/jvm-native-release-{lane}.json'
             value = json.loads(path.read_text())
-            value['qualification_profile']['execution']['classpath_sha256'] = 'c' * 64
+            value['qualification_profile']['execution']['dependency_inputs_sha256'] = 'c' * 64
             path.write_text(json.dumps(value))
-        self.assertEqual(self.verify()['execution_profiles']['release']['classpath_sha256'], 'c' * 64)
+        self.assertEqual(self.verify()['execution_profiles']['release']['dependency_inputs_sha256'], 'c' * 64)
 
     def test_workflow_keeps_all_nine_lanes_and_shared_lint_package_gates(self):
         workflow = Path(__file__).resolve().parents[4] / '.github/workflows/android-ci.yml'

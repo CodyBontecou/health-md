@@ -47,6 +47,8 @@ MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
 DERIVED_DATA_PATH ?= $(CURDIR)/build/DerivedData/macOS
 MACOS_CODE_COVERAGE ?= NO
 export DERIVED_DATA_PATH MACOS_DEST MACOS_CODE_COVERAGE
+IOS_TEST_FILTER := $(patsubst HealthMdTests/%,HealthMdTests-iOS/%,$(patsubst HealthMdTests,HealthMdTests-iOS,$(TEST_FILTER)))
+XCODE_IOS_TEST_FILTER := $(if $(strip $(IOS_TEST_FILTER)),-only-testing:$(IOS_TEST_FILTER))
 XCODE_TEST_FILTER := $(if $(strip $(TEST_FILTER)),-only-testing:$(TEST_FILTER))
 # Root parallel tests opt into independent Xcode build databases. Direct
 # component and hosted CI invocations retain Xcode's existing default paths.
@@ -112,7 +114,7 @@ test-ios: prepare-healthmd-core-rust
 	  -destination "$$ios_sim" \
 	  -resultBundlePath "$(IOS_XCRESULT_PATH)" \
 	  -test-timeouts-enabled NO \
-	  $(XCODE_TEST_FILTER) \
+	  $(XCODE_IOS_TEST_FILTER) \
 	  2>&1 | tee "$(IOS_TEST_RAW_LOG)" | \
 	  if command -v xcpretty >/dev/null 2>&1; then \
 	    xcpretty --color; \

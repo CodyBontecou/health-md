@@ -21,7 +21,7 @@ while not (root/'descendant').exists():time.sleep(.01)
 (root/'ready').touch()
 if mode!='cancel':
  print('note: Target dependency graph ('+('3' if mode=='unexpected' else '2')+' targets)',flush=True)
- print("    Target 'HealthMdTests' in project 'HealthMd'",flush=True)
+ print("    Target 'HealthMdTests-iOS' in project 'HealthMd'",flush=True)
  if mode!='incomplete':print("    Target 'HealthMd' in project 'HealthMd' (no dependencies)",flush=True)
  if mode=='unexpected':print("    Target 'HealthMd-macOS' in project 'HealthMd' (no dependencies)",flush=True)
 if mode=='incomplete':sys.exit(7)

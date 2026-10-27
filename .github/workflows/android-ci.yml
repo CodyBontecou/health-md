@@ -194,7 +194,11 @@ jobs:
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '17.0.21+9'
+
+      - name: Verify exact Java runtime
+        working-directory: ${{ github.workspace }}
+        run: bash apps/android/scripts/verify-ci-java.sh
 
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
@@ -357,7 +361,11 @@ jobs:
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '17.0.21+9'
+
+      - name: Verify exact Java runtime
+        working-directory: ${{ github.workspace }}
+        run: bash apps/android/scripts/verify-ci-java.sh
 
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
@@ -541,7 +549,11 @@ jobs:
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '17.0.21+9'
+
+      - name: Verify exact Java runtime
+        working-directory: ${{ github.workspace }}
+        run: bash apps/android/scripts/verify-ci-java.sh
 
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
@@ -701,7 +713,11 @@ jobs:
         with:
           ref: ${{ inputs.release_sha || github.sha }}
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
-        with: { distribution: temurin, java-version: '17' }
+        with: { distribution: temurin, java-version: '17.0.21+9' }
+
+      - name: Verify exact Java runtime
+        working-directory: ${{ github.workspace }}
+        run: bash apps/android/scripts/verify-ci-java.sh
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         with:
           packages: platform-tools
@@ -748,7 +764,11 @@ jobs:
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '17.0.21+9'
+
+      - name: Verify exact Java runtime
+        working-directory: ${{ github.workspace }}
+        run: bash apps/android/scripts/verify-ci-java.sh
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
