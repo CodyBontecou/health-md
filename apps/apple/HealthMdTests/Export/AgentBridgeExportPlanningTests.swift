@@ -1987,7 +1987,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                         _ = try context.begin()
                         do { _ = try await reconnect.receiveAndHandleNext(); XCTFail("Competing reader must reject") }
                         catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
-                        do { try await reconnect.handleAndSend(nativeDiscoveryBytes(rig)); XCTFail("Competing response must reject") }
+                        do { try await reconnect.handleAndSend(self.nativeDiscoveryBytes(rig)); XCTFail("Competing response must reject") }
                         catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
                         do { try await reconnect.withRetainedCaptureContext(request) { _ in XCTFail("Competing capture must reject") }; XCTFail("Expected busy") }
                         catch { XCTAssertEqual(error as? AgentBridgeValidationError, .busy) }
