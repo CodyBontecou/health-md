@@ -117,12 +117,13 @@ impl ResumedTransfer {
     }
 }
 
-pub(super) struct TransferGuard {
+pub(crate) struct TransferGuard {
     dir: cap_std::fs::Dir,
     name: String,
     bytes: Vec<u8>,
     partitions: Vec<PartitionRecord>,
     completion: crate::agent_host::output::CompletionEvidence,
+    frontiers: Vec<Digest>,
 }
 impl TransferGuard {
     fn new(
@@ -153,6 +154,17 @@ impl TransferGuard {
         if completion.is_present() {
             require_completed_journal(transaction, binding, &journal)?;
         }
+        let mut frontier = TransferFrontier::new(
+            &binding.request.job_id,
+            &binding.manifest.request_sha256,
+            &document_digest(&binding.manifest)?,
+            &ControlUuid(journal.session.0.session_id.to_string()),
+        )?;
+        let mut frontiers = vec![frontier.sha256().clone()];
+        for record in &journal.partitions {
+            frontier = frontier.appending(&record.partition)?;
+            frontiers.push(frontier.sha256().clone());
+        }
         let guard = Self {
             dir: transaction
                 .directory()
@@ -162,11 +174,36 @@ impl TransferGuard {
             bytes,
             partitions: journal.partitions,
             completion,
+            frontiers,
         };
         guard.verify()?;
         Ok(guard)
     }
-    pub(super) fn verify(&self) -> Result<(), ClientError> {
+    /// Retained signed prefix and staged bytes, without opening another output lease.
+    pub(crate) fn for_stop(transaction: &OutputTransaction) -> Result<Self, ClientError> {
+        let (_, bytes) = transaction.read_transfer::<TransferJournal>()?;
+        Self::new(transaction, transaction.binding(), &bytes)
+    }
+    pub(crate) fn evidence_digests(&self) -> (Digest, Option<Digest>) {
+        (
+            Digest(healthmd_protocol::transfer::sha256_hex(&self.bytes)),
+            self.completion
+                .bytes()
+                .map(|bytes| Digest(healthmd_protocol::transfer::sha256_hex(bytes))),
+        )
+    }
+    pub(crate) fn validate_stop_frontier(
+        &self,
+        receipt: &ExecutionReceipt,
+    ) -> Result<(), ClientError> {
+        let count =
+            usize::try_from(receipt.committed_partition_count).map_err(private::unavailable)?;
+        if self.frontiers.get(count) != Some(&receipt.frontier_sha256) {
+            return Err(Error::BindingChanged.into());
+        }
+        Ok(())
+    }
+    pub(crate) fn verify(&self) -> Result<(), ClientError> {
         self.completion.verify()?;
         if private::read_private(&self.dir, &self.name, 64 * 1024 * 1024)? != self.bytes {
             return Err(Error::BindingChanged.into());

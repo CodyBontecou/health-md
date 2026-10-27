@@ -3,7 +3,26 @@
 use super::*;
 
 const PENDING_MAC_DOMAIN: &[u8] = b"HealthMd.AgentBridge.HostExecutionAttempt.v5\0";
+const TRANSFER_PENDING_MAC_DOMAIN: &[u8] = b"HealthMd.AgentBridge.HostExecutionAttempt.v7\0";
+const TRANSFER_CONFIRMED_MAC_DOMAIN: &[u8] = b"HealthMd.AgentBridge.HostExecutionAttempt.v8\0";
 const CONFIRMED_MAC_DOMAIN: &[u8] = b"HealthMd.AgentBridge.HostExecutionAttempt.v6\0";
+
+#[derive(Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct TransferStopEvidence {
+    transfer_sha256: Digest,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    completion_sha256: Option<Digest>,
+}
+impl TransferStopEvidence {
+    fn from_guard(guard: &crate::agent_bridge::TransferGuard) -> Self {
+        let (transfer_sha256, completion_sha256) = guard.evidence_digests();
+        Self {
+            transfer_sha256,
+            completion_sha256,
+        }
+    }
+}
 
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -16,6 +35,8 @@ struct PendingRecord {
     output_sha256: Digest,
     cancellation_request: v4::CancelRequest,
     requested_at: UtcTimestamp,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    transfer_evidence: Option<TransferStopEvidence>,
 }
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -53,6 +74,7 @@ pub(crate) struct PendingOutputStop {
     request: v4::CancelRequest,
     started_at: UtcTimestamp,
     requested_at: UtcTimestamp,
+    transfer_guard: Option<crate::agent_bridge::TransferGuard>,
 }
 
 impl PendingOutputStop {
@@ -94,16 +116,28 @@ impl PendingOutputStop {
         pending: SignedPendingRecord,
     ) -> Result<Self, ClientError> {
         let started_at = validate_pending(&pending, &transaction)?;
+        let transfer_guard = match &pending.attempt.transfer_evidence {
+            Some(expected) => {
+                let guard = crate::agent_bridge::TransferGuard::for_stop(&transaction)?;
+                if TransferStopEvidence::from_guard(&guard) != *expected {
+                    return Err(Error::BindingChanged.into());
+                }
+                Some(guard)
+            }
+            None => None,
+        };
         Ok(Self {
             transaction,
             request: pending.attempt.cancellation_request,
             started_at,
             requested_at: pending.attempt.requested_at,
+            transfer_guard,
         })
     }
 
-    /// Consume an existing persisted output owner before transfer has begun. Older output
-    /// recovery rejects the separately signed version-5 attempt rather than resuming it.
+    /// Consume an existing persisted output owner. Pre-transfer Stop retains v5 bytes;
+    /// retained-transfer Stop uses a separate v7 MAC domain and pins all recovery evidence.
+    /// Ordinary output recovery rejects either pending record instead of resuming it.
     pub(crate) fn prepare<F, Fut>(
         transaction: OutputTransaction,
         clock: &dyn PlanningClock,
@@ -128,11 +162,20 @@ impl PendingOutputStop {
         let request = execution_cancel_request(&transaction.journal.binding.request)?;
         let original: SignedExecutionAttempt =
             private_json::decode(transaction.attempt.as_ref().ok_or(Error::BindingChanged)?)?;
+        let transfer_guard = match transaction
+            .dir
+            .symlink_metadata(format!("transfer-{}.json", request.job_id.0))
+        {
+            Ok(_) => Some(crate::agent_bridge::TransferGuard::for_stop(&transaction)?),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(private::unavailable(error)),
+        };
         let mut owner = Self {
             transaction,
             request,
             started_at: original.attempt.started_at,
             requested_at: clock.now(),
+            transfer_guard,
         };
         owner.require_current(clock, fence).await?;
         let transaction = &owner.transaction;
@@ -147,13 +190,17 @@ impl PendingOutputStop {
         owner.requested_at.validate_shape()?;
         let attempt = PendingRecord {
             schema: "healthmd.agent_host_execution_attempt".into(),
-            schema_version: 5,
+            schema_version: if owner.transfer_guard.is_some() { 7 } else { 5 },
             host: transaction.store.host.clone(),
             binding: transaction.journal.binding.clone(),
             original_attempt: original,
             output_sha256: Digest(hex_sha256(output)),
             cancellation_request: owner.request.clone(),
             requested_at: owner.requested_at.clone(),
+            transfer_evidence: owner
+                .transfer_guard
+                .as_ref()
+                .map(TransferStopEvidence::from_guard),
         };
         let bytes = private_json::encode(&SignedPendingRecord {
             mac: pending_mac(&attempt, &transaction.key)?,
@@ -188,6 +235,9 @@ impl PendingOutputStop {
             return Err(ClientError::WaitCancelled);
         }
         validate_bound_receipt(&self.transaction.journal.binding, receipt)?;
+        if let Some(guard) = &self.transfer_guard {
+            guard.validate_stop_frontier(receipt)?;
+        }
         let confirmed_at = clock.now();
         confirmed_at.validate_shape()?;
         if confirmed_at < self.requested_at
@@ -204,14 +254,18 @@ impl PendingOutputStop {
         validate_pending(&pending, &self.transaction)?;
         let record = ConfirmedRecord {
             schema: "healthmd.agent_host_execution_attempt".into(),
-            schema_version: 6,
+            schema_version: if pending.attempt.schema_version == 7 {
+                8
+            } else {
+                6
+            },
             host: self.transaction.store.host.clone(),
             pending,
             source_receipt: receipt.clone(),
             source_confirmed_at: confirmed_at.clone(),
         };
         let bytes = private_json::encode(&SignedConfirmedRecord {
-            mac: stop_mac(&record, CONFIRMED_MAC_DOMAIN, &self.transaction.key)?,
+            mac: stop_mac(&record, confirmed_domain(&record)?, &self.transaction.key)?,
             attempt: record,
         })?;
         self.reserve_replacement(bytes.len())?;
@@ -223,6 +277,10 @@ impl PendingOutputStop {
             }
             if clock.now() < confirmed_at {
                 return Err(Error::BindingChanged.into());
+            }
+            self.transaction.require_current()?;
+            if let Some(guard) = &self.transfer_guard {
+                guard.verify()?;
             }
             Ok(())
         })
@@ -236,6 +294,10 @@ impl PendingOutputStop {
         }
         if now < confirmed_at {
             return Err(Error::BindingChanged.into());
+        }
+        self.transaction.require_current()?;
+        if let Some(guard) = &self.transfer_guard {
+            guard.verify()?;
         }
         Ok(receipt.clone())
     }
@@ -289,6 +351,10 @@ impl PendingOutputStop {
         if self.started_at > self.requested_at || self.requested_at > clock.now() {
             return Err(Error::BindingChanged.into());
         }
+        transaction.require_current()?;
+        if let Some(guard) = &self.transfer_guard {
+            return guard.verify();
+        }
         for prefix in ["transfer", "completion"] {
             match transaction
                 .dir
@@ -331,7 +397,19 @@ fn hex_sha256(bytes: &[u8]) -> String {
 }
 
 fn pending_mac(record: &PendingRecord, key: &SecretBox<[u8; 32]>) -> Result<Digest, ClientError> {
-    stop_mac(record, PENDING_MAC_DOMAIN, key)
+    let domain = match (record.schema_version, record.transfer_evidence.is_some()) {
+        (5, false) => PENDING_MAC_DOMAIN,
+        (7, true) => TRANSFER_PENDING_MAC_DOMAIN,
+        _ => return Err(Error::BindingChanged.into()),
+    };
+    stop_mac(record, domain, key)
+}
+fn confirmed_domain(record: &ConfirmedRecord) -> Result<&'static [u8], ClientError> {
+    match (record.schema_version, record.pending.attempt.schema_version) {
+        (6, 5) => Ok(CONFIRMED_MAC_DOMAIN),
+        (8, 7) => Ok(TRANSFER_CONFIRMED_MAC_DOMAIN),
+        _ => Err(Error::BindingChanged.into()),
+    }
 }
 fn stop_mac<T: Serialize>(
     record: &T,
@@ -391,7 +469,10 @@ fn validate_pending(
         .as_ref()
         .ok_or(Error::BindingChanged)?;
     if record.schema != "healthmd.agent_host_execution_attempt"
-        || record.schema_version != 5
+        || !matches!(
+            (record.schema_version, record.transfer_evidence.is_some()),
+            (5, false) | (7, true)
+        )
         || record.host != transaction.store.host
         || record.binding != transaction.journal.binding
         || record.output_sha256.0 != hex_sha256(output)
@@ -464,14 +545,14 @@ pub(crate) async fn read_confirmed_output_stop(
     let now = clock.now();
     now.validate_shape()?;
     if record.schema != "healthmd.agent_host_execution_attempt"
-        || record.schema_version != 6
+        || !matches!(record.schema_version, 6 | 8)
         || record.host != store.host
         || record.source_confirmed_at > now
         || record.source_confirmed_at < record.pending.attempt.requested_at
     {
         return Err(Error::BindingChanged.into());
     }
-    let expected = stop_mac(&record, CONFIRMED_MAC_DOMAIN, &transaction.key)?;
+    let expected = stop_mac(&record, confirmed_domain(&record)?, &transaction.key)?;
     if !healthmd_protocol::crypto::constant_time_equal(
         signed.mac.0.as_bytes(),
         expected.0.as_bytes(),
@@ -482,6 +563,9 @@ pub(crate) async fn read_confirmed_output_stop(
     let receipt = record.source_receipt;
     let confirmed_at = record.source_confirmed_at;
     let owner = PendingOutputStop::from_pending(transaction, record.pending)?;
+    if let Some(guard) = &owner.transfer_guard {
+        guard.validate_stop_frontier(&receipt)?;
+    }
     owner
         .require_current(&ObservedAt(&confirmed_at), || async { Ok(()) })
         .await?;
@@ -489,6 +573,10 @@ pub(crate) async fn read_confirmed_output_stop(
     now.validate_shape()?;
     if now < confirmed_at {
         return Err(Error::BindingChanged.into());
+    }
+    owner.transaction.require_current()?;
+    if let Some(guard) = &owner.transfer_guard {
+        guard.verify()?;
     }
     Ok(receipt)
 }

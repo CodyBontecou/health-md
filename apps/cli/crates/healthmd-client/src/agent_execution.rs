@@ -250,7 +250,10 @@ impl HostAuthorityStore {
         job: &ControlUuid,
         clock: &dyn PlanningClock,
     ) -> Result<SourceStopConfirmation, ClientError> {
-        let receipt = crate::agent_host::output::read_source_confirmation(self, job, clock).await?;
+        let receipt = Box::pin(crate::agent_host::output::read_source_confirmation(
+            self, job, clock,
+        ))
+        .await?;
         Ok(SourceStopConfirmation { receipt })
     }
 }
@@ -880,6 +883,7 @@ impl Drop for PrivateOutputFile {
 #[path = "agent_transfer.rs"]
 mod transfer;
 pub use transfer::ReceivedArtifacts;
+pub(crate) use transfer::TransferGuard;
 
 #[path = "agent_confirmation.rs"]
 mod confirmation;

@@ -865,3 +865,407 @@ async fn host_resume_preflight_rejects_retained_drift_during_authority_callbacks
         }
     }
 }
+
+async fn retained_stop_fixture(platform: PeerPlatform) -> CompletedFixture {
+    let (temporary, client, saved, peer) = stored_pair(platform).await;
+    let (store, output, _request, binding) =
+        configured_request(&client, &peer, &OutputSettingsWriteMode::Append).await;
+    let receipts = Box::pin(commit_original(&client, &saved, &store, &output, &binding)).await;
+    let data = payload(TransferCase::Confirmed);
+    Box::pin(retained_fixture_with_payload(
+        &store,
+        &output,
+        &binding,
+        1,
+        RecoveryCase::Exact,
+        &data,
+    ))
+    .await;
+    CompletedFixture {
+        _temporary: temporary,
+        client,
+        saved,
+        store,
+        output,
+        binding,
+        receipts,
+        prefix: 1,
+    }
+}
+fn transfer_stop_receipt(f: &CompletedFixture) -> ExecutionReceipt {
+    let path = f
+        .client
+        .layout
+        .root
+        .join("agent-host-v1")
+        .join(format!("transfer-{}.json", f.binding.request.job_id.0));
+    let journal: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    ExecutionReceipt {
+        status: ExecutionReceiptStatus::Cancelled,
+        source_acknowledged: true,
+        artifact_count: f.binding.manifest.artifacts.len() as u64,
+        manifest_sha256: document_digest(&f.binding.manifest).unwrap(),
+        committed_partition_count: f.prefix,
+        frontier_sha256: serde_json::from_value(journal["journal"]["frontier_sha256"].clone())
+            .unwrap(),
+        ..f.binding.accepted.clone()
+    }
+}
+
+#[tokio::test]
+async fn retained_transfer_stop_persists_exact_prefix_and_confirms_without_renewing_export_grants()
+{
+    use crate::agent_host::output::PendingOutputStop;
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let f = Box::pin(retained_stop_fixture(platform)).await;
+        let job = &f.binding.request.job_id;
+        let root = f.client.layout.root.join("agent-host-v1");
+        let record = |prefix: &str| root.join(format!("{prefix}-{}.json", job.0));
+        let output = std::fs::read(record("output")).unwrap();
+        let transfer = std::fs::read(record("transfer")).unwrap();
+        let receipt = transfer_stop_receipt(&f);
+        let clock = AdvancingClock::new();
+        let transaction = OutputTransaction::open_retained(&f.store, job)
+            .await
+            .unwrap();
+        f.store
+            .revoke_local(
+                f.store.revision().await.unwrap(),
+                &f.binding
+                    .request
+                    .plan
+                    .authority_references
+                    .host
+                    .authority_id,
+            )
+            .await
+            .unwrap();
+        let pending = PendingOutputStop::prepare(transaction, &clock, || async { Ok(()) })
+            .await
+            .unwrap();
+        let request = pending.request().clone();
+        let bytes = std::fs::read(record("attempt")).unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(value["attempt"]["schema_version"], 7);
+        assert_eq!(
+            value["attempt"]["transfer_evidence"]["transfer_sha256"],
+            healthmd_protocol::transfer::sha256_hex(&transfer)
+        );
+        assert!(value["attempt"].get("source_receipt").is_none());
+        drop(pending);
+        assert!(
+            OutputTransaction::open_retained(&f.store, job)
+                .await
+                .is_err()
+        );
+        let replay = PendingOutputStop::open_retained(&f.store, job, &clock, || async { Ok(()) })
+            .await
+            .unwrap();
+        assert_eq!(replay.request(), &request);
+        assert_eq!(std::fs::read(record("attempt")).unwrap(), bytes);
+        let confirmed = replay
+            .confirm(&receipt, &clock, &CancellationToken::new(), || async {
+                Ok(())
+            })
+            .await
+            .unwrap();
+        assert_eq!(confirmed, receipt);
+        let value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(record("attempt")).unwrap()).unwrap();
+        assert_eq!(value["attempt"]["schema_version"], 8);
+        assert_eq!(std::fs::read(record("output")).unwrap(), output);
+        assert_eq!(std::fs::read(record("transfer")).unwrap(), transfer);
+        assert!(!record("completion").exists());
+        assert_eq!(
+            f.store
+                .retained_source_stop_confirmation(job, &clock)
+                .await
+                .unwrap()
+                .receipt(),
+            &receipt
+        );
+        for path in &f.binding.request.plan.predicted_paths {
+            assert_eq!(
+                std::fs::read(f.output.join(&path.0)).unwrap(),
+                expected_output(platform, &OutputSettingsWriteMode::Append)
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn retained_transfer_stop_rejects_stage_drift_and_wrong_native_frontier_without_repair() {
+    use crate::agent_host::output::PendingOutputStop;
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let f = Box::pin(retained_stop_fixture(platform)).await;
+        let job = &f.binding.request.job_id;
+        let root = f.client.layout.root.join("agent-host-v1");
+        let attempt = root.join(format!("attempt-{}.json", job.0));
+        let transfer = root.join(format!("transfer-{}.json", job.0));
+        let journal: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&transfer).unwrap()).unwrap();
+        let stage = root.join(
+            journal["journal"]["partitions"][0]["stage_name"]
+                .as_str()
+                .unwrap(),
+        );
+        let original_stage = std::fs::read(&stage).unwrap();
+        let original_attempt = std::fs::read(&attempt).unwrap();
+        let clock = AdvancingClock::new();
+        let transaction = OutputTransaction::open_retained(&f.store, job)
+            .await
+            .unwrap();
+        assert!(
+            PendingOutputStop::prepare(transaction, &clock, || async {
+                std::fs::write(&stage, b"changed").unwrap();
+                Ok(())
+            })
+            .await
+            .is_err()
+        );
+        assert_eq!(std::fs::read(&attempt).unwrap(), original_attempt);
+        std::fs::write(&stage, &original_stage).unwrap();
+        let transaction = OutputTransaction::open_retained(&f.store, job)
+            .await
+            .unwrap();
+        let pending = PendingOutputStop::prepare(transaction, &clock, || async { Ok(()) })
+            .await
+            .unwrap();
+        let pending_bytes = std::fs::read(&attempt).unwrap();
+        let mut wrong = transfer_stop_receipt(&f);
+        wrong.frontier_sha256 = Digest("f".repeat(64));
+        assert!(
+            pending
+                .confirm(&wrong, &clock, &CancellationToken::new(), || async {
+                    Ok(())
+                })
+                .await
+                .is_err()
+        );
+        assert_eq!(std::fs::read(&attempt).unwrap(), pending_bytes);
+        std::fs::write(&stage, b"changed").unwrap();
+        assert!(
+            PendingOutputStop::open_retained(&f.store, job, &clock, || async { Ok(()) })
+                .await
+                .is_err()
+        );
+        assert_eq!(std::fs::read(&attempt).unwrap(), pending_bytes);
+    }
+}
+
+struct StopPublicationDriftClock {
+    stage: PathBuf,
+    armed: std::sync::atomic::AtomicBool,
+    calls: AtomicUsize,
+    changed: std::sync::atomic::AtomicBool,
+}
+impl crate::agent_planning::PlanningClock for StopPublicationDriftClock {
+    fn now(&self) -> v4::UtcTimestamp {
+        if self.armed.load(Ordering::SeqCst) && self.calls.fetch_add(1, Ordering::SeqCst) == 2 {
+            std::fs::write(&self.stage, b"publication-boundary drift").unwrap();
+            self.changed.store(true, Ordering::SeqCst);
+        }
+        now()
+    }
+}
+#[tokio::test]
+async fn retained_transfer_stop_publication_clock_drift_preserves_pending_intent() {
+    use crate::agent_host::output::PendingOutputStop;
+    let f = Box::pin(retained_stop_fixture(PeerPlatform::Android)).await;
+    let job = &f.binding.request.job_id;
+    let root = f.client.layout.root.join("agent-host-v1");
+    let attempt = root.join(format!("attempt-{}.json", job.0));
+    let transfer = root.join(format!("transfer-{}.json", job.0));
+    let journal: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&transfer).unwrap()).unwrap();
+    let stage = root.join(
+        journal["journal"]["partitions"][0]["stage_name"]
+            .as_str()
+            .unwrap(),
+    );
+    let receipt = transfer_stop_receipt(&f);
+    let transaction = OutputTransaction::open_retained(&f.store, job)
+        .await
+        .unwrap();
+    let pending =
+        PendingOutputStop::prepare(transaction, &AdvancingClock::new(), || async { Ok(()) })
+            .await
+            .unwrap();
+    let pending_bytes = std::fs::read(&attempt).unwrap();
+    let clock = StopPublicationDriftClock {
+        stage,
+        armed: std::sync::atomic::AtomicBool::new(false),
+        calls: AtomicUsize::new(0),
+        changed: std::sync::atomic::AtomicBool::new(false),
+    };
+    assert!(
+        pending
+            .confirm(&receipt, &clock, &CancellationToken::new(), || async {
+                if std::fs::read_dir(&root).unwrap().any(|entry| {
+                    let name = entry.unwrap().file_name();
+                    let name = name.to_str().unwrap();
+                    name.starts_with(".issuer-")
+                        && std::path::Path::new(name)
+                            .extension()
+                            .and_then(|ext| ext.to_str())
+                            .is_some_and(|ext| ext.eq_ignore_ascii_case("tmp"))
+                }) {
+                    clock.armed.store(true, Ordering::SeqCst);
+                }
+                Ok(())
+            })
+            .await
+            .is_err()
+    );
+    assert!(
+        clock.changed.load(Ordering::SeqCst),
+        "must reach the final staged-publication clock callback"
+    );
+    assert_eq!(
+        std::fs::read(&attempt).unwrap(),
+        pending_bytes,
+        "rejected publication must preserve pending v7 instead of installing v8"
+    );
+}
+
+fn sign_transfer_stop_test_record(value: &mut serde_json::Value, domain: &[u8]) {
+    use hmac::Mac as _;
+    // Dedicated synthetic issuer key; no native credential store or user data.
+    let mut mac = hmac::Hmac::<sha2::Sha256>::new_from_slice(&[41; 32]).unwrap();
+    mac.update(domain);
+    mac.update(&canonical_json(&value["attempt"]).unwrap());
+    value["mac"] = format!("{:x}", mac.finalize().into_bytes()).into();
+}
+#[tokio::test]
+async fn retained_transfer_stop_rejects_validly_signed_domain_downgrades_and_substituted_evidence()
+{
+    use crate::agent_host::output::PendingOutputStop;
+    let f = Box::pin(retained_stop_fixture(PeerPlatform::Android)).await;
+    let job = &f.binding.request.job_id;
+    let path = f
+        .client
+        .layout
+        .root
+        .join("agent-host-v1")
+        .join(format!("attempt-{}.json", job.0));
+    let clock = AdvancingClock::new();
+    let transaction = OutputTransaction::open_retained(&f.store, job)
+        .await
+        .unwrap();
+    let pending = PendingOutputStop::prepare(transaction, &clock, || async { Ok(()) })
+        .await
+        .unwrap();
+    let bytes = std::fs::read(&path).unwrap();
+    drop(pending);
+    let mut positive: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    sign_transfer_stop_test_record(
+        &mut positive,
+        b"HealthMd.AgentBridge.HostExecutionAttempt.v7\0",
+    );
+    assert_eq!(
+        canonical_json(&positive).unwrap(),
+        bytes,
+        "test signer must reproduce the real v7 MAC"
+    );
+    for case in 0..3 {
+        let mut value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let domain: &[u8] = match case {
+            0 => b"HealthMd.AgentBridge.HostExecutionAttempt.v5\0",
+            1 => {
+                value["attempt"]["schema_version"] = 5.into();
+                value["attempt"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("transfer_evidence");
+                b"HealthMd.AgentBridge.HostExecutionAttempt.v5\0"
+            }
+            _ => {
+                value["attempt"]["transfer_evidence"]["transfer_sha256"] = "0".repeat(64).into();
+                b"HealthMd.AgentBridge.HostExecutionAttempt.v7\0"
+            }
+        };
+        sign_transfer_stop_test_record(&mut value, domain);
+        let changed = canonical_json(&value).unwrap();
+        std::fs::write(&path, &changed).unwrap();
+        assert!(
+            PendingOutputStop::open_retained(&f.store, job, &clock, || async { Ok(()) })
+                .await
+                .is_err()
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), changed);
+    }
+    std::fs::write(&path, &bytes).unwrap();
+    let pending = PendingOutputStop::open_retained(&f.store, job, &clock, || async { Ok(()) })
+        .await
+        .unwrap();
+    pending
+        .confirm(
+            &transfer_stop_receipt(&f),
+            &clock,
+            &CancellationToken::new(),
+            || async { Ok(()) },
+        )
+        .await
+        .unwrap();
+    let bytes = std::fs::read(&path).unwrap();
+    let mut positive: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    sign_transfer_stop_test_record(
+        &mut positive,
+        b"HealthMd.AgentBridge.HostExecutionAttempt.v8\0",
+    );
+    assert_eq!(
+        canonical_json(&positive).unwrap(),
+        bytes,
+        "test signer must reproduce the real v8 MAC"
+    );
+    for case in 0..2 {
+        let mut value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let domain: &[u8] = if case == 0 {
+            value["attempt"]["schema_version"] = 6.into();
+            b"HealthMd.AgentBridge.HostExecutionAttempt.v6\0"
+        } else {
+            value["attempt"]["source_receipt"]["frontier_sha256"] = "f".repeat(64).into();
+            b"HealthMd.AgentBridge.HostExecutionAttempt.v8\0"
+        };
+        sign_transfer_stop_test_record(&mut value, domain);
+        let changed = canonical_json(&value).unwrap();
+        std::fs::write(&path, &changed).unwrap();
+        assert!(
+            Box::pin(f.store.retained_source_stop_confirmation(job, &clock))
+                .await
+                .is_err()
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), changed);
+    }
+}
+
+#[tokio::test]
+async fn retained_transfer_stop_rejects_completion_evidence_drift_before_publication() {
+    use crate::agent_host::output::PendingOutputStop;
+    let f = Box::pin(recover_mode(
+        PeerPlatform::Ios,
+        OutputSettingsWriteMode::Append,
+    ))
+    .await;
+    let job = &f.binding.request.job_id;
+    let root = f.client.layout.root.join("agent-host-v1");
+    let attempt = root.join(format!("attempt-{}.json", job.0));
+    let completion = root.join(format!("completion-{}.json", job.0));
+    let original_attempt = std::fs::read(&attempt).unwrap();
+    let transaction = OutputTransaction::open_retained(&f.store, job)
+        .await
+        .unwrap();
+    assert!(
+        PendingOutputStop::prepare(transaction, &AdvancingClock::new(), || async {
+            std::fs::write(&completion, b"completion callback drift").unwrap();
+            Ok(())
+        })
+        .await
+        .is_err()
+    );
+    assert_eq!(std::fs::read(&attempt).unwrap(), original_attempt);
+    assert_eq!(
+        std::fs::read(&completion).unwrap(),
+        b"completion callback drift"
+    );
+}

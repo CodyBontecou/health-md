@@ -10,7 +10,7 @@ impl CompletionEvidence {
     pub fn is_present(&self) -> bool {
         self.bytes.is_some()
     }
-    pub(super) fn bytes(&self) -> Option<&[u8]> {
+    pub(crate) fn bytes(&self) -> Option<&[u8]> {
         self.bytes.as_deref()
     }
     pub fn verify(&self) -> Result<(), ClientError> {
