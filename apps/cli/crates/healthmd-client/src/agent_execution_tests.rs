@@ -94,6 +94,111 @@ fn accepted_fixture(platform: PeerPlatform) -> impl std::future::Future<Output =
     })
 }
 
+#[tokio::test]
+async fn host_execution_request_reconstructs_only_signed_approved_plan_without_effects() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        let fixture = accepted_fixture(platform).await;
+        let planner = HostPlanner::new(fixture.store.clone());
+        let before = fixture.store.revision().await.unwrap();
+        let result = planner
+            .prepare_approved_execution(
+                &fixture.request.plan.plan_id,
+                fixture.request.job_id.clone(),
+                fixture.request.idempotency_key.clone(),
+                fixture.request.request_id.clone(),
+                &fixture.clock,
+            )
+            .await
+            .unwrap();
+        assert_eq!(result, fixture.request);
+        assert_eq!(fixture.store.revision().await.unwrap(), before);
+        assert_eq!(std::fs::read_dir(&fixture.output).unwrap().count(), 0);
+    }
+}
+
+#[tokio::test]
+async fn host_execution_request_requires_both_separately_stored_decisions() {
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for host_decision in [false, true] {
+            let (_temporary, client, _saved, peer) = stored_pair(platform).await;
+            let (store, output) = enroll(&client.layout.root, &peer, &now()).await;
+            let planner = HostPlanner::new(store.clone());
+            let clock = AdvancingClock::new();
+            let mut native = NativeFake::new(peer.clone(), now());
+            let plan = planner
+                .plan(&mut native, input(&peer), &clock)
+                .await
+                .unwrap();
+            if host_decision {
+                store
+                    .record_local_decision(2, &plan.plan_id, &clock, &ExplicitFakeLocalConsent)
+                    .await
+                    .unwrap();
+            }
+            let before = store.revision().await.unwrap();
+            assert!(matches!(
+                planner
+                    .prepare_approved_execution(&plan.plan_id, id(20), id(19), id(22), &clock)
+                    .await,
+                Err(ClientError::Agent(Error::ApprovalRequired))
+            ));
+            assert_eq!(store.revision().await.unwrap(), before);
+            assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
+        }
+    }
+}
+
+#[tokio::test]
+async fn host_execution_request_rejects_expiry_revocation_and_destination_substitution() {
+    for mode in ["expired", "revoked", "destination", "unknown", "invalid"] {
+        let fixture = accepted_fixture(PeerPlatform::Ios).await;
+        let planner = HostPlanner::new(fixture.store.clone());
+        if mode == "expired" {
+            fixture.clock.advance_to(301);
+        }
+        if mode == "revoked" {
+            fixture
+                .store
+                .revoke_local(
+                    fixture.store.revision().await.unwrap(),
+                    &fixture.request.plan.authority_references.host.authority_id,
+                )
+                .await
+                .unwrap();
+        }
+        if mode == "destination" {
+            std::fs::rename(&fixture.output, fixture.output.with_extension("original")).unwrap();
+            std::fs::create_dir(&fixture.output).unwrap();
+        }
+        let before = fixture.store.revision().await.unwrap();
+        let plan = if mode == "unknown" {
+            id(99)
+        } else {
+            fixture.request.plan.plan_id.clone()
+        };
+        let job = if mode == "invalid" {
+            ControlUuid("not-a-uuid".into())
+        } else {
+            fixture.request.job_id.clone()
+        };
+        assert!(
+            planner
+                .prepare_approved_execution(
+                    &plan,
+                    job,
+                    fixture.request.idempotency_key.clone(),
+                    fixture.request.request_id.clone(),
+                    &fixture.clock
+                )
+                .await
+                .is_err(),
+            "{mode}"
+        );
+        assert_eq!(fixture.store.revision().await.unwrap(), before);
+        assert_eq!(std::fs::read_dir(&fixture.output).unwrap().count(), 0);
+    }
+}
+
 struct AdversarialOutputTrust<'a> {
     inner: &'a dyn CurrentBridgeTrust,
     remaining: AtomicUsize,

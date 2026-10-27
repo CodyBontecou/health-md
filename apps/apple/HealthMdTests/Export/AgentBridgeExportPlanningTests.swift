@@ -2061,7 +2061,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                         committedPartitionCount: value.committedPartitionCount, destination: value.destination,
                         frontierSha256: value.frontierSha256, jobId: value.jobId,
                         manifestSha256: try AgentBridgeDigest(String(repeating: "0", count: 64)), peer: value.peer,
-                        requestSha256: value.requestSha256, schema: value.schema, schemaVersion: value.schemaVersion) : value
+                        requestSha256: value.requestSha256) : value
                     resumePrelude.append(try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .resume(resume))))
                 }
             }
