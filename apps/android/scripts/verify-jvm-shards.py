@@ -12,6 +12,9 @@ NATIVE_CLASS = 'com.healthmd.direct.AgentBridgeNativeConfigurationReaderTest'
 TASKS = {'debug': 'testPlayDebugUnitTest', 'release': 'testPlayReleaseUnitTest', 'e2e': 'testPlayE2eUnitTest'}
 LANES = ('remaining', 'native-0', 'native-1')
 MODULES = {'healthmd-core': 'testDebugUnitTest', 'wearable-contract': 'test', 'direct-protocol': 'test'}
+PROFILE_TEXT = {'gradle', 'ndk_revision', 'os', 'arch'}
+PROFILE_COMPILER_HASH = {'test_java_sha256', 'gradle_java_sha256', 'rustc_sha256', 'cargo_ndk_sha256'}
+PROFILE_EXECUTION_HASH = {'environment_sha256', 'classpath_sha256', 'jvm_args_sha256', 'host_core_sha256'}
 
 
 def ordered(values):
@@ -52,21 +55,52 @@ def read_cases(directory: Path) -> dict:
 def verify(reports: Path, source_sha: str, run_id: str, attempt: str) -> dict:
     if not re.fullmatch('[0-9a-f]{40}', source_sha) or any(not re.fullmatch('[1-9][0-9]*', item) for item in (run_id, attempt)):
         raise ValueError('Exact current source/run/attempt required')
-    expected = {f'android-jvm-{variant}-{lane}-results-{run_id}-{attempt}' for variant in TASKS for lane in LANES}
-    if {path.name for path in reports.iterdir()} != expected:
-        raise ValueError('Missing or unexpected Play JVM lane artifacts')
-    result = {'source_sha': source_sha, 'run_id': run_id, 'attempt': attempt, 'variants': {}}
+    selected_artifacts = {}
+    for path in reports.iterdir():
+        match = re.fullmatch(rf'android-jvm-(debug|release|e2e)-(remaining|native-0|native-1)-results-{run_id}-([1-9][0-9]*)', path.name)
+        if not match or int(match[3]) > int(attempt) or path.is_symlink() or not path.is_dir():
+            raise ValueError('Future, missing or unexpected Play JVM lane artifact')
+        key = (match[1], match[2])
+        if key not in selected_artifacts or int(match[3]) > int(selected_artifacts[key][0]):
+            selected_artifacts[key] = (match[3], path)
+    if set(selected_artifacts) != {(variant, lane) for variant in TASKS for lane in LANES}:
+        raise ValueError('Missing Play JVM lane artifacts')
+    result = {'source_sha': source_sha, 'run_id': run_id, 'attempt': attempt, 'variants': {},
+              'lane_attempts': {f'{variant}:{lane}': selected_artifacts[(variant, lane)][0] for variant in TASKS for lane in LANES}}
+    compiler_profile = None
+    execution_profiles = {}
     for variant, task in TASKS.items():
         combined, native_methods = {}, None
         for lane in LANES:
-            folder = reports / f'android-jvm-{variant}-{lane}-results-{run_id}-{attempt}'
+            artifact_attempt, folder = selected_artifacts[(variant, lane)]
             if folder.is_symlink() or not folder.is_dir():
                 raise ValueError('JVM artifact must be a regular directory')
             metadata = json.loads((folder / f'build/reports/ci/jvm-native-{variant}-{lane}.json').read_text())
-            binding = {'source_sha': source_sha, 'run_id': run_id, 'attempt': attempt,
+            binding = {'source_sha': source_sha, 'run_id': run_id, 'attempt': artifact_attempt,
                        'variant': variant, 'lane': lane, 'task': ':app:' + task, 'native_class': NATIVE_CLASS}
             if any(metadata.get(key) != value for key, value in binding.items()):
                 raise ValueError('JVM lane source/run/task differs from current qualification')
+            profile = metadata.get('qualification_profile')
+            if (not isinstance(profile, dict) or set(profile) != {'version', 'compiler', 'execution'}
+                    or type(profile['version']) is not int or profile['version'] != 1):
+                raise ValueError('Missing or invalid JVM qualification profile')
+            compiler, execution = profile['compiler'], profile['execution']
+            if (not isinstance(compiler, dict) or set(compiler) != PROFILE_TEXT | PROFILE_COMPILER_HASH
+                    or any(not isinstance(compiler[key], str) or not compiler[key].strip() for key in PROFILE_TEXT)
+                    or any(not isinstance(compiler[key], str) or not re.fullmatch('[a-f0-9]{64}', compiler[key]) for key in PROFILE_COMPILER_HASH)
+                    or compiler['ndk_revision'] != '27.1.12297006'
+                    or not isinstance(execution, dict) or set(execution) != PROFILE_EXECUTION_HASH | {'max_parallel_forks'}
+                    or any(not isinstance(execution[key], str) or not re.fullmatch('[a-f0-9]{64}', execution[key]) for key in PROFILE_EXECUTION_HASH)
+                    or type(execution['max_parallel_forks']) is not int or execution['max_parallel_forks'] < 1):
+                raise ValueError('Missing or invalid JVM compiler/execution profile')
+            if compiler_profile is None:
+                compiler_profile = compiler
+            elif compiler != compiler_profile:
+                raise ValueError('JVM compiler profiles differ between lanes')
+            if variant not in execution_profiles:
+                execution_profiles[variant] = execution
+            elif execution != execution_profiles[variant]:
+                raise ValueError('JVM execution/dependency profiles differ within a variant')
             methods = metadata.get('native_methods')
             if (not isinstance(methods, list) or not methods or any(not isinstance(name, str) or not name for name in methods)
                     or methods != ordered(set(methods))):
@@ -97,6 +131,8 @@ def verify(reports: Path, source_sha: str, run_id: str, attempt: str) -> dict:
             raise ValueError('Combined native JVM inventory is incomplete')
         result['variants'][variant] = {'tests': len(combined), 'passed': sum(value == 'Passed' for value in combined.values()),
                                        'skipped': sum(value == 'Skipped' for value in combined.values()), 'native_methods': len(native_methods)}
+    result['compiler_profile'] = compiler_profile
+    result['execution_profiles'] = execution_profiles
     return result
 
 

@@ -161,6 +161,13 @@ device workers write it; other workers and fork PRs remain read-only. Gradle sti
 checks compilation inputs, and the CI init script disables caching and up-to-date
 skips for every JVM Test task. Cache availability never replaces test evidence.
 
+After a targeted retry, the JVM collector selects the latest artifact for every
+lane from the same workflow run and exact source, recording each producer's real
+attempt. Compiler identities must match across lanes; classpath and optional host-library
+bytes, JVM options, effective test opt-ins/update flags and fork counts must match
+within each variant. Missing or changed profiles, future attempts and latest failing results
+reject qualification. No test results from another workflow run are reused.
+
 The remaining-class lane uses two app-class forks within the existing two-worker
 budget; each native lane contains one class and preserves its exact method half.
 Gradle test graphs prepare all four ABIs for the actual library profile; the

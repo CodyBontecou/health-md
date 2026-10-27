@@ -1,4 +1,6 @@
 import importlib.util
+import copy
+import shutil
 import json
 from pathlib import Path
 import tempfile
@@ -10,6 +12,10 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 SHA = 'a' * 40
 METHODS = ['first', 'native ACK with spaces', 'native retry', 'stop']
+PROFILE = {'version': 1, 'compiler': {**{key: 'a' * 64 for key in m.PROFILE_COMPILER_HASH},
+           'gradle': '8.13', 'ndk_revision': '27.1.12297006', 'os': 'Linux', 'arch': 'amd64'},
+           'execution': {**{key: 'b' * 64 for key in m.PROFILE_EXECUTION_HASH}, 'max_parallel_forks': 2}}
+
 
 
 def xml(path, cases):
@@ -33,7 +39,8 @@ class JVMShardTests(unittest.TestCase):
                         'task': ':app:' + task, 'native_class': m.NATIVE_CLASS, 'native_methods': METHODS,
                         'selected_methods': selected,
                         'include_patterns': sorted(m.NATIVE_CLASS + '.' + name for name in selected),
-                        'exclude_patterns': [m.NATIVE_CLASS] if lane == 'remaining' else []}
+                        'exclude_patterns': [m.NATIVE_CLASS] if lane == 'remaining' else [],
+                        'qualification_profile': copy.deepcopy(PROFILE)}
                 path = folder / f'build/reports/ci/jvm-native-{variant}-{lane}.json'
                 path.parent.mkdir(parents=True)
                 path.write_text(json.dumps(meta))
@@ -131,6 +138,73 @@ class JVMShardTests(unittest.TestCase):
         tree.write(path)
         self.assertEqual(self.verify()['variants']['debug']['skipped'], 1)
 
+    def retry(self, variant='debug', lane='native-0', attempt='2'):
+        old = self.folder(variant, lane)
+        new = self.root / f'android-jvm-{variant}-{lane}-results-123-{attempt}'
+        shutil.copytree(old, new)
+        path = new / f'build/reports/ci/jvm-native-{variant}-{lane}.json'
+        value = json.loads(path.read_text())
+        value['attempt'] = attempt
+        path.write_text(json.dumps(value))
+        return new
+
+    def test_targeted_retry_preserves_every_case_and_records_real_lane_attempts(self):
+        original = self.verify()
+        self.retry()
+        result = m.verify(self.root, SHA, '123', '2')
+        self.assertEqual(result['variants'], original['variants'])
+        self.assertEqual(result['shared_modules'], original['shared_modules'])
+        self.assertEqual(result['lane_attempts']['debug:native-0'], '2')
+        self.assertEqual(sum(value == '1' for value in result['lane_attempts'].values()), 8)
+        self.assertEqual(result['compiler_profile'], PROFILE['compiler'])
+
+    def test_latest_failed_retry_never_falls_back_to_older_passing_results(self):
+        retry = self.retry()
+        path = retry / 'app/build/test-results/testPlayDebugUnitTest/TEST-lane.xml'
+        tree = ET.parse(path)
+        ET.SubElement(tree.getroot().find('testcase'), 'failure')
+        tree.write(path)
+        with self.assertRaises(ValueError):
+            m.verify(self.root, SHA, '123', '2')
+
+    def test_future_attempt_and_other_run_artifacts_are_rejected(self):
+        retry = self.retry(attempt='3')
+        with self.assertRaises(ValueError):
+            m.verify(self.root, SHA, '123', '2')
+        retry.rename(self.root / retry.name.replace('results-123-', 'results-124-'))
+        with self.assertRaises(ValueError):
+            m.verify(self.root, SHA, '123', '3')
+
+    def test_changed_compiler_dependencies_flags_or_environment_reject_reuse(self):
+        retry = self.retry()
+        path = retry / 'build/reports/ci/jvm-native-debug-native-0.json'
+        original = path.read_text()
+        for section, fields in [('compiler', m.PROFILE_COMPILER_HASH | m.PROFILE_TEXT),
+                                ('execution', m.PROFILE_EXECUTION_HASH | {'max_parallel_forks'})]:
+            for key in fields:
+                with self.subTest(section=section, key=key):
+                    value = json.loads(original)
+                    previous = value['qualification_profile'][section][key]
+                    value['qualification_profile'][section][key] = 1 if isinstance(previous, int) else ('c' * 64 if 'sha256' in key else 'different')
+                    path.write_text(json.dumps(value))
+                    with self.assertRaises(ValueError):
+                        m.verify(self.root, SHA, '123', '2')
+
+    def test_missing_or_malformed_profile_is_never_reused(self):
+        for profile in [None, {}, {'version': True, 'compiler': {}, 'execution': {}},
+                        dict(PROFILE, compiler={}), dict(PROFILE, execution={})]:
+            self.metadata(qualification_profile=profile)
+            with self.subTest(profile=profile), self.assertRaises(ValueError):
+                self.verify()
+
+    def test_variant_execution_profiles_are_independent_but_its_lanes_must_match(self):
+        for lane in m.LANES:
+            path = self.folder('release', lane) / f'build/reports/ci/jvm-native-release-{lane}.json'
+            value = json.loads(path.read_text())
+            value['qualification_profile']['execution']['classpath_sha256'] = 'c' * 64
+            path.write_text(json.dumps(value))
+        self.assertEqual(self.verify()['execution_profiles']['release']['classpath_sha256'], 'c' * 64)
+
     def test_workflow_keeps_all_nine_lanes_and_shared_lint_package_gates(self):
         workflow = Path(__file__).resolve().parents[4] / '.github/workflows/android-ci.yml'
         source = workflow.read_text()
@@ -147,6 +221,7 @@ class JVMShardTests(unittest.TestCase):
         self.assertIn('needs: [changes, jvm-tests]', gate)
         self.assertIn('test "$JVM_RESULT" = success', gate)
         self.assertIn('verify-jvm-shards.py', gate)
+        self.assertIn('pattern: android-jvm-*-results-${{ github.run_id }}-*', gate)
         self.assertNotIn('continue-on-error', worker + gate)
 
 

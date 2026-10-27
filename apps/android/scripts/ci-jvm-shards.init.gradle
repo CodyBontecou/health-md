@@ -1,6 +1,7 @@
 import groovy.json.JsonOutput
 import org.gradle.api.tasks.testing.Test
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 
 // Opt-in only. Normal developer Gradle invocations keep their full discovery.
 def lane = System.getenv('HEALTHMD_JVM_LANE')
@@ -40,6 +41,91 @@ if (lane != null) {
                     new String(Base64.decoder.decode(it), StandardCharsets.UTF_8)
                 }.sort()
                 if (methods.empty || methods.toSet().size() != methods.size()) throw new GradleException('Invalid compiled native method inventory')
+                def version = { List<String> command ->
+                    def output = new ByteArrayOutputStream()
+                    rootProject.exec {
+                        commandLine command
+                        standardOutput output
+                        errorOutput output
+                    }
+                    def value = output.toString('UTF-8').trim()
+                    if (value.empty) throw new GradleException('Missing JVM qualification compiler identity')
+                    MessageDigest.getInstance('SHA-256').digest(value.getBytes(StandardCharsets.UTF_8)).encodeHex().toString()
+                }
+                def ndkRoot = System.getenv('ANDROID_NDK_HOME')
+                if (!ndkRoot) throw new GradleException('Pinned NDK identity is required for JVM qualification')
+                def ndkProperties = new Properties()
+                new File(ndkRoot, 'source.properties').withInputStream { ndkProperties.load(it) }
+                if (ndkProperties.getProperty('Pkg.Revision') != '27.1.12297006') {
+                    throw new GradleException('JVM qualification NDK revision differs from the pinned profile')
+                }
+                // Retried lanes may reuse same-run results only under this exact
+                // compiler/runtime profile. Never retain arbitrary environment values.
+                def effectiveEnvironment = testTask.environment
+                def environmentNames = (['JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'GRADLE_OPTS',
+                    'JAVA_OPTS', 'RUSTFLAGS', 'RUSTC', 'RUSTC_WRAPPER', 'CC', 'CXX', 'AR', 'LD'] +
+                    effectiveEnvironment.keySet().findAll { name ->
+                        ['HEALTHMD_', 'UPDATE_', 'ROBOLECTRIC_', 'CARGO_', 'ORG_GRADLE_PROJECT_'].any { name.startsWith(it) }
+                    }).findAll { it != 'HEALTHMD_JVM_LANE' }.toSet().sort()
+                def environmentInputs = environmentNames.collectEntries { name ->
+                    [(name): effectiveEnvironment[name]?.toString()]
+                }
+                def environmentDigest = MessageDigest.getInstance('SHA-256')
+                    .digest(JsonOutput.toJson(environmentInputs).getBytes(StandardCharsets.UTF_8)).encodeHex().toString()
+                def classpathDigest = MessageDigest.getInstance('SHA-256')
+                (testTask.classpath + testTask.testClassesDirs).files.eachWithIndex { entry, index ->
+                    classpathDigest.update((index.toString() + ':' + entry.name + '\u0000').getBytes(StandardCharsets.UTF_8))
+                    classpathDigest.update((entry.exists() ? 'present\u0000' : 'missing\u0000').getBytes(StandardCharsets.UTF_8))
+                    def files = !entry.exists() ? [] : entry.isDirectory() ? rootProject.fileTree(entry).files.sort { a, b ->
+                        entry.toPath().relativize(a.toPath()).toString() <=> entry.toPath().relativize(b.toPath()).toString()
+                    } : [entry]
+                    files.each { file ->
+                        def relative = entry.isDirectory() ? entry.toPath().relativize(file.toPath()).toString() : entry.name
+                        classpathDigest.update((relative + '\u0000').getBytes(StandardCharsets.UTF_8))
+                        def fileDigest = MessageDigest.getInstance('SHA-256')
+                        file.withInputStream { stream ->
+                            byte[] buffer = new byte[65536]
+                            int size
+                            while ((size = stream.read(buffer)) != -1) fileDigest.update(buffer, 0, size)
+                        }
+                        classpathDigest.update(fileDigest.digest())
+                    }
+                }
+                def hashText = { text -> MessageDigest.getInstance('SHA-256')
+                    .digest(text.getBytes(StandardCharsets.UTF_8)).encodeHex().toString() }
+                def hostCoreDigest = MessageDigest.getInstance('SHA-256')
+                def hostCoreDirectory = effectiveEnvironment['HEALTHMD_BRIDGE_HOST_CORE_DIRECTORY']?.toString()
+                if (hostCoreDirectory != null && !hostCoreDirectory.trim().empty) {
+                    def found = false
+                    hostCoreDirectory.split(java.util.regex.Pattern.quote(File.pathSeparator)).eachWithIndex { directory, index ->
+                        def library = new File(directory, System.mapLibraryName('healthmd_core_uniffi'))
+                        hostCoreDigest.update((index.toString() + '\u0000').getBytes(StandardCharsets.UTF_8))
+                        hostCoreDigest.update((library.isFile() ? 'present\u0000' : 'missing\u0000').getBytes(StandardCharsets.UTF_8))
+                        if (library.isFile()) {
+                            found = true
+                            def binaryDigest = MessageDigest.getInstance('SHA-256')
+                            library.withInputStream { stream ->
+                                byte[] buffer = new byte[65536]
+                                int size
+                                while ((size = stream.read(buffer)) != -1) binaryDigest.update(buffer, 0, size)
+                            }
+                            hostCoreDigest.update(binaryDigest.digest())
+                        }
+                    }
+                    if (!found) throw new GradleException('Configured host native-core library is missing from the qualification profile')
+                }
+                def qualificationProfile = [version: 1, compiler: [
+                    test_java_sha256: version([testTask.javaLauncher.get().executablePath.asFile.absolutePath, '-version']),
+                    gradle_java_sha256: hashText(System.getProperty('java.runtime.version') + ' / ' + System.getProperty('java.vendor')),
+                    gradle: gradle.gradleVersion, rustc_sha256: version(['rustc', '-vV']),
+                    cargo_ndk_sha256: version(['cargo', 'ndk', '--version']),
+                    ndk_revision: ndkProperties.getProperty('Pkg.Revision'),
+                    os: System.getProperty('os.name'), arch: System.getProperty('os.arch')], execution: [
+                    environment_sha256: environmentDigest,
+                    host_core_sha256: hostCoreDigest.digest().encodeHex().toString(),
+                    classpath_sha256: classpathDigest.digest().encodeHex().toString(),
+                    jvm_args_sha256: hashText(JsonOutput.toJson(testTask.allJvmArgs)),
+                    max_parallel_forks: testTask.maxParallelForks]]
                 def selected = []
                 if (lane == 'remaining') {
                     filter.excludeTestsMatching(nativeClass)
@@ -56,7 +142,7 @@ if (lane != null) {
                 def receipt = [source_sha: sourceSha, run_id: runId, attempt: attempt, variant: variant,
                     lane: lane, task: testTask.path, native_class: nativeClass, native_methods: methods,
                     selected_methods: selected, include_patterns: filter.includePatterns.toList().sort(),
-                    exclude_patterns: filter.excludePatterns.toList().sort()]
+                    exclude_patterns: filter.excludePatterns.toList().sort(), qualification_profile: qualificationProfile]
                 def output = new File(androidRoot, "build/reports/ci/jvm-native-${variant}-${lane}.json")
                 output.parentFile.mkdirs()
                 output.text = JsonOutput.prettyPrint(JsonOutput.toJson(receipt)) + '\n'
