@@ -195,7 +195,7 @@ function footerHtml(depth = 1) {
   <script src="${prefix}assets/analytics.js" defer></script>`;
 }
 
-function documentHead({ title, socialTitle = title, description, canonical, image, type = 'website', date, updated, depth = 1 }) {
+function documentHead({ title, socialTitle = title, description, canonical, image, type = 'website', date, updated, depth = 1, breadcrumbs }) {
   const prefix = depth === 2 ? '../../' : '../';
   const socialImage = image || `${SITE_URL}/assets/app-icon/icon_1024x1024.png`;
   const jsonLd = type === 'article'
@@ -218,6 +218,13 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
         description,
         url: canonical,
       };
+  const breadcrumbJsonLd = breadcrumbs && {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbs.map(({ name, url }, index) => ({
+      '@type': 'ListItem', position: index + 1, name, item: url,
+    })),
+  };
 
   return `<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -245,7 +252,8 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
   <script src="${prefix}assets/theme.js"></script>
   <link rel="stylesheet" href="${depth === 2 ? '../styles.css' : 'styles.css'}">
   <link rel="stylesheet" href="${prefix}assets/theme-icons.css">
-  <script type="application/ld+json">${escapeJsonForHtml(jsonLd)}</script>`;
+  <script type="application/ld+json">${escapeJsonForHtml(jsonLd)}</script>${breadcrumbJsonLd ? `
+  <script type="application/ld+json">${escapeJsonForHtml(breadcrumbJsonLd)}</script>` : ''}`;
 }
 
 function renderIndex(posts) {
@@ -306,6 +314,16 @@ function renderIndex(posts) {
 
 async function renderPost(post) {
   const canonical = `${SITE_URL}/blog/${post.slug}/`;
+  const breadcrumbs = [
+    { name: 'Health.md', url: `${SITE_URL}/` },
+    { name: 'Guides', url: `${SITE_URL}/blog/` },
+    { name: post.title, url: canonical },
+  ];
+  const breadcrumbNav = `<nav class="article-breadcrumbs" aria-label="Breadcrumb">
+      <ol>${breadcrumbs.map(({ name, url }, index) => `<li>${index ? '<span aria-hidden="true">/</span>' : ''}${index === breadcrumbs.length - 1
+        ? `<span aria-current="page">${escapeHtml(name)}</span>`
+        : `<a href="${escapeHtml(url)}">${escapeHtml(name)}</a>`}</li>`).join('')}</ol>
+    </nav>`;
   const bodyHtml = sanitizeRenderedMarkdown(await marked.parse(post.body));
   const cover = post.image && post.showCover
     ? `<figure class="article-cover"><img src="${escapeHtml(post.image)}" alt="${escapeHtml(post.imageAlt)}"></figure>`
@@ -327,11 +345,13 @@ async function renderPost(post) {
     date: post.date,
     updated: post.updated,
     depth: 2,
+    breadcrumbs,
   })}
 </head>
 <body>
   ${headerHtml(2)}
   <main class="article">
+    ${breadcrumbNav}
     <span class="eyebrow">${escapeHtml(formatDate(post.date))} · ${escapeHtml(post.category)}</span>
     <h1>${escapeHtml(post.title)}</h1>
     <p class="lead">${escapeHtml(post.lead)}</p>
