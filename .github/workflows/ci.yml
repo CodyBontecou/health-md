@@ -74,9 +74,9 @@ jobs:
       - uses: actions/cache/restore@v4
         id: cargo-cache
         with:
-          key: portable-ci-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-${{ github.sha }}
+          key: portable-ci-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
-            portable-ci-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-
+            portable-ci-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/healthmd-core-rust/Cargo.lock', 'apps/cli/Cargo.lock') }}-
           path: |
             ~/.cargo/registry
             ~/.cargo/git
