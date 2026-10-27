@@ -241,7 +241,8 @@ final class ExportJourneyUITests: XCTestCase {
         // Tapping a filename in the provider's icon view need not enter its folder.
         // Select the cell and observe navigation before Open can select a parent.
         testVault.tap()
-        let selectedFolderTitle = app.navigationBars.staticTexts["TestVault"].firstMatch
+        // SDK27 Files exposes the current folder as an actions-menu button.
+        let selectedFolderTitle = app.navigationBars.buttons["TestVault, Actions Menu"].firstMatch
         guard selectedFolderTitle.waitForExistence(timeout: 10) else {
             let hierarchy = XCTAttachment(string: app.debugDescription)
             hierarchy.name = "Synthetic TestVault navigation hierarchy"

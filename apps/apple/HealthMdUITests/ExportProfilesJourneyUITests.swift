@@ -170,6 +170,20 @@ final class ExportProfilesJourneyUITests: XCTestCase {
     // MARK: - Journey C: per-profile schedules
 
     func testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter() {
+        checkProfileSchedule(refreshInterval: nil)
+    }
+
+    func testQA_ProfileThirtyMinuteRefreshPersistsWithWeeklyCadence() {
+        checkProfileSchedule(refreshInterval: "Every 30 minutes")
+    }
+
+    func testQA_ProfileHourlyRefreshPersistsWithWeeklyCadence() {
+        checkProfileSchedule(refreshInterval: "Every hour")
+    }
+
+    /// Each independent interval retains the real enable/edit/save/reopen path and
+    /// its assertions, within the unchanged per-test execution allowance.
+    private func checkProfileSchedule(refreshInterval: String?) {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
@@ -235,8 +249,9 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         )
         snap("10-weekly-cadence-saved")
 
-        // Minute choices survive save/reopen and do not change completed-day cadence.
-        for label in ["Every 30 minutes", "Every hour"] {
+        // The base journey verifies toggle/cadence/footer; each interval case also
+        // verifies its persisted value and preserves the weekly completed-day cadence.
+        if let label = refreshInterval {
             XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5), "previous editor must finish dismissing")
             editSchedule.tap()
             XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5), "editor must reopen before editing refresh")
