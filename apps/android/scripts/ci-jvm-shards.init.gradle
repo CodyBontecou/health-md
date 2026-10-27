@@ -104,7 +104,12 @@ if (lane != null) {
                 def artifactInputs = { Map<String, Object> configurations ->
                     def records = []
                     configurations.each { scope, configuration ->
-                        configuration.incoming.artifacts.artifacts.each { artifact ->
+                        // Filter components BEFORE artifact selection: AGP project
+                        // variants expose classes, profiles and other artifact types.
+                        // Resolving an untyped project view first is ambiguous.
+                        configuration.incoming.artifactView {
+                            componentFilter { !(it instanceof ProjectComponentIdentifier) }
+                        }.artifacts.artifacts.each { artifact ->
                             def component = artifact.id.componentIdentifier
                             if (!(component instanceof ProjectComponentIdentifier)) {
                                 records.add(fileInput(scope, component.displayName, artifact.file))
