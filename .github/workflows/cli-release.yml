@@ -1,15 +1,6 @@
 name: CLI Release
 
 on:
-  pull_request:
-    paths:
-      - 'apps/cli/**'
-      - 'packages/healthmd-core-rust/**'
-      - 'packages/contracts/**'
-      - '.github/workflows/cli-*.yml'
-      - '.github/workflows/core-rust-ci.yml'
-      - '.github/workflows/apple-ci.yml'
-      - '.github/workflows/android-ci.yml'
   push:
     tags:
       - 'healthmd-cli/v*'

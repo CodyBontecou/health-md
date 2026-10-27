@@ -51,3 +51,11 @@ Do not maintain competing release paths. Once a repository wrapper is available 
 - A release-sync audit should compare ASC versions/builds with Git tags, GitHub Releases, and the version/build stored at each tagged commit.
 - Never repair history by tagging arbitrary current `main`. First identify the exact commit used to build the uploaded binary. If the binary came from an uncommitted worktree and exact provenance cannot be recovered, record that gap explicitly and ask the user before creating a best-effort historical release.
 - If drift is discovered while a new ASC version is still in preparation, pause submission and make that version the first fully synchronized release before continuing.
+
+## Agent verification
+
+Use the root [test selection guide](../../docs/testing-strategy.md) for focused
+iteration checks and native handoff. Route native integration compilation through
+root `make verify-native` so concurrent worktrees share one build queue. Inspect
+`make plan-native` before relying on automatic platform selection. A passing build
+is compilation evidence; runtime/device QA follows the root opt-in policy.
