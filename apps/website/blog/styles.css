@@ -590,8 +590,8 @@ footer {
 #starter-vault, #your-first-note { scroll-margin-top: 128px; }
 @media (max-width: 640px) { .starter-preview-grid { grid-template-columns: minmax(0, 1fr); } .starter-preview-card { padding: 16px; } }
 
-.starter-log-scroll { overflow-x: auto; }
-.starter-log-scroll:focus-visible { outline: 3px solid var(--pine); outline-offset: 4px; }
+.starter-log-scroll, .article-table-scroll { overflow-x: auto; }
+.starter-log-scroll:focus-visible, .article-table-scroll:focus-visible { outline: 3px solid var(--pine); outline-offset: 4px; }
 
 .article-body .starter-actions a.button { font-family: var(--sans); font-size: 16px; line-height: 24px; font-weight: 600; padding: 8px 12px; text-decoration: none; touch-action: manipulation; }
 .article-body .starter-actions a.button:not(.secondary) { background: #6532cb; border-color: #6532cb; color: #fff; }

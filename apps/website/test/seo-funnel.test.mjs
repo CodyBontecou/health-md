@@ -99,6 +99,7 @@ test('homepage multi-format downloads count the selected CSV once even when the 
 });
 
 test('page/locale and destination/source classifiers have closed vocabularies', () => {
+  assert.deepEqual(funnelPage('/blog/health-md-vs-health-auto-export/'), { page: 'auto_export_comparison', locale: 'en' });
   assert.deepEqual(funnelPage('/es/'), { page: 'home', locale: 'es' });
   assert.equal(funnelPage('/es/apple-health-to-csv/'), null);
   assert.equal(funnelPage('/unknown/'), null);
