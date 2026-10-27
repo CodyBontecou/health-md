@@ -1,6 +1,11 @@
 name: PR189 focused Stop diagnosis (not qualification)
 on:
   workflow_dispatch:
+    inputs:
+      apply_fixture_candidate:
+        description: Apply the reviewed test-only Stop phase correction
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -40,7 +45,9 @@ jobs:
           actual=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)
           test "$actual" = "$(cat Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256)"
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
-      - name: Run original failing Stop cases
+      - name: Run selected Stop diagnostic cases
+        env:
+          APPLY_STOP_FIXTURE_CANDIDATE: ${{ inputs.apply_fixture_candidate && 'true' || 'false' }}
         run: bash .github/scripts/pr189-stop-focused.sh
       - name: Retain synthetic diagnostic logs
         if: always()

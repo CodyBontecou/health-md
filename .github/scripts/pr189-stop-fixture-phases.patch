@@ -1,0 +1,107 @@
+diff --git a/apps/apple/HealthMdTests/Export/AgentBridgeExportPlanningTests.swift b/apps/apple/HealthMdTests/Export/AgentBridgeExportPlanningTests.swift
+index 402738d29..8a1cc616f 100644
+--- a/apps/apple/HealthMdTests/Export/AgentBridgeExportPlanningTests.swift
++++ b/apps/apple/HealthMdTests/Export/AgentBridgeExportPlanningTests.swift
+@@ -1718,9 +1718,13 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
+         XCTAssertEqual(wire.packets.count, 1, mode)
+     }
+ 
+-    func testNativeTransferConfirmsSourceStopAtEachACKAndHostCommitWithoutAnotherReader() async throws {
+-        for stage in ["disposition", "chunk", "partition", "final", "host"] { try await checkNativeTransferSender("stop-" + stage) }
+-    }
++    // Independent ACK scenarios keep their own failure identity and the unchanged XCTest limit.
++    func testNativeTransferConfirmsSourceStopAtDispositionWithoutAnotherReader() async throws { try await checkNativeTransferSender("stop-disposition") }
++    func testNativeTransferConfirmsSourceStopAtChunkACKWithoutAnotherReader() async throws { try await checkNativeTransferSender("stop-chunk") }
++    func testNativeTransferConfirmsSourceStopAtPartitionACKWithoutAnotherReader() async throws { try await checkNativeTransferSender("stop-partition") }
++    func testNativeTransferConfirmsSourceStopAtFinalACKWithoutAnotherReader() async throws { try await checkNativeTransferSender("stop-final") }
++    func testNativeTransferConfirmsSourceStopAtHostCommitWithoutAnotherReader() async throws { try await checkNativeTransferSender("stop-host") }
++    func testNativeTransferRevocationDuringGuardedWriteCannotConfirmSourceStop() async throws { try await checkNativeTransferSender("stop-inflight-read-revoked") }
+     func testNativeTransferSourceStopSurvivesUnavailableReadConfiguration() async throws { try await checkNativeTransferSender("stop-read-revoked") }
+     func testNativeResumedTransferConfirmsExactRetainedSourceStop() async throws { try await checkNativeTransferSender("stop-resume") }
+     func testNativeTransferSourceStopPreservesExistingCompletion() async throws { try await checkNativeTransferSender("stop-complete") }
+@@ -1866,10 +1870,13 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
+                 if mode == "stop-host" { stopIndex = responses.count }
+                 else { stopIndex = responses.firstIndex { message in
+                     switch (mode, message) {
+-                    case ("stop-chunk", .transferChunkAcknowledgement),
++                    // The first read is carried from preparation and can overlap transfer-open's
++                    // final write fences. Revoke read access at the next, sequential ACK wait here;
++                    // the dedicated in-flight control covers revocation before a write has finished.
++                    case ("stop-chunk", .transferChunkAcknowledgement), ("stop-read-revoked", .transferChunkAcknowledgement),
+                          ("stop-partition", .transferPartitionAcknowledgement),
+                          ("stop-final", .transferFinalAcknowledgement): return true
+-                    case (_, .transferDisposition): return !["stop-chunk", "stop-partition", "stop-final"].contains(mode)
++                    case (_, .transferDisposition): return !["stop-chunk", "stop-read-revoked", "stop-partition", "stop-final"].contains(mode)
+                     default: return false
+                     }
+                 } }
+@@ -1882,6 +1889,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
+             }
+             let inbound = try incoming.enumerated().map { try nativeResponsePacket($0.element, sequence: UInt64($0.offset), key: key) }
+             let responseReady = NativePreparationTestGate()
++            let stopReadStarted = NativePreparationTestGate()
+             let writeState = NativeTransferWriteState()
+             let wire = NativePlanningResponsePackets(beforeWrite: {
+                 if mode == "stop-write-failure" {
+@@ -1901,17 +1909,25 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
+                     }
+                 } }
+             }, afterWrite: {
+-                await MainActor.run {
+-                    if writeState.count >= 3 + original.export.baseFiles.count { responseReady.release() }
++                let transferOpenWritten = await MainActor.run {
++                    let ready = writeState.count >= 3 + original.export.baseFiles.count
++                    if ready { responseReady.release() }
++                    return ready
+                 }
++                // Pin revocation between writing transfer-open and its existing final authority
++                // checks. A channel rejected here cannot claim source-confirmed cancellation.
++                if mode == "stop-inflight-read-revoked", transferOpenWritten { await stopReadStarted.wait() }
+             }, inbound: inbound, beforeReceive: {
+                 await responseReady.wait()
+                 await MainActor.run {
+-                    if stopState.nextReceive == selectedStopIndex { stopState.received = true }
++                    if stopState.nextReceive == selectedStopIndex {
++                        stopState.received = true
++                        stopReadStarted.release()
++                    }
+                     stopState.nextReceive += 1
+                 }
+                 if mode == "revoke" || mode == "keepalive-revoke" { await MainActor.run { rig.session.revoke() } }
+-            }, onCancel: { Task { @MainActor in responseReady.release() } })
++            }, onCancel: { Task { @MainActor in responseReady.release(); stopReadStarted.release() } })
+             let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+             _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+             let profiles = try XCTUnwrap(Self.retainedNativeConfigurationObjects.compactMap { $0 as? ExportProfileStore }.last)
+@@ -1919,7 +1935,10 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
+             defer { channel.cancel() }
+             var finalNativeRead: (() throws -> Void)?
+             let reconnect = try nativePlanningSession(rig, lifecycle, profiles: profiles, responseChannel: channel, beforeNativeRead: {
+-                if mode == "stop-read-revoked", stopState.received { XCTFail("Source stop reentered unavailable read configuration"); throw AgentBridgeValidationError.permissionRequired }
++                if stopState.received {
++                    if mode == "stop-inflight-read-revoked" { throw AgentBridgeValidationError.permissionRequired }
++                    if mode == "stop-read-revoked" { XCTFail("Source stop reentered unavailable read configuration"); throw AgentBridgeValidationError.permissionRequired }
++                }
+                 try finalNativeRead?()
+             })
+             let job = try XCTUnwrap(rig.store.snapshot().acceptedJobs?.first)
+@@ -1945,7 +1964,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
+                     else { try await reconnect.sendTransferExport(request, manager: manager, retained: true, core: BridgeRenderTamperCore(mode: "forbid")) }
+                 } catch { failure = error }
+                 XCTAssertTrue(stopState.received)
+-                let unsafe = ["stop-foreign", "stop-write-failure"].contains(mode)
++                let unsafe = ["stop-foreign", "stop-write-failure", "stop-inflight-read-revoked"].contains(mode)
+                 func receipts() throws -> [AgentBridgeExecutionReceipt] {
+                     try wire.packets.compactMap { packet in
+                         guard case .encrypted(let frame) = packet else { return nil }
+@@ -1957,6 +1976,10 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
+                 }
+                 if unsafe {
+                     XCTAssertNotNil(failure); XCTAssertTrue(channel.isLocallyTerminal); XCTAssertTrue(try receipts().isEmpty)
++                    if mode == "stop-inflight-read-revoked" {
++                        XCTAssertEqual(failure as? AgentBridgeValidationError, .permissionRequired)
++                        XCTAssertTrue(try rig.store.snapshot().cancellationIntents?.isEmpty ?? true)
++                    }
+                     let count = wire.packets.count
+                     do { try await reconnect.sendTransferExport(request, manager: manager, retained: true); XCTFail("Abandoned owner revived") }
+                     catch { XCTAssertEqual(wire.packets.count, count) }
