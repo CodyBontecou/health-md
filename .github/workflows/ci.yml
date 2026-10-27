@@ -60,6 +60,8 @@ jobs:
         with:
           node-version: '24'
       - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: rustfmt, clippy
       - name: Check out the pinned Obsidian consumer
         shell: bash
         run: |

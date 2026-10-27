@@ -2,6 +2,7 @@
 """Run the minimal, platform-neutral regression groups concurrently."""
 import concurrent.futures
 import os
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -32,7 +33,8 @@ def main():
                 '--budget-seconds', '90', '--receipt', str(output / f'{lane}.json'), '--', *command]
         with log.open('w') as stream:
             result = subprocess.run(args, stdout=stream, stderr=subprocess.STDOUT)
-        print(f'{lane}: {"passed" if result.returncode == 0 else "FAILED"} ({log})', flush=True)
+        receipt = json.loads((output / f'{lane}.json').read_text())
+        print(f'{lane}: {receipt["status"]} in {receipt["elapsed_seconds"]:.3f}s ({log})', flush=True)
         if result.returncode:
             print(log.read_text()[-12000:], flush=True)
         return result.returncode == 0
