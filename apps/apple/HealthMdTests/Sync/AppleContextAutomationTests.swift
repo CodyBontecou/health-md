@@ -671,8 +671,8 @@ final class AppleContextAutomationTests: XCTestCase {
         XCTAssertEqual(journal.record(scope.id)?.request, scope)
     }
 
-    func testRealShortcutProviderRetainsSevenActionsAndRegistersBothContextIntents() async throws {
-        XCTAssertEqual(HealthMdAppShortcuts.appShortcuts.count, 9)
+    func testRealShortcutProviderRetainsExistingTilesAndExposesRequestContextIntents() async throws {
+        XCTAssertEqual(HealthMdAppShortcuts.appShortcuts.count, 10)
         // Check the actual extracted Shortcuts editor configuration. Declaring
         // @Parameter alone does not expose an optional field omitted by Summary.
         let metadataURL = Bundle.main.bundleURL.appendingPathComponent("Metadata.appintents/extract.actionsdata")
@@ -681,8 +681,11 @@ final class AppleContextAutomationTests: XCTestCase {
         let action = try XCTUnwrap(actions["RefreshMacHealthContextIntent"] as? [String: Any])
         XCTAssertEqual(action["openAppWhenRun"] as? Bool, true,
                        "Context capture requires the phone app's foreground authenticated session")
-        let statusAction = try XCTUnwrap(actions["GetMacContextRefreshStatusIntent"] as? [String: Any])
+        let statusAction = try XCTUnwrap(actions["GetMacContextRequestStatusIntent"] as? [String: Any])
         XCTAssertEqual(statusAction["openAppWhenRun"] as? Bool, true)
+        let latestStatusAction = try XCTUnwrap(actions["GetMacContextRefreshStatusIntent"] as? [String: Any])
+        XCTAssertEqual(latestStatusAction["openAppWhenRun"] as? Bool, false,
+                       "Existing latest-status automation keeps its background behavior")
         let configuration = try XCTUnwrap(action["actionConfiguration"] as? [String: Any])
         let summary = try XCTUnwrap(configuration["actionSummary"] as? [String: Any])
         let wrapper = try XCTUnwrap(summary["wrapper"] as? [String: Any])
@@ -691,7 +694,7 @@ final class AppleContextAutomationTests: XCTestCase {
         let expandedParameters = try XCTUnwrap(wrapper["otherParameterIdentifiers"] as? [String])
         XCTAssertEqual(Set(inlineParameters + expandedParameters), ["profile", "startDate", "endDate"])
         _ = RefreshMacHealthContextIntent()
-        _ = GetMacContextRefreshStatusIntent()
+        _ = GetMacContextRequestStatusIntent()
         // Actual public EntityQuery resolves only persisted IDs, not caller identities.
         let values = try await MacContextRefreshQuery().entities(for: [UUID().uuidString])
         XCTAssertTrue(values.isEmpty)
@@ -701,7 +704,7 @@ final class AppleContextAutomationTests: XCTestCase {
         refresh.endDate = Date()
         do { _ = try await refresh.perform(); XCTFail("Actual intent must reject unknown profiles") }
         catch { }
-        let status = GetMacContextRefreshStatusIntent()
+        let status = GetMacContextRequestStatusIntent()
         status.request = MacContextRefreshEntity(id: UUID().uuidString, status: "pending")
         do { _ = try await status.perform(); XCTFail("Actual intent must reject unknown requests") }
         catch { }

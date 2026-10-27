@@ -1,0 +1,33 @@
+[Unit]
+Description=Health.md MCP dedicated loopback proxy (no request logs)
+After=healthmd-cloud-mcp.service
+Requires=healthmd-cloud-mcp.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+ExecStart=/usr/sbin/nginx -c /etc/healthmd-cloud-mcp-proxy.conf -g "daemon off;"
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+InaccessiblePaths=/etc/healthmd-cloud-mvp /etc/healthmd-cloud-mcp /var/lib/healthmd-cloud-mvp /var/lib/healthmd-cloud-mcp
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_UNIX AF_INET
+ProtectProc=invisible
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+MemoryMax=128M
+TasksMax=16
+
+[Install]
+WantedBy=multi-user.target

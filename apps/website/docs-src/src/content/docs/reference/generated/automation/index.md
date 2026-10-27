@@ -10,13 +10,13 @@ This group contains 35 deterministic artifacts. Checksums are SHA-256 hashes of 
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
-| `agent-evidence-response.json` | 2525 | `35a6c7114b3c42a3b388a33609459e1142ef61019dd5bf15a1ed574e6ce5af3d` | — | [Download](/docs/reference/generated/automation/agent-evidence-response.json) |
+| `agent-evidence-response.json` | 2529 | `80be1ef2a4f339f03f7c61fcd5578b78e5427c942198349641ae0ca43042706d` | — | [Download](/docs/reference/generated/automation/agent-evidence-response.json) |
 | `agent-query-error.json` | 187 | `73ee1c07fe56b1d94cfce67944b40b7749a5731790684974086437ac93056d32` | — | [Download](/docs/reference/generated/automation/agent-query-error.json) |
 | `agent-query-request.json` | 308 | `2adc1ab2cfcc89df538e5143276caca5c1c385ab4b8db2f46b84411a268fe9a4` | — | [Download](/docs/reference/generated/automation/agent-query-request.json) |
-| `agent-query-response-partial.json` | 1518 | `6aff9cd121b035405c2c2d72a00c03507b47659dae4ce58be38d03f1d3446d00` | — | [Download](/docs/reference/generated/automation/agent-query-response-partial.json) |
-| `agent-query-response.json` | 1487 | `77e005fc07e7d6889613c1ba04e4b1a3af6e13612fad59eef3a16ab06ba3612d` | — | [Download](/docs/reference/generated/automation/agent-query-response.json) |
-| `api-export-v1.json` | 2212 | `b19dc00b38c0abe885a94d6f8a91a2860b4ea3f7bfb929c93daab2ab5dd21e8f` | — | [Download](/docs/reference/generated/automation/api-export-v1.json) |
-| `api-export-v2-provider-sidecar.json` | 7619 | `60318ab4f2a3d6598b956e0b2a04f501ab15f9ef7d54ba5758849ff53d86ef15` | — | [Download](/docs/reference/generated/automation/api-export-v2-provider-sidecar.json) |
+| `agent-query-response-partial.json` | 1521 | `05699243833a9979b6317cb179cb9ece92e64f18a4f0795dcc00da5835e9541c` | — | [Download](/docs/reference/generated/automation/agent-query-response-partial.json) |
+| `agent-query-response.json` | 1490 | `9198944e64b44028ee62f9fc390f7844f6fbcfa06e2303ff1f19974e4a1646f9` | — | [Download](/docs/reference/generated/automation/agent-query-response.json) |
+| `api-export-v1.json` | 2214 | `8a200410fc28852e0ab43b3b57855a4acded031335fd08b56ecc22b704d381ba` | — | [Download](/docs/reference/generated/automation/api-export-v1.json) |
+| `api-export-v2-provider-sidecar.json` | 7656 | `94283e6cd273aca0a09d9b4a0ab333f8c77b7113e263df85eaabcaefd2878a4b` | — | [Download](/docs/reference/generated/automation/api-export-v2-provider-sidecar.json) |
 | `apple-context-receipt.json` | 1020 | `2bbe5bf1573415fa32e607352ea794be7d95dbc0d49978a3f4447efc3aa715cd` | — | [Download](/docs/reference/generated/automation/apple-context-receipt.json) |
 | `apple-context-refresh.json` | 879 | `1094c312f5f3be5f4d375d30bd9586dbf9dafc18ee6894dd8025c3385a38ecf1` | — | [Download](/docs/reference/generated/automation/apple-context-refresh.json) |
 | `apple-context-status.json` | 878 | `00919374ffc97ebd98972810eb0605238409723829fa1a3905dddea4c2b933af` | — | [Download](/docs/reference/generated/automation/apple-context-status.json) |
@@ -35,11 +35,11 @@ This group contains 35 deterministic artifacts. Checksums are SHA-256 hashes of 
 | `mac-export-job.json` | 27691 | `eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `mac-export-result-partial.json` | 1034 | `f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `mac-export-result-success.json` | 585 | `b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `manifest.json` | 6337 | `cae3da8ad44c397296f9b6260e80a189d04fd3567bd5b87abe28875275535d0f` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `message-fields.md` | 134280 | `eb22fe94883624cd88bd97f464fd0fc7fe8c79c14d1873846553b0cf1fdeba14` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `peer-capabilities.json` | 1722 | `5b792b5cc67b3a78b99a5f171a584d4ddbc2b10b936fcb8caa07c6b474a2399e` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
-| `raw-result-complete.json` | 3240 | `d82df3876394ac05761c2fdc44db41b6b4021ebc8b4becba20bf51793c25f6c6` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
-| `raw-result-partial.json` | 5280 | `311e1f6b6225226b0a3000aab2322114e47067bfc36a54cc78f7a9e3a0482d33` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
+| `manifest.json` | 6337 | `1943a98769a8a958c17a0806fda0d5bdf57afea2389bf58246237a267bae04c8` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `message-fields.md` | 136182 | `3ff0fa79ea502393010686b61289116eb8f0cdeb7d6b3b274beb8ce29aa8a4d8` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `peer-capabilities.json` | 1773 | `0e2f8666af901c63d72e2950863fc5211e610149d8319f84ff372f257d2beacf` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `raw-result-complete.json` | 3241 | `bbf8f86a366590cae7823d1e6a2134d1ad14e77d539d26a5ee3ab8e2c96eb338` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
+| `raw-result-partial.json` | 5281 | `05979a293411c09f05f40476d893c2335658f9426d96e2fcf9ee4a48927750cb` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |
 | `transfer-chunk.json` | 242 | `6363e031033b01e65349bc3061ee08f524cd0b09522edaa1ad1a83d0e3368418` | — | [Download](/docs/reference/generated/automation/transfer-chunk.json) |
 | `transfer-complete.json` | 183 | `f31d7bcfcdbd3d3b661368d506109597862b3257a3882a0bfcb687448140fa27` | — | [Download](/docs/reference/generated/automation/transfer-complete.json) |

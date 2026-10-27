@@ -1,0 +1,32 @@
+[Unit]
+Description=Health.md MCP isolated Cloudflare Tunnel connector
+After=network-online.target healthmd-mcp-proxy.service
+Wants=network-online.target
+Requires=healthmd-mcp-proxy.service
+
+[Service]
+Type=simple
+User=healthmd-tunnel
+Group=healthmd-tunnel
+WorkingDirectory=/var/lib/healthmd-cloud-mcp-tunnel
+ExecStart=/opt/healthmd-cloud-mcp/bin/cloudflared tunnel --config /etc/healthmd-cloud-mcp-tunnel/config.yml --no-autoupdate --loglevel warn --metrics 127.0.0.1:0 run
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+InaccessiblePaths=/etc/healthmd-cloud-mvp /etc/healthmd-cloud-mcp /var/lib/healthmd-cloud-mvp /var/lib/healthmd-cloud-mcp
+ProtectProc=invisible
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+MemoryMax=256M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target

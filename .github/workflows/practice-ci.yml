@@ -255,6 +255,7 @@ jobs:
         with:
           # The action's default also requests the discontinued legacy tools package.
           packages: platform-tools
+          log-accepted-android-sdk-licenses: false
 
       - name: Set up pinned Rust Android toolchain
         working-directory: ${{ github.workspace }}

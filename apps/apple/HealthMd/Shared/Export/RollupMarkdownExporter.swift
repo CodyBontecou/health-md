@@ -51,7 +51,7 @@ extension RollupDataSnapshot {
         lines.append("- **Period:** \(dayString(window.startDate)) → \(dayString(window.endDate))")
         lines.append("- **Days counted:** \(daysCounted) / \(daysExpected) (\(HealthRollupFormatting.number(coveragePercent))%)")
         lines.append("- **Missing days:** \(max(0, daysExpected - daysCounted))")
-        lines.append("- **Rule source:** `_healthmd_data_dictionary.json` schema v\(HealthRollupExportSchema.rulesVersion)")
+        lines.append("- **Rule source:** `_healthmd_data_dictionary.json` schema v\(HealthMdExportSchema.version)")
 
         if !sourceDates.isEmpty {
             lines.append("- **Source dates:** \(sourceDates.sorted().map(dayString).joined(separator: ", "))")

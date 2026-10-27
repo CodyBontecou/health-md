@@ -162,7 +162,7 @@ test('CSV preview is an explicitly synthetic, ordered excerpt of the production-
   assert.ok(excerpt, 'inline CSV excerpt exists');
   const lines = excerpt.trim().split('\n');
   assert.equal(lines[0], 'Date,Category,Metric,Value,Unit,Timestamp');
-  assert.ok(lines.some((line) => line.includes(',Metadata,schema_version,8,,')), 'Apple v8 identified');
+  assert.ok(lines.some((line) => line.includes(',Metadata,schema_version,10,,')), 'Apple v10 identified');
   const original = published.trim().split('\n');
   let previous = -1;
   for (const line of lines) {

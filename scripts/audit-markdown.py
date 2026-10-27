@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only, dependency-aware Markdown inventory. Findings are not deletion rules.
 
-From the repository root:
+Run from any directory in the checkout:
     python3 scripts/audit-markdown.py
 
 Reports go to ignored .pi/markdown-audit/{inventory.json,inventory.csv} by default.

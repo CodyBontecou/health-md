@@ -27,6 +27,14 @@ Health.md uses public HealthKit/WorkoutKit APIs only. Normal local exports do no
 
 For many read types, HealthKit intentionally does not tell an app whether access was denied. A denied read can look like a successful query with zero records. Health.md reports the public result and cannot bypass or reliably distinguish that privacy behavior.
 
+On OS 27 and later, the supported HealthKit API can report an earliest authorized sample end date for selected types. A reported date describes a boundary; an omitted entry does not prove unrestricted access and can also occur for denied access or limited access without a known date.
+
+The current scoped assessment keeps `limited`, `not_assessed_or_denied`, `api_unavailable`, and `not_completed` distinct. It binds the selected metrics, dates, timezone, profile and request lifetime. Interactive execution rechecks that scope and requires an explicit Continue or Cancel if the assessment does not complete. Query and durable-export paths return their own scoped evidence when negotiated. **All Time** / `all_available` acquires currently readable data; it never certifies that unreadable earlier records do not exist.
+
+The legacy `healthmd.history_authorization` v1 representation remains decodable. Historical `full_history` tags are compatibility data, not authorization proof; newly assessed omitted boundaries report `unknown`. A scope-free status response reports unverified history. Legacy all-data sync without bound history provenance requires an explicit date range or a scoped export path.
+
+The boundary is evaluated against a sample's end date, so a readable sample can begin before its reported boundary. Health.md never interprets the pre-boundary period as zero or missing-by-proof.
+
 Therefore:
 
 - `success` + `record_count: 0` means the query completed empty from the app's perspective;
@@ -71,6 +79,9 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 |---|---|---|
 | Ordinary metric missing | Permission off, metric off, no data, or read hidden | Check Health app, selection, and manifest. |
 | Empty query despite known data | HealthKit may be hiding denied read access | Revisit Apple Health permissions; Health.md cannot distinguish denial. |
+| History disclosure reports a limited boundary | OS 27 reported an earliest readable sample end date | Earlier data remains unknown; review permissions or select an explicit date range. |
+| History assessment did not complete | The provider failed, timed out or could not cover the selected scope | Review the current selection, then explicitly Continue without verification or Cancel. No sample is read merely because a logical waiter expired. |
+| History state is `api_unavailable` | The runtime or app build cannot call the history-boundary API, or the query is local to Mac | Treat full-history completeness as unverified. Runtime and build support are separate; no omitted boundary proves full read access. |
 | Medication/Vision locked | Unsupported OS or selector incomplete | Use supported OS and complete separate selection. |
 | Clinical record metric unavailable | Clinical Health Records are omitted from this App Store build | Use an ordinary Apple Health metric; clinical access may return in a future reviewed release. |
 | Archive partial | One requested branch failed/skipped/unsupported/cancelled | Inspect manifest and retry recoverable paths. |
@@ -88,3 +99,4 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 - `HealthKitManager` keeps standard, medication, vision, document, verifiable, and WorkoutKit paths separate; the document/clinical paths are source-gated off in current App Store builds.
 - Errors are isolated and safely described without logging clinical content/PHI.
 - macOS does not query HealthKit; iPhone prepares local/API/Connected Mac records.
+- The current scoped adapter requires actual SDK 27 compilation and supported runtime qualification. The older compatibility adapter's SDK-family flag does not prove that every app source compiles against SDK 26. Local SDK 26.5 cannot qualify the current scoped API; do not infer support from the compiler version or override gates to make an unsupported build pass.

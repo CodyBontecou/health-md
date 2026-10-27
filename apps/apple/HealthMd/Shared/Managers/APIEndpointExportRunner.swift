@@ -239,6 +239,7 @@ struct APIEndpointExportRunner {
         // Freeze process-global/provider decisions and the HealthKit calendar before any capture.
         let connectedAppsEnabled = ConnectedAppsFeature.isEnabled
         let calendarTimeZone = settings.exportTimeZoneOverride ?? .current
+        let whoopResources = settings.metricSelection.enabledWHOOPResources
         let externalFetcher: ExternalDailyRecordFetcher?
         if connectedAppsEnabled,
            let externalIntegrations,
@@ -248,7 +249,8 @@ struct APIEndpointExportRunner {
             externalFetcher = { date in
                 await externalIntegrations.fetchDailyRecords(
                     for: date,
-                    calendar: providerCalendar
+                    calendar: providerCalendar,
+                    whoopResources: whoopResources
                 )
             }
         } else {
@@ -310,6 +312,11 @@ struct APIEndpointExportRunner {
         defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
 
         let normalizedDates = HealthKitDailyCapture.normalizedDates(dates)
+        // This injectable uploader is a legacy-only seam, not permission to override a job pin.
+        if settings.executionAppleExportEnginePin != nil {
+            return failureResult(dates: normalizedDates, reason: .unknown,
+                message: EngineError.rustPlanningFailed.rawValue)
+        }
         guard !normalizedDates.isEmpty else {
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
@@ -377,7 +384,7 @@ struct APIEndpointExportRunner {
         if settings.executionAppleExportEngineAuthorityIsFrozen {
             return .legacy
         }
-        return policyResolver.requestedModeForNewOperation(profile: .appleHealthDataV8)
+        return policyResolver.requestedModeForNewOperation(profile: .appleHealthDataV10)
     }
 
     /// Destination-free preparation seam used by API preview and focused engine tests. A legacy
@@ -400,6 +407,9 @@ struct APIEndpointExportRunner {
         diagnosticSink: @escaping EngineDiagnosticSink = ShadowExportEvidenceRecorder.productionSink,
         onProgress: ProgressHandler? = nil
     ) async throws -> PreparationResolution {
+        if fetchExternalDailyRecords != nil, settings.executionAppleExportEnginePin != nil {
+            throw EngineError.rustPlanningFailed
+        }
         let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil
             ? requestedMode(settings: settings, policyResolver: policyResolver)
             : .legacy
@@ -439,7 +449,10 @@ struct APIEndpointExportRunner {
         comparisonOptions: NativeExportComparisonOptions = NativeExportComparisonOptions(),
         diagnosticSink: @escaping EngineDiagnosticSink = ShadowExportEvidenceRecorder.productionSink
     ) async throws -> PreparedOperation? {
-        guard !records.isEmpty else { return nil }
+        guard !records.isEmpty else {
+            if settings.executionAppleExportEnginePin != nil { throw EngineError.rustPlanningFailed }
+            return nil
+        }
         let timeZoneIdentifier = calendarTimeZone.identifier
         var recordsByOwnerDate: [String: HealthData] = [:]
         for record in records {
@@ -505,6 +518,10 @@ struct APIEndpointExportRunner {
         calendar.timeZone = calendarTimeZone
         let normalizedDates = HealthKitDailyCapture.normalizedDates(dates, calendar: calendar)
         guard !normalizedDates.isEmpty else {
+            if settings.executionAppleExportEnginePin != nil {
+                return failureResult(dates: [], reason: .unknown,
+                    message: EngineError.rustPlanningFailed.rawValue)
+            }
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
                 totalCount: 0,
@@ -532,8 +549,12 @@ struct APIEndpointExportRunner {
 
         // This is the only authority read for the operation and occurs before either HealthKit or
         // a provider can be called. Persisted pins, including explicit nil/legacy authority, take
-        // precedence over current rollout defaults. Provider-bearing v8 days remain
+        // precedence over current rollout defaults. Provider-bearing v10 days remain
         // native-authoritative so the typed section cannot be dropped by an older path.
+        if fetchExternalDailyRecords != nil, settings.executionAppleExportEnginePin != nil {
+            return failureResult(dates: normalizedDates, reason: .unknown,
+                message: EngineError.rustPlanningFailed.rawValue)
+        }
         let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil
             ? requestedMode(settings: settings, policyResolver: policyResolver)
             : .legacy
@@ -641,7 +662,7 @@ struct APIEndpointExportRunner {
             throw EngineError.rustPlanningFailed
         }
         if requestedMode == .rust {
-            // Apple-v8 API records still require native profile-document serialization for exact
+            // Apple-v10 API records still require native profile-document serialization for exact
             // shipped bytes. New Rust requests resolve wholly to legacy before capture/core work;
             // an already-persisted Rust promise fails closed instead of changing authority.
             if suppliedPin != nil { throw EngineError.rustPlanningFailed }
@@ -650,7 +671,10 @@ struct APIEndpointExportRunner {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = calendarTimeZone
         let normalizedDates = HealthKitDailyCapture.normalizedDates(dates, calendar: calendar)
-        guard !normalizedDates.isEmpty else { return .legacy }
+        guard !normalizedDates.isEmpty else {
+            if suppliedPin != nil { throw EngineError.rustPlanningFailed }
+            return .legacy
+        }
 
         let dayLimit = max(1, maxBatchDaySpan)
         let byteLimit = max(1, maxBatchPayloadBytes)
@@ -682,7 +706,7 @@ struct APIEndpointExportRunner {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            if requestedMode == .shadow {
+            if requestedMode == .shadow, suppliedPin == nil {
                 await emitRustFailure(pin: nil, diagnosticSink: diagnosticSink)
                 return .legacy
             }
@@ -902,7 +926,7 @@ struct APIEndpointExportRunner {
                 id: NativeExportArtifactPlan.artifactID(
                     requestID: identity.requestID,
                     sessionID: identity.sessionID,
-                    profile: .appleHealthDataV8,
+                    profile: .appleHealthDataV10,
                     relativePath: path,
                     mediaType: "application/json",
                     writeMode: .apiPost,
@@ -920,7 +944,7 @@ struct APIEndpointExportRunner {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin
@@ -1058,7 +1082,7 @@ struct APIEndpointExportRunner {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin

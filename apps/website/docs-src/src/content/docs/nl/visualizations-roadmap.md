@@ -25,10 +25,10 @@ Gebruik `auto` om het eenhedensysteem van de export te volgen, `metric` om kilom
 ## Huidige visualisatiedekking
 
 <div class="reference-stats">
-<div><strong>43</strong><span>huidige pluginrenderers</span></div>
+<div><strong>62</strong><span>huidige pluginrenderers</span></div>
 <div><strong>18</strong><span>gegevenscategorieën in exports</span></div>
 <div><strong>220+</strong><span>canonieke exportsleutels</span></div>
-<div><strong>1</strong><span>nog benodigde generieke meetwaardenlaag</span></div>
+<div><strong>4</strong><span>WHOOP-specifieke weergaven</span></div>
 </div>
 
 ## Platformondersteuning per exporter
@@ -161,6 +161,40 @@ Elk item verwijst naar de bijbehorende openbare variant in de [Health.md-visuali
 - [Work-outtrends](/visualizations/workout-analytics/workout-trends/theme-colors/) — `workout-trends`
 - [Work-outintervallen](/visualizations/workout-analytics/workout-intervals/theme-colors/) — `workout-intervals`
 - [Work-outkaart](/visualizations/workout-analytics/workout-map/theme-colors/) — `workout-map`
+
+### WHOOP: afzonderlijke providergegevens
+
+Verbind WHOOP in Apple-versies waarin WHOOP is ingeschakeld via Instellingen → Verbonden apps en neem verbonden apps op in de export. Deze grafieken lezen dagelijkse Apple-bestanden van `healthmd.health_data` v8 met `providers.whoop` (`healthmd.provider.whoop_daily` v1). Ze mengen WHOOP niet met Apple- of Health Connect-samenvattingen; WHOOP-HRV is RMSSD, niet Apples SDNN.
+
+- [Herstel × belasting](/visualizations/whoop/whoop-recovery-strain/theme-colors/), `whoop-recovery-strain`: herstel (0–100%) tegenover cyclusbelasting (0–21), in volledige records gekoppeld via dezelfde cyclus-ID. Dit is een verband, geen trainingsadvies.
+- [Behaalde slaap en slaapbehoefte](/visualizations/whoop/whoop-sleep-need/theme-colors/), `whoop-sleep-need`: afzonderlijke slaapsessies en dutjes, met basisbehoefte, slaapschuld, behoefte door recente belasting en een dutjesaanpassing met teken. De markering van de nettobehoefte vereist alle vier gerapporteerde componenten; negatieve dutjesaanpassingen blijven aftrekken.
+- [Trends in slaapbeoordeling](/visualizations/whoop/whoop-sleep-trends/theme-colors/), `whoop-sleep-trends`: door WHOOP gerapporteerde percentages voor prestatie, regelmaat en efficiëntie, geen lokaal berekende scores.
+- [Trainingsbelasting en zones](/visualizations/whoop/whoop-workout-strain/theme-colors/), `whoop-workout-strain`: belasting per training en WHOOP-zones 0–5. Zoneaandelen gebruiken de totale gerapporteerde zonetijd, niet de verstreken duur of van Apple afgeleide zones; opnamebereik en verstreken tijd blijven afzonderlijke context.
+
+Gebruik JSON of gestructureerde CSV voor volledige records en slaapbehoeftecomponenten. Markdown/Bases bieden alleen ondubbelzinnige scalaire projecties van één record, zonder dutjesidentiteit of trainingszonedetails. Deze grafieken lezen geen native nevenbestanden van de provider, Android Raw API Snapshots of roll-ups. Ontbrekende waarden of waarden zonder score zijn niet nul; gedeeltelijke vastleggingen blijven zichtbaar. Datumfilters gebruiken de bijbehorende exportdag, niet de tijdstempels van de gebeurtenis. Galerievoorbeelden gebruiken synthetische gegevens, niet de records van een echt persoon.
+
+```health-viz
+type: whoop-recovery-strain
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-need
+sleep: main
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-trends
+sleep: all
+last: 30
+```
+
+```health-viz
+type: whoop-workout-strain
+limit: 12
+last: 30
+```
 
 ## Roadmap voor de basis
 

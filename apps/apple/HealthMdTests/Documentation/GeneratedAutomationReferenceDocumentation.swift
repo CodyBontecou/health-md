@@ -1040,6 +1040,25 @@ enum GeneratedAutomationReferenceDocumentation {
                 underlyingError: "Synthetic fixture filesystem rejection.",
                 occurredAt: createdAt
             )),
+            .iphoneContextRefreshRequest(IPhoneContextRefreshRequest(
+                jobID: jobID,
+                createdAt: createdAt,
+                dateSelection: .explicitRange,
+                dateRangeStart: dayStart,
+                dateRangeEnd: dayEnd,
+                selection: CanonicalHealthDataSelection(
+                    metricIDs: ["steps"], sourceIDs: ["apple_health"], detailLevel: .summary
+                ),
+                profileID: secondJobID,
+                profileName: "Synthetic context profile"
+            )),
+            .iphoneContextRefreshStatus(IPhoneContextRefreshStatus(
+                jobID: jobID,
+                state: .failed,
+                updatedAt: createdAt,
+                message: "Synthetic encrypted-context selection was rejected.",
+                failureReason: "invalid_context_selection"
+            )),
             .iphoneExportRequest(strictRawRequest),
             .iphoneExportAccepted(IPhoneExportAcknowledgement(
                 jobID: jobID,

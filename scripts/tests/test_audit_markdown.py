@@ -32,6 +32,7 @@ class MarkdownAuditTests(unittest.TestCase):
             "apps/website/docs-src/src/content/docs/agents.md": "published-guide",
             "apps/website/assets/samples/health-data-sample.md": "fixture-or-sample",
             "apps/apple/docs/testing/example-execution-plan.md": "planning-or-evidence",
+            "apps/apple/docs/testing/WAVE1-EXECUTION-PLAN.md": "planning-or-evidence",
             "apps/cloud/docs/production-design-interview.md": "planning-or-evidence",
             "apps/cli/docs/releasing.md": "maintained-document",
         }

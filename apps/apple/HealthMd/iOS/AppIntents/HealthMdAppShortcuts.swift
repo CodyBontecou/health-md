@@ -61,22 +61,33 @@ struct HealthMdAppShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: RefreshMacHealthContextIntent(),
             phrases: ["Refresh Mac health context with \(.applicationName)"],
-            shortTitle: "Refresh Mac Context",
+            shortTitle: "Refresh Context for Dates",
             systemImageName: "lock.shield"
         )
 
-        AppShortcut(
-            intent: GetMacContextRefreshStatusIntent(),
-            phrases: ["Check \(.applicationName) Mac context refresh"],
-            shortTitle: "Mac Context Status",
-            systemImageName: "checkmark.shield"
-        )
+        // The request-bound status intent remains discoverable in the Shortcuts
+        // editor through AppIntent metadata and accepts the refresh's entity.
+        // Preserve the existing nine tiles within Apple's ten-shortcut limit.
 
         AppShortcut(
             intent: SetScheduledExportEnabledIntent(),
             phrases: ["Toggle \(.applicationName) scheduled export"],
             shortTitle: "Set Scheduled Export",
             systemImageName: "clock.arrow.circlepath"
+        )
+
+        AppShortcut(
+            intent: RefreshMacContextIntent(),
+            phrases: ["Refresh \(.applicationName) Mac context"],
+            shortTitle: "Refresh Mac Context",
+            systemImageName: "arrow.triangle.2.circlepath.icloud"
+        )
+
+        AppShortcut(
+            intent: GetMacContextRefreshStatusIntent(),
+            phrases: ["Check \(.applicationName) Mac context refresh"],
+            shortTitle: "Mac Context Status",
+            systemImageName: "checkmark.icloud"
         )
     }
 }

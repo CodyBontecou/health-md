@@ -26,7 +26,7 @@
             {"name": "testActualFakeHealthKitCaptureAwaitRechecksPeerCapabilityAndUncertainAuthority()", "nodeIdentifier": "AppleContextAutomationTests/testActualFakeHealthKitCaptureAwaitRechecksPeerCapabilityAndUncertainAuthority()", "nodeType": "Test Case", "result": "Passed"},
             {"name": "testColdUnavailablePhoneAuthorityBlocksActualHandlerButPreservesOrdinaryFilesAndFirstRunContext()", "nodeIdentifier": "AppleContextAutomationTests/testColdUnavailablePhoneAuthorityBlocksActualHandlerButPreservesOrdinaryFilesAndFirstRunContext()", "nodeType": "Test Case", "result": "Passed"},
             {"name": "testProtectedStatusCannotTransmitEvenWithProvenAdmission()", "nodeIdentifier": "AppleContextAutomationTests/testProtectedStatusCannotTransmitEvenWithProvenAdmission()", "nodeType": "Test Case", "result": "Passed"},
-            {"name": "testRealShortcutProviderRetainsSevenActionsAndRegistersBothContextIntents()", "nodeIdentifier": "AppleContextAutomationTests/testRealShortcutProviderRetainsSevenActionsAndRegistersBothContextIntents()", "nodeType": "Test Case", "result": "Passed"}
+            {"name": "testRealShortcutProviderRetainsExistingTilesAndExposesRequestContextIntents()", "nodeIdentifier": "AppleContextAutomationTests/testRealShortcutProviderRetainsExistingTilesAndExposesRequestContextIntents()", "nodeType": "Test Case", "result": "Passed"}
           ]
         },
         {"name": "UnrelatedTests", "nodeType": "Test Suite", "children": [{"name": "testUnrelated()", "nodeIdentifier": "UnrelatedTests/testUnrelated()", "nodeType": "Test Case", "result": "Skipped"}]}

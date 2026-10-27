@@ -284,7 +284,7 @@ struct MacContextRefreshQuery: EntityQuery {
 }
 
 struct RefreshMacHealthContextIntent: AppIntent {
-    static var title: LocalizedStringResource = "Refresh Mac Health Context"
+    static var title: LocalizedStringResource = "Refresh Mac Context for Dates"
     static var description = IntentDescription("Refresh explicit owner dates in the paired Mac's encrypted context, without export files or file quota. Requires open, authenticated apps.", categoryName: "Health")
     static var openAppWhenRun = true
     @Parameter(title: "Profile", description: "Saved Connected Mac profile name. Empty selects the active saved profile; no live-settings fallback.")
@@ -299,12 +299,12 @@ struct RefreshMacHealthContextIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<MacContextRefreshEntity> & ProvidesDialog {
         let entity = try await AppleContextPhoneClient.shared.refreshAfterOpeningApp(profileName: profile, startDate: startDate, endDate: endDate)
-        return .result(value: entity, dialog: "Request saved; context refresh is pending. Use Get Mac Context Refresh Status with this request.")
+        return .result(value: entity, dialog: "Request saved; context refresh is pending. Use Get Mac Context Request Status with this request.")
     }
 }
 
-struct GetMacContextRefreshStatusIntent: AppIntent {
-    static var title: LocalizedStringResource = "Get Mac Context Refresh Status"
+struct GetMacContextRequestStatusIntent: AppIntent {
+    static var title: LocalizedStringResource = "Get Mac Context Request Status"
     static var description = IntentDescription("Read a saved context refresh receipt and request an updated status from its original authenticated Mac. Disconnection is not completion.", categoryName: "Health")
     static var openAppWhenRun = true
     @Parameter(title: "Refresh Request") var request: MacContextRefreshEntity

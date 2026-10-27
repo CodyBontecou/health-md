@@ -136,7 +136,7 @@ private enum GeneratedRollupReferenceDocs {
             "range.md": Data(snapshot.toRollupMarkdown().utf8)
         ]
         // Shipped v8 calendar artifacts are immutable compatibility references. The
-        // generator carries them forward byte-for-byte beside current range-v9 output.
+        // generator carries them forward byte-for-byte beside current range-v10 output.
         let historicalDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()

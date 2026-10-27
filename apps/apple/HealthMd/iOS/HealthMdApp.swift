@@ -154,6 +154,7 @@ struct HealthMdApp: App {
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
     @StateObject private var sharedSetupCoordinator: SharedSetupCoordinator
     @State private var hasInstalledSharedSetupURLHandler = false
+    @State private var cloudRepairLinkNotice = false
     @State private var showingMyselfClaim = false
     #if DEBUG
     @StateObject private var exportPerformanceLab = IPhoneExportPerformanceLabCoordinator()
@@ -426,6 +427,12 @@ struct HealthMdApp: App {
             .sheet(isPresented: $sharedSetupCoordinator.isFlowPresented) {
                 SharedSetupFlowView(coordinator: sharedSetupCoordinator)
             }
+            .geistDialog(
+                isPresented: $cloudRepairLinkNotice,
+                title: Text("Cloud requests are not yet available"),
+                message: Text("Opening a Cloud link never starts an export. Device approval and safe supplemental uploads must be available before Cloud requests can be reviewed here."),
+                actions: [.cancel("OK")]
+            )
             .alert("Shared Setup", isPresented: Binding(
                 get: { sharedSetupCoordinator.errorMessage != nil },
                 set: { if !$0 { sharedSetupCoordinator.errorMessage = nil } }
@@ -438,23 +445,32 @@ struct HealthMdApp: App {
             // Keep native bordered controls aligned with the 6px Geist control radius
             // instead of SwiftUI's default capsule shape.
             .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Group {
-                    if let snapshot = notificationExportActivity.snapshot {
-                        NotificationExportActivityBanner(
-                            snapshot: snapshot,
-                            onCancel: snapshot.phase.allowsCancellation
-                                ? { schedulingManager.cancelNotificationExport(operationID: snapshot.operationID) }
-                                : nil
-                        )
-                    } else if let snapshot = cliExportActivity.snapshot {
-                        CLIExportActivityBanner(snapshot: snapshot)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if UIDevice.current.userInterfaceIdiom == .pad,
+                   (configurationProtection.blockedChangeToastID != nil
+                    || notificationExportActivity.snapshot != nil
+                    || cliExportActivity.snapshot != nil) {
+                    VStack(spacing: Spacing.s2) {
+                        ConfigurationProtectionToast(configurationProtection: configurationProtection)
+
+                        Group {
+                            if let snapshot = notificationExportActivity.snapshot {
+                                NotificationExportActivityBanner(
+                                    snapshot: snapshot,
+                                    onCancel: snapshot.phase.allowsCancellation
+                                        ? { schedulingManager.cancelNotificationExport(operationID: snapshot.operationID) }
+                                        : nil
+                                )
+                            } else if let snapshot = cliExportActivity.snapshot {
+                                CLIExportActivityBanner(snapshot: snapshot)
+                            }
+                        }
                     }
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, Spacing.s2)
+                    .padding(.bottom, Spacing.s2)
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 }
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.s2)
-                .padding(.bottom, Spacing.s1)
-                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
             .animation(
                 reduceMotion ? nil : AnimationTimings.standard,
@@ -464,16 +480,10 @@ struct HealthMdApp: App {
                 reduceMotion ? nil : AnimationTimings.standard,
                 value: cliExportActivity.snapshot?.jobID
             )
-            .overlay(alignment: .top) {
-                ConfigurationProtectionToast(configurationProtection: configurationProtection)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.top, Spacing.s2)
-                    .animation(
-                        reduceMotion ? nil : AnimationTimings.standard,
-                        value: configurationProtection.blockedChangeToastID
-                    )
-            }
-            .zIndex(configurationProtection.blockedChangeToastID == nil ? 0 : 1)
+            .animation(
+                reduceMotion ? nil : AnimationTimings.standard,
+                value: configurationProtection.blockedChangeToastID
+            )
             #if DEBUG
             .sheet(isPresented: $exportPerformanceLab.isConfirmationPresented) {
                 IPhoneExportPerformanceLabConfirmationView(
@@ -523,6 +533,7 @@ struct HealthMdApp: App {
                     externalIntegrations: externalIntegrationManager
                 )
                 setupSyncMessageHandler()
+                IPhoneMacContextRefreshCoordinator.shared.configure(syncService: syncService)
                 corpusRecoveryManager.applicationDidBecomeActive()
                 directCLIService.exportRequestHandler = { request, binding, negotiation, channel, protocolAuthority in
                     await IPhoneDirectExportCoordinator.shared.handle(
@@ -549,6 +560,18 @@ struct HealthMdApp: App {
                 }
                 directCLIService.statusProvider = {
                     await PurchaseManager.shared.refreshStatus()
+                    // Status has no immutable query scope and cannot certify access.
+                    let historyAuthorization = HealthHistoryAuthorizationAssessment.unknown
+                    let historyStatus = DirectHistoryAuthorizationStatus(
+                        state: historyAuthorization.state.rawValue,
+                        assessedTypeIdentifiers: historyAuthorization.assessedTypeIdentifiers,
+                        earliestAuthorizedDates: Dictionary(uniqueKeysWithValues: historyAuthorization.boundaries.map {
+                            ($0.typeIdentifier, $0.earliestAuthorizedSampleDate)
+                        }),
+                        unassessedMetricIDs: historyAuthorization.unassessedMetricIDs,
+                        checkedAt: historyAuthorization.checkedAt,
+                        message: historyAuthorization.message
+                    )
                     let protectedDataAvailable = UIApplication.shared.isProtectedDataAvailable
                     let exportInProgress = IPhoneDirectExportCoordinator.shared.isExporting
                     let queryInProgress = IPhoneDirectQueryCoordinator.shared.isQuerying
@@ -580,7 +603,11 @@ struct HealthMdApp: App {
                         canTriggerQueries: canStartOperation,
                         activeJobID: IPhoneDirectExportCoordinator.shared.currentJobID,
                         activeQueryRequestID: IPhoneDirectQueryCoordinator.shared.activeRequestID,
-                        message: message
+                        message: message,
+                        appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+                        buildVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+                        operatingSystemVersion: UIDevice.current.systemVersion,
+                        historyAuthorization: historyStatus
                     )
                 }
                 if scenePhase == .active {
@@ -602,6 +629,10 @@ struct HealthMdApp: App {
                 )
             }
             .onOpenURL { url in
+                if CloudRepairLink.matches(url) {
+                    cloudRepairLinkNotice = true
+                    return
+                }
                 if url.scheme == "healthmd", url.host == "myself", url.path == "/claim",
                    url.user == nil, url.password == nil, url.port == nil,
                    url.query == nil, url.fragment == nil {
@@ -824,6 +855,8 @@ struct HealthMdApp: App {
                         healthKitManager: self.healthKitManager,
                         externalIntegrations: externalIntegrations
                     )
+                case .iphoneContextRefreshStatus(let status):
+                    IPhoneMacContextRefreshCoordinator.shared.handle(status)
                 case .iphoneExportRejected(let failure):
                     if let jobID = failure.jobID {
                         self.syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
@@ -882,6 +915,7 @@ struct HealthMdApp: App {
                 case .iphoneExportAccepted, .iphoneExportPreparationProgress, .iphoneExportRawData:
                     break // iOS sends these for Mac-initiated export requests
                 case .healthData, .syncProgress, .macExportRequest, .macExportCancel,
+                     .iphoneContextRefreshRequest,
                      .macExportStreamStart, .macExportStreamChunk,
                      .macExportStreamComplete, .macExportStreamAbort,
                      .connectedTransferStart, .connectedTransferChunk, .connectedTransferComplete,
@@ -924,6 +958,20 @@ struct HealthMdApp: App {
     /// Handle a request for ALL available health data.
     /// Discovers the earliest HealthKit data date and sends data in batches with progress updates.
     private func handleAllDataRequest() async {
+        let historyAuthorization = HealthHistoryAuthorizationAssessment.unknown
+        guard historyAuthorization.supportsUnqualifiedFullHistoryClaim else {
+            let message = historyAuthorization.state == .limitedHistory
+                ? "All-time sync stopped because Apple Health history is limited by date. Earlier data is unknown."
+                : "All-time sync stopped because full-history access could not be verified. Choose an explicit date range or a scoped export path with bound history evidence."
+            syncService.send(.syncProgress(SyncProgressInfo(
+                totalDays: 0,
+                processedDays: 0,
+                recordsInBatch: 0,
+                isComplete: true,
+                message: message
+            )))
+            return
+        }
         // Find the earliest date with health data
         guard let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
             // No data found — send a completion progress message

@@ -20,6 +20,49 @@ enum DocumentationExportFixtures {
         "binary_artifact_reference", "unknown",
     ]
 
+    struct SummarySizingFixture {
+        let name: String
+        let data: HealthData
+    }
+
+    /// Deterministic profiles used to measure Summary export size without customer data.
+    /// These are performance/capacity fixtures, not export-schema fixtures.
+    static var summarySizingFixtures: [SummarySizingFixture] {
+        var workoutHeavy = ExportFixtures.fullDayGranular
+        workoutHeavy.workouts = (0..<12).map { index in
+            let id = UUID(uuidString: String(format: "00000000-0000-0000-0000-%012x", 1_000 + index))!
+            let start = referenceDate.addingTimeInterval(Double(index * 6_000))
+            return WorkoutData(
+                id: id,
+                workoutType: .running,
+                healthKitActivityType: "running",
+                healthKitActivityTypeRawValue: 37,
+                startTime: start,
+                actualEndDate: start.addingTimeInterval(3_600),
+                isIndoor: index.isMultiple(of: 2),
+                metadata: ["fixture": "workout-heavy", "sequence": String(index)],
+                duration: 3_600,
+                calories: Double(400 + index * 10),
+                distance: Double(8_000 + index * 250),
+                avgHeartRate: Double(140 + index),
+                maxHeartRate: Double(170 + index),
+                minHeartRate: Double(80 + index),
+                avgRunningCadence: Double(165 + index),
+                avgStrideLength: 1.1 + Double(index) / 100,
+                avgGroundContactTime: Double(250 - index),
+                avgVerticalOscillation: 8.0 + Double(index) / 10,
+                elevationGainMeters: Double(100 + index * 5),
+                elevationLossMeters: Double(95 + index * 5)
+            )
+        }
+        return [
+            SummarySizingFixture(name: "sparse", data: ExportFixtures.partialDay),
+            SummarySizingFixture(name: "typical", data: ExportFixtures.fullDay),
+            SummarySizingFixture(name: "workout_heavy", data: workoutHeavy),
+            SummarySizingFixture(name: "maximal", data: exhaustiveSummaryDay),
+        ]
+    }
+
     static var exhaustiveSummaryDay: HealthData {
         var data = ExportFixtures.fullDayGranular
 

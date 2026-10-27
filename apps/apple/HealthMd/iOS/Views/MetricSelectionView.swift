@@ -28,9 +28,12 @@ struct MetricSelectionView: View {
                 pageHeader
                 summaryHeader
                 searchBar
+                if !filteredWHOOPResources.isEmpty {
+                    whoopSelectionSection
+                }
                 categoryListHeader
 
-                if filteredCategories.isEmpty {
+                if filteredCategories.isEmpty && filteredWHOOPResources.isEmpty {
                     emptySearchState
                 } else {
                     LazyVStack(spacing: Spacing.s3) {
@@ -88,7 +91,7 @@ struct MetricSelectionView: View {
                             selectionState.selectAll()
                         }
                     }
-                    Button("Deselect All") {
+                    Button("Deselect All Apple Health Metrics") {
                         configurationProtection.performConfigurationChange {
                             selectionState.deselectAll()
                         }
@@ -146,7 +149,9 @@ struct MetricSelectionView: View {
     private var pageHeader: some View {
         HealthMdPageHeader(
             title: "Health Metrics",
-            subtitle: "Choose which Apple Health metrics Health.md writes into exports."
+            subtitle: ConnectedAppsFeature.isEnabled
+                ? "Choose which Apple Health and WHOOP data Health.md writes into exports."
+                : "Choose which Apple Health metrics Health.md writes into exports."
         )
     }
 
@@ -159,7 +164,7 @@ struct MetricSelectionView: View {
                         .foregroundStyle(Color.textPrimary)
                         .contentTransition(.numericText())
 
-                    Text("of \(selectionState.totalMetricCount) metrics enabled")
+                    Text("of \(selectionState.totalMetricCount) Apple Health metrics enabled")
                         .font(Typography.caption())
                         .foregroundStyle(Color.textSecondary)
                 }
@@ -252,9 +257,81 @@ struct MetricSelectionView: View {
         )
     }
 
+    private var filteredWHOOPResources: [WHOOPResourceName] {
+        guard ConnectedAppsFeature.isEnabled else { return [] }
+        let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return WHOOPResourceName.allCases.filter {
+            search.isEmpty || "WHOOP".localizedCaseInsensitiveContains(search)
+                || $0.displayName.localizedCaseInsensitiveContains(search)
+                || $0.selectionDescription.localizedCaseInsensitiveContains(search)
+        }
+    }
+
+    private var whoopSelectionSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            Text("WHOOP")
+                .font(Typography.labelUppercase())
+                .foregroundStyle(Color.textSecondary)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: 0) {
+                Toggle(isOn: configurationProtection.protecting(Binding(
+                    get: { selectionState.enabledWHOOPResources == Set(WHOOPResourceName.allCases) },
+                    set: { selectionState.enabledWHOOPResources = $0 ? Set(WHOOPResourceName.allCases) : [] }
+                ))) {
+                    VStack(alignment: .leading, spacing: Spacing.s1) {
+                        Text("All WHOOP Data")
+                            .font(Typography.bodyEmphasis())
+                            .foregroundStyle(Color.textPrimary)
+                        Text("\(selectionState.enabledWHOOPResources.count)/\(WHOOPResourceName.allCases.count) data groups enabled")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+                .padding(Spacing.s4)
+                .accessibilityIdentifier("metrics.whoop.all")
+
+                ForEach(filteredWHOOPResources, id: \.self) { resource in
+                    rowDivider
+                    Toggle(isOn: configurationProtection.protecting(Binding(
+                        get: { selectionState.enabledWHOOPResources.contains(resource) },
+                        set: { enabled in
+                            if enabled {
+                                selectionState.enabledWHOOPResources.insert(resource)
+                            } else {
+                                selectionState.enabledWHOOPResources.remove(resource)
+                            }
+                        }
+                    ))) {
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Text(resource.displayName)
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
+                            Text(resource.selectionDescription)
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(Spacing.s4)
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("metrics.whoop.\(resource.rawValue)")
+                }
+            }
+            .tint(Color.success)
+            .geistCard(cornerRadius: GeistRadius.lg, padding: 0)
+
+            Text("Requires WHOOP in Settings → Connected Apps. Disabled groups are not fetched or exported in daily files or native JSON sidecars. These switches do not change Apple Health selection or delete previous exports.")
+                .font(Typography.caption())
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
     private var categoryListHeader: some View {
         VStack(alignment: .leading, spacing: Spacing.s1) {
-            Text(LocalizedStringKey(searchText.isEmpty ? "Metric Categories" : "Search Results"))
+            Text(LocalizedStringKey(searchText.isEmpty ? "Apple Health Categories" : "Apple Health Search Results"))
                 .font(Typography.labelUppercase())
                 .foregroundStyle(Color.textSecondary)
                 .tracking(1.2)
