@@ -25,10 +25,14 @@ pub(crate) use source_confirmation::read_source_confirmation;
 #[path = "agent_output_stop.rs"]
 mod later_stop;
 pub(crate) use later_stop::PendingOutputStop;
+#[path = "agent_uncertain_stop.rs"]
+mod uncertain_stop;
+pub(crate) use uncertain_stop::UncertainStop;
 
 /// Decoder selection only: each selected reader must authenticate its complete evidence.
 #[derive(Clone, Copy)]
 pub(crate) enum RetainedCancellationHint {
+    Uncertain,
     Accepted,
     Output,
     Confirmed,
@@ -67,9 +71,10 @@ impl HostAuthorityStore {
             hint.pointer("/attempt/schema_version")
                 .and_then(serde_json::Value::as_u64),
         ) {
+            (false, Some(1 | 9)) => Ok(RetainedCancellationHint::Uncertain),
             (false, Some(2 | 3)) => Ok(RetainedCancellationHint::Accepted),
             (true, Some(1 | 2 | 5 | 7)) => Ok(RetainedCancellationHint::Output),
-            (false, Some(4)) | (true, Some(6 | 8)) => Ok(RetainedCancellationHint::Confirmed),
+            (false, Some(4 | 10)) | (true, Some(6 | 8)) => Ok(RetainedCancellationHint::Confirmed),
             _ => Err(Error::BindingChanged.into()),
         }
     }
@@ -235,8 +240,29 @@ struct AcceptancePublicationBoundary<'a> {
 }
 #[derive(Clone, Copy)]
 enum RetainedAttemptPurpose {
+    UncertainStop,
     AcceptedStop,
     Resume,
+}
+impl RetainedAttemptPurpose {
+    fn accepts(self, schema_version: u64, has_acceptance: bool, has_cancellation: bool) -> bool {
+        matches!(
+            (self, schema_version, has_acceptance, has_cancellation),
+            (
+                RetainedAttemptPurpose::AcceptedStop | RetainedAttemptPurpose::Resume,
+                2,
+                true,
+                false
+            ) | (RetainedAttemptPurpose::AcceptedStop, 3, true, true)
+                | (
+                    RetainedAttemptPurpose::Resume | RetainedAttemptPurpose::UncertainStop,
+                    1,
+                    false,
+                    false
+                )
+                | (RetainedAttemptPurpose::UncertainStop, 9, false, true)
+        )
+    }
 }
 impl OutputAdmission {
     /// Existing pre-manifest evidence only. Never create a missing lock, attempt, output
@@ -283,20 +309,10 @@ impl OutputAdmission {
         if let Some(receipt) = accepted {
             validate_accepted(&attempt.request, receipt, clock)?;
         }
-        let allowed = matches!(
-            (
-                purpose,
-                attempt.schema_version,
-                accepted.is_some(),
-                attempt.cancellation_request.is_some()
-            ),
-            (
-                RetainedAttemptPurpose::AcceptedStop | RetainedAttemptPurpose::Resume,
-                2,
-                true,
-                false
-            ) | (RetainedAttemptPurpose::AcceptedStop, 3, true, true)
-                | (RetainedAttemptPurpose::Resume, 1, false, false)
+        let allowed = purpose.accepts(
+            attempt.schema_version,
+            accepted.is_some(),
+            attempt.cancellation_request.is_some(),
         );
         if attempt.schema != "healthmd.agent_host_execution_attempt"
             || attempt.host != store.host
@@ -321,15 +337,19 @@ impl OutputAdmission {
                 return Err(ClientError::AgentAuthorityUnavailable);
             }
         }
-        let expected = execution_attempt_bytes(
-            &store.host,
-            &attempt.request,
-            &attempt.started_at,
-            accepted,
-            attempt.cancellation_request.as_ref(),
-            None,
-            &key,
-        )?;
+        let expected = if attempt.schema_version == 9 {
+            uncertain_stop::pending_bytes(&store.host, &attempt.request, &attempt.started_at, &key)?
+        } else {
+            execution_attempt_bytes(
+                &store.host,
+                &attempt.request,
+                &attempt.started_at,
+                accepted,
+                attempt.cancellation_request.as_ref(),
+                None,
+                &key,
+            )?
+        };
         let expected: SignedExecutionAttempt = private_json::decode(&expected)?;
         if !healthmd_protocol::crypto::constant_time_equal(
             saved.mac.0.as_bytes(),
@@ -800,6 +820,16 @@ fn validate_source_stop_receipt(
     accepted: &ExecutionReceipt,
     receipt: &ExecutionReceipt,
 ) -> Result<(), ClientError> {
+    if receipt.expires_at != accepted.expires_at {
+        return Err(Error::BindingChanged.into());
+    }
+    validate_source_stop_identity(request, receipt)
+}
+
+fn validate_source_stop_identity(
+    request: &ExecuteRequest,
+    receipt: &ExecutionReceipt,
+) -> Result<(), ClientError> {
     v4::validate_execution_receipt(receipt)?;
     let no_manifest = receipt.manifest_sha256.0 == "0".repeat(64);
     let no_frontier = receipt.frontier_sha256.0 == "0".repeat(64);
@@ -816,7 +846,6 @@ fn validate_source_stop_receipt(
     if receipt.binding != v4::approval_binding(&request.plan)
         || receipt.job_id != request.job_id
         || receipt.request_sha256 != v4::document_digest(request)?
-        || receipt.expires_at != accepted.expires_at
         || !receipt.source_acknowledged
         || !matches!(
             receipt.status,

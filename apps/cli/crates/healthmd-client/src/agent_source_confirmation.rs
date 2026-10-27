@@ -28,6 +28,41 @@ impl PlanningClock for ObservedAt<'_> {
     }
 }
 
+enum ConfirmationReader {
+    Accepted,
+    Output,
+    Uncertain,
+}
+// Selection grants no authority. Every selected decoder independently authenticates its
+// entire record and evidence, and an error never retries another decoder.
+fn select_confirmation_reader(
+    store: &HostAuthorityStore,
+    job: &ControlUuid,
+) -> Result<ConfirmationReader, ClientError> {
+    let dir = store.directory()?;
+    match dir.symlink_metadata(format!("output-{}.json", job.0)) {
+        Ok(_) => return Ok(ConfirmationReader::Output),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(private::unavailable(error)),
+    }
+    let hint: serde_json::Value = private_json::decode(&private::read_private(
+        &dir,
+        &format!("attempt-{}.json", job.0),
+        MAX_OUTPUT_BYTES,
+    )?)?;
+    Ok(
+        if hint
+            .pointer("/attempt/schema_version")
+            .and_then(serde_json::Value::as_u64)
+            == Some(10)
+        {
+            ConfirmationReader::Uncertain
+        } else {
+            ConfirmationReader::Accepted
+        },
+    )
+}
+
 pub(crate) async fn read_source_confirmation<F, Fut>(
     store: &HostAuthorityStore,
     job: &ControlUuid,
@@ -39,15 +74,18 @@ where
     Fut: std::future::Future<Output = Result<(), ClientError>>,
 {
     job.validate_shape()?;
-    // File presence selects a decoder only; it never establishes trusted state. Both readers
+    // File presence selects a decoder only; it never establishes trusted state. Each selected reader
     // independently acquire the original lock and authenticate their complete evidence, then
     // recheck it after the final protected-key await. A raced/unsafe hint fails closed rather
     // than retrying a different format after authentication or binding failure.
-    let dir = store.directory()?;
-    match dir.symlink_metadata(format!("output-{}.json", job.0)) {
-        Ok(_) => return later_stop::read_confirmed_output_stop(store, job, clock, fence).await,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(private::unavailable(error)),
+    match select_confirmation_reader(store, job)? {
+        ConfirmationReader::Output => {
+            return later_stop::read_confirmed_output_stop(store, job, clock, fence).await;
+        }
+        ConfirmationReader::Uncertain => {
+            return uncertain_stop::read_confirmed(store, job, clock, fence).await;
+        }
+        ConfirmationReader::Accepted => {}
     }
     let key = key_bytes(&store.protected_key.load_existing(&store.host).await?)?;
     let dir = store.directory()?;

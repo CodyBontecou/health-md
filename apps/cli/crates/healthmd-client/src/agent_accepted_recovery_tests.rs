@@ -908,3 +908,84 @@ async fn reconciled_acceptance_final_publication_clock_preserves_uncertain_inten
         }
     }
 }
+
+#[tokio::test]
+async fn uncertain_stop_preparation_never_requires_live_export_authority() {
+    let mut outcomes = Vec::new();
+    for platform in [PeerPlatform::Ios, PeerPlatform::Android] {
+        for mode in [
+            "current",
+            "revoked_grant",
+            "missing_destination",
+            "expired_plan",
+        ] {
+            let f = Box::pin(accepted_fixture(platform)).await;
+            // The original request was durably reserved before send, but its native
+            // acceptance reply was lost. This record must never imply acceptance.
+            let admission = OutputAdmission::reserve(&f.store, &f.request, &f.clock, || async {
+                Ok(f.output.clone())
+            })
+            .await
+            .unwrap();
+            drop(admission);
+            match mode {
+                "revoked_grant" => f
+                    .store
+                    .revoke_local(
+                        f.store.revision().await.unwrap(),
+                        &f.request.plan.authority_references.host.authority_id,
+                    )
+                    .await
+                    .unwrap(),
+                "missing_destination" => std::fs::remove_dir(&f.output).unwrap(),
+                "expired_plan" => f.clock.advance_to(301),
+                _ => {}
+            }
+            let planner = HostPlanner::new(f.store.clone());
+            let result = planner
+                .prepare_retained_cancellation(
+                    &f.peer,
+                    &f.request.job_id,
+                    &f.clock,
+                    &CancellationToken::new(),
+                    || async { Ok(()) },
+                )
+                .await;
+            let ok = matches!(result, Ok(None));
+            outcomes.push((format!("{platform:?}/{mode}"), ok));
+            if ok {
+                let path = f
+                    .client
+                    .layout
+                    .root
+                    .join("agent-host-v1")
+                    .join(format!("attempt-{}.json", f.request.job_id.0));
+                let value: serde_json::Value =
+                    serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+                let attempt = &value["attempt"];
+                assert!(attempt.get("accepted_receipt").is_none());
+                assert!(attempt.get("source_confirmation").is_none());
+                assert!(attempt.get("cancellation_request").is_some());
+                // Existing strict accepted-job owners cannot reinterpret this new
+                // pending uncertainty as accepted work or permission to export.
+                assert!(
+                    OutputAdmission::open_retained_accepted(&f.store, &f.request.job_id, &f.clock,)
+                        .await
+                        .is_err()
+                );
+            }
+            if mode == "missing_destination" {
+                assert!(!f.output.exists());
+            } else {
+                assert_eq!(std::fs::read_dir(&f.output).unwrap().count(), 0);
+            }
+        }
+    }
+    assert!(
+        outcomes.iter().all(|(_, ok)| *ok),
+        "Original-job Stop must remain pending without live export authority: {outcomes:?}"
+    );
+}
+
+#[path = "agent_uncertain_stop_tests.rs"]
+mod uncertain_stop_tests;

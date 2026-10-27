@@ -116,6 +116,7 @@ impl<C: CredentialStore> HealthDataBackend for DirectAgentBackend<C> {
             &expected,
             &input.job_id,
             &SystemPlanningClock,
+            &context.cancellation,
             current,
         ))
         .await

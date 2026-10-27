@@ -517,6 +517,7 @@ impl HostPlanner {
         expected_peer: &Peer,
         job: &ControlUuid,
         clock: &dyn PlanningClock,
+        cancellation: &tokio_util::sync::CancellationToken,
         mut fence: F,
     ) -> Result<Option<crate::agent_bridge::SourceStopConfirmation>, ClientError>
     where
@@ -526,9 +527,24 @@ impl HostPlanner {
         use crate::agent_host::output::{
             OutputAdmission, PendingOutputStop, RetainedCancellationHint,
         };
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
+        }
         expected_peer.validate_shape()?;
         fence().await?;
-        match self.store.retained_cancellation_hint(job)? {
+        let result = match self.store.retained_cancellation_hint(job)? {
+            RetainedCancellationHint::Uncertain => {
+                let _pending = crate::agent_host::output::UncertainStop::prepare(
+                    &self.store,
+                    expected_peer,
+                    job,
+                    clock,
+                    cancellation,
+                    fence,
+                )
+                .await?;
+                Ok(None)
+            }
             RetainedCancellationHint::Accepted => {
                 let mut owner =
                     OutputAdmission::open_retained_accepted(&self.store, job, clock).await?;
@@ -568,7 +584,11 @@ impl HostPlanner {
                 // Historical facts confer no live grant or destination-verification authority.
                 Ok(Some(current))
             }
+        };
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
         }
+        result
     }
 
     /// Request Stop on a fresh authenticated source, using only existing stored job facts.
@@ -583,14 +603,23 @@ impl HostPlanner {
     ) -> Result<crate::agent_bridge::SourceStopConfirmation, ClientError> {
         use crate::agent_host::output::RetainedCancellationHint;
         let peer = source.peer().clone();
-        if let Some(proof) = Box::pin(
-            self.prepare_retained_cancellation(&peer, job, clock, || source.require_current()),
-        )
+        if let Some(proof) = Box::pin(self.prepare_retained_cancellation(
+            &peer,
+            job,
+            clock,
+            &source.retained_stop_cancellation_token(),
+            || source.require_current(),
+        ))
         .await?
         {
             return Ok(proof);
         }
         match self.store.retained_cancellation_hint(job)? {
+            RetainedCancellationHint::Uncertain => {
+                source
+                    .cancel_retained_uncertain(&self.store, job, clock)
+                    .await
+            }
             RetainedCancellationHint::Accepted => {
                 let pending = Box::pin(source.request_retained_accepted_cancellation(
                     &self.store,

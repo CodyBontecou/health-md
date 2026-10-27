@@ -229,6 +229,7 @@ enum ExecutionPeerOutcome {
     AcceptedThenResume,
     UncertainThenResume,
     UncertainThenStop,
+    UncertainDirectStop,
     DisconnectAfterFirstPartition,
 }
 
@@ -288,7 +289,9 @@ async fn answer_approved_execute(
     };
     if !matches!(
         outcome,
-        ExecutionPeerOutcome::UncertainThenResume | ExecutionPeerOutcome::UncertainThenStop
+        ExecutionPeerOutcome::UncertainThenResume
+            | ExecutionPeerOutcome::UncertainThenStop
+            | ExecutionPeerOutcome::UncertainDirectStop
     ) {
         channel
             .send_v4(
@@ -343,6 +346,7 @@ async fn answer_approved_execute(
     if matches!(
         outcome,
         ExecutionPeerOutcome::AcceptedThenCancel
+            | ExecutionPeerOutcome::UncertainDirectStop
             | ExecutionPeerOutcome::AcceptedThenResume
             | ExecutionPeerOutcome::UncertainThenResume
             | ExecutionPeerOutcome::UncertainThenStop
@@ -352,12 +356,20 @@ async fn answer_approved_execute(
         return ExecutedPeerSnapshot {
             request,
             completed: ExecutionReceipt {
-                status: if outcome == ExecutionPeerOutcome::AcceptedThenCancel {
+                status: if matches!(
+                    outcome,
+                    ExecutionPeerOutcome::AcceptedThenCancel
+                        | ExecutionPeerOutcome::UncertainDirectStop
+                ) {
                     ExecutionReceiptStatus::Cancelled
                 } else {
                     ExecutionReceiptStatus::Accepted
                 },
-                source_acknowledged: outcome == ExecutionPeerOutcome::AcceptedThenCancel,
+                source_acknowledged: matches!(
+                    outcome,
+                    ExecutionPeerOutcome::AcceptedThenCancel
+                        | ExecutionPeerOutcome::UncertainDirectStop
+                ),
                 ..accepted.clone()
             },
             accepted,
@@ -1347,6 +1359,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 ExecutionPeerOutcome::AcceptedThenResume,
                 ExecutionPeerOutcome::UncertainThenResume,
                 ExecutionPeerOutcome::UncertainThenStop,
+                ExecutionPeerOutcome::UncertainDirectStop,
                 ExecutionPeerOutcome::DisconnectAfterFirstPartition,
             ]
             .map(|outcome| (platform.clone(), outcome))
@@ -1542,6 +1555,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 outcome,
                 ExecutionPeerOutcome::DisconnectThenCancel
                     | ExecutionPeerOutcome::AcceptedThenCancel
+                    | ExecutionPeerOutcome::UncertainDirectStop
             ) {
                 for execution in &mut executions {
                     let (mut channel, negotiation) = fake_session(port, &native, &secret).await;
@@ -1652,6 +1666,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 if matches!(
                     outcome,
                     ExecutionPeerOutcome::AcceptedThenCancel
+                        | ExecutionPeerOutcome::UncertainDirectStop
                         | ExecutionPeerOutcome::AcceptedThenResume
                         | ExecutionPeerOutcome::UncertainThenResume
                         | ExecutionPeerOutcome::UncertainThenStop
@@ -1672,7 +1687,9 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
             .collect();
         if matches!(
             outcome,
-            ExecutionPeerOutcome::UncertainThenResume | ExecutionPeerOutcome::UncertainThenStop
+            ExecutionPeerOutcome::UncertainThenResume
+                | ExecutionPeerOutcome::UncertainThenStop
+                | ExecutionPeerOutcome::UncertainDirectStop
         ) {
             for job in [id(200), id(203)] {
                 let value: Value = serde_json::from_slice(
@@ -1690,9 +1707,21 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 );
             }
         }
+        if outcome == ExecutionPeerOutcome::UncertainDirectStop {
+            let authority: ControlUuid = serde_json::from_value(
+                cli_approval["binding"]["authority_references"]["host"]["authority_id"].clone(),
+            )
+            .unwrap();
+            store
+                .revoke_local(store.revision().await.unwrap(), &authority)
+                .await
+                .unwrap();
+        }
         if !matches!(
             outcome,
-            ExecutionPeerOutcome::DisconnectThenCancel | ExecutionPeerOutcome::AcceptedThenCancel
+            ExecutionPeerOutcome::DisconnectThenCancel
+                | ExecutionPeerOutcome::AcceptedThenCancel
+                | ExecutionPeerOutcome::UncertainDirectStop
         ) {
             let cli_resume = crate::mcp::execute_agent_operation(
                 Arc::clone(&backend),
@@ -1774,6 +1803,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                     outcome,
                     ExecutionPeerOutcome::DisconnectThenCancel
                         | ExecutionPeerOutcome::AcceptedThenCancel
+                        | ExecutionPeerOutcome::UncertainDirectStop
                         | ExecutionPeerOutcome::UncertainThenStop
                 ) {
                     "cancelled"
@@ -1810,6 +1840,7 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
                 None if matches!(
                     outcome,
                     ExecutionPeerOutcome::AcceptedThenCancel
+                        | ExecutionPeerOutcome::UncertainDirectStop
                         | ExecutionPeerOutcome::UncertainThenStop
                 ) =>
                 {
@@ -1833,7 +1864,9 @@ async fn actual_direct_backend_cli_mcp_execute_and_recover_both_platforms() {
         assert!(key.0.load(Ordering::SeqCst) > 0);
         if matches!(
             outcome,
-            ExecutionPeerOutcome::AcceptedThenCancel | ExecutionPeerOutcome::UncertainThenStop
+            ExecutionPeerOutcome::AcceptedThenCancel
+                | ExecutionPeerOutcome::UncertainThenStop
+                | ExecutionPeerOutcome::UncertainDirectStop
         ) {
             assert_eq!(std::fs::read_dir(&output).unwrap().count(), 0);
             for result in [&cli_cancel, &mcp_cancel] {

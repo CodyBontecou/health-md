@@ -1050,3 +1050,76 @@ mod confirmation;
 #[path = "agent_output_cancellation.rs"]
 mod output_cancellation;
 pub use output_cancellation::HostPendingOutputCancellation;
+
+impl BridgeSession<'_> {
+    pub(crate) fn retained_stop_cancellation_token(&self) -> tokio_util::sync::CancellationToken {
+        self.cancellation.clone()
+    }
+    pub(crate) async fn cancel_retained_uncertain(
+        &mut self,
+        store: &HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<SourceStopConfirmation, ClientError> {
+        let cancellation = self.cancellation.clone();
+        let timeout = self.timeout;
+        tokio::select! { biased;
+            () = cancellation.cancelled() => Err(ClientError::WaitCancelled),
+            result = tokio::time::timeout(timeout, Box::pin(self.cancel_retained_uncertain_inner(store, job, clock))) => {
+                result.map_err(|_| ClientError::TimedOut)?
+            }
+        }
+    }
+    async fn cancel_retained_uncertain_inner(
+        &mut self,
+        store: &HostAuthorityStore,
+        job: &ControlUuid,
+        clock: &dyn PlanningClock,
+    ) -> Result<SourceStopConfirmation, ClientError> {
+        if self.send_interrupted {
+            return Err(Error::BindingChanged.into());
+        }
+        self.send_interrupted = true;
+        let trust = self.trust_fence;
+        let expected = &self.expected_trust;
+        let selected = self.requested_device;
+        let cancellation = &self.cancellation;
+        let fence = || async {
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            trust.require_current(selected, expected).await?;
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            Ok(())
+        };
+        let mut pending = crate::agent_host::output::UncertainStop::prepare(
+            store,
+            &self.peer,
+            job,
+            clock,
+            cancellation,
+            fence,
+        )
+        .await?;
+        let request = pending.request()?;
+        self.channel
+            .send_v4_guarded(
+                &Envelope::new(Message::CancelRequest(Box::new(request))),
+                self.negotiation,
+                || pending.require_current(clock, fence),
+            )
+            .await?;
+        pending.require_current(clock, fence).await?;
+        let Message::ExecutionReceipt(receipt) =
+            self.channel.receive_v4(self.negotiation).await?.message
+        else {
+            return Err(ClientError::UnexpectedMessage);
+        };
+        pending
+            .confirm(&receipt, clock, cancellation, fence)
+            .await?;
+        Ok(SourceStopConfirmation { receipt: *receipt })
+    }
+}

@@ -343,6 +343,24 @@ checkpoint and an empty acknowledged prefix; no ACK prelude is allowed. Any nati
 rejects zero-digest transfer admission. A host with later output/transfer state uses its exact bound
 frontier and never falls back after a failed decoder. A retained pending Stop cannot resume export work.
 
+Stop from an uncertain send is a separate host lifecycle. An authenticated original send intent may
+publish a Stop-only pending record and send only its exact original Cancel binding to that original
+source. It does not establish acceptance, send Resume/Execute, resolve a destination, create output,
+renew export permission or require a still-current export grant. The source must independently find
+and authorize its original accepted job; missing native work cannot be created by cancellation.
+Host-private pending/confirmed forms use distinct v9/v10 MAC domains and contain no fabricated accepted
+receipt. Strict accepted-job and export-recovery readers reject both forms.
+
+Only an authenticated terminal source receipt matching the original request/job/approval binding can
+confirm this Stop. Its actual expiry must follow the observation and fit both the immutable original
+plan deadline plus seven days and seven days after observation. Lookup bounds never become accepted
+facts or renew native lifetime. An original completion that precedes Stop keeps its original status.
+The resulting historical source facts do not verify destination contents (`output_verified` remains
+false); exact local replay needs no listener or live export grant. Pending Stop remains monotonic.
+Original key/root/evidence, live caller trust, explicit cancellation and clock fences remain required
+at publication and disclosure. These independently observed fences do not claim global atomicity
+across protected-key, pairing and filesystem stores. Deployed wire schemas and export bytes are unchanged.
+
 After a real manifest is published, even an empty prefix uses its bound seed. Frontier1 adds semantics
 to this deferred extension without changing deployed base messages, frames, envelope schemas or health
 export profiles. A future hash construction must not silently replace frontier1 for a retained job;

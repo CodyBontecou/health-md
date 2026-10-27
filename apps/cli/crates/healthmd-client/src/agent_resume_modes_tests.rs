@@ -1486,6 +1486,7 @@ async fn prepared_accepted_cancel_fixture(
             &f.peer,
             &f.request.job_id,
             &f.clock,
+            &CancellationToken::new(),
             || async { Ok(()) }
         ))
         .await
@@ -1562,6 +1563,7 @@ async fn host_cancel_planner_prepares_accepted_state_and_returns_exact_historica
             &f.peer,
             &f.request.job_id,
             &f.clock,
+            &CancellationToken::new(),
             || async { Ok(()) },
         ))
         .await
@@ -1576,6 +1578,7 @@ async fn host_cancel_planner_prepares_accepted_state_and_returns_exact_historica
                 &wrong,
                 &f.request.job_id,
                 &f.clock,
+                &CancellationToken::new(),
                 || async { Ok(()) }
             ))
             .await
@@ -1657,8 +1660,12 @@ async fn host_cancel_history_rechecks_caller_after_final_protected_key_callback(
                 .unwrap();
         let planner = HostPlanner::new(store);
         key.armed.store(true, Ordering::SeqCst);
-        let result = Box::pin(
-            planner.prepare_retained_cancellation(peer, job, &clock, || async {
+        let result = Box::pin(planner.prepare_retained_cancellation(
+            peer,
+            job,
+            &clock,
+            &key.cancellation,
+            || async {
                 if key.cancellation.is_cancelled() {
                     return Err(ClientError::WaitCancelled);
                 }
@@ -1670,8 +1677,8 @@ async fn host_cancel_history_rechecks_caller_after_final_protected_key_callback(
                     }
                 }
                 Ok(())
-            }),
-        )
+            },
+        ))
         .await;
         assert!(
             key.calls.load(Ordering::SeqCst) >= 4,
