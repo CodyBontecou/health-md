@@ -484,8 +484,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make build-ios-tests CORE_RUST_PREPARE=: IOS_DERIVED_DATA_DIR=build/ios-unit-derived \
-            IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO" \
+          python3 scripts/observe-ci-build.py --log build/logs/build-ios-processes.log -- \
+            make build-ios-tests CORE_RUST_PREPARE=: IOS_DERIVED_DATA_DIR=build/ios-unit-derived \
+            IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO -showBuildTimingSummary" \
             IOS_SIM="${{ steps.simulator.outputs.ios_destination }}" \
             2>&1 | tee build/logs/build-ios.log
       - name: Enumerate and retain complete qualified iOS unit products

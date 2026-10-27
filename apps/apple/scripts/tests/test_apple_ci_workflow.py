@@ -251,7 +251,8 @@ class WorkflowRoutingTests(unittest.TestCase):
     def test_ios_inventory_shards_keep_complete_suite_and_overlap_boot_with_compile(self):
         blocks = jobs()
         producer, worker, collector = (blocks[name] for name in ('prepare-ios-artifacts', 'ios-native-shards', 'test-ios'))
-        self.assertIn('IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO"', producer)
+        self.assertIn('IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO -showBuildTimingSummary"', producer)
+        self.assertIn('python3 scripts/observe-ci-build.py --log build/logs/build-ios-processes.log --', producer)
         self.assertNotIn('-only-testing', producer)
         self.assertNotIn('-skip-testing', producer)
         self.assertLess(producer.index('scripts/start-ci-ios-simulator.sh'), producer.index('make build-ios-tests'))
