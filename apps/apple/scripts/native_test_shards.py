@@ -208,7 +208,9 @@ def prepare(args):
     plan = make_plan(json.loads(raw.read_text()), args.source_sha, args.run_id, args.attempt, platform=args.platform)
     (args.output / "native-test-plan.json").write_text(json.dumps(plan, indent=2) + "\n")
     archive = args.output / "native-products.tar.gz"
-    subprocess.run(["tar", "-czf", str(archive.resolve()), "-C", str(args.derived), "Build/Products"],
+    # Keep every product/permission/link; spend less CPU on transport compression.
+    subprocess.run(["tar", "--options", "gzip:compression-level=1", "-czf",
+                    str(archive.resolve()), "-C", str(args.derived), "Build/Products"],
                    env=dict(os.environ, COPYFILE_DISABLE="1"), check=True, timeout=120)
     receipt = {key: plan[key] for key in ("source_sha", "run_id", "attempt", "platform")}
     receipt.update(prepared_archive_sha256=file_digest(archive),

@@ -501,6 +501,7 @@ jobs:
         with:
           name: ios-native-products
           path: apps/apple/build/ios-unit-prepared/
+          compression-level: 0 # The product archive is already gzip-compressed.
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 3
@@ -910,6 +911,7 @@ jobs:
         with:
           name: macos-native-products
           path: apps/apple/build/macos-prepared/
+          compression-level: 0 # The product archive is already gzip-compressed.
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 3
@@ -1299,6 +1301,7 @@ jobs:
         with:
           name: apple-sdk27-ui-products
           path: apps/apple/build/prepared-ios-ui/ui-products.tar.gz
+          compression-level: 0 # Avoid compressing the gzip stream again.
           if-no-files-found: error
           retention-days: 1
 
