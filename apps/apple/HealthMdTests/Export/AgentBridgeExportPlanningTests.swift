@@ -1803,7 +1803,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 } else if let envelope = try? AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes) {
                     peer.agent.append(envelope)
                 } else {
-                    let message = try JSONDecoder().decode(DirectMessage.self, from: bytes)
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let message = try decoder.decode(DirectMessage.self, from: bytes)
                     peer.base.append(message)
                     switch message {
                     case .transferOpen(let open):
