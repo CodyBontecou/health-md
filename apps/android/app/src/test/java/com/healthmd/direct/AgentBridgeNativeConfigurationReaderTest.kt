@@ -138,6 +138,189 @@ class AgentBridgeNativeConfigurationReaderTest {
         }
     }
 
+    private fun preparationPlanner(f: AgentBridgeExportPlanningFixture, channel: DirectSecureChannel): Pair<AgentBridgeNativePlanningSession, AgentBridgeExecuteRequest> {
+        f.enrolled()
+        val lifecycle = AgentBridgeNativeCatalogLifecycle()
+        lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
+        val planner = ownedPlanner(f, lifecycle, channel)
+        return planner to nativeCaptureRequest(f, planner, listOf("steps"),
+            AgentBridgeDatesExact(AgentBridgeRange("2026-03-08", "2026-03-08"), "exact"))
+    }
+
+    @Test fun `native Stop during preparation waits for worker cleanup before acknowledging`() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val (planner, request) = preparationPlanner(f, channel)
+            val stop = stopRequest(request)
+            val entered = java.util.concurrent.CountDownLatch(1)
+            val cleanupEntered = CompletableDeferred<Unit>()
+            val releaseCleanup = CompletableDeferred<Unit>()
+            val cleanupExited = java.util.concurrent.atomic.AtomicBoolean(false)
+            val acknowledged = java.util.concurrent.atomic.AtomicBoolean(false)
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                check(entered.await(10, TimeUnit.SECONDS))
+                secondArg<() -> Unit>().invoke()
+                ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("cancel_request", stop))
+            }
+            every { channel.sendAgentBridge(any(), any(), any()) } answers {
+                val message = firstArg<AgentBridgeMessage>()
+                val receipt = message.payload as? AgentBridgeExecutionReceipt
+                thirdArg<() -> Unit>().invoke()
+                if (receipt?.sourceAcknowledged == true) {
+                    assertThat(cleanupExited.get()).isTrue()
+                    assertThat(receipt.status).isEqualTo(AgentBridgeExecutionReceiptStatus.CANCELLED)
+                    acknowledged.set(true)
+                }
+            }
+            val export = async(Dispatchers.IO) {
+                try {
+                    planner.transmitTransfer(request, retained = false) { context ->
+                        context.begin(); entered.countDown()
+                        try {
+                            // Synthetic in-flight SDK work returns only after Stop has been stored.
+                            while (f.store.access { transaction ->
+                                transaction!!.state.cancellationIntents.orEmpty().none { it.request().jobId == request.jobId }
+                            }) delay(10)
+                            cleanupEntered.complete(Unit)
+                            releaseCleanup.await()
+                            throw AgentBridgeException(AgentBridgeErrorCode.CANCELLED)
+                        } finally { cleanupExited.set(true) }
+                    }
+                    throw AssertionError("Confirmed Stop must terminate this transfer as cancelled")
+                } catch (failure: AgentBridgeException) {
+                    assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.CANCELLED)
+                    assertThat(acknowledged.get()).isTrue()
+                }
+            }
+            try {
+                withContext(Dispatchers.IO) { check(entered.await(10, TimeUnit.SECONDS)) }
+                withTimeout(10_000) { cleanupEntered.await() }
+                assertThat(acknowledged.get()).isFalse()
+                releaseCleanup.complete(Unit)
+                withTimeout(10_000) { export.await() }
+                assertThat(acknowledged.get()).isTrue()
+                assertThat(f.store.access { it!!.state.cancellationIntents!!.single().terminalReceipt()!!.sourceAcknowledged }).isTrue()
+                verify(exactly = 1) { channel.receiveAllowingAgentBridge(any(), any()) }
+                verify(exactly = 0) { channel.close() }
+            } finally { releaseCleanup.complete(Unit); export.cancelAndJoin() }
+        }
+    }
+
+    @Test fun `native preparation failure closes and joins its blocked reader without terminal proof`() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val (planner, request) = preparationPlanner(f, channel)
+            val readerEntered = java.util.concurrent.CountDownLatch(1)
+            val closed = java.util.concurrent.CountDownLatch(1)
+            val readerExited = java.util.concurrent.atomic.AtomicBoolean(false)
+            every { channel.close() } answers { closed.countDown() }
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                secondArg<() -> Unit>().invoke(); readerEntered.countDown()
+                try { check(closed.await(10, TimeUnit.SECONDS)); throw IOException("Synthetic closed channel") }
+                finally { readerExited.set(true) }
+            }
+            try {
+                withTimeout(10_000) {
+                    planner.transmitTransfer(request, false) { context ->
+                        context.begin()
+                        withContext(Dispatchers.IO) { check(readerEntered.await(10, TimeUnit.SECONDS)) }
+                        throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+                    }
+                }
+                throw AssertionError("Preparation failure returned success")
+            } catch (failure: AgentBridgeException) { assertThat(failure.code).isEqualTo(AgentBridgeErrorCode.INVALID_REQUEST) }
+            assertThat(readerExited.get()).isTrue()
+            assertThat(f.store.access { it!!.state.cancellationIntents.orEmpty() }).isEmpty()
+            verify(atLeast = 1) { channel.close() }
+            verify(exactly = 0) { channel.sendAgentBridge(match { (it.payload as? AgentBridgeExecutionReceipt)?.sourceAcknowledged == true }, any(), any()) }
+        }
+    }
+
+    @Test fun `native invalid preparation controls close promptly and join worker cleanup without acknowledgement`() = runBlocking {
+        for (mode in listOf("foreign-job", "foreign-binding", "unexpected-frame", "read-failure")) AgentBridgeExportPlanningFixture().use { f ->
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val (planner, request) = preparationPlanner(f, channel)
+            val entered = java.util.concurrent.CountDownLatch(1)
+            val releaseCleanup = CompletableDeferred<Unit>()
+            val closed = CompletableDeferred<Unit>()
+            val cleanupExited = java.util.concurrent.atomic.AtomicBoolean(false)
+            every { channel.close() } answers { closed.complete(Unit); Unit }
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                check(entered.await(10, TimeUnit.SECONDS)); secondArg<() -> Unit>().invoke()
+                when (mode) {
+                    "read-failure" -> throw IOException("Synthetic inbound failure")
+                    "unexpected-frame" -> ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode("status_request", JsonObject.serializer(), JsonObject(emptyMap()))))
+                    else -> ReceivedAgentBridgePayload.Agent(AgentBridgeMessage("cancel_request", stopRequest(request).let {
+                        if (mode == "foreign-job") it.copy(jobId = AgentBridgeExportPlanningFixture.id(99)) else it.copy(requestSha256 = "0".repeat(64))
+                    }))
+                }
+            }
+            val export = async(Dispatchers.IO) {
+                try {
+                    planner.transmitTransfer(request, false) { context ->
+                        context.begin(); entered.countDown()
+                        try { withContext(NonCancellable) { releaseCleanup.await() }; throw AgentBridgeException(AgentBridgeErrorCode.CANCELLED) }
+                        finally { cleanupExited.set(true) }
+                    }
+                    throw AssertionError("Invalid control returned success")
+                } catch (failure: Exception) { failure }
+            }
+            try {
+                withTimeout(10_000) { closed.await() }
+                assertThat(export.isCompleted).isFalse()
+                releaseCleanup.complete(Unit)
+                val failure = withTimeout(10_000) { export.await() }
+                if (mode == "read-failure") assertThat(failure).isInstanceOf(IOException::class.java)
+                else assertThat((failure as AgentBridgeException).code).isEqualTo(AgentBridgeErrorCode.BINDING_CHANGED)
+                assertThat(cleanupExited.get()).isTrue()
+                assertThat(f.store.access { it!!.state.cancellationIntents.orEmpty() }).isEmpty()
+                verify(exactly = 0) { channel.sendAgentBridge(match { (it.payload as? AgentBridgeExecutionReceipt)?.sourceAcknowledged == true }, any(), any()) }
+            } finally { releaseCleanup.complete(Unit); export.cancelAndJoin() }
+        }
+    }
+
+    @Test fun `native preparation caller cancellation closes promptly and joins SDK and reader cleanup`() = runBlocking {
+        AgentBridgeExportPlanningFixture().use { f ->
+            val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val (planner, request) = preparationPlanner(f, channel)
+            val entered = java.util.concurrent.CountDownLatch(1)
+            val readClosed = java.util.concurrent.CountDownLatch(1)
+            val readerEntered = java.util.concurrent.CountDownLatch(1)
+            val closed = CompletableDeferred<Unit>()
+            val releaseCleanup = CompletableDeferred<Unit>()
+            val cleanupExited = java.util.concurrent.atomic.AtomicBoolean(false)
+            val readerExited = java.util.concurrent.atomic.AtomicBoolean(false)
+            every { channel.close() } answers { readClosed.countDown(); closed.complete(Unit); Unit }
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                secondArg<() -> Unit>().invoke(); readerEntered.countDown()
+                try { check(readClosed.await(10, TimeUnit.SECONDS)); throw IOException("Synthetic closed channel") }
+                finally { readerExited.set(true) }
+            }
+            val export = async(Dispatchers.IO) {
+                planner.transmitTransfer(request, false) { context ->
+                    context.begin(); entered.countDown()
+                    try { withContext(NonCancellable) { releaseCleanup.await() }; throw AgentBridgeException(AgentBridgeErrorCode.CANCELLED) }
+                    finally { cleanupExited.set(true) }
+                }
+            }
+            try {
+                withContext(Dispatchers.IO) {
+                    check(entered.await(10, TimeUnit.SECONDS))
+                    check(readerEntered.await(10, TimeUnit.SECONDS))
+                }
+                export.cancel()
+                withTimeout(10_000) { closed.await() }
+                assertThat(export.isCompleted).isFalse()
+                releaseCleanup.complete(Unit)
+                withTimeout(10_000) { export.join() }
+                assertThat(export.isCancelled).isTrue()
+                assertThat(cleanupExited.get()).isTrue(); assertThat(readerExited.get()).isTrue()
+                assertThat(f.store.access { it!!.state.cancellationIntents.orEmpty() }).isEmpty()
+                verify(exactly = 0) { channel.sendAgentBridge(match { (it.payload as? AgentBridgeExecutionReceipt)?.sourceAcknowledged == true }, any(), any()) }
+            } finally { releaseCleanup.complete(Unit); export.cancelAndJoin() }
+        }
+    }
+
     @Test fun `native accepted receipt failure or revocation prevents capture claim`() = runBlocking {
         for (revoke in listOf(false, true)) AgentBridgeExportPlanningFixture().use { f ->
             f.enrolled()
@@ -823,6 +1006,13 @@ class AgentBridgeNativeConfigurationReaderTest {
             planner.prepareTransferExport(request, manager, journalRenderer(resolution))
             val lifecycle = AgentBridgeNativeCatalogLifecycle(); lifecycle.observe(state); lifecycle.publish(f.store, f.peer.sourceInstallationId)
             val channel = mockk<DirectSecureChannel>(relaxed = true)
+            val closed = java.util.concurrent.CountDownLatch(1)
+            every { channel.close() } answers { closed.countDown() }
+            every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                secondArg<() -> Unit>().invoke()
+                check(closed.await(10, TimeUnit.SECONDS))
+                throw IOException("Synthetic idle channel closed")
+            }
             val reconnect = ownedPlanner(f, lifecycle, channel)
             try {
                 reconnect.transmitTransfer(request, true) { context ->
@@ -946,6 +1136,10 @@ class AgentBridgeNativeConfigurationReaderTest {
             val agent = mutableListOf<AgentBridgeMessage>(); val base = mutableListOf<ReceivedEnvelope>()
             val chunks = mutableListOf<Pair<String, ByteArray>>()
             val responses = java.util.ArrayDeque<ReceivedAgentBridgePayload>()
+            // A host reply becomes available only after its first outbound challenge.
+            // The native reader can already be waiting while preparation is in flight.
+            val responseReady = java.util.concurrent.CountDownLatch(1)
+            every { channel.close() } answers { responseReady.countDown() }
             fun keepalives() {
                 if (keepalive) for (type in listOf("ping", "pong")) responses.add(
                     ReceivedAgentBridgePayload.Base(V2Codec.decode(V2Codec.encode(type, JsonObject.serializer(), buildJsonObject { if (mode == "bad-keepalive-$type") put("unexpected", 1) }))))
@@ -1011,6 +1205,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 lastArg<() -> Unit>()()
                 base += V2Codec.decode(V2Codec.encode(firstArg(), secondArg<kotlinx.serialization.SerializationStrategy<Any>>(), thirdArg()))
                 lastArg<() -> Unit>()()
+                if (firstArg<String>() == "transfer_open") responseReady.countDown()
             }
             every { channel.sendTransferChunkForAgentBridge(any(), any(), any(), any(), any()) } answers {
                 lastArg<() -> Unit>()(); assertThat(secondArg<Int>()).isEqualTo(1)
@@ -1021,6 +1216,9 @@ class AgentBridgeNativeConfigurationReaderTest {
                 chunks += firstArg<String>() to thirdArg<ByteArray>().copyOf(); lastArg<() -> Unit>()()
             }
             every { channel.receiveAllowingAgentBridge(any(), any()) } answers {
+                // Socket reads wait for a peer response or close; preparation has no
+                // ten-second deadline. The runner bounds the whole test command.
+                responseReady.await()
                 secondArg<() -> Unit>()()
                 val result = responses.pollFirst() ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
                 if (mode == "revoke" || mode == "keepalive-revoke") lifecycle.stop()

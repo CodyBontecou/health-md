@@ -403,7 +403,7 @@ final class AgentBridgeNativePlanningSession {
     /// The prepared value never escapes as send authority. Keep capture, carriage and every
     /// acknowledgement inside the original owner callback; this is not a completion receipt.
     func transmitTransfer(_ request: AgentBridgeExecute, retained: Bool, confirmCompletion: Bool = false,
-        prepare: (AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
+        prepare: @escaping @MainActor @Sendable (AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
     ) async throws {
         let operation: (AgentBridgeNativeCaptureContext) async throws -> Void = { [self] context in
             try await sendPreparedTransfer(request, context: context, confirmCompletion: confirmCompletion, prepare: prepare)
@@ -423,7 +423,7 @@ final class AgentBridgeNativePlanningSession {
     func transmitResumedTransfer(_ resume: AgentBridgeResume,
         acknowledging acknowledgement: DirectTransferPartitionAcknowledgement? = nil,
         confirmCompletion: Bool = false,
-        prepare: (AgentBridgeExecute, AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
+        prepare: @escaping @MainActor @Sendable (AgentBridgeExecute, AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
     ) async throws {
         do {
             try await withResumedCaptureContext(resume, acknowledging: acknowledgement) { [self] request, context in
@@ -454,37 +454,150 @@ final class AgentBridgeNativePlanningSession {
         if stop.receipt.status == .cancelled { throw AgentBridgeValidationError.cancelled }
     }
 
+    nonisolated private enum PreparationEvent: Sendable {
+        case prepared(Result<AgentBridgeNativePreparedTransfer, any Error>)
+        case incoming(Result<AgentBridgeSecurePayload, any Error>)
+    }
+
+    /// Receive authority belongs to the original native owner, including before capture has
+    /// produced a transfer. Export grants are checked by capture, not needed to request Stop.
+    private func readPreparationControl() async throws -> AgentBridgeSecurePayload {
+        guard let channel = responseChannel, let negotiation = responseNegotiation else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
+        return try await channel.receiveAllowingAgentBridge(negotiation: negotiation) { [self] in
+            try Task.checkCancellation()
+            try await MainActor.run { try requireOwnerCurrent() }
+            try Task.checkCancellation()
+        }
+    }
+
     private func sendPreparedTransfer(_ request: AgentBridgeExecute, context: AgentBridgeNativeCaptureContext,
         confirmCompletion: Bool,
-        prepare: (AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
+        prepare: @escaping @MainActor @Sendable (AgentBridgeNativeCaptureContext) async throws -> AgentBridgeNativePreparedTransfer
     ) async throws {
+        guard let channel = responseChannel, let negotiation = responseNegotiation else {
+            throw AgentBridgeValidationError.unsupportedCapability
+        }
         do {
-            let supplied = try await prepare(context)
-            guard supplied.export.requestSHA256 == (try context.requestFingerprintForRead()),
-                  supplied.export.manifestCanonical == (try context.preserveManifest()),
-                  supplied.checkpointCanonical == (try context.preserveTransferPlan()) else {
-                throw AgentBridgeValidationError.bindingChanged
-            }
-            // Rebuild from the exact original request and pinned metadata. A caller-supplied
-            // session, partition table or content descriptor cannot replace retained bytes.
-            let export = try AgentBridgeNativePreparedExport.make(request: request, days: supplied.export.days,
-                totalByteCount: supplied.export.totalByteCount, publicArtifactIDs: supplied.export.publicArtifactIDs,
-                manifestCanonical: supplied.export.manifestCanonical)
-            let transfer = try AgentBridgeNativePreparedTransfer.make(request: request, export: export,
-                checkpointCanonical: supplied.checkpointCanonical)
-            try await sendTransferBytes(transfer, context: context, confirmCompletion: confirmCompletion)
-            _ = try context.configurationForRead()
+            try await withTaskCancellationHandler {
+                try await withThrowingTaskGroup(of: PreparationEvent.self) { group in
+                    // Child failures are values so the owner can close a blocked reader before
+                    // structured cleanup joins it. There is exactly one outstanding read.
+                    group.addTask { @MainActor in
+                        do { return .prepared(.success(try await prepare(context))) }
+                        catch { return .prepared(.failure(error)) }
+                    }
+                    group.addTask { @MainActor [self] in
+                        do { return .incoming(.success(try await readPreparationControl())) }
+                        catch { return .incoming(.failure(error)) }
+                    }
+                    defer { group.cancelAll() }
+                    do {
+                        var prepared: AgentBridgeNativePreparedTransfer?
+                        while prepared == nil {
+                            guard let event = try await group.next() else { throw AgentBridgeValidationError.bindingChanged }
+                            try Task.checkCancellation()
+                            switch event {
+                            case .prepared(let result): prepared = try result.get()
+                            case .incoming(let result):
+                                let payload = try result.get()
+                                lastInboundActivityAt = ContinuousClock().now
+                                try requireOwnerCurrent()
+                                if case .agent(let envelope) = payload, case .cancel(let stop) = envelope.payload {
+                                    guard stop.jobId == request.jobId,
+                                          stop.requestSha256.rawValue == (try AgentBridgeV4Codec.digest(request)) else {
+                                        throw AgentBridgeValidationError.bindingChanged
+                                    }
+                                    _ = try service.requestCancellation(stop, authenticatedPeer: peer)
+                                    // Persist Stop first, then wait for the actual worker and its
+                                    // cleanup. Cancelling an await alone is not source confirmation.
+                                    guard let remaining = try await group.next(), case .prepared(let result) = remaining else {
+                                        throw AgentBridgeValidationError.bindingChanged
+                                    }
+                                    if case .failure(let error) = result,
+                                       !(error is CancellationError), !(error is AgentBridgeValidationError),
+                                       !(error is AgentBridgeNativeRenderFailure) { throw error }
+                                    try Task.checkCancellation()
+                                    context.invalidate()
+                                    let receipt = try await sendRetainedCancellation(stop)
+                                    throw ConfirmedTransferStop(owner: ObjectIdentifier(self), receipt: receipt)
+                                }
+                                switch payload {
+                                case .base(.ping):
+                                    try await channel.sendBaseForAgentBridge(.pong, negotiation: negotiation) { [self] in
+                                        try Task.checkCancellation()
+                                        try await MainActor.run { try requireOwnerCurrent() }
+                                        try Task.checkCancellation()
+                                    }
+                                case .base(.pong): break
+                                default: throw AgentBridgeValidationError.bindingChanged
+                                }
+                                group.addTask { @MainActor [self] in
+                                    do { return .incoming(.success(try await readPreparationControl())) }
+                                    catch { return .incoming(.failure(error)) }
+                                }
+                            }
+                        }
+                        guard let supplied = prepared else { throw AgentBridgeValidationError.bindingChanged }
+                        var pendingRead = true
+                        guard supplied.export.requestSHA256 == (try context.requestFingerprintForRead()),
+                              supplied.export.manifestCanonical == (try context.preserveManifest()),
+                              supplied.checkpointCanonical == (try context.preserveTransferPlan()) else {
+                            throw AgentBridgeValidationError.bindingChanged
+                        }
+                        // Rebuild from the exact original request and pinned metadata. A caller-supplied
+                        // session, partition table or content descriptor cannot replace retained bytes.
+                        let export = try AgentBridgeNativePreparedExport.make(request: request, days: supplied.export.days,
+                            totalByteCount: supplied.export.totalByteCount, publicArtifactIDs: supplied.export.publicArtifactIDs,
+                            manifestCanonical: supplied.export.manifestCanonical)
+                        let transfer = try AgentBridgeNativePreparedTransfer.make(request: request, export: export,
+                            checkpointCanonical: supplied.checkpointCanonical)
+                        try await sendTransferBytes(transfer, context: context, confirmCompletion: confirmCompletion, preparation: &group, pendingRead: &pendingRead)
+                        _ = try context.configurationForRead()
+                    } catch let stop as ConfirmedTransferStop {
+                        throw stop
+                    } catch {
+                        wireAbandoned = true; channel.cancel(); throw error
+                    }
+                }
+            } onCancel: { channel.cancel() }
         } catch let stop as ConfirmedTransferStop {
             context.invalidate()
             try requireConfirmedTransferStop(stop, jobID: request.jobId.rawValue, requestSHA256: AgentBridgeV4Codec.digest(request))
             throw stop
         } catch {
-            context.invalidate(); wireAbandoned = true; responseChannel?.cancel(); throw error
+            context.invalidate(); wireAbandoned = true; channel.cancel(); throw error
         }
     }
 
+    private func receivePreparedTransferPayload(
+        preparation: inout ThrowingTaskGroup<PreparationEvent, any Error>, pendingRead: inout Bool
+    ) async throws -> AgentBridgeSecurePayload {
+        if pendingRead {
+            pendingRead = false
+            guard let event = try await preparation.next(), case .incoming(let result) = event else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            return try result.get()
+        }
+        return try await readPreparationControl()
+    }
+
+    private func receiveBaseTransferPayload(_ transfer: AgentBridgeNativePreparedTransfer,
+        context: AgentBridgeNativeCaptureContext,
+        preparation: inout ThrowingTaskGroup<PreparationEvent, any Error>, pendingRead: inout Bool
+    ) async throws -> DirectMessage {
+        guard case .base(let message) = try await receiveTransferPayload(transfer, context: context,
+            preparation: &preparation, pendingRead: &pendingRead) else {
+            throw AgentBridgeValidationError.bindingChanged
+        }
+        return message
+    }
+
     private func sendTransferBytes(_ transfer: AgentBridgeNativePreparedTransfer,
-        context: AgentBridgeNativeCaptureContext, confirmCompletion: Bool
+        context: AgentBridgeNativeCaptureContext, confirmCompletion: Bool,
+        preparation: inout ThrowingTaskGroup<PreparationEvent, any Error>, pendingRead: inout Bool
     ) async throws {
         guard let channel = responseChannel, let negotiation = responseNegotiation else {
             throw AgentBridgeValidationError.unsupportedCapability
@@ -495,12 +608,6 @@ final class AgentBridgeNativePlanningSession {
         func send(_ message: DirectMessage) async throws {
             try await channel.sendBaseForAgentBridge(message, negotiation: negotiation, authorize: validate)
         }
-        func receive() async throws -> DirectMessage {
-            guard case .base(let message) = try await receiveTransferPayload(transfer, context: context) else {
-                throw AgentBridgeValidationError.bindingChanged
-            }
-            return message
-        }
         var frontier = try context.preserveTransferFrontier()
         let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: transfer.export.manifestCanonical)
         try await channel.sendAgentBridge(AgentBridgeEnvelope(payload: .manifest(manifest)), negotiation: negotiation, authorize: validate)
@@ -508,7 +615,7 @@ final class AgentBridgeNativePlanningSession {
         for file in transfer.export.baseFiles { try await send(.fileManifest(file.manifest)) }
         for (partition, file) in zip(transfer.partitions, transfer.export.baseFiles) {
             try await send(.transferOpen(DirectTransferOpen(session: transfer.session, partition: partition)))
-            guard case .transferDisposition(let disposition) = try await receive(),
+            guard case .transferDisposition(let disposition) = try await receiveBaseTransferPayload(transfer, context: context, preparation: &preparation, pendingRead: &pendingRead),
                   disposition.sessionID == transfer.session.sessionID, disposition.jobID == transfer.session.jobID,
                   disposition.partitionIndex == partition.index, disposition.partitionSHA256 == partition.sha256,
                   disposition.disposition != .rejected else { throw AgentBridgeValidationError.bindingChanged }
@@ -519,7 +626,7 @@ final class AgentBridgeNativePlanningSession {
                 let chunk = try DirectTransferChunk(transferID: partition.transferID, sequence: 1,
                     data: file.content, sha256: partition.sha256)
                 try await channel.sendTransferChunkForAgentBridge(chunk, negotiation: negotiation, authorize: validate)
-                guard case .transferChunkAcknowledgement(let ack) = try await receive(), ack.accepted,
+                guard case .transferChunkAcknowledgement(let ack) = try await receiveBaseTransferPayload(transfer, context: context, preparation: &preparation, pendingRead: &pendingRead), ack.accepted,
                       ack.transferID == partition.transferID, ack.sequence == 1, ack.sha256 == partition.sha256 else {
                     throw AgentBridgeValidationError.bindingChanged
                 }
@@ -527,7 +634,7 @@ final class AgentBridgeNativePlanningSession {
                 try await send(.transferPartitionComplete(DirectTransferPartitionComplete(sessionID: transfer.session.sessionID,
                     jobID: transfer.session.jobID, partitionIndex: partition.index, transferID: partition.transferID,
                     partitionSHA256: partition.sha256)))
-                guard case .transferPartitionAcknowledgement(let ack) = try await receive(), ack.accepted,
+                guard case .transferPartitionAcknowledgement(let ack) = try await receiveBaseTransferPayload(transfer, context: context, preparation: &preparation, pendingRead: &pendingRead), ack.accepted,
                       ack.sessionID == transfer.session.sessionID, ack.jobID == transfer.session.jobID,
                       ack.partitionIndex == partition.index, ack.transferID == partition.transferID,
                       ack.partitionSHA256 == partition.sha256 else { throw AgentBridgeValidationError.bindingChanged }
@@ -541,17 +648,19 @@ final class AgentBridgeNativePlanningSession {
             requestFingerprint: transfer.session.requestFingerprint, totalPartitions: transfer.partitions.count,
             totalBytes: Int64(transfer.export.totalByteCount), finalPartitionSHA256: transfer.partitions.last?.sha256)
         try await send(.transferFinalize(finalize))
-        guard case .transferFinalAcknowledgement(let ack) = try await receive(), ack.accepted,
+        guard case .transferFinalAcknowledgement(let ack) = try await receiveBaseTransferPayload(transfer, context: context, preparation: &preparation, pendingRead: &pendingRead), ack.accepted,
               ack.sessionID == finalize.sessionID, ack.jobID == finalize.jobID,
               ack.totalPartitions == finalize.totalPartitions, ack.totalBytes == finalize.totalBytes,
               ack.finalPartitionSHA256 == finalize.finalPartitionSHA256 else { throw AgentBridgeValidationError.bindingChanged }
         _ = try context.configurationForRead()
-        if confirmCompletion { try await confirmTransferCompletion(transfer, context: context) }
+        if confirmCompletion { try await confirmTransferCompletion(transfer, context: context, preparation: &preparation, pendingRead: &pendingRead) }
     }
 
     /// The transfer's existing reader consumes keepalives without advancing any ACK frontier.
     /// Both base ACKs and v4 host commits retain the same native read/owner fences.
-    private func receiveTransferPayload(_ transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext) async throws -> AgentBridgeSecurePayload {
+    private func receiveTransferPayload(_ transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext,
+        preparation: inout ThrowingTaskGroup<PreparationEvent, any Error>, pendingRead: inout Bool
+    ) async throws -> AgentBridgeSecurePayload {
         guard let channel = responseChannel, let negotiation = responseNegotiation else {
             throw AgentBridgeValidationError.unsupportedCapability
         }
@@ -561,11 +670,7 @@ final class AgentBridgeNativePlanningSession {
             try Task.checkCancellation()
         }
         while true {
-            let payload = try await channel.receiveAllowingAgentBridge(negotiation: negotiation) { [self] in
-                try Task.checkCancellation()
-                try await MainActor.run { try requireOwnerCurrent() }
-                try Task.checkCancellation()
-            }
+            let payload = try await receivePreparedTransferPayload(preparation: &preparation, pendingRead: &pendingRead)
             lastInboundActivityAt = ContinuousClock().now
             if case .agent(let envelope) = payload, case .cancel(let request) = envelope.payload {
                 guard request.jobId.rawValue == transfer.session.jobID.uuidString.lowercased(),
@@ -590,11 +695,13 @@ final class AgentBridgeNativePlanningSession {
     }
 
     private func confirmTransferCompletion(_ transfer: AgentBridgeNativePreparedTransfer,
-        context: AgentBridgeNativeCaptureContext) async throws {
+        context: AgentBridgeNativeCaptureContext,
+        preparation: inout ThrowingTaskGroup<PreparationEvent, any Error>, pendingRead: inout Bool
+    ) async throws {
         guard let channel = responseChannel, let negotiation = responseNegotiation else { throw AgentBridgeValidationError.unsupportedCapability }
         let manifest = try AgentBridgeV4Codec.decode(AgentBridgeArtifactManifest.self, from: transfer.export.manifestCanonical)
         for artifact in manifest.artifacts {
-            guard case .agent(let envelope) = try await receiveTransferPayload(transfer, context: context),
+            guard case .agent(let envelope) = try await receiveTransferPayload(transfer, context: context, preparation: &preparation, pendingRead: &pendingRead),
                   case .commit(let receipt) = envelope.payload, receipt.artifactId == artifact.artifactId else { throw AgentBridgeValidationError.bindingChanged }
             try context.recordHostCommit(receipt)
         }

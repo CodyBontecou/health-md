@@ -1554,6 +1554,170 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
     func testNativeTransferSenderConsumesKeepalivesBeforeEveryACKAndHostCommit() async throws { try await checkNativeTransferSender("complete-keepalive") }
     func testNativeTransferKeepaliveReceiveCannotBypassOwnerRevocation() async throws { try await checkNativeTransferSender("keepalive-revoke") }
     func testNativeTransferPongWriteCannotBypassOwnerRevocation() async throws { try await checkNativeTransferSender("keepalive-write-revoke") }
+    func testNativeStopDuringPreparationWaitsForWorkerCleanupBeforeAcknowledging() async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let key = SymmetricKey(size: .bits256)
+        let entered = NativePreparationTestGate()
+        let releaseCleanup = NativePreparationTestGate()
+        let cleanupReady = expectation(description: "persisted Stop reached worker cleanup")
+        var cleanupStarted = false
+        var cleanupExited = false
+        // The host can issue Stop only after the worker has entered its synthetic SDK call.
+        let wire = NativePlanningResponsePackets(beforeReceive: { await entered.wait() },
+            onCancel: { Task { @MainActor in entered.release() } })
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic preparation")
+        defer { channel.cancel() }
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner)
+        let stop = try cancellationRequest(request)
+        let stopBytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(stop)))
+        wire.appendInbound(try nativeResponsePacket(stopBytes, sequence: 0, key: key))
+        let task = Task { @MainActor in
+            try await planner.transmitTransfer(request, retained: false) { context in
+                _ = try context.begin()
+                entered.release()
+                defer { cleanupExited = true }
+                while try rig.store.snapshot().cancellationIntents?.isEmpty ?? true {
+                    try Task.checkCancellation()
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+                cleanupStarted = true
+                cleanupReady.fulfill()
+                await releaseCleanup.wait()
+                throw AgentBridgeValidationError.cancelled
+            }
+        }
+        var beforeCleanup = 0
+        do {
+            await fulfillment(of: [cleanupReady], timeout: 30)
+            XCTAssertTrue(cleanupStarted)
+            XCTAssertFalse(cleanupExited)
+            XCTAssertTrue(try rig.store.snapshot().cancellationIntents?.allSatisfy { try $0.terminalReceipt() == nil } ?? true)
+            beforeCleanup = wire.packets.count
+            // Only the accepted receipt was sent; Stop remains pending while cleanup is held.
+            XCTAssertEqual(beforeCleanup, 1)
+        } catch {
+            releaseCleanup.release(); entered.release(); task.cancel()
+            _ = await task.result
+            throw error
+        }
+        releaseCleanup.release()
+        if !cleanupStarted { task.cancel() }
+        do { try await task.value; XCTFail("Confirmed Stop must terminate as cancelled") }
+        catch { XCTAssertEqual(error as? AgentBridgeValidationError, .cancelled) }
+        XCTAssertTrue(cleanupExited)
+        let receipt = try XCTUnwrap(rig.store.snapshot().cancellationIntents?.first?.terminalReceipt())
+        XCTAssertEqual(receipt.status, .cancelled); XCTAssertTrue(receipt.sourceAcknowledged)
+        XCTAssertEqual(wire.receiveCount, 1)
+        XCTAssertFalse(channel.isLocallyTerminal)
+        XCTAssertGreaterThan(wire.packets.count, beforeCleanup)
+    }
+
+    func testNativeInvalidPreparationControlsCloseAndJoinCleanupWithoutAcknowledgement() async throws {
+        for mode in ["foreign-job", "foreign-binding", "unexpected-control", "read-failure"] {
+            try await checkNativePreparationFailure(mode)
+        }
+    }
+
+    func testNativePreparationCallerCancellationClosesAndJoinsCleanup() async throws {
+        try await checkNativePreparationFailure("caller-cancel")
+    }
+
+    func testNativePreparationFailureClosesAndJoinsItsBlockedReader() async throws {
+        try await checkNativePreparationFailure("prepare-failure")
+    }
+
+    private func checkNativePreparationFailure(_ mode: String) async throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
+        _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
+        let entered = NativePreparationTestGate()
+        let reading = NativePreparationTestGate()
+        let closed = NativePreparationTestGate()
+        let releaseCleanup = NativePreparationTestGate()
+        let cleanupReady = mode == "prepare-failure" ? nil : expectation(description: "failed preparation worker cleanup: " + mode)
+        let readerReady = expectation(description: "preparation reader entered: " + mode)
+        var readerEntered = false
+        var cleanupStarted = false
+        var cleanupExited = false
+        var finished = false
+        let key = SymmetricKey(size: .bits256)
+        let wire = NativePlanningResponsePackets(beforeReceive: {
+            await entered.wait()
+            await MainActor.run { readerEntered = true; reading.release(); readerReady.fulfill() }
+            if mode == "caller-cancel" || mode == "prepare-failure" { await closed.wait() }
+            if mode == "read-failure" || mode == "caller-cancel" || mode == "prepare-failure" {
+                throw DirectChannelError.connectionClosed
+            }
+        }, onCancel: { Task { @MainActor in entered.release(); closed.release() } })
+        let channel = DirectSecureChannel(packetConnection: wire, sessionKey: key, peerInstallationID: UUID(), peerDisplayName: "Synthetic failure")
+        defer { channel.cancel() }
+        let planner = try nativePlanningSession(rig, lifecycle, responseChannel: channel)
+        let request = try nativeCaptureRequest(rig, planner: planner)
+        let stop = try cancellationRequest(request)
+        let control: Data
+        if mode == "unexpected-control" { control = try nativeDiscoveryBytes(rig) }
+        else {
+            control = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .cancel(AgentBridgeCancel(
+                approvalId: stop.approvalId, authorityId: stop.authorityId,
+                jobId: mode == "foreign-job" ? id(99) : stop.jobId, peer: stop.peer,
+                requestSha256: mode == "foreign-binding" ? digest("f") : stop.requestSha256))))
+        }
+        wire.appendInbound(try nativeResponsePacket(control, sequence: 0, key: key))
+        let task = Task { @MainActor in
+            defer { finished = true }
+            try await planner.transmitTransfer(request, retained: false) { context in
+                _ = try context.begin()
+                entered.release()
+                await reading.wait()
+                if mode == "prepare-failure" { throw AgentBridgeValidationError.invalidRequest }
+                await closed.wait()
+                cleanupStarted = true; cleanupReady?.fulfill()
+                defer { cleanupExited = true }
+                // Deliberately hold even a cancelled worker's cleanup until the test releases it.
+                await releaseCleanup.wait()
+                throw AgentBridgeValidationError.cancelled
+            }
+        }
+        do {
+            await fulfillment(of: [readerReady], timeout: 30)
+            XCTAssertTrue(readerEntered, mode)
+            if mode == "caller-cancel" { task.cancel() }
+            if mode != "prepare-failure" {
+                await fulfillment(of: [try XCTUnwrap(cleanupReady)], timeout: 30)
+                XCTAssertTrue(cleanupStarted, mode)
+                XCTAssertTrue(channel.isLocallyTerminal, mode)
+                XCTAssertFalse(finished, mode)
+                XCTAssertFalse(cleanupExited, mode)
+                XCTAssertTrue(try rig.store.snapshot().cancellationIntents?.isEmpty ?? true, mode)
+                XCTAssertEqual(wire.packets.count, 1, mode)
+            }
+        } catch {
+            releaseCleanup.release(); entered.release(); closed.release(); reading.release(); task.cancel()
+            _ = await task.result
+            throw error
+        }
+        releaseCleanup.release()
+        // Ensure a failed setup cannot leave either synthetic child parked on a gate.
+        if !readerEntered || (mode != "prepare-failure" && !cleanupStarted) {
+            entered.release(); closed.release(); reading.release(); task.cancel()
+        }
+        do { try await task.value; XCTFail("Preparation failure returned success: " + mode) }
+        catch {
+            if mode == "prepare-failure" { XCTAssertEqual(error as? AgentBridgeValidationError, .invalidRequest) }
+            else if mode == "caller-cancel" { XCTAssertTrue(error is CancellationError) }
+            else if mode == "read-failure" { XCTAssertEqual(error as? DirectChannelError, .connectionClosed) }
+            else { XCTAssertEqual(error as? AgentBridgeValidationError, .bindingChanged) }
+        }
+        XCTAssertTrue(finished, mode)
+        XCTAssertTrue(channel.isLocallyTerminal, mode)
+        if mode != "prepare-failure" { XCTAssertTrue(cleanupExited, mode) }
+        XCTAssertTrue(try rig.store.snapshot().cancellationIntents?.isEmpty ?? true, mode)
+        XCTAssertEqual(wire.packets.count, 1, mode)
+    }
+
     func testNativeTransferConfirmsSourceStopAtEachACKAndHostCommitWithoutAnotherReader() async throws {
         for stage in ["disposition", "chunk", "partition", "final", "host"] { try await checkNativeTransferSender("stop-" + stage) }
     }
@@ -1568,7 +1732,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 _ = try await planner.prepareTransferExport(request, manager: manager)
                 let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
                 _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
-                let wire = NativePlanningResponsePackets()
+                let closed = NativePreparationTestGate()
+                let wire = NativePlanningResponsePackets(beforeReceive: { await closed.wait() },
+                    onCancel: { Task { @MainActor in closed.release() } })
                 let channel = DirectSecureChannel(packetConnection: wire, sessionKey: SymmetricKey(size: .bits256), peerInstallationID: UUID(), peerDisplayName: "Synthetic")
                 defer { channel.cancel() }
                 let profiles = try XCTUnwrap(Self.retainedNativeConfigurationObjects.compactMap { $0 as? ExportProfileStore }.last)
@@ -1715,6 +1881,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                 incoming = try incoming.flatMap { [try JSONEncoder().encode(DirectMessage.ping), try JSONEncoder().encode(DirectMessage.pong), $0] }
             }
             let inbound = try incoming.enumerated().map { try nativeResponsePacket($0.element, sequence: UInt64($0.offset), key: key) }
+            let responseReady = NativePreparationTestGate()
             let writeState = NativeTransferWriteState()
             let wire = NativePlanningResponsePackets(beforeWrite: {
                 if mode == "stop-write-failure" {
@@ -1733,13 +1900,18 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                         if mode == "complete-corrupt", let first = originalManifest.artifacts.first { try Data("corrupt".utf8).write(to: completionDirectory.appendingPathComponent("host-commit-\(first.artifactId.rawValue).json")) }
                     }
                 } }
+            }, afterWrite: {
+                await MainActor.run {
+                    if writeState.count >= 3 + original.export.baseFiles.count { responseReady.release() }
+                }
             }, inbound: inbound, beforeReceive: {
+                await responseReady.wait()
                 await MainActor.run {
                     if stopState.nextReceive == selectedStopIndex { stopState.received = true }
                     stopState.nextReceive += 1
                 }
                 if mode == "revoke" || mode == "keepalive-revoke" { await MainActor.run { rig.session.revoke() } }
-            })
+            }, onCancel: { Task { @MainActor in responseReady.release() } })
             let lifecycle = AgentBridgeNativeCatalogLifecycle(); try lifecycle.observe(nativeState())
             _ = try lifecycle.publish(to: rig.store, sourceInstallationID: rig.peer.peer.sourceInstallationID)
             let profiles = try XCTUnwrap(Self.retainedNativeConfigurationObjects.compactMap { $0 as? ExportProfileStore }.last)
@@ -5712,6 +5884,20 @@ private final class Rig {
 }
 
 /// Actual channel encryption/gates with a synthetic native write boundary. No pairing or consent proof.
+@MainActor private final class NativePreparationTestGate {
+    private var opened = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    func wait() async {
+        if opened { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+    func release() {
+        opened = true
+        let pending = waiters; waiters.removeAll()
+        pending.forEach { $0.resume() }
+    }
+}
+
 @MainActor private final class NativeTransferWriteState { var count = 0 }
 @MainActor private final class NativeTransferStopState { var nextReceive = 0; var received = false }
 
@@ -5723,10 +5909,13 @@ nonisolated private final class NativePlanningResponsePackets: DirectGuardedPack
     private let beforeReceive: @concurrent @Sendable () async throws -> Void
     private let beforeWrite: @concurrent @Sendable () async throws -> Void
     private let afterWrite: @concurrent @Sendable () async throws -> Void
+    private let onCancel: @Sendable () -> Void
     var receiveCount: Int { lock.withLock { receives } }
     var packets: [ManualIPSyncPacket] { lock.withLock { stored } }
+    func appendInbound(_ packet: ManualIPSyncPacket) { lock.withLock { inbound.append(packet) } }
     init(beforeWrite: @escaping @concurrent @Sendable () async throws -> Void = {}, afterWrite: @escaping @concurrent @Sendable () async throws -> Void = {},
-         inbound: [ManualIPSyncPacket] = [], beforeReceive: @escaping @concurrent @Sendable () async throws -> Void = {}) {
+         inbound: [ManualIPSyncPacket] = [], beforeReceive: @escaping @concurrent @Sendable () async throws -> Void = {}, onCancel: @escaping @Sendable () -> Void = {}) {
+        self.onCancel = onCancel
         self.beforeWrite = beforeWrite; self.afterWrite = afterWrite; self.inbound = inbound; self.beforeReceive = beforeReceive
     }
     @concurrent func sendGuarded(_ packet: ManualIPSyncPacket, authorize: @escaping @concurrent @Sendable () async throws -> Void) async throws {
@@ -5745,7 +5934,7 @@ nonisolated private final class NativePlanningResponsePackets: DirectGuardedPack
             return inbound.removeFirst()
         }
     }
-    func cancel() {}
+    func cancel() { onCancel() }
 }
 
 #if canImport(HealthMd)

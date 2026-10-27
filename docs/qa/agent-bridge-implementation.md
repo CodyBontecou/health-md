@@ -1504,3 +1504,11 @@ This read acquires only the existing private output lock and loads only the exis
 Before returning an output transaction, the host authenticates any coexisting execution-attempt record for that job. Missing legacy evidence, an exactly bound v1 pre-send intent, and a matching v2 accepted record remain compatible. Acceptance comes from the independently signed output binding; a v1 intent never supplies it. Pending v3 or confirmed v4 Stop evidence, invalid MACs or metadata, and mismatched requests or acceptance reject without repair.
 
 The transaction pins the attempt's exact bytes or absence and rechecks that evidence alongside its root, held named lock and output journal after delaying callbacks. Changing its bytes or presence invalidates the existing owner. This closes contradictory retained-output recovery; it does not implement later-state Stop, pre-send-uncertain reconciliation, installed orchestration or native active-worker cancellation.
+
+### Native Stop while export preparation is active
+
+The original capture owner starts one guarded control read alongside export preparation. A matching Cancel persists its Stop intent before waiting for the preparation worker and its cleanup to finish. Only then may the owner invalidate its capture context and invoke the existing retained source-confirmation path. Cancelling an awaiting task, returning a late SDK result, or closing a transport never supplies source-confirmed cancellation.
+
+If preparation finishes first, the same outstanding read becomes the first transfer read. Keepalives do not create a second reader or advance a transfer frontier. Invalid controls, read failures and original-caller cancellation close the channel before structured child cleanup is joined; those paths cannot acknowledge Stop. Peer, original lifecycle, signed spool and final receipt fences remain in their existing owners.
+
+This preparation lifecycle is an internal building block. Installed native dispatch, CLI/MCP and recipe orchestration, later-state and uncertain-send recovery, SDK27 runtime qualification and full physical acceptance remain separate requirements; no advertisement or rollout gate is enabled by this change.

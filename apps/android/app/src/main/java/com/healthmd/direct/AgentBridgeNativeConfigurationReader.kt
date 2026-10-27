@@ -20,6 +20,14 @@ import java.time.ZoneId
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
@@ -170,6 +178,10 @@ internal class AgentBridgeNativePlanningSession(
     /** Private original-owner proof; an ordinary CANCELLED error cannot keep a channel alive. */
     private class ConfirmedTransferStop(val owner: AgentBridgeNativePlanningSession,
         val receipt: AgentBridgeExecutionReceipt) : Exception()
+    private sealed interface PreparationEvent {
+        data class Prepared(val transfer: AgentBridgeNativePreparedTransfer) : PreparationEvent
+        data class Incoming(val payload: ReceivedAgentBridgePayload) : PreparationEvent
+    }
     init {
         val publication = requireCurrent()
         // Compare the issuer transaction's exact revision, not only its facts fingerprint.
@@ -322,7 +334,7 @@ internal class AgentBridgeNativePlanningSession(
     /** Child of the actual caller Job, armed before native I/O. Unconfined resumption performs
      * only local abandonment/socket close on cancellation, even while its parent's thread blocks.
      * It never does SDK/issuer/UI work and is canceled/disposed on every normal or failing exit. */
-    private fun <T> withTransportCancellation(caller: Job, channel: DirectSecureChannel, operation: () -> T): T {
+    private fun armTransportCancellation(caller: Job, channel: DirectSecureChannel): () -> Unit {
         caller.ensureActive()
         val finished = AtomicBoolean(false)
         val cancellation = CoroutineScope(caller + Dispatchers.Unconfined).launch(start = CoroutineStart.UNDISPATCHED) {
@@ -334,8 +346,12 @@ internal class AgentBridgeNativePlanningSession(
                 }
             }
         }
-        try { caller.ensureActive(); return operation() }
-        finally { finished.set(true); cancellation.cancel() }
+        return { finished.set(true); cancellation.cancel() }
+    }
+
+    private fun <T> withTransportCancellation(caller: Job, channel: DirectSecureChannel, operation: () -> T): T {
+        val finish = armTransportCancellation(caller, channel)
+        try { caller.ensureActive(); return operation() } finally { finish() }
     }
 
     /** Own the whole native capture operation. Caller identity is captured once from the actual
@@ -479,38 +495,104 @@ internal class AgentBridgeNativePlanningSession(
     private suspend fun sendPreparedTransfer(request: AgentBridgeExecuteRequest, context: AgentBridgeNativeCaptureContext,
         confirmCompletion: Boolean,
         prepare: suspend (AgentBridgeNativeCaptureContext) -> AgentBridgeNativePreparedTransfer) {
+        val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        val caller = currentCoroutineContext().job
+        val fingerprint = AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request))
+        val finish = armTransportCancellation(caller, channel)
+        val ownerFence = { caller.ensureActive(); requireOwnerCurrent(); caller.ensureActive() }
         try {
-            val supplied = prepare(context)
-            if (supplied.export.requestSha256 != context.requestFingerprintForRead() ||
-                !supplied.export.manifestCanonical.contentEquals(context.preserveManifest()) ||
-                !supplied.checkpointCanonical.contentEquals(context.preserveTransferPlan()))
-                throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
-            val export = AgentBridgeNativePreparedExport.make(request, supplied.export.days,
-                supplied.export.totalByteCount, supplied.export.publicArtifactIDs, supplied.export.manifestCanonical)
-            val transfer = AgentBridgeNativePreparedTransfer.make(request, export, supplied.checkpointCanonical)
-            val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
-            val caller = currentCoroutineContext().job
-            withTransportCancellation(caller, channel) { sendTransferBytes(transfer, context, confirmCompletion, caller) }
-            context.configurationForRead()
-            Unit
+            supervisorScope {
+                val worker = async(Dispatchers.IO) { prepare(context) }
+                // This is the only reader. If preparation wins, its outstanding read becomes
+                // the first transfer read rather than being canceled or replaced by another.
+                var incoming = async(Dispatchers.IO) { channel.receiveAllowingAgentBridge(negotiation, ownerFence) }
+                try {
+                    var prepared: AgentBridgeNativePreparedTransfer? = null
+                    while (prepared == null) {
+                        when (val event = select<PreparationEvent> {
+                            incoming.onAwait { PreparationEvent.Incoming(it) }
+                            worker.onAwait { PreparationEvent.Prepared(it) }
+                        }) {
+                            is PreparationEvent.Prepared -> prepared = event.transfer
+                            is PreparationEvent.Incoming -> {
+                                ownerFence()
+                                val message = (event.payload as? ReceivedAgentBridgePayload.Agent)?.message
+                                if (message?.type == "cancel_request") {
+                                    val stop = message.payload as? AgentBridgeCancelRequest
+                                        ?: throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
+                                    if (stop.jobId != request.jobId || stop.requestSha256 != fingerprint)
+                                        throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                                    service.requestCancellation(peer, stop)
+                                    // Persist first. In-flight native work must actually finish its
+                                    // cleanup, not merely lose its awaiting coroutine, before ACK.
+                                    val failure = runCatching { worker.await() }.exceptionOrNull()
+                                    caller.ensureActive()
+                                    if (failure != null && failure !is CancellationException &&
+                                        failure !is AgentBridgeException && failure !is AgentBridgeNativeRenderException) throw failure
+                                    context.invalidate()
+                                    val receipt = sendRetainedCancellation(stop, caller)
+                                    throw ConfirmedTransferStop(this@AgentBridgeNativePlanningSession, receipt)
+                                }
+                                val envelope = (event.payload as? ReceivedAgentBridgePayload.Base)?.envelope
+                                if (envelope == null || envelope.type !in setOf("ping", "pong") || envelope.payload.isNotEmpty())
+                                    throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                                if (envelope.type == "ping") channel.sendV2ForAgentBridge("pong", JsonObject.serializer(),
+                                    JsonObject(emptyMap()), negotiation, ownerFence)
+                                incoming = async(Dispatchers.IO) { channel.receiveAllowingAgentBridge(negotiation, ownerFence) }
+                                // A stream of keepalives cannot starve an already finished worker.
+                                if (worker.isCompleted) prepared = worker.await()
+                            }
+                        }
+                    }
+                    val supplied = checkNotNull(prepared)
+                    if (supplied.export.requestSha256 != context.requestFingerprintForRead() ||
+                        !supplied.export.manifestCanonical.contentEquals(context.preserveManifest()) ||
+                        !supplied.checkpointCanonical.contentEquals(context.preserveTransferPlan()))
+                        throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
+                    val export = AgentBridgeNativePreparedExport.make(request, supplied.export.days,
+                        supplied.export.totalByteCount, supplied.export.publicArtifactIDs, supplied.export.manifestCanonical)
+                    val transfer = AgentBridgeNativePreparedTransfer.make(request, export, supplied.checkpointCanonical)
+                    var firstRead: Deferred<ReceivedAgentBridgePayload>? = incoming
+                    val readNext: suspend () -> ReceivedAgentBridgePayload = {
+                        val pending = firstRead
+                        firstRead = null
+                        val payload = if (pending != null) pending.await() else withContext(Dispatchers.IO) {
+                            channel.receiveAllowingAgentBridge(negotiation, ownerFence)
+                        }
+                        ownerFence(); payload
+                    }
+                    sendTransferBytes(transfer, context, confirmCompletion, caller, readNext)
+                    context.configurationForRead()
+                    Unit
+                } catch (stop: ConfirmedTransferStop) {
+                    throw stop
+                } catch (failure: Throwable) {
+                    // Unblock the sole reader before structured cleanup joins its job.
+                    wireAbandoned = true; runCatching { channel.close() }; throw failure
+                } finally {
+                    withContext(NonCancellable) { worker.cancelAndJoin(); incoming.cancelAndJoin() }
+                }
+            }
         } catch (stop: ConfirmedTransferStop) {
             context.invalidate()
-            requireConfirmedTransferStop(stop, request.jobId, AgentBridgeCodec.sha256(AgentBridgeCodec.encode(request)), currentCoroutineContext().job)
+            requireConfirmedTransferStop(stop, request.jobId, fingerprint, caller)
             throw stop
         } catch (failure: Throwable) {
-            context.invalidate(); wireAbandoned = true; runCatching { responseChannel?.close() }; throw failure
-        }
+            context.invalidate(); wireAbandoned = true; runCatching { channel.close() }; throw failure
+        } finally { finish() }
     }
 
-    private fun sendTransferBytes(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext, confirmCompletion: Boolean, caller: Job) {
+    private suspend fun sendTransferBytes(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext,
+        confirmCompletion: Boolean, caller: Job, readNext: suspend () -> ReceivedAgentBridgePayload) {
         val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val validate = { context.configurationForRead(); Unit }
         fun invalid(): Nothing = throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
         fun <T> send(type: String, serializer: kotlinx.serialization.SerializationStrategy<T>, payload: T) =
             channel.sendV2ForAgentBridge(type, serializer, payload, negotiation, validate)
-        fun <T> receive(type: String, serializer: kotlinx.serialization.DeserializationStrategy<T>): T {
-            val envelope = (receiveTransferPayload(transfer, context, caller) as? ReceivedAgentBridgePayload.Base)?.envelope ?: invalid()
+        suspend fun <T> receive(type: String, serializer: kotlinx.serialization.DeserializationStrategy<T>): T {
+            val envelope = (receiveTransferPayload(transfer, context, caller, readNext) as? ReceivedAgentBridgePayload.Base)?.envelope ?: invalid()
             if (envelope.type != type) invalid()
             return V2Codec.decodePayload(envelope, serializer)
         }
@@ -552,17 +634,18 @@ internal class AgentBridgeNativePlanningSession(
             ack.totalPartitions != finalize.totalPartitions || ack.totalBytes != finalize.totalBytes ||
             ack.finalPartitionSha256 != finalize.finalPartitionSha256) invalid()
         context.configurationForRead()
-        if (confirmCompletion) confirmTransferCompletion(transfer, context, caller)
+        if (confirmCompletion) confirmTransferCompletion(transfer, context, caller, readNext)
     }
 
     /** Consume keepalives on the same transfer reader without changing any ACK frontier.
      * The existing read/owner fences apply to both base ACKs and v4 host commits. */
-    private fun receiveTransferPayload(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext, caller: Job): ReceivedAgentBridgePayload {
+    private suspend fun receiveTransferPayload(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext,
+        caller: Job, readNext: suspend () -> ReceivedAgentBridgePayload): ReceivedAgentBridgePayload {
         val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val validate = { context.configurationForRead(); Unit }
         while (true) {
-            val payload = channel.receiveAllowingAgentBridge(negotiation) { caller.ensureActive(); requireOwnerCurrent(); caller.ensureActive() }
+            val payload = readNext()
             val message = (payload as? ReceivedAgentBridgePayload.Agent)?.message
             if (message?.type == "cancel_request") {
                 val request = message.payload as? AgentBridgeCancelRequest ?: throw AgentBridgeException(AgentBridgeErrorCode.INVALID_REQUEST)
@@ -587,13 +670,14 @@ internal class AgentBridgeNativePlanningSession(
         }
     }
 
-    private fun confirmTransferCompletion(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext, caller: Job) {
+    private suspend fun confirmTransferCompletion(transfer: AgentBridgeNativePreparedTransfer, context: AgentBridgeNativeCaptureContext,
+        caller: Job, readNext: suspend () -> ReceivedAgentBridgePayload) {
         val channel = responseChannel ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val negotiation = responseNegotiation ?: throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
         val manifest = AgentBridgeCodec.decode(transfer.export.manifestCanonical) as? AgentBridgeArtifactManifest
             ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
         for (artifact in manifest.artifacts) {
-            val message = (receiveTransferPayload(transfer, context, caller) as? ReceivedAgentBridgePayload.Agent)?.message
+            val message = (receiveTransferPayload(transfer, context, caller, readNext) as? ReceivedAgentBridgePayload.Agent)?.message
                 ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
             val receipt = message.payload as? AgentBridgeCommitReceipt ?: throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
             if (message.type != "commit_receipt" || receipt.artifactId != artifact.artifactId) throw AgentBridgeException(AgentBridgeErrorCode.BINDING_CHANGED)
