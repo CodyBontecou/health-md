@@ -1,0 +1,18 @@
+{
+  "main": {
+    "id": "healthmd-main",
+    "type": "split",
+    "children": [
+      {
+        "id": "healthmd-start",
+        "type": "leaf",
+        "state": {
+          "type": "markdown",
+          "state": { "file": "Start here.md", "mode": "preview" }
+        }
+      }
+    ],
+    "direction": "vertical"
+  },
+  "active": "healthmd-start"
+}

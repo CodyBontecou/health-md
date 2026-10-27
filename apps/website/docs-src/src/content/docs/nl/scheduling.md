@@ -1,46 +1,38 @@
 ---
-title: "Geplande exports"
-description: "Voer exports automatisch uit met dagelijkse, wekelijkse of aangepaste kalenderritmes. iOS gebruikt achtergrondtaken en een lokale herstelmelding wanneer beveiligde gegevens niet beschikbaar zijn."
+title: "Apple Health-exports plannen en gemiste uitvoeringen oplossen"
+description: "Controleer geplande exports, het venster met voltooide dagen en herstel. iOS garandeert geen tijdstip; Opnieuw proberen in de geschiedenis gebruikt huidige instellingen."
 ---
 
-## Het tabblad Schema
-<p>Dit is een statusscherm, geen instellingenpaneel. Je ziet in één oogopslag:</p>
-<ul>
-<li>of het schema aan- of uitstaat</li>
-<li>wanneer de volgende geplande uitvoering plaatsvindt</li>
-<li>wat het resultaat van de laatste uitvoering was</li>
-</ul>
-<p>Met één knop, <em>Schema instellen</em> of <em>Schema beheren</em>, open je de detailweergave.</p>
+Deze pagina beschrijft planning op de iPhone. Android heeft andere achtergrondmachtigingen en aankoopvoorwaarden; zie [Android-automatisering](/nl/docs/android/).
 
-## Schema-instellingen
-<div class="options">
-<div class="option"><strong>Geplande exports inschakelen</strong><p>De hoofdschakelaar bovenaan. Staat deze uit, dan zijn er geen uitvoeringen op de achtergrond en geen meldingen.</p></div>
-<div class="option"><strong>Frequentie</strong><p>Dagelijks, wekelijks of aangepast. Aangepaste schema’s herhalen vanaf een startdatum elke N dagen, weken of maanden. Het terugkijkvenster bepaalt hoeveel voltooide dagen elke uitvoering omvat.</p></div>
-<div class="option"><strong>Tijd</strong><p>Uur en minuut. iOS behandelt dit als richttijd, niet als garantie. Lees de toelichting over beperkingen hieronder.</p></div>
-</div>
+## Controleer de eerste geplande export
 
-## Exportgeschiedenis
-<p>De lijst onderaan het scherm Schema legt elke geplande uitvoering en het resultaat vast. Tik op een rij voor meer informatie. Bij een mislukte uitvoering staat een knop <em>Opnieuw proberen</em> waarmee je het datumbereik met de huidige instellingen en bestemming opnieuw uitvoert en daarna een nieuwe geschiedenisrij vastlegt.</p>
+1. Activeer het bedoelde profiel. Controleer metingen, formaten, detailniveau, schrijfgedrag en bestemming. Exporteer één voltooide dag handmatig en controleer het bestand of endpointresultaat voordat u automatiseert.
+2. Open Schema en Schema instellen of Schema beheren. Schakel het in, kies dagelijks, wekelijks of aangepast, stel de tijd in en begin met één voltooide terugkijkdag. Sta meldingen toe als u lokale herstelherinneringen wilt.
+3. Controleer inschakeling, volgende uitvoering en laatste resultaat. Bekijk na een poging de geschiedenis en echte bestemming; een geplande datum of melding bewijst niet dat gegevens zijn geschreven.
+4. Controleer datums, eenheden, dekking en ontbrekende gegevens. Een opgeslagen bestand bewijst op zichzelf geen volledige bronopname.
 
-## Hoe planning in iOS werkelijk werkt
-<div class="doc-diagram">
-  <div class="flow-steps" aria-label="Alternatief verloop voor een geplande export">
-    <span><strong>1. Richttijd</strong>Health.md vraagt iOS de app rond de gekozen tijd te activeren.</span>
-    <span><strong>2. Poging op de achtergrond</strong>Als het apparaat beschikbaar is, voert iOS een taak voor achtergrondvernieuwing uit.</span>
-    <span><strong>3. Alternatief bij vergrendeling</strong>Als HealthKit niet beschikbaar is, plaatst Health.md een melding.</span>
-    <span><strong>4. Tik om te voltooien</strong>Open de melding, zodat de app HealthKit kan lezen en kan exporteren.</span>
-  </div>
-</div>
+Op Apple deelt een geplande aanvraag die minstens één datum exporteert de vijf gratis exportacties met handmatige en andere getelde exports. Full Access verwijdert deze gedeelde limiet. Zie [Ontgrendelen en aankopen](/nl/docs/paywall/).
 
-<div class="callout">
-<strong>Belangrijke beperkingen van iOS.</strong>
-<p style="margin-top:6px;">HealthKit-gegevens zijn niet leesbaar wanneer het apparaat is vergrendeld. Geplande exports gebruiken <code>BGAppRefreshTask</code>. iOS plant deze taak op basis van gebruikspatronen wanneer het systeem daar gelegenheid voor ziet. De ingestelde tijd is dus een richttijd, geen afspraak. Als alternatief plaatst de app op de geplande tijd een lokale melding wanneer het apparaat is vergrendeld. Tik daarop om de export uit te voeren.</p>
-</div>
-<ul>
-<li>De geplande tijd is bij benadering. iOS kan de taak eerder of later uitvoeren of overslaan als het apparaat uitstaat of niet verbonden is.</li>
-<li>Geplande exports werken het best als je telefoon regelmatig rond dezelfde tijd is aangesloten en ontgrendeld.</li>
-<li>Mislukt de export omdat het apparaat was vergrendeld, tik dan op de melding. De app voert de export vervolgens met HealthKit-toegang uit.</li>
-</ul>
+## Begrijp het venster met voltooide dagen
+
+Dagelijkse, wekelijkse en aangepaste schema’s kunnen een terugkijkperiode hebben. Aangepast herhaalt elke N dagen, weken of maanden vanaf de startdatum. Elke nieuwe uitvoering exporteert het hele ingestelde venster opnieuw, ook eerder geëxporteerde datums. Drie dagen omvatten gisteren en de twee dagen ervoor; bij vertraging blijft de geplande uitvoerdag het anker.
+
+Vandaag vernieuwen staat hier los van en vervangt dit venster niet. Controleer paden en schrijfgedrag bij overlap; herhaalde dagmomentopnamen zijn geen nieuwe metingen.
+
+## Kies het juiste herstelpad
+
+- **Openstaande geplande aanvraag:** ontgrendel de iPhone, open Health.md en bekijk de poging. De exacte onopgeloste datums, opgeslagen instellingen en bestemming blijven behouden. Voltooide dagen blijven voltooid; herstel vergroot het venster niet.
+- **Opnieuw proberen vanuit geschiedenis:** start een nieuwe uitvoering voor dat bereik met de huidige instellingen en bestemming en maakt een nieuwe rij. Controleer eerst de actieve configuratie. Dit hervat niet de bevroren aanvraag.
+- **Gewijzigde of onbereikbare bestemming:** herstel toegang of bekijk het openstaande profiel. Oude iPhone-API-herstelacties mogen niet stilzwijgend een ander endpoint of gewijzigde referenties gebruiken. Start niet steeds nieuwe pogingen terwijl de oorspronkelijke onopgelost is.
+
+Zie [Exportprofielen](/nl/docs/export-profiles/) voor herstel-, identiteits- en bestemmingsregels.
+
+## Wat iOS wel en niet garandeert
+
+De tijd is een doel, geen gegarandeerde eindtijd. iOS bepaalt achtergrondruntime en toestelvergrendeling kan HealthKit-lezen verhinderen. Achtergrondverzoeken en stille meldingen omzeilen die bescherming niet.
+
+Lokale herinneringen vereisen meldingsmachtiging en garanderen geen aflevering op de doeltijd. Ontgrendel het toestel en open een ontvangen melding om herstel te proberen. Komt er geen melding, open Health.md en bekijk openstaand werk en geschiedenis. Controleer het resultaat in plaats van succes af te leiden uit een melding of verstreken tijd.
 
 ## Programmatisch bedienen
 <p>Je kunt het schema via Shortcuts in- of uitschakelen met de intentie <em>Geplande export in- of uitschakelen</em>. <a href="/nl/docs/shortcuts/">Bekijk Shortcuts</a> voor voorbeelden.</p>

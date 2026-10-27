@@ -1,0 +1,37 @@
+.csv-combiner {
+  margin: 24px 0;
+  padding: 24px;
+  border: 1px solid var(--about-line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.csv-combiner [hidden], .csv-combiner[hidden] { display: none !important; }
+.csv-combiner label { display: block; margin-bottom: 8px; font-weight: 600; }
+.csv-combiner input { display: block; max-width: 100%; font: inherit; font-size: 16px; line-height: 24px; }
+.csv-combiner input::file-selector-button { padding: 8px 12px; margin-right: 12px; font: inherit; cursor: pointer; }
+.csv-combiner-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 16px; }
+.csv-combiner button, .csv-combiner-download {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.csv-combiner button:disabled { opacity: 0.5; cursor: not-allowed; }
+.csv-combiner button:focus-visible, .csv-combiner input:focus-visible, .csv-combiner-download:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.csv-combiner button:enabled:active, .csv-combiner-download:active { transform: translateY(1px); }
+@media (hover: hover) and (pointer: fine) {
+  .csv-combiner button:enabled:hover, .csv-combiner-download:hover { background: var(--about-soft); }
+}
+.csv-combiner [data-csv-status], .csv-combiner [data-csv-error] { overflow-wrap: anywhere; }
+.csv-combiner [data-csv-error] { border: 1px solid currentColor; padding: 12px; }

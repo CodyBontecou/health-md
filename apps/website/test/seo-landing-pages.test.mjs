@@ -11,7 +11,7 @@ const PAGES = [
     dir: 'apple-health-export',
     url: 'https://healthmd.app/apple-health-export/',
     title: 'Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian | Health.md',
-    h1: 'Export your Apple Health data — your way.',
+    h1: 'How to export Apple Health data',
     minFaqs: 5,
   },
   {
@@ -24,8 +24,8 @@ const PAGES = [
   {
     dir: 'apple-health-to-csv',
     url: 'https://healthmd.app/apple-health-to-csv/',
-    title: 'Export Apple Health to CSV — No Xcode, No Scripts | Health.md',
-    h1: 'Apple Health to CSV, without the Xcode project.',
+    title: 'Export Apple Health to CSV for Excel and Google Sheets | Health.md',
+    h1: 'Export Apple Health to CSV',
     minFaqs: 4,
   },
 ];
@@ -265,6 +265,32 @@ test('CSV preview is an explicitly synthetic, ordered excerpt of the production-
   }
   assert.ok(lines.some((line) => line.split(',').length === 5), 'compatibility aggregate width is not padded');
   assert.ok(lines.some((line) => line.split(',').length === 6), 'metadata retains all six fields');
+});
+
+test('CSV hero table stays consistent with the downloadable producer fixture', async () => {
+  const html = sources['apple-health-to-csv'];
+  const hero = html.match(/<aside class="csv-sample-card"[\s\S]*?<\/aside>/)?.[0];
+  assert.ok(hero, 'sample card exists');
+  const fixture = await readFile(path.join(ROOT, 'docs-src/public/reference/generated/core/summary-day.csv'), 'utf8');
+  const displayed = [...hero.matchAll(/<tr><th scope="row">([^<]+)<\/th><td>([^<]+)<\/td><td>([^<]+)<\/td><\/tr>/g)];
+  assert.equal(displayed.length, 3, 'all three visible rows are checked');
+  for (const [, label, value, unit] of displayed) {
+    // These are plain numeric summary rows, not quoted source-record JSON cells.
+    const metric = label.replace(/ \(sleep\)$/, '');
+    assert.ok(Number.isFinite(Number(value)), `${label}: numeric preview`);
+    const row = fixture.split('\n').find(line => {
+      const fields = line.split(',');
+      return fields[2] === metric && (label.endsWith(' (sleep)') ? fields[1] === 'Sleep' : true);
+    });
+    assert.ok(row, `${label}: metric exists in the downloaded fixture`);
+    const [date, , , expectedValue, expectedUnit] = row.split(',');
+    assert.equal(value, expectedValue, `${label}: producer value`);
+    assert.equal(unit, expectedUnit, `${label}: producer unit`);
+    const displayedDate = new Intl.DateTimeFormat('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+    }).format(new Date(`${date}T00:00:00Z`));
+    assert.ok(hero.includes(displayedDate), `${label}: sample date`);
+  }
 });
 
 test('CSV guide uses a standalone article column rather than the shared sidebar layout', async () => {
