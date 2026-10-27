@@ -238,7 +238,23 @@ final class ExportJourneyUITests: XCTestCase {
             XCTFail("Files must expose the synthetic TestVault folder")
             return
         }
+        // Tapping a filename in the provider's icon view need not enter its folder.
+        // Select the cell and observe navigation before Open can select a parent.
         testVault.tap()
+        // SDK27 Files exposes the current folder as an actions-menu button.
+        let selectedFolderTitle = app.navigationBars.buttons["TestVault, Actions Menu"].firstMatch
+        guard selectedFolderTitle.waitForExistence(timeout: 10) else {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "Synthetic TestVault navigation hierarchy"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = "Synthetic TestVault navigation"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+            XCTFail("Files must enter TestVault before selecting the export destination")
+            return
+        }
         openFolder.tap()
         let pickerDismissed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: openFolder
