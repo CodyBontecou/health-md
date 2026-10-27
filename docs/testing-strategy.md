@@ -41,6 +41,6 @@ Caches are not qualification receipts. Keep build directories isolated between w
 
 ## Opt-in workflows
 
-Root `make test` and `make test-apple` include iOS simulator work. They are broad routes, not a default host-only loop. Use the owning component's explicit host commands, such as `make -C apps/apple test-macos`, when their scope is appropriate.
+Root `make test` runs the [portable CI regression suite](qa/two-minute-ci.md) without native SDKs or devices. `make test-apple` is a broad diagnostic that includes iOS simulator work and requires explicit opt-in. Use the owning component's explicit host commands, such as `make -C apps/apple test-macos`, when their scope is appropriate.
 
 Simulator/emulator QA, device installation/launch, UI automation, and Argent require explicit authorization for the current task. A request to implement, polish UI, or run tests does not authorize those workflows. Mark relevant unrun native/visual surfaces as gaps rather than claiming another platform's tests verify them.
