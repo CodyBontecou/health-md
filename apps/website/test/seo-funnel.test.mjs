@@ -236,3 +236,24 @@ test('Android Obsidian store and sample actions use existing page, placement and
     assert.equal(validFunnelEvent(request.data), true);
   }
 });
+
+test('Mac destination guide actions reach daily counters with existing privacy and field limits', async t => {
+  const b = browser('/blog/health-md-for-macos/');
+  startFunnel(b.win);
+  b.listeners.click(click(anchor('https://healthmd.app/docs/reference/generated/core/summary-day.csv')));
+  b.listeners.click(click(anchor('https://apps.apple.com/us/app/health-md/id6757763969', '.download-cta')));
+  assert.deepEqual(b.sent.map(request => [request.data.page, request.data.action, request.data.target, request.data.placement]), [
+    ['mac_export', 'page_view', 'none', 'page'],
+    ['mac_export', 'csv_sample_download', 'summary_csv', 'body'],
+    ['mac_export', 'store_click', 'app_store', 'final'],
+  ]);
+  const DB = database(t);
+  for (const sent of b.sent) {
+    assert.equal(validFunnelEvent(sent.data), true);
+    assert.equal((await worker.fetch(request(sent.data), { DB }, {})).status, 204);
+  }
+  assert.equal(DB.db.prepare("SELECT SUM(count) n FROM web_funnel_daily WHERE page = 'mac_export'").get().n, 3);
+  assert.equal((await worker.fetch(request({ ...b.sent[0].data, file_path: '/private/health.csv' }), { DB }, {})).status, 400);
+  assert.equal((await worker.fetch(request(b.sent[0].data, { headers: { origin: 'https://healthmd.app', 'sec-gpc': '1' } }), { DB }, {})).status, 204);
+  assert.equal(DB.db.prepare("SELECT SUM(count) n FROM web_funnel_daily WHERE page = 'mac_export'").get().n, 3);
+});

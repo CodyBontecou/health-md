@@ -14,6 +14,7 @@ export const FUNNEL_PAGES = Object.freeze({
   local_export: '/blog/export-health-data-without-the-cloud/',
   auto_export_comparison: '/blog/health-md-vs-health-auto-export/',
   xml_export: '/blog/apple-health-xml-export/',
+  mac_export: '/blog/health-md-for-macos/',
 });
 export const FUNNEL_LOCALES = Object.freeze(['en', 'es', 'de', 'fr', 'pt-br', 'it', 'nl', 'ja', 'ko', 'zh-hans']);
 export const FUNNEL_ACTIONS = Object.freeze({
