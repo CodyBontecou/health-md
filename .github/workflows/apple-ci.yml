@@ -70,6 +70,7 @@ jobs:
       - name: Test Apple PR routing and final gate
         run: |
           python3 -m unittest discover -s apps/apple/scripts/tests -p 'test_apple_ci_*.py'
+          python3 .github/scripts/tests/test_apple_core_cache.py
           python3 apps/apple/scripts/tests/test_ci_apple_core_slices.py
           python3 apps/apple/scripts/tests/test_ios_ui_shards.py
           python3 apps/apple/scripts/tests/test_start_ci_ios_simulator.py
@@ -180,6 +181,9 @@ jobs:
     # Free standard public-repository SDK27 runner, never xlarge.
     runs-on: xcode-27
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     outputs:
       cache-hit: ${{ steps.admit.outputs.ready }}
     defaults:
@@ -218,6 +222,7 @@ jobs:
           set -euo pipefail
           fingerprint=$({ xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; xcrun --sdk macosx --show-sdk-version; } | shasum -a 256 | awk '{print $1}')
           echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+          echo "source-digest=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)" >> "$GITHUB_OUTPUT"
       - id: shared-core-cache
         name: Restore exact-source shared-core cache
         uses: actions/cache/restore@v4
@@ -228,14 +233,40 @@ jobs:
           key: >-
             apple-shared-core-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fingerprint }}-${{ hashFiles('packages/healthmd-core-rust/vendor/**', 'packages/healthmd-core-rust/Cargo.toml', 'packages/healthmd-core-rust/Cargo.lock', 'packages/healthmd-core-rust/rust-toolchain.toml', 'packages/healthmd-core-rust/crates/**', 'packages/healthmd-core-rust/scripts/*apple*', 'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
 
+      - name: Find trusted compiled core inputs after cache eviction
+        id: compiled-inputs
+        if: ${{ steps.shared-core-cache.outputs.cache-hit != 'true' }}
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CORE_TOOLCHAIN: ${{ steps.toolchain.outputs.fingerprint }}
+          CORE_SOURCE: ${{ steps.toolchain.outputs.source-digest }}
+        run: python3 .github/scripts/find-apple-core-cache.py
+      - name: Restore only prior compiled inputs, never prior qualification receipts
+        id: compiled-inputs-download
+        continue-on-error: true
+        if: ${{ steps.compiled-inputs.outputs.run-id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.compiled-inputs.outputs.run-id }}
+          name: ${{ steps.compiled-inputs.outputs.name }}
+          path: ${{ runner.temp }}/apple-core-compiled-inputs
+      - name: Promote complete download or discard unavailable cache inputs
+        if: ${{ steps.compiled-inputs.outputs.run-id != '' }}
+        env:
+          COMPILED_INPUTS_STAGING: ${{ runner.temp }}/apple-core-compiled-inputs
+          COMPILED_INPUTS_OUTCOME: ${{ steps.compiled-inputs-download.outcome }}
+        run: python3 ../../.github/scripts/promote-apple-core-inputs.py "$COMPILED_INPUTS_STAGING" Packages/HealthMdCoreRust/Artifacts "$COMPILED_INPUTS_OUTCOME"
+
       - name: Restore binding-generator compilation for a hot bundle
-        if: ${{ steps.shared-core-cache.outputs.cache-hit == 'true' }}
+        if: ${{ steps.shared-core-cache.outputs.cache-hit == 'true' || steps.compiled-inputs-download.outcome == 'success' }}
         uses: actions/cache@v4
         with:
           path: packages/healthmd-core-rust/target/debug
           key: apple-core-host-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fingerprint }}-${{ hashFiles('packages/healthmd-core-rust/vendor/**', 'packages/healthmd-core-rust/Cargo.lock', 'packages/healthmd-core-rust/rust-toolchain.toml') }}
       - name: Check bindings before hot bundle admission
-        if: ${{ steps.shared-core-cache.outputs.cache-hit == 'true' }}
+        if: ${{ steps.shared-core-cache.outputs.cache-hit == 'true' || steps.compiled-inputs-download.outcome == 'success' }}
         working-directory: .
         run: packages/healthmd-core-rust/scripts/generate-apple-bindings.sh --check
 
@@ -244,7 +275,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ '${{ steps.shared-core-cache.outputs.cache-hit }}' == 'true' ]]; then
+          if [[ '${{ steps.shared-core-cache.outputs.cache-hit }}' == 'true' || '${{ steps.compiled-inputs-download.outcome }}' == 'success' ]]; then
             actual=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)
             test "$actual" = "$(cat Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256)"
             ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
@@ -261,6 +292,17 @@ jobs:
             apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+      - name: Retain short-lived exact compiled inputs outside the eviction cache
+        if: ${{ steps.admit.outputs.ready == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-core-inputs-v1-${{ steps.toolchain.outputs.fingerprint }}-${{ steps.toolchain.outputs.source-digest }}
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 3
@@ -302,6 +344,7 @@ jobs:
           set -euo pipefail
           fingerprint=$({ xcodebuild -version; xcrun --sdk iphonesimulator --show-sdk-version; xcrun --sdk macosx --show-sdk-version; } | shasum -a 256 | awk '{print $1}')
           echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+          echo "source-digest=$(../../packages/healthmd-core-rust/scripts/apple-source-digest.sh)" >> "$GITHUB_OUTPUT"
       - id: shared-core-cache
         if: ${{ needs.probe-shared-core.outputs.cache-hit == 'false' }}
         name: Restore exact-source shared-core cache
@@ -360,6 +403,17 @@ jobs:
             apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+      - name: Retain short-lived exact compiled inputs outside the eviction cache
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-core-inputs-v1-${{ steps.toolchain.outputs.fingerprint }}-${{ steps.toolchain.outputs.source-digest }}
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 3

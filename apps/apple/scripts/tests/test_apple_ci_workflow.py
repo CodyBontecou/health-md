@@ -116,7 +116,24 @@ class WorkflowRoutingTests(unittest.TestCase):
         self.assertIn("needs: [changes, prepare-ui-artifacts]", workers)
         self.assertIn("name: apple-sdk27-shared-core", workers)
         self.assertIn("ios_ui_shards.py run", workers)
-        self.assertNotIn("continue-on-error", workflow)
+        # Only optional cache transport may fail into a fresh cold build. Every
+        # compilation, validation and test step still propagates its failure.
+        download = jobs()["probe-shared-core"].split(
+            "      - name: Restore only prior compiled inputs, never prior qualification receipts\n", 1
+        )[1].split("      - name:", 1)[0]
+        self.assertIn("uses: actions/download-artifact@v4", download)
+        self.assertNotIn("        run:", download)
+        self.assertEqual(download.count("continue-on-error: true"), 1)
+        self.assertNotIn("continue-on-error", workflow.replace(download, ""))
+
+    def test_optional_transport_never_allows_test_failure_suppression(self):
+        from unittest.mock import patch
+        workflow = WORKFLOW.read_text()
+        unsafe = workflow.replace("  ios-native-shards:\n", "  ios-native-shards:\n    continue-on-error: true\n", 1)
+        self.assertNotEqual(unsafe, workflow)
+        with patch.object(Path, "read_text", return_value=unsafe):
+            with self.assertRaises(AssertionError):
+                self.test_all_original_test_commands_and_ui_coverage_remain()
 
     def test_validated_bundle_cache_is_checked_before_native_slice_fanout(self):
         blocks = jobs()
@@ -146,8 +163,8 @@ class WorkflowRoutingTests(unittest.TestCase):
         body = probe.split("      - name: Admit only an exact validated bundle\n", 1)[1]
         body = body.split("        run: |\n", 1)[1].split("      - name:", 1)[0]
         body = "\n".join(line[10:] for line in body.splitlines())
-        for cached, digest, valid_framework in itertools.product(("true", "false"), (True, False), (True, False)):
-            with self.subTest(cached=cached, digest=digest, valid_framework=valid_framework), tempfile.TemporaryDirectory() as tmp:
+        for cached, restored, digest, valid_framework in itertools.product(("true", "false"), ("success", "skipped", "failure"), (True, False), (True, False)):
+            with self.subTest(cached=cached, restored=restored, digest=digest, valid_framework=valid_framework), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 cwd = root / "apps/apple"
                 artifacts = cwd / "Packages/HealthMdCoreRust/Artifacts"
@@ -163,11 +180,11 @@ class WorkflowRoutingTests(unittest.TestCase):
                     path.write_text(script)
                     path.chmod(0o755)
                 output = root / "output"
-                command = body.replace("${{ steps.shared-core-cache.outputs.cache-hit }}", cached)
+                command = body.replace("${{ steps.shared-core-cache.outputs.cache-hit }}", cached).replace("${{ steps.compiled-inputs-download.outcome }}", restored)
                 result = subprocess.run(["bash", "-c", command], cwd=cwd,
                                         env=dict(os.environ, GITHUB_OUTPUT=str(output)), capture_output=True, text=True)
                 recorded = output.read_text() if output.exists() else ""
-                if cached == "false":
+                if cached == "false" and restored != "success":
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertEqual(recorded, "ready=false\n")
                 elif digest and valid_framework:
@@ -176,6 +193,31 @@ class WorkflowRoutingTests(unittest.TestCase):
                 else:
                     self.assertNotEqual(result.returncode, 0)
                     self.assertNotIn("ready=true", recorded)
+
+    def test_eviction_fallback_carries_compilation_inputs_only(self):
+        blocks = jobs()
+        probe = blocks["probe-shared-core"]
+        self.assertIn("actions: read", probe)
+        download = probe.split("        id: compiled-inputs-download", 1)[1].split("      - name:", 1)[0]
+        self.assertIn("continue-on-error: true", download)
+        self.assertIn("path: ${{ runner.temp }}/apple-core-compiled-inputs", download)
+        self.assertIn("promote-apple-core-inputs.py", probe)
+        self.assertEqual(probe.count("continue-on-error: true"), 1)
+
+        self.assertIn("run: python3 .github/scripts/find-apple-core-cache.py", probe)
+        self.assertLess(probe.index("bash scripts/qualify-history-authorization-sdk27.sh"),
+                        probe.index("id: compiled-inputs-download"))
+        for job in ("probe-shared-core", "assemble-shared-core"):
+            block = blocks[job].split("      - name: Retain short-lived exact compiled inputs", 1)[1]
+            self.assertIn("github.event_name == 'push' || github.event_name == 'workflow_dispatch'", block)
+            self.assertIn("apple-core-inputs-v1-${{ steps.toolchain.outputs.fingerprint }}-${{ steps.toolchain.outputs.source-digest }}", block)
+            self.assertIn("HealthmdCore.xcframework", block)
+            self.assertIn(".healthmd-core-source.sha256", block)
+            self.assertNotIn(".healthmd-core-sdk27.txt", block)
+            self.assertIn("retention-days: 3", block)
+        for name in ("Restore binding-generator compilation for a hot bundle", "Check bindings before hot bundle admission"):
+            step = probe.split("      - name: " + name, 1)[1].split("      - name:", 1)[0]
+            self.assertIn("steps.compiled-inputs-download.outcome == 'success'", step)
 
     def test_cold_assembler_requires_complete_consistent_prerequisites(self):
         collector = jobs()["assemble-shared-core"]

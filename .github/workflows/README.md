@@ -50,6 +50,14 @@ independently checks that same path and remains required by the final Apple gate
 Consumers still check source, SDK provenance and framework contents; only a
 validated hit skips native slice fanout. Cancellation prevents new product builds.
 
+When repository cache eviction removes that bundle, the probe can recover only
+compiled inputs from a three-day artifact keyed to the exact core-source digest
+and toolchain. Lookup is bounded to earlier trusted runs of this workflow on the
+same branch (main for PRs). The backup excludes SDK qualification receipts and
+test results. Current-run SDK qualification, binding checks, source-digest and
+complete framework validation still precede admission; missing inputs retain
+the cold build path.
+
 A cache miss builds all five Rust targets (iOS device, both iOS Simulator
 architectures, and both macOS architectures) in parallel with the unchanged
 pinned release profile. Each archive has a source digest, commit, toolchain and
