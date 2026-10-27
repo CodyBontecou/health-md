@@ -137,7 +137,7 @@ Health.md reads sleep records already stored in Apple Health, including records 
 
 ### Why does last night's sleep appear in yesterday's export?
 
-Health.md assigns the session to the day it started. On Tuesday morning, a Monday-night session belongs to Monday. This is the same rule used by the existing sleep-date guide and daily-note workflows.
+Daily sleep summaries use a local noon-to-noon journal window. Monday's window runs from Monday 12:00 to Tuesday 12:00, so sleep from Tuesday 01:00 to 07:30 belongs to Monday's summary even though it began on Tuesday. A Tuesday afternoon nap belongs to Tuesday. Raw source records keep their separate day-ownership rules and original timestamps. See the [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples).
 
 ### Can I export REM, deep, and core sleep separately?
 
