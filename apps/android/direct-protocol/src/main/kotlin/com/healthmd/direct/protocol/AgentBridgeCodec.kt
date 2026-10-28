@@ -183,7 +183,8 @@ object AgentBridgeCodec {
                 value.entries.sortedWith { a, b -> compareCodePoints(a.key, b.key) }
                     .forEachIndexed { index, (key, child) ->
                         if (index > 0) output.append(',')
-                        output.append(quote(key)).append(':')
+                        appendQuoted(key, output)
+                        output.append(':')
                         appendCanonical(child, output)
                     }
                 output.append('}')
@@ -196,7 +197,9 @@ object AgentBridgeCodec {
                 }
                 output.append(']')
             }
-            is JsonPrimitive -> output.append(if (value.isString) quote(value.content) else value.content)
+            is JsonPrimitive -> {
+                if (value.isString) appendQuoted(value.content, output) else output.append(value.content)
+            }
         }
     }
 
@@ -213,21 +216,23 @@ object AgentBridgeCodec {
         return (a.length - i).compareTo(b.length - j)
     }
 
-    private fun quote(value: String): String = buildString {
-        append('"')
+    // Write into the owning canonical buffer; do not allocate/copy a temporary
+    // quoted String for every key and primitive. Validation still visits every unit.
+    private fun appendQuoted(value: String, output: StringBuilder) {
+        output.append('"')
         AgentBridgeChecks.visitText(value, 0, 65536) { c ->
             when (c) {
-                '"' -> append("\\\"")
-                '\\' -> append("\\\\")
-                '\b' -> append("\\b")
-                '\u000c' -> append("\\f")
-                '\n' -> append("\\n")
-                '\r' -> append("\\r")
-                '\t' -> append("\\t")
-                else -> if (c.code < 32) append("\\u%04x".format(c.code)) else append(c)
+                '"' -> output.append("\\\"")
+                '\\' -> output.append("\\\\")
+                '\b' -> output.append("\\b")
+                '\u000c' -> output.append("\\f")
+                '\n' -> output.append("\\n")
+                '\r' -> output.append("\\r")
+                '\t' -> output.append("\\t")
+                else -> if (c.code < 32) output.append("\\u%04x".format(c.code)) else output.append(c)
             }
         }
-        append('"')
+        output.append('"')
     }
 
     internal inline fun <T> sanitized(block: () -> T): T = try {
