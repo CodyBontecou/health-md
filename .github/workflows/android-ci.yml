@@ -417,6 +417,9 @@ jobs:
           cd ../cli
           cargo test --locked -p healthmd-client --test android_live_listener --no-run
 
+      - name: Install and verify the active test system image
+        run: bash scripts/install-ci-system-image.sh
+
       - name: Enable KVM access
         run: sudo chmod 666 /dev/kvm
 

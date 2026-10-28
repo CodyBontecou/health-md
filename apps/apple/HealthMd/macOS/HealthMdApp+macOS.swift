@@ -328,80 +328,74 @@ struct HealthMdApp: App {
         }
     }
 
-    @SceneBuilder
-    var body: some Scene {
-        if TestMode.isUnitTesting {
-            // Mounting runtime views realizes their StateObjects and onAppear
-            // work even when the app's own startup task is suppressed.
-            Window("Health.md Unit Test Host", id: "unit-test-host") {
-                EmptyView()
-            }
-        } else {
-            runtimeScenes
-        }
+    private var mainWindowTitle: LocalizedStringKey {
+        TestMode.isUnitTesting ? "Health.md Unit Test Host" : "Mac Destination"
     }
 
-    @SceneBuilder
-    private var runtimeScenes: some Scene {
-        Window("Mac Destination", id: "main-window") {
-            MacContentView()
-                .environmentObject(schedulingManager)
-                .environmentObject(vaultManager)
-                .environmentObject(advancedSettings)
-                .environmentObject(syncService)
-                .environmentObject(healthDataStore)
-                .environmentObject(encryptedHealthContextManager)
-                .frame(minWidth: 1_100, minHeight: 680)
-                .tint(Color.accent)
-                #if DEBUG
-                .preferredColorScheme(MacMarketingCapture.isActive ? .light : nil)
-                #endif
-                .task {
-                    guard !TestMode.isUnitTesting else { return }
+    var body: some Scene {
+        Window(mainWindowTitle, id: "main-window") {
+            if TestMode.isUnitTesting {
+                EmptyView()
+            } else {
+                MacContentView()
+                    .environmentObject(schedulingManager)
+                    .environmentObject(vaultManager)
+                    .environmentObject(advancedSettings)
+                    .environmentObject(syncService)
+                    .environmentObject(healthDataStore)
+                    .environmentObject(encryptedHealthContextManager)
+                    .frame(minWidth: 1_100, minHeight: 680)
+                    .tint(Color.accent)
                     #if DEBUG
-                    if MacMarketingCapture.isActive {
-                        MacMarketingCapture.configure(
-                            syncService: syncService,
-                            vaultManager: vaultManager
-                        )
-                        await MacMarketingCapture.captureWindowAndTerminate(
-                            syncService: syncService,
-                            vaultManager: vaultManager
-                        )
-                        return
+                    .preferredColorScheme(MacMarketingCapture.isActive ? .light : nil)
+                    #endif
+                    .task {
+                        guard !TestMode.isUnitTesting else { return }
+                        #if DEBUG
+                        if MacMarketingCapture.isActive {
+                            MacMarketingCapture.configure(
+                                syncService: syncService,
+                                vaultManager: vaultManager
+                            )
+                            await MacMarketingCapture.captureWindowAndTerminate(
+                                syncService: syncService,
+                                vaultManager: vaultManager
+                            )
+                            return
+                        }
+                        #endif
+                        setupSyncMessageHandler()
+                        setupControlServer()
+                        syncService.startBrowsing()
+                        syncService.restoreManualIPServerIfNeeded()
+                        #if DEBUG
+                        MacExportPerformanceLabController.shared.startMonitoring()
+                        #endif
+                    }
+                    #if DEBUG
+                    .onOpenURL { url in
+                        _ = MacExportPerformanceLabController.shared.handle(url: url)
                     }
                     #endif
-                    setupSyncMessageHandler()
-                    setupControlServer()
-                    syncService.startBrowsing()
-                    syncService.restoreManualIPServerIfNeeded()
-                    #if DEBUG
-                    MacExportPerformanceLabController.shared.startMonitoring()
-                    #endif
-                }
-                #if DEBUG
-                .onOpenURL { url in
-                    _ = MacExportPerformanceLabController.shared.handle(url: url)
-                }
-                #endif
-                .onChange(of: syncService.connectionState) { _, newState in
-                    scheduleConnectionStateSideEffects(for: newState)
-                }
-                .onChange(of: vaultManager.vaultURL) { _, _ in
-                    scheduleMacDestinationStatusPublication()
-                }
-                .onChange(of: vaultManager.destinationState) { _, _ in
-                    scheduleMacDestinationStatusPublication()
-                }
-                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-                    guard !TestMode.isUnitTesting else { return }
-                    vaultManager.refreshVaultAccess()
-                }
-                .onChange(of: syncService.lastError) { _, _ in
-                    scheduleMacDestinationStatusPublication()
-                }
-                .withWindowManagerBridge()
-                .gradientMatchedTitleBar()
+                    .onChange(of: syncService.connectionState) { _, newState in
+                        scheduleConnectionStateSideEffects(for: newState)
+                    }
+                    .onChange(of: vaultManager.vaultURL) { _, _ in
+                        scheduleMacDestinationStatusPublication()
+                    }
+                    .onChange(of: vaultManager.destinationState) { _, _ in
+                        scheduleMacDestinationStatusPublication()
+                    }
+                    .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                        guard !TestMode.isUnitTesting else { return }
+                        vaultManager.refreshVaultAccess()
+                    }
+                    .onChange(of: syncService.lastError) { _, _ in
+                        scheduleMacDestinationStatusPublication()
+                    }
+                    .withWindowManagerBridge()
+                    .gradientMatchedTitleBar()
+            }
         }
         #if DEBUG
         .defaultSize(
@@ -418,25 +412,29 @@ struct HealthMdApp: App {
         }
 
         MenuBarExtra("Health.md", systemImage: "heart.text.square") {
-            MacMenuBarView()
-                .environmentObject(schedulingManager)
-                .environmentObject(vaultManager)
-                .environmentObject(advancedSettings)
-                .environmentObject(syncService)
-                .environmentObject(healthDataStore)
-                .tint(Color.accent)
+            if !TestMode.isUnitTesting {
+                MacMenuBarView()
+                    .environmentObject(schedulingManager)
+                    .environmentObject(vaultManager)
+                    .environmentObject(advancedSettings)
+                    .environmentObject(syncService)
+                    .environmentObject(healthDataStore)
+                    .tint(Color.accent)
+            }
         }
         .menuBarExtraStyle(.window)
 
         Settings {
-            MacSettingsWindow()
-                .environmentObject(schedulingManager)
-                .environmentObject(vaultManager)
-                .environmentObject(advancedSettings)
-                .environmentObject(syncService)
-                .environmentObject(healthDataStore)
-                .environmentObject(encryptedHealthContextManager)
-                .tint(Color.accent)
+            if !TestMode.isUnitTesting {
+                MacSettingsWindow()
+                    .environmentObject(schedulingManager)
+                    .environmentObject(vaultManager)
+                    .environmentObject(advancedSettings)
+                    .environmentObject(syncService)
+                    .environmentObject(healthDataStore)
+                    .environmentObject(encryptedHealthContextManager)
+                    .tint(Color.accent)
+            }
         }
     }
 

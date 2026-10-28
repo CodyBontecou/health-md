@@ -144,6 +144,11 @@ summed runner work. F-Droid and Android Wear remain paused as described below.
 
 ## Android CI selection and accessibility coverage
 
+The active API 35 Google APIs x86_64 image is installed before emulator startup.
+Its installer retries the specific corrupt-archive download warning once, then
+verifies API, tag, ABI and boot payloads. Other installer errors and all test
+failures remain fatal; this does not change the device matrix or clear SDK state.
+
 Play JVM qualification retains debug, release and E2E variants. Each variant has
 three fresh lanes: default Gradle discovery for all remaining classes, plus two
 halves of the slow native configuration class. The halves come from the live
