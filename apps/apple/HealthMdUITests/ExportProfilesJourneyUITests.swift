@@ -256,6 +256,17 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             app.buttons[label].firstMatch.tap()
             app.buttons["Save"].firstMatch.tap()
             XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5))
+            // Saving Today Refresh can request notification permission asynchronously.
+            // Resolve that exact system prompt before reopening the sheet: handling it
+            // during the next scroll left XCTest retrying a stale app hierarchy.
+            let notificationAlert = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+                .alerts["“Health.md” Would Like to Send You Notifications"]
+            if notificationAlert.waitUntilExists(timeout: 5) {
+                let allow = notificationAlert.buttons["Allow"]
+                XCTAssertTrue(allow.exists, "the notification prompt must expose Allow")
+                allow.tap()
+                XCTAssertTrue(notificationAlert.waitForNonExistence(timeout: 5))
+            }
             editSchedule.tap()
             XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5))
             let savedInterval = app.buttons["Refresh Interval"].firstMatch
