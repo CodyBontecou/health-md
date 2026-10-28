@@ -74,8 +74,9 @@ jobs:
     name: Resolve release SHA
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # GitHub only exposes draft releases to tokens with push access.
     permissions:
-      contents: read
+      contents: write
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
       tag: ${{ steps.resolve.outputs.tag }}
