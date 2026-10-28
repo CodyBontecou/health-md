@@ -1,0 +1,2196 @@
+{
+  "data" : {
+    "type" : "inAppPurchasePriceSchedules",
+    "id" : "6761057963",
+    "relationships" : {
+      "baseTerritory" : {
+        "links" : {
+          "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules/6761057963/relationships/baseTerritory",
+          "related" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules/6761057963/baseTerritory"
+        }
+      },
+      "manualPrices" : {
+        "meta" : {
+          "paging" : {
+            "total" : 154,
+            "limit" : 10
+          }
+        },
+        "data" : [ {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBRkciLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBR08iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBTEIiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBUkciLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBUk0iLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBVEciLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBVVQiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBWkUiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCRUwiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCRU4iLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCRkEiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCR1IiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCSFMiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCSUgiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCTFIiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCTFoiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCT0wiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCUkEiLCJwIjoiMTAyMTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCUkIiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCVE4iLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCV0EiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDSEwiLCJwIjoiMTAyNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDSE4iLCJwIjoiMTAxNTAiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDSVYiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDTVIiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDT0QiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDT0ciLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDT0wiLCJwIjoiMTAxNDgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDUFYiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDUkkiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDWU0iLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDWVAiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDWkUiLCJwIjoiMTAxNTgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJERVUiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJETUEiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJET00iLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJEWkEiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFQ1UiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFR1kiLCJwIjoiMTAzMDkiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFU1AiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFU1QiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGSU4iLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGSkkiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGUkEiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGU00iLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHQUIiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHQlIiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHRU8iLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHSEEiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHTUIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHTkIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHUkMiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHUkQiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHVE0iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHVVkiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJITkQiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJIUlYiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJIVU4iLCJwIjoiMTAxODAiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJRE4iLCJwIjoiMTAxODYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJTkQiLCJwIjoiMTAxNzQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJUlEiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJU1IiLCJwIjoiMTAxNDgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJVEEiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJKQU0iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJKT1IiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJKUE4iLCJwIjoiMTAyMTEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLQVoiLCJwIjoiMTAyNzEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLRU4iLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLR1oiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLSE0iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLTkEiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLT1IiLCJwIjoiMTAyMzQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLV1QiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQU8iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQk4iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQlIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQlkiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQ0EiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMS0EiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMVFUiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMVkEiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNQVIiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNREEiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNREciLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNRFYiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNRVgiLCJwIjoiMTAxOTUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNS0QiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTEkiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTFQiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTVIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTkUiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTkciLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNT1oiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNUlQiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNVVMiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNV0kiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNWVMiLCJwIjoiMTAxOTMiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOQU0iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJORVIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOR0EiLCJwIjoiMTAxOTQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOSUMiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOUEwiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOUlUiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOWkwiLCJwIjoiMTAyMjYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJPTU4iLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQQUsiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQQU4iLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQRVIiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQSEwiLCJwIjoiMTAxNDkiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQTFciLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQTkciLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQT0wiLCJwIjoiMTAxOTUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQUlQiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQUlkiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJST1UiLCJwIjoiMTAyMTYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJSVVMiLCJwIjoiMTAzMjYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJSV0EiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTQVUiLCJwIjoiMTAyNDAiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTRU4iLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTTEIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTTEUiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTTFYiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTUkIiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVFAiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVVIiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVksiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVk4iLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTV0UiLCJwIjoiMTAxMzYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTV1oiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTWUMiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUQ0EiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUQ0QiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUSEEiLCJwIjoiMTAxMTkiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUSksiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUS00iLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUT04iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUVE8iLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUVU4iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUVVIiLCJwIjoiMTAzODQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUWkEiLCJwIjoiMTAxNDUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVR0EiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVS1IiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVUlkiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVU0EiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVWkIiLCJwIjoiMTAxMTQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWQ1QiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWRU4iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWTk0iLCJwIjoiMTAxNzYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWVVQiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJYS1MiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJZRU0iLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJaQUYiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJaTUIiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        }, {
+          "type" : "inAppPurchasePrices",
+          "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJaV0UiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+        } ],
+        "links" : {
+          "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules/6761057963/relationships/manualPrices",
+          "related" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules/6761057963/manualPrices"
+        }
+      },
+      "automaticPrices" : {
+        "links" : {
+          "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules/6761057963/relationships/automaticPrices",
+          "related" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules/6761057963/automaticPrices"
+        }
+      }
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules/6761057963"
+    }
+  },
+  "included" : [ {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBRkciLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBRkciLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBR08iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBR08iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBTEIiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBTEIiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBUkciLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBUkciLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBUk0iLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBUk0iLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBVEciLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBVEciLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBVVQiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBVVQiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBWkUiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJBWkUiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCRUwiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCRUwiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCRU4iLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCRU4iLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCRkEiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCRkEiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCR1IiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCR1IiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCSFMiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCSFMiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCSUgiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCSUgiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCTFIiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCTFIiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCTFoiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCTFoiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCT0wiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCT0wiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCUkEiLCJwIjoiMTAyMTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCUkEiLCJwIjoiMTAyMTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCUkIiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCUkIiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCVE4iLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCVE4iLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCV0EiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJCV0EiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDSEwiLCJwIjoiMTAyNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDSEwiLCJwIjoiMTAyNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDSE4iLCJwIjoiMTAxNTAiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDSE4iLCJwIjoiMTAxNTAiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDSVYiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDSVYiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDTVIiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDTVIiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDT0QiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDT0QiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDT0ciLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDT0ciLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDT0wiLCJwIjoiMTAxNDgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDT0wiLCJwIjoiMTAxNDgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDUFYiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDUFYiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDUkkiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDUkkiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDWU0iLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDWU0iLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDWVAiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDWVAiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDWkUiLCJwIjoiMTAxNTgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJDWkUiLCJwIjoiMTAxNTgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJERVUiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJERVUiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJETUEiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJETUEiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJET00iLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJET00iLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJEWkEiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJEWkEiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFQ1UiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFQ1UiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFR1kiLCJwIjoiMTAzMDkiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFR1kiLCJwIjoiMTAzMDkiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFU1AiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFU1AiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFU1QiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJFU1QiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGSU4iLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGSU4iLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGSkkiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGSkkiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGUkEiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGUkEiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGU00iLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJGU00iLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHQUIiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHQUIiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHQlIiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHQlIiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHRU8iLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHRU8iLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHSEEiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHSEEiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHTUIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHTUIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHTkIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHTkIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHUkMiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHUkMiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHUkQiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHUkQiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHVE0iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHVE0iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHVVkiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJHVVkiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJITkQiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJITkQiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJIUlYiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJIUlYiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJIVU4iLCJwIjoiMTAxODAiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJIVU4iLCJwIjoiMTAxODAiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJRE4iLCJwIjoiMTAxODYiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJRE4iLCJwIjoiMTAxODYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJTkQiLCJwIjoiMTAxNzQiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJTkQiLCJwIjoiMTAxNzQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJUlEiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJUlEiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJU1IiLCJwIjoiMTAxNDgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJU1IiLCJwIjoiMTAxNDgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJVEEiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJJVEEiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJKQU0iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJKQU0iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJKT1IiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJKT1IiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJKUE4iLCJwIjoiMTAyMTEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJKUE4iLCJwIjoiMTAyMTEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLQVoiLCJwIjoiMTAyNzEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLQVoiLCJwIjoiMTAyNzEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLRU4iLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLRU4iLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLR1oiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLR1oiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLSE0iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLSE0iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLTkEiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLTkEiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLT1IiLCJwIjoiMTAyMzQiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLT1IiLCJwIjoiMTAyMzQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLV1QiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJLV1QiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQU8iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQU8iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQk4iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQk4iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQlIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQlIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQlkiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQlkiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQ0EiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMQ0EiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMS0EiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMS0EiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMVFUiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMVFUiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMVkEiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJMVkEiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNQVIiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNQVIiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNREEiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNREEiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNREciLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNREciLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNRFYiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNRFYiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNRVgiLCJwIjoiMTAxOTUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNRVgiLCJwIjoiMTAxOTUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNS0QiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNS0QiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTEkiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTEkiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTFQiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTFQiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTVIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTVIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTkUiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTkUiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTkciLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNTkciLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNT1oiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNT1oiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNUlQiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNUlQiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNVVMiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNVVMiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNV0kiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNV0kiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNWVMiLCJwIjoiMTAxOTMiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJNWVMiLCJwIjoiMTAxOTMiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOQU0iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOQU0iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJORVIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJORVIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOR0EiLCJwIjoiMTAxOTQiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOR0EiLCJwIjoiMTAxOTQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOSUMiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOSUMiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOUEwiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOUEwiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOUlUiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOUlUiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOWkwiLCJwIjoiMTAyMjYiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJOWkwiLCJwIjoiMTAyMjYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJPTU4iLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJPTU4iLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQQUsiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQQUsiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQQU4iLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQQU4iLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQRVIiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQRVIiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQSEwiLCJwIjoiMTAxNDkiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQSEwiLCJwIjoiMTAxNDkiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQTFciLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQTFciLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQTkciLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQTkciLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQT0wiLCJwIjoiMTAxOTUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQT0wiLCJwIjoiMTAxOTUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQUlQiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQUlQiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQUlkiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJQUlkiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJST1UiLCJwIjoiMTAyMTYiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJST1UiLCJwIjoiMTAyMTYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJSVVMiLCJwIjoiMTAzMjYiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJSVVMiLCJwIjoiMTAzMjYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJSV0EiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJSV0EiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTQVUiLCJwIjoiMTAyNDAiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTQVUiLCJwIjoiMTAyNDAiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTRU4iLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTRU4iLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTTEIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTTEIiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTTEUiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTTEUiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTTFYiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTTFYiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTUkIiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTUkIiLCJwIjoiMTAxNTIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVFAiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVFAiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVVIiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVVIiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVksiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVksiLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVk4iLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTVk4iLCJwIjoiMTAxNjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTV0UiLCJwIjoiMTAxMzYiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTV0UiLCJwIjoiMTAxMzYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTV1oiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTV1oiLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTWUMiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJTWUMiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUQ0EiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUQ0EiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUQ0QiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUQ0QiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUSEEiLCJwIjoiMTAxMTkiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUSEEiLCJwIjoiMTAxMTkiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUSksiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUSksiLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUS00iLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUS00iLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUT04iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUT04iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUVE8iLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUVE8iLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUVU4iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUVU4iLCJwIjoiMTAxMDEiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUVVIiLCJwIjoiMTAzODQiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUVVIiLCJwIjoiMTAzODQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUWkEiLCJwIjoiMTAxNDUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJUWkEiLCJwIjoiMTAxNDUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVR0EiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVR0EiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVS1IiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVS1IiLCJwIjoiMTAxMzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVUlkiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVUlkiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVU0EiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVU0EiLCJwIjoiMTAxNzciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVWkIiLCJwIjoiMTAxMTQiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJVWkIiLCJwIjoiMTAxMTQiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWQ1QiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWQ1QiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWRU4iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWRU4iLCJwIjoiMTAwODgiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWTk0iLCJwIjoiMTAxNzYiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWTk0iLCJwIjoiMTAxNzYiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWVVQiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJWVVQiLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJYS1MiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJYS1MiLCJwIjoiMTAxMjciLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJZRU0iLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJZRU0iLCJwIjoiMTAwNjIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJaQUYiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJaQUYiLCJwIjoiMTAxNDIiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJaTUIiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJaTUIiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  }, {
+    "type" : "inAppPurchasePrices",
+    "id" : "eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJaV0UiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ",
+    "attributes" : {
+      "startDate" : null,
+      "endDate" : null,
+      "manual" : true
+    },
+    "links" : {
+      "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePrices/eyJzIjoiNjc2MTA1Nzk2MyIsInQiOiJaV0UiLCJwIjoiMTAwNzUiLCJzZCI6MC4wLCJlZCI6MC4wfQ"
+    }
+  } ],
+  "links" : {
+    "self" : "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules"
+  }
+}

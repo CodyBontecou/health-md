@@ -1,0 +1,78 @@
+{
+  "prepared": "2026-10-27",
+  "fictionalDataOnly": true,
+  "assets": [
+    {
+      "file": "assets/csv-enabled.webp",
+      "sourceUrl": "https://healthmd.app/assets/guides/first-csv-export/csv-enabled.webp",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 90930,
+      "sha256": "24dde03cbb1c7258c56aa65fee68e50756a986b9d8239c29a2481856cad8e73d"
+    },
+    {
+      "file": "assets/csv-preview.webp",
+      "sourceUrl": "https://healthmd.app/assets/guides/first-csv-export/csv-preview.webp",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 45724,
+      "sha256": "ec5ef714423508251b39a2b246cf17f064df0a8d380063615c4fcacd8e63148b"
+    },
+    {
+      "file": "assets/csv-written.webp",
+      "sourceUrl": "https://healthmd.app/assets/guides/first-csv-export/csv-written.webp",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 99500,
+      "sha256": "17c8f873e589831a632ac2be02e93a1e201876f4449baf0bbc4fb3ef177e7b05"
+    },
+    {
+      "file": "assets/csv-opened.webp",
+      "sourceUrl": "https://healthmd.app/assets/guides/first-csv-export/csv-opened.webp",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 49394,
+      "sha256": "aa7a4763fd49a5fdbffaf920683577c6a30d1f65c37e78742c761011000a07fc"
+    },
+    {
+      "file": "assets/2026-10-26.csv",
+      "sourceUrl": "https://healthmd.app/assets/guides/first-csv-export/2026-10-26.csv",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 658,
+      "sha256": "f850d45b125ad045ca7a188362e1ec1775098a0d5e856e7d53fb56e0c3a4f643"
+    },
+    {
+      "file": "assets/healthmd-spreadsheet-sample.zip",
+      "sourceUrl": "https://healthmd.app/assets/downloads/healthmd-spreadsheet-sample.zip",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 37891,
+      "sha256": "c199b5af916ea6e5a8b1ec77443ec9c6846876ee32bfa8fa87fe95a9caa74a59"
+    },
+    {
+      "file": "assets/healthmd-obsidian-starter.zip",
+      "sourceUrl": "https://healthmd.app/assets/downloads/healthmd-obsidian-starter.zip",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 71835,
+      "sha256": "a60957529a0aaca6ecdb685ac19bb4c3a3e49a4e3303a4578cec05fba5727a7e"
+    },
+    {
+      "file": "assets/workbook-preview.png",
+      "sourceUrl": "https://healthmd.app/assets/downloads/spreadsheet-sample/workbook-preview.png",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 216293,
+      "sha256": "a5cc54df7be8b65d98ca36c1e9660b504e45147556e236e3fe6c5908c3f4a962"
+    },
+    {
+      "file": "assets/healthmd-starter-preview.svg",
+      "sourceUrl": "https://healthmd.app/assets/downloads/healthmd-starter-preview.svg",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 6046,
+      "sha256": "2035cc3bfdfbe142ad6302e54aee6807a7bbd5719f099f1cf4c79edd32a2efcc"
+    },
+    {
+      "file": "assets/Geist-Variable.woff2",
+      "sourceUrl": "https://healthmd.app/assets/fonts/Geist-Variable.woff2",
+      "sourceCommit": "4a1f6214a935bfcdce30301d23902ef31335a9dc",
+      "bytes": 56800,
+      "sha256": "28258d0621216948416a859d32487ab6ad1c9effa0d08795698e70be3c917630",
+      "licenseFile": "assets/Geist-OFL.txt",
+      "licenseSourceUrl": "https://raw.githubusercontent.com/vercel/geist-font/main/OFL.txt"
+    }
+  ]
+}

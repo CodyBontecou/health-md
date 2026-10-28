@@ -43,6 +43,7 @@
 		E7A72632889E567841E8160A /* HealthMdWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A94E3DD3CBA29DE5940F397 /* HealthMdWatchWidgets.appex */; platformFilter = watchos; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F0A09B888CE578A656870A5E /* HealthWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AEFB0CEDB2F557D759180ED /* HealthWidgetSnapshot.swift */; };
 		FCA3C8D53C123B834E3FB77C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 21388098C540E1DD9899E9C7 /* Foundation.framework */; };
+		44D4D3D82018428CBCFFBC75 /* ScrawlKit in Frameworks */ = {isa = PBXBuildFile; productRef = AC119E5D78AB42968213BDC0 /* ScrawlKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -318,6 +319,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				44D4D3D82018428CBCFFBC75 /* ScrawlKit in Frameworks */,
 				62D100022F60B00000A10000 /* Notelet in Frameworks */,
 				C0A200000000000000000012 /* HealthMdCoreRust in Frameworks */,
 				D1EC70000000000000000012 /* HealthMdConnectionCore in Frameworks */,
@@ -580,6 +582,7 @@
 			);
 			name = HealthMd;
 			packageProductDependencies = (
+				AC119E5D78AB42968213BDC0 /* ScrawlKit */,
 				62D100012F60B00000A10000 /* Notelet */,
 				C0A200000000000000000011 /* HealthMdCoreRust */,
 				D1EC70000000000000000011 /* HealthMdConnectionCore */,
@@ -764,6 +767,7 @@
 			mainGroup = 624B99E62F15D70300F9103F;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				25CB6263A21849E7AF23E49D /* XCRemoteSwiftPackageReference "scrawl" */,
 				62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */,
 				C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */,
 				D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */,
@@ -1132,7 +1136,7 @@
 				CURRENT_PROJECT_VERSION = 202610071220;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 3.4.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1457,7 +1461,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1511,6 +1515,7 @@
 		62A1B0092F50A00100000009 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 202610071220;
@@ -1732,7 +1737,7 @@
 				CURRENT_PROJECT_VERSION = 202610071220;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 3.4.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdUITests;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -1810,7 +1815,7 @@
 				CURRENT_PROJECT_VERSION = 202610071220;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 3.4.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codybontecou.HealthMdUITests;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -2066,7 +2071,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2433,6 +2438,14 @@
 				minimumVersion = 1.1.0;
 			};
 		};
+		25CB6263A21849E7AF23E49D /* XCRemoteSwiftPackageReference "scrawl" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kitlangton/scrawl";
+			requirement = {
+				kind = revision;
+				revision = 6d4fa333475ef5170c4df683e306480f8618b95a;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -2480,6 +2493,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */;
 			productName = HealthMdDirectClientCore;
+		};
+		AC119E5D78AB42968213BDC0 /* ScrawlKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 25CB6263A21849E7AF23E49D /* XCRemoteSwiftPackageReference "scrawl" */;
+			productName = ScrawlKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
