@@ -140,8 +140,7 @@ fn native_record(
     day: &RenderDay,
     root: &OrderedJsonValue,
 ) -> Result<Vec<u8>, RenderError> {
-    let value: Value = serde_json::from_slice(&format::kotlin_ordered_json(root)?)
-        .map_err(|_| RenderError::PresentationMismatch)?;
+    let value = super::public_numbers::exact_ordered_value(root)?;
     super::validate_document_identity(config, &value)?;
     // No local -> UTC relabeling, imperial -> metric metadata swap, or owner-date reinterpretation.
     // Native producers must supply a prepared canonical document while retaining exact instants.
@@ -158,7 +157,7 @@ fn native_record(
                 .get(key)
                 .ok_or(RenderError::PresentationMismatch)?;
         }
-        if presented != &metric.public_value {
+        if !super::public_numbers::exact_value_matches(presented, &metric.public_value) {
             return Err(RenderError::PresentationMismatch);
         }
     }

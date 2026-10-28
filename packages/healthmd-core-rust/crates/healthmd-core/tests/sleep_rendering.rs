@@ -146,7 +146,13 @@ fn successor_render_binding_keeps_exact_binary64_round_trips() {
             )
             .unwrap();
             session
-                .process_batch(&serde_json::to_vec(&batches[0]).unwrap(), || false)
+                .process_batch(
+                    &String::from_utf8(serde_json::to_vec(&batches[0]).unwrap())
+                        .unwrap()
+                        .replace("\"public_value\":-0.0", "\"public_value\":-0")
+                        .into_bytes(),
+                    || false,
+                )
                 .expect("successor public number must match the exact completed binary64 value");
             session.finish(|| false).unwrap();
         }
@@ -677,6 +683,72 @@ fn android_successor_envelope_v2_retains_authority_without_apple_external_record
         )
         .is_err()
     );
+}
+
+#[test]
+fn successor_native_api_attestation_keeps_exact_decimals_and_rejects_one_bit_changes() {
+    for (input, source) in [
+        (
+            apple_successor_input as fn() -> (Value, Value, Vec<Value>),
+            "ios",
+        ),
+        (
+            android_successor_input as fn() -> (Value, Value, Vec<Value>),
+            "android",
+        ),
+    ] {
+        for value in [f64::from_bits(0x3fed_d40b_a583_eb65), -0.0] {
+            let (mut config, mut semantic, mut batches) = input();
+            let key = semantic["days"][0]["values"][0]["output_key"].clone();
+            semantic["days"][0]["values"][0]["value"]["number"] =
+                json!({"representation":"binary64", "bits":format!("{:016x}",value.to_bits())});
+            let metric = batches[0]["days"][0]["metrics"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|metric| metric["output_key"] == key)
+                .unwrap();
+            metric["public_value"] = json!(value);
+            let path: Vec<String> = metric["json_path"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|part| part.as_str().unwrap().to_owned())
+                .collect();
+            config["formats"] = json!(["json"]);
+            let local = render(&config, &semantic, &batches);
+            let mut native: Value = serde_json::from_slice(&local.items[0].content).unwrap();
+            let pointer = format!("/{}", path.join("/"));
+            *native.pointer_mut(&pointer).unwrap() = json!(value);
+            let keys: Vec<Value> = batches[0]["days"][0]["metrics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|metric| metric["output_key"].clone())
+                .collect();
+            batches[0]["days"][0]["profile_documents"] = json!({"semantic_output_keys":keys,"json_root":ordered(&native),"markdown_body":null,"csv_rows":null});
+            enable_successor_api(&mut config, source);
+            render(&config, &semantic, &batches);
+            *native.pointer_mut(&pointer).unwrap() = json!(if value == 0.0 {
+                0.0
+            } else {
+                f64::from_bits(value.to_bits() ^ 1)
+            });
+            batches[0]["days"][0]["profile_documents"]["json_root"] = ordered(&native);
+            let mut session = RenderSession::from_json(
+                &serde_json::to_vec(&config).unwrap(),
+                &serde_json::to_vec(&semantic).unwrap(),
+            )
+            .unwrap();
+            session
+                .process_batch(&serde_json::to_vec(&batches[0]).unwrap(), || false)
+                .unwrap();
+            assert_eq!(
+                session.finish(|| false),
+                Err(RenderError::PresentationMismatch)
+            );
+        }
+    }
 }
 
 fn enable_successor_api(config: &mut Value, source: &str) {

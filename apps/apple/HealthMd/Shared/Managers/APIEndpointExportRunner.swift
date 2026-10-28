@@ -62,7 +62,8 @@ struct APIEndpointExportRunner {
         let pin: AppleExportEnginePin
         let settingsSnapshot: ExportSettingsSnapshot
         let destination: APIExportDestinationSnapshot
-        let nativePlan: NativeExportArtifactPlan
+        /// Comparison authority for historical shadow work; successor Rust work has none.
+        let nativePlan: NativeExportArtifactPlan?
         /// Present when the shared renderer completed, including shadow mode where it is never sent.
         let rustPlan: NativeExportArtifactPlan?
         let selectedPlan: NativeExportArtifactPlan
@@ -104,14 +105,16 @@ struct APIEndpointExportRunner {
         ) throws {
             sourceDate = outcome.sourceDate
             record = outcome.record
-            recordArtifact = try outcome.record.map {
-                // HealthKitDailyCapture already applied this exact selection.
-                // Stream compact canonical bytes once into an immutable spool.
-                try APIExportClient.makeSelectedRecordJSONArtifact(
-                    $0,
-                    settings: settings,
-                    directoryURL: artifactDirectory
-                )
+            if settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds {
+                recordArtifact = nil
+            } else {
+                recordArtifact = try outcome.record.map {
+                    // HealthKitDailyCapture already applied this exact selection.
+                    // Stream compact canonical bytes once into an immutable spool.
+                    try APIExportClient.makeSelectedRecordJSONArtifact(
+                        $0, settings: settings, directoryURL: artifactDirectory
+                    )
+                }
             }
             failure = outcome.failure
             failureData = try outcome.failure.map {
@@ -388,6 +391,9 @@ struct APIEndpointExportRunner {
         if settings.executionAppleExportEngineAuthorityIsFrozen {
             return .legacy
         }
+        if (settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.pinned.wrappedValue)?.sleepDayAttribution == .morningEnds {
+            return .rust
+        }
         return policyResolver.requestedModeForNewOperation(profile: .appleHealthDataV8)
     }
 
@@ -411,10 +417,15 @@ struct APIEndpointExportRunner {
         diagnosticSink: @escaping EngineDiagnosticSink = ShadowExportEvidenceRecorder.productionSink,
         onProgress: ProgressHandler? = nil
     ) async throws -> PreparationResolution {
-        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil
+        let captureContext = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.pinned.wrappedValue
+        let wakeDate = captureContext?.sleepDayAttribution == .morningEnds
+        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate
             ? requestedMode(settings: settings, policyResolver: policyResolver)
             : .legacy
-        guard requestedMode != .legacy else { return .legacy }
+        guard requestedMode != .legacy else {
+            if wakeDate { throw EngineError.rustPlanningFailed }
+            return .legacy
+        }
         return try await prepareNonLegacy(
             dates: dates,
             settings: settings,
@@ -494,7 +505,7 @@ struct APIEndpointExportRunner {
         }
     }
 
-    private static func exportEngineAware(
+    static func exportEngineAware(
         dates: [Date],
         settings: AdvancedExportSettings,
         destination: APIExportDestinationSnapshot,
@@ -545,10 +556,13 @@ struct APIEndpointExportRunner {
         // a provider can be called. Persisted pins, including explicit nil/legacy authority, take
         // precedence over current rollout defaults. Provider-bearing v8 days remain
         // native-authoritative so the typed section cannot be dropped by an older path.
-        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil
+        let wakeDate = (settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.pinned.wrappedValue)?.sleepDayAttribution == .morningEnds
+            || settings.executionAppleExportEnginePin?.isWakeDate == true
+        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate
             ? requestedMode(settings: settings, policyResolver: policyResolver)
             : .legacy
         guard requestedMode != .legacy else {
+            if wakeDate { return failureResult(dates: normalizedDates, reason: .unknown, message: EngineError.rustPlanningFailed.rawValue) }
             return await exportLegacyPrepared(
                 dates: dates,
                 settings: settings,
@@ -640,22 +654,38 @@ struct APIEndpointExportRunner {
         diagnosticSink: @escaping EngineDiagnosticSink,
         onProgress: ProgressHandler?
     ) async throws -> PreparationResolution {
-        let calendarTimeZoneIdentifier = engineTimeZoneIdentifier(calendarTimeZone)
         let suppliedPin = settings.executionAppleExportEnginePin
+        let captureContext = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.pinned.wrappedValue
+        let wakeDate = captureContext?.sleepDayAttribution == .morningEnds || suppliedPin?.isWakeDate == true
+        // Historical API v8 normalized GMT to UTC. Successor work keeps the exact
+        // captured IANA authority used by its data and pin, including GMT aliases.
+        let calendarTimeZoneIdentifier = wakeDate
+            ? captureContext?.calendarTimeZoneIdentifier ?? suppliedPin?.calendarTimeZoneIdentifier ?? engineTimeZoneIdentifier(calendarTimeZone)
+            : engineTimeZoneIdentifier(calendarTimeZone)
+        if wakeDate {
+            guard requestedMode == .rust, let captureContext,
+                  captureContext.sleepDayAttribution == .morningEnds, captureContext.exportProfileID == "apple-v11",
+                  captureContext.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier,
+                  captureContext.timeZone.identifier == calendarTimeZone.identifier,
+                  !settings.executionAppleExportEngineAuthorityIsFrozen || suppliedPin != nil,
+                  suppliedPin == nil || suppliedPin?.hasExplicitWakeDateContracts == true else {
+                throw EngineError.rustPlanningFailed
+            }
+        }
         guard requestedMode == .shadow || requestedMode == .rust,
               AppleExportEnginePin.isIANAIdentifier(calendarTimeZoneIdentifier) else {
-            if suppliedPin != nil { throw EngineError.rustPlanningFailed }
+            if suppliedPin != nil || wakeDate { throw EngineError.rustPlanningFailed }
             return .legacy
         }
         if let suppliedPin,
            suppliedPin.calendarTimeZoneIdentifier != calendarTimeZoneIdentifier {
             throw EngineError.rustPlanningFailed
         }
-        if requestedMode == .rust {
+        if requestedMode == .rust && !wakeDate {
             // Apple-v8 API records still require native profile-document serialization for exact
             // shipped bytes. New Rust requests resolve wholly to legacy before capture/core work;
             // an already-persisted Rust promise fails closed instead of changing authority.
-            if suppliedPin != nil { throw EngineError.rustPlanningFailed }
+            if suppliedPin != nil || wakeDate { throw EngineError.rustPlanningFailed }
             return .legacy
         }
         var calendar = Calendar(identifier: .gregorian)
@@ -672,14 +702,15 @@ struct APIEndpointExportRunner {
             // The packaged API renderer's bounded input contract is an operation-level gate. Never
             // mix native and Rust batches to work around it. Pinned work fails rather than changing
             // authority during resume.
-            if suppliedPin != nil { throw EngineError.rustPlanningFailed }
+            if suppliedPin != nil || wakeDate { throw EngineError.rustPlanningFailed }
             return .legacy
         }
 
-        let settingsSnapshot = ExportSettingsSnapshot.from(
+        var settingsSnapshot = ExportSettingsSnapshot.from(
             settings,
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
         )
+        settingsSnapshot.sleepCaptureContext = captureContext
         let frozenSettings = settingsSnapshot.makeAdvancedExportSettings()
         frozenSettings.exportTimeZoneOverride = calendarTimeZone
         let identity = identitySource.capture(
@@ -689,7 +720,14 @@ struct APIEndpointExportRunner {
 
         let context: AppleLooseDailyCoreContext
         do {
-            context = try await coreExecutor.loadContext()
+            if let suppliedPin {
+                context = try await coreExecutor.loadContext(pin: suppliedPin)
+            } else if wakeDate {
+                context = try await coreExecutor.loadContext(profile: .appleHealthDataV11,
+                    expectedRegistryVersion: HealthMdSleepProfileContract.registryVersion)
+            } else {
+                context = try await coreExecutor.loadContext()
+            }
         } catch is CancellationError {
             throw CancellationError()
         } catch {
@@ -718,9 +756,8 @@ struct APIEndpointExportRunner {
                     buildInfo: context.buildInfo,
                     registrySnapshot: context.registry
                 )
-            } catch is AppleExportEnginePin.CompatibilityError {
-                return .legacy
             } catch {
+                if wakeDate { throw EngineError.rustPlanningFailed }
                 return .legacy
             }
         }
@@ -755,20 +792,23 @@ struct APIEndpointExportRunner {
                 artifactDirectory: artifactDirectory
             )
         }
-        let nativeBatches = try makePreparedBatches(
-            outcomes: preparedOutcomes,
-            exportedAt: identity.capturedAt,
-            connectedAppsEnabled: connectedAppsEnabled,
-            calendarTimeZone: calendarTimeZone,
-            maxBatchDaySpan: dayLimit,
-            maxBatchPayloadBytes: byteLimit,
-            artifactDirectory: artifactDirectory
-        )
-        let nativePlan = try makeNativePlan(
-            batches: nativeBatches,
-            identity: identity,
-            pin: pin
-        )
+        let nativeBatches: [PreparedBatch]
+        let nativePlan: NativeExportArtifactPlan?
+        if requestedMode == .shadow {
+            nativeBatches = try makePreparedBatches(
+                outcomes: preparedOutcomes,
+                exportedAt: identity.capturedAt,
+                connectedAppsEnabled: connectedAppsEnabled,
+                calendarTimeZone: calendarTimeZone,
+                maxBatchDaySpan: dayLimit,
+                maxBatchPayloadBytes: byteLimit,
+                artifactDirectory: artifactDirectory
+            )
+            nativePlan = try makeNativePlan(batches: nativeBatches, identity: identity, pin: pin)
+        } else {
+            nativeBatches = []
+            nativePlan = nil
+        }
 
         let rustPlan: NativeExportArtifactPlan?
         do {
@@ -800,6 +840,7 @@ struct APIEndpointExportRunner {
         let selectedBatches: [PreparedBatch]
         switch requestedMode {
         case .shadow:
+            guard let nativePlan else { throw EngineError.invalidPreparedPlan }
             if let rustPlan {
                 let diagnostics = NativeExportPlanComparator.compare(
                     native: nativePlan,
@@ -844,6 +885,7 @@ struct APIEndpointExportRunner {
 
         var pinnedSnapshot = settingsSnapshot
         pinnedSnapshot.appleExportEnginePin = pin
+        if wakeDate { pinnedSnapshot.appleExportEngineAuthorityIsFrozen = true }
         return .prepared(PreparedOperation(
             authority: requestedMode,
             identity: identity,
@@ -952,21 +994,26 @@ struct APIEndpointExportRunner {
         coreExecutor: any AppleLooseDailyCoreExecuting
     ) async throws -> NativeExportArtifactPlan {
         let records = outcomes.compactMap(\.record)
+        let captureContext = settings.executionSleepCaptureContext
+        let customization = settings.formatCustomization
+        if pin.isWakeDate { customization.unitPreference = .metric }
         let semanticConfiguration = try HealthMdSemanticInputAdapter.sessionConfiguration(
             sessionID: identity.sessionID,
             selection: settings.metricSelection,
             registry: context.registry,
-            customization: settings.formatCustomization,
-            calendarTimeZoneIdentifier: engineTimeZoneIdentifier(calendarTimeZone),
+            customization: customization,
+            calendarTimeZoneIdentifier: pin.calendarTimeZoneIdentifier,
             retainPlatformExtensions: false,
-            rollupPeriods: []
+            rollupPeriods: [],
+            captureContext: captureContext
         )
         let semanticBatches = try HealthMdSemanticInputAdapter.boundedBatches(
             sessionID: identity.sessionID,
             healthData: records,
             registry: context.registry,
-            customization: settings.formatCustomization,
-            calendarTimeZoneIdentifier: engineTimeZoneIdentifier(calendarTimeZone)
+            customization: customization,
+            calendarTimeZoneIdentifier: pin.calendarTimeZoneIdentifier,
+            captureContext: captureContext
         )
         let semanticResult = try await coreExecutor.processSemantic(
             configuration: semanticConfiguration,
@@ -1011,7 +1058,7 @@ struct APIEndpointExportRunner {
             requestID: identity.requestID,
             formats: ["json"]
         )
-        renderOptions.unitSystem = settings.formatCustomization.unitPreference == .imperial
+        renderOptions.unitSystem = customization.unitPreference == .imperial
             ? "imperial"
             : "metric"
         renderOptions.includeMetadata = settings.includeMetadata
@@ -1047,10 +1094,11 @@ struct APIEndpointExportRunner {
         let renderInput = try HealthMdRenderInputAdapter.encode(
             semanticResult: semanticResult,
             registry: context.registry,
-            calendarTimeZoneIdentifier: engineTimeZoneIdentifier(calendarTimeZone),
+            calendarTimeZoneIdentifier: pin.calendarTimeZoneIdentifier,
             options: renderOptions,
             presentationByOwnerDate: presentationByOwnerDate,
-            presentationCustomization: settings.formatCustomization
+            presentationCustomization: customization,
+            captureContext: captureContext
         )
         let corePlan = try await coreExecutor.render(
             configuration: renderInput.configuration,
@@ -1069,7 +1117,7 @@ struct APIEndpointExportRunner {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV8,
+            profile: pin.coreProfile,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin
@@ -1109,6 +1157,23 @@ struct APIEndpointExportRunner {
                   let recordCount = object["record_count"] as? Int,
                   let failures = object["failed_date_details"] as? [Any] else {
                 throw EngineError.invalidPreparedPlan
+            }
+            if plan.profile == .appleHealthDataV11 {
+                let expectedContext: [String: String] = ["calendar_timezone": calendarTimeZone.identifier,
+                    "timestamp_timezone": "UTC", "sleep_day_attribution": "morning_ends",
+                    "sleep_owner_day_rule": "session_end_date", "sleep_interval_clipping": "none"]
+                guard object["daily_record_schema"] as? String == "healthmd.health_data",
+                      object["daily_record_schema_version"] as? Int == 11,
+                      object["daily_record_schema_profile"] as? String == "apple-v11",
+                      object["daily_record_time_context"] as? [String: String] == expectedContext,
+                      let dailyRecords = object["records"] as? [[String: Any]],
+                      dailyRecords.allSatisfy({ $0["schema"] as? String == "healthmd.health_data"
+                          && $0["unit_system"] as? String == "metric"
+                          && $0["schema_version"] as? Int == 11
+                          && $0["schema_profile"] as? String == "apple-v11"
+                          && $0["time_context"] as? [String: String] == expectedContext }) else {
+                    throw EngineError.invalidPreparedPlan
+                }
             }
             let slice = outcomes[cursor...endIndex]
             let records = slice.compactMap(\.record)

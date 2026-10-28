@@ -559,8 +559,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             guard !(settings.executionAppleExportEngineAuthorityIsFrozen
                         && settings.executionSleepCaptureContextIsFrozen),
                   !hasNativeOnlyCompanionAction,
-                  AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(
-                      settingsSnapshot: snapshot, surface: surface) else { return snapshot }
+                  (surface == .apiEndpoint ? APIEndpointExportRunner.supportsNewEnginePin(settingsSnapshot: snapshot)
+                    : AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(
+                        settingsSnapshot: snapshot, surface: surface)) else { return snapshot }
             snapshot.appleExportEnginePin = await policyResolver.pinForNewWakeDateOperation(
                 calendarTimeZoneIdentifier: identifier, coreExecutor: coreExecutor)
             return snapshot

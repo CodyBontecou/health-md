@@ -193,7 +193,7 @@ enum HealthMdRenderInputAdapter {
                   root["semantic_input_version"] as? Int == 2,
                   root["canonical_model_version"] as? Int == 2,
                   root["core_api_version"] as? Int == 4,
-                  options.api == nil, !options.formats.isEmpty,
+                  !options.formats.isEmpty,
                   Set(options.formats).isSubset(of: ["json", "markdown", "obsidian_bases", "csv"]),
                   let captureContext, captureContext.sleepDayAttribution == .morningEnds,
                   captureContext.exportProfileID == "apple-v11",
@@ -440,9 +440,15 @@ enum HealthMdRenderInputAdapter {
             } else {
                 display = presentationSnapshot?.frontmatterMetrics[outputKey] ?? displayValue(publicValue)
             }
-            let frontmatterKey = presentationCustomization.frontmatterConfig.outputKey(for: outputKey) ?? outputKey
+            let frontmatterKey = captureContext?.sleepDayAttribution == .morningEnds && options.api != nil
+                ? outputKey : presentationCustomization.frontmatterConfig.outputKey(for: outputKey) ?? outputKey
             let publicUnit: String
-            if let snapshot = presentationSnapshot {
+            if captureContext?.sleepDayAttribution == .morningEnds, options.api != nil {
+                if semanticValue["value_type"] as? String == "number" {
+                    publicUnit = output.unit.isEmpty
+                        ? (semanticValue["unit"] as? [String: Any])?["id"] as? String ?? "" : output.unit
+                } else { publicUnit = "" }
+            } else if let snapshot = presentationSnapshot {
                 publicUnit = HealthMetricDataDictionary.unit(
                     for: outputKey,
                     converter: snapshot.converter
@@ -478,14 +484,15 @@ enum HealthMdRenderInputAdapter {
                 "category_label": metric.categoryId,
                 "label": label,
                 "frontmatter_key": frontmatterKey,
-                "json_path": [categoryIdentifier(metric.categoryId), outputKey],
+                "json_path": (captureContext?.sleepDayAttribution == .morningEnds && options.api != nil ? ["summary"] : [])
+                    + [categoryIdentifier(metric.categoryId), outputKey],
                 "public_value": publicValue,
                 "display_value": display,
                 "unit": publicUnit,
                 "timestamp": timestamp,
                 "ordinal": ordinal,
             ]
-            if captureContext?.sleepDayAttribution == .morningEnds,
+            if captureContext?.sleepDayAttribution == .morningEnds, options.api == nil,
                semanticValue["value_type"] as? String == "number", output.unit.lowercased() != "time",
                let number = publicValue as? NSNumber, let snapshot = presentationSnapshot {
                 rendered["human_presentation"] = try humanPresentation(
@@ -536,7 +543,8 @@ enum HealthMdRenderInputAdapter {
                 options: options,
                 semanticOutputKeys: selectedOutputKeys,
                 captureContext: captureContext,
-                profile: registry.profileId
+                profile: registry.profileId,
+                metrics: metrics
             ),
         ]
         if let data = presentationData, let captureContext,
@@ -783,7 +791,8 @@ enum HealthMdRenderInputAdapter {
         options: Options,
         semanticOutputKeys: [String],
         captureContext: AppleSleepCaptureContext?,
-        profile: String
+        profile: String,
+        metrics: [[String: Any]]
     ) throws -> [String: Any] {
         guard let data else {
             return [
@@ -795,11 +804,28 @@ enum HealthMdRenderInputAdapter {
         }
         let requested = Set(options.formats)
         if let captureContext, captureContext.sleepDayAttribution == .morningEnds {
-            guard options.api == nil else { throw AdapterError.invalidPresentation }
             let json: Any
             if requested.contains("json") {
                 let bytes = try data.toJSONDataThrowing(customization: customization, captureContext: captureContext)
-                json = try orderedJSON(JSONSerialization.jsonObject(with: bytes))
+                guard var root = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
+                    throw AdapterError.invalidPresentation
+                }
+                if options.api != nil {
+                    guard root["summary"] == nil else { throw AdapterError.invalidPresentation }
+                    var summary: [String: [String: Any]] = [:]
+                    var units: [String: String] = [:]
+                    for metric in metrics {
+                        guard let path = metric["json_path"] as? [String], path.count == 3, path[0] == "summary",
+                              let value = metric["public_value"], let unit = metric["unit"] as? String else {
+                            throw AdapterError.invalidPresentation
+                        }
+                        summary[path[1], default: [:]][path[2]] = value
+                        if !unit.isEmpty { units[path[2]] = unit }
+                    }
+                    root["summary"] = summary
+                    root["units"] = units
+                }
+                json = try orderedJSON(root)
             } else {
                 json = NSNull()
             }

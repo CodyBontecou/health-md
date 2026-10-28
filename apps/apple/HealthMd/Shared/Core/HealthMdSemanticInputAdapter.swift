@@ -187,7 +187,9 @@ nonisolated enum HealthMdSemanticInputAdapter {
             let snapshot = day.exportSnapshot(customization: customization)
             let ownerDate = capturedDay.ownerDate
             if inputVersion != semanticInputVersion, day.sleep.hasData || !day.sleep.stages.isEmpty {
-                guard let start = day.sleep.sessionStart, let end = day.sleep.sessionEnd,
+                let bounds = day.sleep.sourceSessionBounds
+                    ?? .init(start: day.sleep.sessionStart, end: day.sleep.sessionEnd)
+                guard let start = bounds.start, let end = bounds.end,
                       start.timeIntervalSince1970.isFinite, end.timeIntervalSince1970.isFinite,
                       start < end, ownerDateString(end, timeZone: calendarTimeZone) == ownerDate else {
                     throw AdapterError.invalidCaptureAuthority

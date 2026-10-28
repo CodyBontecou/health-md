@@ -9,6 +9,187 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testMorningEndsAPISelectsV11BeforeCaptureAndKeepsNativeRecordsAndFailedBatchAuthority() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let formatter = ExportDateFormatting.utcISO8601Formatter()
+        let first = try XCTUnwrap(formatter.date(from: "2026-11-01T04:00:00Z"))
+        let second = try XCTUnwrap(formatter.date(from: "2026-11-02T05:00:00Z"))
+        let start = try XCTUnwrap(formatter.date(from: "2026-11-01T05:30:00Z")).addingTimeInterval(0.125)
+        let end = try XCTUnwrap(formatter.date(from: "2026-11-01T06:30:00Z")).addingTimeInterval(0.125)
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = context
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.formatCustomization.unitPreference = .imperial
+        settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "workouts"]
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+            calendarTimeZone: zone, surface: .apiEndpoint)
+        XCTAssertEqual(snapshot.appleExportEnginePin?.profile, AppleExportEnginePin.wakeDateProfileID)
+        let frozen = snapshot.makeAdvancedExportSettings()
+        Self.retainedSettings.append(frozen)
+        // Changes to the original device-side settings cannot alter accepted API work.
+        settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: TimeZone(identifier: "Europe/Berlin")!, sleepDayAttribution: .nightBegins)
+        settings.exportTimeZoneOverride = TimeZone(identifier: "Europe/Berlin")
+        let workout = WorkoutData(workoutType: .running, startTime: start, duration: 1800.5,
+            calories: 123.25, distance: 1500.125)
+        var populated = HealthData(date: first,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 17), workouts: [workout])
+        populated.sleep = SleepData(totalDuration: 3600, sessionStart: start, sessionEnd: end)
+        var captures = 0
+        let events = APIEngineEventRecorder()
+        let resolution: APIEndpointExportRunner.PreparationResolution
+        do {
+        resolution = try await APIEndpointExportRunner.prepare(dates: [first, second], settings: frozen,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false,
+            fetchHealthData: { date, _, _ in
+                captures += 1
+                XCTAssertEqual(frozen.executionSleepCaptureContext, context)
+                return date == first ? populated : HealthData(date: date,
+                    timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+            }, maxBatchDaySpan: 1, coreExecutor: APIRecordingCoreExecutor(events: events), identitySource: identitySource)
+        } catch {
+            let phases = await events.values()
+            XCTFail("API boundary phases: \(phases)")
+            throw error
+        }
+        guard case .prepared(let operation) = resolution else { return XCTFail("Morning ends API must not fall back") }
+        XCTAssertEqual(captures, 2)
+        let phases = await events.values()
+        XCTAssertEqual(phases.filter { $0 == "semantic" }.count, 1)
+        XCTAssertEqual(phases.filter { $0 == "render" }.count, 1)
+        XCTAssertEqual(operation.authority, .rust)
+        XCTAssertNil(operation.nativePlan)
+        XCTAssertEqual(operation.selectedPlan, try XCTUnwrap(operation.rustPlan))
+        XCTAssertEqual(operation.pin, snapshot.appleExportEnginePin)
+        XCTAssertEqual(operation.batches.count, 2)
+        for (index, batch) in operation.batches.enumerated() {
+            let root = try XCTUnwrap(JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+            XCTAssertEqual(root["schema_version"] as? Int, 1)
+            XCTAssertEqual(root["daily_record_schema_version"] as? Int, 11)
+            XCTAssertEqual(root["daily_record_schema_profile"] as? String, "apple-v11")
+            let clock = try XCTUnwrap(root["daily_record_time_context"] as? [String: String])
+            XCTAssertEqual(clock["calendar_timezone"], zone.identifier)
+            XCTAssertEqual(clock["sleep_day_attribution"], "morning_ends")
+            let records = try XCTUnwrap(root["records"] as? [[String: Any]])
+            XCTAssertEqual(records.count, index == 0 ? 1 : 0)
+            if let record = records.first {
+                let nativeWorkouts = try XCTUnwrap(record["workouts"] as? [[String: Any]])
+                XCTAssertEqual(nativeWorkouts.first?["id"] as? String, workout.id.uuidString)
+                let summary = try XCTUnwrap(record["summary"] as? [String: [String: Any]])
+                XCTAssertEqual(summary["activity"]?["steps"] as? Int, 17)
+                XCTAssertEqual(summary["sleep"]?["sleep_total_hours"] as? Double, 1)
+            }
+        }
+    }
+
+    func testMorningEndsAPIRejectsMissingOrContradictoryAuthorityBeforeCapture() async throws {
+        let utc = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let valid = AppleSleepCaptureContext(timeZone: utc, sleepDayAttribution: .morningEnds)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(valid)) as? [String: Any])
+        object.removeValue(forKey: "exportProfileID")
+        let draft = try JSONDecoder().decode(AppleSleepCaptureContext.self,
+            from: JSONSerialization.data(withJSONObject: object))
+        let service = HealthMdCoreService()
+        let historical = try AppleExportEnginePin(engine: .shadow, calendarTimeZoneIdentifier: "UTC",
+            buildInfo: service.buildInfo(), registrySnapshot: service.metricRegistry(profile: .appleHealthDataV8))
+        let cases: [(AppleSleepCaptureContext, AppleExportEnginePin?, Bool)] = [
+            (draft, nil, false), (valid, historical, true), (valid, nil, true),
+            (AppleSleepCaptureContext(timeZone: TimeZone(identifier: "Europe/Berlin")!, sleepDayAttribution: .morningEnds), nil, false),
+        ]
+        for (context, pin, frozen) in cases {
+            let settings = makeSettings()
+            settings.executionSleepCaptureContext = context
+            settings.executionSleepCaptureContextIsFrozen = true
+            settings.executionAppleExportEnginePin = pin
+            settings.executionAppleExportEngineAuthorityIsFrozen = frozen
+            var captures = 0
+            do {
+                _ = try await APIEndpointExportRunner.prepare(dates: days(count: 1), settings: settings,
+                    destination: destination, calendarTimeZone: utc, connectedAppsEnabled: false,
+                    fetchHealthData: { date, _, _ in captures += 1; return self.record(date: date, steps: 1) })
+                XCTFail("Incompatible API authority must reject before capture")
+            } catch {
+                XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
+            }
+            XCTAssertEqual(captures, 0)
+        }
+    }
+
+    func testMorningEndsV2EnvelopeAndFailureOnlyOperationKeepProfileBeforeCommit() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let date = days(count: 1)[0]
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        for failureOnly in [false, true] {
+            let settings = makeSettings()
+            settings.executionSleepCaptureContext = context
+            settings.executionSleepCaptureContextIsFrozen = true
+            let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, calendarTimeZone: zone, surface: .apiEndpoint)
+            let frozen = snapshot.makeAdvancedExportSettings()
+            Self.retainedSettings.append(frozen)
+            let identity = AppleExportOperationIdentitySource(makeRequestID: { "api-v11-v2-\(failureOnly)" },
+                makeSessionID: { "api-v11-session-\(failureOnly)" }, now: { Date(timeIntervalSince1970: 1_751_328_000.125) })
+            let resolution = try await APIEndpointExportRunner.prepare(dates: [date], settings: frozen,
+                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: true,
+                fetchHealthData: { date, _, _ in HealthData(date: date,
+                    timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                    activity: failureOnly ? ActivityData() : ActivityData(steps: 3)) }, identitySource: identity)
+            guard case .prepared(let operation) = resolution else { return XCTFail("A v11 API cannot downgrade") }
+            XCTAssertNil(operation.nativePlan)
+            let body = try XCTUnwrap(operation.batches.first).body
+            let root = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(root["schema_version"] as? Int, 2)
+            XCTAssertEqual(root["daily_record_schema_version"] as? Int, 11)
+            XCTAssertEqual(root["daily_record_schema_profile"] as? String, "apple-v11")
+            XCTAssertEqual(root["external_record_schema"] as? String, ExternalDailyRecord.schema)
+            XCTAssertEqual(root["external_record_count"] as? Int, 0)
+            XCTAssertEqual((root["records"] as? [Any])?.count, failureOnly ? 0 : 1)
+            var uploaded: [Data] = []
+            let result = await APIEndpointExportRunner.commitPreparedOperation(operation) { batch, _ in
+                uploaded.append(batch.body)
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }
+            XCTAssertEqual(uploaded, failureOnly ? [] : [body])
+            XCTAssertEqual(result.successCount, failureOnly ? 0 : 1)
+        }
+    }
+
+    func testMorningEndsExportDispatcherDoesNotFallBackWithAnExternalFetcherOrFrozenNilPin() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        for frozenNilPin in [false, true] {
+            let settings = makeSettings()
+            settings.executionAppleExportEngineAuthorityIsFrozen = frozenNilPin
+            var captures = 0
+            var uploads: [Data] = []
+            let result = await AppleSleepCaptureContext.pinned.withValue(context) {
+                await APIEndpointExportRunner.exportEngineAware(dates: days(count: 1), settings: settings,
+                    destination: destination, calendarTimeZone: zone, connectedAppsEnabled: true,
+                    fetchHealthData: { date, _, _ in
+                        captures += 1
+                        return HealthData(date: date, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                            activity: ActivityData(steps: 3))
+                    }, fetchExternalDailyRecords: { _ in [] }, upload: { batch, _ in
+                        uploads.append(batch.body)
+                        return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+                    }, maxBatchDaySpan: 7, maxBatchPayloadBytes: APIEndpointExportRunner.defaultMaxBatchPayloadBytes,
+                    policyResolver: AppleExportEnginePolicyResolver(injectedOverride: "legacy", userDefaults: nil, environment: [:]),
+                    coreExecutor: SystemAppleLooseDailyCoreExecutor(), identitySource: identitySource,
+                    comparisonOptions: NativeExportComparisonOptions(), diagnosticSink: { _ in }, onProgress: nil)
+            }
+            XCTAssertEqual(captures, frozenNilPin ? 0 : 1)
+            XCTAssertEqual(uploads.count, frozenNilPin ? 0 : 1)
+            XCTAssertEqual(result.successCount, frozenNilPin ? 0 : 1)
+            if let body = uploads.first {
+                let root = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+                XCTAssertEqual(root["schema_version"] as? Int, 2)
+                XCTAssertEqual(root["daily_record_schema_version"] as? Int, 11)
+                XCTAssertEqual(root["daily_record_schema_profile"] as? String, "apple-v11")
+            }
+        }
+    }
+
     func testShadowCapturesEachOwnerOnceAndCompletesEveryPlanBeforeUpload() async throws {
         let dates = days(count: 8)
         let settings = makeSettings()
@@ -44,7 +225,7 @@ final class APIEndpointExportEngineTests: XCTestCase {
             return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
         }
 
-        XCTAssertEqual(uploadBodies, operation.nativePlan.artifacts.map(\.inlineData))
+        XCTAssertEqual(uploadBodies, try XCTUnwrap(operation.nativePlan).artifacts.map(\.inlineData))
         let values = await events.values()
         let firstUpload = try XCTUnwrap(values.firstIndex(of: "upload"))
         XCTAssertFalse(values[firstUpload...].contains("capture"))
@@ -167,7 +348,7 @@ final class APIEndpointExportEngineTests: XCTestCase {
             uploaded.append(batch.body)
             return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
         }
-        XCTAssertEqual(uploaded, operation.nativePlan.artifacts.map(\.inlineData))
+        XCTAssertEqual(uploaded, try XCTUnwrap(operation.nativePlan).artifacts.map(\.inlineData))
         XCTAssertFalse(uploaded.contains(rustPlan.artifacts[0].inlineData))
 
         let recorded = await diagnostics.values()
@@ -317,7 +498,7 @@ final class APIEndpointExportEngineTests: XCTestCase {
         let finalBarrierState = await barrier.state
         XCTAssertEqual(finalBarrierState, .failed)
         XCTAssertEqual(bodies, operation.selectedPlan.artifacts.map(\.inlineData))
-        XCTAssertEqual(bodies, operation.nativePlan.artifacts.map(\.inlineData))
+        XCTAssertEqual(bodies, try XCTUnwrap(operation.nativePlan).artifacts.map(\.inlineData))
         XCTAssertNotEqual(bodies, try XCTUnwrap(operation.rustPlan).artifacts.map(\.inlineData))
         XCTAssertEqual(result.successCount, 0)
         XCTAssertEqual(result.failedDateDetails.first?.reason, .apiUploadFailed)
@@ -623,9 +804,21 @@ nonisolated private struct APIRecordingCoreExecutor: AppleLooseDailyCoreExecutin
         return try await base.loadContext()
     }
 
+    func loadContext(profile: CoreMetricRegistryProfile, expectedRegistryVersion: UInt32) async throws -> AppleLooseDailyCoreContext {
+        await events.record("profile-context")
+        return try await base.loadContext(profile: profile, expectedRegistryVersion: expectedRegistryVersion)
+    }
+
     func processSemantic(configuration: Data, batches: [Data]) async throws -> Data {
         await events.record("semantic")
-        return try await base.processSemantic(configuration: configuration, batches: batches)
+        do {
+            let result = try await base.processSemantic(configuration: configuration, batches: batches)
+            await events.record("semantic-completed")
+            return result
+        } catch {
+            await events.record("semantic-failure: \(error)")
+            throw error
+        }
     }
 
     func render(
@@ -633,12 +826,26 @@ nonisolated private struct APIRecordingCoreExecutor: AppleLooseDailyCoreExecutin
         semanticResult: Data,
         batches: [Data]
     ) async throws -> CoreArtifactPlan {
+        if let directory = ProcessInfo.processInfo.environment["HEALTHMD_API_V11_FIXTURE_DIR"],
+           let config = try JSONSerialization.jsonObject(with: configuration) as? [String: Any],
+           config["profile"] as? String == AppleExportEnginePin.wakeDateProfileID {
+            let root = URL(fileURLWithPath: directory)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            try configuration.write(to: root.appendingPathComponent("config.json"))
+            try semanticResult.write(to: root.appendingPathComponent("semantic.json"))
+            for (index, batch) in batches.enumerated() {
+                try batch.write(to: root.appendingPathComponent("batch-\(index).json"))
+            }
+        }
         await events.record("render")
-        return try await base.render(
-            configuration: configuration,
-            semanticResult: semanticResult,
-            batches: batches
-        )
+        do {
+            let result = try await base.render(configuration: configuration, semanticResult: semanticResult, batches: batches)
+            await events.record("render-completed")
+            return result
+        } catch {
+            await events.record("render-failure: \(error)")
+            throw error
+        }
     }
 }
 
