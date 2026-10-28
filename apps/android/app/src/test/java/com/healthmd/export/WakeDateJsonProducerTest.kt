@@ -41,6 +41,37 @@ class WakeDateJsonProducerTest {
     private val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
 
     @Test
+    fun successorRejectsSummaryClocksThatDisagreeWithSourceByOneNanosecond() {
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val localStart = start.atZone(context.zoneId).toLocalDateTime()
+        val localEnd = end.atZone(context.zoneId).toLocalDateTime()
+        val sleep = SleepData(
+            totalDuration = 60.minutes,
+            sessionStart = localStart,
+            sessionEnd = localEnd,
+            sessions = listOf(SleepSessionEntry(localStart, localEnd,
+                exactStartTime = ExactSourceTimestamp.from(start),
+                exactEndTime = ExactSourceTimestamp.from(end))),
+        )
+        for (conflict in listOf(sleep.copy(sessionStart = localStart.plusNanos(1)),
+            sleep.copy(sessionEnd = localEnd.minusNanos(1)))) {
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                JsonExporter().export(HealthData(LocalDate.of(2026, 11, 1), sleep = conflict),
+                    captureContext = context)
+            }
+            assertThat(error.message).isEqualTo("wake-date native JSON is incompatible")
+            assertThat(error.cause).isNull()
+        }
+        val valid = Json.parseToJsonElement(JsonExporter().export(
+            HealthData(LocalDate.of(2026, 11, 1), sleep = sleep), captureContext = context)).jsonObject
+        assertThat(valid.getValue("sleep").jsonObject.getValue("bedtimeISO").jsonPrimitive.content)
+            .isEqualTo(start.toString())
+        assertThat(valid.getValue("sleep").jsonObject.getValue("wakeTimeISO").jsonPrimitive.content)
+            .isEqualTo(end.toString())
+    }
+
+    @Test
     fun nativeSuccessorUsesExactInstantsAcrossDstFoldAndCanonicalUnitsWithoutCoreAliases() {
         // Both source instants have the SAME 01:30 wall clock during the fall-back fold.
         val first = exact("2026-11-01T05:30:00.123456789Z", "-04:00")

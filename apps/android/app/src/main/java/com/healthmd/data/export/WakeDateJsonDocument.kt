@@ -54,12 +54,12 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
         val start = intervals.minOfOrNull { it.first }
         val end = intervals.maxOfOrNull { it.second }
         if (data.sleep.sessionStart != null) require(start != null && runCatching {
-            start.atZone(context.zoneId).toLocalDateTime().withNano(0) == data.sleep.sessionStart.withNano(0)
+            start.atZone(context.zoneId).toLocalDateTime() == data.sleep.sessionStart
         }.getOrDefault(false)) {
             "wake-date native summary clock is incompatible"
         }
         if (data.sleep.sessionEnd != null) require(end != null && runCatching {
-            end.atZone(context.zoneId).toLocalDateTime().withNano(0) == data.sleep.sessionEnd.withNano(0) &&
+            end.atZone(context.zoneId).toLocalDateTime() == data.sleep.sessionEnd &&
                 end.atZone(context.zoneId).toLocalDate() == data.date
         }.getOrDefault(false)) {
             "wake-date native summary clock is incompatible"
