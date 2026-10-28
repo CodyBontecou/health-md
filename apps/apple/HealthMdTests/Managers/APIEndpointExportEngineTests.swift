@@ -320,7 +320,7 @@ final class APIEndpointExportEngineTests: XCTestCase {
         XCTAssertEqual(bodies, operation.nativePlan.artifacts.map(\.inlineData))
         XCTAssertNotEqual(bodies, try XCTUnwrap(operation.rustPlan).artifacts.map(\.inlineData))
         XCTAssertEqual(result.successCount, 0)
-        XCTAssertEqual(result.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .apiUploadFailed)
     }
 
     func testShadowFailureDiagnosticIsTypedAndHealthFree() async throws {

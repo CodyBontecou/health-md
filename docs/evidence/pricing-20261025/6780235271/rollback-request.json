@@ -1,0 +1,51 @@
+{
+  "data": {
+    "type": "inAppPurchasePriceSchedules",
+    "relationships": {
+      "inAppPurchase": {
+        "data": {
+          "type": "inAppPurchases",
+          "id": "6780235271"
+        }
+      },
+      "baseTerritory": {
+        "data": {
+          "type": "territories",
+          "id": "USA"
+        }
+      },
+      "manualPrices": {
+        "data": [
+          {
+            "type": "inAppPurchasePrices",
+            "id": "${price-USA}"
+          }
+        ]
+      }
+    }
+  },
+  "included": [
+    {
+      "type": "inAppPurchasePrices",
+      "id": "${price-USA}",
+      "attributes": {
+        "startDate": null,
+        "endDate": null
+      },
+      "relationships": {
+        "inAppPurchasePricePoint": {
+          "data": {
+            "type": "inAppPurchasePricePoints",
+            "id": "eyJzIjoiNjc4MDIzNTI3MSIsInQiOiJVU0EiLCJwIjoiMTAyNzcifQ"
+          }
+        },
+        "inAppPurchaseV2": {
+          "data": {
+            "type": "inAppPurchases",
+            "id": "6780235271"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,15 +1,16 @@
 #!/bin/sh
 # One fingerprint for locally prepared and CI-assembled native libraries.
 set -eu
-workspace_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-repo_root=$(CDPATH= cd -- "$workspace_root/../.." && pwd)
+workspace_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+repo_root=$(CDPATH='' cd -- "$workspace_root/../.." && pwd)
 (
     cd "$workspace_root"
+    printf 'apple-build-scope=%s\n' "${HEALTHMD_CORE_APPLE_SCOPE:-full}"
     {
         printf '%s\n' Cargo.toml Cargo.lock rust-toolchain.toml
         find crates/healthmd-core crates/healthmd-core-uniffi crates/healthmd-protocol vendor -type f -print
         printf '%s\n' scripts/build-apple-xcframework.sh scripts/normalize-apple-xcframework.py \
-            scripts/validate-apple-xcframework.sh scripts/apple-source-digest.sh
+            scripts/validate-apple-xcframework.sh scripts/apple-source-digest.sh scripts/prepare-apple-xcframework.sh
     } | LC_ALL=C sort | while IFS= read -r file; do shasum -a 256 "$file"; done
     cd "$repo_root/apps/apple/Packages/HealthMdCoreRust"
     find Bindings -type f -print | LC_ALL=C sort | while IFS= read -r file; do shasum -a 256 "$file"; done

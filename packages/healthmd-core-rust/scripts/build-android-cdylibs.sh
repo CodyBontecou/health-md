@@ -7,7 +7,7 @@ RUST_TOOLCHAIN="1.88.0"
 ANDROID_MIN_API="28"
 EXPECTED_LIBRARY="libhealthmd_core_uniffi.so"
 TARGETS="aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android"
-ABIS="arm64-v8a armeabi-v7a x86_64 x86"
+ABIS="${HEALTHMD_CORE_ANDROID_ABIS:-arm64-v8a armeabi-v7a x86_64 x86}"
 
 usage() {
     echo "usage: $0 <debug|release> <jni-output-directory>" >&2
@@ -25,6 +25,20 @@ output_dir=$2
 case "$profile" in
     debug|release) ;;
     *) usage ;;
+esac
+
+# Release artifacts always retain the complete supported ABI set. CI may build
+# one debug ABI to match its actual test device without compiling unused targets.
+case "$ABIS" in
+    "arm64-v8a armeabi-v7a x86_64 x86") ;;
+    arm64-v8a|x86_64)
+        [ "$profile" = debug ] || fail "single-ABI mode is debug-only"
+        case "$ABIS" in
+            arm64-v8a) TARGETS="aarch64-linux-android" ;;
+            x86_64) TARGETS="x86_64-linux-android" ;;
+        esac
+        ;;
+    *) fail "unsupported ABI selection: $ABIS" ;;
 esac
 
 command -v cargo >/dev/null 2>&1 || fail "cargo is missing; install Rust toolchain $RUST_TOOLCHAIN with rustup"
@@ -63,8 +77,8 @@ fi
 grep -Eq "^Pkg\.Revision[[:space:]]*=[[:space:]]*$ANDROID_NDK_VERSION([[:space:]]*)$" "$ndk_dir/source.properties" ||
     fail "Android NDK $ANDROID_NDK_VERSION is required; $ndk_dir contains a different revision"
 
-workspace_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-repo_root=$(CDPATH= cd -- "$workspace_root/../.." && pwd)
+workspace_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+repo_root=$(CDPATH='' cd -- "$workspace_root/../.." && pwd)
 source_revision=${HEALTHMD_CORE_SOURCE_REVISION:-$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf development)}
 if [ "$source_revision" != development ] && [ -n "$(git -C "$repo_root" status --porcelain -- packages/healthmd-core-rust 2>/dev/null)" ]; then
     source_revision="$source_revision-dirty"
@@ -92,13 +106,11 @@ fi
 
 cd "$workspace_root"
 # shellcheck disable=SC2086
-"$toolchain_cargo" ndk \
-    --platform "$ANDROID_MIN_API" \
-    --target arm64-v8a \
-    --target armeabi-v7a \
-    --target x86_64 \
-    --target x86 \
-    --output-dir "$output_dir" \
+set -- --platform "$ANDROID_MIN_API"
+for abi in $ABIS; do
+    set -- "$@" --target "$abi"
+done
+"$toolchain_cargo" ndk "$@" --output-dir "$output_dir" \
     build --locked --package healthmd-core-uniffi $release_flag
 
 for abi in $ABIS; do

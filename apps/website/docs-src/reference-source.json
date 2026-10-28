@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "ba81734771053d420702ae8c247213d5bee17c71",
+  "docs_reference_git_tree": "ffdff54d27e6cc869dcd177bec9f3a0f1fff1b28",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "94c2624f6d1fdc708b705c22786a6f110c1d45a56d49ad62181074f8dac2d9f1",
+    "digest": "a119482f212a22dd3cdd05e0c4234329e801d236b78f50531105f1482313c758",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -105,8 +105,8 @@
     },
     {
       "path": "canonical-healthkit-records.md",
-      "bytes": 11009,
-      "sha256": "9620f04e7eed088078d243fdff8a1137d46e8b2dcff2eacee5e787b96ab9a1d4",
+      "bytes": 11618,
+      "sha256": "ca67f6faec9710ac2aced00df71bab3cb58a07e3879ac62f83a962c54e66ea5f",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/canonical-healthkit-records/",
@@ -766,7 +766,7 @@
     {
       "path": "generated/core/manifest.json",
       "bytes": 3253,
-      "sha256": "020145dc076f6c66bc4e7b0f68d31cea638635c33766b6f926e85456fbccb373",
+      "sha256": "239c8a3dd94ac848d93987ec619df7bdb04aa13632d75d0ee6cf49760796221d",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -775,8 +775,8 @@
     },
     {
       "path": "generated/core/metric-catalog.md",
-      "bytes": 49571,
-      "sha256": "556ef7535a6934e35c0e3576f83fe376938bb494e9da9aab8d2277dd0491a403",
+      "bytes": 50456,
+      "sha256": "c9ea08b90d5d2bc1ea88cb7eac1a95be3d8fbd2af5958b30248e7f11e5684ab6",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/core/metric-catalog/",
@@ -1195,8 +1195,8 @@
     },
     {
       "path": "other-export-surfaces.md",
-      "bytes": 4795,
-      "sha256": "e413f15384fccad8e0d5c71cb4be61d7323e5fd3c9896f3835452ca6cd58a5b4",
+      "bytes": 4958,
+      "sha256": "94ba0ac61c1b75821bc937d9479f484d0efca2cecfcbf103a040c1e7e43c97b3",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/other-export-surfaces/",
@@ -1638,14 +1638,14 @@
     {
       "path": "public/reference/generated/core/manifest.json",
       "bytes": 3253,
-      "sha256": "020145dc076f6c66bc4e7b0f68d31cea638635c33766b6f926e85456fbccb373",
+      "sha256": "239c8a3dd94ac848d93987ec619df7bdb04aa13632d75d0ee6cf49760796221d",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/core/manifest.json"
     },
     {
       "path": "public/reference/generated/core/metric-catalog.md",
-      "bytes": 49571,
-      "sha256": "556ef7535a6934e35c0e3576f83fe376938bb494e9da9aab8d2277dd0491a403",
+      "bytes": 50456,
+      "sha256": "c9ea08b90d5d2bc1ea88cb7eac1a95be3d8fbd2af5958b30248e7f11e5684ab6",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/core/metric-catalog.md"
     },
@@ -1917,8 +1917,8 @@
     },
     {
       "path": "src/content/docs/reference/canonical-healthkit-records.md",
-      "bytes": 11255,
-      "sha256": "c416f129485edb091dd1c2a5a62fa4528e08d9608c8fd78e8a0b576ab1810d37",
+      "bytes": 11864,
+      "sha256": "4b343088d6ea18a08278f8a768b45efb2c1367310f519939e26fddc732ca0254",
       "classification": "rendered-page",
       "route": "/docs/reference/canonical-healthkit-records/"
     },
@@ -2009,14 +2009,14 @@
     {
       "path": "src/content/docs/reference/generated/core/index.md",
       "bytes": 4373,
-      "sha256": "73849a43cb24992590d475276fd5256485b39c93a504343d02b661374fc17e78",
+      "sha256": "c56fd7e380642e70b4682facf265ba5ab60c9505c35f06cd7f7036a799278f8e",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/core/"
     },
     {
       "path": "src/content/docs/reference/generated/core/metric-catalog.md",
-      "bytes": 49720,
-      "sha256": "fb111a25cfedf372c5ab6eaf97d36a3dde9dd328c9c0b1a3a37855ad8745bec7",
+      "bytes": 50665,
+      "sha256": "c358fb05bb63b86d534cdc613ec363b65141394a4ebf4a328bf79409a40f4eca",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/core/metric-catalog/"
     },
@@ -2037,7 +2037,7 @@
     {
       "path": "src/content/docs/reference/generated/index.md",
       "bytes": 21605,
-      "sha256": "33fce911b8898bae10d45fdd9250d2f93ee7c800f12fb8c0ffdf359489dbf208",
+      "sha256": "43d909a30903dc5e914956bcac85be868e3151994e592cd1b37083d2a9362b98",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },
@@ -2120,8 +2120,8 @@
     },
     {
       "path": "src/content/docs/reference/other-export-surfaces.md",
-      "bytes": 4957,
-      "sha256": "c7c5451b652423a2c5fb3d066ec6325cd7fd916d2b1f50d11428edadc0c8bfb8",
+      "bytes": 5120,
+      "sha256": "c5c513d514cb5df7efd34c446663bd812351d9f62762cc5fa0dacffb8411bb95",
       "classification": "rendered-page",
       "route": "/docs/reference/other-export-surfaces/"
     },

@@ -169,7 +169,7 @@ class MainActivity : ComponentActivity() {
         // Claim links must never enter Shared Setup's document importer. Reject noncanonical
         // variants here as well; presenting a disclosure never authorizes a proof upload.
         if (intent?.data?.scheme == "healthmd") {
-            if (!handledMyselfClaimIntent && com.healthmd.myselfclaim.MyselfClaimLinks.accepts(
+            if (BuildConfig.MYSELF_CLAIM_ENABLED && !handledMyselfClaimIntent && com.healthmd.myselfclaim.MyselfClaimLinks.accepts(
                     intent.action, intent.dataString, BuildConfig.DISTRIBUTION_CHANNEL == "play",
                 )) {
                 handledMyselfClaimIntent = true

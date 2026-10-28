@@ -1,3 +1,6 @@
+#if DEBUG
+import ScrawlKit
+#endif
 import HealthMdConnectionCore
 import SwiftUI
 import UniformTypeIdentifiers
@@ -409,6 +412,9 @@ struct HealthMdApp: App {
                     ContentView()
                 }
             }
+            #if DEBUG
+            .scrawl()
+            #endif
             .environmentObject(schedulingManager)
             .environmentObject(healthKitManager)
             .environmentObject(syncService)
@@ -602,10 +608,13 @@ struct HealthMdApp: App {
                 )
             }
             .onOpenURL { url in
+                #if DEBUG
+                if url.host == "scrawl" || url.host == "tether" { return }
+                #endif
                 if url.scheme == "healthmd", url.host == "myself", url.path == "/claim",
                    url.user == nil, url.password == nil, url.port == nil,
                    url.query == nil, url.fragment == nil {
-                    showingMyselfClaim = true
+                    if MyselfClaimFeature.isEnabled { showingMyselfClaim = true }
                     return
                 }
                 if sharedSetupCoordinator.handleOpenURL(url, cold: !hasInstalledSharedSetupURLHandler) {

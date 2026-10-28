@@ -17,6 +17,7 @@ from validate_ios_ui_xctestrun import qualify
 # Keep stateful XCTest classes together within each device family.
 SHARDS = (
     (
+        "ExportProfilesJourneyUITests/testCreatingAPIProfileKeepsSelectedEndpointOnFirstSave",
         "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
         "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
         "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",

@@ -285,7 +285,7 @@ struct MacContextRefreshQuery: EntityQuery {
 
 struct RefreshMacHealthContextIntent: AppIntent {
     static var title: LocalizedStringResource = "Refresh Mac Health Context"
-    static var description = IntentDescription("Refresh explicit owner dates in the paired Mac's encrypted context, without export files or file quota. Requires open, authenticated apps.", categoryName: "Health")
+    static var description = IntentDescription("Refresh explicit owner dates in the paired computer's encrypted context, without export files or file quota. Requires open, authenticated apps.", categoryName: "Health")
     static var openAppWhenRun = true
     @Parameter(title: "Profile", description: "Saved Connected Mac profile name. Empty selects the active saved profile; no live-settings fallback.")
     var profile: String?
@@ -305,7 +305,7 @@ struct RefreshMacHealthContextIntent: AppIntent {
 
 struct GetMacContextRefreshStatusIntent: AppIntent {
     static var title: LocalizedStringResource = "Get Mac Context Refresh Status"
-    static var description = IntentDescription("Read a saved context refresh receipt and request an updated status from its original authenticated Mac. Disconnection is not completion.", categoryName: "Health")
+    static var description = IntentDescription("Read a saved context refresh receipt and request an updated status from its original authenticated computer. Disconnection is not completion.", categoryName: "Health")
     static var openAppWhenRun = true
     @Parameter(title: "Refresh Request") var request: MacContextRefreshEntity
     @MainActor

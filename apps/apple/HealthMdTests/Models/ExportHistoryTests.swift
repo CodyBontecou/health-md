@@ -809,6 +809,19 @@ final class ExportHistoryTests: XCTestCase {
 
     // MARK: - ExportFailureReason
 
+    func testAPIUploadFailureHasDestinationSpecificCopyAndRoundTrips() throws {
+        let reason = ExportFailureReason.apiUploadFailed
+        XCTAssertEqual(reason.shortDescription, "API upload failed")
+        XCTAssertTrue(reason.detailedDescription.contains("API endpoint"))
+        XCTAssertTrue(reason.recoverySuggestion.contains("credentials"))
+        XCTAssertFalse(reason.alertMessage().contains("files"))
+        XCTAssertEqual(try JSONDecoder().decode(ExportFailureReason.self,
+            from: JSONEncoder().encode(reason)), reason)
+        XCTAssertEqual(try JSONDecoder().decode(ExportFailureReason.self,
+            from: Data("\"future_upload_reason\"".utf8)), .unknown)
+        XCTAssertEqual(ExportFailureReason.fileWriteError.shortDescription, "File write failed")
+    }
+
     func testFailureReason_shortDescriptions() {
         for reason in [ExportFailureReason.noVaultSelected, .accessDenied, .noHealthData,
                        .healthKitError, .deviceLocked, .fileWriteError, .backgroundTaskExpired, .unknown] {
@@ -840,7 +853,7 @@ final class ExportHistoryTests: XCTestCase {
     func testFailureReason_otherAlertsPreserveOriginalDescriptionAndDetail() {
         for reason in [ExportFailureReason.noVaultSelected, .accessDenied, .healthKitError,
                        .deviceLocked, .fileWriteError, .backgroundTaskExpired,
-                       .apiEndpointNotConfigured, .unknown] {
+                       .apiEndpointNotConfigured, .apiUploadFailed, .unknown] {
             XCTAssertEqual(reason.alertMessage(), reason.detailedDescription)
             let detail = FailedDateDetail(date: Date(), reason: reason, errorDetails: "Synthetic failure detail")
             XCTAssertEqual(reason.alertMessage(detail: detail), detail.detailedMessage)

@@ -4,6 +4,17 @@ import {
   buildPlayStoreUrl,
   parseCampaignSlug,
 } from "../../../campaign-links.mjs";
+import { FUNNEL_ENDPOINT } from "../../../assets/funnel-contract.js";
+import { handleWebFunnel } from "./web-funnel.js";
+
+// Known date-style YouTube links predate the current campaign-token format.
+// Recover their content intent without inventing store/install attribution.
+const LEGACY_GUIDE_REDIRECTS = Object.freeze({
+  "/v/yt-csv-0702": "/apple-health-to-csv/",
+  "/v/yt-obsidian-0702": "/blog/export-apple-health-data-to-obsidian/",
+  "/v/yt-obsidian-0703": "/blog/export-apple-health-data-to-obsidian/",
+  "/v/yt-obsidian-070312": "/blog/export-apple-health-data-to-obsidian/",
+});
 
 function referrerHost(request) {
   const raw = request.headers.get("referer") || request.headers.get("referrer");
@@ -396,6 +407,9 @@ function monthsAgoClamped(now, months) {
 async function deleteExpiredAttribution(env, now = new Date()) {
   if (!env.DB) throw new Error("Campaign attribution database is unavailable");
   const attributionCutoff = monthsAgoClamped(now, 13);
+  // Remove the next cutoff day too: daily buckets must not exceed retention
+  // between scheduled sweeps. This does not change native attribution retention.
+  const funnelCutoff = monthsAgoClamped(new Date(now.getTime() + 24 * 60 * 60 * 1_000), 13);
   const rateWindowCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1_000).toISOString();
   await env.DB.batch([
     env.DB.prepare("DELETE FROM campaign_clicks WHERE created_at < ?")
@@ -403,6 +417,10 @@ async function deleteExpiredAttribution(env, now = new Date()) {
     env.DB.prepare("DELETE FROM campaign_installs WHERE received_at < ?")
       .bind(attributionCutoff.toISOString()),
     env.DB.prepare("DELETE FROM campaign_ingest_windows WHERE window_start < ?")
+      .bind(rateWindowCutoff),
+    env.DB.prepare("DELETE FROM web_funnel_daily WHERE day <= ?")
+      .bind(funnelCutoff.toISOString().slice(0, 10)),
+    env.DB.prepare("DELETE FROM web_funnel_ingest_windows WHERE window_start < ?")
       .bind(rateWindowCutoff),
   ]);
 }
@@ -449,6 +467,7 @@ export default {
 
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === FUNNEL_ENDPOINT) return handleWebFunnel(request, env);
     if (url.pathname === INSTALL_INGEST_PATH) {
       if (url.search) return jsonResponse({ error: "Query parameters are not allowed" }, 400);
       return handleInstallIngest(request, env, ctx);
@@ -460,6 +479,18 @@ export default {
 
     if (url.pathname === "/health") {
       return jsonResponse({ ok: true, service: "healthmd-campaign-redirects" });
+    }
+
+    const legacyPath = url.pathname.replace(/\/$/, "");
+    if (Object.hasOwn(LEGACY_GUIDE_REDIRECTS, legacyPath)) {
+      return new Response(null, {
+        status: 301,
+        headers: {
+          location: new URL(LEGACY_GUIDE_REDIRECTS[legacyPath], "https://healthmd.app").href,
+          "cache-control": "public, max-age=3600",
+          "referrer-policy": "no-referrer",
+        },
+      });
     }
 
     const slug = slugFromRequest(request);

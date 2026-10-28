@@ -9,7 +9,7 @@
 
 ## What it does
 
-Health.md's seven ordinary App Intents integrate with Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, and toggle scheduled exports. Ordinary Export Shortcuts write to the selected iPhone folder. The #173 draft now adds two separately gated Mac encrypted-context intents in source; they remain unreleased and unqualified. See the [additive context-automation implementation contract](apple-context-automation.md).
+Health.md's seven ordinary App Intents integrate with Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, and toggle scheduled exports. Export Shortcuts use the named profile, or the active profile when Profile is empty. API Endpoint profiles upload through the same API pipeline as manual and scheduled exports without requiring a folder. Folder profiles write to the selected iPhone folder; Connected Mac profiles retain the local-folder Shortcut behavior. The #173 draft now adds two separately gated Mac encrypted-context intents in source; they remain unreleased and unqualified. See the [additive context-automation implementation contract](apple-context-automation.md).
 
 Shortcuts are useful for personal automations like:
 
@@ -21,12 +21,12 @@ Shortcuts are useful for personal automations like:
 
 ## Available actions
 
-The seven ordinary actions below are retained unchanged. The draft source additionally registers **Refresh Mac Health Context** and **Get Mac Context Refresh Status** with authenticated phone-initiated requests and durable receipts, but they are not released or device-qualified. Do not infer customer availability; qualification and an exact Apple release note are still required.
+The seven ordinary actions below remain available. The draft source additionally registers **Refresh Mac Health Context** and **Get Mac Context Refresh Status** with authenticated phone-initiated requests and durable receipts, but they are not released or device-qualified. Do not infer customer availability; qualification and an exact Apple release note are still required.
 
 | Shortcut action | What it does | Parameters | Returns |
 |---|---|---|---|
 | **Export Yesterday** | Exports yesterday’s HealthKit data. | None | Dialog with success/failure summary |
-| **Export Last N Days** | Exports the most recent complete days ending yesterday. | Number of days, minimum 1; multi-year ranges supported | Dialog with success/failure summary |
+| **Export Last N Days** | Exports N days ending yesterday, or today when Include Today is on. | Number of days, minimum 1; Include Today (default off); Profile; multi-year ranges supported | Dialog with success/failure summary |
 | **Export a Specific Day** | Exports one chosen date. | Date | Dialog with success/failure summary |
 | **Export Date Range** | Exports every day from start to end, inclusive. | Start date, end date | Dialog; multi-year ranges supported |
 | **Get Health Summary** | Reads headline metrics without writing files. | Date | Structured `Health Summary` entity |
@@ -50,7 +50,7 @@ All actions are available in the Shortcuts app even if they do not have multiple
 ## Prerequisites
 
 - HealthKit permission granted in Health.md.
-- A vault/folder selected on iPhone for export actions.
+- A selected iPhone folder for folder exports, or a configured API endpoint for API profiles.
 - At least one export format selected.
 - Free export quota remaining or Full Access unlocked when an export runs.
 - Turning the scheduled export on or off does not require Full Access; a scheduled request that exports at least one date uses the same free-export allowance as manual and Shortcut exports.
@@ -73,7 +73,11 @@ This is the simplest Shortcuts equivalent of the Schedule tab.
 2. Add **Export Last N Days of Health Data**.
 3. Set **Number of Days** to `7` or any larger lookback needed for your corpus.
 4. Run the shortcut.
-5. Health.md exports the selected lookback window ending yesterday.
+5. Health.md exports the selected lookback window ending yesterday. Turn on **Include Today** to end the same N-day window today instead; `1` exports today alone. Today’s data is incomplete.
+
+For a morning API report, select an API Endpoint profile, set Number of Days to `1`, enable Include Today, and run the action from an “Alarm Is Stopped” automation while the phone is unlocked. A missing bound endpoint fails without falling back to another endpoint or writing local files. If HealthKit is locked during an API export, unlock and rerun the Shortcut; API uploads are not placed in the legacy folder-only pending Shortcut queue.
+
+Android automation already honors API profile destinations. Its Last Days action still ends yesterday; the matching `INCLUDE_TODAY` boolean extra (default false) is tracked as planned in the capability ledger. Neither change alters daily export schemas, API payload envelopes, or direct protocols.
 
 ## Setup: build a health summary shortcut
 
@@ -128,7 +132,7 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 - records export history;
 - counts against the free export quota when successful;
 - updates schedule bookkeeping when yesterday is part of the run;
-- does not send ordinary Shortcut exports to API Endpoint or Connected Mac, even if those destinations are selected for manual or scheduled exports.
+- uploads API Endpoint profile exports and records API history with zero local files; Connected Mac profiles continue to use the local iPhone folder.
 
 ## Draft Mac context implementation (not released)
 
@@ -144,7 +148,7 @@ Apple protects HealthKit data while the iPhone is locked and [relinquishes app a
 
 **Allow Running When Locked** only allows Shortcuts to start the action. It does not unlock HealthKit or override its data protection, and granting Health.md app-content access in Shortcuts does not change that restriction.
 
-When an export Shortcut encounters locked HealthKit data, Health.md preserves the exact requested dates as pending and posts a **Health Export Needs Attention** notification. Unlock the iPhone, then tap the notification or open Health.md to retry. There is no supported way for Health.md or Shortcuts to silently bypass locked-device protection.
+When a folder export Shortcut encounters locked HealthKit data, Health.md preserves the exact requested dates as pending and posts a **Health Export Needs Attention** notification. Unlock the iPhone, then tap the notification or open Health.md to retry. API export Shortcuts report the locked-device failure and require a rerun after unlocking. There is no supported way for Health.md or Shortcuts to silently bypass locked-device protection.
 
 **Get Last Export Status** reads the most recent recorded export-history entry. A locked-device request is pending rather than complete, so this action may continue to return the previous recorded export until the pending request is retried. Use Health.md’s recovery notification as the authoritative signal for pending work.
 
@@ -155,7 +159,7 @@ When an export Shortcut encounters locked HealthKit data, Health.md preserves th
 - Use **Get Health Summary** when another Shortcut needs values, not files.
 - Use **Get Last Export Status** to inspect the latest recorded result; it does not represent a pending locked-device request.
 - Keep Health.md configured first; Shortcuts depend on the app’s saved settings.
-- Use the Health.md Export tab or Schedule tab for API Endpoint and Connected Mac destinations because Shortcut export actions keep the local iPhone-folder pipeline.
+- Select an API Endpoint profile to upload from a Shortcut. Use the Export or Schedule tab to send files to Connected Mac.
 
 ## Troubleshooting
 
@@ -182,7 +186,7 @@ When an export Shortcut encounters locked HealthKit data, Health.md preserves th
   2. Build a one-tap **Export Yesterday** shortcut.
   3. Build a **Time of Day** automation for every morning.
   4. Run **Export Last N Days** for backfill.
-  5. Mention that Shortcut exports are iPhone-folder exports, while API Endpoint and Connected Mac are Export/Schedule tab destinations.
+  5. Show an API Endpoint profile upload, and explain that Connected Mac remains an Export/Schedule tab destination.
   6. Use **Get Health Summary** and show the returned fields.
   7. Use **Get Last Export Status** to create a failure notification.
 - **Key screenshot/recording moments:** Shortcuts action list, Export Last N Days parameter, Health Summary variables, successful export dialog.

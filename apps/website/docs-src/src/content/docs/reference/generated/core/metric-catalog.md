@@ -6,7 +6,11 @@ editUrl: false
 
 Generated from `HealthMetrics.all`, `HealthMetricExportMapping`, and `HealthMetricDataDictionary.entries`.
 
-| Metric ID | Name | Category | Source unit | Type | HealthKit aggregation | Archive only | Default | Availability | HealthKit identifier | Exported keys and rules |
+The keys in this table are canonical Markdown and Obsidian Bases frontmatter keys. Daily JSON uses separate nested fields: for example, `sleep_total_hours` is expressed in hours in frontmatter, while `sleep.totalDuration` is expressed in seconds in daily JSON. See the [daily JSON field inventory](/docs/reference/generated/core/daily-json-fields/) and [complete JSON example](/docs/reference/generated/core/summary-day.json) for JSON names, types, and units.
+
+A listed key or an archive record's `metric_attribution.direct_metric_ids` does not guarantee a summary value. Attribution describes capture selection; summaries use their own query windows and reducers and require qualifying data. Apple sleep summaries use the local noon-to-noon journal window, while raw records use calendar-day source-start ownership. Staged sleep can supply asleep duration without an `inBed` record, but cannot supply an explicit in-bed duration.
+
+| Metric ID | Name | Category | Source unit | Type | HealthKit aggregation | Archive only | Default | Availability | HealthKit identifier | Canonical frontmatter keys and rules |
 |---|---|---|---|---|---|---:|---:|---|---|---|
 | sleep_total | Total Sleep | Sleep | hours | category | duration | no | yes | baseline | HKCategoryTypeIdentifierSleepAnalysis | `sleep_total_hours` (hours; daily duration_sum; roll-up sum) |
 | sleep_bedtime | Bedtime | Sleep | time | category | duration | no | yes | baseline | HKCategoryTypeIdentifierSleepAnalysis | `sleep_bedtime` (time; daily first_time; roll-up time_of_day) |

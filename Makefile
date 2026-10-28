@@ -12,10 +12,9 @@ CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
         android-build android-play-debug android-fdroid-debug android-fdroid-release \
         practice-build website-build
 
-# Bound component concurrency, preserve every gate, and report all failures.
-# TEST_JOBS=1 retains serial scheduling for diagnosis or smaller machines.
+# Same six portable regression groups as CI; only Node, Rust and Python are required.
 test:
-	$(MAKE) --jobs="$(TEST_JOBS)" --keep-going test-components
+	python3 scripts/ci/run.py
 
 test-components: test-contracts test-core test-apple test-android test-cli test-practice test-wake test-website
 
@@ -95,3 +94,12 @@ practice-build:
 
 website-build:
 	cd apps/website && npm run build
+
+# Serialize affected native compilation across linked worktrees; no device launch.
+NATIVE_ARGS ?=
+.PHONY: verify-native plan-native
+verify-native:
+	python3 scripts/native/verify.py $(NATIVE_ARGS)
+
+plan-native:
+	python3 scripts/native/verify.py --plan $(NATIVE_ARGS)

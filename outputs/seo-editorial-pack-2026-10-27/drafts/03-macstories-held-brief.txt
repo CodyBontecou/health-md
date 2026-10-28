@@ -1,0 +1,32 @@
+MACSTORIES — HOLD THE END-TO-END AUTOMATION PITCH
+Prepared October 27, 2026. No message sent.
+
+Official routes: viticci@macstories.net or voorhees@macstories.net
+Choose one editor with relevant coverage; do not send duplicate pitches to both.
+Contact and review policy: https://www.macstories.net/about/
+Topic fit: https://www.macstories.net/Shortcuts/
+Existing Health.md Mac workflow:
+https://healthmd.app/blog/health-md-for-macos/
+
+What is ready now
+- Current published instructions for selecting the connected Mac destination.
+- A runnable offline Python example using the existing fictional daily CSVs.
+- Verified output: four weekly rows; 249,630 total steps; 27 recorded sleep days; 7.49 hours mean sleep.
+- Missing sleep remains missing, recorded zeros count, and duplicate totals or incompatible units cause an error.
+
+Exact command, from this package's root
+python3 automation/weekly_review.py --input automation/daily --output automation/weekly-review.md
+
+What the demonstration establishes
+Files already on disk can be transformed locally into a readable weekly review using Python's standard library. No account, upload, new dependency, folder watcher, or scheduled job is required. The command works as a manual post-export step. Running the command in this session verified file processing, not macOS device transfer or background automation.
+
+What remains before calling it an iPhone-to-Mac automation demo
+1. Use an explicitly authorized isolated device/simulator capture workflow with fictional data.
+2. Record app/OS versions, selected dates and metrics, ready Mac destination, and selected output folder.
+3. Complete a real iPhone → connected Mac → written CSV run.
+4. Run this local processing example on those resulting files and compare date/units/missing data with the source.
+5. Capture the run and preserve the original output. Keep iOS background timing qualifications explicit if scheduling is included.
+
+MacStories says it tests reviewed products itself and normally uses its own screenshots. Our assets provide context and a reproducible starting point, not a substitute for its review. Paid reviews are excluded. Offer review access only after confirming what can be supplied.
+
+Do not describe the existing iPhone simulator CSV captures as a Mac transfer, Shortcuts run, or scheduled background export.

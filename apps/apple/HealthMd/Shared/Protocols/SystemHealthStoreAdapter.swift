@@ -150,6 +150,9 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         }
         #endif
         guard isAvailable else { return .unavailable }
+        // Enabled for the SDK 27 family qualified by the public-declaration CI
+        // probe. Runtime availability cannot hide declarations from older SDKs.
+        #if HEALTHMD_HAS_HISTORY_AUTHORIZATION_API
         if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
             do {
                 let dates = try await store.earliestAuthorizedSampleDate(for: types)
@@ -162,6 +165,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 return .failure
             }
         }
+        #endif
         return .unavailable
     }
 

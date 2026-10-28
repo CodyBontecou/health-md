@@ -1,0 +1,17 @@
+{
+  "app": "healthmd",
+  "kind": "family",
+  "id": "6780235271",
+  "us_price": "39.99",
+  "non_us_overrides": 155,
+  "territories_verified": 175,
+  "mismatches": [],
+  "actual_us": {
+    "price_point_id": "eyJzIjoiNjc4MDIzNTI3MSIsInQiOiJVU0EiLCJwIjoiMTAyNzcifQ",
+    "price": "39.99",
+    "proceeds": "33.99",
+    "currency": "USD",
+    "manual": true
+  },
+  "method": "Raw API includes matched by full product/territory/point ID; CLI resolved output had incorrect amounts in some storefronts."
+}

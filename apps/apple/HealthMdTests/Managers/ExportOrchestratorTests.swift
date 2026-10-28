@@ -1452,6 +1452,39 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertFalse(result.isFailure) // totalCount must be > 0
     }
 
+    @MainActor
+    func testCIProductionExportReadsSDKValuesAndWritesRealMarkdown() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CIExport-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in identifier == .stepCount ? 1234 : nil }
+        let health = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let bookmarks = FakeBookmarkResolver()
+        bookmarks.accessGranted = true
+        let vault = VaultManager(defaults: FakeUserDefaults(), fileSystem: SystemFileSystem(),
+                                 bookmarkResolver: bookmarks)
+        vault.healthSubfolder = "Health"
+        vault.setVaultFolder(root)
+        Self.retainedManagers.append(vault)
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [])
+        settings.metricSelection.deselectAll()
+        settings.metricSelection.enabledMetrics = ["steps"]
+        settings.includeGranularData = false
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate], healthKitManager: health,
+            vaultManager: vault, settings: settings
+        )
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertTrue(result.failedDateDetails.isEmpty)
+        XCTAssertTrue(store.queriedSumIdentifiers.contains(HKQuantityTypeIdentifier.stepCount.rawValue))
+        let file = root.appendingPathComponent("Health/2026-03-15.md")
+        let content = try String(contentsOf: file, encoding: .utf8)
+        XCTAssertTrue(content.contains("steps: 1234"))
+        XCTAssertEqual(vault.lastExportPresentationTarget?.fileURL, file)
+    }
+
     // MARK: - Helpers
 
     private func makeDate(_ year: Int, _ month: Int, _ day: Int) -> Date {

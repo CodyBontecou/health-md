@@ -21,15 +21,15 @@ This is an independent Node 24/npm component with its own lockfile and generated
 ```bash
 npm ci
 npm run check
-npx playwright install chromium firefox webkit
+npx playwright install chromium
 npm run test:e2e
 npm run check:qualification
 npm start
 npm run dry-run
 ```
 
-`npm run check:ci` is the component-local full synthetic gate after browser binaries are installed. Real-browser evidence covers bundled Chromium, Firefox, and WebKit; it does not replace pending manual screen-reader, physical-device, external security, compliance, BAA, backend, or pilot approval.
+The default PR regression command is `bash scripts/ci/practice.sh` from the repository root. It installs this component's lockfile, type-checks, runs its unit/API security tests, builds production assets, and checks the synthetic/security boundaries. No real-browser or production-readiness qualification is claimed. `npm run check:ci` remains an explicit diagnostic command with Chromium and the full qualification/smoke pipeline.
 
-`npm start` builds and starts the local synthetic Worker on `127.0.0.1:8787`. Generated `dist/` and `.wrangler/` content is never committed. CI qualifies a build but never deploys it.
+`npm start` builds and starts the local synthetic Worker on `127.0.0.1:8787`. Generated `dist/` and `.wrangler/` content is never committed. CI builds once and passes the current assets through its `:built` steps. Run `npm run check:ci` as the complete pipeline; invoke standalone commands when a fresh build is needed. CI qualifies a build but never deploys it.
 
 Before finishing, run type checking, unit tests, the source/build/fixture scanner and canary, security/qualification verifiers, production build, real local-Wrangler browser projects where available, smoke, Wrangler dry-run, `npm audit --audit-level=moderate`, and `git diff --check`. Preserve strict no-store/security headers and the fail-closed runtime guard. Generated browser failure artifacts and `qualification/generated/` provenance are synthetic-only and ignored.

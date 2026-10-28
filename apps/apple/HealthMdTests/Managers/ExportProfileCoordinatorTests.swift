@@ -800,6 +800,28 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         )
     }
 
+    func testCreateProfilePersistsChosenAPIEndpointInsteadOfActiveBinding() throws {
+        let coordinator = makeCoordinator()
+        let first = coordinator.destinationStore.upsertAPIEndpoint(
+            name: "First", endpointURLString: "https://first.example/export", bearerToken: "first-token")
+        let second = coordinator.destinationStore.upsertAPIEndpoint(
+            name: "Second", endpointURLString: "https://second.example/export", bearerToken: "second-token")
+        _ = coordinator.createProfile(name: "First API", target: .apiEndpoint, apiEndpointID: first.id)
+        let created = try XCTUnwrap(coordinator.createProfile(
+            name: "Second API", target: .apiEndpoint, apiEndpointID: second.id))
+        XCTAssertEqual(created.apiEndpointID, second.id)
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, created.id)
+        XCTAssertEqual(ExportProfileStore(userDefaults: defaults).profile(id: created.id)?.apiEndpointID, second.id)
+        XCTAssertEqual(coordinator.apiExportSettingsForTesting.endpointURLString, "https://second.example/export")
+        XCTAssertEqual(coordinator.apiExportSettingsForTesting.bearerToken, "second-token")
+
+        let legacy = try XCTUnwrap(coordinator.createProfile(name: "Current endpoint", target: .apiEndpoint))
+        XCTAssertNil(legacy.apiEndpointID, "an explicit current-endpoint choice must not inherit another binding")
+        let folder = try XCTUnwrap(coordinator.createProfile(
+            name: "Folder", target: .localIPhoneFolder, apiEndpointID: second.id))
+        XCTAssertNil(folder.apiEndpointID)
+    }
+
     func testSuggestedProfileNameSkipsTakenNames() throws {
         let coordinator = makeCoordinator()
         XCTAssertEqual(coordinator.suggestedProfileName(), "Profile")

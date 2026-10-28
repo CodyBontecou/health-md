@@ -9742,6 +9742,64 @@
     "API Refresh Behavior" : {
 
     },
+    "API upload failed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API-Upload fehlgeschlagen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error al subir a la API"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec de l’envoi à l’API"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Caricamento API non riuscito"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIへのアップロードに失敗しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 업로드 실패"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API-upload mislukt"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Falha no envio para a API"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 上传失败"
+          }
+        }
+      }
+    },
     "API: %@" : {
       "comment" : "Profile row destination line for an API endpoint target"
     },
@@ -15254,6 +15312,64 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "检查目的地是否在线并且有可用空间。重新选择导出文件夹以刷新访问权限，然后重试。"
+          }
+        }
+      }
+    },
+    "Check the endpoint URL, credentials, network connection, and server status, then retry the export." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüfe die Endpunkt-URL, die Zugangsdaten, die Netzwerkverbindung und den Serverstatus und versuche den Export erneut."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comprueba la URL del punto de conexión, las credenciales, la conexión de red y el estado del servidor, y vuelve a intentar la exportación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifiez l’URL du point de terminaison, les identifiants, la connexion réseau et l’état du serveur, puis réessayez l’export."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controlla l’URL dell’endpoint, le credenziali, la connessione di rete e lo stato del server, quindi riprova l’esportazione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エンドポイントのURL、認証情報、ネットワーク接続、サーバーの状態を確認してから、エクスポートを再試行してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "엔드포인트 URL, 인증 정보, 네트워크 연결 및 서버 상태를 확인한 후 내보내기를 다시 시도하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controleer de URL van het eindpunt, de inloggegevens, de netwerkverbinding en de serverstatus en probeer de export opnieuw."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verifique a URL do endpoint, as credenciais, a conexão de rede e o status do servidor e tente exportar novamente."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请检查端点 URL、凭据、网络连接和服务器状态，然后重试导出。"
           }
         }
       }
@@ -62763,6 +62879,64 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Health.md 无法分配不可变的查询上下文生成。"
+          }
+        }
+      }
+    },
+    "Health.md could not deliver the export to the API endpoint. The server may have rejected the request or the connection may have failed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md konnte den Export nicht an den API-Endpunkt übermitteln. Der Server hat die Anfrage möglicherweise abgelehnt oder die Verbindung ist fehlgeschlagen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md no pudo enviar la exportación al punto de conexión de la API. Puede que el servidor haya rechazado la solicitud o que la conexión haya fallado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md n’a pas pu transmettre l’export au point de terminaison de l’API. Le serveur a peut-être rejeté la requête ou la connexion a échoué."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md non ha potuto inviare l’esportazione all’endpoint API. Il server potrebbe aver rifiutato la richiesta oppure la connessione potrebbe non essere riuscita."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.mdはエクスポートをAPIエンドポイントに送信できませんでした。サーバーがリクエストを拒否したか、接続に失敗した可能性があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md가 내보내기 데이터를 API 엔드포인트로 전송하지 못했습니다. 서버가 요청을 거부했거나 연결에 실패했을 수 있습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md kon de export niet naar het API-eindpunt verzenden. De server heeft het verzoek mogelijk geweigerd of de verbinding is mislukt."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Health.md não conseguiu enviar a exportação ao endpoint da API. O servidor pode ter rejeitado a solicitação ou a conexão pode ter falhado."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md 无法将导出数据发送到 API 端点。服务器可能拒绝了请求，或连接失败。"
           }
         }
       }

@@ -1,6 +1,6 @@
 ---
-title: "Health.md CLI"
-description: "Install the standalone healthmd CLI on macOS, Linux, or Windows. Pair it directly with an iPhone or Android device. Check readiness, export data, run queries, and manage durable jobs. No Mac app required."
+title: "Apple Health and Health Connect CLI"
+description: "Export Apple Health or Health Connect data from your terminal with Health.md. Preview CLI for macOS, Linux and Windows; pair an open phone app."
 ---
 
 The standalone `healthmd` CLI runs on macOS, Linux, and Windows. It pairs directly with an open Health.md app on iPhone (protocol v1) or Android (protocol v2). It never requires the Health.md Mac app, has no backend selection, and never reads Apple Health or Health Connect from the computer.
@@ -18,6 +18,22 @@ The standalone `healthmd` CLI runs on macOS, Linux, and Windows. It pairs direct
 </div>
 
 On macOS or Linux, install the preview with <code>brew install CodyBontecou/tap/healthmd</code>. Use the exact matching mobile build named by release evidence. Package publication does not prove mobile compatibility.
+
+## First export from your phone
+
+For Windows and other install options, follow the [installation guide](/docs/cli/installation/). Check the [compatible mobile build](/docs/cli-direct/) before pairing. Keep Health.md open on the phone, enable Direct CLI Access and authorize the health categories you want to export.
+
+Create a folder on your computer and replace `/absolute/path/to/HealthVault` below with its existing absolute path. On Windows, use a full Windows path. Follow the pairing prompts, check readiness, then export one day:
+
+```bash
+healthmd direct pair --transport manual-ip
+healthmd status
+healthmd export --yesterday --destination /absolute/path/to/HealthVault
+```
+
+After a successful export, open the destination folder and inspect the written files. The phone produces the export; the CLI saves the validated files to your computer. If the job times out, [inspect its status and resume it](/docs/cli-jobs/) rather than assuming it was cancelled.
+
+### Platform support
 
 The standalone Rust CLI runs on macOS, Linux, and Windows, uses direct Manual IP or Tailscale connections, and does not need the Mac app. It pairs with iPhone sources through protocol v1 and Android sources through protocol v2, with automated Swift↔Rust and Kotlin↔Rust compatibility gates. Protocol compatibility is implemented, but physical-device release QA must finish before the first qualified stable release. Checksummed archives, a PowerShell installer, and `cargo install healthmd-cli --locked` are attached to each release.
 

@@ -1,6 +1,6 @@
 ---
-title: "Health.md CLI"
-description: "Installieren Sie die eigenständige healthmd-CLI unter macOS, Linux oder Windows, koppeln Sie sie direkt mit einem iPhone oder Android-Gerät, prüfen Sie die Bereitschaft, exportieren Sie Daten, führen Sie Abfragen aus und verwalten Sie persistente Aufträge. Keine Mac-App erforderlich."
+title: "CLI für Apple Health und Health Connect"
+description: "Exportieren Sie Daten aus Apple Health oder Health Connect mit Health.md im Terminal. CLI-Vorschau für macOS, Linux und Windows mit geöffneter Telefon-App."
 ---
 
 Die eigenständige `healthmd`-CLI läuft unter macOS, Linux und Windows und koppelt sich direkt mit einer geöffneten Health.md-App auf dem iPhone (Protokoll v1) oder unter Android (Protokoll v2). Sie benötigt niemals die Health.md-Mac-App, hat keine Backend-Auswahl und liest niemals Apple Health oder Health Connect auf dem Computer.
@@ -18,6 +18,22 @@ Die eigenständige `healthmd`-CLI läuft unter macOS, Linux und Windows und kopp
 </div>
 
 Installieren Sie die Vorschau unter macOS oder Linux mit <code>brew install CodyBontecou/tap/healthmd</code>. Verwenden Sie den exakten mobilen Build aus den Release-Nachweisen; die Paketveröffentlichung beweist keine mobile Kompatibilität.
+
+## Erster Export vom Telefon
+
+Für Windows und weitere Installationswege folgen Sie der [Installationsanleitung](/de/docs/cli/installation/). Prüfen Sie vor der Kopplung den [kompatiblen mobilen Build](/de/docs/cli-direct/). Lassen Sie Health.md auf dem Telefon geöffnet, aktivieren Sie Direct CLI Access und erlauben Sie die gewünschten Gesundheitskategorien.
+
+Erstellen Sie einen Ordner auf dem Computer und ersetzen Sie `/absolute/path/to/HealthVault` durch dessen bestehenden absoluten Pfad. Unter Windows verwenden Sie einen vollständigen Windows-Pfad. Folgen Sie den Kopplungsschritten, prüfen Sie die Bereitschaft und exportieren Sie einen Tag:
+
+```bash
+healthmd direct pair --transport manual-ip
+healthmd status
+healthmd export --yesterday --destination /absolute/path/to/HealthVault
+```
+
+Öffnen Sie nach einem erfolgreichen Export den Zielordner und prüfen Sie die geschriebenen Dateien. Das Telefon erzeugt den Export; die CLI speichert die validierten Dateien auf dem Computer. Bei einer Zeitüberschreitung [prüfen Sie den Status und setzen den Auftrag fort](/de/docs/cli-jobs/), statt von einem Abbruch auszugehen.
+
+### Unterstützte Plattformen
 
 Die eigenständige Rust-CLI läuft unter macOS, Linux und Windows, verwendet direkte Verbindungen über Manual IP oder Tailscale und benötigt die Mac-App nicht. Sie koppelt sich über Protokoll v1 mit iPhone-Quellen und über Protokoll v2 mit Android-Quellen, mit automatisierten Kompatibilitätsgates für Swift↔Rust und Kotlin↔Rust. Die Protokollkompatibilität ist implementiert; vor der ersten qualifizierten stabilen Version muss die Release-QA auf physischen Geräten abgeschlossen sein. Prüfsummen-gesicherte Archive, ein PowerShell-Installationsprogramm und `cargo install healthmd-cli --locked` sind jedem Release beigefügt.
 

@@ -1,6 +1,6 @@
 ---
-title: "Health.md CLI"
-description: "スタンドアロンのhealthmd CLIをmacOS、Linux、Windowsにインストールし、iPhoneまたはAndroidデバイスと直接ペアリングして、準備状況の確認、データのエクスポート、クエリ実行、永続ジョブの管理を行います。Macアプリは不要です。"
+title: "Apple HealthとHealth ConnectのCLI"
+description: "Health.mdを使い、ターミナルからApple HealthやHealth Connectのデータを書き出します。macOS、Linux、Windows向けプレビュー版CLI。スマートフォンでアプリを開いてペアリングします。"
 ---
 
 スタンドアロンの`healthmd` CLIはmacOS、Linux、Windowsで動作し、開いているiPhone（プロトコルv1）またはAndroid（プロトコルv2）のHealth.mdアプリと直接ペアリングします。Health.md for Macを一切必要とせず、バックエンド選択も存在せず、コンピューターからApple HealthやHealth Connectを読み取ることもありません。
@@ -18,6 +18,22 @@ description: "スタンドアロンのhealthmd CLIをmacOS、Linux、Windowsに�
 </div>
 
 macOSまたはLinuxでは、<code>brew install CodyBontecou/tap/healthmd</code>でプレビューをインストールします。リリースエビデンスに記載された正確なモバイルビルドを使用してください。パッケージの公開はモバイル互換性を証明しません。
+
+## スマートフォンから最初のエクスポート
+
+Windowsや他の導入方法は[インストールガイド](/ja/docs/cli/installation/)を参照し、ペアリング前に[対応するモバイルビルド](/ja/docs/cli-direct/)を確認してください。スマートフォンでHealth.mdを開いたままにし、Direct CLI Accessを有効にして、書き出すカテゴリへのアクセスを許可します。
+
+コンピューターにフォルダを作成し、下記の`/absolute/path/to/HealthVault`をその既存フォルダの絶対パスに置き換えます。Windowsでは完全なWindowsパスを使います。ペアリングの案内に従い、準備状況を確認してから1日分を書き出します。
+
+```bash
+healthmd direct pair --transport manual-ip
+healthmd status
+healthmd export --yesterday --destination /absolute/path/to/HealthVault
+```
+
+成功後、保存先フォルダを開いて書き込まれたファイルを確認します。エクスポートはスマートフォンが生成し、CLIが検証済みファイルをコンピューターに保存します。タイムアウトした場合は、キャンセルされたと判断せず[状態を確認してジョブを再開](/ja/docs/cli-jobs/)してください。
+
+### 対応プラットフォーム
 
 スタンドアロンのRust CLIはmacOS、Linux、Windowsで動作し、Manual IPまたはTailscaleによる直接接続を使用し、Macアプリを必要としません。プロトコルv1でiPhoneソースと、プロトコルv2でAndroidソースとペアリングし、Swift↔RustおよびKotlin↔Rustの自動互換性ゲートを備えます。プロトコル互換性は実装済みですが、最初の認定済み安定版の前に物理デバイスのリリースQAを完了する必要があります。チェックサム付きアーカイブ、PowerShellインストーラー、`cargo install healthmd-cli --locked`が各リリースに付属します。
 
