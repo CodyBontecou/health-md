@@ -276,15 +276,16 @@ struct ExportTabView: View {
                     ? apiExportSettings.destinationSnapshot
                     : nil,
                 connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
-                fetchHealthData: { date in
+                fetchHealthData: { date, snapshot in
+                    let capturedSettings = snapshot.makeAdvancedExportSettings()
                     #if DEBUG
                     if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveDetailPolicy
+                            includeGranularData: capturedSettings.effectiveDetailPolicy
                                 .includesSelectedTimeSeries,
                             includeLargeSourceArchive: TestMode.healthKitExportPreviewLargeArchive
-                                && advancedSettings.effectiveDetailPolicy.includesCanonicalArchive
+                                && capturedSettings.effectiveDetailPolicy.includesCanonicalArchive
                         )
                     }
                     #endif
@@ -292,9 +293,9 @@ struct ExportTabView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            detailPolicy: advancedSettings.effectiveDetailPolicy,
-                            metricSelection: advancedSettings.metricSelection,
-                            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+                            detailPolicy: capturedSettings.effectiveDetailPolicy,
+                            metricSelection: capturedSettings.metricSelection,
+                            timeZone: capturedSettings.exportTimeZoneOverride ?? .current
                         )
                     } catch {
                         let descriptor = HealthKitSafeLogging.failureDescriptor(

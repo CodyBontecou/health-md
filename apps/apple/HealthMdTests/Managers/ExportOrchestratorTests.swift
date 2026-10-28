@@ -1550,6 +1550,67 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testEmptyMorningOperationsKeepPinnedCaptureAndCompleteEveryDateWithoutFiles() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        let expected = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 1)))
+        let dates = [first, try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: first))]
+        for range in [false, true] {
+            for background in [false, true] {
+                let store = FakeHealthStore()
+                store.querySumResult = { _, _ in
+                    XCTAssertEqual(AppleSleepCaptureContext.pinned.wrappedValue, expected)
+                    return nil
+                }
+                let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+                manager.setSleepDayAttribution(.morningEnds)
+                let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/EmptyMorning-\(range)-\(background)")
+                let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: range ? [.range] : [])
+                settings.executionSleepCaptureContext = nil
+                settings.exportTimeZoneOverride = zone
+                settings.metricSelection.enabledMetrics = ["steps"]
+                settings.detailPolicy = .summary
+                settings.includeDataDictionary = false
+                let progress: (Int, Int, String) -> Void = { processed, _, _ in
+                    if processed == 1 {
+                        manager.setSleepDayAttribution(.nightBegins)
+                        settings.exportTimeZoneOverride = TimeZone(identifier: "Europe/Berlin")
+                        settings.metricSelection.enabledMetrics = ["sleep_total"]
+                    }
+                }
+                let result: ExportOrchestrator.ExportResult
+                if background {
+                    let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: manager.sleepDayAttribution)
+                    settings.executionSleepCaptureContext = context
+                    let accepted = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+                        healthSubfolder: vault.healthSubfolder, calendarTimeZone: zone,
+                        surface: .localVaultRangeWithoutSideEffects)
+                    XCTAssertTrue(accepted.appleExportEnginePin?.hasExplicitWakeDateContracts == true)
+                    let recovered = accepted.makeAdvancedExportSettings()
+                    Self.retainedSettings.append(recovered)
+                    manager.setSleepDayAttribution(.nightBegins)
+                    result = await ExportOrchestrator.exportDatesBackground(dates, healthKitManager: manager,
+                        vaultManager: vault, settings: recovered, frozenSettingsSnapshot: accepted,
+                        operationSurface: .localVaultRangeWithoutSideEffects, onProgress: progress)
+                } else {
+                    result = await ExportOrchestrator.exportDates(dates, healthKitManager: manager,
+                        vaultManager: vault, settings: settings, onProgress: progress)
+                }
+                XCTAssertEqual(result.successCount, 0)
+                XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData, .noHealthData])
+                XCTAssertEqual(Set(result.completedDates ?? []), Set(dates))
+                XCTAssertTrue(result.didCompleteAllRequestedDates)
+                XCTAssertFalse(result.wasCancelled)
+                XCTAssertEqual(result.totalFilesWritten, 0)
+                XCTAssertTrue(fileSystem.files.isEmpty)
+                XCTAssertEqual(store.queriedSumIdentifiers.filter { $0 == HKQuantityTypeIdentifier.stepCount.rawValue }.count, 2)
+            }
+        }
+    }
+
+    @MainActor
     func testFrozenMissingMorningRendererWritesNoFormatAndMissingRecoveryContextDoesNotRepin() async {
         let date = HealthKitFixtures.referenceDate
         let store = FakeHealthStore()

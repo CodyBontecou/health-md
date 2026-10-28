@@ -867,15 +867,16 @@ struct iPadExportView: View {
                 destinationRootName: nil,
                 dateRangePreset: dateRangePreset,
                 targetType: .localFile,
-                fetchHealthData: { date in
+                fetchHealthData: { date, snapshot in
+                    let capturedSettings = snapshot.makeAdvancedExportSettings()
                     #if DEBUG
                     if TestMode.useHealthKitExportPreviewFixtures {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveDetailPolicy
+                            includeGranularData: capturedSettings.effectiveDetailPolicy
                                 .includesSelectedTimeSeries,
                             includeLargeSourceArchive: TestMode.healthKitExportPreviewLargeArchive
-                                && advancedSettings.effectiveDetailPolicy.includesCanonicalArchive
+                                && capturedSettings.effectiveDetailPolicy.includesCanonicalArchive
                         )
                     }
                     #endif
@@ -883,8 +884,9 @@ struct iPadExportView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            detailPolicy: advancedSettings.effectiveDetailPolicy,
-                            metricSelection: advancedSettings.metricSelection
+                            detailPolicy: capturedSettings.effectiveDetailPolicy,
+                            metricSelection: capturedSettings.metricSelection,
+                            timeZone: capturedSettings.exportTimeZoneOverride ?? .current
                         )
                     } catch {
                         let descriptor = HealthKitSafeLogging.failureDescriptor(

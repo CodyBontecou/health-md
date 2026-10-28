@@ -3,6 +3,82 @@ import XCTest
 
 final class ExportPreviewDisplayContentTests: XCTestCase {
 
+    // Retain nested observation state through host-test teardown; see docs/testing/lifecycle-audit.md.
+    @MainActor private static var retainedPreviewSettings: [AdvancedExportSettings] = []
+    @MainActor private static var retainedPreviewConfigurations: [ExportPreviewOperationConfiguration] = []
+
+    @MainActor
+    func testAcceptedPreviewKeepsCaptureScopeAndDestinationPathsAcrossLivePreferenceMutation() async throws {
+        let suite = "FrozenPreviewConfiguration.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let source = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedPreviewSettings.append(source)
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        source.executionSleepCaptureContext = context
+        source.executionSleepCaptureContextIsFrozen = true
+        source.exportTimeZoneOverride = zone
+        source.exportFormats = [.json, .csv]
+        source.detailPolicy = .lossless
+        source.organizeFormatsIntoFolders = true
+        source.folderStructure = "yyyy/MM"
+        source.dailyNoteInjection.folderPath = "Daily/Accepted"
+        source.generateRangeSummary = false
+        source.archiveExportFiles = false
+        source.metricSelection.enabledMetrics = ["steps"]
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(source,
+            healthSubfolder: "Accepted/Health", calendarTimeZone: zone, surface: .preview)
+        XCTAssertTrue(snapshot.appleExportEnginePin?.hasExplicitWakeDateContracts == true)
+        let root = URL(fileURLWithPath: "/tmp/AcceptedPreviewVault", isDirectory: true)
+        let configuration = ExportPreviewOperationConfiguration(snapshot: snapshot,
+            destinationRootName: "AcceptedVault", vaultURL: root)
+        Self.retainedPreviewConfigurations.append(configuration)
+        let date = ExportFixtures.referenceDate
+        let folder = configuration.aggregateFolderPath(for: date, format: .json)
+        let summaryFolder = configuration.aggregateSummaryFolderPath(for: date)
+        let rollupFolder = configuration.rollupFolderPath(for: .range, format: .json)
+        let noteFolder = configuration.dailyNoteFolderPath(for: date)
+        let noteURL = configuration.dailyNoteURL(for: date)
+        XCTAssertTrue(folder.hasPrefix("AcceptedVault/Accepted/Health/"))
+        XCTAssertTrue(noteFolder.contains("Daily/Accepted"))
+        var callbacks = 0
+        _ = await configuration.fetchRecord(for: date) { receivedDate, accepted in
+            callbacks += 1
+            source.exportFormats = [.markdown]
+            source.detailPolicy = .summary
+            source.metricSelection.enabledMetrics = ["sleep_total"]
+            source.exportTimeZoneOverride = TimeZone(identifier: "America/Los_Angeles")!
+            source.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .nightBegins)
+            source.folderStructure = "Changed"
+            source.organizeFormatsIntoFolders = false
+            source.dailyNoteInjection.folderPath = "Daily/Changed"
+            await Task.yield()
+            XCTAssertEqual(receivedDate, date)
+            XCTAssertEqual(accepted.exportFormats, [.json, .csv])
+            XCTAssertEqual(accepted.detailPolicy, .lossless)
+            XCTAssertEqual(accepted.calendarTimeZoneIdentifier, zone.identifier)
+            XCTAssertEqual(try? accepted.recoveredSleepCaptureContext(), context)
+            let captured = accepted.makeAdvancedExportSettings()
+            Self.retainedPreviewSettings.append(captured)
+            XCTAssertEqual(captured.metricSelection.enabledMetrics, ["steps"])
+            XCTAssertEqual(captured.exportTimeZoneOverride, zone)
+            return nil
+        }
+        XCTAssertEqual(callbacks, 1)
+        XCTAssertEqual(configuration.scope.maximumRenderedDates, 1)
+        XCTAssertEqual(Set(configuration.scope.formats), [.json, .csv])
+        XCTAssertFalse(configuration.scope.includesSupplementalFiles)
+        XCTAssertEqual(configuration.aggregateFolderPath(for: date, format: .json), folder)
+        XCTAssertEqual(configuration.aggregateSummaryFolderPath(for: date), summaryFolder)
+        XCTAssertEqual(configuration.rollupFolderPath(for: .range, format: .json), rollupFolder)
+        XCTAssertEqual(configuration.dailyNoteFolderPath(for: date), noteFolder)
+        XCTAssertEqual(configuration.dailyNoteURL(for: date), noteURL)
+        XCTAssertTrue(configuration.matchesVault(root))
+        XCTAssertFalse(configuration.matchesVault(URL(fileURLWithPath: "/tmp/ReboundVault")))
+        XCTAssertFalse(configuration.matchesVault(nil))
+    }
+
     @MainActor
     func testMorningPreviewFreezesSuccessorBeforeSyntheticCaptureAndNeverUsesHistoricalWriter() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
