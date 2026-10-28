@@ -641,6 +641,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">美式短日期（01/13/2026）</string>
     <string name="date_format_display_us_long">美式长日期（2026年1月13日）</string>
+    <string name="date_format_display_eu_dot">欧式点分隔 (13.01.2026)</string>
     <string name="date_format_display_eu_short">欧式短日期（13/01/2026）</string>
     <string name="date_format_display_eu_long">欧式长日期（2026年1月13日）</string>
     <string name="date_format_display_compact">紧凑格式（20260113）</string>

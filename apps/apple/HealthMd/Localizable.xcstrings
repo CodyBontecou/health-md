@@ -49291,6 +49291,65 @@
         }
       }
     },
+    "EU Dot (13.01.2026)" : {
+      "comment" : "Date format option",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EU mit Punkten (13.01.2026)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "UE con puntos (13.01.2026)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "UE avec points (13.01.2026)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "UE con punti (13.01.2026)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EUドット区切り (13.01.2026)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유럽식 점 구분 (13.01.2026)"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EU met punten (13.01.2026)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EU com pontos (13.01.2026)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欧式点分隔 (13.01.2026)"
+          }
+        }
+      }
+    },
     "EU Long (13 January 2026)" : {
       "comment" : "Date format option",
       "localizations" : {

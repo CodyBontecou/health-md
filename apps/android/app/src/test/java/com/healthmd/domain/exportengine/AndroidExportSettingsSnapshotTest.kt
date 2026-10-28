@@ -34,6 +34,25 @@ import org.junit.Test
 
 class AndroidExportSettingsSnapshotTest {
     @Test
+    fun euDotSurvivesFrozenProfilePersistenceAndFormatsCalendarDates() {
+        val settings = ExportSettings().let { it.copy(
+            formatCustomization = it.formatCustomization.copy(dateFormat = DateFormatPreference.EU_DOT),
+        ) }
+        val snapshot = AndroidExportSettingsSnapshot.capture(settings, syntheticExportEnginePin(zoneId = "UTC"), ZoneId.of("UTC"))
+        val decoded = AndroidExportSettingsSnapshotCodec.decode(AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot))
+        val restored = decoded.restoreOnto(ExportSettings())
+        assertThat(restored.formatCustomization.dateFormat).isEqualTo(DateFormatPreference.EU_DOT)
+        for ((date, expected) in listOf(
+            "2026-01-13" to "13.01.2026",
+            "2024-02-29" to "29.02.2024",
+            "2025-12-31" to "31.12.2025",
+            "2026-01-01" to "01.01.2026",
+        )) {
+            assertThat(restored.formatCustomization.dateFormat.format(LocalDate.parse(date))).isEqualTo(expected)
+        }
+    }
+
+    @Test
     fun historicalSnapshotRestorationKeepsExactFrozenAuthority() {
         for (profile in AndroidExportProfile.entries) {
             for (mode in listOf(ExportEngineMode.rust, ExportEngineMode.shadow)) {

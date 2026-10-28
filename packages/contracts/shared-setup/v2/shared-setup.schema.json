@@ -390,6 +390,7 @@
             "us_short",
             "us_long",
             "eu_short",
+            "eu_dot",
             "eu_long",
             "compact",
             "friendly"
