@@ -25,6 +25,10 @@ components remain isolated. Cached compilation never supplies a passed test resu
 Explicit cache saving occurs before the final timing gate; no cache post-action runs
 later. Hosted completion timestamps, not local runtime alone, establish success.
 
+## Android SDK setup
+
+Every Android workflow explicitly passes `packages: platform-tools` to the pinned `setup-android` action. Its default, `tools platform-tools`, requests the removed legacy `tools` package and fails before Gradle runs. The action still installs command-line tools and accepts SDK licenses; each job installs its NDK, build tools, and emulator images separately as needed. `apps/android/scripts/tests/test_android_workflow_action_pins.py` guards this override as well as action pins.
+
 ## Android release trigger
 
 Android `1.9.3` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.

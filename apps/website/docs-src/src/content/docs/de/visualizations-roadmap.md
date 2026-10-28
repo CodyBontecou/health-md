@@ -24,10 +24,10 @@ Verwende `auto`, um dem im Export angegebenen Einheitensystem zu folgen, `metric
 
 ## Aktuelle Visualisierungsabdeckung
 <div class="reference-stats">
-<div><strong>43</strong><span>aktuelle Plugin-Renderer</span></div>
+<div><strong>62</strong><span>aktuelle Plugin-Renderer</span></div>
 <div><strong>18</strong><span>Exportdatenkategorien</span></div>
 <div><strong>220+</strong><span>kanonische Exportschlüssel</span></div>
-<div><strong>1</strong><span>noch benötigte generische Metrikebene</span></div>
+<div><strong>4</strong><span>WHOOP-spezifische Ansichten</span></div>
 </div>
 
 ## Plattformunterstützung nach Exporter
@@ -146,6 +146,40 @@ Jeder Eintrag verweist auf die passende öffentliche Variante in der [Health.md-
 - [Trainingstrends](/visualizations/workout-analytics/workout-trends/theme-colors/) — `workout-trends`
 - [Trainingsintervalle](/visualizations/workout-analytics/workout-intervals/theme-colors/) — `workout-intervals`
 - [Trainingskarte](/visualizations/workout-analytics/workout-map/theme-colors/) — `workout-map`
+
+### WHOOP: getrennte Anbieterdaten
+
+Verbinde WHOOP in Apple-Versionen mit aktivierter WHOOP-Funktion unter Einstellungen → Verbundene Apps und beziehe verbundene Apps in den Export ein. Diese Diagramme lesen tägliche Apple-Dateien im Format `healthmd.health_data` v8 mit `providers.whoop` (`healthmd.provider.whoop_daily` v1). WHOOP wird nicht mit Apple- oder Health-Connect-Zusammenfassungen vermischt; die WHOOP-HRV ist RMSSD, nicht Apples SDNN.
+
+- [Erholung × Belastung](/visualizations/whoop/whoop-recovery-strain/theme-colors/), `whoop-recovery-strain`: Erholung (0–100 %) gegenüber Zyklusbelastung (0–21), in vollständigen Datensätzen über dieselbe Zyklus-ID verknüpft. Dies zeigt einen Zusammenhang, keine Trainingsempfehlung.
+- [Erreichter Schlaf und Schlafbedarf](/visualizations/whoop/whoop-sleep-need/theme-colors/), `whoop-sleep-need`: getrennte Schlafepisoden und Nickerchen mit Grundbedarf, Schlafdefizit, Bedarf durch jüngste Belastung und vorzeichenbehafteter Nickerchenanpassung. Die Nettobedarfsmarkierung benötigt alle vier gemeldeten Komponenten; negative Nickerchenanpassungen werden weiterhin abgezogen.
+- [Trends der Schlafbewertung](/visualizations/whoop/whoop-sleep-trends/theme-colors/), `whoop-sleep-trends`: von WHOOP gemeldete Prozentwerte für Leistung, Regelmäßigkeit und Effizienz, keine lokal berechneten Bewertungen.
+- [Trainingsbelastung und Zonen](/visualizations/whoop/whoop-workout-strain/theme-colors/), `whoop-workout-strain`: individuelle Trainingsbelastung und WHOOP-Zonen 0–5. Zonenanteile beziehen sich auf die gesamte gemeldete Zonenzeit, nicht auf die verstrichene Dauer oder von Apple abgeleitete Zonen; Aufzeichnungsabdeckung und verstrichene Zeit bleiben separater Kontext.
+
+Verwende JSON oder strukturiertes CSV für vollständige Datensätze und Schlafbedarfskomponenten. Markdown/Bases bieten nur eindeutige skalare Projektionen eines einzelnen Datensatzes, ohne Nickerchenidentität oder Trainingszonendetails. Diese Diagramme lesen keine anbieternativen Begleitdateien, Android Raw API Snapshots oder Roll-ups. Fehlende oder unbewertete Werte sind nicht null; teilweise Erfassungen bleiben sichtbar. Datumsfilter verwenden den zugehörigen Exporttag, nicht die Ereigniszeitstempel. Die Galerie nutzt synthetische Daten, keine Aufzeichnungen einer realen Person.
+
+```health-viz
+type: whoop-recovery-strain
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-need
+sleep: main
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-trends
+sleep: all
+last: 30
+```
+
+```health-viz
+type: whoop-workout-strain
+limit: 12
+last: 30
+```
 
 ## Roadmap der Grundlage
 
