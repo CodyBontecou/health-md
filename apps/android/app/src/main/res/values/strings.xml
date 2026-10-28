@@ -314,6 +314,7 @@
     <string name="sleep_attribution_morning_ends">Morning ends</string>
     <string name="sleep_attribution_night_begins_description">Sleep uses the daily note’s noon-to-noon window. This is the default and matches previous exports.</string>
     <string name="sleep_attribution_morning_ends_description">Morning ends is unavailable for current export profiles. Choose Night begins for a new export.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Assigns the whole sleep session to the date you wake up, using the export’s time zone.</string>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Health Metrics</string>

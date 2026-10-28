@@ -101,6 +101,7 @@ struct ExportPreviewView: View {
     @State private var datePreviews: [DatePreview] = []
     @State private var partialFailures: [ExportPartialFailure] = []
     @State private var isLoading = true
+    @State private var capturedSleepAttribution: SleepDayAttribution = .nightBegins
     @State private var totalDateCount = 0
     @State private var renderedDayPreviewCount = 0
     @State private var estimatedExportSize: ExportPreviewSizeEstimate?
@@ -129,12 +130,18 @@ struct ExportPreviewView: View {
                 }
             }
             .safeAreaInset(edge: .top) {
-                if !isLoading && settings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
+                if !isLoading && !sleepWindowDescription.isEmpty
+                    && settings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
                     VStack(alignment: .leading, spacing: Spacing.s1) {
                         Text(sleepWindowDescription)
                             .font(.footnote.weight(.semibold))
-                        Text("If sleep is missing, try the preceding date. Morning sleep can appear in that date's summary even when its raw records are dated today. Query failures are listed separately; an empty result can also mean read access is unavailable.")
-                            .font(.footnote)
+                        if capturedSleepAttribution == .morningEnds {
+                            Text(capturedSleepAttribution.localizedDescription)
+                                .font(.footnote)
+                        } else {
+                            Text("If sleep is missing, try the preceding date. Morning sleep can appear in that date's summary even when its raw records are dated today. Query failures are listed separately; an empty result can also mean read access is unavailable.")
+                                .font(.footnote)
+                        }
                     }
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -202,6 +209,9 @@ struct ExportPreviewView: View {
     // MARK: - States
 
     private func makeSleepWindowDescription(calendar: Calendar) -> String {
+        if capturedSleepAttribution == .morningEnds {
+            return "\(SleepDayAttribution.morningEnds.localizedDisplayName): \(rangeDescription(dates: [startDate, endDate], timeZone: calendar.timeZone)) (\(calendar.timeZone.identifier))."
+        }
         let start = HealthKitManager.sleepWindow(for: startDate, calendar: calendar).start
         let end = HealthKitManager.sleepWindow(for: endDate, calendar: calendar).end
         let formatter = DateFormatter()
@@ -691,16 +701,30 @@ struct ExportPreviewView: View {
         let metadata = analyticsMetadata()
         analytics.trackExportPreviewOpened(metadata: metadata)
 
-        let frozenTimeZone = settings.exportTimeZoneOverride ?? .current
+        let operationSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            settings, healthSubfolder: vaultManager.healthSubfolder,
+            calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
+            surface: targetType == .apiEndpoint ? .apiEndpoint : .preview)
+        let frozenTimeZone = operationSnapshot.sleepCaptureContext?.timeZone
+            ?? settings.exportTimeZoneOverride ?? .current
         var frozenCalendar = Calendar(identifier: .gregorian)
         frozenCalendar.timeZone = frozenTimeZone
-        sleepWindowDescription = makeSleepWindowDescription(calendar: frozenCalendar)
-        let dates = ExportOrchestrator.dateRange(
-            from: startDate,
-            to: endDate,
-            calendar: frozenCalendar
-        )
+        capturedSleepAttribution = operationSnapshot.sleepCaptureContext?.sleepDayAttribution ?? .nightBegins
+        sleepWindowDescription = operationSnapshot.sleepCaptureContext == nil
+            ? "" : makeSleepWindowDescription(calendar: frozenCalendar)
+        let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate, calendar: frozenCalendar)
         totalDateCount = dates.count
+        let captureContext: AppleSleepCaptureContext
+        do {
+            captureContext = try operationSnapshot.recoveredSleepCaptureContext()
+        } catch {
+            partialFailures = [ExportPartialFailure(date: startDate, dataType: "Export preview",
+                dateRangeDescription: Self.dateLabelFormatter.string(from: startDate),
+                errorDescription: "The selected renderer could not prepare this preview.")]
+            isLoading = false
+            return
+        }
+        let settings = operationSnapshot.makeAdvancedExportSettings()
 
         guard settings.hasFileDestinationOutput,
               !(settings.dailyNotesOnlyModeEnabled
@@ -730,14 +754,16 @@ struct ExportPreviewView: View {
             if attempts >= Self.maxFetchAttempts { break }
             attempts += 1
 
-            guard let healthData = await Self.fetchPreviewRecord(
+            guard let healthData = await AppleSleepCaptureContext.pinned.withValue(captureContext, operation: {
+                await Self.fetchPreviewRecord(
                 for: date,
                 targetType: targetType,
                 connectedAppsEnabled: connectedAppsEnabled,
                 writesExternalProviderSidecars: settings.writesExternalProviderSidecars,
                 fetchHealthData: fetchHealthData,
                 fetchExternalDailyRecords: fetchExternalDailyRecords
-            ) else { continue }
+            )
+            }) else { continue }
             warnings.append(contentsOf: healthData.partialFailures)
             guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
             rollupInputs.append(healthData)
@@ -755,16 +781,9 @@ struct ExportPreviewView: View {
             let plannedContentByFormat: [ExportFormat: String]?
             if targetType == .localFile {
                 do {
-                    let snapshot = ExportSettingsSnapshot.from(
-                        settings,
-                        healthSubfolder: vaultManager.healthSubfolder,
-                        appleExportEngineAuthorityIsFrozen: false,
-                        calendarTimeZoneIdentifier: settings.exportTimeZoneOverride?.identifier
-                            ?? healthData.timeContext.calendarTimeZoneIdentifier
-                    )
                     if let artifacts = try await AppleLooseDailyExportPreviewPlanner.artifacts(
                         healthData: healthData,
-                        settingsSnapshot: snapshot,
+                        settingsSnapshot: operationSnapshot,
                         planner: appleLooseDailyPlanner
                     ) {
                         var content: [ExportFormat: String] = [:]

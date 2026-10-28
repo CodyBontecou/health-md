@@ -265,6 +265,7 @@
     <string name="sleep_attribution_morning_ends">以醒来早晨为准</string>
     <string name="sleep_attribution_night_begins_description">睡眠使用每日日记中从正午到次日正午的时间窗口。这是默认设置，与之前的导出一致。</string>
     <string name="sleep_attribution_morning_ends_description">当前导出配置不支持“以醒来早晨为准”。如需开始新的导出，请选择“以入睡当晚为准”。</string>
+    <string name="sleep_attribution_morning_ends_wake_description">将整个睡眠时段归入醒来当天，使用导出的时区。</string>
 
     <string name="metric_selection_title">健康指标</string>
     <string name="search_metrics_hint">搜索指标…</string>

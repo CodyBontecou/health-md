@@ -4,6 +4,46 @@ import XCTest
 final class ExportPreviewDisplayContentTests: XCTestCase {
 
     @MainActor
+    func testMorningPreviewFreezesSuccessorBeforeSyntheticCaptureAndNeverUsesHistoricalWriter() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let date = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 2)))
+        let suite = "MorningPreviewTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.exportFormats = Set(ExportFormat.allCases)
+        settings.detailPolicy = .summary
+        settings.generateRangeSummary = false
+        settings.writeMode = .overwrite
+        settings.archiveExportFiles = false
+        settings.executionSleepCaptureContext = context
+        settings.executionSleepCaptureContextIsFrozen = true
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+            healthSubfolder: "health", calendarTimeZone: zone, surface: .preview)
+        XCTAssertEqual(try snapshot.recoveredSleepCaptureContext(), context)
+        let record = await AppleSleepCaptureContext.pinned.withValue(context) {
+            UITestHealthKitFixtures.exportPreviewHealthData(for: date, includeGranularData: false)
+        }
+        XCTAssertEqual(record.timeContext.sleepDayAttribution, .morningEnds)
+        XCTAssertEqual(record.sleep.sessionEnd.map { calendar.startOfDay(for: $0) }, date)
+        XCTAssertEqual(record.sleep.sessionStart.map { calendar.startOfDay(for: $0) },
+            calendar.date(byAdding: .day, value: -1, to: date))
+        let planned = try await AppleLooseDailyExportPreviewPlanner.artifacts(
+            healthData: record, settingsSnapshot: snapshot, planner: AppleLooseDailyExportPlanner())
+        let artifacts = try XCTUnwrap(planned)
+        XCTAssertEqual(Set(artifacts.map(\.format)), Set(ExportFormat.allCases))
+        for artifact in artifacts {
+            XCTAssertTrue(String(decoding: artifact.data, as: UTF8.self).contains("apple-v11"))
+        }
+        let json = try XCTUnwrap(artifacts.first { $0.format == .json })
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: json.data) as? [String: Any])
+        XCTAssertEqual(object["schema_version"] as? Int, 11)
+    }
+
+    @MainActor
     func testFilePreviewIncludesTypedWHOOPCaptureInRenderedJSON() async throws {
         let date = Date(timeIntervalSince1970: 1_773_556_800)
         var fetchCount = 0

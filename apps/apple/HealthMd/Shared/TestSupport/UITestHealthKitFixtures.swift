@@ -3,7 +3,9 @@ import Foundation
 
 enum UITestHealthKitFixtures {
     static func exportPreviewHealthData(for date: Date, includeGranularData: Bool) -> HealthData {
-        let calendar = Calendar.current
+        let context = AppleSleepCaptureContext.resolve(attribution: HealthKitManager.shared.sleepDayAttribution)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = context.timeZone
         let day = calendar.startOfDay(for: date)
 
         func time(hour: Int, minute: Int = 0, dayOffset: Int = 0) -> Date {
@@ -11,10 +13,12 @@ enum UITestHealthKitFixtures {
             return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: base) ?? base
         }
 
-        var data = HealthData(date: day)
+        var data = HealthData(date: day, timeContext: ExportTimeContext(timeZone: context.timeZone,
+            sleepDayAttribution: context.sleepDayAttribution == .morningEnds ? .morningEnds : nil))
 
-        let bedtime = time(hour: 22)
-        let wake = time(hour: 6, dayOffset: 1)
+        let nightOffset = context.sleepDayAttribution == .morningEnds ? -1 : 0
+        let bedtime = time(hour: 22, dayOffset: nightOffset)
+        let wake = time(hour: 6, dayOffset: nightOffset + 1)
         data.sleep = SleepData(
             totalDuration: 23_400,
             deepSleep: 5_400,
@@ -26,9 +30,9 @@ enum UITestHealthKitFixtures {
             sessionEnd: wake,
             stages: includeGranularData ? [
                 SleepStageSample(stage: "inBed", startDate: bedtime, endDate: wake),
-                SleepStageSample(stage: "deep", startDate: time(hour: 22, minute: 30), endDate: time(hour: 0, dayOffset: 1)),
-                SleepStageSample(stage: "rem", startDate: time(hour: 0, minute: 10, dayOffset: 1), endDate: time(hour: 2, minute: 10, dayOffset: 1)),
-                SleepStageSample(stage: "core", startDate: time(hour: 2, minute: 40, dayOffset: 1), endDate: time(hour: 5, minute: 40, dayOffset: 1))
+                SleepStageSample(stage: "deep", startDate: time(hour: 22, minute: 30, dayOffset: nightOffset), endDate: time(hour: 0, dayOffset: nightOffset + 1)),
+                SleepStageSample(stage: "rem", startDate: time(hour: 0, minute: 10, dayOffset: nightOffset + 1), endDate: time(hour: 2, minute: 10, dayOffset: nightOffset + 1)),
+                SleepStageSample(stage: "core", startDate: time(hour: 2, minute: 40, dayOffset: nightOffset + 1), endDate: time(hour: 5, minute: 40, dayOffset: nightOffset + 1))
             ] : []
         )
 

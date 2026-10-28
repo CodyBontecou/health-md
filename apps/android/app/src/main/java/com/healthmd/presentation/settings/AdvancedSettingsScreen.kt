@@ -162,7 +162,9 @@ fun AdvancedSettingsScreen(
                 stringResource(
                     when (sleepDayAttribution) {
                         SleepDayAttribution.NIGHT_BEGINS -> R.string.sleep_attribution_night_begins_description
-                        SleepDayAttribution.MORNING_ENDS -> R.string.sleep_attribution_morning_ends_description
+                        SleepDayAttribution.MORNING_ENDS -> if (sleepDayAttribution.isAvailableForShippedProfiles) {
+                            R.string.sleep_attribution_morning_ends_wake_description
+                        } else R.string.sleep_attribution_morning_ends_description
                     }
                 ),
                 style = MaterialTheme.typography.bodySmall,

@@ -1,6 +1,65 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Assigns the whole sleep session to the date you wake up, using the export’s time zone." : {
+      "comment" : "Sleep attribution description for the explicit wake-date export profile.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordnet die gesamte Schlafsitzung dem Aufwachdatum in der Zeitzone des Exports zu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asigna toda la sesión de sueño a la fecha en que despiertas, según la zona horaria de la exportación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attribue toute la session de sommeil à la date du réveil, dans le fuseau horaire de l’exportation."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Assegna l’intera sessione di sonno alla data del risveglio, nel fuso orario dell’esportazione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "睡眠セッション全体を、エクスポートのタイムゾーンでの起床日に割り当てます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 수면 세션을 내보내기의 시간대를 기준으로 잠에서 깬 날짜에 배정합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wijst de hele slaapsessie toe aan de datum waarop je wakker wordt, in de tijdzone van de export."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atribui toda a sessão de sono à data em que você acorda, no fuso horário da exportação."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将整个睡眠时段归入醒来当天，使用导出的时区。"
+          }
+        }
+      }
+    },
     "" : {
 
     },

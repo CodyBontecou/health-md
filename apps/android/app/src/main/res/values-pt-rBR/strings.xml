@@ -549,6 +549,7 @@
     <string name="sleep_attribution_morning_ends">Termina de manhã</string>
     <string name="sleep_attribution_night_begins_description">O sono usa o intervalo de meio-dia a meio-dia da nota diária. Este é o padrão e corresponde às exportações anteriores.</string>
     <string name="sleep_attribution_morning_ends_description">Termina de manhã não está disponível para os perfis de exportação atuais. Escolha Começa à noite para uma nova exportação.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Atribui toda a sessão de sono à data em que você acorda, no fuso horário da exportação.</string>
 
     <string name="metric_category_cycling">Ciclismo</string>
     <string name="metric_category_medications">Medicamentos</string>

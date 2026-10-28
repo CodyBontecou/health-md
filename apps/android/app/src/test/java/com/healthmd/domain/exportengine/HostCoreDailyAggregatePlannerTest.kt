@@ -145,7 +145,14 @@ class HostCoreDailyAggregatePlannerTest {
             context.copy(exportProfileID = null)), com.healthmd.domain.model.ExportTarget.DEVICE_FOLDER,
             context.zoneId)).isNull()
         assertThat(pinPlanner.forDirectGeneratedFiles(settings, ZoneId.of("Europe/Berlin"))).isNull()
-        assertThat(pinPlanner.forDirectGeneratedFiles(settings, context.zoneId)).isEqualTo(pin)
+        val directPin = pinPlanner.forDirectGeneratedFiles(settings, context.zoneId)
+        assertThat(directPin).isEqualTo(pin)
+        com.healthmd.direct.requireDirectGeneratedFilesAuthority(context, directPin)
+        for (invalid in listOf(null, directPin!!.copy(ianaTimeZone = "Europe/Berlin"),
+            directPin.copy(renderInputVersion = 1u))) {
+            assertThat(runCatching { com.healthmd.direct.requireDirectGeneratedFilesAuthority(context, invalid) }
+                .exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
+        }
     }
 
     @Test

@@ -285,6 +285,7 @@
     <string name="sleep_attribution_morning_ends">सुबह खत्म</string>
     <string name="sleep_attribution_night_begins_description">नींद दैनिक नोट की दोपहर से अगले दिन की दोपहर तक की अवधि का उपयोग करती है। यह डिफ़ॉल्ट है और पिछले निर्यात से मेल खाता है।</string>
     <string name="sleep_attribution_morning_ends_description">मौजूदा निर्यात प्रोफ़ाइलों के लिए सुबह खत्म उपलब्ध नहीं है। नए निर्यात के लिए रात शुरू चुनें।</string>
+    <string name="sleep_attribution_morning_ends_wake_description">निर्यात के समय क्षेत्र के अनुसार, पूरे नींद सत्र को आपके जागने की तारीख से जोड़ता है।</string>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">स्वास्थ्य मेट्रिक्स</string>

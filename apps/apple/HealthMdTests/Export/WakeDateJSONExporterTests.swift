@@ -143,7 +143,7 @@ final class WakeDateJSONExporterTests: XCTestCase {
         XCTAssertThrowsError(try historical.toJSONDataThrowing(customization: Self.customization, captureContext: morning)) {
             XCTAssertEqual($0 as? AppleWakeDateJSONError, .incompatibleCaptureAuthority)
         }
-        XCTAssertThrowsError(try morning.requireShippedProfile(), "Native preparation does not open production acceptance")
+        XCTAssertNoThrow(try morning.requireShippedProfile())
     }
 
     func testExplicitNightAuthorityRetainsExactHistoricalBytesAndDoesNotAddSuccessorMetadata() throws {

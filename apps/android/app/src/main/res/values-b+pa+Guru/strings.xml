@@ -285,6 +285,7 @@
     <string name="sleep_attribution_morning_ends">ਸਵੇਰ ਸਮਾਪਤ</string>
     <string name="sleep_attribution_night_begins_description">ਨੀਂਦ ਰੋਜ਼ਾਨਾ ਨੋਟ ਦੀ ਦੁਪਹਿਰ ਤੋਂ ਅਗਲੇ ਦਿਨ ਦੀ ਦੁਪਹਿਰ ਤੱਕ ਦੀ ਮਿਆਦ ਵਰਤਦੀ ਹੈ। ਇਹ ਡਿਫ਼ਾਲਟ ਹੈ ਅਤੇ ਪਿਛਲੇ ਐਕਸਪੋਰਟਾਂ ਨਾਲ ਮੇਲ ਖਾਂਦਾ ਹੈ।</string>
     <string name="sleep_attribution_morning_ends_description">ਮੌਜੂਦਾ ਐਕਸਪੋਰਟ ਪ੍ਰੋਫ਼ਾਈਲਾਂ ਲਈ ਸਵੇਰ ਸਮਾਪਤ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਨਵੇਂ ਐਕਸਪੋਰਟ ਲਈ ਰਾਤ ਸ਼ੁਰੂ ਚੁਣੋ।</string>
+    <string name="sleep_attribution_morning_ends_wake_description">ਨਿਰਯਾਤ ਦੇ ਸਮਾਂ ਖੇਤਰ ਅਨੁਸਾਰ, ਪੂਰੀ ਨੀਂਦ ਨੂੰ ਤੁਹਾਡੇ ਜਾਗਣ ਦੀ ਤਾਰੀਖ ਨਾਲ ਜੋੜਦਾ ਹੈ।</string>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ</string>

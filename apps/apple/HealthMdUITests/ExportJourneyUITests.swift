@@ -692,7 +692,7 @@ final class ExportJourneyUITests: XCTestCase {
 
     // MARK: - Sleep Day Attribution
 
-    func testSleepAttribution_morningEndsDisabledForShippedProfiles() throws {
+    func testSleepAttribution_morningEndsCanBeSelected() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         // The argument domain isolates the starting preference from earlier journeys.
         app.launchArguments += ["-healthKit.sleepDayAttribution", "night_begins"]
@@ -704,9 +704,12 @@ final class ExportJourneyUITests: XCTestCase {
 
         let morningEnds = app.buttons["Morning ends"]
         XCTAssertTrue(morningEnds.waitForExistence(timeout: 3))
-        XCTAssertFalse(morningEnds.isEnabled, "Unapproved attribution must be a disabled native menu option")
+        XCTAssertTrue(morningEnds.isEnabled)
+        morningEnds.tap()
+        XCTAssertTrue(waitForAccessibilityText(of: picker, containing: "Morning ends").contains("Morning ends"))
+        picker.tap()
         XCTAssertTrue(app.buttons["Night begins"].isEnabled)
-        XCTAssertTrue(app.buttons["Night begins"].isSelected)
+        XCTAssertTrue(app.buttons["Morning ends"].isSelected)
     }
 
     func testSleepAttribution_storedMorningEndsRemainsVisibleAndCanChangeToNightBegins() throws {
@@ -717,18 +720,18 @@ final class ExportJourneyUITests: XCTestCase {
         let picker = sleepDayAttributionPicker(in: app)
         XCTAssertTrue(
             accessibilityText(of: picker).contains("Morning ends"),
-            "An unavailable preexisting preference must not be silently replaced"
+            "A stored preference must not be silently replaced"
         )
-        let unavailableExplanation = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS %@", "Morning ends is unavailable for current export profiles")
+        let explanation = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "Assigns the whole sleep session")
         ).firstMatch
-        XCTAssertTrue(unavailableExplanation.exists)
+        XCTAssertTrue(explanation.exists)
         picker.tap()
 
         let morningEnds = app.buttons["Morning ends"]
         XCTAssertTrue(morningEnds.waitForExistence(timeout: 3))
-        XCTAssertFalse(morningEnds.isEnabled)
-        XCTAssertTrue(morningEnds.isSelected, "The unavailable stored choice should still be identified as selected")
+        XCTAssertTrue(morningEnds.isEnabled)
+        XCTAssertTrue(morningEnds.isSelected, "The stored choice should still be identified as selected")
         let nightBegins = app.buttons["Night begins"]
         XCTAssertTrue(nightBegins.isEnabled)
         nightBegins.tap()

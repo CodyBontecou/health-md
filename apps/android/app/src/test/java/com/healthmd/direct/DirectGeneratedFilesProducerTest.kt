@@ -117,7 +117,7 @@ class DirectGeneratedFilesProducerTest {
     }
 
     @Test
-    fun shippedSleepFilesKeepNightDayOnceAndRejectUnapprovedContextWithoutSingleDateFallback() = runTest {
+    fun shippedSleepFilesKeepNightDayOnceAndRejectUnpinnedMorningWithoutSingleDateFallback() = runTest {
         val fixture = SleepAttributionCaptureFixture()
         fixture.storedAttribution = SleepDayAttribution.NIGHT_BEGINS
         val producer = DirectGeneratedFilesProducer(
@@ -138,7 +138,7 @@ class DirectGeneratedFilesProducerTest {
                 producer.produce(root, listOf(fixture.startDay, fixture.wakeDay), settings,
                     AndroidCaptureContext(fixture.zone, SleepDayAttribution.MORNING_ENDS))
             }
-            assertThat(unavailable.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
+            assertThat(unavailable.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
             assertThat(root.listFiles().orEmpty()).isEmpty()
             assertThat(fixture.observedContexts).isEmpty()
             val files = producer.produce(

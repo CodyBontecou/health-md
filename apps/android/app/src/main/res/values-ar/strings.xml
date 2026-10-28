@@ -579,6 +579,7 @@
     <string name="sleep_attribution_morning_ends">تنتهي في الصباح</string>
     <string name="sleep_attribution_night_begins_description">يستخدم النوم الفترة من الظهر إلى ظهر اليوم التالي في الملاحظة اليومية. هذا هو الخيار الافتراضي ويطابق عمليات التصدير السابقة.</string>
     <string name="sleep_attribution_morning_ends_description">خيار تنتهي في الصباح غير متاح لملفات التصدير الحالية. اختر تبدأ في الليل لعملية تصدير جديدة.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">تُنسب جلسة النوم بأكملها إلى تاريخ استيقاظك، وفقًا للمنطقة الزمنية للتصدير.</string>
 
     <string name="metric_category_cycling">ركوب الدراجات</string>
     <string name="metric_category_medications">الأدوية</string>

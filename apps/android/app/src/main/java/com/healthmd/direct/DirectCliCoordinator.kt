@@ -113,6 +113,17 @@ internal suspend fun resolveDirectGeneratedFilesCaptureContext(
     captureFreshContext().also { it.requireShippedProfile() }
 }
 
+/** Reject incompatible generated-file authority before journaling or reading providers. */
+internal fun requireDirectGeneratedFilesAuthority(context: AndroidCaptureContext, pin: ExportEnginePin?) {
+    if (context.sleepDayAttribution != com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) return
+    require(context.exportProfileID == "android-sleep-v6" && pin != null &&
+        pin.profile == com.healthmd.domain.exportengine.AndroidExportProfile.android_sleep_v6 &&
+        pin.ianaTimeZone == context.zoneId.id &&
+        com.healthmd.domain.exportengine.ExportEnginePinCodec.isStructurallyValid(pin)) {
+        "Morning ends requires a compatible frozen Android v6 renderer before capture."
+    }
+}
+
 /** Initial pause before the direct session reconnects to a listening CLI. */
 private const val RECONNECT_INITIAL_BACKOFF_MILLIS = 250L
 
@@ -695,6 +706,9 @@ class DirectCliCoordinator @Inject constructor(
                 ), requireNotNull(captureContext).zoneId)
             }
             ProductId.ANDROID_DAILY_RECORDS_V1 -> enginePinPlanner.forApiV1(zoneId)
+        }
+        if (productId == ProductId.GENERATED_FILES_V1) {
+            requireDirectGeneratedFilesAuthority(requireNotNull(captureContext), enginePin)
         }
         // Persist renderer authority before either producer can read non-transactional provider data.
         val preparationLease = jobStore.beginPreparation(

@@ -539,6 +539,7 @@
     <string name="sleep_attribution_morning_ends">Morgenende</string>
     <string name="sleep_attribution_night_begins_description">Schlaf wird im Fenster von Mittag bis Mittag der Tagesnotiz erfasst. Dies ist die Standardeinstellung und entspricht früheren Exporten.</string>
     <string name="sleep_attribution_morning_ends_description">Morgenende ist für aktuelle Exportprofile nicht verfügbar. Wähle Nachtbeginn für einen neuen Export.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Ordnet die gesamte Schlafsitzung dem Aufwachdatum in der Zeitzone des Exports zu.</string>
 
     <string name="metric_category_cycling">Radfahren</string>
     <string name="metric_category_medications">Medikamente</string>

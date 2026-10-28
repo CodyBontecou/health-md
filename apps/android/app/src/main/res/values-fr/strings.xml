@@ -549,6 +549,7 @@
     <string name="sleep_attribution_morning_ends">Fin au matin</string>
     <string name="sleep_attribution_night_begins_description">Le sommeil utilise la période de midi à midi de la note quotidienne. Il s\'agit du réglage par défaut, identique aux exportations précédentes.</string>
     <string name="sleep_attribution_morning_ends_description">Fin au matin est indisponible pour les profils d\'exportation actuels. Choisissez Début de nuit pour une nouvelle exportation.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Attribue toute la session de sommeil à la date du réveil, dans le fuseau horaire de l’exportation.</string>
 
     <string name="metric_category_cycling">Vélo</string>
     <string name="metric_category_medications">Médicaments</string>

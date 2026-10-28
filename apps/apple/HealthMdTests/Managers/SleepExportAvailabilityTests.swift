@@ -32,28 +32,21 @@ final class SleepExportAvailabilityTests: XCTestCase {
             XCTAssertEqual(first.timeContext.calendarTimeZoneIdentifier, context.calendarTimeZoneIdentifier)
             XCTAssertEqual(second.timeContext, first.timeContext)
 
-            // An independent concurrent operation must see its OWN morning
-            // context and reject it, not borrow this task's available night pin.
+            // A new concurrent operation owns its own Morning ends context.
             let other = Task.detached { @MainActor in
-                do {
-                    _ = try await manager.fetchHealthData(for: wake, detailPolicy: .summary, metricSelection: selection)
-                    XCTFail("Concurrent new work must not inherit another operation's pin")
-                } catch {
-                    XCTAssertEqual(error as? AppleSleepCaptureContext.AvailabilityError, .unapprovedAttribution)
-                }
+                try await manager.fetchHealthData(for: wake, detailPolicy: .summary, metricSelection: selection)
             }
-            await other.value
+            let morning = try await other.value
+            XCTAssertEqual(morning.sleep.totalDuration, 465 * 60, accuracy: 0.001)
+            XCTAssertEqual(morning.sleep.sessionStart, start)
+            XCTAssertEqual(morning.timeContext.sleepDayAttribution, .morningEnds)
         }
-        // Reverse mutation: a persisted unavailable context must remain
-        // unavailable even when the current preference becomes night-begins.
         let saved = AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .morningEnds)
         manager.setSleepDayAttribution(.nightBegins)
-        do {
-            _ = try await manager.fetchHealthData(for: wake, detailPolicy: .summary, metricSelection: selection, captureContext: saved)
-            XCTFail("Do not coerce persisted ownership")
-        } catch {
-            XCTAssertEqual(error as? AppleSleepCaptureContext.AvailabilityError, .unapprovedAttribution)
-        }
+        let morning = try await manager.fetchHealthData(for: wake, detailPolicy: .summary,
+            metricSelection: selection, captureContext: saved)
+        XCTAssertEqual(morning.sleep.totalDuration, 465 * 60, accuracy: 0.001)
+        XCTAssertEqual(morning.timeContext.sleepDayAttribution, .morningEnds)
     }
 
     func testPendingStorePreservesStandaloneCaptureAuthorityAndMissingLegacyJobsWithoutCoercion() throws {
@@ -67,7 +60,7 @@ final class SleepExportAvailabilityTests: XCTestCase {
             let healthManager = HealthKitManager(store: FakeHealthStore(), userDefaults: defaults)
             healthManager.setSleepDayAttribution(current)
             let recovered = try XCTUnwrap(PendingExportStore(userDefaults: defaults).loadAll().first)
-            if saved == .nightBegins {
+            if saved != nil {
                 XCTAssertEqual(try recovered.recoveredSleepCaptureContext(), context)
             } else {
                 XCTAssertThrowsError(try recovered.recoveredSleepCaptureContext())
@@ -92,7 +85,7 @@ final class SleepExportAvailabilityTests: XCTestCase {
         let saved = try wire.encode(snapshot)
         let recovered = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: saved)
         XCTAssertEqual(recovered.sleepCaptureContext, snapshot.sleepCaptureContext)
-        XCTAssertThrowsError(try recovered.sleepCaptureContext?.requireShippedProfile())
+        XCTAssertNoThrow(try recovered.sleepCaptureContext?.requireShippedProfile())
     }
 
     func testSnapshotRecoveryKeepsOriginalAuthorityAndRefusesMissingAuthorityWithoutWrites() throws {
@@ -111,7 +104,7 @@ final class SleepExportAvailabilityTests: XCTestCase {
         let manager = HealthKitManager(store: FakeHealthStore(), userDefaults: UserDefaults(suiteName: "SleepRecoveryTests.\(UUID())")!)
         manager.setSleepDayAttribution(.nightBegins)
         XCTAssertThrowsError(try manager.resolveSleepCaptureContext(settings: restored.makeAdvancedExportSettings())) {
-            XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .unapprovedAttribution)
+            XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .incompatibleDurableAuthority)
         }
         var legacy = restored
         legacy.sleepCaptureContext = nil

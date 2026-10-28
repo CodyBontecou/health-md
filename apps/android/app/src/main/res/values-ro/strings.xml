@@ -549,6 +549,7 @@
     <string name="sleep_attribution_morning_ends">Se termină dimineața</string>
     <string name="sleep_attribution_night_begins_description">Somnul folosește intervalul de la prânz până la prânzul următor al notiței zilnice. Aceasta este opțiunea implicită și corespunde exporturilor anterioare.</string>
     <string name="sleep_attribution_morning_ends_description">Se termină dimineața nu este disponibil pentru profilurile actuale de export. Alege Începe noaptea pentru un export nou.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Atribuie întreaga sesiune de somn datei la care te trezești, în fusul orar al exportului.</string>
 
     <string name="metric_category_cycling">Ciclism</string>
     <string name="metric_category_medications">Medicamente</string>

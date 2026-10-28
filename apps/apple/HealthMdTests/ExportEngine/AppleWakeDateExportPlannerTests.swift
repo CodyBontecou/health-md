@@ -1190,6 +1190,6 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         let activity = try XCTUnwrap(root["activity"] as? [String: Any])
         XCTAssertEqual(activity["steps"] as? Int, 1_234)
         XCTAssertEqual(activity["activeCalories"] as? Double, 123.875)
-        XCTAssertThrowsError(try context.requireShippedProfile(), "Planner qualification alone does not enable fresh capture")
+        XCTAssertNoThrow(try context.requireShippedProfile())
     }
 }

@@ -51,6 +51,8 @@ internal class SleepAttributionCaptureFixture(allConnected: Boolean = false) {
                 startTime = start,
                 endTime = end,
                 identity = ExactSourceIdentity(nativeId = "synthetic-overnight"),
+                exactStartTime = ExactSourceTimestamp.from(start.atZone(zone).toInstant()),
+                exactEndTime = ExactSourceTimestamp.from(end.atZone(zone).toInstant()),
             ),
             stages = listOf(
                 stage(start, awakeStart, "light"),

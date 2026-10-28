@@ -106,6 +106,7 @@ class DirectGeneratedFilesProducer private constructor(
     ): List<ProducedGeneratedFile> {
         require(dates.isNotEmpty())
         captureContext.requireShippedProfile()
+        requireDirectGeneratedFilesAuthority(captureContext, settings.executionEnginePin)
         require(!settings.executionSleepCaptureAuthorityIsFrozen ||
             settings.executionSleepCaptureContext == captureContext) {
             "Direct generated capture authority conflicts with frozen settings."

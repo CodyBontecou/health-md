@@ -19,13 +19,7 @@ final class AppleSleepCaptureContextTests: XCTestCase {
                 let second = AppleSleepCaptureContext.resolve(attribution: preference)
                 XCTAssertEqual(first, context)
                 XCTAssertEqual(second, context, "A daily fetch must not shadow the operation pin")
-                if initial == .nightBegins {
-                    XCTAssertNoThrow(try second.requireShippedProfile())
-                } else {
-                    XCTAssertThrowsError(try second.requireShippedProfile()) {
-                        XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .unapprovedAttribution)
-                    }
-                }
+                XCTAssertNoThrow(try second.requireShippedProfile())
             }
         }
     }
@@ -40,14 +34,14 @@ final class AppleSleepCaptureContextTests: XCTestCase {
         XCTAssertTrue(results.1.allSatisfy { $0 == second })
     }
 
-    func testDurableRoundTripPreservesUnavailableAttributionAndMissingAuthorityNeverUsesPreference() throws {
+    func testDurableRoundTripPreservesSuccessorAttributionAndMissingAuthorityNeverUsesPreference() throws {
         let pending = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let bytes = try encoder.encode(pending)
         let restored = try JSONDecoder().decode(AppleSleepCaptureContext.self, from: bytes)
         XCTAssertEqual(restored, pending)
-        XCTAssertThrowsError(try AppleSleepCaptureContext.recovered(restored))
+        XCTAssertEqual(try AppleSleepCaptureContext.recovered(restored), pending)
         XCTAssertEqual(try encoder.encode(restored), bytes, "Do not coerce or rewrite pending authority")
         let night = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .nightBegins)
         XCTAssertThrowsError(try AppleSleepCaptureContext.pinned.withValue(night) {
@@ -58,9 +52,9 @@ final class AppleSleepCaptureContextTests: XCTestCase {
         XCTAssertEqual(try AppleSleepCaptureContext.recovered(night), night)
     }
 
-    func testCurrentWriterProfilesRejectMorningEndsWithoutCoercingContext() {
+    func testSuccessorCaptureAdmitsMorningEndsWithoutCoercingContext() {
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
-        XCTAssertThrowsError(try context.requireShippedProfile())
+        XCTAssertNoThrow(try context.requireShippedProfile())
         XCTAssertEqual(context.sleepDayAttribution, .morningEnds)
         XCTAssertNoThrow(try AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .nightBegins).requireShippedProfile())
     }
@@ -167,9 +161,7 @@ final class AppleSleepCaptureContextTests: XCTestCase {
         let opposite = AppleSleepCaptureContext(timeZone: TimeZone(identifier: "Europe/Berlin")!, sleepDayAttribution: .nightBegins)
         try AppleSleepCaptureContext.pinned.withValue(opposite) {
             XCTAssertEqual(try restored.validatedSleepCaptureContext(), context)
-            XCTAssertThrowsError(try restored.recoveredSleepCaptureContext()) {
-                XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .unapprovedAttribution)
-            }
+            XCTAssertEqual(try restored.recoveredSleepCaptureContext(), context)
         }
         var missingPin = restored
         missingPin.appleExportEnginePin = nil

@@ -8,6 +8,22 @@ import org.junit.Test
 /** Direct profile policy must preserve the snapshot's explicit engine authority, including legacy. */
 class DirectProfileEngineAuthorityTest {
     @Test
+    fun `wake capture rejects absent historical malformed or conflicting pins before admission`() {
+        val context = com.healthmd.domain.model.AndroidCaptureContext(java.time.ZoneId.of("Asia/Kathmandu"),
+            com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val historical = syntheticExportEnginePin(zoneId = context.zoneId.id)
+        for (pin in listOf(null, historical, historical.copy(
+            profile = com.healthmd.domain.exportengine.AndroidExportProfile.android_sleep_v6))) {
+            assertThat(runCatching { requireDirectGeneratedFilesAuthority(context, pin) }.exceptionOrNull())
+                .isInstanceOf(IllegalArgumentException::class.java)
+        }
+        // Night begins retains explicit legacy authority.
+        requireDirectGeneratedFilesAuthority(context.copy(
+            sleepDayAttribution = com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS,
+            exportProfileID = null), null)
+    }
+
+    @Test
     fun `frozen capture never reads a changed device preference or ambient zone`() = kotlinx.coroutines.test.runTest {
         val original = com.healthmd.domain.model.AndroidCaptureContext(java.time.ZoneId.of("Asia/Kathmandu"),
             com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS)

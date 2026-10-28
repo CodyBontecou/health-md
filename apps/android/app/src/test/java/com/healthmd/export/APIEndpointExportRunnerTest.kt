@@ -223,7 +223,7 @@ class APIEndpointExportRunnerTest {
     }
 
     @Test
-    fun unapprovedSleepOwnershipDoesNotReadProviderOrUploadImmutableV4Envelope() = runTest {
+    fun conflictingLegacyPinDoesNotReadMorningProviderOrUploadImmutableV4Envelope() = runTest {
         val fixture = SleepAttributionCaptureFixture()
         val uploader = CapturingUploader()
         val jsonExporter = JsonExporter()
@@ -231,12 +231,45 @@ class APIEndpointExportRunnerTest {
             envelopeBuilder = APIExportEnvelopeBuilder(jsonExporter), jsonExporter = jsonExporter,
             uploader = uploader, credentialStore = credentials())
         val result = runner.exportDates(listOf(fixture.startDay, fixture.wakeDay),
-            ExportSettings(exportTarget = ExportTarget.API_ENDPOINT, apiEndpointUrl = "https://api.example.com/healthmd", dataTypes = fixture.selection))
+            ExportSettings(exportTarget = ExportTarget.API_ENDPOINT, apiEndpointUrl = "https://api.example.com/healthmd",
+                dataTypes = fixture.selection,
+                executionSleepCaptureContext = AndroidCaptureContext(fixture.zone, SleepDayAttribution.MORNING_ENDS),
+                executionSleepCaptureAuthorityIsFrozen = true,
+                executionEnginePin = com.healthmd.testing.syntheticExportEnginePin(zoneId = fixture.zone.id),
+                executionEngineAuthorityIsFrozen = true))
         assertThat(result.successCount).isEqualTo(0)
         assertThat(result.failedDateDetails.map { it.reason }).containsExactly(ExportFailureReason.UNKNOWN, ExportFailureReason.UNKNOWN)
         assertThat(uploader.calls).isEqualTo(0)
         assertThat(fixture.observedContexts).isEmpty()
         assertThat(fixture.storedAttribution).isEqualTo(SleepDayAttribution.MORNING_ENDS)
+    }
+
+    @Test
+    fun morningEndsActualRepositoryDispatcherUploadsSuccessorEnvelopeWithExactWakeOwner() = runTest {
+        val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")
+        org.junit.Assume.assumeTrue(!library.isNullOrBlank())
+        System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library!!)
+        val fixture = SleepAttributionCaptureFixture()
+        val uploader = CapturingUploader()
+        val exporter = JsonExporter()
+        val runner = APIEndpointExportRunner(healthRepository = fixture.repository,
+            envelopeBuilder = APIExportEnvelopeBuilder(exporter), jsonExporter = exporter,
+            uploader = uploader, credentialStore = credentials())
+        val context = AndroidCaptureContext(fixture.zone, SleepDayAttribution.MORNING_ENDS)
+        val result = runner.exportDates(listOf(fixture.startDay, fixture.wakeDay),
+            ExportSettings(exportTarget = ExportTarget.API_ENDPOINT, apiEndpointUrl = "https://api.example.com/healthmd",
+                dataTypes = fixture.selection, includeGranularData = true,
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true))
+        assertThat(result.successCount).isEqualTo(1)
+        assertThat(result.failedDateDetails.map { it.date }).containsExactly(fixture.startDay)
+        assertThat(uploader.calls).isEqualTo(1)
+        assertThat(uploader.payload).contains("android-sleep-v6")
+        assertThat(uploader.payload).contains("morning_ends")
+        assertThat(uploader.payload).contains("Asia/Kathmandu")
+        assertThat(uploader.payload).contains("synthetic-overnight")
+        assertThat(fixture.observedContexts).containsExactly(fixture.zone to SleepDayAttribution.MORNING_ENDS,
+            fixture.zone to SleepDayAttribution.MORNING_ENDS)
+        assertThat(fixture.singleDayReads).isEmpty()
     }
 
     @Test

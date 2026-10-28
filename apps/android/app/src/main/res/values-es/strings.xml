@@ -549,6 +549,7 @@
     <string name="sleep_attribution_morning_ends">Termina de mañana</string>
     <string name="sleep_attribution_night_begins_description">El sueño usa el intervalo de mediodía a mediodía de la nota diaria. Es la opción predeterminada y coincide con exportaciones anteriores.</string>
     <string name="sleep_attribution_morning_ends_description">Termina de mañana no está disponible para los perfiles de exportación actuales. Elige Comienza de noche para una nueva exportación.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Asigna toda la sesión de sueño a la fecha en que despiertas, según la zona horaria de la exportación.</string>
 
     <string name="metric_category_cycling">Ciclismo</string>
     <string name="metric_category_medications">Medicamentos</string>

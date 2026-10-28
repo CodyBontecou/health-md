@@ -9,21 +9,27 @@ import Foundation
 
 /// Which daily note owns a sleep session.
 ///
-/// Planned cross-platform mode switch (issue #104). Both platforms persist the same
+/// Cross-platform mode switch (issue #104). Both platforms persist the same
 /// raw values and default to `nightBegins`.
 ///
 /// - `nightBegins`: the shipped noon-to-noon journaling window clips summary
 ///   intervals at its boundaries. It remains the default so existing exports
 ///   never change silently.
-/// - `morningEnds`: proposed wake-up-date ownership of the whole session,
-///   unavailable until successor profiles and consumers are approved.
+/// - `morningEnds`: wake-up-date ownership of the whole session through the
+///   explicit successor export profile.
 nonisolated enum SleepDayAttribution: String, CaseIterable, Codable, Sendable, Equatable {
     case nightBegins = "night_begins"
     case morningEnds = "morning_ends"
 
-    /// Wake-date semantics have no approved production profile or qualified
-    /// consumer set. Persisted values are retained, never coerced to the default.
-    var isAvailableForShippedProfiles: Bool { self == .nightBegins }
+    /// Development QA can exercise the successor while release qualification is pending.
+    /// Capture still requires an explicit profile and matching immutable engine authority.
+    var isAvailableForShippedProfiles: Bool {
+        #if DEBUG
+        true
+        #else
+        self == .nightBegins
+        #endif
+    }
 
     var localizedDisplayName: String {
         switch self {
@@ -37,7 +43,10 @@ nonisolated enum SleepDayAttribution: String, CaseIterable, Codable, Sendable, E
         case .nightBegins:
             return String(localized: "Sleep uses the daily note's noon-to-noon window. This is the default and matches previous exports.")
         case .morningEnds:
-            return String(localized: "Morning ends is unavailable for current export profiles. Choose Night begins for a new export.")
+            guard isAvailableForShippedProfiles else {
+                return String(localized: "Morning ends is unavailable for current export profiles. Choose Night begins for a new export.")
+            }
+            return String(localized: "Assigns the whole sleep session to the date you wake up, using the export’s time zone.")
         }
     }
 }

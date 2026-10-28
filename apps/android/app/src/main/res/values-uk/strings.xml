@@ -559,6 +559,7 @@
     <string name="sleep_attribution_morning_ends">Ранок завершення</string>
     <string name="sleep_attribution_night_begins_description">Сон використовує проміжок щоденної нотатки від полудня до наступного полудня. Це стандартне значення, яке збігається з попередніми експортами.</string>
     <string name="sleep_attribution_morning_ends_description">Ранок завершення недоступний для поточних профілів експорту. Виберіть Ніч початку для нового експорту.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Відносить увесь сеанс сну до дати пробудження в часовому поясі експорту.</string>
 
     <string name="metric_category_cycling">Велоспорт</string>
     <string name="metric_category_medications">Ліки</string>

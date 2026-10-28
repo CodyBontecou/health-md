@@ -134,6 +134,12 @@ enum TestMode {
     // MARK: - Private
 
     private static func env(_ key: String) -> String? {
-        ProcessInfo.processInfo.environment[key]
+        if let value = ProcessInfo.processInfo.environment[key] { return value }
+        // Argent launches use arguments; XCTest continues to supply environment values.
+        // Read this fallback only in explicit UI-test mode, never from persisted defaults.
+        guard isUITesting else { return nil }
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-" + key), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
     }
 }

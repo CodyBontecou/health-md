@@ -539,6 +539,7 @@
     <string name="sleep_attribution_morning_ends">Ochtend eindigt</string>
     <string name="sleep_attribution_night_begins_description">Slaap gebruikt het venster van middag tot middag van de dagnotitie. Dit is de standaard en komt overeen met eerdere exports.</string>
     <string name="sleep_attribution_morning_ends_description">Ochtend eindigt is niet beschikbaar voor de huidige exportprofielen. Kies Nacht begint voor een nieuwe export.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">Wijst de hele slaapsessie toe aan de datum waarop je wakker wordt, in de tijdzone van de export.</string>
 
     <string name="metric_category_cycling">Fietsen</string>
     <string name="metric_category_medications">Medicijnen</string>

@@ -3,21 +3,22 @@ package com.healthmd.domain.model
 /**
  * Which daily note owns a sleep session (issue #104).
  *
- * Planned cross-platform mode switch. Apple and Android persist the same [wireValue]
+ * Cross-platform mode switch. Apple and Android persist the same [wireValue]
  * strings and default to [NIGHT_BEGINS].
  *
  * @property NIGHT_BEGINS shipped noon-to-noon journaling behavior. Summary
  *   intervals are clipped at the window boundaries; this remains the default
  *   so existing exports never change silently.
- * @property MORNING_ENDS proposed wake-up-date ownership of the whole session,
- *   unavailable until successor profiles and consumers are approved.
+ * @property MORNING_ENDS wake-up-date ownership of the whole session through
+ *   the explicit successor export profile.
  */
 enum class SleepDayAttribution(val wireValue: String) {
     NIGHT_BEGINS("night_begins"),
     MORNING_ENDS("morning_ends");
 
     val isAvailableForShippedProfiles: Boolean
-        get() = this == NIGHT_BEGINS
+        // Development QA can exercise the successor while release qualification is pending.
+        get() = this == NIGHT_BEGINS || com.healthmd.BuildConfig.DEBUG
 
     companion object {
         val DEFAULT: SleepDayAttribution = NIGHT_BEGINS
