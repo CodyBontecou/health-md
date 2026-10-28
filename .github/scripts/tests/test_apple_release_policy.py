@@ -113,6 +113,13 @@ class AppleReleasePolicyTests(unittest.TestCase):
                         self.assertNotIn("if", step)
                         self.assertIn("apple-release-source.py\" verify", step["run"])
 
+    def test_ios_draft_release_preflight_has_push_access(self):
+        self.assertEqual(
+            workflow("release-ios.yml")["jobs"]["resolve-release-sha"]["permissions"]["contents"],
+            "write",
+            "GitHub hides draft releases from tokens without push access",
+        )
+
     def test_existing_draft_is_required_before_qualification_not_created_after_upload(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
