@@ -148,11 +148,123 @@ class WhoopCloudDataProviderTest {
     }
 
     @Test
+    fun repeatedPagesDoNotDoubleWorkoutCaloriesOrSleepTotals() = runTest {
+        val requests = mutableListOf<CloudHttpRequest>()
+        val data = provider { request ->
+            requests += request
+            when {
+                request.url.path.endsWith("/sleep") -> response("""{"records":[${sleep(201)}],"next_token":"repeat-sleep"}""")
+                request.url.path.endsWith("/workout") -> response("""{"records":[${workout(301)}],"next_token":"repeat-workout"}""")
+                request.url.path.endsWith("/body") -> response("{}")
+                else -> response("""{"records":[]}""")
+            }
+        }.fetchHealthData(date)
+
+        assertThat(requests.count { it.url.path.endsWith("/sleep") }).isEqualTo(2)
+        assertThat(requests.count { it.url.path.endsWith("/workout") }).isEqualTo(2)
+        assertThat(data.workouts).hasSize(1)
+        assertThat(data.activity.activeCalories).isWithin(0.001).of(300.0)
+        assertThat(data.sleep.totalDuration.inWholeMinutes).isEqualTo(60)
+        assertThat(data.sleep.sessions).hasSize(1)
+    }
+
+    @Test
+    fun overlappingPagesKeepFirstCapturedRecordPerProviderIdentity() = runTest {
+        val data = provider { request ->
+            val next = "nextToken=" in request.url.query.orEmpty()
+            when {
+                request.url.path.endsWith("/sleep") -> response(if (next) """
+                    {"records":[${sleep(201, 7_200_000)},${sleep(202, 1_800_000)}]}
+                """ else """{"records":[${sleep(201)}],"next_token":"sleep-page-2"}""")
+                request.url.path.endsWith("/workout") -> response(if (next) """
+                    {"records":[${workout(301).replace("1255.2", "4184.0")},${workout(302)}]}
+                """ else """{"records":[${workout(301)}],"next_token":"workout-page-2"}""")
+                request.url.path.endsWith("/recovery") -> response(if (next) """
+                    {"records":[{"cycle_id":"101","score":{"resting_heart_rate":61,"hrv_rmssd_milli":40}},
+                     {"cycle_id":100,"score":{"hrv_rmssd_milli":68.5}}]}
+                """ else """
+                    {"records":[{"cycle_id":101,"score":{"resting_heart_rate":52}}],"next_token":"recovery-page-2"}
+                """)
+                else -> response("{}")
+            }
+        }.fetchHealthData(date)
+
+        assertThat(data.workouts.map { it.id }).containsExactly(
+            "00000000-0000-4000-8000-000000000301", "00000000-0000-4000-8000-000000000302",
+        ).inOrder()
+        assertThat(data.workouts.first().calories).isWithin(0.001).of(300.0)
+        assertThat(data.activity.activeCalories).isWithin(0.001).of(600.0)
+        assertThat(data.sleep.totalDuration.inWholeMinutes).isEqualTo(90)
+        assertThat(data.sleep.sessions).hasSize(2)
+        assertThat(data.heart.restingHeartRate).isEqualTo(52.0)
+        assertThat(data.heart.hrv).isEqualTo(68.5)
+    }
+
+    @Test
+    fun recordsWithoutProviderIdentityAreNotCollapsedTogether() = runTest {
+        val data = provider { request ->
+            val next = "nextToken=" in request.url.query.orEmpty()
+            when {
+                request.url.path.endsWith("/sleep") -> response(if (next) """
+                    {"records":[${sleep(null, 1_800_000)}]}
+                """ else """{"records":[${sleep(null)}],"next_token":"sleep-page-2"}""")
+                request.url.path.endsWith("/recovery") -> response(if (next) """
+                    {"records":[{"score":{"hrv_rmssd_milli":68.5}}]}
+                """ else """{"records":[{"score":{"resting_heart_rate":52}}],"next_token":"recovery-page-2"}""")
+                request.url.path.endsWith("/body") -> response("{}")
+                else -> response("""{"records":[]}""")
+            }
+        }.fetchHealthData(date)
+
+        assertThat(data.sleep.totalDuration.inWholeMinutes).isEqualTo(90)
+        assertThat(data.sleep.sessions).hasSize(2)
+        assertThat(data.heart.restingHeartRate).isEqualTo(52.0)
+        assertThat(data.heart.hrv).isEqualTo(68.5)
+    }
+
+    @Test
+    fun malformedMappingInOneSectionPreservesHealthySections() = runTest {
+        for (malformed in listOf("sleep", "workout-calories", "workout-id", "recovery")) {
+            val data = provider { request ->
+                when {
+                    request.url.path.endsWith("/sleep") -> response("""{"records":[${
+                        if (malformed == "sleep") sleep(201).replace("\"total_light_sleep_time_milli\":3600000", "\"total_light_sleep_time_milli\":[]")
+                        else sleep(201)
+                    }]}""")
+                    request.url.path.endsWith("/workout") -> response("""{"records":[${
+                        when (malformed) {
+                            "workout-calories" -> workout(301).replace("\"kilojoule\":1255.2", "\"kilojoule\":[]")
+                            "workout-id" -> workout(301).replace("\"id\":\"00000000-0000-4000-8000-000000000301\"", "\"id\":[]")
+                            else -> workout(301)
+                        }
+                    }]}""")
+                    request.url.path.endsWith("/recovery") -> response(if (malformed == "recovery") """
+                        {"records":[{"cycle_id":101,"score":{"resting_heart_rate":{}}}]}
+                    """ else """{"records":[{"cycle_id":101,"score":{"resting_heart_rate":52,"hrv_rmssd_milli":68.5}}]}""")
+                    else -> response("""{"weight_kilogram":78.4}""")
+                }
+            }.fetchHealthData(date)
+
+            assertThat(data.sleep.hasData).isEqualTo(malformed != "sleep")
+            assertThat(data.activity.activeCalories).isEqualTo(if (malformed == "workout-calories") null else 300.0)
+            assertThat(data.heart.restingHeartRate).isEqualTo(if (malformed == "recovery") null else 52.0)
+            assertThat(data.heart.hrv).isEqualTo(if (malformed == "recovery") null else 68.5)
+            assertThat(data.body.weight).isEqualTo(78.4)
+            assertThat(data.workouts).hasSize(if (malformed.startsWith("workout-")) 0 else 1)
+        }
+    }
+
+    @Test
     fun compatibilityCancellationIsNotConvertedToEmptyData() = runTest {
-        val failure = runCatching {
-            provider { throw CancellationException("synthetic cancellation") }.fetchHealthData(date)
-        }.exceptionOrNull()
-        assertThat(failure).isInstanceOf(CancellationException::class.java)
+        for (endpoint in listOf("/sleep", "/workout", "/recovery", "/body")) {
+            val failure = runCatching {
+                provider { request ->
+                    if (request.url.path.endsWith(endpoint)) throw CancellationException("synthetic cancellation")
+                    response("""{"records":[]}""")
+                }.fetchHealthData(date)
+            }.exceptionOrNull()
+            assertThat(failure).isInstanceOf(CancellationException::class.java)
+        }
     }
 
     private fun provider(
@@ -167,6 +279,12 @@ class WhoopCloudDataProviderTest {
     )
 
     private fun response(body: String) = CloudHttpResponse(200, "application/json", body = body.trimIndent().toByteArray())
+
+    private fun sleep(id: Int?, lightMs: Long = 3_600_000) = """
+        {"id":${id?.let { "\"00000000-0000-4000-8000-${it.toString().padStart(12, '0')}\"" } ?: "null"},
+         "start":"2026-06-02T00:00:00Z","end":"2026-06-02T01:00:00Z","score_state":"SCORED",
+         "score":{"stage_summary":{"total_light_sleep_time_milli":$lightMs,"total_in_bed_time_milli":3600000}}}
+    """.trimIndent()
 
     private fun workout(id: Int, sport: String = "running") = """
         {"id":"00000000-0000-4000-8000-${id.toString().padStart(12, '0')}","sport_name":"$sport",
