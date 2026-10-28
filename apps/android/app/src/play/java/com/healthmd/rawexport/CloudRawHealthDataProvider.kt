@@ -15,7 +15,7 @@ import kotlinx.serialization.json.JsonObject
 class CloudRawHealthDataProvider(
     private val source: CloudNativeRawPageProvider,
     private val apiClient: CloudHealthApiClient,
-) : RawHealthDataProvider {
+) : RawHealthRepository {
     private val definitions = source.rawEndpointDefinitions
         .map { it.copy(providerId = source.rawProviderId, metricIds = it.metricIds.toSortedSet()) }
         .sortedBy { it.typeKey }

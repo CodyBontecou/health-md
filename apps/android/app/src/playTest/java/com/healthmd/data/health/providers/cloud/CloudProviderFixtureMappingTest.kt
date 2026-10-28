@@ -12,7 +12,10 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 class CloudProviderFixtureMappingTest {
     private lateinit var server: MockWebServer
@@ -135,12 +138,11 @@ class CloudProviderFixtureMappingTest {
     fun whoopFixture_mapsSleepActivityRecoveryBodyAndWorkoutData() = runTest {
         enqueueFixture("whoop/sleep.json")
         enqueueFixture("whoop/workouts.json")
-        enqueueFixture("whoop/cycle.json")
         enqueueFixture("whoop/recovery.json")
         enqueueFixture("whoop/body.json")
-        enqueueFixture("whoop/workouts.json")
 
-        val data = WhoopCloudDataProvider(apiClient("whoop"), baseUrl()).fetchHealthData(date)
+        val clock = Clock.fixed(Instant.parse("2026-06-02T18:00:00Z"), ZoneOffset.UTC)
+        val data = WhoopCloudDataProvider(apiClient("whoop"), "${baseUrl()}/developer/v2", clock).fetchHealthData(date)
 
         assertThat(data.sleep.totalDuration.inWholeMinutes).isEqualTo(450)
         assertThat(data.sleep.lightSleep.inWholeMinutes).isEqualTo(300)
@@ -154,14 +156,24 @@ class CloudProviderFixtureMappingTest {
         assertThat(data.body.height).isWithin(0.001).of(1.82)
         assertThat(data.body.weight).isWithin(0.001).of(78.4)
         assertThat(data.workouts).hasSize(1)
+        assertThat(data.workouts.single().id).isEqualTo("00000000-0000-4000-8000-000000000301")
+        assertThat(data.workouts.single().metadata).containsEntry("sport_name", "running")
         assertThat(data.workouts.single().workoutType).isEqualTo(WorkoutType.RUNNING)
         assertThat(data.workouts.single().duration.inWholeSeconds).isEqualTo(1800)
         assertThat(data.workouts.single().calories).isWithin(0.001).of(300.0)
         assertThat(data.workouts.single().averageHeartRate).isWithin(0.001).of(145.0)
         assertThat(data.workouts.single().heartRateMax).isWithin(0.001).of(178.0)
 
-        assertThat(server.takeRequest().path).startsWith("/activity/sleep?start=")
-        assertThat(server.takeRequest().path).startsWith("/activity/workout?start=")
+        listOf("activity/sleep", "activity/workout", "recovery").forEach { endpoint ->
+            val request = server.takeRequest()
+            assertThat(request.requestUrl!!.encodedPath).isEqualTo("/developer/v2/$endpoint")
+            assertThat(request.requestUrl!!.queryParameter("start")).isEqualTo("2026-06-02T00:00:00Z")
+            assertThat(request.requestUrl!!.queryParameter("end")).isEqualTo("2026-06-03T00:00:00Z")
+            assertThat(request.requestUrl!!.queryParameter("limit")).isEqualTo("25")
+            assertThat(request.requestUrl!!.queryParameter("cycleId")).isNull()
+        }
+        assertThat(server.takeRequest().path).isEqualTo("/developer/v2/user/measurement/body")
+        assertThat(server.requestCount).isEqualTo(4)
     }
 
     @Test

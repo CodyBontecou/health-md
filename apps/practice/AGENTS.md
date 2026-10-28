@@ -2,7 +2,7 @@
 
 ## Clinical boundary
 
-Everything served after authentication, including identity and request metadata, is inside the clinical/PHI boundary. This component is independent from `apps/website`, every existing Worker, and root `worker/`. Never import from, proxy through, or share stores with those components.
+Everything served after authentication, including identity and request metadata, is inside the clinical/PHI boundary. This component is independent from [the website](../website/), [Apple Workers](../apple/worker/), and every other existing Worker. Never import from, proxy through, or share stores with those components.
 
 The checked-in runtime is **synthetic only**. Use fictional aliases and generated values. Never add real names, dates of birth, MRNs, readings, credentials, tenant URLs, access tokens, screenshots, or production configuration. `PRACTICE_RUNTIME_MODE` accepts only `synthetic`; do not add a production value without an approved architecture, compliance, security, BAA, and release-gate change.
 
@@ -30,6 +30,6 @@ npm run dry-run
 
 The default PR regression command is `bash scripts/ci/practice.sh` from the repository root. It installs this component's lockfile, type-checks, runs its unit/API security tests, builds production assets, and checks the synthetic/security boundaries. No real-browser or production-readiness qualification is claimed. `npm run check:ci` remains an explicit diagnostic command with Chromium and the full qualification/smoke pipeline.
 
-`npm start` builds and starts the local synthetic Worker on `127.0.0.1:8787`. Generated `dist/` and `.wrangler/` content is never committed. CI builds once and passes the current assets through its `:built` steps. Run `npm run check:ci` as the complete pipeline; invoke standalone commands when a fresh build is needed. CI qualifies a build but never deploys it.
+`npm start` builds and starts the local synthetic Worker on `127.0.0.1:8787`. Generated build output (`dist`) and local Wrangler state (`.wrangler`) are never committed; these directories are created by component commands and are not navigation targets. CI builds once and passes the current assets through its `:built` steps. Run `npm run check:ci` as the complete pipeline; invoke standalone commands when a fresh build is needed. CI qualifies a build but never deploys it.
 
-Before finishing, run type checking, unit tests, the source/build/fixture scanner and canary, security/qualification verifiers, production build, real local-Wrangler browser projects where available, smoke, Wrangler dry-run, `npm audit --audit-level=moderate`, and `git diff --check`. Preserve strict no-store/security headers and the fail-closed runtime guard. Generated browser failure artifacts and `qualification/generated/` provenance are synthetic-only and ignored.
+Before finishing, run type checking, unit tests, the source/build/fixture scanner and canary, security/qualification verifiers, production build, real local-Wrangler browser projects where available, smoke, Wrangler dry-run, `npm audit --audit-level=moderate`, and `git diff --check`. Preserve strict no-store/security headers and the fail-closed runtime guard. Generated browser failure artifacts and provenance under the component's `qualification/generated` directory are synthetic-only and ignored; these outputs need not exist in a fresh checkout.

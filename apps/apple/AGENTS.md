@@ -1,5 +1,11 @@
 # Health.md Agent Instructions
 
+## Task navigation
+
+- iOS UI tests: read the [UI-test runbook](docs/testing/UI-TESTS.md) for deterministic launch state, journey patterns, and failure attachments.
+- Pricing/analytics: use the [operational experiment index](../../docs/experiments/index.md) and [Worker runbook](worker/pricing-analytics/README.md).
+- Generated reference edits: use the [publication ownership guide](../website/docs-src/README.md) before changing a mirrored page.
+
 ## Cross-platform feature policy
 
 Apple and Android should expose the same capability, terminology, settings semantics, and public data meaning whenever HealthKit and Health Connect permit it. Before changing a mobile feature or export behavior, read `../../docs/architecture/cross-platform-unification-policy.md` and inspect the Android implementation and capability inventory.

@@ -24,7 +24,7 @@ object PlayRawHealthRepositoryRegistryFactory {
             cloudProviders.forEach { source ->
                 put(
                     source.rawProviderId,
-                    DefaultRawHealthRepository(CloudRawHealthDataProvider(source, apiClient)),
+                    CloudRawHealthDataProvider(source, apiClient),
                 )
             }
             listOf("polar", "samsung_health", "huawei_health", "garmin").forEach { providerId ->
