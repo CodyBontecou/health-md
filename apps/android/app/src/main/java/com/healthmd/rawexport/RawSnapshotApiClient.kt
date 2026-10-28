@@ -14,10 +14,6 @@ import okhttp3.RequestBody
 import okio.BufferedSink
 import okio.source
 
-fun interface RawSnapshotArtifactResolver {
-    fun resolve(result: RawExportResult): CompletedRawSnapshot
-}
-
 data class CompletedRawSnapshot(
     val format: RawExportFormat,
     val contentLength: Long? = null,
@@ -129,22 +125,5 @@ class RawSnapshotApiClient(private val client: OkHttpClient) {
         const val NDJSON_CONTENT_TYPE = "application/x-ndjson; charset=utf-8"
         fun contentType(format: RawExportFormat): MediaType =
             (if (format == RawExportFormat.JSON) JSON_CONTENT_TYPE else NDJSON_CONTENT_TYPE).toMediaType()
-    }
-}
-
-class RawSnapshotApiEndpointExportRunner(
-    private val orchestrator: RawSnapshotExportOrchestrator,
-    private val apiClient: RawSnapshotApiClient,
-    private val artifactResolver: RawSnapshotArtifactResolver,
-) {
-    suspend fun exportAndUpload(
-        request: RawSnapshotRequest,
-        endpointUrl: String,
-        authorizationHeader: String? = null,
-        headers: List<RawApiHeader> = emptyList(),
-    ): Pair<RawExportResult, RawApiUploadResult> {
-        val result = orchestrator.export(request)
-        val upload = apiClient.upload(endpointUrl, artifactResolver.resolve(result), authorizationHeader, headers)
-        return result to upload
     }
 }

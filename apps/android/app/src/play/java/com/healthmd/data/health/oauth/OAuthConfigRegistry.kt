@@ -69,7 +69,7 @@ class OAuthConfigRegistry(
                     providerTokenEndpoint = "https://api.prod.whoop.com/oauth/oauth2/token",
                 ),
                 clientId = BuildConfig.WHOOP_CLIENT_ID,
-                scopes = listOf("offline", "read:profile", "read:cycles", "read:recovery", "read:sleep", "read:workout", "read:body_measurement"),
+                scopes = listOf("offline", "read:cycles", "read:recovery", "read:sleep", "read:workout", "read:body_measurement"),
             ),
         )
 

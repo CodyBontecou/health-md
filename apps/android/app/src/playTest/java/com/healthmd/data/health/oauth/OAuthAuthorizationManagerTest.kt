@@ -134,6 +134,54 @@ class OAuthAuthorizationManagerTest {
     }
 
     @Test
+    fun whoopAuthorizationUsesEightCharacterStateAndReadOnlyScopes() = runTest {
+        val registry = OAuthConfigRegistry()
+        val config = registry.get("whoop")!!.copy(clientId = "synthetic-whoop-client")
+        val store = InMemoryOAuthTokenStore()
+        val manager = OAuthAuthorizationManager(OAuthConfigRegistry(listOf(config)), store)
+        val query = queryParameters(requireNotNull(manager.buildAuthorizationUrl("whoop")))
+
+        assertThat(query.getValue("state")).hasLength(8)
+        assertThat(store.pendingAuthorizations.getValue(query.getValue("state")).providerId).isEqualTo("whoop")
+        assertThat(query.getValue("scope").split(' ')).containsExactly(
+            "offline", "read:cycles", "read:recovery", "read:sleep", "read:workout", "read:body_measurement",
+        )
+        assertThat(query.getValue("redirect_uri")).isEqualTo("healthmd://oauth2redirect")
+    }
+
+    @Test
+    fun whoopRefreshRequestsOfflineScopeAndStoresRotatedPair() = runTest {
+        val store = InMemoryOAuthTokenStore(listOf(OAuthToken("whoop", "access-old", "refresh-old")))
+        val config = OAuthProviderConfig(
+            providerId = "whoop",
+            displayName = "WHOOP",
+            authorizationEndpoint = server.url("/oauth/authorize").toString(),
+            tokenEndpoint = server.url("/oauth/token").toString(),
+            clientId = "synthetic-whoop-client",
+            scopes = listOf("offline"),
+        )
+        val manager = OAuthAuthorizationManager(OAuthConfigRegistry(listOf(config)), store)
+        server.enqueue(MockResponse().setBody("""
+            {"access_token":"access-new","refresh_token":"refresh-new","expires_in":3600}
+        """.trimIndent()))
+
+        val token = manager.refreshToken(config, "refresh-old")
+        val body = formParameters(server.takeRequest().body.readUtf8())
+        assertThat(body).containsEntry("scope", "offline")
+        assertThat(body).containsEntry("refresh_token", "refresh-old")
+        assertThat(body).doesNotContainKey("client_secret")
+        assertThat(token.accessToken).isEqualTo("access-new")
+        assertThat(store.tokens.getValue("whoop").refreshToken).isEqualTo("refresh-new")
+
+        server.enqueue(MockResponse().setBody("{\"access_token\":\"unusable-access\"}"))
+        val failure = runCatching { manager.refreshToken(config, "refresh-new") }.exceptionOrNull()
+        assertThat(failure).isInstanceOf(OAuthAuthorizationException::class.java)
+        assertThat((failure as OAuthAuthorizationException).reason).isEqualTo(OAuthFailureReason.INVALID_TOKEN_RESPONSE)
+        assertThat(store.tokens.getValue("whoop").accessToken).isEqualTo("access-new")
+        assertThat(store.tokens.getValue("whoop").refreshToken).isEqualTo("refresh-new")
+    }
+
+    @Test
     fun handleCallback_rejectsUnknownStateBeforeTokenExchange() = runTest {
         val manager = manager(store = InMemoryOAuthTokenStore())
 

@@ -13,6 +13,14 @@
 
 Read the nearest component `AGENTS.md` before changing files in a component. Keep component build commands, lockfiles, and generated artifacts scoped to that component.
 
+## Task navigation
+
+- CLI/MCP changes: start with the [development skill](.agents/skills/healthmd-cli-development/SKILL.md) and [QA consumer checklist](apps/cli/docs/qa.md).
+- Pricing/analytics: start with the [operational experiment index](docs/experiments/index.md), then the [pricing Worker runbook](apps/apple/worker/pricing-analytics/README.md).
+- Documentation edits: use the [website source-ownership guide](apps/website/docs-src/README.md) and `make check-doc-navigation`.
+
+Resolve unfamiliar filenames with `git ls-files` in the active worktree; component and feature maps describe ownership.
+
 ## Verification policy
 
 - During iteration, run the smallest relevant behavior tests and cheap type/lint checks in the owning component. At completion of a coherent change, run its affected-module regressions once. Default to checks that run without a simulator, emulator, physical device, or Argent.
