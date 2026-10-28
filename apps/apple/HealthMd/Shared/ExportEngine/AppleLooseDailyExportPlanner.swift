@@ -551,7 +551,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             nativePlan = nil
         }
 
-        let rustPlan: NativeExportArtifactPlan
+        var rustPlan: NativeExportArtifactPlan
         do {
             let semanticConfiguration = try HealthMdSemanticInputAdapter.sessionConfiguration(
                 sessionID: identity.sessionID,
@@ -570,7 +570,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 registry: context.registry,
                 customization: frozenSettings.formatCustomization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
-                captureContext: wakeDateContext
+                captureContext: wakeDateContext,
+                includeArchiveExtensions: wakeDateContext == nil
             )
             let semanticResult = try await coreExecutor.processSemantic(
                 configuration: semanticConfiguration,
@@ -593,10 +594,14 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             let captureStatuses = Set(preparedExports.map {
                 Self.rawCaptureStatusIdentifier($0.filteredData.healthKitRecordCaptureStatus)
             })
-            guard captureStatuses.count == 1, let captureStatus = captureStatuses.first else {
+            guard let captureStatus = captureStatuses.first else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
-            renderOptions.rawCaptureStatus = captureStatus
+            if captureStatuses.count != 1 && wakeDateContext == nil {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+            // Per-day archive diagnostics and native composition retain each exact status.
+            renderOptions.rawCaptureStatus = captureStatuses.count == 1 ? captureStatus : "not_requested"
             renderOptions.writeMode = "overwrite"
             if !settingsSnapshot.operationRollupPeriods.isEmpty {
                 renderOptions.rollupGeneratedAt = HealthRollupDateFormatting.timestampString(
@@ -688,6 +693,13 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 )
             }
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+
+        if wakeDateContext != nil, settingsSnapshot.detailPolicy.includesCanonicalArchive {
+            rustPlan = try await AppleWakeDateArchiveComposer.compose(plan: rustPlan, pin: pin,
+                prepared: preparedExports, settings: frozenSettings,
+                healthSubfolder: settingsSnapshot.healthSubfolder ?? "",
+                dailyOutputOwnerDates: dailyOutputOwnerDates)
         }
 
         switch requestedMode {
@@ -794,7 +806,9 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         !healthData.isEmpty
             && supports(settingsSnapshot: settingsSnapshot, surface: surface)
             && healthData.allSatisfy {
-                $0.healthKitRecordArchive == nil
+                ($0.healthKitRecordArchive == nil
+                    || (settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+                        && settingsSnapshot.detailPolicy.includesCanonicalArchive))
                     && settingsSnapshot.calendarTimeZoneIdentifier
                         == $0.timeContext.calendarTimeZoneIdentifier
             }
@@ -830,8 +844,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         surface: AppleExportOperationSurface,
         allowsUnpinnedWakeDateDetails: Bool
     ) -> Bool {
-        let supportsWakeDateDetails = settingsSnapshot.detailPolicy == .detailedTimeSeries
-            && settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+        let supportsWakeDateDetails = settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
             && settingsSnapshot.sleepCaptureContext?.exportProfileID == "apple-v11"
             && (allowsUnpinnedWakeDateDetails
                 || (settingsSnapshot.appleExportEnginePin?.isWakeDate == true

@@ -11,6 +11,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings owns nested observation
     // state that is unsafe during test teardown; see docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
+    private static var retainedManagers: [VaultManager] = []
 
     func testNativeStateOfMindRecordsReachEverySuccessorFormatWithoutLosingSourceFacts() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
@@ -296,7 +297,157 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
-    func testWakeDateDetailsRejectArchivesRemoteSurfacesAndInvalidPairs() async throws {
+    func testWakeDateRangeRetainsEachDaysArchiveCaptureStatus() async throws {
+        let context = AppleSleepCaptureContext(timeZone: try XCTUnwrap(TimeZone(identifier: "UTC")),
+            sleepDayAttribution: .morningEnds)
+        let statuses: [HealthKitRecordCaptureStatus] = [.complete, .partial]
+        let days = statuses.enumerated().map { index, status in
+            let date = ExportFixtures.referenceDate.addingTimeInterval(Double(index) * 86400)
+            return HealthData(date: date,
+                timeContext: ExportTimeContext(timeZone: context.timeZone, sleepDayAttribution: .morningEnds),
+                healthKitRecordArchive: HealthKitRecordArchive(captureStatus: status,
+                    dailyOwnership: HealthKitDailyOwnershipMetadata(
+                        ownerDate: HealthKitDailyOwnershipMetadata.ownerDate(for: date,
+                            calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier),
+                        intervalStart: date, intervalEnd: date.addingTimeInterval(86400),
+                        calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier)),
+                healthKitRecordCaptureStatus: status)
+        }
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["steps"])
+        snapshot.detailPolicy = .archiveOnly
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().planRange(
+            healthData: days, dailyOutputOwnerDates: ["2026-03-15", "2026-03-16"], requestedRange: nil,
+            settingsSnapshot: snapshot, surface: .localVaultRangeWithoutSideEffects, operationIdentity: nil) else {
+            return XCTFail("Mixed archive statuses must retain independent daily evidence")
+        }
+        XCTAssertEqual(operation.artifacts.count, 8)
+        for planned in operation.artifacts {
+            let expected = planned.artifact.relativePath.contains("2026-03-15") ? "complete" : "partial"
+            let text = String(decoding: try planned.artifact.content.materializedData(), as: UTF8.self)
+            switch planned.format {
+            case .csv: XCTAssertTrue(text.contains(",Raw HealthKit,Raw Capture Status,\(expected),status,"))
+            case .json:
+                let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+                XCTAssertEqual(root["raw_capture_status"] as? String, expected)
+            case .markdown, .obsidianBases: XCTAssertTrue(text.contains("raw_capture_status: \(expected)"))
+            }
+        }
+    }
+
+    func testWakeDateLargeFileBackedArchiveCommitsThroughRealVaultWithoutInlinePlanLimit() async throws {
+        let context = AppleSleepCaptureContext(timeZone: try XCTUnwrap(TimeZone(identifier: "UTC")),
+            sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let bytes = Data(repeating: 0x7a, count: 7 * 1024 * 1024)
+        let attachmentFile = try ExportArtifactIO.renderTemporary(prefix: "synthetic-wake-attachment",
+            mediaType: "application/octet-stream") { try $0.write(bytes) }
+        let external = ClinicalDocumentVisionHealthKitRecordMapper.attachment(HealthKitAttachmentValue(
+            identifier: UUID(uuidString: "20000000-0000-0000-0000-000000000099")!,
+            filename: "synthetic.bin", uniformTypeIdentifier: "public.data", byteCount: Int64(bytes.count),
+            creationDate: owner, data: nil, fileBackedData: HealthKitFileBackedBlob(artifact: attachmentFile),
+            sha256: attachmentFile.descriptor.sha256),
+            parentUUID: UUID(uuidString: "10000000-0000-0000-0000-000000000099")!,
+            parentObjectTypeIdentifier: "HKClinicalRecord", selectedMetricIDs: ["heart_rate_avg"])
+        let archive = HealthKitRecordArchive(captureStatus: .complete,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(ownerDate: "2026-03-15", intervalStart: owner,
+                intervalEnd: owner.addingTimeInterval(86400),
+                calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier), externalRecords: [external])
+        let day = HealthData(date: owner,
+            timeContext: ExportTimeContext(timeZone: context.timeZone, sleepDayAttribution: .morningEnds),
+            healthKitRecordArchive: archive, healthKitRecordCaptureStatus: .complete)
+        var snapshot = try acceptedSnapshot(context: context, formats: [.json, .csv], selectionIDs: ["heart_rate_avg"])
+        snapshot.detailPolicy = .archiveOnly
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(
+            healthData: day, settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+            return XCTFail("Large source archives require a final file-backed plan")
+        }
+        XCTAssertEqual(operation.artifacts.count, 2)
+        for planned in operation.artifacts {
+            let file = try XCTUnwrap(planned.artifact.fileArtifact)
+            XCTAssertGreaterThan(file.descriptor.byteCount, 8 * 1024 * 1024)
+            try file.validateIntegrity()
+        }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("SyntheticWakeVault-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let bookmarks = FakeBookmarkResolver()
+        bookmarks.accessGranted = true
+        let vault = VaultManager(defaults: FakeUserDefaults(), fileSystem: SystemFileSystem(), bookmarkResolver: bookmarks)
+        vault.healthSubfolder = "Health"
+        vault.setVaultFolder(root)
+        Self.retainedManagers.append(vault)
+        let result = try await vault.exportHealthDataRange([day], settingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects, writeDataDictionary: false)
+        XCTAssertEqual(result?.dailyFileCount, 2)
+        for planned in operation.artifacts {
+            let destination = root.appendingPathComponent(planned.artifact.relativePath)
+            let committed = try Data(contentsOf: destination)
+            XCTAssertEqual(UInt64(committed.count), planned.artifact.byteCount)
+            XCTAssertEqual(NativeExportArtifact.sha256(of: committed), planned.artifact.sha256)
+        }
+    }
+
+    func testWakeDateCanonicalArchiveRemainsIndependentAndFileBackedAcrossFormats() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let source = try XCTUnwrap(ExportFixtures.losslessDay.healthKitRecordArchive)
+        let archive = HealthKitRecordArchive(captureStatus: source.captureStatus,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(ownerDate: source.dailyOwnership.ownerDate,
+                intervalStart: source.dailyOwnership.intervalStart, intervalEnd: source.dailyOwnership.intervalEnd,
+                calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier),
+            records: source.records, externalRecords: source.externalRecords,
+            queryManifest: source.queryManifest, integrityWarnings: source.integrityWarnings,
+            medicationInventoryRecords: source.medicationInventoryRecords)
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 42), healthKitRecordArchive: archive,
+            healthKitRecordCaptureStatus: archive.captureStatus)
+        let selected: Set<String> = ["steps", "heart_rate_avg", "heart_rate_max"]
+        let selectedArchive = archive.filtered(enabledMetricIDs: selected)
+        XCTAssertFalse(selectedArchive.records.isEmpty)
+        for policy: AppleExportDetailPolicy in [.archiveOnly, .lossless] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: selected)
+            snapshot.detailPolicy = policy
+            guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(
+                healthData: day, settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+                return XCTFail("Canonical archives require the successor plan")
+            }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            for planned in operation.artifacts {
+                let artifact = planned.artifact
+                let data = try artifact.content.materializedData()
+                XCTAssertEqual(artifact.sha256, NativeExportArtifact.sha256(of: data))
+                let text = String(decoding: data, as: UTF8.self)
+                XCTAssertTrue(text.contains("morning_ends"))
+                switch planned.format {
+                case .json:
+                    XCTAssertNotNil(artifact.fileArtifact)
+                    let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+                    let actual = try XCTUnwrap(root["healthkit_record_archive"] as? NSDictionary)
+                    let expected = try XCTUnwrap(try JSONSerialization.jsonObject(with:
+                        HealthKitRecordArchiveSerializer.data(for: selectedArchive)) as? NSDictionary)
+                    XCTAssertEqual(actual, expected)
+                    XCTAssertTrue(text.contains("18446744073709551615"))
+                    XCTAssertTrue(text.contains("record_start_in_half_open_day_interval"))
+                case .csv:
+                    XCTAssertNotNil(artifact.fileArtifact)
+                    let sink = MemoryExportByteSink(mediaType: "text/csv")
+                    try HealthKitArchiveCSVProjection.write(archive: selectedArchive,
+                        ownerDate: archive.dailyOwnership.ownerDate, to: sink)
+                    _ = try sink.finish()
+                    XCTAssertTrue(data.suffix(sink.data.count).elementsEqual(sink.data))
+                case .markdown:
+                    XCTAssertNotNil(artifact.fileArtifact)
+                    XCTAssertTrue(text.contains("Lossless Health Records"))
+                    XCTAssertFalse(text.contains("canonical_record_json"))
+                case .obsidianBases:
+                    XCTAssertTrue(text.contains("raw_record_count:"))
+                }
+            }
+        }
+    }
+
+    func testWakeDateDetailsAdmitArchivePoliciesAndRejectRemoteSurfacesAndInvalidPairs() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
@@ -306,9 +457,9 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         XCTAssertFalse(AppleLooseDailyExportPlanner.supports(settingsSnapshot: snapshot, surface: .directGeneratedFilesWithoutSideEffects))
         XCTAssertFalse(AppleLooseDailyExportPlanner.supports(settingsSnapshot: snapshot, surface: .connectedReceivedFilesWithoutSideEffects))
         for policy: AppleExportDetailPolicy in [.archiveOnly, .lossless] {
-            var rejected = snapshot
-            rejected.detailPolicy = policy
-            XCTAssertFalse(AppleLooseDailyExportPlanner.supports(settingsSnapshot: rejected, surface: .localVaultWithoutSideEffects))
+            var accepted = snapshot
+            accepted.detailPolicy = policy
+            XCTAssertTrue(AppleLooseDailyExportPlanner.supports(settingsSnapshot: accepted, surface: .localVaultWithoutSideEffects))
         }
         var noContext = snapshot
         noContext.sleepCaptureContext = nil

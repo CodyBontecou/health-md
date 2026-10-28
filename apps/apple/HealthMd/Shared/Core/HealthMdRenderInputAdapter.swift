@@ -183,6 +183,13 @@ enum HealthMdRenderInputAdapter {
             throw AdapterError.invalidPresentation
         }
 
+        // API envelopes have no native source-archive composition phase. Until that
+        // route is qualified, never attest an aggregate while omitting its archive.
+        if registry.profileId == AppleExportEnginePin.wakeDateProfileID, options.api != nil,
+           presentationByOwnerDate.values.contains(where: { $0.healthKitRecordArchive != nil }) {
+            throw AdapterError.invalidPresentation
+        }
+
         let wakeDate = registry.profileId == AppleExportEnginePin.wakeDateProfileID
         if wakeDate {
             guard registry.publicProfileId == "apple-v11", registry.publicSchemaVersion == 11,
@@ -549,7 +556,7 @@ enum HealthMdRenderInputAdapter {
         ]
         if let data = presentationData, let captureContext,
            captureContext.sleepDayAttribution == .morningEnds {
-            let bytes = try data.toJSONDataThrowing(customization: presentationCustomization, captureContext: captureContext)
+            let bytes = try data.aggregateJSONDataThrowing(customization: presentationCustomization, captureContext: captureContext)
             guard let root = try JSONSerialization.jsonObject(with: bytes) as? [String: Any],
                   !hasUnqualifiedDetailArrays(root, path: []) else {
                 throw AdapterError.invalidPresentation
@@ -808,7 +815,7 @@ enum HealthMdRenderInputAdapter {
             // Keeping it in the handoff does not select a JSON output artifact.
             let json: Any
             do {
-                let bytes = try data.toJSONDataThrowing(customization: customization, captureContext: captureContext)
+                let bytes = try data.aggregateJSONDataThrowing(customization: customization, captureContext: captureContext)
                 guard var root = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
                     throw AdapterError.invalidPresentation
                 }

@@ -155,12 +155,23 @@ extension HealthData {
         return sink.data
     }
 
+    /// Bounded daily attestation; canonical source bytes are composed independently.
+    func aggregateJSONDataThrowing(customization: FormatCustomization,
+        captureContext: AppleSleepCaptureContext) throws -> Data {
+        let sink = MemoryExportByteSink(mediaType: "application/json")
+        try writeJSONThrowing(to: sink, snapshot: exportSnapshot(customization: customization),
+            config: customization, captureContext: captureContext, includeCanonicalArchive: false)
+        _ = try sink.finish()
+        return sink.data
+    }
+
     func writeJSONThrowing(
         to sink: ExportByteSink,
         snapshot: ExportDataSnapshot,
         config: FormatCustomization,
         outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
-        captureContext: AppleSleepCaptureContext? = nil
+        captureContext: AppleSleepCaptureContext? = nil,
+        includeCanonicalArchive: Bool = true
     ) throws {
         let object = try canonicalJSONObject(
             snapshot: snapshot,
@@ -170,7 +181,7 @@ extension HealthData {
         )
         try HealthKitRecordArchiveSerializer.writeDailyJSONObject(
             object,
-            archive: snapshot.healthKitRecordArchive,
+            archive: includeCanonicalArchive ? snapshot.healthKitRecordArchive : nil,
             to: sink,
             outputFormatting: outputFormatting
         )

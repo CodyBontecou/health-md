@@ -171,7 +171,7 @@ extension HealthData {
         return "\n" + lines.joined(separator: "\n") + "\n"
     }
 
-    private func losslessHealthRecordsMarkdown(
+    func losslessHealthRecordsMarkdown(
         snapshot: ExportDataSnapshot,
         headerPrefix: String
     ) -> String {

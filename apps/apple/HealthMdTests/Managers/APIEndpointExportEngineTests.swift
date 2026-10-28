@@ -9,6 +9,36 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testMorningEndsAPIRejectsCanonicalArchiveBeforeAggregateOnlyAttestation() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = context
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.detailPolicy = .archiveOnly
+        settings.metricSelection.enabledMetrics = ["steps"]
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+            calendarTimeZone: zone, surface: .apiEndpoint)
+        let frozen = snapshot.makeAdvancedExportSettings()
+        Self.retainedSettings.append(frozen)
+        let date = ExportFixtures.referenceDate
+        let archive = HealthKitRecordArchive(captureStatus: .complete,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(
+                ownerDate: HealthKitDailyOwnershipMetadata.ownerDate(for: date, calendarTimeZoneIdentifier: zone.identifier),
+                intervalStart: date, intervalEnd: date.addingTimeInterval(86400), calendarTimeZoneIdentifier: zone.identifier))
+        let day = HealthData(date: date,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            healthKitRecordArchive: archive, healthKitRecordCaptureStatus: .complete)
+        do {
+            _ = try await APIEndpointExportRunner.preparePreview(records: [day], settings: frozen,
+                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false)
+            XCTFail("An API envelope must not silently omit a canonical archive")
+        } catch {
+            XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
+        }
+    }
+
     func testMorningEndsAPISelectsV11BeforeCaptureAndKeepsNativeRecordsAndFailedBatchAuthority() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let formatter = ExportDateFormatting.utcISO8601Formatter()

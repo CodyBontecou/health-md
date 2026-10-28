@@ -248,6 +248,13 @@ nonisolated struct ExportArtifactFile: Equatable, Sendable {
         )
     }
 
+    func validateIntegrity() throws {
+        var hasher = SHA256()
+        try forEachChunk { hasher.update(data: $0) }
+        let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        guard digest == descriptor.sha256 else { throw CocoaError(.fileReadCorruptFile) }
+    }
+
     func materializedData() throws -> Data {
         guard descriptor.byteCount <= UInt64(Int.max) else {
             throw CocoaError(.fileReadTooLarge)

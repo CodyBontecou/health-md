@@ -1,4 +1,5 @@
 import Combine
+import CryptoKit
 import Darwin
 import Foundation
 import HealthMdCoreRust
@@ -363,6 +364,7 @@ nonisolated private final class AggregateFileWriter: Sendable {
                     sourceFileURL: artifact.url,
                     binding: destination.binding,
                     expectedByteCount: artifact.descriptor.byteCount,
+                    expectedSHA256: artifact.descriptor.sha256,
                     beforeCommit: destination.beforeCommit,
                     afterValidationBeforeRename: destination.afterValidationBeforeRename,
                     cancellationCheck: cancellationCheck
@@ -965,6 +967,7 @@ nonisolated enum SecureExactArtifactIO {
         sourceFileURL: URL,
         binding: AppleVaultDestinationBinding,
         expectedByteCount: UInt64? = nil,
+        expectedSHA256: String? = nil,
         chunkSize: Int = 64 * 1024,
         beforeCommit: (@Sendable () throws -> Void)? = nil,
         afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil,
@@ -981,6 +984,7 @@ nonisolated enum SecureExactArtifactIO {
             let input = try FileHandle(forReadingFrom: sourceFileURL)
             defer { try? input.close() }
             var copiedByteCount: UInt64 = 0
+            var hasher = SHA256()
             while true {
                 try cancellationCheck()
                 guard let bytes = try input.read(upToCount: chunkSize), !bytes.isEmpty else {
@@ -991,10 +995,15 @@ nonisolated enum SecureExactArtifactIO {
                     throw AppleExactDestinationError.destinationUnavailable
                 }
                 copiedByteCount = nextCount.partialValue
+                hasher.update(data: bytes)
                 try writeAll(bytes, descriptor: descriptor)
             }
             if let expectedByteCount, copiedByteCount != expectedByteCount {
                 throw AppleExactDestinationError.destinationUnavailable
+            }
+            if let expectedSHA256 {
+                let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+                guard digest == expectedSHA256 else { throw CocoaError(.fileReadCorruptFile) }
             }
         }
     }
@@ -2497,9 +2506,16 @@ final class VaultManager: ObservableObject {
         guard case .planned(let operation) = resolution else { return nil }
 
         for planned in operation.artifacts {
-            guard planned.artifact.writeMode == .overwrite,
-                  String(data: planned.artifact.inlineData, encoding: .utf8) != nil else {
+            guard planned.artifact.writeMode == .overwrite else {
                 throw CocoaError(.fileWriteInapplicableStringEncoding)
+            }
+            switch planned.artifact.content {
+            case .inline(let data):
+                guard String(data: data, encoding: .utf8) != nil else {
+                    throw CocoaError(.fileWriteInapplicableStringEncoding)
+                }
+            case .file(let file):
+                try file.validateIntegrity()
             }
         }
         let dictionary: AppleLooseDailyMaterializedFile?
@@ -2595,20 +2611,12 @@ final class VaultManager: ObservableObject {
         }
         let aggregateRequests: [(AppleLooseDailyPlannedArtifact, AggregateFileWriteRequest)] =
             try materialized.operation.artifacts.map { planned in
-                guard let content = String(data: planned.artifact.inlineData, encoding: .utf8) else {
-                    throw CocoaError(.fileWriteInapplicableStringEncoding)
-                }
                 let fileURL = ExportPathPlanner.appendingRelativePath(
                     planned.artifact.relativePath,
                     to: vaultURL,
                     isDirectory: false
                 )
-                return (planned, AggregateFileWriteRequest(
-                    fileURL: fileURL,
-                    filename: fileURL.lastPathComponent,
-                    newContent: content,
-                    behavior: .overwrite
-                ))
+                return (planned, try Self.plannedArtifactWriteRequest(planned.artifact, fileURL: fileURL))
             }
 
         let destinationBinding = try productionDestinationBinding(for: vaultURL)
@@ -3154,20 +3162,12 @@ final class VaultManager: ObservableObject {
             nil
         }
         let aggregateRequests: [(AppleLooseDailyPlannedArtifact, AggregateFileWriteRequest)] = try operation.artifacts.map { planned in
-            guard let content = String(data: planned.artifact.inlineData, encoding: .utf8) else {
-                throw CocoaError(.fileWriteInapplicableStringEncoding)
-            }
             let fileURL = ExportPathPlanner.appendingRelativePath(
                 planned.artifact.relativePath,
                 to: vaultURL,
                 isDirectory: false
             )
-            return (planned, AggregateFileWriteRequest(
-                fileURL: fileURL,
-                filename: fileURL.lastPathComponent,
-                newContent: content,
-                behavior: .overwrite
-            ))
+            return (planned, try Self.plannedArtifactWriteRequest(planned.artifact, fileURL: fileURL))
         }
 
         let barrier = ExportCommitBarrier()
@@ -4488,6 +4488,22 @@ final class VaultManager: ObservableObject {
 
     /// Freezes mutable render settings into an immutable write request on MainActor.
     /// The serialized filesystem transaction can then run safely on its utility queue.
+    private static func plannedArtifactWriteRequest(
+        _ artifact: NativeExportArtifact, fileURL: URL
+    ) throws -> AggregateFileWriteRequest {
+        switch artifact.content {
+        case .file(let file):
+            return AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
+                artifact: file, behavior: .overwrite)
+        case .inline(let data):
+            guard let content = String(data: data, encoding: .utf8) else {
+                throw CocoaError(.fileWriteInapplicableStringEncoding)
+            }
+            return AggregateFileWriteRequest(fileURL: fileURL, filename: fileURL.lastPathComponent,
+                newContent: content, behavior: .overwrite)
+        }
+    }
+
     private func makeAggregateFileWriteRequest(
         preparedExport: PreparedHealthDataExport,
         date: Date,

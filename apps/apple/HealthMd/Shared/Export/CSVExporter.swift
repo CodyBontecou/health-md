@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-nonisolated private final class CSVStreamAccumulator {
+nonisolated fileprivate final class CSVStreamAccumulator {
     private let writer: BufferedExportByteWriter
     private var deferredError: Error?
 
@@ -249,14 +249,8 @@ extension HealthData {
             to csv: inout CSVStreamAccumulator,
             render: (ExportByteSink) throws -> Void
         ) throws {
-            let prefix = [snapshot.dateString, category, metric]
-                .map(csvSafe)
-                .joined(separator: ",")
-            try csv.appendThrowing(prefix + ",\"")
-            let jsonSink = CSVQuotedJSONFieldSink(csv: csv)
-            try render(jsonSink)
-            _ = try jsonSink.finish()
-            try csv.appendThrowing("\",\(csvSafe(unit)),\(csvSafe(timestamp))\n")
+            try HealthKitArchiveCSVProjection.appendCanonicalJSONRow(date: snapshot.dateString,
+                category: category, metric: metric, unit: unit, timestamp: timestamp, to: &csv, render: render)
         }
 
         var csv = try CSVStreamAccumulator(sink: sink)
@@ -276,58 +270,7 @@ extension HealthData {
         )
 
         if let archive = snapshot.healthKitRecordArchive {
-            let manifestTimestamp = CanonicalRFC3339UTC.string(from: archive.dailyOwnership.intervalStart)
-            try appendCanonicalJSONRow(
-                category: "Raw HealthKit",
-                metric: "Archive Manifest",
-                unit: "json",
-                timestamp: manifestTimestamp,
-                to: &csv
-            ) { try HealthKitRecordArchiveSerializer.writeManifest(archive, to: $0) }
-
-            // HealthKitRecordArchive normalizes records in every initializer.
-            // Stream each canonical JSON field through CSV quote escaping rather
-            // than retaining a second full JSON String per dense record.
-            for record in archive.records {
-                try appendCanonicalJSONRow(
-                    category: "Raw HealthKit",
-                    metric: "Raw HealthKit Record",
-                    unit: "json",
-                    timestamp: CanonicalRFC3339UTC.string(from: record.startDate),
-                    to: &csv
-                ) { try HealthKitRecordArchiveSerializer.writeRecord(record, to: $0) }
-            }
-
-            for record in HealthKitRecordArchiveSerializer.sortedExternalRecords(archive.externalRecords) {
-                try appendCanonicalJSONRow(
-                    category: "Raw HealthKit",
-                    metric: "Raw HealthKit External Record",
-                    unit: "json",
-                    timestamp: manifestTimestamp,
-                    to: &csv
-                ) { try HealthKitRecordArchiveSerializer.writeExternalRecord(record, to: $0) }
-            }
-
-            for result in HealthKitRecordArchiveSerializer.sortedQueryResults(archive.queryResults)
-                where result.status == .failure || result.status == .cancelled {
-                try appendCanonicalJSONRow(
-                    category: "Raw HealthKit",
-                    metric: "Query Failure",
-                    unit: "json",
-                    timestamp: CanonicalRFC3339UTC.string(from: result.interval.startDate),
-                    to: &csv
-                ) { try HealthKitRecordArchiveSerializer.writeQueryResult(result, to: $0) }
-            }
-
-            for warning in HealthKitRecordArchiveSerializer.sortedWarnings(archive.integrityWarnings) {
-                try appendCanonicalJSONRow(
-                    category: "Raw HealthKit",
-                    metric: "Integrity Warning",
-                    unit: "json",
-                    timestamp: manifestTimestamp,
-                    to: &csv
-                ) { try HealthKitRecordArchiveSerializer.writeIntegrityWarning(warning, to: $0) }
-            }
+            try HealthKitArchiveCSVProjection.append(archive: archive, date: snapshot.dateString, to: &csv)
         }
 
         for failure in ExportDiagnosticSerializer.sorted(snapshot.partialFailures) {
@@ -1112,5 +1055,81 @@ extension HealthData {
         }
 
         try csv.finish()
+    }
+}
+
+/// Independently versioned canonical source rows; no daily schema/summary serialization.
+nonisolated enum HealthKitArchiveCSVProjection {
+    static func write(archive: HealthKitRecordArchive, ownerDate: String, to sink: ExportByteSink) throws {
+        var csv = try CSVStreamAccumulator(sink: sink)
+        try append(archive: archive, date: ownerDate, to: &csv)
+        try csv.finish()
+    }
+
+    fileprivate static func appendCanonicalJSONRow(date: String, category: String,
+        metric: String, unit: String, timestamp: String, to csv: inout CSVStreamAccumulator,
+        render: (ExportByteSink) throws -> Void) throws {
+        let prefix = [date, category, metric].map(CSVFieldEscaper.escape).joined(separator: ",")
+        try csv.appendThrowing(prefix + ",\"")
+        let jsonSink = CSVQuotedJSONFieldSink(csv: csv)
+        try render(jsonSink)
+        _ = try jsonSink.finish()
+        try csv.appendThrowing("\",\(CSVFieldEscaper.escape(unit)),\(CSVFieldEscaper.escape(timestamp))\n")
+    }
+
+    fileprivate static func append(archive: HealthKitRecordArchive, date: String,
+        to csv: inout CSVStreamAccumulator) throws {
+        let manifestTimestamp = CanonicalRFC3339UTC.string(from: archive.dailyOwnership.intervalStart)
+        try appendCanonicalJSONRow(date: date,
+            category: "Raw HealthKit",
+            metric: "Archive Manifest",
+            unit: "json",
+            timestamp: manifestTimestamp,
+            to: &csv
+        ) { try HealthKitRecordArchiveSerializer.writeManifest(archive, to: $0) }
+
+        // HealthKitRecordArchive normalizes records in every initializer.
+        // Stream each canonical JSON field through CSV quote escaping rather
+        // than retaining a second full JSON String per dense record.
+        for record in archive.records {
+            try appendCanonicalJSONRow(date: date,
+                category: "Raw HealthKit",
+                metric: "Raw HealthKit Record",
+                unit: "json",
+                timestamp: CanonicalRFC3339UTC.string(from: record.startDate),
+                to: &csv
+            ) { try HealthKitRecordArchiveSerializer.writeRecord(record, to: $0) }
+        }
+
+        for record in HealthKitRecordArchiveSerializer.sortedExternalRecords(archive.externalRecords) {
+            try appendCanonicalJSONRow(date: date,
+                category: "Raw HealthKit",
+                metric: "Raw HealthKit External Record",
+                unit: "json",
+                timestamp: manifestTimestamp,
+                to: &csv
+            ) { try HealthKitRecordArchiveSerializer.writeExternalRecord(record, to: $0) }
+        }
+
+        for result in HealthKitRecordArchiveSerializer.sortedQueryResults(archive.queryManifest.results)
+            where result.status == .failure || result.status == .cancelled {
+            try appendCanonicalJSONRow(date: date,
+                category: "Raw HealthKit",
+                metric: "Query Failure",
+                unit: "json",
+                timestamp: CanonicalRFC3339UTC.string(from: result.interval.startDate),
+                to: &csv
+            ) { try HealthKitRecordArchiveSerializer.writeQueryResult(result, to: $0) }
+        }
+
+        for warning in HealthKitRecordArchiveSerializer.sortedWarnings(archive.integrityWarnings) {
+            try appendCanonicalJSONRow(date: date,
+                category: "Raw HealthKit",
+                metric: "Integrity Warning",
+                unit: "json",
+                timestamp: manifestTimestamp,
+                to: &csv
+            ) { try HealthKitRecordArchiveSerializer.writeIntegrityWarning(warning, to: $0) }
+        }
     }
 }

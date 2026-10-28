@@ -138,7 +138,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
         startingSourceOrdinal: UInt64 = 0,
-        captureContext: AppleSleepCaptureContext? = nil
+        captureContext: AppleSleepCaptureContext? = nil,
+        includeArchiveExtensions: Bool = true
     ) throws -> EncodedBatch {
         let inputVersion = try validatedInputVersion(registry: registry,
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
@@ -239,6 +240,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
                 guard archive.dailyOwnership.ownerDate == ownerDate,
                       archive.dailyOwnership.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier
                 else { throw AdapterError.invalidArchiveOwnership }
+                guard includeArchiveExtensions else { continue }
                 let extensionSources: [(ExtensionLocation.Collection, Int, String, [String], HealthKitRecordInclusionReason)] =
                     archive.records.enumerated().map {
                         (.healthKitRecord, $0.offset, $0.element.originalUUID.uuidString, $0.element.selectedMetricIDs, $0.element.includedBecause)
@@ -316,7 +318,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
         startingSourceOrdinal: UInt64 = 0,
-        captureContext: AppleSleepCaptureContext? = nil
+        captureContext: AppleSleepCaptureContext? = nil,
+        includeArchiveExtensions: Bool = true
     ) throws -> [EncodedBatch] {
         let inputVersion = try validatedInputVersion(registry: registry,
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
@@ -355,7 +358,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
                 customization: customization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
                 startingSourceOrdinal: sourceOrdinal,
-                captureContext: captureContext
+                captureContext: captureContext,
+                includeArchiveExtensions: includeArchiveExtensions
             )
             guard let object = try JSONSerialization.jsonObject(with: encodedDay.data) as? [String: Any],
                   let records = object["records"] as? [[String: Any]],

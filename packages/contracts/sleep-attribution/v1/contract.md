@@ -64,6 +64,10 @@ CSV retains its existing column/header contract and emits `Metadata` rows for `s
 
 Custom/placeholder frontmatter cannot override successor schema/profile/time-context authority. Attribution is independent of metric selection, empty sleep and archive completeness; a day with no sleep is not permission to drop its operation's mode.
 
+Apple successor local-file preparation composes canonical source archives after bounded aggregate rendering. JSON retains the independently versioned `healthmd.healthkit_records` archive; CSV retains its canonical manifest, record, external-record, query-failure and warning rows. Selection still controls which source records enter the accepted capture. Their source intervals, identity, provenance, exact metadata numbers and start-day ownership rule remain independent of sleep summary ownership. Markdown and Bases expose archive diagnostics rather than a raw archive dump. Each day retains its own capture status, including mixed-status ranges.
+
+Raw archive payloads do not cross the bounded semantic/render handoff. Native composition streams the accepted source into file-backed artifacts, then binds the final byte count and digest into the immutable plan before opening a destination. The secure file commit verifies those bytes before atomic replacement. This does not change a shipped schema, archive version, registry or wire identity, and does not establish complete preview, remote-route or recovery qualification.
+
 ## Native workout projection
 
 Successor daily preparation preserves the complete emitted native compatibility-workout objects across JSON, CSV, Markdown and Bases. Workout start-day ownership stays independent of sleep end-day ownership. Source metadata, native type identity, laps/splits, routes and series retain their platform fields. This does not claim canonical HealthKit archive completeness, provider capture or production admission.

@@ -8,6 +8,36 @@ final class ExportArtifactIOTests: XCTestCase {
         case injected
     }
 
+    func testSecureFileCommitRejectsSameLengthMutationBeforeReplacingDestination() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let destination = root.appendingPathComponent("daily.json")
+        try Data("retained".utf8).write(to: destination)
+        var info = stat()
+        XCTAssertEqual(Darwin.lstat(root.resolvingSymlinksInPath().path, &info), 0)
+        let binding = AppleVaultDestinationBinding(standardizedPath: root.standardizedFileURL.path,
+            resolvedPath: root.resolvingSymlinksInPath().path, deviceID: UInt64(info.st_dev), inode: UInt64(info.st_ino))
+        let file = try ExportArtifactIO.renderTemporary(prefix: "synthetic-commit", mediaType: "application/json") {
+            try $0.write(Data("before".utf8))
+        }
+        try Data("after!".utf8).write(to: file.url)
+        XCTAssertThrowsError(try SecureExactArtifactIO.overwrite(rootURL: root, relativePath: "daily.json",
+            sourceFileURL: file.url, binding: binding, expectedByteCount: file.descriptor.byteCount,
+            expectedSHA256: file.descriptor.sha256))
+        XCTAssertEqual(try Data(contentsOf: destination), Data("retained".utf8))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), ["daily.json"])
+    }
+
+    func testIntegrityValidationRejectsSameLengthArtifactMutation() throws {
+        let file = try ExportArtifactIO.renderTemporary(prefix: "synthetic-integrity", mediaType: "text/plain") {
+            try $0.write(Data("before".utf8))
+        }
+        XCTAssertNoThrow(try file.validateIntegrity())
+        try Data("after!".utf8).write(to: file.url)
+        XCTAssertThrowsError(try file.validateIntegrity())
+    }
+
     func testFirstPublicationLockSupportsNestedMarkerAndJournalWrites() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
