@@ -33,8 +33,8 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 | `core/lossless-day.csv` | 58802 | `c67db49ecbfd74ae200b34e7e30d65c688bc716c9bb285ec7194382d645f009f` | — | [Download](/docs/reference/generated/core/lossless-day.csv) |
 | `core/lossless-day.json` | 84633 | `0465094abb79eb74257248c11f5fa7455e800920aa177e733bfa34cd61808356` | — | [Download](/docs/reference/generated/core/lossless-day.json) |
 | `core/lossless-day.md` | 24315 | `88d6574df1bf970585590a2cc1af88115d6ca26bf803c9583490657738176387` | — | [Download](/docs/reference/generated/core/lossless-day.md) |
-| `core/manifest.json` | 3253 | `020145dc076f6c66bc4e7b0f68d31cea638635c33766b6f926e85456fbccb373` | — | [Download](/docs/reference/generated/core/manifest.json) |
-| `core/metric-catalog.md` | 49571 | `556ef7535a6934e35c0e3576f83fe376938bb494e9da9aab8d2277dd0491a403` | [Open page](/docs/reference/generated/core/metric-catalog/) | [Download](/docs/reference/generated/core/metric-catalog.md) |
+| `core/manifest.json` | 3253 | `239c8a3dd94ac848d93987ec619df7bdb04aa13632d75d0ee6cf49760796221d` | — | [Download](/docs/reference/generated/core/manifest.json) |
+| `core/metric-catalog.md` | 50456 | `c9ea08b90d5d2bc1ea88cb7eac1a95be3d8fbd2af5958b30248e7f11e5684ab6` | [Open page](/docs/reference/generated/core/metric-catalog/) | [Download](/docs/reference/generated/core/metric-catalog.md) |
 | `core/metric-examples.md` | 62772 | `7137c304d100c9832692f080068095016b9e72d8cbc02ffc4148aa0630d90226` | [Open page](/docs/reference/generated/core/metric-examples/) | [Download](/docs/reference/generated/core/metric-examples.md) |
 | `core/provider-day-bases.md` | 2615 | `da3e5520aa73c2a12623957354596505a241ed861a5a2b2b17049a30705da559` | — | [Download](/docs/reference/generated/core/provider-day-bases.md) |
 | `core/provider-day.csv` | 5703 | `4de16a7b0d40729ebe83fc2ca8ba3fd9fe8c35e045b9d84acde111547758abe9` | — | [Download](/docs/reference/generated/core/provider-day.csv) |

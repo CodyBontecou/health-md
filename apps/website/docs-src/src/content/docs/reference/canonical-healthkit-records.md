@@ -50,6 +50,8 @@ Every element of `records` can contain:
 
 Records are deduplicated only by the same original UUID. Repeated query views can enrich the same canonical record without promoting a relationship dependency to a directly selected record.
 
+Metric attribution explains why a source record was captured. It is not a statement that the record supplies every attributed summary field. For example, selected sleep metrics share the Sleep Analysis source type, but asleep-stage records cannot establish an explicit in-bed duration. Summary queries also have their own windows and reducers: morning sleep can belong to the preceding journal date's noon-to-noon summary while its raw record belongs to the wake date's midnight-to-midnight archive. Successful raw capture therefore does not by itself establish a missing summary or a summary-query failure.
+
 ## Record kinds
 
 The serializer recognizes these public kinds and preserves unknown future values:

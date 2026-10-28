@@ -553,6 +553,13 @@ struct ExportTabView: View {
                     }
                 }
 
+                if advancedSettings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
+                    Text("Sleep covers noon on each selected date through noon the next day. For last night's sleep, choose Yesterday.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
                 if dateRangePreset == .custom {
                     Divider().background(Color.borderSubtle)
 

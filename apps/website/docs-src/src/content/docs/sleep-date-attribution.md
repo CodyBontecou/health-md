@@ -46,6 +46,10 @@ Daily Note Injection and API Endpoint summaries follow the same journal window. 
 
 Raw or canonical records have their own ownership rules and retain original timestamps. Do not reconstruct session boundaries from a daily total or add source intervals to that total as extra sleep.
 
+On Apple, the raw archive assigns records by their source start within the local midnight-to-midnight day. The sleep summary instead clips intervals to the noon-to-noon journal window. A successful raw Sleep Analysis query can therefore contain morning records while that date's sleep summary is empty. Export the preceding journal date and check `time_context.calendar_timezone` before diagnosing a missing summary. For example, records from September 22 at 04:03–11:52 UTC belong entirely to September 21's summary in UTC; in Europe/Lisbon, the final 52 minutes fall after local noon and contribute to September 22 instead.
+
+Staged sleep does not require an explicit `inBed` record: Apple summaries use the union of available asleep stages when it is absent. Missing in-bed data does not create an in-bed duration. A failed summary query should appear in `diagnostics.partial_failures`; a successful query with no qualifying intervals is valid absence. Resting heart rate uses a separate calendar-day query and requires an actual resting-heart-rate measurement; sleep stages or read permission alone do not supply one.
+
 On a supported **Apple Health** CLI/MCP setup, `healthmd_sleep_sessions` provides session queries. Android typed MCP queries are not currently supported. Check [platform capabilities](/docs/guides/platform-features/) and the [MCP guide](/docs/mcp/) for the chosen setup.
 
 See [scheduling](/docs/scheduling/) for lookback and timing, [troubleshooting](/docs/troubleshooting/) for empty reads versus failed writes, and [export formats](/docs/format/) for detail and coverage.

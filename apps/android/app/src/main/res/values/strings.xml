@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="export_sleep_date_guidance">Sleep covers noon on each selected date through noon the next day. For last night\'s sleep, choose Yesterday.</string>
+    <string name="export_sleep_preview_window">Sleep window: %1$s at noon to %2$s at noon (%3$s).</string>
+    <string name="export_sleep_preview_guidance">If sleep is missing, try the preceding date. Morning sleep can appear in that date\'s summary even when its raw records are dated today. Query failures are listed separately; an empty result can also mean read access is unavailable.</string>
     <string name="app_name">Health.md</string>
 
     <!-- Common -->
