@@ -8,9 +8,14 @@ import XCTest
 final class MacUnitTestHostIsolationTests: XCTestCase {
     func testUnitHostMountsOnlyItsEmptySceneInsteadOfRuntimeViews() {
         XCTAssertTrue(TestMode.isUnitTesting)
-        let titles = NSApplication.shared.windows.map(\.title)
-        XCTAssertTrue(titles.contains("Health.md Unit Test Host"),
-                      "The app-hosted suite must mount its isolated test scene")
+        let windows = NSApplication.shared.windows
+        let titles = windows.map(\.title)
+        let host = windows.first { $0.title == "Health.md Unit Test Host" }
+        XCTAssertNotNil(host, "The app-hosted suite must mount its isolated test scene")
+        if let host {
+            XCTAssertLessThan(host.frame.width, 512, "The unit host must not allocate a full runtime window")
+            XCTAssertLessThan(host.frame.height, 512, "The unit host must not allocate a full runtime window")
+        }
         XCTAssertFalse(titles.contains("Mac Destination"),
                        "Runtime views start discovery and must not mount in the unit host")
     }

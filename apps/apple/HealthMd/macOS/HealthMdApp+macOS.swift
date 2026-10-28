@@ -332,10 +332,22 @@ struct HealthMdApp: App {
         TestMode.isUnitTesting ? "Health.md Unit Test Host" : "Mac Destination"
     }
 
+    private var mainWindowDefaultSize: CGSize {
+        if TestMode.isUnitTesting { return CGSize(width: 1, height: 1) }
+        #if DEBUG
+        return CGSize(
+            width: MacMarketingCapture.isActive ? 1_100 : 1_360,
+            height: MacMarketingCapture.isActive ? 700 : 900
+        )
+        #else
+        return CGSize(width: 1_360, height: 900)
+        #endif
+    }
+
     var body: some Scene {
-        Window(mainWindowTitle, id: "main-window") {
+        Window(mainWindowTitle, id: TestMode.isUnitTesting ? "unit-test-host" : "main-window") {
             if TestMode.isUnitTesting {
-                EmptyView()
+                EmptyView().frame(width: 1, height: 1)
             } else {
                 MacContentView()
                     .environmentObject(schedulingManager)
@@ -397,14 +409,8 @@ struct HealthMdApp: App {
                     .gradientMatchedTitleBar()
             }
         }
-        #if DEBUG
-        .defaultSize(
-            width: MacMarketingCapture.isActive ? 1_100 : 1_360,
-            height: MacMarketingCapture.isActive ? 700 : 900
-        )
-        #else
-        .defaultSize(width: 1_360, height: 900)
-        #endif
+        .defaultSize(width: mainWindowDefaultSize.width, height: mainWindowDefaultSize.height)
+        .windowResizability(TestMode.isUnitTesting ? .contentSize : .automatic)
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }
