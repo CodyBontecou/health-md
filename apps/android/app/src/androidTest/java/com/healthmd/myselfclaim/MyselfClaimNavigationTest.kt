@@ -24,7 +24,7 @@ class MyselfClaimNavigationTest {
             }
         }
         ActivityScenario.launch<MainActivity>(link()).use { scenario ->
-            if (BuildConfig.FLAVOR != "play") {
+            if (!BuildConfig.MYSELF_CLAIM_ENABLED || BuildConfig.FLAVOR != "play") {
                 compose.waitForIdle()
                 compose.onNodeWithTag("myself_claim_screen").assertDoesNotExist()
                 scenario.onActivity { it.startActivity(link().addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)) }

@@ -1,5 +1,6 @@
 Health.md 3.4.4 improves repeat exports and explains Apple Ads purchase measurement.
 
 • Guidance after a successful export helps you export again or set up a schedule. The free plan includes five export actions.
+• Today Refresh success notifications now accurately describe the exported data.
 • Improved export history, connection recovery, and the export file browser.
 • On iPhone and iPad, Apple Ads campaign identifiers help measure which campaigns lead to purchases. Health data and purchase events are never sent to Apple Ads.

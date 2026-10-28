@@ -1,5 +1,7 @@
 # Complimentary myself.md claim handoff
 
+The claim feature is **disabled by default** on Apple and Android. Settings entries and claim deep links are gated; disabled links do not read purchases or start verification. Apple: add `HEALTHMD_MYSELF_CLAIM` to Swift Active Compilation Conditions for the intended iOS build configuration. Enabling requires a new build; this is not a remote or user-facing toggle.
+
 On iOS/iPadOS, `healthmd://myself/claim` opens the purchase-disclosure screen. The exact route rejects credentials, ports, query strings and fragments. iPhone Settings → Claim myself.md access presents the same view. Opening either entry point does not read purchase evidence, sync StoreKit, contact myself.md, authenticate or grant access. The owner must choose Verify purchase and continue.
 
 The view reuses the companion iso.me claim implementation. It submits only Apple-signed proof of a purchased base Individual/Family Health.md lifetime product, or the refreshed AppTransaction for an original purchase before the existing April 26, 2026 UTC cutoff. The myself.md server independently verifies product/app/ownership and eligibility, then returns an origin-validated short-lived `/claim#ticket` browser handoff. The owner signs in and explicitly confirms the receiving account. No HealthKit records or exported files are read or transmitted. Shared-family recipients do not qualify independently. Cancellation/errors remain on the disclosure screen and never claim success.

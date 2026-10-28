@@ -3171,17 +3171,19 @@ struct SettingsTabView: View {
 
             SettingsRowDivider()
 
-            SettingsRow(
-                icon: "gift.fill",
-                title: "Claim myself.md access",
-                subtitle: "Verify an eligible purchase for complimentary Lifetime access.",
-                isActive: true,
-                accessibilityHint: "Double tap to review purchase verification for myself.md",
-                accessibilityIdentifier: "settings-myself-claim",
-                action: { showMyselfClaim = true }
-            )
+            if MyselfClaimFeature.isEnabled {
+                SettingsRow(
+                    icon: "gift.fill",
+                    title: "Claim myself.md access",
+                    subtitle: "Verify an eligible purchase for complimentary Lifetime access.",
+                    isActive: true,
+                    accessibilityHint: "Double tap to review purchase verification for myself.md",
+                    accessibilityIdentifier: "settings-myself-claim",
+                    action: { showMyselfClaim = true }
+                )
 
-            SettingsRowDivider()
+                SettingsRowDivider()
+            }
 
             SettingsRow(
                 icon: "folder.fill",

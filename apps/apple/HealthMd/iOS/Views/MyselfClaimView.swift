@@ -2,6 +2,15 @@
 import SwiftUI
 import StoreKit
 
+/// Enable explicitly with HEALTHMD_MYSELF_CLAIM in Swift Active Compilation Conditions.
+enum MyselfClaimFeature {
+    #if HEALTHMD_MYSELF_CLAIM
+    static let isEnabled = true
+    #else
+    static let isEnabled = false
+    #endif
+}
+
 /// Sends purchase proof only after the user chooses to claim access. No health or location data is sent.
 struct MyselfClaimView: View {
     let app: String
@@ -43,6 +52,7 @@ struct MyselfClaimView: View {
 
     @MainActor
     private func claim() async {
+        guard MyselfClaimFeature.isEnabled else { return }
         busy = true
         errorMessage = nil
         defer { busy = false }

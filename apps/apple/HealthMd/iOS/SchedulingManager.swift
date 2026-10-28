@@ -47,9 +47,7 @@ struct NotificationExportResult: Equatable {
     var message: String {
         switch status {
         case .success(let days):
-            return days == 1
-                ? String(localized: "Successfully exported yesterday's health data", comment: "Export success message for 1 day")
-                : String(localized: "Successfully exported \(days) days of health data", comment: "Export success message for multiple days")
+            return String(localized: "Successfully exported \(days) days of health data", comment: "Export success message for the number of exported days, including Today Refresh and recovery")
         case .partialSuccess(let exported, let total):
             return String(localized: "Exported \(exported) of \(total) days", comment: "Partial export message")
         case .dailyNotesCompleted(let updated, let skipped):
@@ -3603,9 +3601,7 @@ class SchedulingManager: ObservableObject {
                 }
             } else {
                 content.title = String(localized: "Export Completed", comment: "Notification title")
-                content.body = daysExported == 1
-                    ? String(localized: "Successfully exported yesterday's health data", comment: "Export notification body for 1 day")
-                    : String(localized: "Successfully exported \(daysExported) days of health data", comment: "Export notification body for multiple days")
+                content.body = String(localized: "Successfully exported \(daysExported) days of health data", comment: "Export notification body for the number of exported days, including Today Refresh and recovery")
             }
             content.sound = .default
         } else {

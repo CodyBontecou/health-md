@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.healthmd.BuildConfig
 import com.healthmd.R
 import com.healthmd.data.health.providers.HealthProviderDirectExportStatus
 import com.healthmd.data.health.providers.HealthProviderId
@@ -121,7 +122,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
-        if (distributionPolicy.purchasesAvailable) {
+        if (BuildConfig.MYSELF_CLAIM_ENABLED && distributionPolicy.purchasesAvailable) {
             SettingsNavigationCard(
                 title = stringResource(R.string.myself_claim_entry),
                 subtitle = stringResource(R.string.myself_claim_entry_subtitle),
