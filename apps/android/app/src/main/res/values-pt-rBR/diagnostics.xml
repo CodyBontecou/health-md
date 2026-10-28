@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Diagnóstico</string>
+    <string name="diagnostics_entry">Inspecione os eventos técnicos locais e escolha o que compartilhar</string>
+    <string name="diagnostics_recording">Registro local</string>
+    <string name="diagnostics_privacy">Os diagnósticos permanecem neste dispositivo até você salvar ou compartilhar. Os eventos operacionais excluem valores de saúde, IDs de registros de saúde, datas de saúde solicitadas, caminhos, endpoints e credenciais. Eles não são anônimos.</string>
+    <string name="diagnostics_enabled">Registrar eventos operacionais</string>
+    <string name="diagnostics_retention">O nível de detalhe não altera a permissão para coletar conteúdo de saúde. Retenção: até 7 dias / 20 MiB. Nenhum envio automático.</string>
+    <string name="diagnostics_start_private">Registrar contexto privado por 15 minutos</string>
+    <string name="diagnostics_stop_private">Parar registro privado</string>
+    <string name="diagnostics_private_description">O contexto privado V1 registra nomes de dispositivos conectados quando disponíveis. Não captura conteúdo de saúde, credenciais nem texto arbitrário de erros. Os segmentos privados expiram em até 24 horas no próximo acesso ao app.</string>
+    <string name="diagnostics_private_until">O registro privado expira: %1$s</string>
+    <string name="diagnostics_clear">Limpar todos os diagnósticos</string>
+    <string name="diagnostics_clear_question">Excluir eventos locais, pacotes preparados e cópias de anexos? Isso interrompe o registro privado. Arquivos exportados e cópias compartilhadas não são afetados.</string>
+    <string name="diagnostics_select">Selecionar eventos</string>
+    <string name="diagnostics_hour">Última hora</string>
+    <string name="diagnostics_day">Últimas 24 horas</string>
+    <string name="diagnostics_week">Últimos 7 dias</string>
+    <string name="diagnostics_operation">UUID da operação (opcional)</string>
+    <string name="diagnostics_include_private">Incluir contexto privado registrado</string>
+    <string name="diagnostics_search">Pesquisar IDs de eventos ou campos</string>
+    <string name="diagnostics_refresh">Atualizar eventos</string>
+    <string name="diagnostics_summary">Eventos: %1$d · Descartes da sessão: %2$d · Inválidos: %3$d · Truncado: %4$s</string>
+    <string name="diagnostics_view_limit">Mostrando os 100 eventos correspondentes mais recentes. O pacote inclui o instantâneo selecionado, até 10.000 eventos; qualquer truncamento é informado.</string>
+    <string name="diagnostics_attachments">Anexos opcionais</string>
+    <string name="diagnostics_attachment_description">Adicione arquivos existentes, incluindo exportações de saúde ou capturas de tela. Os bytes originais são copiados sem alterações e NÃO são sanitizados. Os nomes dos arquivos de origem são incluídos. Nenhuma nova leitura de saúde é feita. Limite: 50 arquivos / 100 MiB.</string>
+    <string name="diagnostics_choose">Escolher arquivos…</string>
+    <string name="diagnostics_remove">Remover %1$s</string>
+    <string name="diagnostics_prepare">Preparar pacote</string>
+    <string name="diagnostics_review">Preparar e revisar</string>
+    <string name="diagnostics_frozen">Instantâneo congelado. Eventos: %1$d. Conteúdo de saúde: %2$s. O ZIP não é criptografado.</string>
+    <string name="diagnostics_reviewed">Revisei os arquivos que quero compartilhar</string>
+    <string name="diagnostics_share">Compartilhar ZIP revisado</string>
+    <string name="diagnostics_save">Salvar ZIP revisado</string>
+    <string name="diagnostics_share_question">Compartilhar este pacote de diagnóstico?</string>
+    <string name="diagnostics_share_warning">O ZIP não é criptografado. O contexto privado e os anexos podem expor dados de saúde ou segredos. Publicações públicas no GitHub ou Discord podem ser acessíveis a qualquer pessoa. O destino controla suas próprias cópias; o Health.md não pode recuperá-las.</string>
+    <string name="diagnostics_share_confirm">Compartilhar este pacote</string>
+    <string name="diagnostics_bundle_retention">Os pacotes locais expiram em até 24 horas no próximo acesso ao app; apenas os 3 mais recentes são mantidos. Cópias salvas ou compartilhadas têm sua própria retenção.</string>
+    <string name="diagnostics_preview_truncated">\n\n[Prévia truncada em 128 KiB. O arquivo original completo permanece no ZIP.]</string>
+    <string name="diagnostics_failure">A operação de diagnóstico falhou. Verifique o acesso aos arquivos e o armazenamento local; depois prepare e revise novamente.</string>
+    <string name="diagnostics_invalid_operation">O ID da operação deve ser um UUID.</string>
+</resources>

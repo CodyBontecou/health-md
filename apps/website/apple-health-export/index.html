@@ -58,7 +58,7 @@
             "name": "Does my health data leave my phone when I export it?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Only to destinations you choose. Health.md does not store your health data and keeps no server-side copy; exports go to your folder, Obsidian vault, connected Mac, or your own API endpoint."
+              "text": "Only to destinations you choose. By default, core exports do not create a Health.md server copy. A folder, Obsidian vault, paired Mac, or API endpoint receives the data you select. The optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it, with no public signup and no automatic device sync."
             }
           },
           {
@@ -121,10 +121,10 @@
     <section class="about-hero" aria-labelledby="export-title">
       <div class="about-hero-inner">
         <p class="about-eyebrow">Apple Health export</p>
-        <h1 id="export-title">Export your Apple Health data — your way.</h1>
+        <h1 id="export-title">How to export Apple Health data</h1>
         <p class="about-value-prop"><strong>Health.md turns the Apple Health records you authorize into CSV, JSON, Markdown, or Obsidian files you control — with the metrics and date range you choose.</strong></p>
         <p class="about-intro">No Xcode project. No scripts. No giant XML to wrangle first.</p>
-        <div class="hero-actions" aria-label="Download Health.md">
+        <div class="hero-actions" role="group" aria-label="Download Health.md">
           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
             <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
           </a>
@@ -135,13 +135,32 @@
       </div>
     </section>
 
-    <div class="about-layout">
+    <div class="about-layout export-guide-layout">
       <article class="about-content">
         <section class="about-section" id="native-limits">
-          <p class="section-kicker">Why people look for this</p>
-          <h2>The built-in export has limits</h2>
-          <p class="section-lede">On iPhone, the Health app offers <em>Export All Health Data</em> from your profile. It produces a comprehensive archive — a large download containing XML with everything — but you can't select specific metrics or a date range, and the result needs converting before a spreadsheet, notebook, or AI tool can use it.</p>
-          <p>That's the gap Health.md fills: instead of one all-data archive, you choose what to export, which dates to cover, and which format to receive.</p>
+          <p class="section-kicker">Start with the file you need</p>
+          <h2>Use Apple's XML export, or choose metrics and dates</h2>
+          <p class="section-lede">For Apple's built-in archive, open Health on your iPhone, tap your profile picture, and choose Export All Health Data. For selected metrics and dates in CSV, JSON, or Markdown, use Health.md.</p>
+          <h3>Export an archive from the Health app</h3>
+          <ol class="guide-steps">
+            <li>Open the Health app on your iPhone and tap your profile picture or initials.</li>
+            <li>Tap <strong>Export All Health Data</strong> and confirm the export.</li>
+            <li>When the share sheet appears, choose where to save or send the archive.</li>
+          </ol>
+          <p>Apple exports health and fitness data in XML, rather than a ready-made spreadsheet. See <a href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios">Apple's export instructions</a>. If you already have this archive, you need a compatible reader or converter to turn its XML into CSV. Health.md's workflow reads authorized Apple Health data on your device; it does not import that XML archive.</p>
+          <div class="guide-table" role="region" aria-label="Apple Health export workflow comparison" tabindex="0">
+            <table>
+              <caption>Choose how to export</caption>
+              <thead><tr><th scope="col">Your goal</th><th scope="col">Start here</th><th scope="col">What you receive</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Keep Apple's built-in archive</th><td>Health → profile → Export All Health Data</td><td>An archive containing XML, without selecting a date range or metrics for that export.</td></tr>
+                <tr><th scope="row">Work with selected days in a spreadsheet</th><td><a href="/apple-health-to-csv/">Export CSV with Health.md</a></td><td>Daily metric rows with values and units. Preview a small range first.</td></tr>
+                <tr><th scope="row">Keep health data beside your journal</th><td><a href="/blog/export-apple-health-data-to-obsidian/">Export to Obsidian</a></td><td>Markdown notes or Bases frontmatter in your chosen vault folder.</td></tr>
+                <tr><th scope="row">Use scripts or an agent</th><td><a href="/health-data-for-ai/">Choose files or agent access</a></td><td>Selected JSON/CSV files, or a separately configured query workflow.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Using Android? Start with the <a href="/docs/android/">Health Connect export guide</a>. Available records and export detail differ by platform.</p>
         </section>
 
         <section class="about-section" id="how-it-works">
@@ -161,26 +180,26 @@
             <div>
               <span>3</span>
               <h3>Preview and export</h3>
-              <p>Review exactly what will be written before anything is created, then export. The files land where you chose — ready for spreadsheets, notes, scripts, or AI tools.</p>
+              <p>Start with one day and preview the selected format. Tap Export Data, review the written, skipped, or failed files, then open the destination folder in Files. Follow the <a href="/docs/iphone-first-export/">first iPhone export walkthrough</a> for screenshots and verification steps.</p>
             </div>
           </div>
         </section>
 
         <section class="about-section" id="formats">
           <p class="section-kicker">Formats</p>
-          <h2>One export, six destinations for your data</h2>
+          <h2>Choose a format and a destination</h2>
           <div class="about-card-grid">
             <div class="about-card">
               <h3>CSV</h3>
-              <p>One file per day with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Opens in Excel, Google Sheets, or any analysis tool. <a href="/docs/format/">CSV format details</a></p>
+              <p>One file per day with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Opens in Excel, Google Sheets, or any analysis tool. <a href="/apple-health-to-csv/#open-in-spreadsheet">Open your CSV in a spreadsheet</a></p>
             </div>
             <div class="about-card">
               <h3>JSON</h3>
-              <p>Structured JSON for scripts, Shortcuts, and developers who want to build on their own data. <a href="/docs/format/">JSON format details</a></p>
+              <p>Structured JSON for scripts, Shortcuts, and developers who want to build on their own data. <a href="/docs/reference/export-formats/">JSON format details and samples</a></p>
             </div>
             <div class="about-card">
               <h3>Markdown</h3>
-              <p>Readable daily summaries for journals, notes, and archives — no parsing required. <a href="/docs/format/">Markdown format details</a></p>
+              <p>Readable daily summaries for journals, notes, and archives — no parsing required. <a href="/docs/reference/generated/core/summary-day.md">View a synthetic Markdown export</a></p>
             </div>
             <div class="about-card">
               <h3>Obsidian vault</h3>
@@ -188,7 +207,7 @@
             </div>
             <div class="about-card">
               <h3>Folders</h3>
-              <p>Save exports to any local folder you choose and keep them alongside the rest of your files. <a href="/docs/export/">Export destinations</a></p>
+              <p>Save exports to a writable folder available through Files and keep them alongside the rest of your files. <a href="/docs/export/">Export destinations</a></p>
             </div>
             <div class="about-card">
               <h3>API endpoints</h3>
@@ -197,11 +216,25 @@
           </div>
         </section>
 
+        <section class="about-section" id="check-your-export">
+          <p class="section-kicker">Before you automate</p>
+          <h2>Check one file, then export more</h2>
+          <p>Inspect the <a href="/docs/reference/generated/core/summary-day.csv" download>synthetic CSV</a>, <a href="/docs/reference/generated/core/summary-day.json" download>JSON</a>, or <a href="/docs/reference/generated/core/summary-day.md">Markdown example</a> before choosing a format. These production-generated reference files contain fictional data, not a person's records.</p>
+          <ul>
+            <li>Compare the exported date, units, and a metric with Apple Health. Availability depends on your data sources, permissions, OS, and installed app version.</li>
+            <li>For last night's sleep, select the day the session started. See <a href="/docs/sleep-date-attribution/">sleep dates and daily notes</a>.</li>
+            <li>If a value is missing, check the selected metrics, source synchronization, and Health permissions. Missing does not mean zero.</li>
+            <li>If Preview succeeds but saving fails, check the <a href="/docs/folder-vault/">destination folder and file provider</a>.</li>
+          </ul>
+          <p>Once the result is useful, <a href="/docs/scheduling/">set up scheduled exports</a>. iOS controls background timing; a target time is not a guaranteed run time.</p>
+          <p><a href="https://apps.apple.com/us/app/health-md/id6757763969">Try Health.md on iPhone</a> with 5 free export actions, then a one-time lifetime unlock. One action can include multiple dates and formats.</p>
+        </section>
+
         <section class="about-section" id="privacy">
           <p class="section-kicker">Privacy</p>
           <h2>Private by design</h2>
-          <p class="section-lede"><strong>Health.md does not store your health data.</strong> There is no Health.md health-data cloud: processing happens on your devices, and your records go only to the destinations you choose.</p>
-          <p>No account is required for core export workflows. Health permissions, files, and settings stay under the controls of your device and the destinations you pick.</p>
+          <p class="section-lede"><strong>Core exports are local-first by default.</strong> Processing happens on your devices, and your records go to the destinations you choose. Core exports and direct device queries do not create a Health.md server copy.</p>
+          <p>No account is required for core export workflows. The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it, with no public signup and no automatic device sync. Read the <a href="/privacy-policy.html#retention">privacy policy</a> for retention, deletion, and the pilot's unbacked storage limits. Synced folders and other endpoints follow their own terms.</p>
         </section>
 
         <section class="about-section" id="keep-going">
@@ -234,7 +267,7 @@
             </div>
             <div>
               <h3>Does my health data leave my phone when I export it?</h3>
-              <p>Only to destinations you choose. Health.md does not store your health data and keeps no server-side copy; exports go to your folder, Obsidian vault, connected Mac, or your own API endpoint.</p>
+              <p>Only to destinations you choose. By default, core exports do not create a Health.md server copy. A folder, Obsidian vault, paired Mac, or API endpoint receives the data you select. The optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it, with no public signup and no automatic device sync.</p>
             </div>
             <div>
               <h3>Is there a free trial?</h3>

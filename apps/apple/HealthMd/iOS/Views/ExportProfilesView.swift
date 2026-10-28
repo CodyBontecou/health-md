@@ -11,11 +11,13 @@ enum ExportProfileDestinationSummary: Equatable {
     case localFolder(vaultName: String?)
     case connectedMac
     case apiEndpoint(url: String?)
+    case agentDataGateway(url: String?)
 
     static func from(
         profile: ExportProfile,
         vault: SavedVaultDestination?,
-        endpoint: SavedAPIEndpoint?
+        endpoint: SavedAPIEndpoint?,
+        gateway: SavedAgentDataGateway? = nil
     ) -> ExportProfileDestinationSummary {
         switch profile.target {
         case .localIPhoneFolder:
@@ -24,6 +26,8 @@ enum ExportProfileDestinationSummary: Equatable {
             return .connectedMac
         case .apiEndpoint:
             return .apiEndpoint(url: endpoint?.endpointURLString)
+        case .agentDataGateway:
+            return .agentDataGateway(url: gateway?.endpointURLString)
         }
     }
 }
@@ -227,11 +231,14 @@ struct ExportProfilesView: View {
     private func summary(for profile: ExportProfile) -> ExportProfileCardSummary {
         let vault = destinationStore.vault(id: profile.folderVaultID)
         let endpoint = destinationStore.apiEndpoint(id: profile.apiEndpointID)
+        let gateway = destinationStore.agentDataGateway(
+            id: destinationStore.agentDataGatewayBinding(profileID: profile.id)
+        )
         let entry = entryStore.entry(profileID: profile.id)
         return ExportProfileCardSummary(
             profile: profile,
             isActive: profile.id == profileStore.activeProfileID,
-            destination: .from(profile: profile, vault: vault, endpoint: endpoint),
+            destination: .from(profile: profile, vault: vault, endpoint: endpoint, gateway: gateway),
             scheduleStatus: .from(entry),
             cadence: entry.map { ExportProfileCadenceSummary.from($0) },
             formats: ExportProfileCardSummary.sortedFormats(profile.settings.exportFormats),
@@ -272,6 +279,11 @@ struct ExportProfilesView: View {
             return String(
                 localized: "API: \(url ?? "not configured")",
                 comment: "Profile row destination line for an API endpoint target"
+            )
+        case .agentDataGateway(let url):
+            return String(
+                localized: "Agent Data gateway: \(url ?? "not configured")",
+                comment: "Profile row destination line for an Agent Data gateway target"
             )
         }
     }
@@ -330,6 +342,7 @@ struct ExportProfileDetailView: View {
     @ObservedObject private var entryStore: ScheduledExportEntryStore
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject private var syncService: SyncService
     @Environment(\.dismiss) private var dismiss
 
     let profileID: UUID
@@ -339,7 +352,13 @@ struct ExportProfileDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showScheduleEditor = false
     @State private var showSettingsEditor = false
+    // Keep the immutable ID's copy receipt readable until this detail closes.
+    // A timer can erase it before a slow AX snapshot or VoiceOver read finishes.
     @State private var idCopied = false
+    @State private var contextBindingPeer: UUID?
+    @State private var pendingContextPeer: UUID?
+    @State private var showContextBindingConfirmation = false
+    @State private var contextBindingError: String?
     /// Pending overlap warning for a just-duplicated profile; undo deletes
     /// the copy (the source profile stays untouched and active).
     @State private var duplicateOverlapWarning: (copyID: UUID, names: [String])?
@@ -385,6 +404,9 @@ struct ExportProfileDetailView: View {
                 activeBanner(for: profile)
                 overlapCard(for: profile)
                 destinationCard(for: profile)
+                if profile.target == .connectedMac {
+                    contextAutomationCard
+                }
                 outputCard(for: profile)
                 scheduleCard(for: profile)
                 profileIDCard(for: profile)
@@ -411,6 +433,23 @@ struct ExportProfileDetailView: View {
             ExportProfileEditorSheet(coordinator: coordinator, editing: profile)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .onAppear {
+            contextBindingPeer = AppleContextPhoneClient.shared.boundPeer(profileID: profileID)
+        }
+        .alert("Bind context automation?", isPresented: $showContextBindingConfirmation) {
+            Button("Bind to this Mac") { bindContextAutomation() }
+            Button("Cancel", role: .cancel) { pendingContextPeer = nil }
+        } message: {
+            Text("Allow this profile’s refresh shortcuts to use the currently authenticated Mac’s encrypted context. Confirm again to replace an earlier binding. This does not change file exports.")
+        }
+        .alert("Context automation unavailable", isPresented: Binding(
+            get: { contextBindingError != nil },
+            set: { if !$0 { contextBindingError = nil } }
+        )) {
+            Button("OK", role: .cancel) { contextBindingError = nil }
+        } message: {
+            Text(contextBindingError ?? "")
         }
         .geistDialog(
             isPresented: Binding(
@@ -493,6 +532,52 @@ struct ExportProfileDetailView: View {
 
     // MARK: Cards
 
+    private var contextAutomationCard: some View {
+        sectionCard(title: String(localized: "Mac context automation")) {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                Text(contextBindingPeer == nil
+                     ? String(localized: "Not bound. Refresh shortcuts require a separate authenticated Mac binding.")
+                     : String(localized: "A Mac binding is saved. Refresh shortcuts require that same authenticated Mac."))
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Connect both updated apps using authenticated Manual IP pairing before binding. Refresh uses this profile’s Apple Health scope without creating export files.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Bind context automation to this authenticated Mac") {
+                    configurationProtection.performConfigurationChange {
+                        guard syncService.canUsePhoneContextAutomation,
+                              let peer = syncService.authenticatedContextPeerID else {
+                            contextBindingError = AppleContextPhoneClient.ClientError.unavailable.localizedDescription
+                            return
+                        }
+                        pendingContextPeer = peer
+                        showContextBindingConfirmation = true
+                    }
+                }
+                .accessibilityIdentifier("export.profiles.bind-context")
+                .accessibilityHint("Confirms the authenticated Mac used by this profile’s context refresh shortcuts.")
+            }
+        }
+    }
+
+    private func bindContextAutomation() {
+        let peer = pendingContextPeer
+        pendingContextPeer = nil
+        configurationProtection.performConfigurationChange {
+            do {
+                guard let peer, let profile, profile.target == .connectedMac else {
+                    throw AppleContextPhoneClient.ClientError.profile
+                }
+                try AppleContextPhoneClient.shared.bind(profileID: profileID, expectedPeerID: peer)
+                contextBindingPeer = peer
+            } catch {
+                contextBindingError = error.localizedDescription
+            }
+        }
+    }
+
     private func activeBanner(for profile: ExportProfile) -> some View {
         Group {
             if profile.id == profileStore.activeProfileID {
@@ -512,13 +597,16 @@ struct ExportProfileDetailView: View {
     private func destinationCard(for profile: ExportProfile) -> some View {
         let vault = destinationStore.vault(id: profile.folderVaultID)
         let endpoint = destinationStore.apiEndpoint(id: profile.apiEndpointID)
+        let gateway = destinationStore.agentDataGateway(
+            id: destinationStore.agentDataGatewayBinding(profileID: profile.id)
+        )
         return sectionCard(title: String(localized: "Destination", comment: "Profile detail card title")) {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 factRow(
                     title: String(localized: "Target", comment: "Profile detail target row"),
                     value: profile.target.title
                 )
-                switch ExportProfileDestinationSummary.from(profile: profile, vault: vault, endpoint: endpoint) {
+                switch ExportProfileDestinationSummary.from(profile: profile, vault: vault, endpoint: endpoint, gateway: gateway) {
                 case .localFolder(let vaultName):
                     factRow(
                         title: String(localized: "Folder", comment: "Profile detail folder row"),
@@ -530,6 +618,11 @@ struct ExportProfileDetailView: View {
                     factRow(
                         title: String(localized: "Endpoint", comment: "Profile detail endpoint row"),
                         value: url ?? String(localized: "Not configured", comment: "Missing endpoint fallback")
+                    )
+                case .agentDataGateway(let url):
+                    factRow(
+                        title: String(localized: "Gateway", comment: "Profile detail gateway row"),
+                        value: url ?? String(localized: "Not configured", comment: "Missing gateway fallback")
                     )
                 }
             }
@@ -827,7 +920,7 @@ struct ExportProfileDetailView: View {
         ) {
             Button(
                 String(
-                    localized: "Delete “%@”",
+                    localized: "Delete “\(profile.name)”",
                     comment: "Destructive action deleting the named export profile"
                 ),
                 role: .destructive
@@ -895,12 +988,15 @@ struct ExportProfileEditorSheet: View {
     @State private var target: ExportTargetSelection
     @State private var folderVaultID: UUID?
     @State private var apiEndpointID: UUID?
+    @State private var agentDataGatewayID: UUID?
     @State private var draft: ExportSettingsSnapshot
     @StateObject private var metricState: MetricSelectionState
     /// Presents the system folder picker for a new destination binding.
     @State private var showFolderImporter = false
     /// Presents the inline form for a new API endpoint binding.
     @State private var showEndpointForm = false
+    /// Presents the inline form for a new Agent Data gateway binding.
+    @State private var showGatewayForm = false
 
     init(
         coordinator: ExportProfileCoordinator,
@@ -916,6 +1012,7 @@ struct ExportProfileEditorSheet: View {
             _target = State(initialValue: profile.target)
             _folderVaultID = State(initialValue: profile.folderVaultID)
             _apiEndpointID = State(initialValue: profile.apiEndpointID)
+            _agentDataGatewayID = State(initialValue: coordinator.destinationStore.agentDataGatewayBinding(profileID: profile.id))
             _draft = State(initialValue: profile.settings)
         } else {
             // Creation defaults mirror what a plain duplicate would produce,
@@ -925,6 +1022,9 @@ struct ExportProfileEditorSheet: View {
             let active = coordinator.profileStore.activeProfile
             _folderVaultID = State(initialValue: active?.folderVaultID)
             _apiEndpointID = State(initialValue: active?.apiEndpointID)
+            _agentDataGatewayID = State(initialValue: active.flatMap {
+                coordinator.destinationStore.agentDataGatewayBinding(profileID: $0.id)
+            })
             _draft = State(initialValue: ExportSettingsSnapshot.from(coordinator.liveSettings))
         }
 
@@ -1032,6 +1132,22 @@ struct ExportProfileEditorSheet: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showGatewayForm) {
+            ExportProfileGatewayFormSheet { name, url in
+                // Adding a gateway persists it immediately, so the shared
+                // lock still guards this completion.
+                configurationProtection.performConfigurationChange {
+                    if let gatewayID = coordinator.importAgentDataGatewaySelection(
+                        name: name,
+                        endpointURLString: url
+                    ) {
+                        agentDataGatewayID = gatewayID
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         // The sheet covers the app-level toast, so blocked changes surface a
         // sheet-local one (also covering the pushed metric picker), and the
         // toast's settings shortcut dismisses the editor.
@@ -1056,6 +1172,7 @@ struct ExportProfileEditorSheet: View {
                 target: target,
                 folderVaultID: target == .localIPhoneFolder ? folderVaultID : nil,
                 apiEndpointID: target == .apiEndpoint ? apiEndpointID : nil,
+                agentDataGatewayID: target == .agentDataGateway ? agentDataGatewayID : nil,
                 settings: snapshot
             )
         } else {
@@ -1063,6 +1180,7 @@ struct ExportProfileEditorSheet: View {
                 name: trimmedName,
                 target: target,
                 folderVaultID: target == .localIPhoneFolder ? folderVaultID : nil,
+                agentDataGatewayID: target == .agentDataGateway ? agentDataGatewayID : nil,
                 settings: snapshot
             )
         }
@@ -1092,7 +1210,8 @@ struct ExportProfileEditorSheet: View {
                 choices: [
                     SchedulingChoice(value: ExportTargetSelection.localIPhoneFolder, title: "Local Folder"),
                     SchedulingChoice(value: ExportTargetSelection.connectedMac, title: "Connected Mac"),
-                    SchedulingChoice(value: ExportTargetSelection.apiEndpoint, title: "API Endpoint")
+                    SchedulingChoice(value: ExportTargetSelection.apiEndpoint, title: "API Endpoint"),
+                    SchedulingChoice(value: ExportTargetSelection.agentDataGateway, title: "Agent Data gateway")
                 ],
                 selection: $target
             )
@@ -1148,6 +1267,31 @@ struct ExportProfileEditorSheet: View {
                     )
                 }
                 .accessibilityIdentifier("export.profiles.editor.addEndpoint")
+            case .agentDataGateway:
+                Picker(
+                    String(localized: "Gateway", comment: "Profile editor gateway picker label"),
+                    selection: $agentDataGatewayID
+                ) {
+                    Text(String(
+                        localized: "Current gateway (from Export tab)",
+                        comment: "Editor option using the live Agent Data gateway"
+                    ))
+                    .tag(UUID?.none)
+                    ForEach(destinationStore.agentDataGateways) { gateway in
+                        Text(gateway.name).tag(UUID?.some(gateway.id))
+                    }
+                }
+                Button {
+                    configurationProtection.performConfigurationChange {
+                        showGatewayForm = true
+                    }
+                } label: {
+                    Label(
+                        String(localized: "Add Gateway…", comment: "Profile editor action adding a new Agent Data gateway"),
+                        systemImage: "arrow.up.and.down.and.arrow.left.and.right"
+                    )
+                }
+                .accessibilityIdentifier("export.profiles.editor.addGateway")
             case .connectedMac:
                 EmptyView()
             }
@@ -1435,6 +1579,77 @@ private struct ExportProfileEndpointFormSheet: View {
                     }
                     .disabled(!canAdd)
                     .accessibilityIdentifier("export.profiles.editor.addEndpoint.confirm")
+                }
+            }
+        }
+    }
+}
+
+/// Inline form for adding a new Agent Data gateway destination binding.
+/// Gateways carry no credential in ingestion protocol v1, so the form is a
+/// name plus one endpoint URL.
+private struct ExportProfileGatewayFormSheet: View {
+    let onAdd: (String, String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var url = ""
+
+    private var trimmedURL: String {
+        url.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canAdd: Bool {
+        AgentDataGatewayEndpoint.isConfigured(trimmedURL)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(
+                        String(localized: "Name", comment: "Gateway form name field label"),
+                        text: $name
+                    )
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                } header: {
+                    Text("Gateway")
+                } footer: {
+                    Text("Optional. Defaults to the URL.")
+                }
+
+                Section {
+                    TextField(
+                        String(localized: "URL", comment: "Gateway form URL field label"),
+                        text: $url
+                    )
+                    .keyboardType(.URL)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+
+                    HStack {
+                        Image(systemName: canAdd ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(canAdd ? Color.success : Color.warning)
+                        Text(canAdd ? "Valid gateway URL" : "Enter a valid HTTP or HTTPS URL")
+                    }
+                } footer: {
+                    Text("Health.md uploads each exported artifact file unchanged to this gateway's /v1/ingest endpoint using the Agent Data protocol. Gateways need no token in this version.")
+                }
+            }
+            .navigationTitle(Text("New Gateway"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        onAdd(name, trimmedURL)
+                        dismiss()
+                    }
+                    .disabled(!canAdd)
+                    .accessibilityIdentifier("export.profiles.editor.addGateway.confirm")
                 }
             }
         }

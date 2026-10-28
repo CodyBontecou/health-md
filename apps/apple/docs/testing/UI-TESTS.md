@@ -1,6 +1,6 @@
 # UI Tests
 
-The iOS UI test target uses the `HealthMd-UITests-iOS` scheme and launches the app with `--uitesting`.
+The iOS UI test target uses the `HealthMd-UITests-iOS` scheme and launches the app with `--uitesting`. Run commands from `apps/apple` only after obtaining the current task's explicit simulator/UI-QA authorization under the root [verification policy](../../../../AGENTS.md#verification-policy).
 
 ## Export Preview HealthKit Fixtures
 

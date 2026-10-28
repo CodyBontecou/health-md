@@ -49,11 +49,8 @@ dependencies = [
 [[package]]
 name = "askama_derive"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1c7065972a130eafa84215f21352ae15b4a7393da48c1f5e103904490736738"
 dependencies = [
  "askama_parser",
- "basic-toml",
  "glob",
  "memchr",
  "proc-macro2",
@@ -62,6 +59,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "syn 2.0.119",
+ "toml",
 ]
 
 [[package]]
@@ -97,15 +95,6 @@ name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
-
-[[package]]
-name = "basic-toml"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba62675e8242a4c4e806d12f11d136e626e6c8361d6b829310732241652a178a"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "bitflags"
@@ -485,6 +474,7 @@ dependencies = [
  "base64",
  "chacha20poly1305",
  "chrono",
+ "chrono-tz",
  "getrandom 0.3.4",
  "hmac",
  "rand",

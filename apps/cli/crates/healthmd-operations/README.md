@@ -11,3 +11,7 @@ The CLI and MCP adapters must translate into these operations rather than implem
 business behavior. This includes the local-only `all_public_authorized` raw-export request and
 bounded, job-bound artifact reads; platform adapters preserve Apple and Android native raw contracts
 instead of inventing cross-platform equivalence.
+
+`ArtifactStore` is the storage-neutral, read-only boundary for Agent Data; local directories and
+future hosted stores use the same versioned grant/query types and the separate `DataReadOnly`
+operation profile.

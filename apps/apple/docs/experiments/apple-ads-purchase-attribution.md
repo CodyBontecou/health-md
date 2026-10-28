@@ -79,3 +79,42 @@ the report is all retained observations, not a mature acquisition cohort.
 
 References: [Apple token and retry documentation](https://developer.apple.com/documentation/adservices/aaattribution/attributiontoken())
 and [Apple Ads measurement](https://ads.apple.com/app-store/help/attribution/0028-measuring-ad-performance).
+
+## Deployment record — 2026-10-24
+
+Production Worker `health-md-pricing-analytics` was deployed from merged main
+`9b871af92aef1bd10b5e84cbee3f8f9f995402d6` as version
+`5eace51b-51e1-401e-9137-6c2497552d94` at 100% traffic. The previous version was
+`b0a65a3b-392f-4c53-838e-29dc3c4a91de`. No database migration was applied.
+
+Verification passed: `/health`, attribution start/resolution ingestion,
+installation-level replay deduplication, and rejection of a forbidden token
+field. The temporary verification installation's two rows were deleted and a
+follow-up query confirmed zero remaining rows. The campaign report ran with no
+attribution rows yet; real campaign conversion still requires the new app.
+The multilingual public privacy policy already contains the disclosure.
+
+The next prepared iOS version is **3.4.4**, build **202610071219**, selected using
+`asc builds next-build-number` across processed and in-flight iOS builds. Recheck
+that number before building if another upload occurs. Version/build settings,
+changelog, in-app notes, English fastlane notes and all ten canonical localized
+store descriptions/release notes are prepared together. App Store Connect draft
+`3.4.4` (`6248152c-287e-48b6-8340-a8737f3b2738`) has been created and all ten
+localized descriptions and release notes applied. No build has been uploaded and
+no review submission has been made.
+
+Before submission:
+
+- Merge the release preparation into `origin/main`, then create draft GitHub
+  Release `v3.4.4` targeting the exact clean, pushed release source. Use the
+  English canonical `whatsNew` text as the release body.
+- Sign into an Apple web session and update App Privacy to include Advertising
+  Data for Analytics, not linked to identity and not used for tracking, matching
+  `PrivacyInfo.xcprivacy`. The CLI API key alone cannot update these answers;
+  `asc web privacy pull` reported no cached Apple web session during preparation.
+  Preserve the other current declarations.
+- Recheck the canonical 3.4.4 localized metadata, run `asc validate`, and use the
+  existing `Apple Release iOS` workflow with the draft release tag. Keep the
+  GitHub Release in draft while Apple reviews the app.
+- After release, verify a real Apple Ads acquisition and purchase. Production
+  backend smoke tests establish ingestion only, not Apple attribution accuracy.

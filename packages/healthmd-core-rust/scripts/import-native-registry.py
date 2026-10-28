@@ -4,6 +4,11 @@
 The two native snapshots and reviewed semantic crosswalk are independent migration fixtures.
 The canonical output becomes the source of truth; generated adapters and normal builds read
 metric-registry-v1.json instead of parsing Swift, Kotlin, or generated documentation.
+
+Registry v1's capability vocabulary is versioned migration evidence too. Unrelated new
+product/transport capabilities must not change its authority hash or invalidate retained
+semantic/render fixtures. Availability of captured IDs still follows live governance;
+a metric requiring a new capability needs a reviewed registry revision.
 """
 
 from __future__ import annotations
@@ -26,6 +31,7 @@ REGISTRY_DIR = WORKSPACE / "crates/healthmd-core/registry"
 REGISTRY_PATH = REGISTRY_DIR / "metric-registry-v1.json"
 APPLE_BASELINE = REGISTRY_DIR / "native-baseline-apple-v7.json"
 ANDROID_BASELINE = REGISTRY_DIR / "native-baseline-android-v4-v5.json"
+CAPABILITY_BASELINE = REGISTRY_DIR / "native-baseline-capabilities-v1.json"
 
 ANDROID_ONLY = {
     "hrv",

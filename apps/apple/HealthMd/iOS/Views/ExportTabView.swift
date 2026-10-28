@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Combine
 import os.log
 
 // MARK: - Export Tab View
@@ -30,6 +31,7 @@ struct ExportTabView: View {
     @ObservedObject var syncService: SyncService
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
+    @ObservedObject var agentDataGatewaySettings: AgentDataGatewaySettings
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     let externalIntegrations: ExternalIntegrationDailyRecordProviding?
     @Binding var exportTargetSelection: ExportTargetSelection
@@ -46,6 +48,18 @@ struct ExportTabView: View {
     var onFirstExportPreviewDismissed: (() -> Void)? = nil
     let canExport: Bool
     let onExportTapped: () -> Void
+    let historyProfileStore: ExportProfileStore?
+    let executionHistoryAssessment: HealthHistoryAssessment?
+    let isAssessingHistory: Bool
+    let onContinueWithoutHistoryVerification: () -> Void
+    let onCancelHistoryVerification: () -> Void
+
+    @State private var historyAssessment: HealthHistoryAssessment?
+    @State private var historyRefreshID = UUID()
+    @State private var historyProfileID: UUID?
+    @State private var historyCoordinator = HealthHistoryAssessmentCoordinator()
+    @State private var historyPreviewWorker = HealthHistoryAssessmentWorker()
+    @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
@@ -57,6 +71,7 @@ struct ExportTabView: View {
     @State private var showRollupHelp = false
     @State private var showFormatHelp = false
     @State private var showAPIEndpointSettings = false
+    @State private var showAgentDataGatewaySettings = false
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
     @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
@@ -86,11 +101,21 @@ struct ExportTabView: View {
             SchedulingExportScroll(showsFooter: !isExporting) {
                 VStack(spacing: Spacing.md) {
                     heroHeader
+                    #if DEBUG
+                    if TestMode.isUITesting {
+                        // Synthetic journey diagnostics only, not a production
+                        // permission/capture status or bypass of any export guard.
+                        Text(exportStatusMessage)
+                            .font(.caption)
+                            .accessibilityIdentifier("export.synthetic.statusMessage")
+                    }
+                    #endif
                     statusBadges
                         .configurationChangesProtected()
                     exportTargetSection
                         .configurationChangesProtected()
                     dateRangeSection
+                    historyWarningSection
                     healthDataSection
                         .id("marketing-export-health-data")
                     formatsSection
@@ -130,6 +155,22 @@ struct ExportTabView: View {
             }
             #endif
             }
+        }
+        // SwiftUI owns the logical waiter; the parent-owned worker retains the
+        // physical provider slot through cancellation until the provider returns.
+        .task(id: historyPreviewRequest) { await refreshHistoryAssessment() }
+        .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
+        .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
+        .onReceive(healthKitManager.objectWillChange) { _ in invalidateHistoryPreview() }
+        .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { id in
+            guard historyProfileID != id else { return }
+            historyProfileID = id
+            invalidateHistoryPreview()
+        }
+        .onChange(of: scenePhase) { _, _ in invalidateHistoryPreview() }
+        .onDisappear {
+            historyCoordinator.invalidate()
+            historyPreviewWorker.cancelLogicalWaiter()
         }
         .geistDialog(
             isPresented: $showHealthPermissionsGuide,
@@ -214,6 +255,11 @@ struct ExportTabView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showAgentDataGatewaySettings) {
+            AgentDataGatewaySettingsSheet(settings: agentDataGatewaySettings)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showPreview, onDismiss: { onFirstExportPreviewDismissed?() }) {
             ExportPreviewView(
                 startDate: previewDateRange.startDate,
@@ -224,7 +270,9 @@ struct ExportTabView: View {
                 destinationRootName: previewDestinationRootName,
                 dateRangePreset: dateRangePreset,
                 targetType: previewExportTargetType,
-                apiDestination: apiExportSettings.destinationSnapshot,
+                apiDestination: exportTargetSelection == .apiEndpoint
+                    ? apiExportSettings.destinationSnapshot
+                    : nil,
                 connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
                 fetchHealthData: { date in
                     #if DEBUG
@@ -344,13 +392,15 @@ struct ExportTabView: View {
             localSubtitle: localTargetSubtitle,
             macSubtitle: macTargetSubtitle,
             apiSubtitle: apiTargetSubtitle,
+            gatewaySubtitle: agentDataGatewayTargetSubtitle,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
             // Prompt on any state where the retained selection cannot be used
             // right now (including temporary unavailability and the reselection/
             // review states), not merely when no selection metadata is retained.
             shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             onRequestFolderPicker: { showFolderPicker = true },
-            onOpenAPISettings: { showAPIEndpointSettings = true }
+            onOpenAPISettings: { showAPIEndpointSettings = true },
+            onOpenGatewaySettings: { showAgentDataGatewaySettings = true }
         )
     }
 
@@ -385,6 +435,13 @@ struct ExportTabView: View {
             return "POSTs JSON exports to \(apiExportSettings.displayName). Tap to edit."
         }
         return "Send JSON directly to your HTTP(S) endpoint. Tap to configure."
+    }
+
+    private var agentDataGatewayTargetSubtitle: String {
+        if agentDataGatewaySettings.isConfigured {
+            return "Uploads export artifacts to \(agentDataGatewaySettings.displayName). Tap to edit."
+        }
+        return "Upload exact export artifacts to your Agent Data gateway. Tap to configure."
     }
 
     private var canExportToConnectedMacWithCurrentSettings: Bool {
@@ -422,6 +479,61 @@ struct ExportTabView: View {
             return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
+    }
+
+    // MARK: - History evidence (outside exported records)
+
+    private var historyScope: HealthHistoryScope {
+        HealthHistoryScope(
+            metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            startDate: startDate, endDate: endDate,
+            timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
+            allAvailable: dateRangePreset == .allTime, profileID: historyProfileID, rangeSemantics: .ownerDates
+        )
+    }
+
+    private var historyPreviewRequest: HealthHistoryPreviewRequest {
+        HealthHistoryPreviewRequest(scope: historyScope, refreshID: historyRefreshID)
+    }
+
+    private func invalidateHistoryPreview() {
+        historyCoordinator.invalidate()
+        historyPreviewWorker.cancelLogicalWaiter()
+        historyRefreshID = UUID()
+        historyAssessment = nil
+    }
+
+    private func refreshHistoryAssessment() async {
+        guard scenePhase == .active else { return }
+        let request = historyPreviewRequest
+        let result = await historyCoordinator.assessPreview(
+            worker: historyPreviewWorker,
+            notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: request.scope),
+            scope: request.scope, isCurrent: {
+            request == historyPreviewRequest && scenePhase == .active
+        }, operation: {
+            await healthKitManager.assessHistoryAccess(scope: request.scope)
+        })
+        guard let result else { return }
+        historyAssessment = result
+    }
+
+    @ViewBuilder private var historyWarningSection: some View {
+        if isAssessingHistory {
+            sectionCard(title: "Checking history access") {
+                HealthHistoryPendingContent(continueUnverified: onContinueWithoutHistoryVerification,
+                                            cancel: onCancelHistoryVerification)
+            }
+        }
+        if let assessment = HealthHistoryAssessment.displayed(preview: historyAssessment,
+            execution: executionHistoryAssessment, scope: historyScope), assessment.needsWarning {
+            sectionCard(title: assessment.warningTitle) {
+                HealthHistoryDisclosureContent(assessment: assessment,
+                    isExecution: assessment.id == executionHistoryAssessment?.id,
+                    reviewAccess: { showHealthPermissionsGuide = true })
+            }
+            .modifier(HealthHistoryWarningAccessibilityContainer())
+        }
     }
 
     // MARK: - Date Range
@@ -1047,6 +1159,7 @@ struct ExportTabView: View {
 
     private var projectedRollupOutputProjection: ExportRollupOutputProjection {
         guard exportTargetSelection != .apiEndpoint,
+              exportTargetSelection != .agentDataGateway,
               !advancedSettings.dailyNotesOnlyModeEnabled else {
             return ExportRollupOutputProjection(byteCount: 0, fileCount: 0, sourceDateCount: 0)
         }
@@ -1066,6 +1179,7 @@ struct ExportTabView: View {
 
     private var projectedRollupSourceDateCount: Int {
         guard exportTargetSelection != .apiEndpoint,
+              exportTargetSelection != .agentDataGateway,
               !advancedSettings.dailyNotesOnlyModeEnabled,
               !advancedSettings.enabledRollupPeriods.isEmpty else {
             return exportDateCount
@@ -1187,6 +1301,8 @@ struct ExportTabView: View {
             return "Connected Mac"
         case .apiEndpoint:
             return "API: \(apiExportSettings.displayName)"
+        case .agentDataGateway:
+            return "Gateway: \(agentDataGatewaySettings.displayName)"
         }
     }
 
@@ -1194,7 +1310,7 @@ struct ExportTabView: View {
         switch exportTargetSelection {
         case .localIPhoneFolder:
             return nil
-        case .connectedMac, .apiEndpoint:
+        case .connectedMac, .apiEndpoint, .agentDataGateway:
             return previewDestinationLabel
         }
     }
@@ -1207,6 +1323,8 @@ struct ExportTabView: View {
             return .connectedMac
         case .apiEndpoint:
             return .apiEndpoint
+        case .agentDataGateway:
+            return .agentDataGateway
         }
     }
 
@@ -1456,6 +1574,8 @@ struct ExportTabView: View {
             return formattedExportPath(rootName: macDestinationRootName)
         case .apiEndpoint:
             return "POST \(apiExportSettings.redactedEndpointDescription)"
+        case .agentDataGateway:
+            return "POST \(agentDataGatewaySettings.redactedEndpointDescription)"
         }
     }
 
@@ -1526,13 +1646,16 @@ struct ExportTargetSectionView: View {
     let localSubtitle: String
     let macSubtitle: String
     let apiSubtitle: String
+    var gatewaySubtitle: String = ""
     let canExportToConnectedMac: Bool
     let shouldPromptForLocalFolder: Bool
     let localAccessibilityIdentifier: String
     let macAccessibilityIdentifier: String
     let apiAccessibilityIdentifier: String
+    var gatewayAccessibilityIdentifier: String = AccessibilityID.Export.agentDataGatewayTargetOption
     let onRequestFolderPicker: () -> Void
     let onOpenAPISettings: () -> Void
+    var onOpenGatewaySettings: (() -> Void)? = nil
 
     init(
         title: String = "Export Target",
@@ -1542,13 +1665,16 @@ struct ExportTargetSectionView: View {
         localSubtitle: String,
         macSubtitle: String,
         apiSubtitle: String,
+        gatewaySubtitle: String = "",
         canExportToConnectedMac: Bool,
         shouldPromptForLocalFolder: Bool,
         localAccessibilityIdentifier: String = AccessibilityID.Export.localTargetOption,
         macAccessibilityIdentifier: String = AccessibilityID.Export.macTargetOption,
         apiAccessibilityIdentifier: String = AccessibilityID.Export.apiTargetOption,
+        gatewayAccessibilityIdentifier: String = AccessibilityID.Export.agentDataGatewayTargetOption,
         onRequestFolderPicker: @escaping () -> Void,
-        onOpenAPISettings: @escaping () -> Void
+        onOpenAPISettings: @escaping () -> Void,
+        onOpenGatewaySettings: (() -> Void)? = nil
     ) {
         self.title = title
         self.localTitle = localTitle
@@ -1557,13 +1683,16 @@ struct ExportTargetSectionView: View {
         self.localSubtitle = localSubtitle
         self.macSubtitle = macSubtitle
         self.apiSubtitle = apiSubtitle
+        self.gatewaySubtitle = gatewaySubtitle
         self.canExportToConnectedMac = canExportToConnectedMac
         self.shouldPromptForLocalFolder = shouldPromptForLocalFolder
         self.localAccessibilityIdentifier = localAccessibilityIdentifier
         self.macAccessibilityIdentifier = macAccessibilityIdentifier
         self.apiAccessibilityIdentifier = apiAccessibilityIdentifier
+        self.gatewayAccessibilityIdentifier = gatewayAccessibilityIdentifier
         self.onRequestFolderPicker = onRequestFolderPicker
         self.onOpenAPISettings = onOpenAPISettings
+        self.onOpenGatewaySettings = onOpenGatewaySettings
     }
 
     var body: some View {
@@ -1610,6 +1739,20 @@ struct ExportTargetSectionView: View {
                     ) {
                         selection = .apiEndpoint
                         onOpenAPISettings()
+                    }
+
+                    Divider().background(Color.borderSubtle)
+
+                    ExportTargetOptionRow(
+                        title: ExportTargetSelection.agentDataGateway.title,
+                        icon: "arrow.up.and.down.and.arrow.left.and.right",
+                        subtitle: gatewaySubtitle,
+                        isSelected: selection == .agentDataGateway,
+                        isEnabled: true,
+                        accessibilityIdentifier: gatewayAccessibilityIdentifier
+                    ) {
+                        selection = .agentDataGateway
+                        onOpenGatewaySettings?()
                     }
                 }
             }
@@ -1729,7 +1872,6 @@ struct APIExportSettingsSheet: View {
     @ObservedObject var settings: APIExportSettings
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
-
     var body: some View {
         NavigationStack {
             Form {
@@ -1767,6 +1909,63 @@ struct APIExportSettingsSheet: View {
                 }
             }
             .navigationTitle("API Export")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
+            }
+        }
+    }
+}
+
+/// Agent Data gateway endpoint configuration, mirroring the API endpoint
+/// sheet. Gateways carry no credential in ingestion protocol v1, so the form
+/// is a single endpoint URL.
+struct AgentDataGatewaySettingsSheet: View {
+    @ObservedObject var settings: AgentDataGatewaySettings
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(
+                        "https://gateway.example.com",
+                        text: configurationProtection.protecting($settings.endpointURLString)
+                    )
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .accessibilityLabel("Agent Data gateway endpoint URL")
+                } header: {
+                    Text("Gateway")
+                } footer: {
+                    Text("Health.md uploads each exported artifact file unchanged to your gateway's /v1/ingest endpoint using the Agent Data protocol. Re-uploading identical artifacts is idempotent. Gateways use HTTP or HTTPS and need no token in this version.")
+                }
+
+                Section {
+                    HStack {
+                        Image(systemName: settings.isConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(settings.isConfigured ? Color.success : Color.warning)
+                        Text(settings.isConfigured ? "Ready to export to the gateway" : "Enter a valid HTTP or HTTPS URL")
+                    }
+                } footer: {
+                    Text("Only send Apple Health data to gateways you control or trust. Gateway uploads use your selected metrics and Data Detail setting, and always include the JSON daily export.")
+                }
+            }
+            .navigationTitle("Agent Data Gateway")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

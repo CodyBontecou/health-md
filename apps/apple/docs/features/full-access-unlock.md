@@ -9,7 +9,7 @@
 
 ## What it does
 
-Full Access removes the shared free export limit. Free users can complete 10 accounted export actions across manual, scheduled, Shortcut, and direct workflows. One action can write several formats or dates and still consumes one use.
+On iPhone and iPad, Full Access removes the shared free export limit. Health.md for Mac is free. Free users can complete 10 accounted export actions across manual, scheduled, Shortcut, and direct workflows. One action can write several formats or dates and still consumes one use.
 
 Health.md offers Individual Lifetime and Family Lifetime one-time purchases, plus a Family Lifetime upgrade for eligible Individual or legacy owners. There is no recurring subscription. Family Lifetime uses Apple Family Sharing for up to five family members under Apple's eligibility and Purchase Sharing rules.
 

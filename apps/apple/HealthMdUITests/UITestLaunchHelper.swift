@@ -26,6 +26,7 @@ enum UITestLaunchHelper {
     }
 
     enum Export {
+        static let contentScroll = "export.content.scroll"
         static let exportButton = "export.exportButton"
         static let previewButton = "export.previewButton"
         static let cancelExportButton = "export.cancelButton"

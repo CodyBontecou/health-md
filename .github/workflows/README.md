@@ -36,6 +36,48 @@ jobs to pass and rejects missing selection outputs or selected skips. The Rust
 artifact preparation job runs whenever an Xcode test job needs it. Main/testing
 pushes, manual runs, and reusable/exact-SHA qualification retain every job.
 
+### Apple critical-path execution
+
+All five Rust targets (iOS device, both iOS Simulator architectures, and both
+macOS architectures) compile in parallel with the unchanged pinned release
+profile. Each archive is paired with a source digest, commit, toolchain and byte
+hash receipt. The preparation job requires the complete five-slice inventory,
+checks generated bindings, assembles the same three-platform XCFramework and
+runs the existing architecture/symbol validator. Exact-source archive and
+XCFramework caches include the active Xcode/SDK fingerprint; nightly uses the
+same complete-artifact key and still validates source/bindings on cache hits.
+
+The iOS unit job begins booting its selected compatible simulator before
+compilation. Unit and UI products compile only the execution architecture and
+disable the unused compiler index store. The native XCFramework still
+contains all five previously qualified target architectures. Test results are
+never restored from a cache.
+
+The fourteen existing phone UI cases plus three history cases run across three
+phone shards; a fourth shard runs four App Review/history cases on iPad. The
+same history method intentionally runs once per device family. Entire XCTest
+classes remain together within a family to preserve shared fixture state.
+One SDK27 preparation job builds fresh app/runner/test products and publishes a
+qualified archive. Every shard verifies the producer archive SHA, exact source
+and current restored binary fingerprints before execution. The selected actual
+simulator must match its required device family. Setup and the single native
+invocation share an owned deadline inside the existing 35-minute phone or
+15-minute iPad step, with cleanup time reserved. Exact SDK27 compiler/signature
+and producer/consumer provenance checks remain mandatory for core and app jobs.
+
+Each shard checks the authoritative xcresult case tree and summary against its
+exact selection. Missing, duplicate within a device family, failed, skipped or
+unexpected cases fail qualification. The stable `iOS UI regressions` aggregate
+requires successful preparation and all four current-run/source receipts for
+21 device-attributed executions. Compile/runtime warning gates (including
+premature StateObject access), raw logs, process ownership records and xcresults
+remain mandatory. Fail-fast is disabled.
+
+These changes trade additional simultaneous runners for a shorter critical
+path; they do not remove test coverage or claim a fixed hosted-runner speedup.
+Compare cold/warm execution separately from dependency wait, queue time and
+summed runner work. F-Droid and Android Wear remain paused as described below.
+
 ## Android CI selection and accessibility coverage
 
 On pull requests, `apps/android/scripts/android-ci-plan.py` selects the active Android
@@ -58,9 +100,12 @@ or changing results run every active job. Selected jobs must succeed; a skipped
 job is accepted only when its selection output explicitly says `false`. The policy
 job's listing validator discovers every `scripts/tests/test_*.py`.
 
-Phone instrumentation retains four hosted shards. Shard zero also runs the core
+Phone instrumentation uses six hosted shards with the same complete Play test inventory. Shard zero also runs the core
 suite and direct E2E; every shard runs the native-input readiness check using Play.
 The stable instrumentation gate validates the combined Play/core/E2E XML inventory.
+APK preparation reuses compilation outputs through the existing safe Gradle wrapper;
+requested Test tasks still execute freshly. Six workers trade more runner minutes
+for shorter device-test execution; hosted cache and queue evidence determine actual savings.
 Local runs remain unsharded unless shard index/count are explicitly supplied.
 
 Instrumentation runs every core and Play test method with the full ten-display
@@ -211,9 +256,24 @@ The canonical release path starts from a draft GitHub Release whose tag starts w
 - `.github/workflows/release-ios.yml`
 - `.github/workflows/release-macos.yml`
 
-Use `release_tag=v<version>`. The tag version must match `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`; each workflow fails early if it does not. Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it.
+Dispatch from `main` with `release_tag=v<version>`. Apple versions use `v<major>.<minor>[.<patch>]`; the tag must exist on `origin`, its commit and the workflow commit must be reachable from `origin/main`, and the tag version must match every committed `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`. The resolver also requires an existing draft GitHub Release before qualification for a non-dry-run manual submission. It never creates a source ledger after an upload.
 
-Publishing a release still triggers both workflows as a legacy fallback, but it is not the canonical path because publication must wait for ASC approval.
+Before building, each workflow resolves the tag to an immutable SHA and runs the full Apple CI suite (`apple-ci.yml`) against it. The release job checks out **that same SHA**, not the dispatch branch head. Native tests, UI regressions, coverage, warnings, the connectivity package, and the workflow-policy job must all pass; a failed, cancelled, or skipped required job blocks the release. Release callers and reusable CI have distinct concurrency namespaces. Exact-SHA qualification groups are isolated by caller and run ID and cannot cancel their parent or another release; ordinary branch CI still cancels superseded runs.
+
+Workflow-only recovery may dispatch newer `main` workflow code with the original `release_tag`. The release tag must be an ancestor of that workflow SHA, and the diff may change only `.github/workflows/`, `.github/actions/`, or `.github/scripts/`. Qualification and archives still use the original tag's product source, without an overlay from newer `main`. A product, dependency, build-script, version, or metadata fix needs a newly committed and tagged release; never move an existing release tag. Recovery can load the current workflow's source-policy script from Git into `$RUNNER_TEMP` even when the original tag predates that script.
+
+Both release jobs recheck the clean, qualified checkout and pushed tag object at checkout, immediately before and after archiving, and before publication. Staged, unstaged, and non-ignored untracked files fail closed; ignored build products are allowed. The macOS workflow does not remove package references or otherwise edit the tagged project to avoid package networking. Any required project change must be committed, qualified, and released as new source. Summaries record the archived source SHA separately from the executing workflow SHA.
+
+Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it. Human publication remains a legacy fallback, not the canonical submission path. Non-Apple tags (`healthmd-cli/v*`, `android/v*`) and bot-authored publications skip resolution, qualification, and release jobs, so they do not launch duplicate full Apple suites. Untagged branch dispatch is supported only with `dry_run=true`: it qualifies and archives the exact dispatch SHA and cannot upload or submit.
+
+The lightweight policy regressions run on Ubuntu in Apple CI and are included in its final gate. Release-workflow and `.github/scripts/**` changes are in both Apple CI path maps. To run them locally without signing or a native build (Python with `PyYAML==6.0.3`, Git, Bash, and jq):
+
+```sh
+python3 -m unittest discover -s .github/scripts/tests -p 'test_apple_*.py' -v
+actionlint .github/workflows/apple-ci.yml .github/workflows/release-ios.yml .github/workflows/release-macos.yml
+```
+
+The tests use local synthetic Git remotes and a stubbed release-record read; they never dispatch workflows, push, access signing credentials, or perform store operations.
 
 ## What the workflows do
 
@@ -274,8 +334,12 @@ signing jobs skip and the archive/installer ship unsigned with Sigstore-checksum
 when the ledger records a `qualified` publisher, both Windows executables and the PowerShell
 installer are Authenticode-signed and native jobs require an exact match with the protected
 variable. Native runners verify every extracted macOS signature (and every Windows signature once
-qualified). The remote draft assets are then compared byte-for-byte with the qualified
+qualified). The generated Homebrew formula is normalized in an isolated tap before the checksum
+closure is signed. The remote draft assets are then compared byte-for-byte with the qualified
 workflow artifacts before the separate protected `cli-release` environment can publish them.
+After publication, the sealed formula clean-installs on every supported macOS/Linux architecture,
+preserves the signed binaries byte-for-byte, and completes an installed MCP handshake before a
+serialized, anti-rollback tap job pushes and remotely rechecks the exact formula blob.
 
 The repository variables, `cli-signing` environment secrets, rollback/key-compromise/crates-yank/
 Homebrew runbooks, and mobile compatibility requirements are documented in

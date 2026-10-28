@@ -7,6 +7,9 @@ pub mod direct;
 pub mod file_receiver;
 mod generated_path;
 pub mod handshake;
+pub mod history;
+#[cfg(test)]
+mod history_tests;
 pub mod job;
 mod limits;
 pub mod markdown;
