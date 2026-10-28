@@ -894,7 +894,7 @@
       "id": "account.myself_lifetime_claim",
       "name": "Complimentary myself.md access claim",
       "classification": "shared",
-      "summary": "On iOS/iPadOS and Google Play Android, present a user-reviewed claim screen, verify eligible purchase evidence with myself.md, then hand off to explicit browser account confirmation. Opening the screen grants no access. Free macOS companion and F-Droid access do not establish a qualifying purchase.",
+      "summary": "Disabled by default behind explicit build feature flags on both platforms. When enabled on iOS/iPadOS and Google Play Android, present a user-reviewed claim screen, verify eligible purchase evidence with myself.md, then hand off to explicit browser account confirmation. Opening the screen grants no access. Free macOS companion and F-Droid access do not establish a qualifying purchase.",
       "profiles": [],
       "platforms": {
         "apple": {

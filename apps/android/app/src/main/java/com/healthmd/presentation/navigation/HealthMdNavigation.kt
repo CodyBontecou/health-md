@@ -165,7 +165,7 @@ fun HealthMdNavigation(
 
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     LaunchedEffect(myselfClaimRequestId) {
-        if (myselfClaimRequestId > 0 && settingsViewModel.distributionPolicy.purchasesAvailable) {
+        if (BuildConfig.MYSELF_CLAIM_ENABLED && myselfClaimRequestId > 0 && settingsViewModel.distributionPolicy.purchasesAvailable) {
             navController.currentBackStackEntryFlow.first()
             navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
         }
@@ -306,7 +306,9 @@ fun HealthMdNavigation(
                         }
                     },
                     onNavigateToMyselfClaim = {
-                        navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
+                        if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(SubRoutes.MYSELF_CLAIM) { launchSingleTop = true }
+                        }
                     },
                     onNavigateToExportProfiles = { navController.navigate(SubRoutes.EXPORT_PROFILES) },
                     onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
@@ -315,7 +317,7 @@ fun HealthMdNavigation(
                 )
             }
 
-            if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+            if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
                 composable(SubRoutes.MYSELF_CLAIM) {
                     com.healthmd.myselfclaim.MyselfClaimScreen(onBack = { navController.popBackStack() })
                 }

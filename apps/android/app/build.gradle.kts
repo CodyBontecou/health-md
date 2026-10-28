@@ -57,6 +57,9 @@ android {
         versionCode = 42
         versionName = "1.9.4"
 
+        // Explicit opt-in; absent or malformed values keep claim entry points disabled.
+        buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", (configuredValue("MYSELF_CLAIM_ENABLED") == "true").toString())
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {

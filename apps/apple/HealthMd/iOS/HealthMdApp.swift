@@ -590,7 +590,7 @@ struct HealthMdApp: App {
                 if url.scheme == "healthmd", url.host == "myself", url.path == "/claim",
                    url.user == nil, url.password == nil, url.port == nil,
                    url.query == nil, url.fragment == nil {
-                    showingMyselfClaim = true
+                    if MyselfClaimFeature.isEnabled { showingMyselfClaim = true }
                     return
                 }
                 if sharedSetupCoordinator.handleOpenURL(url, cold: !hasInstalledSharedSetupURLHandler) {
