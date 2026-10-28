@@ -35,12 +35,25 @@ data class OAuthProviderConfig(
     val redirectUri: String = DEFAULT_REDIRECT_URI,
     val clientAuthStyle: OAuthClientAuthStyle = OAuthClientAuthStyle.RequestBody,
     val tokenExtraParams: Map<String, String> = emptyMap(),
+    val healthMdBroker: HealthMdOAuthBrokerConfig? = null,
 ) {
-    val isConfigured: Boolean get() = clientId.isNotBlank()
+    val isConfigured: Boolean get() = healthMdBroker?.isConfigured ?: clientId.isNotBlank()
 
     companion object {
         const val DEFAULT_REDIRECT_URI = "healthmd://oauth2redirect"
     }
+}
+
+/** Mobile client gate only; provider client secrets remain on the broker. */
+class HealthMdOAuthBrokerConfig(val baseUrl: String, val clientToken: String) {
+    val isConfigured: Boolean get() = runCatching {
+        val uri = java.net.URI(baseUrl)
+        clientToken.isNotBlank() && uri.host != null && uri.userInfo == null &&
+            uri.rawQuery == null && uri.rawFragment == null &&
+            (uri.scheme == "https" || (uri.scheme == "http" && uri.host in listOf("localhost", "127.0.0.1")))
+    }.getOrDefault(false)
+
+    fun endpoint(path: String): String = java.net.URI(baseUrl).resolve(path).toString()
 }
 
 enum class OAuthClientAuthStyle {

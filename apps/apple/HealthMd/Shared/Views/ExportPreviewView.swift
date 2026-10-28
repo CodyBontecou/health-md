@@ -647,6 +647,30 @@ struct ExportPreviewView: View {
 
     // MARK: - Build previews
 
+    @MainActor
+    static func fetchPreviewRecord(
+        for date: Date,
+        targetType: PricingAnalyticsExportTargetType,
+        connectedAppsEnabled: Bool,
+        writesExternalProviderSidecars: Bool,
+        fetchHealthData: (Date) async -> HealthData?,
+        fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?
+    ) async -> HealthData? {
+        guard var record = await fetchHealthData(date) else { return nil }
+        // API previews capture providers in preparePreview. File previews must
+        // enrich the record before rendering, using the same policy as export.
+        if targetType != .apiEndpoint,
+           targetType != .agentDataGateway,
+           connectedAppsEnabled,
+           writesExternalProviderSidecars,
+           record.hasAnyData,
+           let fetchExternalDailyRecords {
+            let externalRecords = await fetchExternalDailyRecords(date)
+            record.providers = HealthProviderSections.normalized(from: externalRecords)
+        }
+        return record
+    }
+
     private var previewScope: ExportPreviewScope {
         ExportPreviewScope.make(
             selectedFormats: settings.exportFormats,
@@ -706,7 +730,14 @@ struct ExportPreviewView: View {
             if attempts >= Self.maxFetchAttempts { break }
             attempts += 1
 
-            guard let healthData = await fetchHealthData(date) else { continue }
+            guard let healthData = await Self.fetchPreviewRecord(
+                for: date,
+                targetType: targetType,
+                connectedAppsEnabled: connectedAppsEnabled,
+                writesExternalProviderSidecars: settings.writesExternalProviderSidecars,
+                fetchHealthData: fetchHealthData,
+                fetchExternalDailyRecords: fetchExternalDailyRecords
+            ) else { continue }
             warnings.append(contentsOf: healthData.partialFailures)
             guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
             rollupInputs.append(healthData)

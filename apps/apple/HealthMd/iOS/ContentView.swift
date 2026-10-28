@@ -3262,7 +3262,7 @@ struct SettingsTabView: View {
             SettingsRow(
                 icon: "link.circle.fill",
                 title: "Third-Party Integrations",
-                subtitle: "Fitbit, Oura, WHOOP, Withings, and Strava",
+                subtitle: "WHOOP recovery, strain, sleep, and workouts",
                 status: externalIntegrationManager.connectedProviderCount == 0 ? "None" : "\(externalIntegrationManager.connectedProviderCount)",
                 statusTone: externalIntegrationManager.connectedProviderCount == 0 ? .muted : .success,
                 isActive: externalIntegrationManager.connectedProviderCount > 0,

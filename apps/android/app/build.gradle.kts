@@ -121,6 +121,8 @@ android {
             buildConfigField("String", "POLAR_TOKEN_BROKER_URL", configuredValue("POLAR_TOKEN_BROKER_URL").asBuildConfigString())
             buildConfigField("String", "WHOOP_CLIENT_ID", configuredValue("WHOOP_CLIENT_ID").asBuildConfigString())
             buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", configuredValue("WHOOP_TOKEN_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "WHOOP_HEALTHMD_BROKER_URL", configuredValue("WHOOP_HEALTHMD_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN", configuredValue("WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN").asBuildConfigString())
             buildConfigField("String", "CAMPAIGN_ATTRIBUTION_ENDPOINT_URL", campaignAttributionEndpointUrl.asBuildConfigString())
             buildConfigField("String", "CAMPAIGN_ATTRIBUTION_INGEST_TOKEN", campaignAttributionIngestToken.asBuildConfigString())
             buildConfigField("String", "ONBOARDING_ANALYTICS_ENDPOINT_URL", onboardingAnalyticsEndpointUrl.asBuildConfigString())
