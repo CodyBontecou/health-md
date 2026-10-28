@@ -7,6 +7,14 @@
 
     <!-- Common -->
     <string name="cancel">Cancel</string>
+    <string name="whoop_connection_description">Connect WHOOP to export recovery, strain, sleep, workouts, and body measurements. Sign-in uses your browser; Health.md stores tokens encrypted on this device. Disconnect removes this device’s saved connection.</string>
+    <string name="whoop_connect">Connect WHOOP</string>
+    <string name="whoop_sources_description">Connect WHOOP for direct provider exports, or continue using Health Connect for local records.</string>
+    <string name="whoop_sign_in_failed">WHOOP sign-in could not be started. Check your connection and try again.</string>
+    <string name="whoop_use_health_connect">Use Health Connect for exports</string>
+    <string name="whoop_reconnect">Reconnect WHOOP</string>
+    <string name="whoop_disconnect">Disconnect WHOOP</string>
+    <string name="whoop_use_for_exports">Use WHOOP for exports</string>
     <string name="back">Back</string>
     <string name="close">Close</string>
     <string name="refresh">Refresh</string>

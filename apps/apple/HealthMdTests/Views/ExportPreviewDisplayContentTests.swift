@@ -3,6 +3,64 @@ import XCTest
 
 final class ExportPreviewDisplayContentTests: XCTestCase {
 
+    @MainActor
+    func testFilePreviewIncludesTypedWHOOPCaptureInRenderedJSON() async throws {
+        let date = Date(timeIntervalSince1970: 1_773_556_800)
+        var fetchCount = 0
+        let record = await ExportPreviewView.fetchPreviewRecord(
+            for: date,
+            targetType: .localFile,
+            connectedAppsEnabled: true,
+            writesExternalProviderSidecars: true,
+            fetchHealthData: { HealthData(date: $0, activity: ActivityData(steps: 1)) },
+            fetchExternalDailyRecords: { requestedDate in
+                XCTAssertEqual(requestedDate, date)
+                fetchCount += 1
+                return [ExternalDailyRecord(
+                    provider: .whoop,
+                    date: "2026-03-15",
+                    payloads: ["cycles", "recovery", "sleep", "workouts"].map {
+                        ExternalProviderPayload(
+                            name: $0,
+                            endpoint: "https://redacted.invalid/\($0)",
+                            statusCode: 200,
+                            data: .object(["records": .array([])])
+                        )
+                    }
+                )]
+            }
+        )
+        let enriched = try XCTUnwrap(record)
+        XCTAssertEqual(fetchCount, 1)
+        XCTAssertEqual(enriched.providers?.whoop?.captureStatus, .complete)
+        let json = try enriched.toJSONThrowing(outputFormatting: [.sortedKeys])
+        XCTAssertTrue(json.contains("healthmd.provider.whoop_daily"))
+        XCTAssertEqual(enriched.activity.steps, 1)
+    }
+
+    @MainActor
+    func testPreviewSkipsProviderFetchWhenPolicyExcludesIt() async {
+        let cases: [(PricingAnalyticsExportTargetType, Bool, Bool, Bool)] = [
+            (.apiEndpoint, true, true, true),
+            (.agentDataGateway, true, true, true),
+            (.localFile, false, true, true),
+            (.localFile, true, false, true),
+            (.localFile, true, true, false)
+        ]
+        for (target, enabled, writesProviders, hasHealthData) in cases {
+            var fetchCount = 0
+            _ = await ExportPreviewView.fetchPreviewRecord(
+                for: Date(timeIntervalSince1970: 0),
+                targetType: target,
+                connectedAppsEnabled: enabled,
+                writesExternalProviderSidecars: writesProviders,
+                fetchHealthData: { HealthData(date: $0, activity: hasHealthData ? ActivityData(steps: 1) : ActivityData()) },
+                fetchExternalDailyRecords: { _ in fetchCount += 1; return [] }
+            )
+            XCTAssertEqual(fetchCount, 0, "Unexpected provider fetch for \(target)")
+        }
+    }
+
     func testLosslessPreviewScopeShowsAllFourSelectedFormatsForOneDate() {
         let scope = ExportPreviewScope.make(
             selectedFormats: [.markdown, .json, .csv, .obsidianBases],

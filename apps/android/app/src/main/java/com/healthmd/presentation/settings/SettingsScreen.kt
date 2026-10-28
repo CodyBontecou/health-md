@@ -17,6 +17,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -60,6 +63,63 @@ fun SettingsScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val protectionRequester = remember { BringIntoViewRequester() }
+    val healthProviders by viewModel.healthProviderStates.collectAsStateWithLifecycle()
+    val whoopProviders = if (distributionPolicy.directCloudProvidersAvailable) {
+        healthProviders.filter {
+            it.provider.definition.id == HealthProviderId.WHOOP &&
+                (it.isDirectConnectionConfigured || it.isConnected)
+        }
+    } else emptyList()
+    var providerDialog by remember { mutableStateOf<HealthProviderUiState?>(null) }
+
+    providerDialog?.let { provider ->
+        AlertDialog(
+            onDismissRequest = { providerDialog = null },
+            title = { Text(provider.provider.definition.displayName) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    Text(stringResource(R.string.whoop_connection_description))
+                    TextButton(onClick = {
+                        providerDialog = null
+                        viewModel.performConfigurationChange {
+                            coroutineScope.launch {
+                                runCatching {
+                                    val intent = viewModel.getHealthProviderConnectionIntent(HealthProviderId.WHOOP)
+                                        ?: error("WHOOP is not configured")
+                                    context.startActivity(intent)
+                                }.onFailure {
+                                    Toast.makeText(context, R.string.whoop_sign_in_failed, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    }, enabled = provider.isDirectConnectionConfigured) {
+                        Text(stringResource(if (provider.isConnected) R.string.whoop_reconnect else R.string.whoop_connect))
+                    }
+                    if (provider.isConnected) {
+                        TextButton(onClick = {
+                            providerDialog = null
+                            viewModel.performConfigurationChange {
+                                if (provider.isSelected) viewModel.useHealthConnectForExports()
+                                else viewModel.selectHealthProvider(HealthProviderId.WHOOP)
+                            }
+                        }) {
+                            Text(stringResource(if (provider.isSelected) R.string.whoop_use_health_connect else R.string.whoop_use_for_exports))
+                        }
+                        TextButton(onClick = {
+                            providerDialog = null
+                            viewModel.performConfigurationChange { viewModel.disconnectHealthProvider(HealthProviderId.WHOOP) }
+                        }) { Text(stringResource(R.string.whoop_disconnect)) }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { providerDialog = null }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
 
     LaunchedEffect(protectionSettingsRequestId) {
         if (protectionSettingsRequestId != null) protectionRequester.bringIntoView()
@@ -156,7 +216,12 @@ fun SettingsScreen(
             onClick = onNavigateToSharedSetup,
         )
 
-        // Health source configuration is intentionally hidden until the integrations are ready.
+        if (whoopProviders.isNotEmpty()) {
+            HealthProviderSupportSection(
+                providers = whoopProviders,
+                onOpenProvider = { providerDialog = it },
+            )
+        }
 
         SettingsNavigationCard(
             title = stringResource(R.string.direct_cli_title),
@@ -283,7 +348,7 @@ private fun HealthProviderSupportSection(
         SectionLabel(stringResource(R.string.section_health_sources))
 
         Text(
-            text = stringResource(R.string.health_sources_description),
+            text = stringResource(R.string.whoop_sources_description),
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.textMuted,
         )
@@ -368,8 +433,8 @@ private fun HealthProviderRow(
                     text = when {
                         providerState.isSelected -> stringResource(R.string.health_provider_status_selected)
                         providerState.isConnected -> stringResource(R.string.status_connected)
-                        provider.isInstalled -> stringResource(R.string.health_provider_status_installed)
                         providerState.isDirectConnectionConfigured -> stringResource(R.string.health_provider_status_ready_to_connect)
+                        provider.isInstalled -> stringResource(R.string.health_provider_status_installed)
                         else -> stringResource(definition.directExportStatus.labelRes)
                     },
                     style = MaterialTheme.typography.labelSmall,
