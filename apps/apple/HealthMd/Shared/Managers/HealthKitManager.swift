@@ -1,7 +1,16 @@
 import Foundation
 import HealthKit
+import HealthMdConnectionCore
 import Combine
 import os.log
+
+/// Native metadata only. HealthKit cannot reveal per-type read grants: completing its authorization
+/// flow is distinct from proving access or completeness. No sample/history/preview/quota work here.
+nonisolated struct HealthKitNativePlanningMetadata: Equatable, Sendable {
+    let providerAvailable: Bool
+    let availableNativeMetricIDs: Set<String>
+    let authorizationFlowSatisfied: Bool
+}
 
 private enum HealthKitOrdinaryRecordQueryKind: Sendable {
     case quantity(HKQuantityTypeIdentifier)
@@ -78,6 +87,10 @@ nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
     }
 }
 
+extension Notification.Name {
+    nonisolated static let healthMdNativeHealthAuthorizationDidChange = Notification.Name("HealthMd.nativeHealthAuthorizationDidChange")
+}
+
 @MainActor
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
@@ -103,6 +116,7 @@ final class HealthKitManager: ObservableObject {
     private let healthStore: HKHealthStore
     private let logger = Logger(subsystem: "com.healthexporter", category: "HealthKitManager")
     private let userDefaults: UserDefaults
+    private let nativePlanningNotifications: NotificationCenter
     private let healthAuthorizationRequestedKey = "healthKit.authorizationRequested"
     private let authorizationStateMigrationKey = "healthKit.authorizationStateMigrationCompleted"
     private let legacyOnboardingCompletedKey = "hasCompletedOnboarding"
@@ -113,11 +127,13 @@ final class HealthKitManager: ObservableObject {
     private(set) var observerQueries: [HKObserverQuery] = []
 
     init(store: HealthStoreProviding = SystemHealthStoreAdapter(), userDefaults: UserDefaults = .standard,
+         nativePlanningNotifications: NotificationCenter = .default,
          calendarProvider: @escaping @Sendable () -> Calendar = { Calendar.current }) {
         self.store = store
         self.calendarProvider = calendarProvider
         self.healthStore = HKHealthStore()
         self.userDefaults = userDefaults
+        self.nativePlanningNotifications = nativePlanningNotifications
         let medicationRequested = userDefaults.bool(forKey: medicationAuthorizationRequestedKey)
         self.isMedicationAuthorizationRequested = medicationRequested
         self.medicationAuthorizationStatus = medicationRequested ? "Medication access selected" : "Not requested"
@@ -131,7 +147,13 @@ final class HealthKitManager: ObservableObject {
     /// Callback triggered when background delivery receives new data
     var onBackgroundDelivery: (() -> Void)?
 
-    @Published var isAuthorized = false
+    @Published var isAuthorized = false {
+        didSet {
+            if isAuthorized != oldValue {
+                nativePlanningNotifications.post(name: .healthMdNativeHealthAuthorizationDidChange, object: self)
+            }
+        }
+    }
     @Published var authorizationStatus: String = "Not Connected"
     @Published private(set) var isMedicationAuthorizationRequested: Bool
     @Published private(set) var medicationAuthorizationStatus: String
@@ -528,6 +550,13 @@ final class HealthKitManager: ObservableObject {
         store.isAvailable
     }
 
+    func nativePlanningMetadata() -> HealthKitNativePlanningMetadata {
+        let available = store.isAvailable
+        return .init(providerAvailable: available,
+                     availableNativeMetricIDs: available ? HealthMetrics.availableMetricIDsInCurrentBuild : [],
+                     authorizationFlowSatisfied: available && isAuthorized)
+    }
+
     private func restoreSavedAuthorizationState() {
         let authorizationPreviouslyRequested = userDefaults.bool(forKey: healthAuthorizationRequestedKey)
         let shouldMigrateCompletedOnboarding = !userDefaults.bool(forKey: authorizationStateMigrationKey)
@@ -552,7 +581,13 @@ final class HealthKitManager: ObservableObject {
     private func markAuthorizationRequested() {
         userDefaults.set(true, forKey: healthAuthorizationRequestedKey)
         userDefaults.set(true, forKey: authorizationStateMigrationKey)
+        let previouslyAuthorized = isAuthorized
         isAuthorized = true
+        // A repeated completed native flow may change read choices without changing this Boolean.
+        // This is flow evidence only; HealthKit does not disclose per-type read grants.
+        if previouslyAuthorized {
+            nativePlanningNotifications.post(name: .healthMdNativeHealthAuthorizationDidChange, object: self)
+        }
         authorizationStatus = "Connected"
     }
 
@@ -602,8 +637,8 @@ final class HealthKitManager: ObservableObject {
         ) == .unnecessary
     }
 
-    /// Assesses the selected sample types using HealthKit's OS 27 limited-history
-    /// API. HealthKit intentionally omits both unrestricted and denied types, so
+    /// Assesses selected sample types only when the adapter has a compile-supported
+    /// native boundary API. HealthKit omits both unrestricted and denied types, so
     /// `full_history` means "no limited boundary reported", not proof that every
     /// requested read permission was granted.
     func assessHistoryAuthorization(
@@ -1003,6 +1038,103 @@ final class HealthKitManager: ObservableObject {
     }
 
     /// Fetches HealthKit data for the requested date without presenting additional authorization UI.
+    /// Exact bridge summary capture from this owner's HealthKit store. Never reads preferences,
+    /// providers, archives or unselected types, and never converts SDK failure into empty success.
+    /// The enclosing original-session operation must begin its context once and preserve its spool.
+    func captureAgentBridgeDay(_ day: AgentBridgeDate, context: AgentBridgeNativeCaptureContext) async throws -> HealthData {
+        let input = try context.claimDay(day)
+        let resolution = input.resolution
+        do {
+            guard resolution.requestedDays.contains(day),
+                  let zoneID = resolution.settings.calendarTimeZoneIdentifier,
+                  let zone = TimeZone(identifier: zoneID) else { throw AgentBridgeValidationError.invalidRequest }
+            let parts = day.rawValue.split(separator: "-").compactMap { Int($0) }
+            var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+            guard parts.count == 3,
+                  let start = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])),
+                  let end = calendar.date(byAdding: .day, value: 1, to: start) else { throw AgentBridgeValidationError.invalidRequest }
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+            if let retained = input.retainedPayload {
+                let captured: AgentBridgeCapturedScalarDay
+                do { captured = try JSONDecoder().decode(AgentBridgeCapturedScalarDay.self, from: retained) }
+                catch { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                guard captured.version == 1, captured.day == day.rawValue, captured.calendarTimezone == zoneID,
+                      Set(captured.values.keys).isSubset(of: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"]),
+                      Set(captured.values.keys).isSubset(of: Set(resolution.selection.map(\.semanticID))),
+                      captured.values.values.allSatisfy({ $0.isFinite && $0 >= 0 }),
+                      try encoder.encode(captured) == retained else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                var record = HealthData(date: start, timeContext: ExportTimeContext(timeZone: zone))
+                if let steps = captured.values["steps"] {
+                    guard let count = Int(exactly: steps) else { throw AgentBridgeValidationError.spoolMissingRestartRequired }
+                    record.activity.steps = count
+                }
+                record.heart.averageHeartRate = captured.values["heart_rate_avg"]
+                record.heart.heartRateMin = captured.values["heart_rate_min"]
+                record.heart.heartRateMax = captured.values["heart_rate_max"]
+                record.heart.restingHeartRate = captured.values["resting_heart_rate"]
+                record.heart.hrv = captured.values["hrv"]
+                _ = try context.configurationForRead()
+                return record
+            }
+            let selected = Set(resolution.selection.map(\.nativeMetricID))
+            guard !selected.isEmpty, selected.isSubset(of: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "resting_heart_rate", "hrv"]) else {
+                throw AgentBridgeValidationError.unsupportedMetric
+            }
+            func read<T>(_ query: () async throws -> T) async throws -> T {
+                _ = try context.configurationForRead()
+                let value: T
+                do { value = try await query() }
+                catch {
+                    _ = try context.configurationForRead() // Original cancellation/authority loss wins.
+                    if error is CancellationError { throw error }
+                    throw AgentBridgeNativeCaptureFailure.sdkReadFailed
+                }
+                _ = try context.configurationForRead()
+                return value
+            }
+            func checked(_ value: Double?) throws -> Double? {
+                guard let value else { return nil }
+                guard value.isFinite, value >= 0 else { throw AgentBridgeNativeCaptureFailure.invalidResult }
+                return value
+            }
+            let statisticsPredicate = Self.compatibilityStatisticsPredicate(dayStart: start, dayEnd: end)
+            let samplePredicate = Self.compatibilitySamplePredicate(dayStart: start, dayEnd: end)
+            var result = HealthData(date: start, timeContext: ExportTimeContext(timeZone: zone))
+            if selected.contains("steps"), let steps = try checked(await read({ try await store.querySum(identifier: .stepCount, predicate: statisticsPredicate) })) {
+                guard let count = Int(exactly: steps) else { throw AgentBridgeNativeCaptureFailure.invalidResult }
+                result.activity.steps = count
+            }
+            var options: HealthKitDiscreteStatisticsOptions = []
+            if selected.contains("heart_rate_avg") { options.insert(.average) }
+            if selected.contains("heart_rate_min") { options.insert(.minimum) }
+            if selected.contains("heart_rate_max") { options.insert(.maximum) }
+            if !options.isEmpty {
+                let values = try await read { try await store.queryDiscreteStatistics(identifier: .heartRate, predicate: statisticsPredicate, options: options) }
+                if options.contains(.average) { result.heart.averageHeartRate = try checked(values.average) }
+                if options.contains(.minimum) { result.heart.heartRateMin = try checked(values.minimum) }
+                if options.contains(.maximum) { result.heart.heartRateMax = try checked(values.maximum) }
+            }
+            if selected.contains("resting_heart_rate") {
+                result.heart.restingHeartRate = try checked(await read { try await store.queryMostRecent(identifier: .restingHeartRate, predicate: samplePredicate) })
+            }
+            if selected.contains("hrv") {
+                result.heart.hrv = try checked(await read { try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: statisticsPredicate) })
+            }
+            _ = try context.configurationForRead()
+            let values: [String: Double] = [
+                "steps": result.activity.steps.map(Double.init), "heart_rate_avg": result.heart.averageHeartRate,
+                "heart_rate_min": result.heart.heartRateMin, "heart_rate_max": result.heart.heartRateMax,
+                "resting_heart_rate": result.heart.restingHeartRate, "hrv": result.heart.hrv
+            ].compactMapValues { $0 }
+            let payload: Data
+            do { payload = try encoder.encode(AgentBridgeCapturedScalarDay(version: 1,
+                day: day.rawValue, calendarTimezone: zoneID, values: values)) }
+            catch { throw AgentBridgeNativeCaptureFailure.invalidResult }
+            try context.commitDay(day, payload: payload)
+            return result
+        } catch { context.invalidate(); throw error }
+    }
+
     func fetchHealthData(
         for date: Date,
         detailPolicy: AppleExportDetailPolicy,
@@ -4207,3 +4339,6 @@ extension WorkoutType {
         return (workoutType, workoutType.healthKitActivityTypeName)
     }
 }
+
+/// Health-free internal capture failures; native error descriptions never become wire output.
+enum AgentBridgeNativeCaptureFailure: Error { case sdkReadFailed, invalidResult }

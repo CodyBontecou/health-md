@@ -18,10 +18,15 @@ import com.healthmd.domain.model.MetricTrackingConfig
 import com.healthmd.domain.model.PendingScheduledExportRequest
 import com.healthmd.domain.model.RawSnapshotSettings
 import java.io.File
+import java.security.MessageDigest
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -30,6 +35,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -136,6 +142,14 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     }
 
     @Test
+    fun nativeConfigurationRevisionIsLocalOnlyAndHasNoPortableContractPath() {
+        val row = rows(ledgerObject()).single { it.sourceType == "ExportProfile" && it.serializedField == "configurationRevision" }
+        assertEquals(LOCAL_ONLY, row.disposition)
+        assertEquals(DESCRIPTOR, row.coverageKind)
+        assertNull(row.contractPath)
+    }
+
+    @Test
     fun prohibitedFieldsNeverReceiveAContractPath() {
         val prohibited = rows(ledgerObject()).filter { it.disposition == PROHIBITED }
         assertTrue("The audit must explicitly account for prohibited native state", prohibited.isNotEmpty())
@@ -164,15 +178,108 @@ class SharedSetupAndroidProfileFieldCoverageTest {
             )
         }
 
-    private fun ledgerObject() = Json.parseToJsonElement(ledgerFile().readText()).jsonObject
+    @Test
+    fun recoverySupplementIsPrivateOnlyAndPinsHistoricalInventory() {
+        val supplement = Json.parseToJsonElement(ledgerFile(SUPPLEMENT_PATH).readText()).jsonObject
+        assertEquals(
+            setOf("schema", "schema_version", "target_contract", "base_inventory", "audited_git_base", "fields"),
+            supplement.keys,
+        )
+        assertEquals("healthmd.shared_setup.android_recovery_coverage", supplement.getValue("schema").jsonPrimitive.content)
+        assertEquals(1, supplement.getValue("schema_version").jsonPrimitive.content.toInt())
+        assertTrue(supplement.getValue("audited_git_base").jsonPrimitive.content.matches(Regex("[0-9a-f]{40}")))
+        val base = supplement.getValue("base_inventory").jsonObject
+        assertEquals(setOf("path", "sha256"), base.keys)
+        assertEquals(BASE_PATH, base.getValue("path").jsonPrimitive.content)
+        val digest = MessageDigest.getInstance("SHA-256").digest(ledgerFile(HISTORICAL_BASE_PATH).readBytes())
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        assertEquals("Historical portability ledger must remain immutable", BASE_SHA256, digest)
+        assertEquals(digest, base.getValue("sha256").jsonPrimitive.content)
+        assertEquals(
+            Json.parseToJsonElement(ledgerFile().readText()).jsonObject.getValue("target_contract"),
+            supplement.getValue("target_contract"),
+        )
+        val additions = rows(supplement)
+        assertTrue("Private supplement must contain reviewed fields", additions.isNotEmpty())
+        additions.forEach { row ->
+            assertEquals("Recovery fields cannot become portable authority", PROHIBITED, row.disposition)
+            assertNull(row.contractPath)
+            assertTrue(row.evidence.isNotBlank())
+        }
+        val keys = additions.map(FieldRow::key)
+        assertEquals(keys.size, keys.toSet().size)
+        assertEquals(keys.sortedWith(compareBy<FieldKey>({ it.sourceType }, { it.serializedField })), keys)
+    }
+
+    private fun ledgerObject(): JsonObject {
+        val base = Json.parseToJsonElement(ledgerFile().readText()).jsonObject
+        val supplement = Json.parseToJsonElement(ledgerFile(SUPPLEMENT_PATH).readText()).jsonObject
+        val combined = combineCoverageFields(base.getValue("fields").jsonArray, supplement.getValue("fields").jsonArray)
+        // Post-freeze native metadata is classified only in this current inventory, never in
+        // the immutable base or the separately audited recovery-only supplement.
+        val localAdditions = Json.parseToJsonElement("""[{
+            "source_type":"ExportProfile", "serialized_field":"configurationRevision",
+            "coverage_kind":"descriptor", "disposition":"local_only", "contract_path":null,
+            "evidence":"Native profile revision pins are device-local; Shared Setup creates fresh local identities and does not transfer configuration authority."
+        }]""").jsonArray
+        return JsonObject(base + ("fields" to combineCoverageFields(combined, localAdditions)))
+    }
+
+    private fun combineCoverageFields(base: JsonArray, supplement: JsonArray): JsonArray {
+        fun key(element: JsonElement): Pair<String, String> = element.jsonObject.let {
+            it.getValue("source_type").jsonPrimitive.content to it.getValue("serialized_field").jsonPrimitive.content
+        }
+        val combined = linkedMapOf<Pair<String, String>, JsonElement>()
+        for (input in listOf(base, supplement)) {
+            val keys = input.map(::key)
+            assertEquals("Each audit must contain unique field rows", keys.size, keys.toSet().size)
+            for (element in input) {
+                val previous = combined[key(element)]
+                if (previous == null) {
+                    combined[key(element)] = element
+                } else {
+                    // Independent audits may review the same private field. Narrative
+                    // evidence can differ; every machine-readable classification must agree.
+                    assertEquals("Overlapping field reviews must agree: ${key(element)}",
+                        previous.jsonObject.filterKeys { it != "evidence" },
+                        element.jsonObject.filterKeys { it != "evidence" })
+                }
+            }
+        }
+        return JsonArray(combined.values.sortedWith(
+            compareBy({ it.jsonObject.getValue("source_type").jsonPrimitive.content },
+                { it.jsonObject.getValue("serialized_field").jsonPrimitive.content }),
+        ))
+    }
+
+    @Test
+    fun ledgerCompositionRejectsDuplicateRowsAndConflictingReviews() {
+        val field = Json.parseToJsonElement(ledgerFile().readText()).jsonObject
+            .getValue("fields").jsonArray.first {
+                it.jsonObject.getValue("source_type").jsonPrimitive.content == "ScheduledProfileEntry" &&
+                    it.jsonObject.getValue("serialized_field").jsonPrimitive.content == "recoveryGeneration"
+            }.jsonObject
+        val one = JsonArray(listOf(field))
+        val duplicate = JsonArray(listOf(field, field))
+        assertThrows(AssertionError::class.java) { combineCoverageFields(duplicate, JsonArray(emptyList())) }
+        assertThrows(AssertionError::class.java) { combineCoverageFields(JsonArray(emptyList()), duplicate) }
+        for ((key, value) in mapOf(
+            "coverage_kind" to JsonPrimitive(SUPPLEMENTAL),
+            "disposition" to JsonPrimitive(PORTABLE),
+            "contract_path" to JsonPrimitive("profiles[].name"),
+        )) {
+            val conflicting = JsonArray(listOf(JsonObject(field + (key to value))))
+            assertThrows(AssertionError::class.java) { combineCoverageFields(one, conflicting) }
+        }
+    }
 
     /** Mirrors the established Android root-fixture lookup used by Shared Setup contract tests. */
-    private fun ledgerFile(): File {
+    private fun ledgerFile(relativePath: String = BASE_PATH): File {
         var directory: File? = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
         while (directory != null) {
             val candidate = File(
                 directory,
-                "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
+                relativePath,
             )
             if (candidate.isFile) return candidate
             directory = directory.parentFile
@@ -235,6 +342,10 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     }
 
     private companion object {
+        const val BASE_PATH = "packages/contracts/shared-setup/v2/android-profile-field-coverage.json"
+        const val SUPPLEMENT_PATH = "packages/contracts/portability-inventory/android-agent-recovery/v1/inventory.json"
+        const val HISTORICAL_BASE_PATH = "packages/contracts/portability-inventory/android-agent-recovery/v1/historical-base.json"
+        const val BASE_SHA256 = "4a539e7e22006bd0f06e63c3dda7a82f41c6fac0d536249573a37eccec8ae789"
         const val DESCRIPTOR = "descriptor"
         const val SUPPLEMENTAL = "supplemental"
 
@@ -272,6 +383,8 @@ class SharedSetupAndroidProfileFieldCoverageTest {
             FieldKey("CustomFrontmatterField", "outputKey"),
             FieldKey("DataTypeSelection", "enabledCount"),
             FieldKey("DataTypeSelection", "hasAnySelected"),
+            FieldKey("ExportSettings", "executionAPIRecovery"),
+            FieldKey("ExportSettings", "executionAPIRecoveryRequired"),
             FieldKey("ExportSettings", "executionEngineAuthorityIsFrozen"),
             FieldKey("ExportSettings", "executionEnginePin"),
             FieldKey("ExportSettings", "selectedExportFormats"),

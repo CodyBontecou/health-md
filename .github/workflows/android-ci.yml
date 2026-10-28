@@ -138,11 +138,22 @@ jobs:
           scripts/test-ci-instrumentation-runner.sh
           scripts/test-accessibility-ui-runner.sh
 
-  test:
+  jvm-tests:
+    name: Play JVM (${{ matrix.variant }})
     needs: changes
     if: ${{ needs.changes.outputs.test == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: debug
+            app-task: testPlayDebugUnitTest
+          - variant: release
+            app-task: testPlayReleaseUnitTest
+          - variant: e2e
+            app-task: testPlayE2eUnitTest
     defaults:
       run:
         working-directory: apps/android
@@ -230,20 +241,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Keep Compose compiler peaks bounded and compile one app variant at a time.
-          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 \
-            :app:testPlayDebugUnitTest \
-            :healthmd-core:testDebugUnitTest \
-            :wearable-contract:test \
-            :direct-protocol:test \
-            --stacktrace
-          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 :app:testPlayReleaseUnitTest --stacktrace
-          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 :app:testPlayE2eUnitTest --stacktrace
+          # Each bounded runner compiles one variant; all three test lanes remain required.
+          tasks=(":app:${{ matrix.app-task }}")
+          if [[ '${{ matrix.variant }}' == debug ]]; then
+            tasks+=(":healthmd-core:testDebugUnitTest" ":wearable-contract:test" ":direct-protocol:test")
+          fi
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 "${tasks[@]}" --stacktrace
 
       - name: Run Android lint
+        if: ${{ matrix.variant == 'debug' }}
         run: ./scripts/run-ci-gradle.sh :app:lintPlayDebug --stacktrace
 
       - name: Assemble Play debug app and validate phone APK policy
+        if: ${{ matrix.variant == 'debug' }}
         run: |
           ./scripts/run-ci-gradle.sh :app:assemblePlayDebug :app:bundlePlayDebug --stacktrace
           bash scripts/tests/test_verify_google_play_generated_apk_evidence.sh --phone-only
@@ -252,7 +262,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: android-jvm-results-${{ github.run_id }}-${{ github.run_attempt }}
+          name: android-jvm-${{ matrix.variant }}-results-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             apps/android/build/reports/ci/
             apps/android/build/reports/profile/
@@ -263,6 +273,18 @@ jobs:
             apps/android/direct-protocol/build/test-results/
           retention-days: 7
           if-no-files-found: warn
+
+  # Preserve the existing required job context and fail closed after every selected lane.
+  test:
+    needs: [changes, jvm-tests]
+    if: ${{ always() && needs.changes.outputs.test == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require all Play JVM variants
+        env:
+          JVM_RESULT: ${{ needs.jvm-tests.result }}
+        run: test "$JVM_RESULT" = success
 
   instrumentation-shards:
     name: Android device shard ${{ matrix.shard }}

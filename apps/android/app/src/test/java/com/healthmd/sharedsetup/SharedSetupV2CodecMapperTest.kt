@@ -504,6 +504,23 @@ class SharedSetupV2CodecMapperTest {
         assertTrue(codec.decode(codec.encode(mappedFixture().document)) is SharedSetupVersionedDecodeResult.Valid)
     }
 
+    @Test
+    fun nativeProfileConfigurationRevisionNeverChangesPortableSetupBytes() {
+        val fixture = mappedFixture()
+        val baseline = codec.encode(fixture.document)
+        for (revision in listOf(2, 7, Int.MAX_VALUE)) {
+            val changed = mapper.export(
+                profiles = fixture.profiles.map { it.copy(configurationRevision = revision) },
+                activeProfileId = PROFILE_BETA_ID,
+                schedules = fixture.schedules,
+                appVersion = APP_VERSION,
+                preservedAppleExtensionsByProfileId = mapOf(PROFILE_ALPHA_ID to APPLE_ARCHIVE_EXTENSION),
+            )
+            assertArrayEquals(baseline, codec.encode(changed))
+        }
+        assertFalse(baseline.decodeToString().contains("configurationRevision"))
+    }
+
     private fun mappedFixture(): MappedFixture {
         val minimalFrontmatter = FrontmatterConfiguration(
             fields = emptyList(),

@@ -171,6 +171,17 @@ impl BackendError {
 pub trait HealthDataBackend: Send + Sync {
     fn capabilities(&self) -> BackendCapabilities;
 
+    /// Offline selected-source support, distinct from the fixed adapter/tool catalog.
+    /// Unknown installed-peer support is null, never inferred from tool availability.
+    async fn selected_source_capabilities(&self, _context: &CallContext) -> Value {
+        serde_json::json!({
+            "status": "unknown",
+            "supports_queries": null,
+            "supports_local_file_exports": null,
+            "supports_local_raw_exports": null
+        })
+    }
+
     async fn readiness(&self, context: &CallContext) -> Result<Value, BackendError>;
 
     async fn doctor(&self, context: &CallContext) -> Result<Value, BackendError>;
@@ -200,6 +211,67 @@ pub trait HealthDataBackend: Send + Sync {
         Err(BackendError::new(
             "healthmd_pairing_unsupported",
             "This Health.md data source does not support local device pairing.",
+        ))
+    }
+
+    /// Configuration-only, typed v4 plan. No existing export backend fallback is permitted.
+    async fn plan_export(
+        &self,
+        _context: &CallContext,
+        _input: crate::AgentPlanInput,
+    ) -> Result<healthmd_protocol::v4::ExportPlan, BackendError> {
+        Err(BackendError::new(
+            "unsupported_capability",
+            "The selected source does not support stored-authority planning.",
+        ))
+    }
+
+    /// Check/relay previously stored exact native and host decisions, never issue consent.
+    async fn relay_export_approval(
+        &self,
+        _context: &CallContext,
+        _request: healthmd_protocol::v4::ApprovalRequest,
+    ) -> Result<healthmd_protocol::v4::Approval, BackendError> {
+        Err(BackendError::new(
+            "unsupported_capability",
+            "The selected source does not support stored-decision approval relay.",
+        ))
+    }
+
+    /// Execute a separately approved issued plan through the original authenticated source.
+    /// Local references cannot issue consent or select an unregistered destination.
+    async fn execute_approved_export(
+        &self,
+        _context: &CallContext,
+        _input: crate::AgentExecuteInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        Err(BackendError::new(
+            "unsupported_capability",
+            "The selected source does not support approved Agent Bridge execution.",
+        ))
+    }
+
+    /// Recover only an existing signed Agent Bridge job, without legacy job conversion.
+    async fn resume_approved_export(
+        &self,
+        _context: &CallContext,
+        _input: crate::AgentResumeInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        Err(BackendError::new(
+            "unsupported_capability",
+            "The selected source does not support retained Agent Bridge recovery.",
+        ))
+    }
+
+    /// Stop an existing job; receipt is native source state, never destination verification.
+    async fn cancel_approved_export(
+        &self,
+        _context: &CallContext,
+        _input: crate::AgentCancelInput,
+    ) -> Result<healthmd_protocol::v4::ExecutionReceipt, BackendError> {
+        Err(BackendError::new(
+            "unsupported_capability",
+            "The selected source does not support retained Agent Bridge cancellation.",
         ))
     }
 

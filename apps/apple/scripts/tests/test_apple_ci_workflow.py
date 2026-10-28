@@ -5,6 +5,7 @@ from __future__ import annotations
 import itertools
 import os
 import re
+import shlex
 import subprocess
 import unittest
 from pathlib import Path
@@ -115,6 +116,52 @@ class WorkflowRoutingTests(unittest.TestCase):
         self.assertNotIn('-only-testing', native)
         self.assertNotIn('-skip-testing', native)
         self.assertLess(native.index('scripts/start-ci-ios-simulator.sh'), native.index('make test-ios'))
+
+
+    def test_macos_prebuild_preserves_bounded_execution_and_warning_coverage_gates(self):
+        native = jobs()['test-macos']
+        build = native.split('      - name: Build macOS unit-test products\n', 1)[1].split('      - name:', 1)[0]
+        execution = native.split('      - name: Run macOS unit tests with coverage\n', 1)[1].split('      - name:', 1)[0]
+        self.assertIn('    timeout-minutes: 75\n', native)
+        self.assertIn('timeout-minutes: 25', build)
+        self.assertIn('timeout-minutes: 45', execution)
+        self.assertLess(native.index('make build-macos-tests'), native.index('make coverage'))
+        for step in (build, execution):
+            self.assertIn('set -euo pipefail', step)
+            self.assertIn('MACOS_DERIVED_DATA_DIR=build/macos-qa-derived', step)
+            self.assertNotIn('TEST_FILTER', step)
+        self.assertIn('MACOS_CODE_COVERAGE: \'YES\'', native)
+        self.assertIn('| tee build/logs/build-macos.log', build)
+        self.assertIn('| tee -a build/logs/build-macos.log', execution)
+        self.assertIn('scripts/check-warnings.sh build/logs/build-macos.log', native)
+        self.assertIn('scripts/check-coverage.sh build/coverage/HealthMd.xcresult', native)
+        self.assertNotIn('continue-on-error', native)
+
+    def test_macos_make_prebuild_and_execution_share_products_without_test_filtering(self):
+        def command(target):
+            result = subprocess.run(
+                ['make', '-n', target, 'CORE_RUST_PREPARE=:',
+                 'MACOS_DERIVED_DATA_DIR=build/macos-qa-derived',
+                 'MACOS_CODE_COVERAGE=YES', 'TEST_FILTER='],
+                cwd=REPO / 'apps/apple', check=True, capture_output=True, text=True)
+            expanded = result.stdout.replace('\\\n', ' ')
+            return shlex.split(next(line.strip() for line in expanded.splitlines()
+                                    if line.strip().startswith('xcodebuild ')))
+        build, execution = command('build-macos-tests'), command('coverage')
+        self.assertEqual(['xcodebuild', 'build-for-testing'], build[:2])
+        self.assertEqual(['xcodebuild', 'test'], execution[:2])
+        for flag in ('-project', '-scheme', '-destination', '-derivedDataPath', '-enableCodeCoverage'):
+            self.assertEqual(build[build.index(flag) + 1], execution[execution.index(flag) + 1])
+        self.assertEqual('YES', build[build.index('-enableCodeCoverage') + 1])
+        for args in (build, execution):
+            self.assertIn('CODE_SIGNING_ALLOWED=NO', args)
+            self.assertIn('CODE_SIGNING_REQUIRED=NO', args)
+            self.assertFalse(any(arg.startswith(('-only-testing', '-skip-testing')) for arg in args))
+        for flag, value in (('-test-timeouts-enabled', 'YES'),
+                            ('-default-test-execution-time-allowance', '120'),
+                            ('-maximum-test-execution-time-allowance', '300'),
+                            ('-resultBundlePath', 'build/coverage/HealthMd.xcresult')):
+            self.assertEqual(value, execution[execution.index(flag) + 1])
 
 
 class GateExecutionTests(unittest.TestCase):

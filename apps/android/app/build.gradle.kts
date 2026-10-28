@@ -261,6 +261,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     // Testing
+    // Host-only UniFFI qualification needs JNA's desktop loader; APKs keep the AAR runtime.
+    testRuntimeOnly("net.java.dev.jna:jna:${libs.versions.jna.get()}@jar")
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(kotlin("reflect"))

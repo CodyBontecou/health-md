@@ -16,6 +16,9 @@ sourceSets {
             rootProject.layout.projectDirectory.dir(
                 "../../packages/contracts/direct-protocol/pairing-v3/fixtures",
             ),
+            rootProject.layout.projectDirectory.dir(
+                "../../packages/contracts/agent-bridge/v1/fixtures",
+            ),
         )
     }
 }

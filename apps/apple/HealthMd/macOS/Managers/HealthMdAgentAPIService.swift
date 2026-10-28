@@ -640,6 +640,8 @@ final class HealthMdAgentAPIService {
             "history_authorization": [
                 "state": "unknown",
                 "source": "iphone",
+                // OS 27 supports scoped boundary assessments on the iPhone;
+                // this capability does not infer the connected peer's grants.
                 "limited_history_detection_supported": true,
                 "minimum_source_os": 27,
                 "message": "The Mac cache cannot infer current iPhone HealthKit authorization. All-available acquisition means currently readable data, not certified complete history. Fresh requests carry scoped assessment evidence when supported; omitted boundaries, limited access, unavailable APIs and incomplete assessments never prove unrestricted access."

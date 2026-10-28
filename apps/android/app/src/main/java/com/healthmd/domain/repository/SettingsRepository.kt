@@ -5,7 +5,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDate
 
+/** One native storage observation; never combine purchase/quota from different preference revisions. */
+data class NativeExportEligibilitySettings(val purchased: Boolean, val freeExportsUsed: Int)
+
 interface SettingsRepository {
+    /** Unsupported repositories remain unknown; no UI-default fallback for native plans. */
+    val nativeConfigurationProtection: NativeConfigurationProtectionSource?
+        get() = null
+
+    /** Native observer only. Unsupported repositories provide unknown, never fresh free quota. */
+    val nativeExportEligibility: Flow<NativeExportEligibilitySettings?>
+        get() = flowOf(null)
+
     val exportSettings: Flow<ExportSettings>
     suspend fun updateExportSettings(settings: ExportSettings)
     suspend fun getExportSettings(): ExportSettings

@@ -532,6 +532,20 @@ struct HealthMdApp: App {
                     healthKitManager: healthKitManager,
                     externalIntegrations: externalIntegrationManager
                 )
+                if !TestMode.suppressesRuntimeServices {
+                    let profiles = iPadHistoryProfileStore
+                    directCLIService.agentBridgePlanningSessionProvider = { [weak directCLIService, profiles] in
+                        guard let directCLIService else { throw AgentBridgeValidationError.permissionRequired }
+                        return try directCLIService.agentBridgeNativePlanningSession(profiles: profiles)
+                    }
+                    directCLIService.agentBridgeExecutionReceiver = { [healthKitManager] session, channel in
+                        try await session.receiveAndHandleExecutionNext(on: channel, manager: healthKitManager,
+                            confirmedStopIsHandled: true)
+                    }
+                    directCLIService.configureAgentBridgeNativeCatalogRefresh(
+                        health: healthKitManager, purchases: PurchaseManager.shared,
+                        configurationProtection: configurationProtection)
+                }
                 setupSyncMessageHandler()
                 IPhoneMacContextRefreshCoordinator.shared.configure(syncService: syncService)
                 corpusRecoveryManager.applicationDidBecomeActive()

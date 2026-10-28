@@ -81,6 +81,17 @@ summed runner work. F-Droid and Android Wear remain paused as described below.
 
 ## Android CI selection and accessibility coverage
 
+Play JVM qualification runs debug, release, and E2E variants on separate bounded
+runners with fail-fast disabled. Each keeps the original 60-minute job ceiling,
+no-daemon/two-worker compilation policy, and forced test execution. Debug also
+runs the shared core/contract/protocol tests, lint, and APK/bundle policy checks;
+release and E2E remain full variant suites. The stable `test` context requires
+all three lanes, and the stable `Android CI` gate still requires `test`. Reports
+include the variant in their artifact name so all lane evidence is retained.
+This avoids fitting sequential variant compilation/tests plus lint/packaging
+into one 60-minute job; it does not remove checks or increase their deadlines.
+
+
 On pull requests, `apps/android/scripts/android-ci-plan.py` selects the active Android
 jobs that consume changed files. Phone sources keep Play JVM tests and phone
 instrumentation; CLI changes keep instrumentation and live Rust/Kotlin interop.

@@ -5,6 +5,9 @@ exact Health.md builds advertised by a release.
 
 ## Automated gate
 
+Use Python 3.11+ for the release-policy scripts (`tomllib` is required). Static documentation checks
+are not native history-authorization or physical qualification.
+
 Run the independently locked shared-core workspace first:
 
 ```bash
@@ -76,11 +79,15 @@ additive `wake_window_seconds`, and verify MCP progress-token calls emit bounded
 `notifications/progress` before the final response. `healthmd cancel` persists its durable marker
 before the wake wait, so wake expiry or local interruption there reports `direct_cancellation_pending`
 (the truthful pending state) rather than a terminal cancellation. Feed the
-same bounded stdio initialize/tools calls to both serve modes: current development and the next
-candidate must expose 21 complete-mode tools, while read-only mode must expose exactly 13 tools with
-`readOnlyHint`, no pairing resource, and no pairing/export-job declarations. Guess all eight omitted
-tool names and require `Unknown tool` before command dispatch. The published alpha.7 remains a
-historical 19-tool preview and is checked against its own versioned asset, not the development count.
+same bounded stdio initialize/tools calls to both serve modes: current development exposes 26
+complete-mode tools, including agent-bridge plan, exact-approval relay, Execute, retained Resume
+and retained Cancel, while read-only mode must
+expose exactly 13 tools with `readOnlyHint`, no pairing resource, and no pairing/export-job/agent-bridge
+declarations. Guess all thirteen omitted tool names and require `Unknown tool` before command dispatch.
+The five agent-bridge tools do not enlarge the frozen 21-tool CLI 1.0 scope or establish native bridge
+setup or full feature acceptance; qualify a candidate against its own exact catalog. The published alpha.6
+remains a historical 19-tool preview, checked against its versioned asset, not the development count.
+Alpha.7 remains an unpublished draft.
 Confirm that neither stdio mode starts an MCP HTTP listener, that the
 default release rejects `mcp serve-http`, and that every build rejects the removed
 `mcp serve-hosted` command. Separately run
@@ -125,6 +132,11 @@ Never attach raw output to an issue or CI log.
    redial on its own within roughly 20 seconds of its heartbeat/reconnect window (no toggle of
    Direct CLI Access, no QR re-scan), and the command must succeed. Repeat once over Tailscale.
 6. Export one day, seven days, complete-empty data, warning-only data, and an honest partial result.
+   Check the peer's history assessment separately: the current pinned Apple SDK reports `api_unavailable`,
+   and missing/`unknown` assessment cannot prove full access. Use explicit ranges with completeness
+   unverified; an empty result does not prove permission or absence. Exercise verified limited/full
+   boundaries only with an exact native build that actually supports the assessment, not from its OS
+   number. See [current source history limitations](mobile-compatibility.md#current-source-history-limitations).
 7. Run summary and lossless extraction with category, metric, object, and JSON Pointer selectors;
    confirm partial extraction emits no retained values without `--allow-partial`.
 8. Interrupt during a multi-partition raw job, inspect `status --job`, resume, compare the final
@@ -154,9 +166,10 @@ wake plus the operation bound. Expect the identical in-flight command to complet
 opened — never accept a re-run as success.
 
 ```bash
-# unreachable/locked phone, default window: command holds, then completes when Health.md opens
+# Dates are illustrative: replace this bounded week with the authorized test range before running.
+# Unreachable/locked phone: the same command waits, then proceeds when Health.md opens.
 NO_COLOR=1 TERM=dumb timeout 300 healthmd query healthmd_sleep_sessions \
-  --arguments '{"dates":{"type":"all_available"}}' </dev/null
+  --arguments '{"dates":{"type":"exact","range":{"start_date":"2026-01-01","end_date":"2026-01-07"}}}' </dev/null
 
 # fail-fast and custom window
 NO_COLOR=1 TERM=dumb timeout 60 healthmd export --yesterday --raw --wake-timeout 0 \

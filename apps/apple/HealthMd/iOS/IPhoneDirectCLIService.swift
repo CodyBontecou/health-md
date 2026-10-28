@@ -1,6 +1,55 @@
+import Foundation
+import HealthMdConnectionCore
+
+/// Closed, ephemeral owner epoch. Only this controller file can mint it after a matching
+/// authenticated base hello. Copies/peers retain the SAME revocation, never a new owner.
+nonisolated final class IPhoneDirectCLIAuthenticatedSession: @unchecked Sendable {
+    let sourceInstallationID: UUID
+    let sessionID: UUID
+    let channel: DirectSecureChannel
+    let bridgeNegotiation: AgentBridgeNegotiation?
+    let transferNegotiation: DirectTransferNegotiation?
+    let peerTransferCapabilities: DirectTransferCapabilities?
+    private weak var owner: AnyObject?
+    private let defaults: UserDefaults
+    private let enabledKey: String
+    private let currentOwner: @MainActor @Sendable () -> Bool
+    private let lock = NSLock()
+    private var revoked = false
+
+    fileprivate init(owner: AnyObject, defaults: UserDefaults, enabledKey: String,
+                     sourceInstallationID: UUID, sessionID: UUID, channel: DirectSecureChannel,
+                     bridgeNegotiation: AgentBridgeNegotiation? = nil,
+                     transferNegotiation: DirectTransferNegotiation? = nil,
+                     peerTransferCapabilities: DirectTransferCapabilities? = nil,
+                     currentOwner: @escaping @MainActor @Sendable () -> Bool) {
+        self.owner = owner
+        self.defaults = defaults
+        self.enabledKey = enabledKey
+        self.sourceInstallationID = sourceInstallationID
+        self.sessionID = sessionID
+        self.channel = channel
+        self.bridgeNegotiation = bridgeNegotiation
+        self.transferNegotiation = transferNegotiation
+        self.peerTransferCapabilities = peerTransferCapabilities
+        self.currentOwner = currentOwner
+    }
+
+    @MainActor func currentOwnerIsAvailable() -> Bool { currentOwner() }
+
+    func requireCurrent() throws {
+        guard lock.withLock({ !revoked && owner != nil }), defaults.bool(forKey: enabledKey),
+              !channel.isLocallyTerminal else { throw AgentBridgeValidationError.permissionRequired }
+        // Foreground loss/source replacement/teardown revoke this epoch in the MainActor owner.
+        // This is a sampled local fence, not a transaction with defaults/SDK/socket state.
+        guard lock.withLock({ !revoked && owner != nil }) else { throw AgentBridgeValidationError.permissionRequired }
+    }
+
+    func revoke() { lock.withLock { revoked = true } }
+}
+
 #if os(iOS)
 import Combine
-import HealthMdConnectionCore
 import UIKit
 
 final class IPhoneDirectExportConnection: @unchecked Sendable {
@@ -283,6 +332,9 @@ nonisolated enum IPhoneDirectCLIPairingTrustContext: Equatable, Sendable {
 /// iOS remains the HealthKit owner.
 @MainActor
 final class IPhoneDirectCLIService: ObservableObject {
+    // Single source for the actual hello and its accepted-owner negotiation. Extension4 remains off.
+    private static let applicationProtocolVersions = [HealthMdDirectProtocol.currentVersion, HealthMdDirectProtocol.queryVersion]
+
     private struct ProvisionalPairingTrust {
         let sessionID: UUID
         let previousServer: ManualIPTrustedMac?
@@ -324,6 +376,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     @Published private(set) var pendingPairingLink: IPhoneDirectCLIPairingLink?
 
     var statusProvider: (() async -> DirectIPhoneStatus)?
+    var agentBridgePlanningSessionProvider: (() throws -> AgentBridgeNativePlanningSession)?
+    var agentBridgeExecutionReceiver: (@MainActor @Sendable (AgentBridgeNativePlanningSession, DirectSecureChannel) async throws -> AgentBridgeSecurePayload?)?
     var exportRequestHandler: ((
         DirectExportRequest,
         DirectPeerBinding,
@@ -337,7 +391,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     var querySourceInstallationID: UUID { installationID }
 
     private var localCapabilities: DirectPeerCapabilities {
-        DirectPeerCapabilities(protocolVersions: [HealthMdDirectProtocol.currentVersion, HealthMdDirectProtocol.queryVersion],
+        DirectPeerCapabilities(protocolVersions: Self.applicationProtocolVersions,
             platform: .iOS, installationID: installationID, query: .current,
             wake: wakeManager?.advertisesWake == true ? DirectWakeCapabilities(supported: true) : nil,
             exportHistoryObservationVersions: [1])
@@ -367,6 +421,14 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var reconnectTask: Task<Void, Never>?
     private var sessionTask: Task<Void, Never>?
     private var activeSessionID: UUID?
+    private var agentBridgeSession: IPhoneDirectCLIAuthenticatedSession?
+    private var agentBridgePeer: AgentBridgeExportAuthenticatedPeer?
+    private var agentBridgeCatalogLifecycle: AgentBridgeNativeCatalogLifecycle?
+    private var agentBridgePlanner: AgentBridgeNativePlanningSession?
+    private var agentBridgeCatalogRefresh: AgentBridgeNativeCatalogRefresh?
+    private let agentBridgeCatalogAdmission = AgentBridgeNativeCatalogAdmission()
+    private let agentBridgeCatalogEvents: AgentBridgeNativeCatalogEventRelay
+    private let agentBridgeCatalogNotifications: AgentBridgeNativeCatalogNotifications
     private var exportTask: Task<Void, Never>?
     private var activeExportOperationID: UUID?
     private var activeExportJobID: UUID?
@@ -397,6 +459,14 @@ final class IPhoneDirectCLIService: ObservableObject {
         protocolAuthority: AppleDirectProtocolAuthority = .shared,
         wakeManager: (any IPhoneDirectWakeManaging)? = nil
     ) {
+        let catalogEvents = AgentBridgeNativeCatalogEventRelay()
+        agentBridgeCatalogEvents = catalogEvents
+        agentBridgeCatalogNotifications = AgentBridgeNativeCatalogNotifications(
+            names: [.healthMdNativeExportEligibilityDidChange, .healthMdConfigurationProtectionDidChange,
+                    .healthMdNativeHealthAuthorizationDidChange, .healthMdAgentExportAuthorityDidChange,
+                    .NSSystemTimeZoneDidChange,
+                    UIApplication.protectedDataWillBecomeUnavailableNotification,
+                    UIApplication.protectedDataDidBecomeAvailableNotification], relay: catalogEvents)
         self.defaults = defaults
         self.reconnectPolicy = reconnectPolicy
         self.heartbeatPolicy = heartbeatPolicy
@@ -425,6 +495,191 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     var isEnabled: Bool {
         defaults.bool(forKey: Self.enabledKey)
+    }
+
+    /// Native-only identity/liveness factory; app admission runs off the legacy hello/dispatch stack.
+    /// No issuer/consent/configuration/health work or creating trust getter is performed.
+    func agentBridgeAuthenticatedPeer(
+        nativeTrust: AgentBridgeExportNativeTrust = AgentBridgeExportNativeTrust()
+    ) throws -> AgentBridgeExportAuthenticatedPeer {
+        do {
+            guard isEnabled, appIsActive, UIApplication.shared.applicationState == .active,
+                  let sessionID = activeSessionID, let channel, let ownership = agentBridgeSession,
+                  ownership.sessionID == sessionID, ownership.channel === channel,
+                  ownership.sourceInstallationID == installationID,
+                  channel.clientAuthenticatedContext != nil else { throw AgentBridgeValidationError.permissionRequired }
+            let peer: AgentBridgeExportAuthenticatedPeer
+            if let original = agentBridgePeer {
+                // SAME owner: retain its original reader/snapshot and shared terminal checker.
+                // Fresh current checks must reject changes, never recapture them as renewal.
+                peer = original
+            } else {
+                // Obtain UIKit's actor-isolated singleton here. Its protected-data getter is SDK-
+                // declared nonisolated, so held peers can sample it without assuming an executor.
+                let application = UIApplication.shared
+                peer = try AgentBridgeExportNativeSession.authenticatedPeer(
+                    ownership: ownership, nativeTrust: nativeTrust,
+                    protectedData: { application.isProtectedDataAvailable },
+                    foreground: { application.applicationState == .active }
+                )
+            }
+            try peer.requireCurrent()
+            guard isEnabled, appIsActive, UIApplication.shared.applicationState == .active,
+                  activeSessionID == sessionID, self.channel === channel,
+                  agentBridgeSession === ownership else { throw AgentBridgeValidationError.permissionRequired }
+            agentBridgePeer = peer // Pin only the first successful capture for this accepted owner.
+            return peer
+        } catch {
+            invalidateAgentBridgeSession()
+            throw AgentBridgeValidationError.permissionRequired
+        }
+    }
+
+    /// Native planning owner only: no issuer/key/configuration lookup or grant issuance. The future
+    /// native planning adapter must freshly sample SDK facts and publish before reading this cache.
+    func agentBridgeNativePlanningOwner(
+        nativeTrust: AgentBridgeExportNativeTrust = AgentBridgeExportNativeTrust()
+    ) throws -> (peer: AgentBridgeExportAuthenticatedPeer, lifecycle: AgentBridgeNativeCatalogLifecycle) {
+        guard let lifecycle = agentBridgeCatalogLifecycle else { throw AgentBridgeValidationError.permissionRequired }
+        let peer = try agentBridgeAuthenticatedPeer(nativeTrust: nativeTrust)
+        guard agentBridgeCatalogLifecycle === lifecycle else { throw AgentBridgeValidationError.permissionRequired }
+        try peer.requireCurrent()
+        guard agentBridgeCatalogLifecycle === lifecycle else { throw AgentBridgeValidationError.permissionRequired }
+        return (peer, lifecycle)
+    }
+
+    /// Native composition only, never ordinary hello/wire dispatch. Reuse the original service so
+    /// issued discovery evidence survives subsequent planning; new arguments cannot retarget it.
+    func agentBridgeNativePlanningSession(profiles: ExportProfileStore) throws -> AgentBridgeNativePlanningSession {
+        let owner = try agentBridgeNativePlanningOwner()
+        if let planner = agentBridgePlanner { try planner.requireCurrent(); return planner }
+        _ = try owner.lifecycle.currentPublication() // Reject before opening existing issuer storage.
+        let reader = AgentBridgeNativeConfigurationReader(defaults: defaults, profiles: profiles) {
+            try owner.peer.requireCurrent()
+            return try owner.lifecycle.currentFacts()
+        }
+        let store = try AgentBridgeExportAuthorityStore(existingDirectory: AgentExportPermissionsStorage.directory(createParent: false))
+        guard let originalOwner = agentBridgeSession, channel === originalOwner.channel else {
+            throw AgentBridgeValidationError.permissionRequired
+        }
+        let planner = try AgentBridgeNativePlanningSession(peer: owner.peer, lifecycle: owner.lifecycle, store: store,
+            configuration: reader, responseChannel: originalOwner.channel, responseNegotiation: originalOwner.bridgeNegotiation, responseTransferNegotiation: originalOwner.transferNegotiation, responsePeerTransferCapabilities: originalOwner.peerTransferCapabilities)
+        let current = try agentBridgeNativePlanningOwner()
+        guard current.lifecycle === owner.lifecycle else { throw AgentBridgeValidationError.permissionRequired }
+        try planner.requireCurrent()
+        agentBridgePlanner = planner
+        return planner
+    }
+
+    /// Native controller only: caller supplies freshly sampled non-wire facts. Publication runs on
+    /// a cancellable worker and never bootstraps missing private storage or native export authority.
+    func publishAgentBridgeNativeCatalog(sample: () async throws -> AgentBridgeNativePlanningFacts) async throws -> AgentBridgeNativeCatalogPublication {
+        try Task.checkCancellation()
+        let original = try agentBridgeNativePlanningOwner()
+        do {
+            let directory = try AgentExportPermissionsStorage.directory(createParent: false)
+            let publication = try await AgentBridgeNativeCatalogPublisher.refresh(
+                lifecycle: original.lifecycle, peer: original.peer, existingDirectory: directory, sample: sample)
+            try Task.checkCancellation()
+            let current = try agentBridgeNativePlanningOwner()
+            guard current.lifecycle === original.lifecycle, current.peer.peer == original.peer.peer else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
+            guard try original.lifecycle.currentPublication() == publication else {
+                throw AgentBridgeValidationError.bindingChanged
+            }
+            try Task.checkCancellation()
+            return publication
+        } catch {
+            try? original.lifecycle.observeNativeChange()
+            throw error
+        }
+    }
+
+    /// Explicit native controller entry point. Existing managers supply cached readiness; this
+    /// never refreshes billing/quota, queries health samples, requests authorization or creates keys.
+    func refreshAgentBridgeNativeCatalog(health: HealthKitManager, purchases: PurchaseManager,
+                                        configurationProtection: ConfigurationProtectionManager) async throws -> AgentBridgeNativeCatalogPublication {
+        try await publishAgentBridgeNativeCatalog {
+            let application = UIApplication.shared
+            return health.nativePlanningMetadata().planningFacts(
+                sourceCalendarTimezone: try AgentBridgeZone(TimeZone.current.identifier),
+                configurationProtection: configurationProtection.isEnabled ? .locked : .unlockedNative,
+                entitlement: purchases.nativePlanningCanExport ? .satisfied : .required,
+                foregroundAvailable: self.appIsActive && application.applicationState == .active,
+                protectedDataAvailable: application.isProtectedDataAvailable)
+        }
+    }
+
+    /// Application composition only. SDK/store work is deferred off the wire handler's
+    /// stack and bound to its original authenticated owner, never pairing or consent.
+    func configureAgentBridgeNativeCatalogRefresh(health: HealthKitManager, purchases: PurchaseManager,
+                                                 configurationProtection: ConfigurationProtectionManager) {
+        agentBridgeCatalogAdmission.configure { [weak self] original in
+            guard let self, self.agentBridgeCatalogLifecycle === original else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
+            try self.startAgentBridgeNativeCatalogRefresh(health: health, purchases: purchases,
+                                                         configurationProtection: configurationProtection)
+        }
+    }
+
+    /// Native controller admission; repeated starts cannot replace pinned dependencies. Repeated starts do
+    /// not replace the pinned sampler/managers or renew an existing owner.
+    func startAgentBridgeNativeCatalogRefresh(health: HealthKitManager, purchases: PurchaseManager,
+                                             configurationProtection: ConfigurationProtectionManager) throws {
+        try Task.checkCancellation()
+        let original = try agentBridgeNativePlanningOwner()
+        _ = try original.lifecycle.beginSample() // A terminal controller cannot be renewed.
+        guard agentBridgeCatalogRefresh == nil else { return }
+        agentBridgeCatalogRefresh = try AgentBridgeNativeCatalogRefresh(lifecycle: original.lifecycle) { [weak self] in
+            guard let self, self.agentBridgeCatalogLifecycle === original.lifecycle else {
+                throw AgentBridgeValidationError.permissionRequired
+            }
+            _ = try await self.refreshAgentBridgeNativeCatalog(health: health, purchases: purchases,
+                                                              configurationProtection: configurationProtection)
+        }
+    }
+
+    private func recordAgentBridgeBaseHello(
+        _ capabilities: DirectPeerCapabilities, on channel: DirectSecureChannel, sessionID: UUID
+    ) {
+        invalidateAgentBridgeSession()
+        guard isEnabled, appIsActive, activeSessionID == sessionID, self.channel === channel,
+              capabilities.platform == .macOSCLI,
+              capabilities.protocolVersions.contains(HealthMdDirectProtocol.currentVersion),
+              capabilities.installationID == channel.peerInstallationID,
+              let context = channel.clientAuthenticatedContext,
+              context.sourceInstallationID == installationID,
+              context.hostInstallationID == channel.peerInstallationID,
+              (try? context.requireCurrent(on: channel)) != nil else { return }
+        guard let negotiation = try? AgentBridgeNegotiation(localVersions: Self.applicationProtocolVersions,
+            remoteVersions: capabilities.protocolVersions, deployedBaseVersion: HealthMdDirectProtocol.currentVersion) else { return }
+        agentBridgeSession = IPhoneDirectCLIAuthenticatedSession(
+            owner: self, defaults: defaults, enabledKey: Self.enabledKey,
+            sourceInstallationID: installationID, sessionID: sessionID, channel: channel,
+            bridgeNegotiation: negotiation, transferNegotiation: DirectTransferCapabilities.current.negotiated(with: capabilities.transfer), peerTransferCapabilities: capabilities.transfer, currentOwner: { [weak self, weak channel] in
+                guard let self, let channel else { return false }
+                return self.activeSessionID == sessionID && self.channel === channel
+                    && self.appIsActive && self.isEnabled
+            }
+        )
+        let lifecycle = AgentBridgeNativeCatalogLifecycle()
+        agentBridgeCatalogLifecycle = lifecycle
+        agentBridgeCatalogEvents.replace(with: lifecycle)
+        agentBridgeCatalogAdmission.replace(with: lifecycle)
+    }
+
+    private func invalidateAgentBridgeSession() {
+        agentBridgePlanner = nil
+        agentBridgeCatalogAdmission.replace(with: nil)
+        agentBridgeCatalogRefresh?.stop()
+        agentBridgeCatalogRefresh = nil
+        agentBridgeCatalogEvents.replace(with: nil)
+        agentBridgeCatalogLifecycle = nil
+        agentBridgeSession?.revoke()
+        agentBridgeSession = nil
+        agentBridgePeer = nil
     }
 
     var pairedCLIName: String? {
@@ -710,11 +965,13 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     func applicationWillResignActive() {
+        invalidateAgentBridgeSession()
         appIsActive = false
         updateIdleTimer()
     }
 
     func applicationDidEnterBackground() {
+        invalidateAgentBridgeSession()
         appIsActive = false
         updateIdleTimer()
         if queryTask != nil {
@@ -812,6 +1069,11 @@ final class IPhoneDirectCLIService: ObservableObject {
     private func evaluateIdleHeartbeat(
         now: ContinuousClock.Instant
     ) -> IPhoneDirectCLIIdleHeartbeatPolicy.Action {
+        if let inbound = agentBridgePlanner?.lastInboundActivityAt,
+           lastInboundActivityAt.map({ $0 < inbound }) ?? true {
+            lastInboundActivityAt = inbound
+            heartbeatPingSentAt = nil
+        }
         guard let lastInboundActivityAt else { return .none }
         return heartbeatPolicy.action(
             lastInboundAt: lastInboundActivityAt,
@@ -993,6 +1255,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         previousServer: ManualIPTrustedMac?,
         pairingTrustContext: IPhoneDirectCLIPairingTrustContext
     ) {
+        invalidateAgentBridgeSession()
         let sessionID = UUID()
         activeSessionID = sessionID
         lastInboundActivityAt = heartbeatClock.now
@@ -1009,9 +1272,32 @@ final class IPhoneDirectCLIService: ObservableObject {
         self.exportConnection = exportConnection
         sessionTask = Task { [weak self] in
             guard let self else { return }
+            var planningReceiver: AgentBridgeNativePlanningSession?
+            var executionReceiver: (@MainActor @Sendable (AgentBridgeNativePlanningSession, DirectSecureChannel) async throws -> AgentBridgeSecurePayload?)?
             do {
                 while !Task.isCancelled {
-                    let payload = try await connected.receive()
+                    // Await the original reader inline. A negotiated planning session keeps
+                    // its owner and channel; revocation must never fall back to base decoding.
+                    let payload: DirectSecurePayload
+                    if let planningReceiver {
+                        let received: AgentBridgeSecurePayload?
+                        if let executionReceiver {
+                            received = try await executionReceiver(planningReceiver, connected)
+                        } else {
+                            received = try await planningReceiver.receiveAndHandleNext(on: connected)
+                        }
+                        switch received {
+                        case nil:
+                            lastInboundActivityAt = heartbeatClock.now
+                            heartbeatPingSentAt = nil
+                            continue
+                        case .base(let message): payload = .message(message)
+                        case .binaryTransferFrame(let data): payload = .binaryTransferFrame(data)
+                        case .agent: throw AgentBridgeValidationError.unsupportedCapability
+                        }
+                    } else {
+                        payload = try await connected.receive()
+                    }
                     lastInboundActivityAt = heartbeatClock.now
                     heartbeatPingSentAt = nil
                     guard case .message(let message) = payload else {
@@ -1022,12 +1308,38 @@ final class IPhoneDirectCLIService: ObservableObject {
                           self.channel === connected else {
                         break
                     }
+                    if case .hello = message, planningReceiver != nil {
+                        throw AgentBridgeValidationError.bindingChanged
+                    }
                     try await self.handle(
                         message,
                         on: connected,
                         exportConnection: exportConnection,
                         sessionID: sessionID
                     )
+                    if case .hello(let capabilities) = message,
+                       Self.applicationProtocolVersions.contains(4), capabilities.protocolVersions.contains(4) {
+                        let negotiation = try AgentBridgeNegotiation(
+                            localVersions: Self.applicationProtocolVersions,
+                            remoteVersions: capabilities.protocolVersions,
+                            deployedBaseVersion: HealthMdDirectProtocol.currentVersion)
+                        if negotiation.agentBridgeV4 {
+                            guard let provider = self.agentBridgePlanningSessionProvider else {
+                                throw AgentBridgeValidationError.unsupportedCapability
+                            }
+                            let original = try self.agentBridgeNativePlanningOwner()
+                            _ = try await original.lifecycle.awaitInitialPublication()
+                            try Task.checkCancellation()
+                            let current = try self.agentBridgeNativePlanningOwner()
+                            guard current.lifecycle === original.lifecycle else {
+                                throw AgentBridgeValidationError.permissionRequired
+                            }
+                            planningReceiver = try provider()
+                            // Pin native composition once for this accepted owner; subsequent
+                            // property changes cannot retarget an active connection's SDK.
+                            executionReceiver = self.agentBridgeExecutionReceiver
+                        }
+                    }
                 }
             } catch {
                 if !Task.isCancelled,
@@ -1039,6 +1351,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             await exportConnection.finish()
             self.protocolAuthority.endOperation()
             guard self.activeSessionID == sessionID else { return }
+            self.invalidateAgentBridgeSession()
             let pairingWasIncomplete = self.provisionalPairingTrust?.sessionID == sessionID
             let pairingTrustWasRestored = self.rollbackProvisionalPairingTrustIfNeeded(
                 for: sessionID
@@ -1091,6 +1404,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             exportConnection.configureExportHistoryObservation(local: localCapabilities, remote: capabilities)
             protocolAuthority.beginBootstrap()
             try commitProvisionalPairingTrustIfNeeded(for: sessionID)
+            recordAgentBridgeBaseHello(capabilities, on: channel, sessionID: sessionID)
             DiagnosticRecorder.shared.record(.capabilitiesReceived, fields: [.ready: .boolean(isConnected && appIsActive)])
             // RFC-0005 P2: only a CLI that advertised wake support reads the enrollment, and
             // only a phone with valid material sends it — the deterministic handshake keeps
@@ -1316,6 +1630,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func disconnect(clearError: Bool) {
+        invalidateAgentBridgeSession()
         if channel != nil { DiagnosticRecorder.shared.record(.connectionChanged, fields: [.state: .text("disconnected")]) }
         let pairingTrustWasRestored = rollbackProvisionalPairingTrustIfNeeded()
         restorePairingConfigurationIfNeeded()

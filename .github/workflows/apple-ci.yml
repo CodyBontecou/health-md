@@ -543,12 +543,19 @@ jobs:
       - name: Test reference documentation runner policy
         run: python3 -m unittest discover -s scripts/tests -p 'test_reference_docs_runner.py'
 
+      - name: Build macOS unit-test products
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          make build-macos-tests CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/macos-qa-derived MACOS_CODE_COVERAGE=YES 2>&1 | tee build/logs/build-macos.log
+
       - name: Run macOS unit tests with coverage
         timeout-minutes: 45
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make coverage CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/macos-qa-derived 2>&1 | tee build/logs/build-macos.log
+          make coverage CORE_RUST_PREPARE=: MACOS_DERIVED_DATA_DIR=build/macos-qa-derived 2>&1 | tee -a build/logs/build-macos.log
 
       - name: Retain tested macOS QA candidate
         if: ${{ success() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}

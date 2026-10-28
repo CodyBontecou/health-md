@@ -281,7 +281,7 @@ impl HealthMdSession {
                 Ok(value)
             }
             "healthmd_capabilities" => Ok(result::tool_result(
-                capabilities_value(&self.application, &context.caller),
+                capabilities_value(&self.application, &context).await,
                 false,
                 None,
                 Vec::new(),
@@ -294,6 +294,40 @@ impl HealthMdSession {
             )),
             "healthmd_pairing_start" => self.start_pairing(&context, &arguments).await,
             "healthmd_pairing_status" => self.pairing_status(&context, &arguments).await,
+            "healthmd_export_plan"
+            | "healthmd_export_approval"
+            | "healthmd_export_execute"
+            | "healthmd_export_execution_resume"
+            | "healthmd_export_execution_cancel" => {
+                let raw = serde_json::to_vec(&arguments)
+                    .map_err(|_| ApplicationError::invalid_params("Invalid tool arguments"))?;
+                let operations = &self.application.operations;
+                let response = async {
+                    match name {
+                        "healthmd_export_plan" => operations.plan_export(&context, &raw).await,
+                        "healthmd_export_approval" => {
+                            operations.relay_export_approval(&context, &raw).await
+                        }
+                        "healthmd_export_execute" => {
+                            operations.execute_approved_export(&context, &raw).await
+                        }
+                        "healthmd_export_execution_resume" => {
+                            operations.resume_approved_export(&context, &raw).await
+                        }
+                        _ => operations.cancel_approved_export(&context, &raw).await,
+                    }
+                };
+                let value = tokio::select! {
+                    result = response => result,
+                    () = cancellation.cancelled() => return Ok(result::tool_result(result::cancelled(None), true, None, Vec::new())),
+                };
+                Ok(match value {
+                    Ok(value) => result::tool_result(value, false, None, Vec::new()),
+                    Err(error) => {
+                        result::tool_result(result::backend_error(&error), true, None, Vec::new())
+                    }
+                })
+            }
             "healthmd_export_files" => self.start_export(&context, &arguments).await,
             "healthmd_export_raw" => self.start_raw_export(&context, &arguments).await,
             "healthmd_raw_artifact_read" => self.read_raw_artifact(&context, &arguments).await,
@@ -668,8 +702,14 @@ fn pairing_session_id(arguments: &Value) -> Result<Uuid, ()> {
         .ok_or(())
 }
 
-fn capabilities_value(application: &HealthMdApplication, caller: &CallerIdentity) -> Value {
+async fn capabilities_value(application: &HealthMdApplication, context: &CallContext) -> Value {
+    let caller = &context.caller;
     let backend = application.operations.backend().capabilities();
+    let selected_source = application
+        .operations
+        .backend()
+        .selected_source_capabilities(context)
+        .await;
     let supports_local_pairing = application.profile() == SurfaceProfile::LocalDirect
         && caller.mode == CallerMode::LocalStdio
         && caller.has_scope("healthmd:pair");
@@ -694,7 +734,15 @@ fn capabilities_value(application: &HealthMdApplication, caller: &CallerIdentity
         "transport": backend.transport,
         "iphone_must_be_foreground": backend.requires_foreground_source,
         "requires_foreground_source": backend.requires_foreground_source,
-        "supports_queries": backend.supports_queries,
+        "supports_queries": selected_source.get("supports_queries").and_then(Value::as_bool).unwrap_or(false),
+        "support_flags_basis": "selected_source; unknown installed support is not advertised as supported",
+        "selected_source": selected_source,
+        "catalog_availability": {
+            "supports_queries": backend.supports_queries,
+            "supports_local_file_exports": supports_local_file_exports,
+            "supports_local_raw_exports": supports_local_file_exports,
+            "installed_peer_support": false
+        },
         "product_readiness": {
             "component": "standalone_cli_mcp",
             "version": env!("CARGO_PKG_VERSION"),
@@ -709,8 +757,12 @@ fn capabilities_value(application: &HealthMdApplication, caller: &CallerIdentity
             "limited_history_is_not_absence": true
         },
         "supports_local_pairing": supports_local_pairing,
-        "supports_local_file_exports": supports_local_file_exports,
-        "supports_local_raw_exports": supports_local_file_exports,
+        "supports_local_file_exports": if supports_local_file_exports {
+            selected_source.get("supports_local_file_exports").and_then(Value::as_bool).unwrap_or(false)
+        } else { false },
+        "supports_local_raw_exports": if supports_local_file_exports {
+            selected_source.get("supports_local_raw_exports").and_then(Value::as_bool).unwrap_or(false)
+        } else { false },
         "raw_export": {
             "scope": "all_public_authorized",
             "artifact_access": "job_bound_bounded_base64_chunks",
@@ -722,27 +774,7 @@ fn capabilities_value(application: &HealthMdApplication, caller: &CallerIdentity
             .into_iter()
             .filter_map(|tool| tool.get("name").and_then(Value::as_str).map(str::to_owned))
             .collect::<Vec<_>>(),
-        "query_tool_guidance": {
-            "typed_tools_are_preferred": true,
-            "sleep": "healthmd_sleep_sessions",
-            "workouts": "healthmd_workouts",
-            "metric_series": "healthmd_metric_chart",
-            "coverage": "healthmd_coverage",
-            "advanced_fallback": "healthmd_query",
-            "schema_command": "healthmd mcp schema <tool-name>",
-            "shell_extract_is_not_typed_query": true,
-            "minimal_sleep_arguments": {
-                "dates": {
-                    "type": "exact",
-                    "range": {
-                        "start_date": "2026-07-22",
-                        "end_date": "2026-07-28"
-                    }
-                },
-                "all_pages": true
-            },
-            "example_dates_are_illustrative": true
-        },
+        "query_tool_guidance": query_tool_guidance(),
         "query_limits": {
             "maximum_days_per_request": healthmd_operations::limits::MAXIMUM_QUERY_DAYS,
             "maximum_metric_ids": healthmd_operations::limits::MAXIMUM_METRIC_IDS,
@@ -753,6 +785,26 @@ fn capabilities_value(application: &HealthMdApplication, caller: &CallerIdentity
             "all_available_is_logically_unbounded": true
         },
         "result_fallbacks": result_fallbacks
+    })
+}
+
+fn query_tool_guidance() -> Value {
+    json!({
+        "supported_source": "ios",
+        "requires_installed_query_capability": true,
+        "typed_tools_are_preferred": true,
+        "sleep": "healthmd_sleep_sessions",
+        "workouts": "healthmd_workouts",
+        "metric_series": "healthmd_metric_chart",
+        "coverage": "healthmd_coverage",
+        "advanced_fallback": "healthmd_query",
+        "schema_command": "healthmd mcp schema <tool-name>",
+        "shell_extract_is_not_typed_query": true,
+        "minimal_sleep_arguments": {
+            "dates": {"type": "exact", "range": {"start_date": "2026-07-22", "end_date": "2026-07-28"}},
+            "all_pages": true
+        },
+        "example_dates_are_illustrative": true
     })
 }
 
@@ -929,6 +981,11 @@ mod tests {
             Ok(page(0, None))
         }
 
+        async fn selected_source_capabilities(&self, _context: &CallContext) -> Value {
+            json!({"status": "selected", "platform": "android", "supports_queries": false,
+                "supports_local_file_exports": true})
+        }
+
         async fn start_raw_export(
             &self,
             _context: &CallContext,
@@ -956,6 +1013,37 @@ mod tests {
                 "chunk": {"offset": 0, "next_offset": 2, "eof": true, "encoding": "base64", "data": "e30="}
             }))
         }
+    }
+
+    #[tokio::test]
+    async fn selected_android_support_is_distinct_from_the_fixed_catalog() {
+        let application = Arc::new(HealthMdApplication::new(
+            Arc::new(RawFixtureBackend {
+                started: Mutex::new(None),
+            }),
+            SurfaceProfile::LocalDirect,
+        ));
+        let session = application.session(CallerIdentity::local());
+        let response = session
+            .call_tool(
+                "healthmd_capabilities",
+                json!({}),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap();
+        let value: Value =
+            serde_json::from_str(response["content"][0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(value["supports_queries"], false);
+        assert_eq!(value["catalog_availability"]["supports_queries"], true);
+        assert_eq!(value["selected_source"]["platform"], "android");
+        assert!(
+            value["operations"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("healthmd_sleep_sessions"))
+        );
     }
 
     struct PairingFixtureBackend {
@@ -1025,6 +1113,7 @@ mod tests {
                     "schema": "healthmd.pairing_session",
                     "schema_version": 1,
                     "pairing_session_id": self.pairing_session_id,
+                    "supported_sources": ["ios", "android"],
                     "status": "waiting_for_scan"
                 }),
                 qr_png: b"\x89PNG\r\n\x1a\nfixture-secret".to_vec(),
@@ -1095,7 +1184,7 @@ mod tests {
         ));
         let session = application.session(CallerIdentity::local());
         let tools = session.list_tools();
-        assert_eq!(tools.len(), 21);
+        assert_eq!(tools.len(), 26);
         let export = tools
             .iter()
             .find(|tool| tool["name"] == "healthmd_export_raw")
@@ -1160,7 +1249,7 @@ mod tests {
         ));
         let session = application.session(CallerIdentity::local());
         session.set_ui_enabled(true);
-        assert_eq!(session.list_tools().len(), 21);
+        assert_eq!(session.list_tools().len(), 26);
         assert_eq!(session.list_resources().len(), 2);
         let pairing_tool = session
             .list_tools()

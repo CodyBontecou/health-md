@@ -309,6 +309,19 @@ jobs:
           assert responses[1]["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"] == ["text/html;profile=mcp-app"]
           tools = responses[2]["result"]["tools"]
           tool_names = {tool["name"] for tool in tools}
+          expected_tool_names = {
+              "healthmd_status", "healthmd_doctor", "healthmd_capabilities", "healthmd_metrics",
+              "healthmd_metric_chart", "healthmd_sleep_sessions", "healthmd_training_alignment",
+              "healthmd_workouts", "healthmd_coverage", "healthmd_compare_periods",
+              "healthmd_training_evidence", "healthmd_query", "healthmd_evidence_packet",
+              "healthmd_pairing_start", "healthmd_pairing_status", "healthmd_export_plan",
+              "healthmd_export_approval", "healthmd_export_raw", "healthmd_raw_artifact_read",
+              "healthmd_export_files", "healthmd_export_job_status", "healthmd_export_job_resume",
+              "healthmd_export_job_cancel", "healthmd_export_execute",
+              "healthmd_export_execution_resume", "healthmd_export_execution_cancel",
+          }
+          assert len(tools) == 26, sorted(tool_names)
+          assert tool_names == expected_tool_names, sorted(tool_names)
           expected_tools = json.loads(pathlib.Path("crates/healthmd-mcp/assets/mcp-tools-v1.json").read_text())
           expected_names = {tool["name"] for tool in expected_tools}
           assert tool_names == expected_names, (tool_names, expected_names)

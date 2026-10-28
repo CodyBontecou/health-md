@@ -34,7 +34,13 @@ data class ExportProfile(
     val isMigrationDefault: Boolean = false,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
-)
+    /** Device-local revision pin, never portable identity/authority or a wall-clock timestamp. */
+    val configurationRevision: Int = 1,
+) {
+    /** Invalid/exhausted metadata cannot wrap or revive a previously issued revision. */
+    fun nextConfigurationRevision(): Int? =
+        configurationRevision.takeIf { it in 1 until Int.MAX_VALUE }?.plus(1)
+}
 
 /** Result of resolving a profile reference by id or name. */
 sealed interface ExportProfileResolution {

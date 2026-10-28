@@ -2,6 +2,10 @@ import Combine
 import Foundation
 import SwiftUI
 
+extension Notification.Name {
+    nonisolated static let healthMdConfigurationProtectionDidChange = Notification.Name("HealthMd.configurationProtectionDidChange")
+}
+
 /// Device-local, non-security guard that prevents accidental in-app configuration changes.
 ///
 /// The preference is intentionally separate from export settings and operation snapshots. It
@@ -11,14 +15,22 @@ import SwiftUI
 final class ConfigurationProtectionManager: ObservableObject {
     static let storageKey = "configurationProtection.preventAccidentalChanges"
 
-    @Published private(set) var isEnabled: Bool
+    @Published private(set) var isEnabled: Bool {
+        didSet {
+            guard isEnabled != oldValue else { return }
+            // Invalidate plans synchronously, including lock/unlock round trips before resampling.
+            nativePlanningNotifications.post(name: .healthMdConfigurationProtectionDidChange, object: self)
+        }
+    }
     @Published private(set) var blockedChangeToastID: UUID?
     @Published private(set) var settingsNavigationRequestID: UUID?
 
+    private let nativePlanningNotifications: NotificationCenter
     private let userDefaults: UserDefaults
     private var toastDismissTask: Task<Void, Never>?
 
-    init(userDefaults: UserDefaults = .standard) {
+    init(userDefaults: UserDefaults = .standard, nativePlanningNotifications: NotificationCenter = .default) {
+        self.nativePlanningNotifications = nativePlanningNotifications
         self.userDefaults = userDefaults
         isEnabled = userDefaults.bool(forKey: Self.storageKey)
     }

@@ -226,6 +226,14 @@ pub struct DirectClient<C = OsCredentialStore> {
 }
 
 impl DirectClient<OsCredentialStore> {
+    /// Open only existing identity for bridge planning. Unlike `open`, this cannot initialize
+    /// installation storage, jobs, output directories or credentials.
+    /// # Errors
+    /// Missing/corrupt/unsafe identity rejects without side effects.
+    pub fn open_planning() -> Result<Self, ClientError> {
+        Self::open_planning_with_credentials(StorageLayout::discover()?, OsCredentialStore)
+    }
+
     /// Open the durable portable direct-client context.
     ///
     /// # Errors
@@ -243,7 +251,99 @@ impl DirectClient<OsCredentialStore> {
     }
 }
 
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct ExistingPlanningIdentity {
+    version: u16,
+    #[serde(rename = "installationID")]
+    installation_id: SwiftUuid,
+    #[serde(with = "healthmd_protocol::time")]
+    created_at: chrono::DateTime<Utc>,
+}
+
 impl<C: crate::credentials::CredentialStore> DirectClient<C> {
+    /// Open an existing, no-follow private identity with an injected native credential reader.
+    /// Never creates identity/directories/permissions or calls credential mutation methods.
+    /// # Errors
+    /// Missing/unsafe/corrupt identity fails. The deployed binary64 identity timestamp is kept;
+    /// this local legacy record is not incorrectly interpreted as a new integer-only v4 DTO.
+    pub fn open_planning_with_credentials(
+        layout: StorageLayout,
+        credentials: C,
+    ) -> Result<Self, ClientError> {
+        let (directory, _) = crate::agent_private_fs::inspect_root(&layout.root)?;
+        crate::agent_private_fs::private_directory(&directory)?;
+        let bytes = crate::agent_private_fs::read_private(&directory, "identity.json", 16_384)?;
+        let existing: ExistingPlanningIdentity =
+            serde_json::from_slice(&bytes).map_err(|_| ClientError::InvalidIdentity)?;
+        if existing.version != 1 || existing.installation_id.0.is_nil() {
+            return Err(ClientError::InvalidIdentity);
+        }
+        let identity = ClientIdentity {
+            version: existing.version,
+            installation_id: existing.installation_id,
+            created_at: existing.created_at,
+        };
+        Ok(Self {
+            identity,
+            layout,
+            display_name: local_display_name(),
+            trust_store: TrustStore::new(credentials),
+        })
+    }
+
+    /// Authenticated identity selection for planning, with no platform guessing.
+    /// # Errors
+    /// Missing/ambiguous trust or an unknown platform requires explicit setup.
+    pub async fn planning_peer(
+        &self,
+        device: Option<Uuid>,
+    ) -> Result<healthmd_protocol::v4::Peer, ClientError> {
+        let selected = self.selected_source(device).await?;
+        let platform = match selected.platform {
+            Some(PeerPlatform::Ios) => healthmd_protocol::v4::PeerPlatform::Apple,
+            Some(PeerPlatform::Android) => healthmd_protocol::v4::PeerPlatform::Android,
+            _ => return Err(healthmd_protocol::v4::Error::UnsupportedCapability.into()),
+        };
+        Ok(healthmd_protocol::v4::Peer {
+            host_installation_id: healthmd_protocol::v4::ControlUuid(
+                self.identity.installation_id.0.to_string(),
+            ),
+            source_installation_id: healthmd_protocol::v4::ControlUuid(
+                selected.installation_id.0.to_string(),
+            ),
+            platform,
+        })
+    }
+
+    /// Separate opt-in bridge listener; no wake wait, nudge, enrollment or trust writes.
+    /// # Errors
+    /// Authentication/independent base-extension negotiation or bounded transport may fail.
+    pub async fn connect_bridge(
+        &self,
+        device: Option<Uuid>,
+        port: u16,
+        timeout: Duration,
+        cancellation: CancellationToken,
+    ) -> Result<crate::agent_bridge::BridgeSession<'_>, ClientError> {
+        let peer = self.planning_peer(device).await?;
+        let selected = Uuid::parse_str(&peer.source_installation_id.0)
+            .map_err(|_| ClientError::InvalidTrustState)?;
+        let trust = self.load_trust().await?;
+        let listener = bind_listener(port).await?;
+        crate::agent_bridge::BridgeSession::accept(
+            &listener,
+            self.identity.installation_id,
+            selected,
+            trust,
+            timeout,
+            cancellation,
+            self,
+            device,
+        )
+        .await
+    }
+
     /// List locally trusted mobile sources without making a network connection.
     ///
     /// # Errors
@@ -406,6 +506,34 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             port,
             timeout,
             Some(SourceKind::Ios),
+            NewPairingPolicy::RequireNoOtherTrust,
+            on_listening,
+        )
+        .await
+    }
+
+    /// Onboard the first foreground mobile source, with no platform inferred from selector 3.
+    ///
+    /// # Errors
+    ///
+    /// Rejects existing trust atomically and returns the bounded errors documented by [`Self::pair`].
+    pub async fn pair_first_mobile<F>(
+        &self,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
+        port: u16,
+        timeout: Duration,
+        on_listening: F,
+    ) -> Result<PairingResult, ClientError>
+    where
+        F: FnOnce(u16),
+    {
+        self.pair_expected_source(
+            legacy_apple_pairing_code,
+            shared_pairing_code,
+            port,
+            timeout,
+            None,
             NewPairingPolicy::RequireNoOtherTrust,
             on_listening,
         )
@@ -920,6 +1048,24 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 "Android destination does not match the requested product".into(),
             ));
         }
+        if generated {
+            let destination =
+                GeneratedDestination::open(destination_root.as_ref().ok_or_else(|| {
+                    ClientError::InvalidTransfer(
+                        "Android generated-file destination is missing".into(),
+                    )
+                })?)?;
+            let digest = destination.binding_sha256()?;
+            if request
+                .destination
+                .as_ref()
+                .is_none_or(|binding| binding.binding_sha256 != digest)
+            {
+                return Err(ClientError::InvalidTransfer(
+                    "Android destination binding changed".into(),
+                ));
+            }
+        }
         let destination_root = destination_root
             .map(|path| {
                 path.to_str().map(ToOwned::to_owned).ok_or_else(|| {
@@ -1019,11 +1165,26 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 .products
                 .iter()
                 .find(|product| product.product_id == requested_product)
-                .ok_or_else(|| {
-                    ClientError::InvalidTransfer(
-                        "the Android app does not advertise the requested export product".into(),
-                    )
-                })?;
+                .ok_or(ClientError::ExportUnsupported)?;
+            if let v2::ExportProduct::GeneratedFilesV1 {
+                settings_policy,
+                profile_reference,
+            } = &request.product
+            {
+                if !capability.settings_policies.contains(settings_policy)
+                    || capability.artifact_schema.id != "healthmd.generated-files"
+                    || capability.artifact_schema.major != 1
+                    || !capability.supports_resume
+                {
+                    return Err(ClientError::ExportUnsupported);
+                }
+                if (*settings_policy == v2::SettingsPolicy::Profile) != profile_reference.is_some()
+                {
+                    return Err(ClientError::InvalidTransfer(
+                        "invalid Android profile policy".into(),
+                    ));
+                }
+            }
             if let v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
                 provider_id,
                 format,
@@ -1077,6 +1238,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 if matches!(
                     error,
                     ClientError::InvalidTransfer(_)
+                        | ClientError::ExportUnsupported
                         | ClientError::Cancelled
                         | ClientError::JobNotResumable(_, _)
                 ) {
@@ -1125,6 +1287,29 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// Returns an error when the job is absent, expired, or corrupt.
     pub fn v2_job_record(&self, job_id: Uuid) -> Result<V2JobRecord, ClientError> {
         V2JobStore::new(self.layout.clone())?.load(job_id)
+    }
+
+    /// Read a digest-validated iOS file receipt, retaining the source's partial outcome.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a missing, incomplete, expired, or changed job/receipt.
+    pub fn generated_file_receipt(&self, job_id: Uuid) -> Result<FileExportReceipt, ClientError> {
+        let jobs = JobStore::new(self.layout.clone())?;
+        FileReceiver::new(self.layout.clone(), jobs).receipt(job_id)
+    }
+
+    /// Read a digest-validated Android generated-file receipt without contacting the source.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a missing, incomplete, expired, or changed job/receipt.
+    pub fn android_generated_file_receipt(
+        &self,
+        job_id: Uuid,
+    ) -> Result<serde_json::Value, ClientError> {
+        let jobs = V2JobStore::new(self.layout.clone())?;
+        V2ArtifactReceiver::new(self.layout.clone(), jobs).generated_file_receipt(job_id)
     }
 
     /// Start or resume a durable strict-raw export over Manual IP/Tailscale.
@@ -1283,6 +1468,13 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         port: u16,
         timeout: Duration,
     ) -> Result<FileExportResult, ClientError> {
+        // There is no explicit Apple profile-policy capability in the deployed hello model.
+        // Fail before job creation/contact rather than send fields to an older installed peer.
+        if request.settings_policy == healthmd_protocol::models::SettingsPolicy::Profile
+            || request.profile_reference.is_some()
+        {
+            return Err(ClientError::ExportUnsupported);
+        }
         if request.response_mode != ResponseMode::WriteFiles || request.raw_profile.is_some() {
             return Err(ClientError::InvalidTransfer(
                 "generated-file request has incompatible response settings".into(),
@@ -1366,6 +1558,11 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                     "the iPhone cannot negotiate bounded direct transfer".into(),
                 )
             })?;
+            if !peer.supports_durable_jobs
+                || (request.canonical_selection.is_some() && !peer.supports_canonical_extraction)
+            {
+                return Err(ClientError::ExportUnsupported);
+            }
             connection
                 .channel
                 .send(&DirectMessage::ExportRequest(Unlabeled::from(
@@ -1402,6 +1599,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 if matches!(
                     error,
                     ClientError::InvalidTransfer(_)
+                        | ClientError::ExportUnsupported
                         | ClientError::Cancelled
                         | ClientError::JobNotResumable(_, _)
                 ) {
@@ -2582,6 +2780,43 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             }
         }
         Err(last_error)
+    }
+}
+
+#[async_trait::async_trait]
+impl<C: crate::credentials::CredentialStore> crate::agent_bridge::CurrentBridgeTrust
+    for DirectClient<C>
+{
+    async fn require_current(
+        &self,
+        requested: Option<Uuid>,
+        expected: &TrustedClient,
+    ) -> Result<(), ClientError> {
+        // Fresh native-store read on every RPC/response and persistence/return fence. Do not
+        // consult wake enrollment or reuse the cached authenticated peer as authorization.
+        let current = self.load_trust().await?;
+        let selected = match requested {
+            Some(id) => id,
+            None => match current.trusted_clients.as_slice() {
+                [only] => only.installation_id.0,
+                _ => return Err(healthmd_protocol::v4::Error::ApprovalRequired.into()),
+            },
+        };
+        let record = current
+            .client(selected)
+            .ok_or(healthmd_protocol::v4::Error::ApprovalRequired)?;
+        if current.owner_installation_id != self.identity.installation_id
+            || record.installation_id != expected.installation_id
+            || record.platform != expected.platform
+            || record.paired_at != expected.paired_at
+            || !healthmd_protocol::crypto::constant_time_equal(
+                &record.reconnect_secret,
+                &expected.reconnect_secret,
+            )
+        {
+            return Err(healthmd_protocol::v4::Error::ApprovalRequired.into());
+        }
+        Ok(())
     }
 }
 

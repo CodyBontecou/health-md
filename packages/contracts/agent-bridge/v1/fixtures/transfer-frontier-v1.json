@@ -1,0 +1,1003 @@
+{
+  "schema": "healthmd.agent_transfer_frontier_vectors",
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "empty-prefix",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0="
+      ]
+    },
+    {
+      "id": "one-partition",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "d727944cea0c253ff998bb615466f69ff19e39479fda6b0ef19452799747e66c"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "two-artifacts",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        {
+          "partition_index": 1,
+          "transfer_id": "00000000-0000-4000-8000-000000000005",
+          "artifact_id": "00000000-0000-4000-8000-000000000006",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "cb8379ac2098aa165029e3938a51da0bcecfc008fd6795f401178647f96c5b34"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "d727944cea0c253ff998bb615466f69ff19e39479fda6b0ef19452799747e66c",
+        "58aacd74fbd44257efec84369aadd6a9296899393a47dc499b7fbd839d0d45c3"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ==",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDYiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjEsInNoYTI1NiI6ImNiODM3OWFjMjA5OGFhMTY1MDI5ZTM5MzhhNTFkYTBiY2VjZmMwMDhmZDY3OTVmNDAxMTc4NjQ3Zjk2YzViMzQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwNSJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiJkNzI3OTQ0Y2VhMGMyNTNmZjk5OGJiNjE1NDY2ZjY5ZmYxOWUzOTQ3OWZkYTZiMGVmMTk0NTI3OTk3NDdlNjZjIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "one-artifact-segments",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        {
+          "partition_index": 1,
+          "transfer_id": "00000000-0000-4000-8000-000000000005",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 3,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "cb8379ac2098aa165029e3938a51da0bcecfc008fd6795f401178647f96c5b34"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "d727944cea0c253ff998bb615466f69ff19e39479fda6b0ef19452799747e66c",
+        "acb024d3fef2f64a19708a7e906fd921db0adf8009212fac4fccc20071794de5"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ==",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjMsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjEsInNoYTI1NiI6ImNiODM3OWFjMjA5OGFhMTY1MDI5ZTM5MzhhNTFkYTBiY2VjZmMwMDhmZDY3OTVmNDAxMTc4NjQ3Zjk2YzViMzQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwNSJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiJkNzI3OTQ0Y2VhMGMyNTNmZjk5OGJiNjE1NDY2ZjY5ZmYxOWUzOTQ3OWZkYTZiMGVmMTk0NTI3OTk3NDdlNjZjIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "empty-partition",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 0,
+          "chunk_count": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "8cd9bd9b2b6c5791f3d3728372de7ee63ba38975f66d457d2b713e55baa916ef"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjAsImNodW5rX2NvdW50IjowLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "maximum-partition-and-offset",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 1099444518912,
+          "byte_count": 67108864,
+          "chunk_count": 128,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "395c4aff691961af739fe06f0f16014027675418a3370c502554670a4d760c01"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjEwOTk0NDQ1MTg5MTIsImJ5dGVfY291bnQiOjY3MTA4ODY0LCJjaHVua19jb3VudCI6MTI4LCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-job_id",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-00000000000a",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "f8042bd36f16a305e55fb45c37ad2fe7b047b02f4ce57c305d0e2c10641dce0b",
+        "38b529915d5031551cb8940d2f1d26bf1144649ce0c6912744c507e200af9cd0"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMGEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiJmODA0MmJkMzZmMTZhMzA1ZTU1ZmI0NWMzN2FkMmZlN2IwNDdiMDJmNGNlNTdjMzA1ZDBlMmMxMDY0MWRjZTBiIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-manifest_sha256",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "950b572067b1c717457a4ef6119e4bb1d85d23d63f338132751c0e05e9305ef0",
+        "5f20dfbf20e65e92ab4ccac3e59663effc649a082986164ad03beaf2c3d66260"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5NTBiNTcyMDY3YjFjNzE3NDU3YTRlZjYxMTllNGJiMWQ4NWQyM2Q2M2YzMzgxMzI3NTFjMGUwNWU5MzA1ZWYwIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-request_sha256",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "f885711d3b4cf8b0bc18a449a7d4e77f8b625cde2a5179aaffb805ffb1ad99bb",
+        "9df19de9be59d97a75f58b4517fea5f679f6d1db83fd78f73267216192bdac31"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiJmODg1NzExZDNiNGNmOGIwYmMxOGE0NDlhN2Q0ZTc3ZjhiNjI1Y2RlMmE1MTc5YWFmZmI4MDVmZmIxYWQ5OWJiIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-session_id",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-00000000000a"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "727159cfaf2f9dae8dab3bd3b609dc09bda6beb9c6d1748684571401398dfd07",
+        "5a373a43616e3a4f51664d8aa8e8607bfb9bcaa1bc0143f863d5db33b8063027"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDBhIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI3MjcxNTljZmFmMmY5ZGFlOGRhYjNiZDNiNjA5ZGMwOWJkYTZiZWI5YzZkMTc0ODY4NDU3MTQwMTM5OGRmZDA3Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-partition-transfer_id",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-00000000000b",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "68efa969f1b155278a457bba01ae32d0a3d07cc2888df47d64ec671abd4da5bc"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwYiJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-partition-artifact_id",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-00000000000c",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "443bdf6c2b505ac4dce625b75fec24805ec0b2113200613ab3812fa56e9cfba8"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMGMiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-partition-artifact_offset",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 3,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "0638c6eaad688d2c163e9c9eb561d8f5e6fbdd4943bdcc2aaeb8e20d16be91d0"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjMsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-partition-byte_count",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 4,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "adcd186c920619e073f07e345d0ada46d2880566ceb5edd3c9cc9fe52ca388c4"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjQsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-partition-chunk_count",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 2,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "7959c2735233ec29849e035d52325d779dcefba7930db145053321ee70a04f93"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoyLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6ImJhNzgxNmJmOGYwMWNmZWE0MTQxNDBkZTVkYWUyMjIzYjAwMzYxYTM5NjE3N2E5Y2I0MTBmZjYxZjIwMDE1YWQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "changed-partition-sha256",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+        }
+      ],
+      "expected": "valid",
+      "prefix_sha256": [
+        "9c6eb0b99d76424d0fbfa86a6e30dbaa58bde1ebb980bd33435de3d71aa96ac8",
+        "8a31a4e0bc369aa589d492d2a901fe8c8fe829dd160ea47c371e858b2e47602a"
+      ],
+      "canonical_base64": [
+        "eyJqb2JfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJtYW5pZmVzdF9zaGEyNTYiOiIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwicmVxdWVzdF9zaGEyNTYiOiIxMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExIiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc2VlZCIsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAyIn0=",
+        "eyJwYXJ0aXRpb24iOnsiYXJ0aWZhY3RfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDQiLCJhcnRpZmFjdF9vZmZzZXQiOjAsImJ5dGVfY291bnQiOjMsImNodW5rX2NvdW50IjoxLCJwYXJ0aXRpb25faW5kZXgiOjAsInNoYTI1NiI6IjQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQiLCJ0cmFuc2Zlcl9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMyJ9LCJwcmV2aW91c19mcm9udGllcl9zaGEyNTYiOiI5YzZlYjBiOTlkNzY0MjRkMGZiZmE4NmE2ZTMwZGJhYTU4YmRlMWViYjk4MGJkMzM0MzVkZTNkNzFhYTk2YWM4Iiwic2NoZW1hIjoiaGVhbHRobWQuYWdlbnRfdHJhbnNmZXJfZnJvbnRpZXJfc3RlcCIsInNjaGVtYV92ZXJzaW9uIjoxfQ=="
+      ]
+    },
+    {
+      "id": "skipped-first-index",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 1,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "binding_changed"
+    },
+    {
+      "id": "repeated-index",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "binding_changed"
+    },
+    {
+      "id": "reordered-prefix",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 1,
+          "transfer_id": "00000000-0000-4000-8000-000000000005",
+          "artifact_id": "00000000-0000-4000-8000-000000000006",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "cb8379ac2098aa165029e3938a51da0bcecfc008fd6795f401178647f96c5b34"
+        },
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "binding_changed"
+    },
+    {
+      "id": "invalid-partition_index-19",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": -1,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-partition_index-20",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 2147483647,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-byte_count-21",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": -1,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-byte_count-22",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 67108865,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-chunk_count-23",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": -1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-chunk_count-24",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 129,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-artifact_offset-25",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": -1,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-artifact_offset-26",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 1099511627776,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-transfer_id-27",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-ABCDEF000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-artifact_id-28",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "not-an-id",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-sha256-29",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-byte_count-30",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": true,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "quoted-partition_index",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": "0",
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "quoted-artifact_offset",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": "0",
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "quoted-byte_count",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": "3",
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "quoted-chunk_count",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": "1",
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "unknown-partition-field",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1,
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+          "unknown": 1
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "missing-partition-field",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [
+        {
+          "partition_index": 0,
+          "transfer_id": "00000000-0000-4000-8000-000000000003",
+          "artifact_id": "00000000-0000-4000-8000-000000000004",
+          "artifact_offset": 0,
+          "byte_count": 3,
+          "chunk_count": 1
+        }
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-seed-uuid",
+      "seed": {
+        "job_id": "invalid",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "invalid-seed-digest",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "raw-float-index",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [],
+      "raw_partitions_base64": [
+        "eyJhcnRpZmFjdF9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwNCIsImFydGlmYWN0X29mZnNldCI6MCwiYnl0ZV9jb3VudCI6MywiY2h1bmtfY291bnQiOjEsInBhcnRpdGlvbl9pbmRleCI6MC4wLCJzaGEyNTYiOiJiYTc4MTZiZjhmMDFjZmVhNDE0MTQwZGU1ZGFlMjIyM2IwMDM2MWEzOTYxNzdhOWNiNDEwZmY2MWYyMDAxNWFkIiwidHJhbnNmZXJfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDMifQ=="
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "raw-duplicate-field",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [],
+      "raw_partitions_base64": [
+        "eyJhcnRpZmFjdF9pZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwNCIsImFydGlmYWN0X29mZnNldCI6MCwiYnl0ZV9jb3VudCI6MywiY2h1bmtfY291bnQiOjEsInBhcnRpdGlvbl9pbmRleCI6MCwicGFydGl0aW9uX2luZGV4IjowLCJzaGEyNTYiOiJiYTc4MTZiZjhmMDFjZmVhNDE0MTQwZGU1ZGFlMjIyM2IwMDM2MWEzOTYxNzdhOWNiNDEwZmY2MWYyMDAxNWFkIiwidHJhbnNmZXJfaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDMifQ=="
+      ],
+      "expected": "invalid_request"
+    },
+    {
+      "id": "raw-invalid-utf8",
+      "seed": {
+        "job_id": "00000000-0000-4000-8000-000000000001",
+        "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "session_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "partitions": [],
+      "raw_partitions_base64": [
+        "/w=="
+      ],
+      "expected": "invalid_request"
+    }
+  ]
+}

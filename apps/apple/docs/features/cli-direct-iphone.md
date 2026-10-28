@@ -2,9 +2,15 @@
 
 ## Status
 
-- **Implementation status:** Swift direct client complete; portable Rust export protocol v1 and query protocol v3 clients implemented; basic physical connectivity confirmed, with the complete cross-client exact-build qualification matrix still required
+- **Source implementation:** legacy direct/export application v1 and query v3 clients implemented; historical basic physical connectivity reported, not a complete cross-client exact-build matrix or agent-bridge qualification
 - **Primary surfaces:** `healthmd`, same-executable `healthmd mcp serve`, and an open Health.md iPhone app
 - **Source files:** `Packages/HealthMdConnectivity/`, `HealthMdCLI/Sources/healthmd/main.swift`, `HealthMd/iOS/IPhoneDirectCLIService.swift`, `HealthMd/iOS/IPhoneDirectWakeManager.swift`, `HealthMd/iOS/IPhoneDirectExportCoordinator.swift`, `HealthMd/iOS/IPhoneDirectFileExportProducer.swift`, the standalone Rust workspace at [`apps/cli`](../../../cli), and the notification-only Worker at [`apps/wake`](../../../wake)
+
+## Source and qualification
+
+This page describes current development source, not installed/release qualification. The published alpha.6 preview has 19 tools; alpha.7 remains an unpublished draft. The current development catalog declares 26, the read-only profile 13, and the frozen CLI 1.0 scope 21. These are different release/profile facts, not 26 qualified native operations. The bundled Swift helper has its own independently versioned catalog. Consult [CLI production readiness](../../../cli/docs/production-readiness.md) and [mobile compatibility](../../../cli/docs/mobile-compatibility.md) for the exact app/build, CLI artifact, SDK/OS, transport and operation results; the complete exact-build matrix is still pending.
+
+Development declares `healthmd_export_plan`, `healthmd_export_approval`, `healthmd_export_execute`, `healthmd_export_execution_resume` and `healthmd_export_execution_cancel`. Guarded native bound execution and public Execute/Resume/Cancel adapters exist in source, but the [independently negotiated extension 4](../../../../packages/contracts/direct-protocol/v4/protocol.md) remains unadvertised. Installed native consent, host provisioning, host-owned recipes and the complete CLI/MCP × iOS/Android journey remain incomplete. Synthetic source qualification does not establish installed support. Cancel reports native source acknowledgement with `output_verified: false`, including an earlier completion winner; it does not verify host output. Existing application v1 exports/query v3 are separate paths, not evidence of this new journey; pairing or a plan is not permission. Read-only MCP cannot enroll, approve, execute or mutate bridge controls.
 
 ## What it does
 
@@ -131,6 +137,14 @@ healthmd status --job JOB_UUID
 
 The `--transport nearby` line applies to the bundled Swift helper only. Live status authenticates the selected paired iPhone and reports direct access, protected-data, HealthKit/export readiness, and active work without exposing health values. Job status is read from the CLI's durable local record and does not require a live iPhone connection.
 
+## Current build and history scope
+
+The current production history adapter cannot verify unqualified full-history access: the pinned SDK (Xcode 26.6 / SDK 26.5) does not expose the required per-type authorization-boundary API. It reports unavailable build support (`api_unavailable`); forwarded readiness can report `unknown` authorization. Neither means that access was denied, no data exists, or full history is available. An OS upgrade alone does not add the missing API to this build. See [HealthKit permissions](healthkit-permissions.md#permission-privacy) for the current limitation.
+
+Use explicit date ranges for bounded work, while retaining unverified completeness and Apple Health's denied-versus-empty ambiguity. Current capture/query validation rejects unqualified `all_available` history when the required boundary cannot be established; earliest samples are not authorization evidence. This differs from a no-health-read agent plan that can retain logical `all_available` with unresolved history bounds: that internal plan is not an executable export or a new native permission.
+
+Source dates in these examples are illustrative, not a replacement for the user's requested scope. `--full-corpus` expands type scope, not date scope: it requests supported and authorized public types within the chosen range, without establishing full-history permission. Do not silently narrow an approved request or infer permission from pairing, a plan, or an empty result.
+
 ## Strict raw export
 
 Raw mode requests the same public schema-v8 `healthmd.health_data` daily documents and strict validation used by the bundled Swift helper's Mac loopback mode:
@@ -139,7 +153,7 @@ Raw mode requests the same public schema-v8 `healthmd.health_data` daily documen
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 healthmd export --from 2026-07-01 --to 2026-07-07 --raw --output week.json
-healthmd export --all --raw --full-corpus --output complete-health-corpus.json
+healthmd export --from 2026-07-01 --to 2026-07-07 --raw --full-corpus --output apple-health-range.json
 ```
 
 `--raw` writes no generated export files. `--full-corpus` expands the request to every public HealthKit type supported by the current build and authorized by the user, requests lossless canonical records and fields independently of saved/default metric selections, and preserves capture/permission/unsupported/partial/read-error evidence. It does not and cannot read a private HealthKit database. Without `--output`, the validated JSON is streamed to stdout. Prefer an output file for sensitive or large results. `--allow-partial` changes only the exit status for a validated `partial_success`; it does not remove missing/capture diagnostics.

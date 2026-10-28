@@ -9,12 +9,16 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.healthmd.data.export.APIRecoveryAuthorities
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FormatCustomization
+import com.healthmd.domain.repository.NativeConfigurationProtectionObservation
+import com.healthmd.domain.repository.NativeConfigurationProtectionSource
+import com.healthmd.domain.repository.NativeExportEligibilitySettings
 import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -26,6 +30,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.time.LocalDate
+import java.util.UUID
+
+internal data class SavedDeviceExportConfigurationSnapshot(val revision: Int, val settings: ExportSettings)
 
 class SettingsRepositoryImpl(
     private val dataStore: DataStore<Preferences>,
@@ -36,8 +43,10 @@ class SettingsRepositoryImpl(
 
     private object Keys {
         val EXPORT_SETTINGS = stringPreferencesKey("export_settings")
+        val NATIVE_CONFIGURATION_REVISION = intPreferencesKey("native_export_settings_revision_v1")
 
         val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
+        val NATIVE_PROTECTION_REVISION = stringPreferencesKey("native_configuration_protection_revision_v1")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
         val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
@@ -65,6 +74,7 @@ class SettingsRepositoryImpl(
 
     override suspend fun updateExportSettings(settings: ExportSettings) {
         dataStore.edit { prefs ->
+            prefs[Keys.NATIVE_CONFIGURATION_REVISION] = nextNativeConfigurationRevision(prefs)
             prefs[Keys.EXPORT_SETTINGS] = json.encodeToString(ExportSettings.serializer(), settings.normalized())
         }
     }
@@ -78,10 +88,30 @@ class SettingsRepositoryImpl(
         var updated: ExportSettings? = null
         dataStore.edit { prefs ->
             val next = transform(storedExportSettings(prefs)).normalized()
+            prefs[Keys.NATIVE_CONFIGURATION_REVISION] = nextNativeConfigurationRevision(prefs)
             prefs[Keys.EXPORT_SETTINGS] = json.encodeToString(ExportSettings.serializer(), next)
             updated = next
         }
         return checkNotNull(updated) { "Export settings atomic update did not commit." }
+    }
+
+    /** Reads exact persisted settings and revision from one committed image, without Flow defaults. */
+    internal suspend fun readSavedExportConfiguration(expectedRevision: Int): SavedDeviceExportConfigurationSnapshot? =
+        if (expectedRevision < 1) null else readSavedExportConfiguration(dataStore.data.first(), expectedRevision)
+
+    internal fun readSavedExportConfiguration(prefs: Preferences, expectedRevision: Int): SavedDeviceExportConfigurationSnapshot? {
+        if (expectedRevision < 1) return null
+        val revision = try { prefs[Keys.NATIVE_CONFIGURATION_REVISION] ?: 1 } catch (_: ClassCastException) { return null }
+        if (revision != expectedRevision) return null
+        val raw = try { prefs[Keys.EXPORT_SETTINGS] } catch (_: ClassCastException) { return null }
+            ?: return null
+        val settings = try { decodePersistedExportSettings(raw) } catch (_: Exception) { return null }
+        return SavedDeviceExportConfigurationSnapshot(revision, settings)
+    }
+
+    private fun nextNativeConfigurationRevision(prefs: Preferences): Int {
+        val revision = try { prefs[Keys.NATIVE_CONFIGURATION_REVISION] ?: 1 } catch (_: ClassCastException) { return 0 }
+        return if (revision in 1 until Int.MAX_VALUE) revision + 1 else 0
     }
 
     private fun storedExportSettings(prefs: Preferences): ExportSettings =
@@ -93,8 +123,24 @@ class SettingsRepositoryImpl(
         prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false
     }
 
+    override val nativeConfigurationProtection = NativeConfigurationProtectionSource(dataStore.data.map { prefs ->
+        try {
+            val revision = prefs[Keys.NATIVE_PROTECTION_REVISION]
+            if (revision != null && UUID.fromString(revision).toString() != revision) null
+            else NativeConfigurationProtectionObservation(prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false, revision ?: "initial")
+        } catch (_: IllegalArgumentException) { null }
+        catch (_: ClassCastException) { null }
+    })
+
     override suspend fun setPreventAccidentalChanges(enabled: Boolean) {
         dataStore.edit { prefs ->
+            if ((prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false) != enabled) {
+                val revision = UUID.randomUUID().toString()
+                // Synchronous native invalidation precedes commit. Only the matching committed
+                // image may reopen the service cache, including conflated lock/unlock round trips.
+                nativeConfigurationProtection.invalidate(revision)
+                prefs[Keys.NATIVE_PROTECTION_REVISION] = revision
+            }
             prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] = enabled
         }
     }
@@ -110,6 +156,23 @@ class SettingsRepositoryImpl(
 
     override suspend fun getExportFolderUri(): String? =
         exportFolderUri.first()
+
+    override val nativeExportEligibility: Flow<NativeExportEligibilitySettings?> = dataStore.data.map { prefs ->
+        val purchased = prefs[Keys.IS_PURCHASED] ?: isLegacyInstall()
+        if (purchased) {
+            // Known full access does not depend on the free counter, as on Apple.
+            NativeExportEligibilitySettings(purchased = true, freeExportsUsed = 0)
+        } else {
+            val current = prefs[Keys.FREE_EXPORTS_USED]
+            val legacy = prefs[Keys.LEGACY_FREE_EXPORTS_REMAINING]
+            // Keep public getter sanitization separate from strict native readiness.
+            if ((current != null && current < 0) || (current == null && legacy != null && legacy !in 0..3)) {
+                null
+            } else {
+                NativeExportEligibilitySettings(purchased = false, freeExportsUsed = prefs.freeExportsUsedValue())
+            }
+        }
+    }
 
     override val freeExportsUsed: Flow<Int> = dataStore.data.map { prefs ->
         prefs.freeExportsUsedValue()
@@ -375,6 +438,13 @@ private fun JsonObject.withFailClosedPendingMetadata(): JsonObject {
             val pin = ExportEnginePinCodec.decodeOrNull(encodedPin.toString())
             if (pin == null || pin.engine == ExportEngineMode.legacy) {
                 fields = fields + ("enginePin" to JsonNull)
+            }
+        }
+
+        if (request.containsKey("apiAuthorityJson")) {
+            val evidence = request["apiAuthorityJson"]
+            if (evidence !is JsonPrimitive || !evidence.isString || !APIRecoveryAuthorities.isValid(evidence.content)) {
+                fields = fields + ("apiAuthorityJson" to JsonPrimitive("invalid-api-recovery-authority"))
             }
         }
 

@@ -13,6 +13,7 @@ import json
 import math
 import os
 import re
+import runpy
 import struct
 import sys
 from datetime import datetime
@@ -3714,6 +3715,80 @@ def validate_rollup_production_fixture(root: Path, path: Path) -> None:
             fail(f"{context}: canonical Bases fixture must include all metric projections")
 
 
+def validate_agent_bridge_asset(root: Path, path: Path) -> None:
+    """Additive validator for new deferred assets; historical validators are unchanged."""
+    module = runpy.run_path(str(root / "packages/contracts/agent-bridge/v1/validation.py"))
+    module["validate_asset"](root, path, validate_json_schema_subset, fail)
+
+
+def validate_capability_index(root: Path, path: Path) -> None:
+    """Current governance metadata is independent of frozen semantic registry bytes."""
+    context = "capability index"
+    payload = require_exact_keys(load_json(path, context), {
+        "schema", "schema_version", "source_inventory_path", "source_inventory_sha256",
+        "known_capability_ids", "available_capability_ids_by_platform",
+    }, context)
+    if payload["schema"] != "healthmd.capability_index" or type(payload["schema_version"]) is not int or payload["schema_version"] != 1:
+        fail(f"{context}: unsupported edition")
+    if payload["source_inventory_path"] != "packages/contracts/product-capabilities.json":
+        fail(f"{context}: invalid source inventory")
+    source = repository_path(root, payload["source_inventory_path"], context)
+    if payload["source_inventory_sha256"] != hashlib.sha256(source.read_bytes()).hexdigest():
+        fail(f"{context}: source inventory digest changed")
+    capabilities = load_json(source, context)["capabilities"]
+    if payload["known_capability_ids"] != [item["id"] for item in capabilities]:
+        fail(f"{context}: known IDs must exactly follow current governance")
+    available = require_exact_keys(payload["available_capability_ids_by_platform"], {"apple", "android"}, context)
+    for platform in ("apple", "android"):
+        expected = [item["id"] for item in capabilities if item["platforms"][platform]["state"] == "available"]
+        if available[platform] != expected:
+            fail(f"{context}: {platform} availability must exactly follow current governance, not installed/qualified support")
+
+
+def validate_android_recovery_coverage(root: Path, path: Path) -> None:
+    """Review private field additions without rewriting the frozen Shared Setup v2 ledger."""
+    context = "Android recovery coverage"
+    payload = require_exact_keys(load_json(path, context), {
+        "schema", "schema_version", "target_contract", "base_inventory", "audited_git_base", "fields",
+    }, context)
+    if payload["schema"] != "healthmd.shared_setup.android_recovery_coverage" or type(payload["schema_version"]) is not int or payload["schema_version"] != 1:
+        fail(f"{context}: unsupported inventory edition")
+    target = require_exact_keys(payload["target_contract"], {"schema", "schema_version"}, context)
+    if target != {"schema": "healthmd.shared_setup", "schema_version": 2} or type(target["schema_version"]) is not int:
+        fail(f"{context}: target must remain Shared Setup v2")
+    if not isinstance(payload["audited_git_base"], str) or not re.fullmatch(r"[0-9a-f]{40}", payload["audited_git_base"]):
+        fail(f"{context}: audited base must be an exact Git commit")
+    base = require_exact_keys(payload["base_inventory"], {"path", "sha256"}, context)
+    expected_path = "packages/contracts/shared-setup/v2/android-profile-field-coverage.json"
+    expected_sha = "4a539e7e22006bd0f06e63c3dda7a82f41c6fac0d536249573a37eccec8ae789"
+    if base != {"path": expected_path, "sha256": expected_sha}:
+        fail(f"{context}: historical ledger pin changed")
+    # The pinned path names the ledger at audited_git_base. Main subsequently
+    # approved exclusion-only amendments; keep that historical edition separately.
+    base_path = repository_path(root, "packages/contracts/portability-inventory/android-agent-recovery/v1/historical-base.json", context)
+    if hashlib.sha256(base_path.read_bytes()).hexdigest() != expected_sha:
+        fail(f"{context}: historical ledger bytes changed")
+    baseline = load_json(base_path, context)
+    baseline_keys = {(row["source_type"], row["serialized_field"]) for row in baseline["fields"]}
+    fields = payload["fields"]
+    if not isinstance(fields, list) or not fields:
+        fail(f"{context}: reviewed fields must be a nonempty array")
+    keys = []
+    for row in fields:
+        row = require_exact_keys(row, {"source_type", "serialized_field", "coverage_kind", "disposition", "contract_path", "evidence"}, context)
+        if any(not isinstance(row[key], str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", row[key]) for key in ("source_type", "serialized_field")):
+            fail(f"{context}: invalid native field identity")
+        if row["coverage_kind"] not in ("descriptor", "supplemental"):
+            fail(f"{context}: invalid coverage kind")
+        if row["disposition"] != "prohibited" or row["contract_path"] is not None:
+            fail(f"{context}: private recovery state cannot become portable authority")
+        if not isinstance(row["evidence"], str) or not row["evidence"].strip():
+            fail(f"{context}: each field requires evidence")
+        keys.append((row["source_type"], row["serialized_field"]))
+    if len(keys) != len(set(keys)) or keys != sorted(keys) or set(keys) & baseline_keys:
+        fail(f"{context}: rows must be unique, ordered additions to the frozen ledger")
+
+
 def validate_diagnostics_fixture(root: Path, path: Path) -> None:
     from diagnostics.validate import validate_fixture
 
@@ -3849,6 +3924,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     validate_v2_profile_policy_fixture(fixture_path)
                 else:
                     fail(f"{fixture_context}: unknown healthmd.direct.android fixture file")
+            elif identifier in {"healthmd.agent_bridge", "healthmd.source_query", "healthmd.direct.agent-bridge"}:
+                validate_agent_bridge_asset(root, fixture_path)
             elif identifier == "healthmd.diagnostics":
                 validate_diagnostics_fixture(root, fixture_path)
             elif identifier == "healthmd.semantic_input":
@@ -3951,6 +4028,10 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                 fail(f"{inventory_context}: metric registry inventory declared twice")
             found_metric_inventory = True
             validate_metric_registry(root, inventory_path, contract_versions)
+        elif identifier == "healthmd.capability_index":
+            validate_capability_index(root, inventory_path)
+        elif identifier == "healthmd.shared_setup.android_recovery_coverage":
+            validate_android_recovery_coverage(root, inventory_path)
         elif identifier == "healthmd.metric_profile_extension":
             validate_apple_v10_profile_extension(root, inventory_path)
         inventory_count += 1

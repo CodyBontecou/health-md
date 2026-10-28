@@ -26,8 +26,8 @@ final class HealthHistoryCanonicalProfileIdentityTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = ExportSettingsSnapshot.from(AdvancedExportSettings(), appleExportEngineAuthorityIsFrozen: false)
         let writer = ExportProfileStore(userDefaults: defaults)
-        let first = writer.add(name: "First", settings: settings, target: .localIPhoneFolder)
-        let second = writer.add(name: "Same settings", settings: settings, target: .localIPhoneFolder)
+        let first = try XCTUnwrap(writer.add(name: "First", settings: settings, target: .localIPhoneFolder))
+        let second = try XCTUnwrap(writer.add(name: "Same settings", settings: settings, target: .localIPhoneFolder))
         let observedStore = ExportProfileStore(userDefaults: defaults)
         XCTAssertEqual(first.settings, second.settings)
         XCTAssertEqual(observedStore.activeProfileID, first.id)

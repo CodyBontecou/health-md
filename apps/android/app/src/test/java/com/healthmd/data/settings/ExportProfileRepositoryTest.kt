@@ -7,6 +7,11 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.ExportSettings
+import com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence
+import java.time.ZoneId
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
 import io.mockk.mockk
@@ -17,7 +22,14 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -55,6 +67,88 @@ class ExportProfileRepositoryTest {
         dataStoreScope.cancel()
     }
 
+    private fun configurationSnapshot(filename: String): String = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+        AndroidExportSettingsSnapshot.capture(ExportSettings(filenameFormat = filename), null, ZoneId.of("UTC")),
+    )
+
+    @Test
+    fun `configuration read obtains row and gate from one committed image without writing`() = runTest {
+        val profile = repository.add("Selected", configurationSnapshot("selected-{date}"), ExportTarget.DEVICE_FOLDER)
+        val key = SharedSetupV2ProfilePersistence.blockedProfileIdsKey
+        dataStore.edit { it[key] = setOf(profile.id) }
+        var reads = 0
+        var writes = 0
+        val observingStore = object : DataStore<Preferences> {
+            override val data = dataStore.data.map { reads++; it }
+            override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                writes++
+                return dataStore.updateData(transform)
+            }
+        }
+        val reader = ExportProfileRepository(observingStore, mockk<Context>(relaxed = true))
+        assertThat(reader.readConfigurationProfile(profile.id, 1)?.executionBlocked).isTrue()
+        assertThat(reads).isEqualTo(1)
+        assertThat(writes).isEqualTo(0)
+        dataStore.edit { it[stringPreferencesKey(key.name)] = "malformed" }
+        val before = dataStore.data.first().asMap()
+        assertThat(reader.readConfigurationProfile(profile.id, 1)).isNull()
+        assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+    }
+
+    @Test
+    fun `configuration read uses exact persisted row without active or cached fallback`() = runTest {
+        val original = configurationSnapshot("selected-{date}")
+        val selected = repository.add("Selected", original, ExportTarget.DEVICE_FOLDER)
+        val other = repository.add("Active", configurationSnapshot("other-{date}"), ExportTarget.DEVICE_FOLDER)
+        assertThat(repository.activate(other.id)).isTrue()
+        val before = dataStore.data.first().asMap()
+        val read = requireNotNull(repository.readConfigurationProfile(selected.id, 1))
+        assertThat(read.settings.filenameFormat).isEqualTo("selected-{date}")
+        assertThat(read.revision).isEqualTo(1)
+        assertThat(read.executionBlocked).isFalse()
+        assertThat(repository.readConfigurationProfile("missing", 1)).isNull()
+        assertThat(repository.readConfigurationProfile(selected.id, 0)).isNull()
+        assertThat(repository.readConfigurationProfile(selected.id, 2)).isNull()
+        assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+        assertThat(repository.updateProfile(selected.id, settingsSnapshotJson = configurationSnapshot("changed-{date}"))).isTrue()
+        assertThat(repository.updateProfile(selected.id, settingsSnapshotJson = original)).isTrue()
+        assertThat(repository.readConfigurationProfile(selected.id, 1)).isNull()
+        assertThat(repository.readConfigurationProfile(selected.id, 3)?.settings?.filenameFormat).isEqualTo("selected-{date}")
+    }
+
+    @Test
+    fun `configuration read rejects malformed duplicate or missing rows without repair`() = runTest {
+        val profile = repository.add("Selected", configurationSnapshot("selected-{date}"), ExportTarget.DEVICE_FOLDER)
+        val rows = Json.parseToJsonElement(requireNotNull(dataStore.data.first()[PROFILES_KEY])).jsonArray
+        val duplicate = JsonArray(listOf(rows[0], rows[0])).toString()
+        val malformed = JsonArray(listOf(JsonObject(rows[0].jsonObject + ("configurationRevision" to JsonPrimitive("1"))))).toString()
+        for (raw in listOf(duplicate, malformed, "invalid")) {
+            dataStore.edit { it[PROFILES_KEY] = raw }
+            assertThat(repository.readConfigurationProfile(profile.id, 1)).isNull()
+            if (raw != duplicate) {
+                assertThat(repository.updateProfile(profile.id, settingsSnapshotJson = configurationSnapshot("replacement-{date}"))).isFalse()
+            }
+            assertThat(dataStore.data.first()[PROFILES_KEY]).isEqualTo(raw)
+        }
+        dataStore.edit { it.remove(PROFILES_KEY) }
+        assertThat(repository.readConfigurationProfile(profile.id, 1)).isNull()
+        assertThat(dataStore.data.first()[PROFILES_KEY]).isNull()
+    }
+
+    @Test
+    fun `configuration read observes rebind state in same datastore image and rejects corrupt output`() = runTest {
+        val profile = repository.add("Selected", configurationSnapshot("selected-{date}"), ExportTarget.DEVICE_FOLDER)
+        val key = SharedSetupV2ProfilePersistence.blockedProfileIdsKey
+        dataStore.edit { it[key] = setOf(profile.id) }
+        val before = dataStore.data.first().asMap()
+        assertThat(repository.readConfigurationProfile(profile.id, 1)?.executionBlocked).isTrue()
+        assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+        dataStore.edit { it.remove(key) }
+        assertThat(repository.readConfigurationProfile(profile.id, 1)?.executionBlocked).isFalse()
+        assertThat(repository.updateProfile(profile.id, settingsSnapshotJson = "invalid")).isTrue()
+        assertThat(repository.readConfigurationProfile(profile.id, 2)).isNull()
+    }
+
     private suspend fun seededProfile(
         name: String = "Daily",
         target: ExportTarget = ExportTarget.DEVICE_FOLDER,
@@ -68,6 +162,67 @@ class ExportProfileRepositoryTest {
         folderUri = folderUri,
         folderDisplayName = folderUri?.let { "Folder $name" },
     )
+
+    @Test
+    fun `profile revisions survive reload and settings returning to their original values`() = runTest {
+        val first = seededProfile()
+        val other = seededProfile(name = "Other")
+        assertThat(first.configurationRevision).isEqualTo(1)
+        assertThat(repository.updateProfile(first.id, settingsSnapshotJson = "snapshot-b")).isTrue()
+        assertThat(repository.profileById(first.id)?.configurationRevision).isEqualTo(2)
+        val reloaded = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+        assertThat(reloaded.updateProfile(first.id, settingsSnapshotJson = "snapshot-a")).isTrue()
+        assertThat(repository.profileById(first.id)?.configurationRevision).isEqualTo(3)
+        assertThat(repository.profileById(first.id)?.settingsSnapshotJson).isEqualTo(first.settingsSnapshotJson)
+        assertThat(repository.profileById(other.id)?.configurationRevision).isEqualTo(1)
+    }
+
+    @Test
+    fun `every native editor path advances its revision and a derived row starts fresh`() = runTest {
+        val first = seededProfile()
+        assertThat(repository.bindFolder(first.id, "content://synthetic/tree/review", "Review")).isTrue()
+        assertThat(repository.updateProfile(first.id, settingsSnapshotJson = "snapshot-b")).isTrue()
+        assertThat(repository.applyEditorUpdate(first.id, "Edited", "snapshot-c", ExportTarget.DEVICE_FOLDER,
+            null, "content://synthetic/tree/review", "Review")).isEqualTo("Edited")
+        assertThat(repository.rename(first.id, "Renamed")).isEqualTo("Renamed")
+        assertThat(repository.profileById(first.id)?.configurationRevision).isEqualTo(5)
+        assertThat(repository.activate(first.id)).isTrue()
+        assertThat(repository.profileById(first.id)?.configurationRevision).isEqualTo(5)
+        val derived = repository.add("Copy", "snapshot-c", ExportTarget.DEVICE_FOLDER, derivedFromProfileId = first.id)
+        assertThat(derived.id).isNotEqualTo(first.id)
+        assertThat(derived.configurationRevision).isEqualTo(1)
+        assertThat(repository.profileById(first.id)?.configurationRevision).isEqualTo(5)
+    }
+
+    @Test
+    fun `legacy profile revision defaults without a read migration write`() = runTest {
+        val first = seededProfile()
+        val rows = Json.parseToJsonElement(requireNotNull(dataStore.data.first()[PROFILES_KEY])).jsonArray
+        val legacy = JsonArray(rows.map { JsonObject(it.jsonObject.filterKeys { key -> key != "configurationRevision" }) }).toString()
+        dataStore.edit { it[PROFILES_KEY] = legacy }
+        val reloaded = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+        assertThat(reloaded.profileById(first.id)?.configurationRevision).isEqualTo(1)
+        assertThat(dataStore.data.first()[PROFILES_KEY]).isEqualTo(legacy)
+        assertThat(reloaded.updateProfile(first.id, settingsSnapshotJson = "snapshot-a")).isTrue()
+        assertThat(repository.profileById(first.id)?.configurationRevision).isEqualTo(2)
+    }
+
+    @Test
+    fun `invalid or exhausted profile revisions reject edits without changing persisted bytes`() = runTest {
+        val first = seededProfile()
+        for (revision in listOf(-1, 0, Int.MAX_VALUE)) {
+            val rows = Json.parseToJsonElement(requireNotNull(dataStore.data.first()[PROFILES_KEY])).jsonArray
+            val before = JsonArray(rows.map { JsonObject(it.jsonObject + ("configurationRevision" to JsonPrimitive(revision))) }).toString()
+            dataStore.edit { it[PROFILES_KEY] = before }
+            assertThat(repository.updateProfile(first.id, settingsSnapshotJson = "changed")).isFalse()
+            assertThat(repository.bindFolder(first.id, "content://synthetic/tree/changed", "Changed")).isFalse()
+            assertThat(repository.rename(first.id, "Changed")).isNull()
+            assertThat(repository.applyEditorUpdate(first.id, "Changed", "changed", ExportTarget.DEVICE_FOLDER,
+                null, null, null)).isNull()
+            assertThat(dataStore.data.first()[PROFILES_KEY]).isEqualTo(before)
+            assertThat(repository.profileById(first.id)?.configurationRevision).isEqualTo(revision)
+        }
+    }
 
     @Test
     fun `concurrent deletes preserve the final profile`() = runTest {

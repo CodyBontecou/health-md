@@ -72,11 +72,38 @@ class CIOrchestrationTests(unittest.TestCase):
             self.assertEqual(JOBS["changes"]["outputs"][flag], "${{ steps.detect.outputs." + flag + " }}")
 
     def test_each_job_uses_its_own_selection_flag(self):
-        for job, flag in (("test", "test"), ("instrumentation", "instrumentation"),
+        for job, flag in (("test", "test"), ("jvm-tests", "test"), ("instrumentation", "instrumentation"),
                           ("fdroid", "fdroid"), ("wear-emulator-smoke", "wear"),
                           ("rust-kotlin-direct-interop", "interop")):
-            prefix = "always() && " if job in {"instrumentation", "fdroid"} else ""
+            prefix = "always() && " if job in {"test", "instrumentation", "fdroid"} else ""
             self.assertEqual(JOBS[job]["if"], "${{ " + prefix + "needs.changes.outputs." + flag + " == 'true' }}")
+
+    def test_play_jvm_lanes_preserve_every_variant_and_shared_gate(self):
+        lanes = JOBS["jvm-tests"]
+        self.assertFalse(lanes["strategy"]["fail-fast"])
+        self.assertLessEqual(lanes["timeout-minutes"], 60)
+        self.assertEqual(lanes["strategy"]["matrix"]["include"], [
+            {"variant": "debug", "app-task": "testPlayDebugUnitTest"},
+            {"variant": "release", "app-task": "testPlayReleaseUnitTest"},
+            {"variant": "e2e", "app-task": "testPlayE2eUnitTest"},
+        ])
+        step = next(s for s in lanes["steps"] if s.get("name") == "Run Play app, shared contract, core, and protocol tests")
+        self.assertIn('--no-daemon --max-workers=2 "${tasks[@]}"', step["run"])
+        self.assertIn('tasks=(":app:${{ matrix.app-task }}")', step["run"])
+        for task in (":healthmd-core:testDebugUnitTest", ":wearable-contract:test", ":direct-protocol:test"):
+            self.assertIn(task, step["run"])
+        for name in ("Run Android lint", "Assemble Play debug app and validate phone APK policy"):
+            self.assertEqual(next(s for s in lanes["steps"] if s.get("name") == name)["if"], "${{ matrix.variant == 'debug' }}")
+        self.assertEqual(set(JOBS["test"]["needs"]), {"changes", "jvm-tests"})
+        self.assertIn("test", JOBS["gate"]["needs"])
+
+    def test_play_jvm_gate_rejects_missing_failed_cancelled_or_skipped_lanes(self):
+        step = JOBS["test"]["steps"][0]
+        self.assertEqual(step["env"]["JVM_RESULT"], "${{ needs.jvm-tests.result }}")
+        for result in ("success", "failure", "cancelled", "skipped", ""):
+            with self.subTest(result=result):
+                run = subprocess.run(["bash", "-c", step["run"]], env={**os.environ, "JVM_RESULT": result}, capture_output=True)
+                self.assertEqual(run.returncode == 0, result == "success")
 
     def gate(self, **overrides):
         env = {**os.environ, "CHANGES_RESULT": "success", "CHANGES_RUN": "true", "POLICY_RESULT": "success"}
@@ -131,6 +158,20 @@ class CIOrchestrationTests(unittest.TestCase):
                 for step in job.get("steps", []):
                     if step.get("uses", "").startswith("android-actions/setup-android@"):
                         self.assertEqual(step.get("with", {}).get("packages"), "platform-tools")
+
+    def test_practice_browser_cache_is_bound_to_pinned_system_library_abi(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/practice-ci.yml").read_text())["jobs"]
+        validate = jobs["validate"]
+        self.assertEqual(validate["runs-on"], "ubuntu-24.04")
+        cache = next(step["with"] for step in validate["steps"]
+                     if step.get("uses", "").startswith("actions/cache@"))
+        self.assertEqual(cache["path"], "~/.cache/ms-playwright")
+        self.assertEqual(cache["key"], "practice-playwright-ubuntu24-${{ runner.arch }}-${{ hashFiles('apps/practice/package-lock.json') }}")
+        self.assertEqual(cache["restore-keys"], "practice-playwright-ubuntu24-${{ runner.arch }}-")
+        commands = [step.get("run", "") for step in validate["steps"]]
+        self.assertIn("npx playwright install --with-deps chromium firefox webkit", commands)
+        self.assertIn("npm run check:ci", commands)
+        self.assertFalse(any(step.get("continue-on-error") for step in validate["steps"]))
 
     def test_apple_nightly_runs_one_coverage_enabled_macos_suite(self):
         jobs = yaml.safe_load((ROOT / ".github/workflows/apple-nightly.yml").read_text())["jobs"]

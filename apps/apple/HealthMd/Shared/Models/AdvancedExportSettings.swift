@@ -276,7 +276,31 @@ enum EffectiveFileExportMode: Equatable, Sendable {
     case dailyNotesOnly
 }
 
+struct SavedDeviceExportConfigurationSnapshot {
+    let revision: Int64
+    let settings: ExportSettingsSnapshot
+}
+
 class AdvancedExportSettings: ObservableObject {
+    static let nativeConfigurationRevisionKey = "advancedExportSettings.nativeConfigurationRevision.v1"
+
+    /// Missing only is legacy revision1. Malformed/exhausted metadata never becomes a valid pin.
+    static func nativeConfigurationRevision(defaults: any UserDefaultsStoring) -> Int64? {
+        guard defaults.containsObject(forKey: nativeConfigurationRevisionKey) else { return 1 }
+        guard let data = defaults.data(forKey: nativeConfigurationRevisionKey),
+              let revision = try? JSONDecoder().decode(Int64.self, from: data),
+              (1...Int64(Int32.max)).contains(revision) else { return nil }
+        return revision
+    }
+
+    /// Native edits remain usable if bridge revision metadata is invalid, but saved-settings
+    /// planning stays disabled rather than wrapping or repairing an invalid pin into validity.
+    static func advanceNativeConfigurationRevision(defaults: any UserDefaultsStoring) {
+        let revision = nativeConfigurationRevision(defaults: defaults)
+        let next = revision.flatMap { $0 < Int64(Int32.max) ? $0 + 1 : nil } ?? 0
+        defaults.set(Data(String(next).utf8), forKey: nativeConfigurationRevisionKey)
+    }
+
     // Legacy compatibility only (old saved settings + migration source).
     // Export runtime decisions must come from metricSelection.
     @Published var dataTypes: DataTypeSelection {
@@ -427,7 +451,16 @@ class AdvancedExportSettings: ObservableObject {
         set { if newValue { generateRangeSummary = true } }
     }
 
+    func hasPersistedOutputConfiguration() -> Bool {
+        [dataTypesKey, metricSelectionKey, formatKey, formatsKey, metadataKey, filenameFormatKey,
+         folderStructureKey, formatCustomizationKey, individualTrackingKey, dailyNoteInjectionKey]
+            .contains { userDefaults.object(forKey: $0) != nil }
+    }
+
     private let userDefaults: UserDefaults
+    /// Request-owned execution can disable every preference-write/subscription path.
+    /// Live settings and historical snapshot callers retain their existing persistence behavior.
+    private var persistChanges = true
     
     /// Combine subscriptions for observing nested ObservableObject changes
     private var metricSelectionCancellable: AnyCancellable?
@@ -472,6 +505,10 @@ class AdvancedExportSettings: ObservableObject {
     /// Request-scoped source calendar used by connected exports. It is never
     /// persisted; local exports continue using the device's current time zone.
     var exportTimeZoneOverride: TimeZone? = nil
+
+    /// Detached request-only presentation context; never serialized as phone preferences.
+    var exportCalendarOverride: Calendar? = nil
+    var exportLocaleOverride: Locale? = nil
 
     /// Request-scoped durable renderer provenance. It is never written to UserDefaults; queued,
     /// connected, and direct operations restore it only from their immutable settings snapshot.
@@ -534,6 +571,8 @@ class AdvancedExportSettings: ObservableObject {
     /// Common method to apply date placeholders to a template string
     private func applyDatePlaceholders(to template: String, for date: Date) -> String {
         let dateFormatter = DateFormatter()
+        if let exportLocaleOverride { dateFormatter.locale = exportLocaleOverride }
+        if let exportCalendarOverride { dateFormatter.calendar = exportCalendarOverride }
         dateFormatter.timeZone = exportTimeZoneOverride ?? .current
         var result = template
 
@@ -566,7 +605,7 @@ class AdvancedExportSettings: ObservableObject {
         result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
 
         // {quarter} -> Q1, Q2, Q3, Q4
-        var calendar = Calendar.current
+        var calendar = exportCalendarOverride ?? Calendar.current
         calendar.timeZone = exportTimeZoneOverride ?? .current
         let month = calendar.component(.month, from: date)
         let quarter = "Q\((month - 1) / 3 + 1)"
@@ -576,9 +615,9 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     /// Reconstructs request-scoped export settings without replaying every
-    /// property observer into UserDefaults. The returned object remains mutable,
-    /// and later caller mutations persist only to the supplied isolated domain.
-    init(snapshot: ExportSettingsSnapshot, userDefaults: UserDefaults) {
+    /// property observer into UserDefaults. Historical callers persist later mutations to their
+    /// supplied domain. Request-owned execution passes false and cannot persist later mutations.
+    init(snapshot: ExportSettingsSnapshot, userDefaults: UserDefaults, persistChanges: Bool = true) {
         let metricSelection = MetricSelectionState()
         snapshot.metricSelection.apply(to: metricSelection)
         metricSelection.removeMetricsUnavailableInCurrentBuild()
@@ -591,6 +630,7 @@ class AdvancedExportSettings: ObservableObject {
         snapshot.dailyNoteInjection.apply(to: dailyNoteInjection)
 
         self.userDefaults = userDefaults
+        self.persistChanges = persistChanges
         dataTypes = DataTypeSelection()
         self.metricSelection = metricSelection
         exportFormats = snapshot.exportFormats
@@ -649,8 +689,12 @@ class AdvancedExportSettings: ObservableObject {
         exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
     }
 
-    init(userDefaults: UserDefaults = .standard) {
+    init(userDefaults: UserDefaults = .standard, persistChanges: Bool = true) {
         self.userDefaults = userDefaults
+        self.persistChanges = persistChanges
+        if persistChanges {
+            Self.advanceNativeConfigurationRevision(defaults: SystemUserDefaults(defaults: userDefaults))
+        }
 
         var migratedMetricSelectionFromLegacyDataTypes = false
 
@@ -747,8 +791,12 @@ class AdvancedExportSettings: ObservableObject {
 
         // Rolling manual date ranges were removed in favor of explicit date range presets.
         // Clear legacy keys so a previously-enabled hidden toggle cannot affect exports.
-        userDefaults.removeObject(forKey: legacyUseRollingDateRangeKey)
-        userDefaults.removeObject(forKey: legacyRollingDateRangeDaysKey)
+        if persistChanges {
+            userDefaults.removeObject(forKey: legacyUseRollingDateRangeKey)
+        }
+        if persistChanges {
+            userDefaults.removeObject(forKey: legacyRollingDateRangeDaysKey)
+        }
         
         // Load format customization
         if let data = userDefaults.data(forKey: formatCustomizationKey),
@@ -794,11 +842,15 @@ class AdvancedExportSettings: ObservableObject {
             ?? legacyDetailPolicy.healthKitSourceArchive
         self.compatibilityDetail = loadedCompatibilityDetail
         self.healthKitSourceArchivePolicy = loadedHealthKitSourceArchivePolicy
-        userDefaults.set(loadedCompatibilityDetail.rawValue, forKey: compatibilityDetailKey)
-        userDefaults.set(
-            loadedHealthKitSourceArchivePolicy.rawValue,
-            forKey: healthKitSourceArchivePolicyKey
-        )
+        if persistChanges {
+            userDefaults.set(loadedCompatibilityDetail.rawValue, forKey: compatibilityDetailKey)
+        }
+        if persistChanges {
+            userDefaults.set(
+                loadedHealthKitSourceArchivePolicy.rawValue,
+                forKey: healthKitSourceArchivePolicyKey
+            )
+        }
 
         // The new key is authoritative even when false. Otherwise migrate the
         // legacy toggles once using OR semantics and remove all old keys in the
@@ -809,11 +861,19 @@ class AdvancedExportSettings: ObservableObject {
             self.generateRangeSummary = userDefaults.bool(forKey: legacyGenerateWeeklyRollupsKey)
                 || userDefaults.bool(forKey: legacyGenerateMonthlyRollupsKey)
                 || userDefaults.bool(forKey: legacyGenerateYearlyRollupsKey)
-            userDefaults.set(self.generateRangeSummary, forKey: generateRangeSummaryKey)
+            if persistChanges {
+                userDefaults.set(self.generateRangeSummary, forKey: generateRangeSummaryKey)
+            }
         }
-        userDefaults.removeObject(forKey: legacyGenerateWeeklyRollupsKey)
-        userDefaults.removeObject(forKey: legacyGenerateMonthlyRollupsKey)
-        userDefaults.removeObject(forKey: legacyGenerateYearlyRollupsKey)
+        if persistChanges {
+            userDefaults.removeObject(forKey: legacyGenerateWeeklyRollupsKey)
+        }
+        if persistChanges {
+            userDefaults.removeObject(forKey: legacyGenerateMonthlyRollupsKey)
+        }
+        if persistChanges {
+            userDefaults.removeObject(forKey: legacyGenerateYearlyRollupsKey)
+        }
         // Medications use a separate per-object HealthKit authorization flow.
         // If a prior build persisted medication metrics by default before that
         // flow was completed, remove them so users opt in explicitly.
@@ -836,7 +896,9 @@ class AdvancedExportSettings: ObservableObject {
         // opening that selector during ordinary exports.
         var removedLegacyVerifiableClinicalRecords = false
         if !userDefaults.bool(forKey: verifiableClinicalRecordsOptInMigrationKey) {
-            userDefaults.set(true, forKey: verifiableClinicalRecordsOptInMigrationKey)
+            if persistChanges {
+                userDefaults.set(true, forKey: verifiableClinicalRecordsOptInMigrationKey)
+            }
             if metricSelection.enabledMetrics.remove("verifiable_clinical_records") != nil {
                 metricSelection.enabledCategories.remove(HealthMetricCategory.clinicalDocuments.rawValue)
                 removedLegacyVerifiableClinicalRecords = true
@@ -872,7 +934,9 @@ class AdvancedExportSettings: ObservableObject {
         // read from it again on subsequent launches.
         if migratedFormatsFromLegacy {
             saveFormats()
-            userDefaults.removeObject(forKey: formatKey)
+            if persistChanges {
+                userDefaults.removeObject(forKey: formatKey)
+            }
         }
 
         // Subscribe to nested ObservableObject changes so internal mutations
@@ -892,6 +956,7 @@ class AdvancedExportSettings: ObservableObject {
     // MARK: - Nested ObservableObject Subscriptions
     
     private func subscribeToMetricSelection() {
+        guard persistChanges else { return }
         metricSelectionCancellable = metricSelection.objectWillChange
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -908,6 +973,7 @@ class AdvancedExportSettings: ObservableObject {
     }
     
     private func subscribeToIndividualTracking() {
+        guard persistChanges else { return }
         individualTrackingCancellable = individualTracking.objectWillChange
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -923,6 +989,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private func subscribeToFormatCustomization() {
+        guard persistChanges else { return }
         formatCustomizationCancellable = formatCustomization.objectWillChange
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -932,6 +999,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private func subscribeToDailyNoteInjection() {
+        guard persistChanges else { return }
         dailyNoteInjectionCancellable = dailyNoteInjection.objectWillChange
             .sink { [weak self] _ in
                 // Forward immediately so parent views re-render (e.g. summary row).
@@ -945,30 +1013,40 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private func saveMetricSelection() {
+        guard persistChanges else { return }
+        Self.advanceNativeConfigurationRevision(defaults: SystemUserDefaults(defaults: userDefaults))
         if let encoded = try? JSONEncoder().encode(metricSelection) {
             userDefaults.set(encoded, forKey: metricSelectionKey)
         }
     }
     
     private func saveFormatCustomization() {
+        guard persistChanges else { return }
+        Self.advanceNativeConfigurationRevision(defaults: SystemUserDefaults(defaults: userDefaults))
         if let encoded = try? Self.internalSettingsEncoder().encode(formatCustomization) {
             userDefaults.set(encoded, forKey: formatCustomizationKey)
         }
     }
     
     private func saveIndividualTracking() {
+        guard persistChanges else { return }
+        Self.advanceNativeConfigurationRevision(defaults: SystemUserDefaults(defaults: userDefaults))
         if let encoded = try? JSONEncoder().encode(individualTracking) {
             userDefaults.set(encoded, forKey: individualTrackingKey)
         }
     }
 
     private func saveDailyNoteInjection() {
+        guard persistChanges else { return }
+        Self.advanceNativeConfigurationRevision(defaults: SystemUserDefaults(defaults: userDefaults))
         if let encoded = try? JSONEncoder().encode(dailyNoteInjection) {
             userDefaults.set(encoded, forKey: dailyNoteInjectionKey)
         }
     }
 
     private func saveFormats() {
+        guard persistChanges else { return }
+        Self.advanceNativeConfigurationRevision(defaults: SystemUserDefaults(defaults: userDefaults))
         let sorted = Array(exportFormats).sorted(by: { $0.rawValue < $1.rawValue })
         if let encoded = try? JSONEncoder().encode(sorted) {
             userDefaults.set(encoded, forKey: formatsKey)
@@ -976,6 +1054,8 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private func save() {
+        guard persistChanges else { return }
+        Self.advanceNativeConfigurationRevision(defaults: SystemUserDefaults(defaults: userDefaults))
         // Save data types
         if let encoded = try? JSONEncoder().encode(dataTypes) {
             userDefaults.set(encoded, forKey: dataTypesKey)
@@ -1055,6 +1135,9 @@ class AdvancedExportSettings: ObservableObject {
         _ candidate: SharedSetupPortableSnapshot,
         verificationOverride: (() -> Bool)? = nil
     ) throws {
+        guard persistChanges else {
+            throw SharedSetupError.invalid("Detached export settings cannot persist configuration.")
+        }
         var snapshot = candidate
         let normalizedDetailPolicy = candidate.detailPolicy
         snapshot.compatibilityDetail = normalizedDetailPolicy.compatibilityDetail
@@ -1166,6 +1249,7 @@ class AdvancedExportSettings: ObservableObject {
     private func persistSharedSetupSnapshot(_ snapshot: SharedSetupPortableSnapshot) throws {
         let data = try Self.internalSettingsEncoder().encode(snapshot)
         guard data.count <= SharedSetupPortableSnapshot.maximumPersistedEncodedBytes else { throw SharedSetupError.oversized }
+        Self.advanceNativeConfigurationRevision(defaults: SystemUserDefaults(defaults: userDefaults))
         userDefaults.set(data, forKey: sharedSetupPortableSettingsKey)
         persistAllSettings()
     }

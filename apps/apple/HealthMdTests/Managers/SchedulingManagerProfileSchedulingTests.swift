@@ -138,12 +138,15 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         let profileStore = ExportProfileStore(userDefaults: defaults)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let profile = profileStore.add(
+        guard let profile = profileStore.add(
             name: profileName,
             settings: ExportSettingsSnapshot.from(settings),
             target: target,
             folderVaultID: folderVaultID
-        )
+        ) else {
+            XCTFail("Unable to seed the scheduled export profile")
+            return UUID()
+        }
         let entryStore = ScheduledExportEntryStore(userDefaults: defaults)
         var entry = ScheduledExportEntry(
             profileID: profile.id,
@@ -552,11 +555,11 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         let weeklySettings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(weeklySettings)
         let profileStore = ExportProfileStore(userDefaults: defaults)
-        let weekly = profileStore.add(
+        let weekly = try XCTUnwrap(profileStore.add(
             name: "Weekly",
             settings: ExportSettingsSnapshot.from(weeklySettings),
             target: .apiEndpoint
-        )
+        ))
         let entryStore = ScheduledExportEntryStore(userDefaults: defaults)
         var weeklyEntry = ScheduledExportEntry(
             profileID: weekly.id,
@@ -1239,11 +1242,11 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         let profileStore = ExportProfileStore(userDefaults: defaults)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let second = profileStore.add(
+        let second = try XCTUnwrap(profileStore.add(
             name: "Second",
             settings: ExportSettingsSnapshot.from(settings),
             target: .apiEndpoint
-        )
+        ))
         let entryStore = ScheduledExportEntryStore(userDefaults: defaults)
         var secondEntry = ScheduledExportEntry(
             profileID: second.id,

@@ -66,12 +66,17 @@ nonisolated protocol AppleLooseDailyCoreExecuting: Sendable {
 }
 
 nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuting, Sendable {
+    let profile: CoreMetricRegistryProfile
+
+    init(profile: CoreMetricRegistryProfile = .appleHealthDataV10) { self.profile = profile }
+
     func loadContext() async throws -> AppleLooseDailyCoreContext {
-        try await runDetached {
+        let profile = self.profile
+        return try await runDetached {
             let service = HealthMdCoreService()
             return AppleLooseDailyCoreContext(
                 buildInfo: try service.buildInfo(),
-                registry: try service.metricRegistry(profile: .appleHealthDataV10)
+                registry: try service.metricRegistry(profile: profile)
             )
         }
     }

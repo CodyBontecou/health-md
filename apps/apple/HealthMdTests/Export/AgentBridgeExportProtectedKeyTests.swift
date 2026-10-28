@@ -1,0 +1,602 @@
+import CryptoKit
+import Foundation
+import HealthMdConnectionCore
+import LocalAuthentication
+import Security
+import XCTest
+#if canImport(HealthMd)
+@testable import HealthMd
+#else
+@testable import AgentBridgeRequestSettingsHarness
+#endif
+
+final class AgentBridgeExportProtectedKeyTests: XCTestCase {
+    func testExplicitNativeBootstrapProvisionsDedicatedKeyAndAuthenticatesEmptyLedger() throws {
+        let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+        let directory = parent.appendingPathComponent("issuer")
+        let sdk = NativeBootstrapKeyBoundary()
+        sdk.beforeAdd = {
+            sdk.reservedBeforeAdd = FileManager.default.fileExists(atPath: directory.appendingPathComponent("lock").path)
+                && !FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path)
+        }
+        let store = try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+            authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner)
+        XCTAssertEqual(sdk.additions, 1)
+        XCTAssertTrue(sdk.exactAttributes)
+        XCTAssertTrue(sdk.reservedBeforeAdd)
+        let state = try store.snapshot()
+        XCTAssertEqual(state.generation, 0)
+        XCTAssertTrue(state.delegations.isEmpty && state.plans.isEmpty && state.decisions.isEmpty)
+        let reopened = try AgentBridgeExportAuthorityStore(existingDirectory: directory, protectedKeys: sdk.provisioner.reader)
+        XCTAssertEqual(try reopened.snapshot().generation, 0)
+        XCTAssertEqual(sdk.additions, 1)
+    }
+
+    func testNativeBootstrapDenialAndExistingIssuerNeverCreateOrReplaceKeyMaterial() throws {
+        let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+        let directory = parent.appendingPathComponent("issuer")
+        let sdk = NativeBootstrapKeyBoundary()
+        XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+            authorization: ProtectedKeyNativeAuthorization(allowed: false), provisioner: sdk.provisioner))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        XCTAssertEqual(sdk.lookup.calls, 0)
+        XCTAssertEqual(sdk.additions, 0)
+        let store = try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+            authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner)
+        let before = try Data(contentsOf: directory.appendingPathComponent("state.json"))
+        sdk.lookup.respond(status: errSecItemNotFound, result: nil)
+        let calls = sdk.lookup.calls
+        XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+            authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner))
+        XCTAssertEqual(sdk.lookup.calls, calls)
+        XCTAssertEqual(sdk.additions, 1)
+        XCTAssertThrowsError(try store.snapshot())
+        XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("state.json")), before)
+    }
+
+    func testNativeBootstrapReusesValidProtectedKeyWithoutIssuingAnyDelegation() throws {
+        let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+        let sdk = NativeBootstrapKeyBoundary()
+        sdk.lookup.respond(result: [ProtectedKeyLookup.record()] as CFArray)
+        let store = try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: parent.appendingPathComponent("issuer"),
+            authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner)
+        XCTAssertEqual(sdk.additions, 0)
+        XCTAssertTrue(try store.snapshot().delegations.isEmpty)
+    }
+
+    func testNativeBootstrapSDKFailureAndReadbackMismatchLeaveNoUsableLedgerOrAutomaticRetry() throws {
+        for mode in ["denied", "duplicate", "missing-readback", "changed-readback", "moved-root"] {
+            let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let directory = parent.appendingPathComponent("issuer")
+            let sdk = NativeBootstrapKeyBoundary()
+            if mode == "denied" { sdk.addStatus = errSecInteractionNotAllowed }
+            if mode == "duplicate" { sdk.addStatus = errSecDuplicateItem }
+            sdk.missingReadback = mode == "missing-readback"
+            sdk.changedReadback = mode == "changed-readback"
+            if mode == "moved-root" {
+                sdk.beforeAdd = {
+                    try FileManager.default.moveItem(at: directory, to: parent.appendingPathComponent("retained"))
+                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false,
+                                                           attributes: [.posixPermissions: 0o700])
+                }
+            }
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner), mode)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path), mode)
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner), mode)
+            XCTAssertEqual(sdk.additions, 1, mode)
+            XCTAssertNil(sdk.callbackError, mode)
+        }
+    }
+
+    func testNativeBootstrapCannotPublishAfterConsentIsLostDuringSDKWorkOrStaging() throws {
+        for stage in ["sdk", "publication"] {
+            let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let directory = parent.appendingPathComponent("issuer")
+            let sdk = NativeBootstrapKeyBoundary()
+            let consent = NativeBootstrapConsentBoundary()
+            if stage == "sdk" { sdk.beforeAdd = { consent.revoked = true } }
+            if stage == "publication" {
+                consent.beforeCheck = { count in
+                    if count == 4 {
+                        consent.sawStagedFile = (try FileManager.default.contentsOfDirectory(atPath: directory.path))
+                            .contains(where: { $0.hasPrefix("transaction-") })
+                        consent.revoked = true
+                    }
+                }
+            }
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: consent, provisioner: sdk.provisioner), stage) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired, stage)
+            }
+            XCTAssertTrue(FileManager.default.fileExists(atPath: directory.path), stage)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path), stage)
+            if stage == "publication" { XCTAssertTrue(consent.sawStagedFile) }
+            // Consent restoration cannot turn an interrupted issuer into a fresh setup.
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: ProtectedKeyNativeAuthorization(allowed: true), provisioner: sdk.provisioner), stage)
+            XCTAssertEqual(sdk.additions, 1, stage)
+            XCTAssertNil(sdk.callbackError, stage)
+        }
+    }
+
+    func testNativeBootstrapConsentCallbackCannotPublishIntoRelocatedOrReplacementIssuer() throws {
+        for checkpoint in [3, 4] {
+            let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let directory = parent.appendingPathComponent("issuer"), retained = parent.appendingPathComponent("retained")
+            let sdk = NativeBootstrapKeyBoundary(), consent = NativeBootstrapConsentBoundary()
+            let marker = Data("unrelated replacement file".utf8)
+            let untouchedDate = Date(timeIntervalSince1970: 0)
+            var replacementFile: URL?
+            consent.beforeCheck = { count in
+                if count == checkpoint {
+                    let temporary = checkpoint == 4
+                        ? try XCTUnwrap(FileManager.default.contentsOfDirectory(atPath: directory.path)
+                            .first(where: { $0.hasPrefix("transaction-") }))
+                        : "transaction-foreign"
+                    try FileManager.default.moveItem(at: directory, to: retained)
+                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false,
+                                                           attributes: [.posixPermissions: 0o700])
+                    let foreign = directory.appendingPathComponent(temporary)
+                    try marker.write(to: foreign)
+                    replacementFile = foreign
+                    if checkpoint == 3 {
+                        try FileManager.default.setAttributes([.modificationDate: untouchedDate], ofItemAtPath: directory.path)
+                        try FileManager.default.setAttributes([.modificationDate: untouchedDate], ofItemAtPath: retained.path)
+                    }
+                }
+            }
+            XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: directory,
+                authorization: consent, provisioner: sdk.provisioner)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .bindingChanged)
+            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("state.json").path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: retained.appendingPathComponent("state.json").path))
+            XCTAssertEqual(try Data(contentsOf: XCTUnwrap(replacementFile)), marker)
+            if checkpoint == 3 {
+                // A temporary creation+deletion changes directory mtime even with no retained file.
+                XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: directory.path)[.modificationDate] as? Date, untouchedDate)
+                XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: retained.path)[.modificationDate] as? Date, untouchedDate)
+            }
+            XCTAssertNil(sdk.callbackError)
+        }
+    }
+
+    func testNativeSetupConsentIsScopedAndCannotAuthorizeOtherNativeActions() throws {
+        let policy = SetupConsentPolicyBoundary()
+        var escaped: (any AgentBridgeExportNativeAuthorizing)?
+        try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+            escaped = consent
+            try consent.requireNativeAuthorization(for: .createPrivateStore)
+        }
+        XCTAssertThrowsError(try XCTUnwrap(escaped).requireNativeAuthorization(for: .createPrivateStore))
+        let other = try AgentBridgeAuthorityReference(authorityId: AgentBridgeUUID("00000000-0000-4000-8000-000000000001"),
+            grantRevision: 1, grantSha256: AgentBridgeDigest(String(repeating: "a", count: 64)), issuer: .nativeSource)
+        XCTAssertThrowsError(try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+            XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .revokeDelegation(other)))
+            XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .createPrivateStore))
+        })
+        XCTAssertThrowsError(try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+            escaped = consent
+            throw AgentBridgeValidationError.invalidRequest
+        }) { XCTAssertEqual($0 as? AgentBridgeValidationError, .invalidRequest) }
+        XCTAssertThrowsError(try XCTUnwrap(escaped).requireNativeAuthorization(for: .createPrivateStore))
+    }
+
+    func testNativeSetupConsentObservedPolicyLossAndExpiryNeverRenew() throws {
+        for expiry in [false, true] {
+            let policy = SetupConsentPolicyBoundary()
+            XCTAssertThrowsError(try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(
+                requireCurrentNativePolicy: { try policy.requireCurrent() }, now: { policy.now }) { consent in
+                try consent.requireNativeAuthorization(for: .createPrivateStore)
+                if expiry { policy.advance() } else { policy.allowed = false }
+                XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .createPrivateStore))
+                policy.restore()
+                XCTAssertThrowsError(try consent.requireNativeAuthorization(for: .createPrivateStore))
+            }) { XCTAssertEqual($0 as? AgentBridgeValidationError, .approvalRequired) }
+        }
+    }
+
+    func testNativeSetupConfirmationCreatesOnlyLocalEmptyLedgerAndRejectsLatePolicyLoss() throws {
+        for losePolicy in [false, true] {
+            let parent = try nativeBootstrapParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let root = parent.appendingPathComponent("issuer")
+            let sdk = NativeBootstrapKeyBoundary(), policy = SetupConsentPolicyBoundary()
+            sdk.beforeAdd = {
+                XCTAssertEqual(try root.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup, true)
+                if losePolicy { policy.allowed = false }
+            }
+            if losePolicy {
+                XCTAssertThrowsError(try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+                    try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: root, authorization: consent, provisioner: sdk.provisioner)
+                }) { XCTAssertEqual($0 as? AgentBridgeValidationError, .approvalRequired) }
+                XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("state.json").path))
+            } else {
+                let store = try AgentBridgeExportNativeSetupConsent.withNativeConfirmation(requireCurrentNativePolicy: { try policy.requireCurrent() }) { consent in
+                    try AgentBridgeExportAuthorityStore.createNativePrivateStore(at: root, authorization: consent, provisioner: sdk.provisioner)
+                }
+                let state = try store.snapshot()
+                XCTAssertTrue(state.delegations.isEmpty && state.plans.isEmpty && state.decisions.isEmpty)
+            }
+            XCTAssertNil(sdk.callbackError)
+        }
+    }
+
+    private func nativeBootstrapParent() throws -> URL {
+        let parent = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("healthmd-native-bootstrap-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        return parent
+    }
+
+    func testLoadsOnlyTheDedicatedDeviceLocalIntegrityRecordWithoutInteraction() throws {
+        let lookup = ProtectedKeyLookup()
+        let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
+        let key = try XCTUnwrap(reader.loadExistingExportAuthorityKey())
+        XCTAssertEqual(key.bitCount, 256)
+        XCTAssertEqual(lookup.calls, 1)
+        XCTAssertTrue(lookup.exactReadOnlyQuery)
+    }
+
+    func testForeignPurposeAndRecordClassCannotSupplyIntegrityMaterial() throws {
+        let changes: [(String, Any?)] = [
+            (kSecClass as String, kSecClassInternetPassword),
+            (kSecClass as String, nil),
+            (kSecAttrService as String, "com.codybontecou.obsidianhealth.direct-cli-ios-trust"),
+            (kSecAttrService as String, nil),
+            (kSecAttrAccount as String, "cursor-key-v1"),
+            (kSecAttrAccount as String, NSNumber(value: 1))
+        ]
+        for (attribute, value) in changes {
+            var record = ProtectedKeyLookup.record()
+            record[attribute] = value
+            let lookup = ProtectedKeyLookup()
+            lookup.respond(result: [record] as CFArray)
+            let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
+            XCTAssertThrowsError(try reader.loadExistingExportAuthorityKey()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+            }
+            XCTAssertEqual(lookup.calls, 1)
+            XCTAssertTrue(lookup.exactReadOnlyQuery)
+        }
+    }
+
+    func testOnlyExplicitNonsynchronizableWhenUnlockedDeviceLocalProtectionIsAccepted() throws {
+        let changes: [(String, Any?)] = [
+            (kSecAttrAccessible as String, kSecAttrAccessibleWhenUnlocked),
+            (kSecAttrAccessible as String, kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly),
+            (kSecAttrAccessible as String, kSecAttrAccessibleAfterFirstUnlock),
+            (kSecAttrAccessible as String, kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly),
+            (kSecAttrAccessible as String, "unknown"),
+            (kSecAttrAccessible as String, nil),
+            (kSecAttrSynchronizable as String, true),
+            (kSecAttrSynchronizable as String, nil),
+            (kSecAttrSynchronizable as String, NSNumber(value: 0)),
+            (kSecAttrSynchronizable as String, "false"),
+            (kSecAttrIsNegative as String, true)
+        ]
+        for (attribute, value) in changes {
+            var record = ProtectedKeyLookup.record()
+            record[attribute] = value
+            let lookup = ProtectedKeyLookup()
+            lookup.respond(result: [record] as CFArray)
+            let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
+            XCTAssertThrowsError(try reader.loadExistingExportAuthorityKey()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+            }
+            XCTAssertEqual(lookup.calls, 1)
+        }
+    }
+
+    func testMalformedAmbiguousAndWrongSizeResultsNeverSupplyAKey() throws {
+        let record = ProtectedKeyLookup.record()
+        var payloads: [CFTypeRef?] = [nil, Data(repeating: 7, count: 32) as CFData,
+                                    record as CFDictionary, [] as CFArray,
+                                    [record, record] as CFArray, ["wrong-type"] as CFArray]
+        for size in [0, 16, 31, 33, 64] {
+            var damaged = record
+            damaged[kSecValueData as String] = Data(repeating: 7, count: size)
+            payloads.append([damaged] as CFArray)
+        }
+        for data in [nil, "not-data", NSNumber(value: 32)] as [Any?] {
+            var damaged = record
+            damaged[kSecValueData as String] = data
+            payloads.append([damaged] as CFArray)
+        }
+        for payload in payloads {
+            let lookup = ProtectedKeyLookup()
+            lookup.respond(result: payload)
+            let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
+            XCTAssertThrowsError(try reader.loadExistingExportAuthorityKey()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+            }
+            XCTAssertEqual(lookup.calls, 1)
+        }
+    }
+
+    func testDeniedUnavailableAndUnexpectedSDKStatusesHaveOneFixedHealthFreeFailure() throws {
+        for status in [errSecInteractionNotAllowed, errSecAuthFailed, errSecNotAvailable,
+                       errSecDecode, errSecDuplicateItem, errSecUserCanceled, errSecParam, OSStatus(-1)] {
+            let lookup = ProtectedKeyLookup()
+            // Even a populated result cannot override a denied/ambiguous SDK status.
+            lookup.respond(status: status, result: [ProtectedKeyLookup.record()] as CFArray)
+            let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
+            XCTAssertThrowsError(try reader.loadExistingExportAuthorityKey()) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+                XCTAssertEqual(String(describing: $0), "permission_required")
+            }
+            XCTAssertEqual(lookup.calls, 1)
+            XCTAssertTrue(lookup.exactReadOnlyQuery)
+        }
+    }
+
+    func testNotFoundWithUnexpectedMaterialFailsRatherThanMasqueradingAsCleanAbsence() throws {
+        let lookup = ProtectedKeyLookup()
+        lookup.respond(status: errSecItemNotFound, result: [ProtectedKeyLookup.record()] as CFArray)
+        let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
+        XCTAssertThrowsError(try reader.loadExistingExportAuthorityKey()) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        XCTAssertEqual(lookup.calls, 1)
+    }
+
+    func testProductionReaderSupportsRealCryptoKitPrivateLedgerWithoutIssuingRights() throws {
+        let rig = try ProtectedKeyStoreRig(); defer { rig.cleanup() }
+        let bytes = try rig.privateBytes()
+        let reopened = try AgentBridgeExportAuthorityStore(existingDirectory: rig.directory, protectedKeys: rig.reader)
+        let state = try reopened.snapshot()
+        XCTAssertEqual(state.generation, 0)
+        XCTAssertTrue(state.delegations.isEmpty)
+        XCTAssertTrue(state.plans.isEmpty)
+        XCTAssertTrue(state.decisions.isEmpty)
+        XCTAssertEqual(try rig.store.snapshot().generation, 0)
+        XCTAssertEqual(rig.lookup.calls, 3) // Independent creation + two real private MAC reads.
+        XCTAssertEqual(try rig.privateBytes(), bytes)
+        XCTAssertTrue(rig.lookup.exactReadOnlyQuery)
+    }
+
+    func testRejectedOrChangedMaterialCannotReadRepairOrReplaceTheRealPrivateLedger() throws {
+        let rig = try ProtectedKeyStoreRig(); defer { rig.cleanup() }
+        let before = try rig.privateBytes()
+        let good = ProtectedKeyLookup.record()
+        var foreign = good; foreign[kSecAttrService as String] = "com.codybontecou.obsidianhealth.direct-cli-ios-trust"
+        var synchronized = good; synchronized[kSecAttrSynchronizable as String] = true
+        var migratable = good; migratable[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
+        var afterUnlock = good; afterUnlock[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        var short = good; short[kSecValueData as String] = Data(repeating: 7, count: 31)
+        var changed = good; changed[kSecValueData as String] = Data(repeating: 8, count: 32)
+        let failures: [(OSStatus, CFTypeRef?, AgentBridgeValidationError)] = [
+            (errSecItemNotFound, nil, .permissionRequired),
+            (errSecInteractionNotAllowed, [good] as CFArray, .permissionRequired),
+            (errSecDecode, nil, .permissionRequired),
+            (errSecSuccess, nil, .permissionRequired),
+            (errSecSuccess, [good, good] as CFArray, .permissionRequired),
+            (errSecSuccess, [foreign] as CFArray, .permissionRequired),
+            (errSecSuccess, [synchronized] as CFArray, .permissionRequired),
+            (errSecSuccess, [migratable] as CFArray, .permissionRequired),
+            (errSecSuccess, [afterUnlock] as CFArray, .permissionRequired),
+            (errSecSuccess, [short] as CFArray, .permissionRequired),
+            // A different well-formed 32-byte key is detected by the REAL private-store MAC,
+            // not by a fake reader/codec or a claimed native protected monotonic witness.
+            (errSecSuccess, [changed] as CFArray, .bindingChanged)
+        ]
+        for (status, result, expected) in failures {
+            rig.lookup.respond(status: status, result: result)
+            XCTAssertThrowsError(try rig.store.snapshot()) { XCTAssertEqual($0 as? AgentBridgeValidationError, expected) }
+            XCTAssertEqual(try rig.privateBytes(), before)
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path).sorted(), ["lock", "state.json"])
+            rig.lookup.respond(result: [good] as CFArray)
+            XCTAssertEqual(try rig.store.snapshot().generation, 0)
+        }
+        XCTAssertEqual(rig.lookup.calls, 23)
+        XCTAssertTrue(rig.lookup.exactReadOnlyQuery)
+    }
+
+    func testEveryAccessRereadsCurrentAvailabilityWithAFreshNoninteractiveContextOffMainActor() throws {
+        let lookup = ProtectedKeyLookup()
+        let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
+        XCTAssertEqual(try DispatchQueue.global().sync { try reader.loadExistingExportAuthorityKey()?.bitCount }, 256)
+        lookup.respond(status: errSecItemNotFound, result: nil)
+        XCTAssertNil(try DispatchQueue.global().sync { try reader.loadExistingExportAuthorityKey() })
+        lookup.respond(status: errSecNotAvailable, result: nil)
+        XCTAssertThrowsError(try DispatchQueue.global().sync { try reader.loadExistingExportAuthorityKey() }) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+        }
+        lookup.respond(result: [ProtectedKeyLookup.record()] as CFArray)
+        XCTAssertEqual(try DispatchQueue.global().sync { try reader.loadExistingExportAuthorityKey()?.bitCount }, 256)
+        XCTAssertEqual(lookup.calls, 4)
+        XCTAssertTrue(lookup.freshContexts)
+        XCTAssertTrue(lookup.exactReadOnlyQuery)
+    }
+
+    func testAnAvailableProtectedKeyDoesNotBypassTheSeparateNativeInitializationDecision() throws {
+        let rig = try ProtectedKeyStoreRig(); defer { rig.cleanup() }
+        let before = try rig.privateBytes(), calls = rig.lookup.calls
+        let denied = rig.parent.appendingPathComponent("denied-authority")
+        XCTAssertThrowsError(try AgentBridgeExportAuthorityStore.createPrivateStore(
+            at: denied, protectedKeys: rig.reader, authorization: ProtectedKeyNativeAuthorization(allowed: false))) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired)
+            }
+        XCTAssertEqual(rig.lookup.calls, calls) // Native decision rejects before any OS key lookup.
+        XCTAssertFalse(FileManager.default.fileExists(atPath: denied.path))
+        XCTAssertEqual(try rig.privateBytes(), before)
+    }
+
+    func testExactCurrentLookupDataDrivesTheCryptoKitMACRatherThanAnySameSizeKey() throws {
+        // Independent HMAC-SHA256 synthetic vectors, not recomputed expected values.
+        let vectors: [(UInt8, String)] = [
+            (7, "4d113e8847b5f0f49972599a2fc767ddd8fa4756c6ddceebcd8be156faf3851c"),
+            (8, "029ec765b86efa429fdb282e81c573a1eb4979ead6d3700b5ceac2a2fff7dcf0")
+        ]
+        let lookup = ProtectedKeyLookup()
+        let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
+        for (syntheticByte, expectedMAC) in vectors {
+            var record = ProtectedKeyLookup.record()
+            record[kSecValueData as String] = Data(repeating: syntheticByte, count: 32)
+            lookup.respond(result: [record] as CFArray)
+            let key = try XCTUnwrap(reader.loadExistingExportAuthorityKey())
+            let mac = HMAC<SHA256>.authenticationCode(for: Data("protected-key-probe".utf8), using: key)
+            XCTAssertEqual(mac.map { String(format: "%02x", $0) }.joined(), expectedMAC)
+        }
+        XCTAssertEqual(lookup.calls, 2)
+    }
+
+    func testMissingDedicatedItemReturnsNoKeyWithoutAnotherLookupOrFallback() throws {
+        let lookup = ProtectedKeyLookup()
+        lookup.respond(status: errSecItemNotFound, result: nil)
+        let reader = AgentBridgeExportProtectedKey(copyMatching: { lookup.copyMatching($0, $1) })
+        XCTAssertNil(try reader.loadExistingExportAuthorityKey())
+        XCTAssertEqual(lookup.calls, 1)
+        XCTAssertTrue(lookup.exactReadOnlyQuery)
+    }
+}
+
+/// All SDK credential access is intercepted here. No Security writer exists on this seam.
+nonisolated private final class ProtectedKeyLookup: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+    private var validQuery = true
+    private var previousContext: LAContext?
+    private var distinctContexts = true
+    private var status: OSStatus = errSecSuccess
+    private var payload: CFTypeRef? = [ProtectedKeyLookup.record()] as CFArray
+    func respond(status: OSStatus = errSecSuccess, result: CFTypeRef?) {
+        lock.lock(); defer { lock.unlock() }
+        self.status = status
+        payload = result
+    }
+    var calls: Int { lock.lock(); defer { lock.unlock() }; return count }
+    var exactReadOnlyQuery: Bool { lock.lock(); defer { lock.unlock() }; return validQuery }
+    var freshContexts: Bool { lock.lock(); defer { lock.unlock() }; return distinctContexts }
+
+    func copyMatching(_ query: CFDictionary, _ result: UnsafeMutablePointer<CFTypeRef?>?) -> OSStatus {
+        lock.lock(); defer { lock.unlock() }
+        count += 1
+        let values = query as NSDictionary
+        let context = values[kSecUseAuthenticationContext] as? LAContext
+        distinctContexts = distinctContexts && context != nil && context !== previousContext
+        previousContext = context
+        validQuery = validQuery && values.count == 9
+            && values[kSecClass] as? String == kSecClassGenericPassword as String
+            && values[kSecAttrService] as? String == "com.codybontecou.obsidianhealth.agent-bridge.native-export-authority"
+            && values[kSecAttrAccount] as? String == "integrity-key-v1"
+            && values[kSecAttrSynchronizable] as? Bool == false
+            && values[kSecUseDataProtectionKeychain] as? Bool == true
+            && values[kSecReturnAttributes] as? Bool == true
+            && values[kSecReturnData] as? Bool == true
+            && values[kSecMatchLimit] as? Int == 2
+            && context?.interactionNotAllowed == true
+        result?.pointee = payload
+        return status
+    }
+
+    static func record() -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.codybontecou.obsidianhealth.agent-bridge.native-export-authority",
+            kSecAttrAccount as String: "integrity-key-v1",
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecAttrSynchronizable as String: false,
+            kSecValueData as String: Data(repeating: 7, count: 32)
+        ]
+    }
+}
+
+/// Synthetic separate human decision only; key possession itself never authorizes initialization.
+nonisolated private struct ProtectedKeyNativeAuthorization: AgentBridgeExportNativeAuthorizing {
+    let allowed: Bool
+    func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws {
+        guard allowed else { throw AgentBridgeValidationError.permissionRequired }
+    }
+}
+
+nonisolated private final class ProtectedKeyStoreRig {
+    let parent: URL
+    let directory: URL
+    let lookup = ProtectedKeyLookup()
+    let reader: AgentBridgeExportProtectedKey
+    let store: AgentBridgeExportAuthorityStore
+    init() throws {
+        parent = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("healthmd-protected-key-test-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        directory = parent.appendingPathComponent("authority")
+        let boundary = lookup
+        reader = AgentBridgeExportProtectedKey(copyMatching: { boundary.copyMatching($0, $1) })
+        store = try .createPrivateStore(at: directory, protectedKeys: reader,
+                                       authorization: ProtectedKeyNativeAuthorization(allowed: true))
+    }
+    func privateBytes() throws -> Data { try Data(contentsOf: directory.appendingPathComponent("state.json")) }
+    func cleanup() { try? FileManager.default.removeItem(at: parent) }
+}
+
+
+/// Synthetic interception at the actual Security lookup/add boundary. CryptoKit generation,
+/// readback proof, private directory reservation and authenticated ledger I/O are production code.
+nonisolated private final class NativeBootstrapKeyBoundary: @unchecked Sendable {
+    let lookup = ProtectedKeyLookup()
+    var additions = 0
+    var exactAttributes = false
+    var reservedBeforeAdd = false
+    var addStatus: OSStatus = errSecSuccess
+    var missingReadback = false
+    var changedReadback = false
+    var beforeAdd: (() throws -> Void)?
+    var callbackError: Error?
+    init() { lookup.respond(status: errSecItemNotFound, result: nil) }
+    var provisioner: AgentBridgeExportProtectedKeyProvisioner {
+        .init(copyMatching: { self.lookup.copyMatching($0, $1) }, add: { self.add($0) })
+    }
+    private func add(_ query: CFDictionary) -> OSStatus {
+        additions += 1
+        let attrs = query as NSDictionary
+        let data = attrs[kSecValueData] as? Data
+        exactAttributes = attrs.count == 8
+            && attrs[kSecClass] as? String == kSecClassGenericPassword as String
+            && attrs[kSecAttrService] as? String == "com.codybontecou.obsidianhealth.agent-bridge.native-export-authority"
+            && attrs[kSecAttrAccount] as? String == "integrity-key-v1"
+            && attrs[kSecAttrAccessible] as? String == kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String
+            && attrs[kSecAttrSynchronizable] as? Bool == false
+            && attrs[kSecUseDataProtectionKeychain] as? Bool == true
+            && (attrs[kSecUseAuthenticationContext] as? LAContext)?.interactionNotAllowed == true
+            && data?.count == 32
+        do { try beforeAdd?() }
+        catch { callbackError = error; return errSecParam }
+        if addStatus == errSecSuccess && !missingReadback {
+            var record = ProtectedKeyLookup.record()
+            record[kSecValueData as String] = changedReadback ? Data(repeating: 8, count: 32) : data
+            lookup.respond(result: [record] as CFArray)
+        }
+        return addStatus
+    }
+}
+
+// Synchronous, intercepted native decision boundary. No platform consent UI is asserted here.
+nonisolated private final class NativeBootstrapConsentBoundary: AgentBridgeExportNativeAuthorizing {
+    var revoked = false
+    var checks = 0
+    var sawStagedFile = false
+    var beforeCheck: ((Int) throws -> Void)?
+    func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws {
+        guard case .createPrivateStore = action else { throw AgentBridgeValidationError.permissionRequired }
+        checks += 1
+        try beforeCheck?(checks)
+        guard !revoked else { throw AgentBridgeValidationError.permissionRequired }
+    }
+}
+
+nonisolated private final class SetupConsentPolicyBoundary: @unchecked Sendable {
+    private let lock = NSLock()
+    private let origin = ContinuousClock.now
+    private var offset = Duration.zero
+    private var available = true
+    var allowed: Bool {
+        get { lock.withLock { available } }
+        set { lock.withLock { available = newValue } }
+    }
+    var now: ContinuousClock.Instant { lock.withLock { origin.advanced(by: offset) } }
+    func advance() { lock.withLock { offset = .seconds(31) } }
+    func restore() { lock.withLock { available = true; offset = .zero } }
+    func requireCurrent() throws {
+        guard allowed else { throw AgentBridgeValidationError.permissionRequired }
+    }
+}

@@ -39,18 +39,7 @@ class ProductCapabilityManifestTest {
         assertEquals(sharedCapabilities + androidCapabilities, idsWithState(states, "available"))
         assertEquals(appleCapabilities + "source.private-platform-database", idsWithState(states, "unavailable"))
         assertEquals(
-            setOf(
-                "cloud.opt-in-export-receiver",
-                "cloud.read-only-mcp",
-                "core.shared-rust-profile-engine",
-                "automation.api-recovery-authority",
-                "direct.cli_agent_push_wake",
-                "export.range-summary",
-                "export.whoop-resource-selection",
-                "export.whoop-physiological-cycle-steps",
-                "setup.share-portable-configuration",
-                "support.local-reporting-fallback",
-            ),
+            plannedCapabilities,
             idsWithState(states, "planned"),
         )
         assertEquals(allCapabilities, states.keys)
@@ -167,6 +156,7 @@ class ProductCapabilityManifestTest {
             "export.agent-data-gateway",
             "export.scheduled-today-refresh",
             "core.shared-rust-metric-registry",
+            "automation.discard-pending-recovery",
             "automation.cancel-active-export",
             "automation.discard-pending-recovery",
             "direct.full_public_authorized_corpus",
@@ -198,19 +188,34 @@ class ProductCapabilityManifestTest {
             "android.skin-temperature",
         )
 
-        val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+        val agentBridgeCapabilities = setOf(
+            "agent.export.explicit-settings",
+            "agent.export.zero-health-plan",
+            "agent.export.bound-execution",
+            "direct.source-aware-queries",
+            "direct.scoped-source-projection",
+            "agent.host-recipes",
+            "agent.native-profile-controls",
+            "agent.host-schedule-controls",
+            "agent.native-schedule-destination-controls",
+            "agent.export.zip-packaging",
+            "agent.export.profile-dictionary",
+        )
+
+        val plannedCapabilities = agentBridgeCapabilities + setOf(
             "cloud.opt-in-export-receiver",
             "cloud.read-only-mcp",
-            "source.private-platform-database",
             "automation.api-recovery-authority",
             "direct.cli_agent_push_wake",
             "export.range-summary",
             "export.whoop-resource-selection",
             "export.whoop-physiological-cycle-steps",
             "setup.share-portable-configuration",
-            "account.myself_lifetime_claim",
             "core.shared-rust-profile-engine",
             "support.local-reporting-fallback",
         )
+
+        val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities +
+            plannedCapabilities + "source.private-platform-database"
     }
 }

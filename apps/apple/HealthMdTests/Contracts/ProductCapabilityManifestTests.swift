@@ -30,12 +30,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            [
-                "core.shared-rust-profile-engine",
-                "setup.share-portable-configuration",
-                "cloud.opt-in-export-receiver",
-                "cloud.read-only-mcp",
-            ]
+            Self.plannedCapabilities
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
         XCTAssertEqual(
@@ -126,6 +121,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.agent-data-gateway",
         "export.scheduled-today-refresh",
         "core.shared-rust-metric-registry",
+        "automation.discard-pending-recovery",
         "automation.cancel-active-export",
         "automation.discard-pending-recovery",
         "direct.full_public_authorized_corpus",
@@ -163,17 +159,30 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "android.skin-temperature",
     ]
 
+    private static let plannedCapabilities: Set<String> = [
+        "cloud.opt-in-export-receiver",
+        "cloud.read-only-mcp",
+        "setup.share-portable-configuration",
+        "core.shared-rust-profile-engine",
+        "agent.export.explicit-settings",
+        "agent.export.zero-health-plan",
+        "agent.export.bound-execution",
+        "direct.source-aware-queries",
+        "direct.scoped-source-projection",
+        "agent.host-recipes",
+        "agent.native-profile-controls",
+        "agent.host-schedule-controls",
+        "agent.native-schedule-destination-controls",
+        "agent.export.zip-packaging",
+        "agent.export.profile-dictionary",
+    ]
+
     private static var allCapabilities: Set<String> {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union([
-                "source.private-platform-database",
-                "core.shared-rust-profile-engine",
-                "setup.share-portable-configuration",
-                "cloud.opt-in-export-receiver",
-                "cloud.read-only-mcp",
-            ])
+            .union(plannedCapabilities)
+            .union(["source.private-platform-database"])
     }
 
     private enum ManifestError: Error {

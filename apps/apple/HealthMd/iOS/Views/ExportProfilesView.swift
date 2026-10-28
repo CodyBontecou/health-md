@@ -1025,11 +1025,11 @@ struct ExportProfileEditorSheet: View {
             _agentDataGatewayID = State(initialValue: active.flatMap {
                 coordinator.destinationStore.agentDataGatewayBinding(profileID: $0.id)
             })
-            _draft = State(initialValue: ExportSettingsSnapshot.from(coordinator.liveSettings))
+            _draft = State(initialValue: coordinator.liveSettingsSnapshot)
         }
 
         let state = MetricSelectionState()
-        (profile?.settings ?? ExportSettingsSnapshot.from(coordinator.liveSettings))
+        (profile?.settings ?? coordinator.liveSettingsSnapshot)
             .metricSelection.apply(to: state)
         _metricState = StateObject(wrappedValue: state)
     }

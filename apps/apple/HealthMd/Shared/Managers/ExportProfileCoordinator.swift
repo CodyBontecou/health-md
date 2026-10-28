@@ -46,6 +46,12 @@ final class ExportProfileCoordinator: ObservableObject {
     /// for surfaces (profile editor) that seed a draft from current state.
     var liveSettings: AdvancedExportSettings { settings }
 
+    /// Native editing output includes the subfolder, which is stored by VaultManager rather than
+    /// AdvancedExportSettings. Wire/profile readers never borrow it from the live vault.
+    var liveSettingsSnapshot: ExportSettingsSnapshot {
+        ExportSettingsSnapshot.from(settings, healthSubfolder: vaultManager.healthSubfolder)
+    }
+
     /// The shared live API endpoint settings. Test/verification access for
     /// asserting that editor imports never touch live state.
     var apiExportSettingsForTesting: APIExportSettings { apiExportSettings }
@@ -58,6 +64,9 @@ final class ExportProfileCoordinator: ObservableObject {
     private let sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate
     private let sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction
     private var flushCancellable: AnyCancellable?
+    /// Last live output image applied or successfully flushed. Deferred nested notifications
+    /// describe restoration too; only a changed image represents a subsequent native edit.
+    private var observedLiveSnapshot: ExportSettingsSnapshot?
 
     private static let logger = Logger(
         subsystem: "com.codybontecou.healthmd",
@@ -99,7 +108,9 @@ final class ExportProfileCoordinator: ObservableObject {
         guard let activeID = profileStore.activeProfileID ?? profileStore.profiles.first?.id else {
             return
         }
-        activate(profileID: activeID, adoptVault: true)
+        // No outgoing profile was loaded yet. Flushing here would replace the persisted active
+        // snapshot with unrelated legacy/live settings before it could be restored.
+        activate(profileID: activeID, adoptVault: true, flushOutgoing: false)
     }
 
     // MARK: - Bootstrap
@@ -149,7 +160,7 @@ final class ExportProfileCoordinator: ObservableObject {
         }
 
         let didCreate = profileStore.migrateDefaultProfileIfNeeded(
-            settings: ExportSettingsSnapshot.from(settings),
+            settings: liveSettingsSnapshot,
             target: initialTarget,
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID
@@ -200,16 +211,16 @@ final class ExportProfileCoordinator: ObservableObject {
               profileStore.activate(id: profileID),
               let profile = profileStore.profile(id: profileID) else { return false }
 
-        settings.apply(snapshot: profile.settings)
+        applyOutputSettings(profile.settings)
         activeProfileName = profile.name
         activeTarget = profile.target
-        observeEdits()
 
         if adoptVault {
             adoptVaultDestination(for: profile)
         }
         adoptAPIEndpoint(for: profile)
         adoptAgentDataGateway(for: profile)
+        observeEdits()
         return true
     }
 
@@ -222,6 +233,16 @@ final class ExportProfileCoordinator: ObservableObject {
             return profileStore.hasProfiles
         }
         return isProfileExecutionBlocked(activeID)
+    }
+
+    private func applyOutputSettings(_ snapshot: ExportSettingsSnapshot) {
+        settings.apply(snapshot: snapshot)
+        // Missing legacy data remains missing in the profile. Only a frozen, explicit subfolder
+        // can replace live output state during activation; no inferred migration occurs here.
+        if let subfolder = snapshot.healthSubfolder {
+            vaultManager.healthSubfolder = subfolder
+            vaultManager.saveSubfolderSetting()
+        }
     }
 
     private func adoptVaultDestination(for profile: ExportProfile) {
@@ -247,7 +268,10 @@ final class ExportProfileCoordinator: ObservableObject {
     // MARK: - Edit flush
 
     private func observeEdits() {
-        flushCancellable = settings.objectWillChange
+        observedLiveSnapshot = liveSettingsSnapshot
+        let settingsChanges = settings.objectWillChange.map { _ in () }
+        let subfolderChanges = vaultManager.$healthSubfolder.removeDuplicates().dropFirst().map { _ in () }
+        flushCancellable = Publishers.Merge(settingsChanges, subfolderChanges)
             .debounce(for: .seconds(Self.editFlushInterval), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 self?.flushEdits()
@@ -263,10 +287,11 @@ final class ExportProfileCoordinator: ObservableObject {
         // not just the currently debounced save.
         guard let activeID = profileStore.activeProfileID,
               !isProfileExecutionBlocked(activeID) else { return }
-        profileStore.updateSettings(
-            id: activeID,
-            settings: ExportSettingsSnapshot.from(settings)
-        )
+        let snapshot = liveSettingsSnapshot
+        guard snapshot != observedLiveSnapshot else { return }
+        if profileStore.updateSettings(id: activeID, settings: snapshot) {
+            observedLiveSnapshot = snapshot
+        }
     }
 
     // MARK: - Target changes
@@ -532,13 +557,13 @@ final class ExportProfileCoordinator: ObservableObject {
         flushEdits()
         guard let source = profileStore.activeProfile,
               !isProfileExecutionBlocked(source.id) else { return nil }
-        let created = profileStore.add(
+        guard let created = profileStore.add(
             name: name,
-            settings: newSettings ?? ExportSettingsSnapshot.from(settings),
+            settings: newSettings ?? liveSettingsSnapshot,
             target: target,
             folderVaultID: folderVaultID,
             apiEndpointID: source.apiEndpointID
-        )
+        ) else { return nil }
         if target == .agentDataGateway {
             let resolvedGatewayID = agentDataGatewayID
                 ?? destinationStore.agentDataGatewayBinding(profileID: source.id)
@@ -573,7 +598,7 @@ final class ExportProfileCoordinator: ObservableObject {
         overlapPreviewNames(
             target: target,
             folderVaultID: folderVaultID,
-            settings: ExportSettingsSnapshot.from(settings)
+            settings: liveSettingsSnapshot
         )
     }
 
@@ -609,13 +634,13 @@ final class ExportProfileCoordinator: ObservableObject {
     func addProfileDuplicatingActive() -> ExportProfile? {
         guard let source = profileStore.activeProfile,
               !isProfileExecutionBlocked(source.id) else { return nil }
-        let copy = profileStore.add(
+        guard let copy = profileStore.add(
             name: source.name,
-            settings: ExportSettingsSnapshot.from(settings),
+            settings: liveSettingsSnapshot,
             target: source.target,
             folderVaultID: source.folderVaultID,
             apiEndpointID: source.apiEndpointID
-        )
+        ) else { return nil }
         if source.target == .agentDataGateway,
            let bindingID = destinationStore.agentDataGatewayBinding(profileID: source.id) {
             destinationStore.setAgentDataGatewayBinding(
@@ -736,7 +761,7 @@ final class ExportProfileCoordinator: ObservableObject {
         // bound destinations must match what the editor just saved. No
         // flushEdits first — the live settings are about to be replaced by
         // the saved snapshot, so flushing would only write stale values.
-        settings.apply(snapshot: newSettings)
+        applyOutputSettings(newSettings)
         activeProfileName = updated.name
         activeTarget = updated.target
         if folderVaultID != nil {
@@ -748,6 +773,7 @@ final class ExportProfileCoordinator: ObservableObject {
         if agentDataGatewayID != nil {
             adoptAgentDataGateway(for: updated)
         }
+        observeEdits()
         return updated
     }
 

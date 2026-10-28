@@ -281,6 +281,16 @@ impl GeneratedDestination {
         })
     }
 
+    pub(crate) fn output_sha256(&self, relative_path: &str) -> Result<Option<String>, ClientError> {
+        self.ensure_identity()?;
+        let relative = validate_generated_relative_path(relative_path)?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let Some((parent, name)) = open_existing_safe_parent(root, &relative)? else {
+            return Ok(None);
+        };
+        digest_cap_file(&parent, &name)
+    }
+
     /// Install a prepared stage iff the destination still has the expected digest.
     ///
     /// # Errors
@@ -311,6 +321,70 @@ impl GeneratedDestination {
         )?;
         if digest_cap_file(&parent, &name)?.as_deref() != Some(expected_after) {
             return Err(invalid("destination digest failed after commit"));
+        }
+        Ok(())
+    }
+
+    /// Install an exact prepared output with live authority fences around publication.
+    ///
+    /// The caller must check its original live owner on every callback, including replay.
+    /// A failed final fence can mean the exact output was installed but not acknowledged;
+    /// the durable caller must reconcile that digest without rebuilding an append stage.
+    /// This helper does not issue authority or persist a completion receipt.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for denied authority, changed identity/content, or failed atomic I/O.
+    pub async fn install_stage_guarded<F, Fut>(
+        &self,
+        relative_path: &str,
+        stage: &Path,
+        expected_before: Option<&str>,
+        expected_after: &str,
+        mut authorize: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<(), ClientError>>,
+    {
+        authorize().await?;
+        self.ensure_identity()?;
+        let relative = validate_generated_relative_path(relative_path)?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let (parent, name) = open_safe_parent(root, &relative)?;
+        let destination_path = self.root.join(&relative);
+        if digest_cap_file(&parent, &name)?.as_deref() != Some(expected_after) {
+            let prepared = prepare_install_stage(
+                &parent,
+                &name,
+                stage,
+                expected_before,
+                expected_after,
+                &destination_path,
+                self.private_storage_root.as_deref(),
+            )?;
+            authorize().await?;
+            self.require_same_parent(&relative, &parent)?;
+            prepared.publish()?;
+        }
+        authorize().await?;
+        self.require_same_parent(&relative, &parent)?;
+        if digest_cap_file(&parent, &name)?.as_deref() != Some(expected_after) {
+            return Err(invalid("destination digest failed after commit"));
+        }
+        Ok(())
+    }
+
+    fn require_same_parent(&self, relative: &Path, held_parent: &Dir) -> Result<(), ClientError> {
+        self.ensure_identity()?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let (current_parent, _) = open_existing_safe_parent(root, relative)?
+            .ok_or_else(|| invalid("destination parent disappeared"))?;
+        if !same_cap_identity(
+            &current_parent.dir_metadata().map_err(storage_error)?,
+            &held_parent.dir_metadata().map_err(storage_error)?,
+        ) {
+            return Err(invalid("destination parent identity changed"));
         }
         Ok(())
     }
@@ -1390,6 +1464,149 @@ fn build_stage(
     output.sync_all().map_err(storage_error)
 }
 
+struct PreparedInstall<'a> {
+    parent: &'a Dir,
+    name: &'a Path,
+    expected_before: Option<&'a str>,
+    expected_after: &'a str,
+    #[cfg(windows)]
+    destination_path: &'a Path,
+    #[cfg(windows)]
+    temporary: Option<NamedTempFile>,
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    temporary: File,
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    temporary_name: String,
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    cleanup_unpublished: bool,
+    _output_reservation: Option<crate::limits::OutputStorageReservation>,
+}
+
+fn same_cap_identity(left: &cap_std::fs::Metadata, right: &cap_std::fs::Metadata) -> bool {
+    use cap_fs_ext::MetadataExt as _;
+    left.dev() == right.dev() && left.ino() == right.ino()
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+impl Drop for PreparedInstall<'_> {
+    fn drop(&mut self) {
+        if self.cleanup_unpublished {
+            let named = self.parent.symlink_metadata(&self.temporary_name);
+            let held = cap_std::fs::Metadata::from_file(&self.temporary);
+            if let (Ok(named), Ok(held)) = (named, held) {
+                if same_cap_identity(&named, &held) {
+                    let _ = self.parent.remove_file(&self.temporary_name);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+impl Drop for PreparedInstall<'_> {
+    fn drop(&mut self) {
+        if let Some(temporary) = self.temporary.take() {
+            let name = temporary.path().file_name().map(PathBuf::from);
+            let named = name
+                .as_ref()
+                .and_then(|name| self.parent.symlink_metadata(name).ok());
+            let held = cap_std::fs::Metadata::from_file(temporary.as_file()).ok();
+            let same = matches!((named, held), (Some(named), Some(held)) if same_cap_identity(&named, &held));
+            // Disarm absolute-path cleanup unconditionally. Only the held parent identifies
+            // our namespace after an awaited authority callback can move/replace that parent.
+            let (file, mut path) = temporary.into_parts();
+            path.disable_cleanup(true);
+            drop(file);
+            if same {
+                if let Some(name) = name {
+                    let _ = self.parent.remove_file(name);
+                }
+            }
+        }
+    }
+}
+
+impl PreparedInstall<'_> {
+    fn validate(&mut self) -> Result<(), ClientError> {
+        #[cfg(windows)]
+        let (temporary, temporary_name) = {
+            let temporary = self.temporary.as_mut().expect("prepared stage is present");
+            let name = temporary
+                .path()
+                .file_name()
+                .expect("stage has a filename")
+                .to_owned();
+            (temporary.as_file_mut(), PathBuf::from(name))
+        };
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        let (temporary, temporary_name) =
+            (&mut self.temporary, PathBuf::from(&self.temporary_name));
+        let named = self
+            .parent
+            .symlink_metadata(temporary_name)
+            .map_err(storage_error)?;
+        let held = cap_std::fs::Metadata::from_file(temporary).map_err(storage_error)?;
+        if !named.is_file() || !same_cap_identity(&named, &held) {
+            return Err(invalid("staged destination identity changed"));
+        }
+        if digest_seekable(temporary)? != self.expected_after {
+            return Err(invalid("staged destination digest changed"));
+        }
+        if digest_cap_file(self.parent, self.name)?.as_deref() != self.expected_before {
+            return Err(invalid("destination changed during atomic install"));
+        }
+        Ok(())
+    }
+
+    fn publish(mut self) -> Result<(), ClientError> {
+        self.validate()?;
+        #[cfg(windows)]
+        {
+            let temporary = self.temporary.take().expect("validated stage is present");
+            if let Some(expected_before) = self.expected_before {
+                replace_existing_windows(
+                    temporary,
+                    self.destination_path,
+                    expected_before,
+                    self.expected_after,
+                    self.parent,
+                    self.name,
+                )?;
+            } else {
+                temporary
+                    .persist_noclobber(self.destination_path)
+                    .map_err(|error| storage_error(error.error))?;
+            }
+            sync_cap_directory(self.parent)
+        }
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        {
+            if let Some(expected_before) = self.expected_before {
+                // Exchange owns rollback from this point. On rollback failure its displaced
+                // user file must remain, even though this preparation is being dropped.
+                self.cleanup_unpublished = false;
+                exchange_existing_stage(
+                    self.parent,
+                    &self.temporary_name,
+                    self.name,
+                    expected_before,
+                )
+            } else {
+                renameat_with(
+                    self.parent,
+                    self.temporary_name.as_str(),
+                    self.parent,
+                    self.name,
+                    RenameFlags::NOREPLACE,
+                )
+                .map_err(rustix_storage_error)?;
+                self.cleanup_unpublished = false;
+                sync_cap_directory(self.parent)
+            }
+        }
+    }
+}
+
 fn install_stage(
     parent: &Dir,
     name: &Path,
@@ -1399,6 +1616,27 @@ fn install_stage(
     destination_path: &Path,
     private_storage_root: Option<&Path>,
 ) -> Result<(), ClientError> {
+    prepare_install_stage(
+        parent,
+        name,
+        stage,
+        expected_before,
+        expected_after,
+        destination_path,
+        private_storage_root,
+    )?
+    .publish()
+}
+
+fn prepare_install_stage<'a>(
+    parent: &'a Dir,
+    name: &'a Path,
+    stage: &Path,
+    expected_before: Option<&'a str>,
+    expected_after: &'a str,
+    destination_path: &'a Path,
+    private_storage_root: Option<&Path>,
+) -> Result<PreparedInstall<'a>, ClientError> {
     if digest_cap_file(parent, name)?.as_deref() != expected_before {
         return Err(invalid("destination changed before atomic install"));
     }
@@ -1407,7 +1645,7 @@ fn install_stage(
     let destination_parent = destination_path
         .parent()
         .ok_or_else(|| invalid("destination file has no parent"))?;
-    let _output_reservation = if let Some(storage_root) = private_storage_root {
+    let output_reservation = if let Some(storage_root) = private_storage_root {
         Some(reserve_output_capacity(
             storage_root,
             destination_parent,
@@ -1439,58 +1677,49 @@ fn install_stage(
         if digest_cap_file(parent, name)?.as_deref() != expected_before {
             return Err(invalid("destination changed during atomic install"));
         }
-        if let Some(expected_before) = expected_before {
-            replace_existing_windows(
-                temporary,
-                destination_path,
-                expected_before,
-                expected_after,
-                parent,
-                name,
-            )?;
-        } else {
-            temporary
-                .persist_noclobber(destination_path)
-                .map_err(|error| storage_error(error.error))?;
-        }
-        sync_cap_directory(parent)
+        Ok(PreparedInstall {
+            parent,
+            name,
+            expected_before,
+            expected_after,
+            destination_path,
+            temporary: Some(temporary),
+            _output_reservation: output_reservation,
+        })
     }
 
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
+        use cap_std::fs::OpenOptionsExt as _;
+
         let temporary_name = format!(".healthmd-{}.tmp", Uuid::new_v4());
         let mut options = OpenOptions::new();
         options.read(true).write(true).create_new(true);
-        let mut temporary = parent
+        options.mode(0o600);
+        let temporary = parent
             .open_with(&temporary_name, &options)
             .map_err(storage_error)?
             .into_std();
-        fs2::FileExt::allocate(&temporary, stage_bytes).map_err(storage_error)?;
+        let mut prepared = PreparedInstall {
+            parent,
+            name,
+            expected_before,
+            expected_after,
+            temporary,
+            temporary_name,
+            cleanup_unpublished: true,
+            _output_reservation: output_reservation,
+        };
+        fs2::FileExt::allocate(&prepared.temporary, stage_bytes).map_err(storage_error)?;
         let mut input = File::open(stage).map_err(storage_error)?;
-        io::copy(&mut input, &mut temporary).map_err(storage_error)?;
-        temporary.set_len(stage_bytes).map_err(storage_error)?;
-        temporary.sync_all().map_err(storage_error)?;
-        if digest_seekable(&mut temporary)? != expected_after {
-            let _ = parent.remove_file(&temporary_name);
-            return Err(invalid("staged destination digest changed"));
-        }
-        if digest_cap_file(parent, name)?.as_deref() != expected_before {
-            let _ = parent.remove_file(&temporary_name);
-            return Err(invalid("destination changed during atomic install"));
-        }
-        if let Some(expected_before) = expected_before {
-            exchange_existing_stage(parent, &temporary_name, name, expected_before)
-        } else {
-            renameat_with(
-                parent,
-                temporary_name.as_str(),
-                parent,
-                name,
-                RenameFlags::NOREPLACE,
-            )
-            .map_err(rustix_storage_error)?;
-            sync_cap_directory(parent)
-        }
+        io::copy(&mut input, &mut prepared.temporary).map_err(storage_error)?;
+        prepared
+            .temporary
+            .set_len(stage_bytes)
+            .map_err(storage_error)?;
+        prepared.temporary.sync_all().map_err(storage_error)?;
+        prepared.validate()?;
+        Ok(prepared)
     }
 }
 
@@ -2734,6 +2963,413 @@ mod tests {
                 assert_eq!(fs::read(outside).unwrap(), b"outside sentinel");
             }
         }
+    }
+
+    fn guarded_fixture() -> (TempDir, GeneratedDestination, PathBuf, GeneratedStage) {
+        let temporary = TempDir::new().unwrap();
+        let root = temporary.path().join("destination");
+        fs::create_dir(&root).unwrap();
+        fs::write(root.join("daily.md"), b"old").unwrap();
+        let source = temporary.path().join("source.md");
+        let stage = temporary.path().join("stage.md");
+        fs::write(&source, b"fresh").unwrap();
+        let destination = GeneratedDestination::open(&root).unwrap();
+        let prepared = destination
+            .prepare_stage(
+                "daily.md",
+                &source,
+                &stage,
+                healthmd_protocol::v2::FileWriteMode::Append,
+            )
+            .unwrap();
+        (temporary, destination, stage, prepared)
+    }
+
+    #[tokio::test]
+    async fn guarded_install_denial_before_publication_preserves_output_and_cleans_stage() {
+        for denied_call in [1, 2] {
+            let (_temporary, destination, stage, prepared) = guarded_fixture();
+            let calls = std::cell::Cell::new(0);
+            let result = destination
+                .install_stage_guarded(
+                    "daily.md",
+                    &stage,
+                    prepared.before_sha256.as_deref(),
+                    &prepared.after_sha256,
+                    || {
+                        let call = calls.get() + 1;
+                        calls.set(call);
+                        async move {
+                            tokio::task::yield_now().await;
+                            if call == denied_call {
+                                Err(invalid("authority revoked"))
+                            } else {
+                                Ok(())
+                            }
+                        }
+                    },
+                )
+                .await;
+            assert!(result.is_err());
+            assert_eq!(calls.get(), denied_call);
+            assert_eq!(
+                fs::read(destination.root().join("daily.md")).unwrap(),
+                b"old"
+            );
+            assert_eq!(fs::read_dir(destination.root()).unwrap().count(), 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn guarded_install_dropped_authority_future_cleans_unpublished_stage() {
+        let (_temporary, destination, stage, prepared) = guarded_fixture();
+        let calls = std::cell::Cell::new(0);
+        let entered = tokio::sync::Notify::new();
+        let mut operation = Box::pin(destination.install_stage_guarded(
+            "daily.md",
+            &stage,
+            prepared.before_sha256.as_deref(),
+            &prepared.after_sha256,
+            || {
+                let call = calls.get() + 1;
+                calls.set(call);
+                let entered = &entered;
+                async move {
+                    if call == 2 {
+                        entered.notify_one();
+                        std::future::pending::<()>().await;
+                    }
+                    Ok(())
+                }
+            },
+        ));
+        tokio::select! {
+            biased;
+            result = &mut operation => panic!("authority future unexpectedly returned: {result:?}"),
+            () = entered.notified() => {}
+        }
+        drop(operation);
+        assert_eq!(calls.get(), 2);
+        assert_eq!(
+            fs::read(destination.root().join("daily.md")).unwrap(),
+            b"old"
+        );
+        assert_eq!(fs::read_dir(destination.root()).unwrap().count(), 1);
+    }
+
+    #[tokio::test]
+    async fn guarded_install_new_file_publication_is_fenced_and_exact() {
+        let (_temporary, destination, stage, prepared) = guarded_fixture();
+        fs::remove_file(destination.root().join("daily.md")).unwrap();
+        let calls = std::cell::Cell::new(0);
+        destination
+            .install_stage_guarded("daily.md", &stage, None, &prepared.after_sha256, || {
+                calls.set(calls.get() + 1);
+                async {
+                    tokio::task::yield_now().await;
+                    Ok(())
+                }
+            })
+            .await
+            .unwrap();
+        assert_eq!(calls.get(), 3);
+        assert_eq!(
+            fs::read(destination.root().join("daily.md")).unwrap(),
+            b"old\n\nfresh"
+        );
+        assert_eq!(fs::read_dir(destination.root()).unwrap().count(), 1);
+    }
+
+    #[tokio::test]
+    async fn guarded_install_rechecks_destination_after_async_authority_fence() {
+        let (_temporary, destination, stage, prepared) = guarded_fixture();
+        let calls = std::cell::Cell::new(0);
+        let output = destination.root().join("daily.md");
+        let result = destination
+            .install_stage_guarded(
+                "daily.md",
+                &stage,
+                prepared.before_sha256.as_deref(),
+                &prepared.after_sha256,
+                || {
+                    let call = calls.get() + 1;
+                    calls.set(call);
+                    let output = &output;
+                    async move {
+                        tokio::task::yield_now().await;
+                        if call == 2 {
+                            fs::write(output, b"independent edit").unwrap();
+                        }
+                        Ok(())
+                    }
+                },
+            )
+            .await;
+        assert!(result.is_err());
+        assert_eq!(fs::read(&output).unwrap(), b"independent edit");
+        assert_eq!(fs::read_dir(destination.root()).unwrap().count(), 1);
+    }
+
+    #[tokio::test]
+    async fn guarded_install_postpublication_denial_requires_fenced_exact_replay() {
+        let (_temporary, destination, stage, prepared) = guarded_fixture();
+        let calls = std::cell::Cell::new(0);
+        let result = destination
+            .install_stage_guarded(
+                "daily.md",
+                &stage,
+                prepared.before_sha256.as_deref(),
+                &prepared.after_sha256,
+                || {
+                    let call = calls.get() + 1;
+                    calls.set(call);
+                    async move {
+                        if call == 3 {
+                            Err(invalid("authority revoked"))
+                        } else {
+                            Ok(())
+                        }
+                    }
+                },
+            )
+            .await;
+        assert!(result.is_err());
+        assert_eq!(calls.get(), 3);
+        assert_eq!(
+            fs::read(destination.root().join("daily.md")).unwrap(),
+            b"old\n\nfresh"
+        );
+        fs::remove_file(&stage).unwrap();
+        assert!(
+            destination
+                .install_stage_guarded(
+                    "daily.md",
+                    &stage,
+                    prepared.before_sha256.as_deref(),
+                    &prepared.after_sha256,
+                    || async { Err(invalid("authority remains revoked")) }
+                )
+                .await
+                .is_err()
+        );
+        let replay_calls = std::cell::Cell::new(0);
+        destination
+            .install_stage_guarded(
+                "daily.md",
+                &stage,
+                prepared.before_sha256.as_deref(),
+                &prepared.after_sha256,
+                || {
+                    replay_calls.set(replay_calls.get() + 1);
+                    async { Ok(()) }
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(replay_calls.get(), 2);
+        assert_eq!(
+            fs::read(destination.root().join("daily.md")).unwrap(),
+            b"old\n\nfresh"
+        );
+    }
+
+    #[tokio::test]
+    async fn guarded_install_rejects_root_replacement_during_fence() {
+        let (temporary, destination, stage, prepared) = guarded_fixture();
+        let calls = std::cell::Cell::new(0);
+        #[cfg(windows)]
+        let prevented = std::cell::Cell::new(false);
+        let retired = temporary.path().join("retired");
+        let result = destination
+            .install_stage_guarded(
+                "daily.md",
+                &stage,
+                prepared.before_sha256.as_deref(),
+                &prepared.after_sha256,
+                || {
+                    let call = calls.get() + 1;
+                    calls.set(call);
+                    let retired = &retired;
+                    #[cfg(windows)]
+                    let prevented = &prevented;
+                    let root = destination.root();
+                    async move {
+                        if call == 2 {
+                            let sibling = fs::read_dir(root)
+                                .unwrap()
+                                .map(Result::unwrap)
+                                .find(|entry| entry.file_name() != "daily.md")
+                                .unwrap()
+                                .file_name();
+                            if let Err(error) = fs::rename(root, retired) {
+                                // Windows retains a directory handle that prohibits renaming it.
+                                // That OS-level protection must also leave unpublished cleanup exact.
+                                #[cfg(windows)]
+                                if error.raw_os_error() == Some(32) {
+                                    prevented.set(true);
+                                    return Err(ClientError::AgentAuthorityUnavailable);
+                                }
+                                panic!("directory replacement failed unexpectedly: {error}");
+                            }
+                            fs::create_dir(root).unwrap();
+                            fs::write(root.join(sibling), b"foreign sibling").unwrap();
+                            fs::write(root.join("daily.md"), b"replacement").unwrap();
+                        }
+                        Ok(())
+                    }
+                },
+            )
+            .await;
+        assert!(result.is_err());
+        #[cfg(windows)]
+        if prevented.get() {
+            assert_eq!(
+                fs::read(destination.root().join("daily.md")).unwrap(),
+                b"old"
+            );
+            assert!(!retired.exists());
+            assert_eq!(fs::read_dir(destination.root()).unwrap().count(), 1);
+            return;
+        }
+        assert_eq!(
+            fs::read(destination.root().join("daily.md")).unwrap(),
+            b"replacement"
+        );
+        assert_eq!(fs::read(retired.join("daily.md")).unwrap(), b"old");
+        assert_eq!(fs::read_dir(retired).unwrap().count(), 1);
+        let foreign = fs::read_dir(destination.root())
+            .unwrap()
+            .map(Result::unwrap)
+            .find(|entry| entry.file_name() != "daily.md")
+            .unwrap();
+        assert_eq!(fs::read(foreign.path()).unwrap(), b"foreign sibling");
+        assert_eq!(fs::read_dir(destination.root()).unwrap().count(), 2);
+    }
+
+    #[tokio::test]
+    async fn guarded_install_rejects_nested_parent_replacement_during_fence() {
+        let (_temporary, destination, stage, prepared) = guarded_fixture();
+        let nested = destination.root().join("nested");
+        let retired = destination.root().join("retired");
+        fs::create_dir(&nested).unwrap();
+        fs::rename(destination.root().join("daily.md"), nested.join("daily.md")).unwrap();
+        let calls = std::cell::Cell::new(0);
+        #[cfg(windows)]
+        let prevented = std::cell::Cell::new(false);
+        let result = destination
+            .install_stage_guarded(
+                "nested/daily.md",
+                &stage,
+                prepared.before_sha256.as_deref(),
+                &prepared.after_sha256,
+                || {
+                    let call = calls.get() + 1;
+                    calls.set(call);
+                    let nested = &nested;
+                    let retired = &retired;
+                    #[cfg(windows)]
+                    let prevented = &prevented;
+                    async move {
+                        if call == 2 {
+                            let sibling = fs::read_dir(nested)
+                                .unwrap()
+                                .map(Result::unwrap)
+                                .find(|entry| entry.file_name() != "daily.md")
+                                .unwrap()
+                                .file_name();
+                            if let Err(error) = fs::rename(nested, retired) {
+                                // Windows retains a directory handle that prohibits renaming it.
+                                // That OS-level protection must also leave unpublished cleanup exact.
+                                #[cfg(windows)]
+                                if error.raw_os_error() == Some(32) {
+                                    prevented.set(true);
+                                    return Err(ClientError::AgentAuthorityUnavailable);
+                                }
+                                panic!("directory replacement failed unexpectedly: {error}");
+                            }
+                            fs::create_dir(nested).unwrap();
+                            fs::write(nested.join(sibling), b"foreign sibling").unwrap();
+                            fs::write(nested.join("daily.md"), b"replacement").unwrap();
+                        }
+                        Ok(())
+                    }
+                },
+            )
+            .await;
+        assert!(result.is_err());
+        #[cfg(windows)]
+        if prevented.get() {
+            assert_eq!(fs::read(nested.as_path().join("daily.md")).unwrap(), b"old");
+            assert!(!retired.exists());
+            assert_eq!(fs::read_dir(nested.as_path()).unwrap().count(), 1);
+            return;
+        }
+        assert_eq!(fs::read(nested.join("daily.md")).unwrap(), b"replacement");
+        assert_eq!(fs::read(retired.join("daily.md")).unwrap(), b"old");
+        assert_eq!(fs::read_dir(retired).unwrap().count(), 1);
+        let foreign = fs::read_dir(&nested)
+            .unwrap()
+            .map(Result::unwrap)
+            .find(|entry| entry.file_name() != "daily.md")
+            .unwrap();
+        assert_eq!(fs::read(foreign.path()).unwrap(), b"foreign sibling");
+        assert_eq!(fs::read_dir(nested).unwrap().count(), 2);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn guarded_install_rejects_substituted_sibling_without_deleting_foreign_file() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let (_temporary, destination, stage, prepared) = guarded_fixture();
+        let calls = std::cell::Cell::new(0);
+        let substituted = std::cell::RefCell::new(None);
+        let result = destination
+            .install_stage_guarded(
+                "daily.md",
+                &stage,
+                prepared.before_sha256.as_deref(),
+                &prepared.after_sha256,
+                || {
+                    let call = calls.get() + 1;
+                    calls.set(call);
+                    let substituted = &substituted;
+                    let root = destination.root();
+                    async move {
+                        if call == 2 {
+                            let sibling = fs::read_dir(root)
+                                .unwrap()
+                                .map(Result::unwrap)
+                                .find(|entry| {
+                                    entry
+                                        .file_name()
+                                        .to_string_lossy()
+                                        .starts_with(".healthmd-")
+                                })
+                                .unwrap()
+                                .path();
+                            assert_eq!(
+                                fs::metadata(&sibling).unwrap().permissions().mode() & 0o777,
+                                0o600
+                            );
+                            // Keep the original inode alive, making substitution deterministic.
+                            fs::rename(&sibling, root.join("held-original")).unwrap();
+                            fs::write(&sibling, b"foreign file").unwrap();
+                            *substituted.borrow_mut() = Some(sibling);
+                        }
+                        Ok(())
+                    }
+                },
+            )
+            .await;
+        assert!(result.is_err());
+        assert_eq!(
+            fs::read(substituted.borrow().as_ref().unwrap()).unwrap(),
+            b"foreign file"
+        );
+        assert_eq!(
+            fs::read(destination.root().join("daily.md")).unwrap(),
+            b"old"
+        );
     }
 
     #[test]

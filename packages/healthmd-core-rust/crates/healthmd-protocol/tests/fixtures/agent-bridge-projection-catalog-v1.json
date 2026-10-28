@@ -1,0 +1,59 @@
+{
+  "artifact_profile": "android-source-projection-v1",
+  "contains_health_values": false,
+  "fields": [
+    {
+      "field_id": "heart_rate.samples.bpm",
+      "native_record_type": "androidx.health.connect.client.records.HeartRateRecord$Sample",
+      "native_value_key": "beatsPerMinute",
+      "object_id": "selected_series",
+      "parent_record_type": "androidx.health.connect.client.records.HeartRateRecord",
+      "selection_metric_id": "heart_rate_avg",
+      "unit": "bpm",
+      "value_role": "point"
+    },
+    {
+      "field_id": "heart_rate_avg",
+      "native_record_type": "androidx.health.connect.client.records.HeartRateRecord",
+      "native_value_key": "BPM_AVG",
+      "object_id": "daily_summary",
+      "selection_metric_id": "heart_rate_avg",
+      "unit": "bpm",
+      "value_role": "daily_aggregate"
+    },
+    {
+      "field_id": "steps",
+      "native_record_type": "androidx.health.connect.client.records.StepsRecord",
+      "native_value_key": "COUNT_TOTAL",
+      "object_id": "daily_summary",
+      "selection_metric_id": "steps",
+      "unit": "steps",
+      "value_role": "daily_aggregate"
+    },
+    {
+      "field_id": "steps.count",
+      "native_record_type": "androidx.health.connect.client.records.StepsRecord",
+      "native_value_key": "count",
+      "object_id": "selected_series",
+      "selection_metric_id": "steps",
+      "unit": "steps",
+      "value_role": "interval_total"
+    },
+    {
+      "field_id": "steps.record",
+      "native_record_type": "androidx.health.connect.client.records.StepsRecord",
+      "native_value_key": "count",
+      "object_id": "native_records",
+      "selection_metric_id": "steps",
+      "unit": "steps",
+      "value_role": "native_record"
+    }
+  ],
+  "implementation_state": "planned",
+  "product_id": "android_source_projection_v1",
+  "provider_id": "health_connect",
+  "schema": "healthmd.source_projection_catalog",
+  "schema_version": 1,
+  "sdk_version": "1.2.0-alpha02",
+  "source_id": "health_connect"
+}

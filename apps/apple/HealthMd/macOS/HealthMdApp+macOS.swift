@@ -1078,7 +1078,7 @@ struct HealthMdApp: App {
                     publishShortcutContextRefreshStatusIfNeeded(
                         jobID: finalize.jobID,
                         state: fileResult.status == .success ? .completed : .failed,
-                        message: iphoneExportRequestCoordinator.jobResponse(jobID: finalize.jobID).message,
+                        message: MacExportResultSummary.message(for: fileResult),
                         failureReason: fileResult.status == .success ? nil : fileResult.status.rawValue,
                         terminal: true
                     )
@@ -1112,7 +1112,7 @@ struct HealthMdApp: App {
                 publishShortcutContextRefreshStatusIfNeeded(
                     jobID: finalize.jobID,
                     state: result.status == .success ? .completed : .failed,
-                    message: iphoneExportRequestCoordinator.jobResponse(jobID: finalize.jobID).message,
+                    message: MacExportResultSummary.message(for: result),
                     failureReason: result.status == .success ? nil : result.status.rawValue,
                     terminal: true
                 )

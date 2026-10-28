@@ -21,14 +21,14 @@ final class HealthHistoryProfilePublicationObserverTests: XCTestCase {
         try await check(mutation: "settings")
     }
 
-    func testUnboundObserverDoesNotRetainOldLifecycleOrInvalidateNewOwner() {
+    func testUnboundObserverDoesNotRetainOldLifecycleOrInvalidateNewOwner() throws {
         let suite = "HistoryPublicationLifecycle.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ExportProfileStore(userDefaults: defaults)
         let snapshot = ExportSettingsSnapshot.from(AdvancedExportSettings())
-        let first = store.add(name: "First", settings: snapshot, target: .localIPhoneFolder)
-        let second = store.add(name: "Second", settings: snapshot, target: .localIPhoneFolder)
+        let first = try XCTUnwrap(store.add(name: "First", settings: snapshot, target: .localIPhoneFolder))
+        let second = try XCTUnwrap(store.add(name: "Second", settings: snapshot, target: .localIPhoneFolder))
         let observer = HealthHistoryProfilePublicationObserver()
         var oldEvents = 0
         observer.bind(store) { oldEvents += 1 }
@@ -60,7 +60,7 @@ final class HealthHistoryProfilePublicationObserverTests: XCTestCase {
             vaultManager: vault, apiExportSettings: APIExportSettings(userDefaults: defaults, keychain: keychain),
             initialTarget: .localIPhoneFolder)
         let first = try XCTUnwrap(profiles.profileStore.activeProfile)
-        let second = profiles.profileStore.add(name: "Same settings", settings: first.settings, target: first.target)
+        let second = try XCTUnwrap(profiles.profileStore.add(name: "Same settings", settings: first.settings, target: first.target))
         XCTAssertEqual(first.settings, second.settings)
         let coordinator = HealthHistoryAssessmentCoordinator()
         let observer = HealthHistoryProfilePublicationObserver()

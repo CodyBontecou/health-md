@@ -127,6 +127,94 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         vaultManager.setVaultFolder(URL(fileURLWithPath: path))
     }
 
+    func testStartupRestoresPersistedActiveOutputWithoutFlushingUnrelatedLiveSettings() async throws {
+        let settings = makeSettings(), vault = makeVaultManager()
+        settings.filenameFormat = "persisted-{date}"
+        let original = ExportSettingsSnapshot.from(settings, healthSubfolder: "frozen-profile")
+        let store = ExportProfileStore(userDefaults: defaults)
+        Self.retainedInstances.append(store)
+        let profile = try XCTUnwrap(store.add(name: "Persisted", settings: original, target: .localIPhoneFolder))
+        let before = defaults.data(forKey: "exportProfiles.list")
+        settings.filenameFormat = "unrelated-live-{date}"
+        vault.healthSubfolder = "unrelated-live-folder"
+        let coordinator = makeCoordinator(settings: settings, vaultManager: vault)
+        try await Task.sleep(for: .seconds(1)) // Settle nested settings and coordinator debounce windows.
+        XCTAssertEqual(settings.filenameFormat, "persisted-{date}")
+        XCTAssertEqual(vault.healthSubfolder, "frozen-profile")
+        XCTAssertEqual(coordinator.profileStore.profile(id: profile.id)?.settings, original)
+        XCTAssertEqual(coordinator.profileStore.profile(id: profile.id)?.configurationRevision, 1)
+        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+    }
+
+    func testNativeProfileCaptureAndSwitchFreezeOutputSubfolderIndependentlyOfLiveVault() throws {
+        let settings = makeSettings(), vault = makeVaultManager()
+        vault.healthSubfolder = "first-output"
+        let coordinator = makeCoordinator(settings: settings, vaultManager: vault)
+        let firstID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        XCTAssertEqual(coordinator.profileStore.profile(id: firstID)?.settings.healthSubfolder, "first-output")
+        let second = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        vault.healthSubfolder = "second-output"
+        coordinator.flushEdits()
+        XCTAssertEqual(coordinator.profileStore.profile(id: firstID)?.settings.healthSubfolder, "first-output")
+        XCTAssertEqual(coordinator.profileStore.profile(id: second.id)?.settings.healthSubfolder, "second-output")
+        XCTAssertTrue(coordinator.activate(profileID: firstID))
+        XCTAssertEqual(vault.healthSubfolder, "first-output")
+        XCTAssertEqual(defaults.string(forKey: "healthSubfolder"), "first-output")
+        XCTAssertTrue(coordinator.activate(profileID: second.id))
+        XCTAssertEqual(vault.healthSubfolder, "second-output")
+    }
+
+    func testNativeSubfolderEditsAreObservedWithoutOtherSettingsEdits() async throws {
+        let vault = makeVaultManager(), coordinator = makeCoordinator(vaultManager: vault)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let revision = try XCTUnwrap(coordinator.profileStore.profile(id: activeID)?.configurationRevision)
+        vault.healthSubfolder = "edited-subfolder"
+        try await Task.sleep(for: .milliseconds(850))
+        XCTAssertEqual(coordinator.profileStore.profile(id: activeID)?.settings.healthSubfolder, "edited-subfolder")
+        XCTAssertGreaterThan(try XCTUnwrap(coordinator.profileStore.profile(id: activeID)?.configurationRevision), revision)
+        let flushed = try XCTUnwrap(coordinator.profileStore.profile(id: activeID))
+        let bytes = defaults.data(forKey: "exportProfiles.list")
+        coordinator.flushEdits(); coordinator.flushEdits()
+        try await Task.sleep(for: .seconds(1))
+        XCTAssertEqual(coordinator.profileStore.profile(id: activeID), flushed)
+        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), bytes)
+    }
+
+    func testStartupDoesNotFillLegacyMissingSubfolderFromCurrentVault() async throws {
+        let settings = makeSettings(), vault = makeVaultManager()
+        let store = ExportProfileStore(userDefaults: defaults)
+        Self.retainedInstances.append(store)
+        let profile = try XCTUnwrap(store.add(name: "Legacy", settings: ExportSettingsSnapshot.from(settings), target: .localIPhoneFolder))
+        let before = defaults.data(forKey: "exportProfiles.list")
+        vault.healthSubfolder = "unrelated-live-folder"
+        let coordinator = makeCoordinator(settings: settings, vaultManager: vault)
+        try await Task.sleep(for: .seconds(1)) // Startup notifications must not become native edits.
+        XCTAssertNil(coordinator.profileStore.profile(id: profile.id)?.settings.healthSubfolder)
+        XCTAssertEqual(coordinator.profileStore.profile(id: profile.id)?.configurationRevision, 1)
+        XCTAssertEqual(vault.healthSubfolder, "unrelated-live-folder")
+        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+    }
+
+    func testEditorFrozenSubfolderUpdatesOnlyTheSelectedProfileAndActiveOutput() async throws {
+        let vault = makeVaultManager(), coordinator = makeCoordinator(vaultManager: vault)
+        let firstID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let second = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        var edited = second.settings
+        edited.healthSubfolder = "edited-inactive-output"
+        XCTAssertNotNil(coordinator.updateProfile(id: firstID, name: "First", target: .localIPhoneFolder,
+            folderVaultID: nil, apiEndpointID: nil, settings: edited))
+        XCTAssertEqual(coordinator.profileStore.profile(id: firstID)?.settings.healthSubfolder, "edited-inactive-output")
+        XCTAssertNotEqual(vault.healthSubfolder, "edited-inactive-output")
+        edited.healthSubfolder = "edited-active-output"
+        XCTAssertNotNil(coordinator.updateProfile(id: second.id, name: "Second", target: .localIPhoneFolder,
+            folderVaultID: nil, apiEndpointID: nil, settings: edited))
+        XCTAssertEqual(vault.healthSubfolder, "edited-active-output")
+        XCTAssertEqual(defaults.string(forKey: "healthSubfolder"), "edited-active-output")
+        let saved = try XCTUnwrap(coordinator.profileStore.profile(id: second.id))
+        try await Task.sleep(for: .seconds(1))
+        XCTAssertEqual(coordinator.profileStore.profile(id: second.id), saved)
+    }
+
     // MARK: - Bootstrap migration
 
     func testBootstrapCreatesDefaultProfileBoundToCurrentDestinations() throws {
@@ -528,16 +616,16 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         // entries, plus a scheduled entry for the profile being deleted.
         let seedingStore = ExportProfileStore(userDefaults: defaults)
         let snapshot = ExportSettingsSnapshot.from(makeSettings())
-        let folderProfile = seedingStore.add(
+        let folderProfile = try XCTUnwrap(seedingStore.add(
             name: "Imported Folder",
             settings: snapshot,
             target: .localIPhoneFolder
-        )
-        let apiProfile = seedingStore.add(
+        ))
+        let apiProfile = try XCTUnwrap(seedingStore.add(
             name: "Imported API",
             settings: snapshot,
             target: .apiEndpoint
-        )
+        ))
         let source = try importedSourceProfile()
         defaults.set(
             try JSONEncoder().encode(SharedSetupV2AppleProfileState(profiles: [
@@ -597,11 +685,11 @@ final class ExportProfileCoordinatorTests: XCTestCase {
 
         // Deleting a later native profile with no sidecar reference is a
         // clean compaction no-op: the keys stay untouched.
-        let native = coordinator.profileStore.add(
+        let native = try XCTUnwrap(coordinator.profileStore.add(
             name: "Native",
             settings: snapshot,
             target: .localIPhoneFolder
-        )
+        ))
         let sidecarBytes = defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey)
         let blockedBytes = defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey)
         XCTAssertTrue(coordinator.deleteProfile(id: native.id))
@@ -623,16 +711,16 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         // remaining profile keeps working exactly as before.
         let seedingStore = ExportProfileStore(userDefaults: defaults)
         let snapshot = ExportSettingsSnapshot.from(makeSettings())
-        let folderProfile = seedingStore.add(
+        let folderProfile = try XCTUnwrap(seedingStore.add(
             name: "Imported Folder",
             settings: snapshot,
             target: .localIPhoneFolder
-        )
-        let apiProfile = seedingStore.add(
+        ))
+        let apiProfile = try XCTUnwrap(seedingStore.add(
             name: "Imported API",
             settings: snapshot,
             target: .apiEndpoint
-        )
+        ))
         let source = try importedSourceProfile()
         let sidecarBytes = try JSONEncoder().encode(SharedSetupV2AppleProfileState(profiles: [
             .init(

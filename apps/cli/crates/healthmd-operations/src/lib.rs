@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod agent_planning;
 pub mod backend;
 pub mod data;
 pub mod limits;
@@ -9,6 +10,11 @@ pub mod receipt;
 pub mod registry;
 pub mod service;
 
+pub use agent_planning::{
+    AgentCancelInput, AgentExecuteInput, AgentPlanInput, AgentResumeInput,
+    agent_approval_from_bytes, agent_cancel_from_bytes, agent_execute_from_bytes,
+    agent_plan_from_bytes, agent_resume_from_bytes, agent_rpc_bytes_valid,
+};
 pub use backend::{
     ArtifactStore, ArtifactStoreBackend, BackendCapabilities, BackendError, CallContext,
     CallerIdentity, CallerMode, HealthDataBackend, PairingStartResult, ProgressUpdate,

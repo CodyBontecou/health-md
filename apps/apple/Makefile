@@ -56,6 +56,11 @@ IOS_DERIVED_DATA_FLAGS = $(if $(IOS_DERIVED_DATA_DIR),-derivedDataPath "$(IOS_DE
 MACOS_DERIVED_DATA_FLAGS = $(if $(MACOS_DERIVED_DATA_DIR),-derivedDataPath "$(MACOS_DERIVED_DATA_DIR)")
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 300
+# Keep prebuild and execution on the same test products and compilation profile.
+MACOS_TEST_PRODUCT_FLAGS = -project $(PROJECT) -scheme HealthMd-Tests-macOS \
+  $(MACOS_DERIVED_DATA_FLAGS) -destination '$(MACOS_DEST)' \
+  $(if $(MACOS_DERIVED_DATA_DIR),,-derivedDataPath "$(DERIVED_DATA_PATH)") \
+  $(XCODE_TEST_SIGNING_FLAGS)
 CLI_INSTALL_DIR ?= $(HOME)/.local/bin
 CORE_RUST_PREPARE := ../../packages/healthmd-core-rust/scripts/prepare-apple-xcframework.sh
 
@@ -65,7 +70,7 @@ IOS_TEST_RAW_LOG   ?= build/logs/xcodebuild-ios-raw.log
 COVERAGE_DIR       := build/coverage
 XCRESULT_PATH      := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: help test test-platforms test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs check-export-docs-after-tests test-cli cli install-cli test-export-lab-tools check-export-lab-release
+.PHONY: help build-macos-tests test test-platforms test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs check-export-docs-after-tests test-cli cli install-cli test-export-lab-tools check-export-lab-release
 
 help:
 	@awk '/^##/ { sub(/^## ?/, ""); print }' Makefile
@@ -109,19 +114,18 @@ test-ios: prepare-healthmd-core-rust
 	    grep -E "Test Case|error:|PASSED|FAILED|Executed|Testing failed|Test session results|TEST (SUCCEEDED|FAILED)"; \
 	  fi
 
+build-macos-tests: prepare-healthmd-core-rust
+	@echo "Building macOS test products"
+	xcodebuild build-for-testing $(MACOS_TEST_PRODUCT_FLAGS) -enableCodeCoverage $(MACOS_CODE_COVERAGE)
+
 test-macos: prepare-healthmd-core-rust
 	@echo "\n━━━  macOS Tests  ━━━"
 	@set -o pipefail; \
 	xcodebuild test \
-	  -project $(PROJECT) \
-	  -scheme HealthMd-Tests-macOS \
-	  $(MACOS_DERIVED_DATA_FLAGS) \
-	  -destination '$(MACOS_DEST)' \
-	  $(if $(MACOS_DERIVED_DATA_DIR),,-derivedDataPath "$(DERIVED_DATA_PATH)") \
+	  $(MACOS_TEST_PRODUCT_FLAGS) \
 	  -enableCodeCoverage $(MACOS_CODE_COVERAGE) \
 	  $(XCODE_TEST_FILTER) \
 	  $(XCODE_TEST_TIMEOUT_FLAGS) \
-	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  2>&1 | \
 	  if command -v xcpretty >/dev/null 2>&1; then \
 	    xcpretty --color; \
@@ -156,15 +160,10 @@ coverage: prepare-healthmd-core-rust
 	@mkdir -p $(COVERAGE_DIR)
 	@rm -rf $(XCRESULT_PATH)
 	xcodebuild test \
-	  -project $(PROJECT) \
-	  -scheme HealthMd-Tests-macOS \
-	  $(MACOS_DERIVED_DATA_FLAGS) \
-	  -destination '$(MACOS_DEST)' \
-	  $(if $(MACOS_DERIVED_DATA_DIR),,-derivedDataPath "$(DERIVED_DATA_PATH)") \
+	  $(MACOS_TEST_PRODUCT_FLAGS) \
 	  -enableCodeCoverage YES \
 	  -resultBundlePath $(XCRESULT_PATH) \
-	  $(XCODE_TEST_TIMEOUT_FLAGS) \
-	  $(XCODE_TEST_SIGNING_FLAGS)
+	  $(XCODE_TEST_TIMEOUT_FLAGS)
 	@$(MAKE) coverage-report
 
 coverage-report:

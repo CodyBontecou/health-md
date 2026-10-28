@@ -53,7 +53,7 @@ const WELCOME_TEXT: &str = concat!(
     "Secure, direct access to Health.md on your iPhone or Android device.\n\n",
     "Get started:\n",
     "  healthmd direct pair    Pair a mobile device\n",
-    "  healthmd setup codex    Set up Codex and pair an iPhone\n",
+    "  healthmd setup codex    Set up Codex and pair a phone\n",
     "  healthmd status         Check connection readiness\n\n",
     "Run `healthmd --help` to see all commands.\n",
 );
@@ -110,6 +110,16 @@ enum Command {
     Extract(ExtractArgs),
     /// Run the same canonical typed operation exposed by local MCP.
     Query(QueryArgs),
+    /// Plan a summary JSON export using existing bounded native/host authority; never execute.
+    Plan(AgentArgs),
+    /// Relay separately stored exact decisions for an issued plan; never create consent.
+    Approval(AgentArgs),
+    /// Execute an issued plan using separately stored host/native decisions and its registered destination.
+    Execute(AgentExecuteArgs),
+    /// Recover an existing approved Agent Bridge job using its immutable retained state.
+    ResumeExecution(AgentExecuteArgs),
+    /// Stop a retained Agent Bridge job and inspect native source acknowledgement.
+    CancelExecution(AgentExecuteArgs),
     /// Resume an interrupted durable direct job.
     Resume(ResumeArgs),
     /// Request cancellation of a durable direct job.
@@ -120,8 +130,30 @@ enum Command {
     Data(DataArgs),
     /// Serve Health.md's fixed Model Context Protocol surface.
     Mcp(McpArgs),
-    /// Configure a supported local AI host and pair the iPhone when needed.
+    /// Configure a supported local AI host and pair a mobile source when needed.
     Setup(SetupArgs),
+}
+
+#[derive(Debug, Args)]
+struct AgentExecuteArgs {
+    /// Strict operation JSON. Omit to inspect the operation-specific requirements locally.
+    #[arg(long)]
+    arguments: Option<String>,
+    /// Bounded authenticated timeout; never wakes or unlocks the source.
+    #[arg(long, default_value_t = 30, value_parser = clap::value_parser!(u64).range(5..=600))]
+    timeout_seconds: u64,
+}
+
+#[derive(Debug, Args)]
+struct AgentArgs {
+    /// Complete strict JSON DTO; inspect `healthmd mcp schema healthmd_export_plan` or
+    /// `healthmd mcp schema healthmd_export_approval` / `healthmd_export_execute`.
+    /// Execute accepts only existing plan/job/idempotency/request IDs; destinations are registered opaque bindings.
+    #[arg(long)]
+    arguments: String,
+    /// Bounded listener timeout. Planning never uses a wake nudge/window.
+    #[arg(long, default_value_t = 30)]
+    timeout_seconds: u64,
 }
 
 #[derive(Debug, Args)]
@@ -369,7 +401,7 @@ struct SetupArgs {
 
 #[derive(Debug, Subcommand)]
 enum SetupCommand {
-    /// Configure Codex to use this executable, then pair an iPhone if none is trusted.
+    /// Configure Codex to use this executable, then pair a phone if none is trusted.
     Codex(SetupCodexArgs),
 }
 
@@ -382,7 +414,7 @@ struct SetupCodexArgs {
     #[arg(long)]
     skip_pairing: bool,
 
-    /// Maximum seconds to wait for iPhone pairing (30 through 600).
+    /// Maximum seconds to wait for mobile pairing (30 through 600).
     #[arg(long, default_value_t = 180)]
     pairing_timeout: u64,
 }
@@ -423,8 +455,9 @@ struct ExportArgs {
     #[arg(long, visible_alias = "use-iphone-settings")]
     use_device_settings: bool,
 
-    /// Export profile UUID to resolve on the iPhone for this request.
-    /// Cannot combine with --use-iphone-settings or selectors.
+    /// Authoritative hyphenated export-profile UUID on the selected phone.
+    /// Cannot combine with saved settings or selectors. Requires an advertised policy;
+    /// iOS profiles are unavailable until explicit capability negotiation exists.
     #[arg(long = "profile", value_name = "PROFILE_ID")]
     profile_id: Option<String>,
 
@@ -567,9 +600,9 @@ struct SelectionArgs {
     #[arg(long, conflicts_with_all = ["metrics", "categories"])]
     all_metrics: bool,
 
-    /// Summary values or lossless source-record detail.
-    #[arg(long, value_enum, default_value = "summary")]
-    detail: Detail,
+    /// Summary values (default) or lossless source-record detail.
+    #[arg(long, value_enum)]
+    detail: Option<Detail>,
 
     /// Canonical object alias or absolute JSON Pointer for extract (for example sleep or archive).
     #[arg(long = "object", value_name = "ALIAS")]
@@ -1092,6 +1125,44 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         Command::Query(options) => direct_query(options, device, port)
             .await
             .map(CommandSuccess::json),
+        Command::Plan(options) => direct_agent(options, "healthmd_export_plan", device, port)
+            .await
+            .map(CommandSuccess::json),
+        Command::Approval(options) => {
+            direct_agent(options, "healthmd_export_approval", device, port)
+                .await
+                .map(CommandSuccess::json)
+        }
+        Command::Execute(options) => {
+            direct_agent_control(
+                options,
+                "healthmd_export_execute",
+                guidance::execute,
+                device,
+                port,
+            )
+            .await
+        }
+        Command::ResumeExecution(options) => {
+            direct_agent_control(
+                options,
+                "healthmd_export_execution_resume",
+                guidance::resume_execution,
+                device,
+                port,
+            )
+            .await
+        }
+        Command::CancelExecution(options) => {
+            direct_agent_control(
+                options,
+                "healthmd_export_execution_cancel",
+                guidance::cancel_execution,
+                device,
+                port,
+            )
+            .await
+        }
         Command::Resume(options) => direct_resume(options, device, port).await,
         Command::Cancel(options) => direct_cancel(options, device, port)
             .await
@@ -1104,6 +1175,29 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
                 command_name(&command)
             ),
         }),
+    }
+}
+
+async fn direct_agent_control(
+    options: AgentExecuteArgs,
+    operation: &'static str,
+    guidance: fn() -> Value,
+    device: Option<Uuid>,
+    port: u16,
+) -> Result<CommandSuccess, CommandError> {
+    match options.arguments {
+        Some(arguments) => direct_agent(
+            AgentArgs {
+                arguments,
+                timeout_seconds: options.timeout_seconds,
+            },
+            operation,
+            device,
+            port,
+        )
+        .await
+        .map(CommandSuccess::json),
+        None => Ok(CommandSuccess::json(guidance())),
     }
 }
 
@@ -1123,6 +1217,13 @@ fn incomplete_command_guidance(cli: &Cli) -> Option<Value> {
         Command::Query(options) if options.operation.is_none() => Some(guidance::query(None)),
         Command::Query(options) if options.arguments.is_none() => {
             Some(guidance::query(options.operation.as_deref()))
+        }
+        Command::Execute(options) if options.arguments.is_none() => Some(guidance::execute()),
+        Command::CancelExecution(options) if options.arguments.is_none() => {
+            Some(guidance::cancel_execution())
+        }
+        Command::ResumeExecution(options) if options.arguments.is_none() => {
+            Some(guidance::resume_execution())
         }
         Command::Resume(options) if options.job_id.is_none() => Some(guidance::resume()),
         Command::Cancel(options) if options.job_id.is_none() => Some(guidance::cancel()),
@@ -1251,6 +1352,51 @@ async fn direct_query(
     })
 }
 
+async fn direct_agent(
+    options: AgentArgs,
+    operation: &str,
+    device: Option<Uuid>,
+    port: u16,
+) -> Result<Value, CommandError> {
+    if !(5..=600).contains(&options.timeout_seconds) {
+        return Err(usage_error(
+            "agent timeout must be between 5 and 600 seconds",
+        ));
+    }
+    mcp::agent(
+        mcp::ServeOptions {
+            device_id: device,
+            port,
+            timeout_seconds: options.timeout_seconds,
+            wake_timeout_seconds: Some(0),
+        },
+        operation,
+        options.arguments.as_bytes(),
+        tokio_util::sync::CancellationToken::new(),
+    )
+    .await
+    .map_err(|error| CommandError {
+        code: match error.code.as_str() {
+            "invalid_request" => "invalid_request",
+            "approval_required" => "approval_required",
+            "permission_required" => "permission_required",
+            "plan_expired" => "plan_expired",
+            "binding_changed" => "binding_changed",
+            "revision_conflict" => "revision_conflict",
+            "unsupported_metric" => "unsupported_metric",
+            "unsafe_path" => "unsafe_path",
+            "path_collision" => "path_collision",
+            "native_rebind_required" => "native_rebind_required",
+            "direct_source_unavailable" => "direct_source_unavailable",
+            "healthmd_request_cancelled" => "direct_wait_cancelled",
+            "query_budget_exceeded" => "query_budget_exceeded",
+            "entitlement_required" => "entitlement_required",
+            _ => "unsupported_capability",
+        },
+        message: error.message,
+    })
+}
+
 async fn direct_devices() -> Result<Value, CommandError> {
     let client = DirectClient::open().map_err(client_error)?;
     let devices = client.paired_devices().await.map_err(client_error)?;
@@ -1302,6 +1448,14 @@ async fn direct_reset_trust(confirm: bool) -> Result<Value, CommandError> {
 }
 
 async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError> {
+    direct_pair_with_policy(options, port, false).await
+}
+
+async fn direct_pair_with_policy(
+    options: PairArgs,
+    port: u16,
+    first_mobile: bool,
+) -> Result<Value, CommandError> {
     if !(10..=600).contains(&options.timeout) {
         return Err(usage_error(
             "pair timeout must be between 10 and 600 seconds",
@@ -1333,21 +1487,35 @@ async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError
             .join(", ")
     };
     let client = DirectClient::open().map_err(client_error)?;
-    let result = client
-        .pair(
-            &legacy_apple_code,
-            &shared_code,
-            port,
-            Duration::from_secs(options.timeout),
-            |bound_port| {
-                eprintln!(
-                    "Open Health.md → Direct CLI Access and scan the universal QR, or enter computer address {address_text}, port {bound_port}, and shared 20-digit code {shared_code}. Legacy iOS code: {legacy_apple_code}."
-                );
-                print_pairing_qr(&addresses, bound_port, &shared_code);
-            },
-        )
-        .await
-        .map_err(map_direct_pair_error)?;
+    let on_listening = |bound_port| {
+        eprintln!(
+            "Open Health.md → Direct CLI Access and scan the universal QR, or enter computer address {address_text}, port {bound_port}, and shared 20-digit code {shared_code}. Legacy iOS code: {legacy_apple_code}."
+        );
+        print_pairing_qr(&addresses, bound_port, &shared_code);
+    };
+    let timeout = Duration::from_secs(options.timeout);
+    let result = if first_mobile {
+        client
+            .pair_first_mobile(
+                &legacy_apple_code,
+                &shared_code,
+                port,
+                timeout,
+                on_listening,
+            )
+            .await
+    } else {
+        client
+            .pair(
+                &legacy_apple_code,
+                &shared_code,
+                port,
+                timeout,
+                on_listening,
+            )
+            .await
+    }
+    .map_err(map_direct_pair_error)?;
     Ok(json!({
         "schema": "healthmd.direct_pairing_result",
         "schema_version": 1,
@@ -1391,47 +1559,32 @@ async fn setup_codex_pairing(
     }
     let client = DirectClient::open().map_err(client_error)?;
     let paired_devices = client.paired_devices().await.map_err(client_error)?;
-    let iphone_devices = paired_devices
+    // All trusted mobile sources participate; selection never filters Android to re-pair.
+    let ids = paired_devices
         .iter()
-        .filter(|device| {
-            device.platform.is_none()
-                || device.platform == Some(healthmd_protocol::wire::PeerPlatform::Ios)
-        })
+        .map(|device| device.installation_id.0)
         .collect::<Vec<_>>();
-    if let Some(device_id) = requested_device {
-        if !iphone_devices
-            .iter()
-            .any(|device| device.installation_id.0 == device_id)
-        {
-            return Err(CommandError {
+    let selected =
+        onboarding::select_setup_device(&ids, requested_device).map_err(|error| match error {
+            onboarding::SetupDeviceSelectionError::NotPaired => CommandError {
                 code: "direct_device_not_found",
-                message: format!(
-                    "No paired iPhone has installation ID {}",
-                    device_id.to_string().to_lowercase()
-                ),
-            });
-        }
+                message: "The selected mobile source is not paired.".into(),
+            },
+            onboarding::SetupDeviceSelectionError::Ambiguous => CommandError {
+                code: "direct_device_selection_required",
+                message: "More than one mobile source is paired; rerun setup with --device UUID"
+                    .into(),
+            },
+        })?;
+    if let Some(device_id) = selected {
         return Ok(SetupPairing {
             device_id: Some(device_id),
             status: "already_paired",
             receipt: Value::Null,
         });
     }
-    if iphone_devices.len() == 1 {
-        return Ok(SetupPairing {
-            device_id: Some(iphone_devices[0].installation_id.0),
-            status: "already_paired",
-            receipt: Value::Null,
-        });
-    }
-    if iphone_devices.len() > 1 {
-        return Err(CommandError {
-            code: "direct_device_selection_required",
-            message: "More than one iPhone is paired; rerun setup with --device UUID".into(),
-        });
-    }
     drop(client);
-    let result = direct_pair(
+    let result = direct_pair_with_policy(
         PairArgs {
             pairing_code: None,
             android_pairing_code: None,
@@ -1439,21 +1592,16 @@ async fn setup_codex_pairing(
             timeout: pairing_timeout,
         },
         port,
+        true,
     )
     .await?;
-    if result.pointer("/device/platform").and_then(Value::as_str) != Some("ios") {
-        return Err(CommandError {
-            code: "direct_source_unsupported",
-            message: "Codex health analysis requires a paired iPhone".into(),
-        });
-    }
     let device_id = result
         .pointer("/device/installation_id")
         .and_then(Value::as_str)
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or_else(|| CommandError {
             code: "invalid_direct_response",
-            message: "The pairing receipt did not identify the paired iPhone".into(),
+            message: "The pairing receipt did not identify the paired phone".into(),
         })?;
     Ok(SetupPairing {
         device_id: Some(device_id),
@@ -1507,14 +1655,15 @@ async fn setup_codex(
         },
         "pairing": {
             "status": pairing.status,
+            "supported_sources": ["ios", "android"],
             "device_id": pairing.device_id.map(|value| value.to_string().to_lowercase()),
             "receipt": pairing.receipt
         },
         "restart_codex": receipt.changed,
         "message": if options.skip_pairing {
-            "Codex is configured. Run `healthmd setup codex` with Health.md open on iPhone to pair."
+            "Codex is configured. Run `healthmd setup codex` with Health.md open on iPhone or Android to pair."
         } else {
-            "Codex is configured for the paired iPhone. Restart Codex, keep Health.md foreground, and call healthmd_doctor."
+            "Codex is configured for the selected phone. Restart Codex, keep Health.md foreground, and call healthmd_doctor. Android typed queries are unsupported; raw and generated-file exports use application v2."
         }
     }))
 }
@@ -1664,7 +1813,16 @@ async fn direct_export(
     let selected_source = source_client
         .selected_source(device)
         .await
-        .map_err(client_error)?;
+        .map_err(map_direct_client_error)?;
+    if !options.raw_mode.raw {
+        return direct_file_export(
+            options,
+            selected_source.installation_id.0,
+            port,
+            source_client,
+        )
+        .await;
+    }
     if selected_source.platform == Some(healthmd_protocol::wire::PeerPlatform::Android) {
         return direct_android_export(
             options,
@@ -1673,9 +1831,6 @@ async fn direct_export(
             source_client,
         )
         .await;
-    }
-    if !options.raw_mode.raw {
-        return direct_file_export(options, device, port).await;
     }
     if options.destination.is_some() {
         return Err(usage_error("--destination cannot be used with --raw"));
@@ -1825,99 +1980,15 @@ async fn direct_android_export(
         });
     }
 
-    if options.output.is_some() {
-        return Err(usage_error("--output requires --raw"));
-    }
-    if options.selection.all_metrics
-        || !options.selection.metrics.is_empty()
-        || !options.selection.categories.is_empty()
-        || !options.selection.objects.is_empty()
-        || !options.selection.fields.is_empty()
-        || !options.selection.sources.is_empty()
-    {
-        return Err(usage_error(
-            "Android generated-file direct export uses saved device selections or a profile; remove CLI selectors",
-        ));
-    }
-    let profile_reference = options
-        .profile_id
-        .as_deref()
-        .map(str::trim)
-        .filter(|id| !id.is_empty())
-        .map(|profile_id| v2::ProfileReference {
-            profile_id: profile_id.to_owned(),
-            name: None,
-        });
-    if options
-        .profile_id
-        .as_deref()
-        .is_some_and(|id| id.trim().is_empty())
-    {
-        return Err(usage_error("--profile requires a non-empty profile ID"));
-    }
-    if profile_reference.is_some() && options.use_device_settings {
-        return Err(usage_error(
-            "--profile cannot combine with --use-device-settings; the profile owns the settings scope",
-        ));
-    }
-    let (settings_policy, profile_reference) = match profile_reference {
-        Some(reference) => (v2::SettingsPolicy::Profile, Some(reference)),
-        None => (v2::SettingsPolicy::SavedDeviceSettings, None),
-    };
-    let destination_path = options
-        .destination
-        .ok_or_else(|| usage_error("direct generated-file export requires --destination"))?;
-    let destination =
-        GeneratedDestination::open(&destination_path).map_err(map_direct_file_error)?;
-    let display_name = destination
-        .root()
-        .file_name()
-        .and_then(|name| name.to_str())
-        .filter(|name| !name.is_empty())
-        .unwrap_or("Health Exports")
-        .to_owned();
-    let request = v2::ExportRequest {
-        job_id: Uuid::new_v4(),
-        created_at,
-        expires_at,
-        source_installation_id: source_id,
-        date_selection,
-        product: v2::ExportProduct::GeneratedFilesV1 {
-            settings_policy,
-            profile_reference,
-        },
-        destination: Some(v2::DestinationBinding {
-            binding_sha256: destination
-                .binding_sha256()
-                .map_err(map_direct_file_error)?,
-            display_name,
-        }),
-    };
-    wait_for_wake_window(&client, Some(source_id), port, options.wake).await?;
-    let result = client
-        .export_android(
-            request,
-            Some(destination.root().to_path_buf()),
-            Some(source_id),
-            port,
-            timeout,
-        )
-        .await
-        .map_err(map_direct_file_error)?;
-    Ok(CommandSuccess {
-        output: CommandOutput::Artifact {
-            source: result.receipt.path,
-            output: None,
-        },
-        exit_code: 0,
-    })
+    Err(usage_error("Android raw export requires --raw"))
 }
 
 #[allow(clippy::too_many_lines)]
 async fn direct_file_export(
     options: ExportArgs,
-    device: Option<Uuid>,
+    source_id: Uuid,
     port: u16,
+    client: DirectClient,
 ) -> Result<CommandSuccess, CommandError> {
     if options.output.is_some() {
         return Err(usage_error("--output requires --raw"));
@@ -1925,6 +1996,19 @@ async fn direct_file_export(
     if !options.selection.objects.is_empty() || !options.selection.fields.is_empty() {
         return Err(usage_error(
             "--object and --field are available only with extract",
+        ));
+    }
+    if options.selection.detail.is_some()
+        && (options.profile_id.is_some()
+            || options.use_device_settings
+            || client
+                .selected_source_kind(Some(source_id))
+                .await
+                .map_err(map_direct_client_error)?
+                == healthmd_client::direct::SourceKind::Android)
+    {
+        return Err(usage_error(
+            "detail selectors cannot combine with saved settings, profiles, or Android generated files",
         ));
     }
     let destination = options
@@ -1940,7 +2024,7 @@ async fn direct_file_export(
         .profile_id
         .as_deref()
         .map(|profile_id| ProfileReference {
-            profile_id: profile_id.trim().to_owned(),
+            profile_id: profile_id.to_owned(),
             name: None,
         });
     let invocation = GeneratedFileExportInput {
@@ -1957,15 +2041,30 @@ async fn direct_file_export(
         Local::now().date_naive(),
     )
     .map_err(operation_input_error)?;
-    let client = DirectClient::open().map_err(client_error)?;
-    wait_for_wake_window(&client, device, port, options.wake).await?;
-    let result = client
-        .export_files(invocation.request, device, port, invocation.timeout)
+    let plan = client
+        .prepare_generated_files(
+            invocation.request,
+            invocation.uses_source_default,
+            Some(source_id),
+        )
         .await
         .map_err(map_direct_file_error)?;
+    wait_for_wake_window(&client, Some(plan.source_id()), port, options.wake).await?;
+    let result = client
+        .export_generated_files(plan, port, invocation.timeout)
+        .await
+        .map_err(map_direct_file_error)?;
+    let source = match result {
+        healthmd_client::generated_files::GeneratedFileExportResult::Ios(result) => {
+            result.receipt.response_path
+        }
+        healthmd_client::generated_files::GeneratedFileExportResult::Android(result) => {
+            result.receipt.path
+        }
+    };
     Ok(CommandSuccess {
         output: CommandOutput::Artifact {
-            source: result.receipt.response_path,
+            source,
             output: None,
         },
         exit_code: 0,
@@ -2324,7 +2423,7 @@ fn operation_selection_options(options: &SelectionArgs) -> SelectionOptions {
         metric_ids: options.metrics.clone(),
         categories: options.categories.clone(),
         all_metrics: options.all_metrics,
-        detail: match options.detail {
+        detail: match options.detail.unwrap_or_default() {
             Detail::Summary => SelectionDetail::Summary,
             Detail::Lossless => SelectionDetail::Lossless,
         },
@@ -2594,6 +2693,7 @@ fn client_error(error: ClientError) -> CommandError {
 #[allow(clippy::needless_pass_by_value)]
 fn map_direct_pair_error(error: ClientError) -> CommandError {
     let code = match error {
+        ClientError::PairingConflict => "direct_pairing_conflict",
         ClientError::InvalidTrustState => "direct_trust_invalid",
         ClientError::CredentialStore(_) => "direct_storage_unavailable",
         ClientError::CredentialMutationOutcomeUnknown => "direct_storage_outcome_unknown",
@@ -2621,6 +2721,7 @@ fn map_direct_client_error(error: ClientError) -> CommandError {
         ClientError::CredentialMutationOutcomeUnknown => "direct_storage_outcome_unknown",
         ClientError::DeviceSelectionRequired(_) => "direct_device_selection_required",
         ClientError::DeviceNotPaired(_) => "direct_device_not_paired",
+        ClientError::ExportUnsupported => "direct_export_unsupported",
         ClientError::ExportPaused(_) => "direct_export_paused",
         ClientError::CancellationPending(_) => "direct_cancellation_pending",
         ClientError::JobNotResumable(_, _) => "direct_job_not_resumable",
@@ -2633,6 +2734,9 @@ fn map_direct_client_error(error: ClientError) -> CommandError {
 
 fn direct_error(code: &'static str, _error: impl std::fmt::Display) -> CommandError {
     let message = match code {
+        "direct_pairing_conflict" => {
+            "A mobile source is already paired. Select the existing source explicitly."
+        }
         "direct_pairing_failed" => {
             "Direct pairing failed. Verify the one-time code and source app."
         }
@@ -2650,6 +2754,9 @@ fn direct_error(code: &'static str, _error: impl std::fmt::Display) -> CommandEr
             "More than one mobile source is paired. Select one explicitly."
         }
         "direct_device_not_paired" => "The selected mobile source is not paired.",
+        "direct_export_unsupported" => {
+            "The selected source does not advertise the requested export product, settings policy, or selectors."
+        }
         "direct_export_paused" => "The durable direct export paused and can be resumed.",
         "direct_cancellation_pending" => {
             "Cancellation is pending delivery to the authenticated mobile source."
@@ -2679,6 +2786,11 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Export(_) => "export",
         Command::Extract(_) => "extract",
         Command::Query(_) => "query",
+        Command::Plan(_) => "plan",
+        Command::Approval(_) => "approval",
+        Command::Execute(_) => "execute",
+        Command::ResumeExecution(_) => "resume-execution",
+        Command::CancelExecution(_) => "cancel-execution",
         Command::Resume(_) => "resume",
         Command::Cancel(_) => "cancel",
         Command::Direct(DirectArgs {
@@ -3476,5 +3588,86 @@ mod tests {
 
         let unknown = map_direct_pair_error(ClientError::CredentialMutationOutcomeUnknown);
         assert_eq!(unknown.code, "direct_storage_outcome_unknown");
+    }
+}
+
+#[cfg(test)]
+mod agent_execute_parser_tests {
+    use super::*;
+    #[test]
+    fn execute_is_explicit_and_preserves_device_port_and_strict_argument_bytes() {
+        let raw = r#"{"plan_id":"00000000-0000-4000-8000-000000000001","job_id":"00000000-0000-4000-8000-000000000002","idempotency_key":"00000000-0000-4000-8000-000000000003","request_id":"00000000-0000-4000-8000-000000000004"}"#;
+        let cli = Cli::try_parse_from([
+            "healthmd",
+            "--device",
+            "00000000-0000-4000-8000-000000000005",
+            "--port",
+            "17649",
+            "execute",
+            "--arguments",
+            raw,
+        ])
+        .unwrap();
+        assert_eq!(cli.port, 17649);
+        assert_eq!(
+            cli.device.unwrap().to_string(),
+            "00000000-0000-4000-8000-000000000005"
+        );
+        let Command::Execute(input) = cli.command else {
+            panic!("Execute command lost");
+        };
+        assert_eq!(input.arguments.as_deref(), Some(raw));
+        let missing = Cli::try_parse_from(["healthmd", "execute"]).unwrap();
+        let discovery = incomplete_command_guidance(&missing).unwrap();
+        assert_eq!(discovery["schema"], "healthmd.cli_guidance");
+        assert_eq!(discovery["request_sent"], false);
+        let malformed = Cli::try_parse_from(["healthmd", "execute", "--arguments", ""]).unwrap();
+        assert!(incomplete_command_guidance(&malformed).is_none());
+        assert!(Cli::try_parse_from(["healthmd", "execute", "--timeout-seconds", "0"]).is_err());
+        assert!(
+            Cli::try_parse_from(["healthmd", "execute", "--arguments", raw, "--approve"]).is_err()
+        );
+    }
+}
+
+#[cfg(test)]
+mod agent_resume_parser_tests {
+    use super::*;
+    #[test]
+    fn resume_execution_has_local_guidance_and_explicit_strict_arguments() {
+        let missing = Cli::try_parse_from(["healthmd", "resume-execution"]).unwrap();
+        assert_eq!(
+            incomplete_command_guidance(&missing).unwrap()["request_sent"],
+            false
+        );
+        let raw = r#"{"job_id":"00000000-0000-4000-8000-000000000002"}"#;
+        let cli =
+            Cli::try_parse_from(["healthmd", "resume-execution", "--arguments", raw]).unwrap();
+        let Command::ResumeExecution(input) = cli.command else {
+            panic!("recovery command lost")
+        };
+        assert_eq!(input.arguments.as_deref(), Some(raw));
+        assert!(Cli::try_parse_from(["healthmd", "resume-execution", "--approve"]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod agent_cancel_parser_tests {
+    use super::*;
+    #[test]
+    fn cancel_execution_has_local_guidance_and_explicit_strict_arguments() {
+        let missing = Cli::try_parse_from(["healthmd", "cancel-execution"]).unwrap();
+        assert_eq!(
+            incomplete_command_guidance(&missing).unwrap()["request_sent"],
+            false
+        );
+        let raw = r#"{"job_id":"00000000-0000-4000-8000-000000000002"}"#;
+        let cli =
+            Cli::try_parse_from(["healthmd", "cancel-execution", "--arguments", raw]).unwrap();
+        let Command::CancelExecution(input) = cli.command else {
+            panic!("recovery command lost")
+        };
+        assert_eq!(input.arguments.as_deref(), Some(raw));
+        assert!(Cli::try_parse_from(["healthmd", "cancel-execution", "--approve"]).is_err());
     }
 }

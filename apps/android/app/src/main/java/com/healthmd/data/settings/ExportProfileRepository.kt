@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.APIExportEndpoint
@@ -22,7 +23,18 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
 import timber.log.Timber
+
+/** Non-secret frozen output configuration; contains no active-profile or destination authority. */
+internal data class ExportProfileConfigurationSnapshot(
+    val revision: Int,
+    val settings: AndroidExportSettingsSnapshot,
+    val executionBlocked: Boolean,
+)
 
 /**
  * DataStore-backed repository for export profiles (Android phase 6 parity).
@@ -67,6 +79,25 @@ class ExportProfileRepository @Inject constructor(
 
     suspend fun profileByName(name: String): ExportProfile? =
         ExportProfileRules.byName(getProfiles(), name)
+
+    /** One committed DataStore image supplies the exact row, revision and rebind state. No default,
+     * active-profile lookup, migration, preference edit, endpoint or credential read is performed. */
+    internal suspend fun readConfigurationProfile(id: String, expectedRevision: Int): ExportProfileConfigurationSnapshot? =
+        if (expectedRevision < 1) null else readConfigurationProfile(dataStore.data.first(), id, expectedRevision)
+
+    internal fun readConfigurationProfile(prefs: Preferences, id: String, expectedRevision: Int): ExportProfileConfigurationSnapshot? {
+        if (expectedRevision < 1) return null
+        val raw = try { prefs[Keys.PROFILES] } catch (_: ClassCastException) { return null }
+        val profile = decodeProfiles(raw)?.singleOrNull { it.id == id }
+            ?.takeIf { it.configurationRevision == expectedRevision } ?: return null
+        val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson) ?: return null
+        val blocked = try {
+            prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+        } catch (_: ClassCastException) {
+            return null // Malformed gate storage never grants execution.
+        }
+        return ExportProfileConfigurationSnapshot(expectedRevision, snapshot, id in blocked)
+    }
 
     /** Central non-secret execution gate for imported profiles awaiting local rebinding. */
     suspend fun sharedSetupV2ExecutionAccess(id: String): SharedSetupV2ProfileExecutionAccess =
@@ -183,7 +214,9 @@ class ExportProfileRepository @Inject constructor(
             if (index >= 0) {
                 val concreteFolderUri = folderUri
                     ?.takeIf { it.isNotBlank() && it.startsWith("content://", ignoreCase = true) }
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     folderUri = folderUri?.takeIf { it.isNotBlank() },
                     folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
                     updatedAtEpochMillis = System.currentTimeMillis(),
@@ -224,7 +257,9 @@ class ExportProfileRepository @Inject constructor(
             val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     settingsSnapshotJson = settingsSnapshotJson ?: existing[index].settingsSnapshotJson,
                     target = target ?: existing[index].target,
                     apiEndpointUrl = apiEndpointUrl ?: existing[index].apiEndpointUrl,
@@ -264,7 +299,9 @@ class ExportProfileRepository @Inject constructor(
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     name = ExportProfileRules.uniquifyName(rawName, others),
                     settingsSnapshotJson = settingsSnapshotJson,
                     target = target,
@@ -310,7 +347,9 @@ class ExportProfileRepository @Inject constructor(
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
                 val unique = ExportProfileRules.uniquifyName(rawName, others)
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     name = unique,
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )
@@ -445,7 +484,9 @@ class ExportProfileRepository @Inject constructor(
             val encodedSnapshot = runCatching {
                 AndroidExportSettingsSnapshotCodec.encodeCanonical(reboundSnapshot)
             }.getOrNull() ?: return@edit
+            val revision = profile.nextConfigurationRevision() ?: return@edit
             val updated = profile.copy(
+                configurationRevision = revision,
                 apiEndpointUrl = endpoint,
                 settingsSnapshotJson = encodedSnapshot,
                 updatedAtEpochMillis = System.currentTimeMillis(),
@@ -572,7 +613,19 @@ class ExportProfileRepository @Inject constructor(
 
     private fun decodeProfiles(raw: String?): List<ExportProfile>? {
         if (raw.isNullOrBlank()) return emptyList()
-        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrElse { error ->
+        return runCatching {
+            val rows = json.parseToJsonElement(raw)
+            require(rows is JsonArray)
+            for (row in rows) {
+                require(row is JsonObject)
+                if ("configurationRevision" in row) {
+                    val revision = row["configurationRevision"] as? JsonPrimitive
+                    // Kotlin's integer serializer accepts quoted numbers; native revision pins do not.
+                    require(revision != null && !revision.isString && revision.intOrNull != null)
+                }
+            }
+            json.decodeFromJsonElement(listSerializer, rows)
+        }.getOrElse { error ->
             Timber.e(error, "Export profiles failed to decode; blocking profile writes")
             null
         }
