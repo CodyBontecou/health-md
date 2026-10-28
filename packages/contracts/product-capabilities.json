@@ -518,6 +518,28 @@
       ]
     },
     {
+      "id": "automation.include-today",
+      "name": "Automation exports can include today",
+      "classification": "planned",
+      "summary": "Allow an automation to export N calendar days ending today when explicitly requested; default to ending yesterday. API-targeted profiles upload through the existing platform API runner. Current-day data remains incomplete and public daily schemas are unchanged.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Follow up #252 in AutomationReceiver.ACTION_EXPORT_LAST_DAYS with an INCLUDE_TODAY boolean extra defaulting false, preserving N-day count and profile API routing, with date-window regression tests."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/iOS/AppIntents/ExportLastNDaysIntent.swift",
+        "apps/apple/HealthMdTests/iOS/ExportLastNDaysIntentTests.swift",
+        "apps/apple/HealthMdTests/iOS/ExportIntentProfileResolutionTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/automation/AutomationReceiver.kt"
+      ]
+    },
+    {
       "id": "export.scheduled-today-refresh",
       "name": "Scheduled exports refresh today's file",
       "classification": "shared",
@@ -998,7 +1020,7 @@
       "id": "account.myself_lifetime_claim",
       "name": "Complimentary myself.md access claim",
       "classification": "shared",
-      "summary": "On iOS/iPadOS and Google Play Android, present a user-reviewed claim screen, verify eligible purchase evidence with myself.md, then hand off to explicit browser account confirmation. Opening the screen grants no access. Free macOS companion and F-Droid access do not establish a qualifying purchase.",
+      "summary": "Disabled by default behind explicit build feature flags on both platforms. When enabled on iOS/iPadOS and Google Play Android, present a user-reviewed claim screen, verify eligible purchase evidence with myself.md, then hand off to explicit browser account confirmation. Opening the screen grants no access. Free macOS companion and F-Droid access do not establish a qualifying purchase.",
       "profiles": [],
       "platforms": {
         "apple": {

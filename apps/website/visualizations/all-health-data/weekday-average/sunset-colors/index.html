@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Weekday average — Health.md Activity Visualization</title>
   <meta name="description" content="Average a metric by day of week. Works with Health.md Daily JSON, Daily CSV, Markdown &amp; Bases exports. Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact All data preview with the Sunset theme.">
-  <link rel="canonical" href="https://healthmd.app/visualizations/all-health-data/weekday-average/sunset-colors/">
+  <link rel="canonical" href="https://healthmd.app/visualizations/activity-fitness/weekday-average/theme-colors/">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
@@ -62,7 +62,7 @@
   <script src="/assets/theme.js" defer></script>
   <script src="/assets/healthmd-plugin-visualizations.js" defer></script>
   <script src="/assets/visualization-customizer.js?v=platform-card" defer></script>
-  <script type="application/ld+json" data-viz-schema>{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Health.md Weekday average visualization","applicationCategory":"HealthApplication","operatingSystem":"iOS, macOS, Obsidian","url":"https://healthmd.app/visualizations/all-health-data/weekday-average/sunset-colors/","description":"Average a metric by day of week. Works with Health.md Daily JSON, Daily CSV, Markdown & Bases exports. Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact All data preview with the Sunset theme.","featureList":["Works with Health.md Daily JSON exports","Works with Health.md Daily CSV exports","Works with Health.md Markdown & Bases exports"],"isPartOf":{"@type":"WebSite","name":"Health.md","url":"https://healthmd.app"},"keywords":"Apple Health, Obsidian, Health.md, health visualization, activity, weekday-average, sunset"}</script>
+  <script type="application/ld+json" data-viz-schema>{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Health.md Weekday average visualization","applicationCategory":"HealthApplication","operatingSystem":"iOS, macOS, Obsidian","url":"https://healthmd.app/visualizations/activity-fitness/weekday-average/theme-colors/","description":"Average a metric by day of week. Works with Health.md Daily JSON, Daily CSV, Markdown & Bases exports. Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact All data preview with the Sunset theme.","featureList":["Works with Health.md Daily JSON exports","Works with Health.md Daily CSV exports","Works with Health.md Markdown & Bases exports"],"isPartOf":{"@type":"WebSite","name":"Health.md","url":"https://healthmd.app"},"keywords":"Apple Health, Obsidian, Health.md, health visualization, activity, weekday-average, sunset"}</script>
 </head>
 <body>
   <div class="studio" data-viz-app>
@@ -109,6 +109,7 @@
                 <option value="vitals">Vitals &amp; metabolism</option>
                 <option value="body">Body composition</option>
                 <option value="sleep">Sleep</option>
+                <option value="whoop">WHOOP</option>
                 <option value="mental">Mood &amp; mind</option>
                 <option value="medications">Medications</option>
                 <option value="mobility">Mobility</option>
@@ -146,6 +147,7 @@
               <div class="render-error" data-render-error hidden></div>
             </div>
             <div class="health-md-viz-stats" data-viz-stats></div>
+            <p class="export-note" data-whoop-preview-note hidden>WHOOP previews use synthetic provider data, kept separate from Apple summaries. Missing scores and partial captures are intentional examples, not zero values.</p>
           </div>
 
           <section class="parameter-panel" data-viz-params aria-label="Visualization parameters" hidden></section>

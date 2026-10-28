@@ -400,6 +400,24 @@ fn successors_never_widen_historical_handoff_versions() {
     for (config, semantic, batches) in [apple_successor_input(), android_successor_input()] {
         let plan = render(&config, &semantic, &batches);
         assert_eq!(plan.artifact_plan_version, 2);
+        for (version, hash) in [
+            (3, healthmd_core::SLEEP_REGISTRY_SHA256),
+            (2, healthmd_core::WORKOUT_RANGE_REGISTRY_SHA256),
+        ] {
+            let mut crossed = config.clone();
+            crossed["registry_version"] = json!(version);
+            crossed["registry_sha256"] = json!(hash);
+            let mut crossed_result = semantic.clone();
+            crossed_result["registry_sha256"] = json!(hash);
+            assert!(
+                RenderSession::from_json(
+                    &serde_json::to_vec(&crossed).unwrap(),
+                    &serde_json::to_vec(&crossed_result).unwrap()
+                )
+                .is_err(),
+                "a successor cannot relabel registry {version} with {hash}"
+            );
+        }
         for key in [
             "render_input_version",
             "canonical_model_version",

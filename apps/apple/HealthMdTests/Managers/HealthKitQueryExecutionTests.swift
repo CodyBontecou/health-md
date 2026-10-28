@@ -394,17 +394,18 @@ final class HealthKitQueryExecutionTests: XCTestCase {
                 maximumOutstandingQueries: 1
             )
         )
-        let heldQuery = HeldQuery()
+        let physicalQuery = ControlledQuery()
+        defer { physicalQuery.complete() }
         do {
             _ = try await HealthKitQueryExecutionController.withController(controller) {
                 try await executeHealthKitQuery(
                     operation: "testBudgetHung",
                     typeIdentifier: "test.hung"
                 ) {
-                    await heldQuery.value()
+                    await physicalQuery.value()
                 }
             }
-            XCTFail("Expected the held worker to time out")
+            XCTFail("Expected timeout")
         } catch {
             XCTAssertEqual(
                 (error as NSError).code,
@@ -412,10 +413,10 @@ final class HealthKitQueryExecutionTests: XCTestCase {
             )
         }
 
+        // Exercise a caller that resumes after the former 120 ms worker fixture.
+        // Budget evidence must survive delayed observation, not rely on runner speed.
+        try? await ContinuousClock().sleep(for: .milliseconds(160))
         XCTAssertEqual(controller.snapshot().unresolvedQueries, 1)
-        // A delayed runner must not let the physical worker finish before the
-        // budget assertion. Keep it held beyond the old 120 ms fixture delay.
-        try? await ContinuousClock().sleep(for: .milliseconds(200))
 
         let invocations = LockedCounter()
         do {
@@ -442,9 +443,12 @@ final class HealthKitQueryExecutionTests: XCTestCase {
             )
         }
         XCTAssertEqual(invocations.value, 0)
-        await heldQuery.release()
-        let workerReleased = await waitUntil { controller.snapshot().unresolvedQueries == 0 }
-        XCTAssertTrue(workerReleased)
+
+        physicalQuery.complete()
+        let physicalWorkerReleased = await waitUntil {
+            controller.snapshot().unresolvedQueries == 0
+        }
+        XCTAssertTrue(physicalWorkerReleased)
         do {
             let value = try await HealthKitQueryExecutionController.withController(controller) {
                 try await executeHealthKitQuery(
@@ -457,7 +461,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
             }
             XCTAssertEqual(value, 2)
         } catch {
-            XCTFail("Releasing the held worker must restore the budget: \(error)")
+            XCTFail("Expected budget to recover after physical completion: \(error)")
         }
         XCTAssertEqual(invocations.value, 1)
     }

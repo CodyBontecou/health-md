@@ -50,7 +50,11 @@ pub(crate) fn render_frontmatter(
             )
             .map_err(|_| RenderError::SerializationFailed)?;
         } else {
-            output.push_str("schema: healthmd.health_data\nschema_version: 8\n");
+            output.push_str(if config.profile == SemanticProfile::AppleHealthDataV7 {
+                "schema: healthmd.health_data\nschema_version: 7\n"
+            } else {
+                "schema: healthmd.health_data\nschema_version: 8\n"
+            });
         }
         output.push_str("time_context:\n  calendar_timezone: ");
         output.push_str(&config.calendar_time_zone);
@@ -507,7 +511,7 @@ pub(crate) fn render_csv(
                 ],
             );
         }
-    } else if profile == SemanticProfile::AppleHealthDataV8 {
+    } else if profile.is_apple() {
         for row in [
             [
                 day.owner_date.as_str(),
@@ -521,7 +525,11 @@ pub(crate) fn render_csv(
                 day.owner_date.as_str(),
                 "Metadata",
                 "schema_version",
-                "8",
+                if profile == SemanticProfile::AppleHealthDataV7 {
+                    "7"
+                } else {
+                    "8"
+                },
                 "",
                 "",
             ],
@@ -678,7 +686,9 @@ pub(crate) fn public_json_entries(
     public_fields.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
     let mut entries = Vec::new();
     match profile {
-        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV11 => {
+        SemanticProfile::AppleHealthDataV7
+        | SemanticProfile::AppleHealthDataV8
+        | SemanticProfile::AppleHealthDataV11 => {
             let wake_date = profile == SemanticProfile::AppleHealthDataV11;
             entries.push((
                 "schema".to_owned(),
@@ -686,7 +696,7 @@ pub(crate) fn public_json_entries(
             ));
             entries.push((
                 "schema_version".to_owned(),
-                Value::from(if wake_date { 11 } else { 8 }),
+                Value::from(profile.public_schema_version()),
             ));
             if wake_date {
                 entries.push((

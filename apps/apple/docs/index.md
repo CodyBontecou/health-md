@@ -18,5 +18,6 @@
 
 - [Feature documentation](./features/index.md): workflow guides and optional editorial/video planning.
 - [Privacy and local-first design](./features/privacy-local-first.md): what stays local, what can leave the device, and lossless-data sensitivity.
-- [Experiment runbooks](./experiments/index.md): pricing and product experiment plans, gates, and results logs.
-- [Testing docs](./testing/README.md): current test sources, testing policies, and quality gates.
+- [Operational experiments](../../../docs/experiments/index.md): current pricing decisions and results; [Apple experiment archive](./experiments/index.md) retains historical plans.
+- [Testing docs](./testing/README.md): current test sources, verification policies and quality gates.
+- [iOS UI tests](./testing/UI-TESTS.md): deterministic synthetic launch state and journey recipes.

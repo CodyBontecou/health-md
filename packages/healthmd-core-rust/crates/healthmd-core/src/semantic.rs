@@ -37,14 +37,11 @@ pub const MAX_EXTENSIONS_PER_RECORD: usize = 32;
 /// Maximum UTF-8 bytes in one opaque extension retention token.
 pub const MAX_EXTENSION_TOKEN_BYTES: usize = 128;
 
-const REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.json");
-const SLEEP_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v2.json");
-const WORKOUT_RANGE_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v3.json");
-
 /// Closed output profiles. Profiles are never inferred from platform or app version.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SemanticProfile {
+    AppleHealthDataV7,
     AppleHealthDataV8,
     AndroidFrozenV4,
     AndroidAnalyticalV5,
@@ -53,8 +50,9 @@ pub enum SemanticProfile {
 }
 
 impl SemanticProfile {
-    fn id(self) -> &'static str {
+    pub(crate) fn id(self) -> &'static str {
         match self {
+            Self::AppleHealthDataV7 => "apple_health_data_v7",
             Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
@@ -68,7 +66,10 @@ impl SemanticProfile {
     }
 
     pub(crate) const fn is_apple(self) -> bool {
-        matches!(self, Self::AppleHealthDataV8 | Self::AppleHealthDataV11)
+        matches!(
+            self,
+            Self::AppleHealthDataV7 | Self::AppleHealthDataV8 | Self::AppleHealthDataV11
+        )
     }
 
     pub(crate) const fn is_wake_date(self) -> bool {
@@ -77,6 +78,7 @@ impl SemanticProfile {
 
     pub(crate) const fn public_schema_version(self) -> u32 {
         match self {
+            Self::AppleHealthDataV7 => 7,
             Self::AppleHealthDataV8 => 8,
             Self::AndroidFrozenV4 => 4,
             Self::AndroidAnalyticalV5 => 5,
@@ -87,6 +89,7 @@ impl SemanticProfile {
 
     pub(crate) const fn public_profile_id(self) -> &'static str {
         match self {
+            Self::AppleHealthDataV7 => "apple-v7",
             Self::AppleHealthDataV8 => "apple-v8",
             Self::AndroidFrozenV4 => "android-frozen-v4",
             Self::AndroidAnalyticalV5 => "android-analytical-v5",
@@ -502,7 +505,7 @@ impl SemanticSession {
         let config: SemanticSessionConfig =
             serde_json::from_slice(config_bytes).map_err(|_| CoreError::InvalidSemanticConfig)?;
         validate_config(&config)?;
-        let profile = build_profile_index(config.profile, config.registry_version)?;
+        let profile = build_profile_index(config.profile, &config.registry_sha256)?;
         if config
             .selected_selection_ids
             .iter()
@@ -1227,8 +1230,15 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
         || !config
             .profile
             .supports_registry_version(config.registry_version)
-        || config.registry_sha256 != crate::registry::registry_hash(config.registry_version)?
-        || !matches!(config.profile_revision, 1 | 2)
+        || !crate::authority::supports_registry_version(
+            &config.registry_sha256,
+            config.registry_version,
+        )
+        || !crate::authority::supports_semantic(
+            &config.registry_sha256,
+            config.profile.id(),
+            config.profile_revision,
+        )
         || !valid_identifier(&config.session_id, 128)
         || config.calendar_time_zone.len() > 64
         || config.calendar_time_zone.parse::<chrono_tz::Tz>().is_err()
@@ -1291,16 +1301,8 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
     Ok(())
 }
 
-fn build_profile_index(
-    profile: SemanticProfile,
-    registry_version: u32,
-) -> Result<ProfileIndex, CoreError> {
-    let bytes = match registry_version {
-        WORKOUT_RANGE_REGISTRY_VERSION => WORKOUT_RANGE_REGISTRY_BYTES,
-        SLEEP_REGISTRY_VERSION => SLEEP_REGISTRY_BYTES,
-        REGISTRY_VERSION => REGISTRY_BYTES,
-        _ => return Err(CoreError::UnsupportedRegistryVersion),
-    };
+fn build_profile_index(profile: SemanticProfile, hash: &str) -> Result<ProfileIndex, CoreError> {
+    let bytes = crate::authority::registry_bytes(hash, profile.id())?;
     let registry: RawRegistry =
         serde_json::from_slice(bytes).map_err(|_| CoreError::InvalidRegistry)?;
     let mut semantic_to_selection = HashMap::new();

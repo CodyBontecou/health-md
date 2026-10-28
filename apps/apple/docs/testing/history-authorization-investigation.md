@@ -25,6 +25,14 @@ The documentation lists introduction at **27.0** on iOS, iPadOS, Mac Catalyst,
 macOS, visionOS, and watchOS. Availability in documentation does not establish
 availability in the CI SDK or certify a physical device.
 
+The Xcode project enables `HEALTHMD_HAS_HISTORY_AUTHORIZATION_API` only for
+SDK 27 builds, whose public declaration is checked by the existing CI probe.
+Other SDK families compile the adapter's `.unavailable` fallback, including when
+that binary later runs on OS 27. This uses the actual SDK selection rather than
+inferring SDK support from the Swift compiler version. New SDK families must be
+qualified before enabling the condition. The pre-27 compile regression extracts
+and typechecks the production adapter method against the installed iPhone SDK.
+
 The documented semantics are materially narrower than the issue's requested
 `full_history` state:
 

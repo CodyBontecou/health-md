@@ -84,6 +84,7 @@ internal fun DateRangeSelectionSection(
     onOptionSelected: (DateRangeOption) -> Unit,
     onStartDateClick: () -> Unit,
     onEndDateClick: () -> Unit,
+    showSleepGuidance: Boolean = false,
 ) {
     val options = listOf(
         DateRangeOption.Today to stringResource(R.string.date_option_today),
@@ -110,6 +111,15 @@ internal fun DateRangeSelectionSection(
                         }
                     }
                 }
+            }
+
+            if (showSleepGuidance) {
+                Text(
+                    text = stringResource(R.string.export_sleep_date_guidance),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textSecondary,
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
             }
 
             AnimatedVisibility(

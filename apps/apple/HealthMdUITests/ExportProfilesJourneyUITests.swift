@@ -60,6 +60,34 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Export Profiles"].waitUntilExists(timeout: 5))
     }
 
+    func testCreatingAPIProfileKeepsSelectedEndpointOnFirstSave() {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launch()
+        openProfilesManagementSheet(app)
+        app.buttons["New profile"].tap()
+        let name = app.textFields["export.profiles.editor.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        let initialName = name.value as? String ?? ""
+        name.typeText(String(repeating: "\u{8}", count: initialName.count) + "API Creation Regression")
+        app.buttons["Target"].tap()
+        app.buttons["API Endpoint"].tap()
+        app.buttons["export.profiles.editor.addEndpoint"].tap()
+        let url = app.textFields["export.profiles.editor.endpointURL"]
+        XCTAssertTrue(url.waitForExistence(timeout: 5))
+        url.tap()
+        url.typeText("https://qa.example.test/export")
+        app.buttons["export.profiles.editor.addEndpoint.confirm"].tap()
+        let create = app.buttons["export.profiles.editor.confirm"]
+        XCTAssertTrue(create.waitForExistence(timeout: 5))
+        create.tap()
+        let row = app.buttons["export.profiles.row.API Creation Regression"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertFalse(row.label.contains("not configured"))
+        row.tap()
+        XCTAssertTrue(app.staticTexts["https://qa.example.test/export"].waitForExistence(timeout: 5))
+    }
+
     // MARK: - Journey A: migration + Settings entry
 
     func testQA_MigrationShowsDefaultProfileInSettings() {

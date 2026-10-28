@@ -84,7 +84,10 @@ nonisolated enum HealthMdSemanticInputAdapter {
             }
         }
         let containsRange = rollupPeriods.contains(.range)
-        guard containsRange == (requestedRange != nil),
+        guard !containsRange || registry.profileId == "apple_health_data_v8"
+                || (inputVersion == AppleExportEnginePin.wakeDateHandoffVersion
+                    && registry.profileId == AppleExportEnginePin.wakeDateProfileID),
+              containsRange == (requestedRange != nil),
               !containsRange || rollupPeriods == [.range],
               requestedRange?.calendarTimeZoneIdentifier == nil
                 || requestedRange?.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier else {
@@ -541,12 +544,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
             }
             return AppleExportEnginePin.wakeDateHandoffVersion
         }
-        guard registry.profileId == AppleExportEnginePin.profileID,
-              registry.publicProfileId == "apple-v8",
-              registry.publicSchema == HealthMdExportSchema.identifier,
-              registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
-              registry.profileRevision == 1, registry.registryVersion == registryVersion,
-              registry.registrySha256 == HealthMetrics.registrySHA256 else {
+        guard AppleExportEnginePin.supportsRegistry(registry) else {
             throw AdapterError.invalidRegistry
         }
         guard captureContext == nil || (captureContext?.sleepDayAttribution == .nightBegins

@@ -2193,6 +2193,154 @@ final class HealthKitManagerGranularDataTests: XCTestCase {
 // MARK: - Lossless HealthKit Record Archive Tests
 
 final class HealthKitManagerRecordArchiveTests: XCTestCase {
+    private static let sleepCustomization: FormatCustomization = {
+        let customization = FormatCustomization()
+        customization.unitPreference = .metric
+        return customization
+    }()
+
+    // Synthetic issue #198 pattern: 40 third-party stages, no inBed, all
+    // between 04:03Z and 11:52Z on the wake date. These are not reporter data.
+    private func issue198Store() throws -> FakeHealthStore {
+        let store = FakeHealthStore()
+        let start = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-22T04:03:00Z"))
+        var values = Array(repeating: HKCategoryValueSleepAnalysis.asleepDeep, count: 16)
+            + Array(repeating: .asleepCore, count: 12)
+            + Array(repeating: .asleepREM, count: 10)
+        values.insert(.awake, at: 10)
+        values.insert(.awake, at: 25)
+        let samples = values.enumerated().map { index, value in
+            CategorySampleValue(
+                value: value.rawValue,
+                startDate: start.addingTimeInterval(Double(index) * 703.5),
+                endDate: start.addingTimeInterval(Double(index + 1) * 703.5)
+            )
+        }
+        let identifier = HKCategoryTypeIdentifier.sleepAnalysis.rawValue
+        store.categorySampleResults[identifier] = samples
+        store.categoryRecordResults[identifier] = samples.map { sample in
+            HealthKitRecord(
+                originalUUID: UUID(),
+                objectTypeIdentifier: identifier,
+                recordKind: .category,
+                selectedMetricIDs: ["sleep_total"],
+                includedBecause: .selectedMetric,
+                startDate: sample.startDate,
+                endDate: sample.endDate,
+                sourceRevision: HealthKitSourceRevision(
+                    name: "Synthetic third-party ring",
+                    bundleIdentifier: "com.example.ring",
+                    version: "1.0"
+                ),
+                payload: .category(HealthKitCategoryPayload(rawValue: Int64(sample.value), symbolicValue: nil))
+            )
+        }
+        return store
+    }
+
+    @MainActor
+    func test_issue198_stagedSleepWithoutInBedExportsOnJournalDateAtEveryDetailLevel() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let journalDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 9, day: 21)))
+        let selected = selection([
+            "sleep_total", "sleep_bedtime", "sleep_wake", "sleep_deep",
+            "sleep_rem", "sleep_core", "sleep_awake", "sleep_in_bed"
+        ])
+        for policy in [AppleExportDetailPolicy.summary, .detailedTimeSeries, .lossless] {
+            let data = try await makeSUT(store: issue198Store()).fetchHealthData(
+                for: journalDate, detailPolicy: policy, metricSelection: selected,
+                timeZone: calendar.timeZone, captureCalendar: calendar
+            )
+            XCTAssertEqual(data.sleep.totalDuration, 38 * 703.5, accuracy: 0.01)
+            XCTAssertEqual(data.sleep.deepSleep, 16 * 703.5, accuracy: 0.01)
+            XCTAssertEqual(data.sleep.coreSleep, 12 * 703.5, accuracy: 0.01)
+            XCTAssertEqual(data.sleep.remSleep, 10 * 703.5, accuracy: 0.01)
+            XCTAssertEqual(data.sleep.awakeTime, 2 * 703.5, accuracy: 0.01)
+            XCTAssertEqual(data.sleep.inBedTime, 0)
+            XCTAssertEqual(data.sleep.stages.count, policy.includesSelectedTimeSeries ? 40 : 0)
+            XCTAssertTrue(data.partialFailures.isEmpty)
+            if policy.includesCanonicalArchive {
+                XCTAssertTrue(try XCTUnwrap(data.healthKitRecordArchive).records.isEmpty,
+                              "Raw source-start ownership is independent of the sleep journal window")
+            }
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(
+                with: Data(data.toJSONThrowing(customization: Self.sleepCustomization).utf8)
+            ) as? [String: Any])
+            let sleep = try XCTUnwrap(json["sleep"] as? [String: Any])
+            XCTAssertEqual(sleep["totalDuration"] as? Double, 38 * 703.5)
+            XCTAssertEqual(sleep["bedtimeISO"] as? String, "2026-09-22T04:03:00Z")
+            XCTAssertEqual(sleep["wakeTimeISO"] as? String, "2026-09-22T11:52:00Z")
+            let markdown = data.toMarkdown(customization: Self.sleepCustomization)
+            for key in ["sleep_total_hours", "sleep_deep_hours", "sleep_rem_hours", "sleep_core_hours",
+                        "sleep_awake_hours", "sleep_bedtime", "sleep_wake"] {
+                XCTAssertTrue(markdown.contains("\(key):"), key)
+            }
+            XCTAssertNil(sleep["inBedTime"], "Stage-only data must not fabricate in-bed time")
+
+            let filtered = data.filtered(by: selection(["sleep_deep"]))
+            let filteredMarkdown = filtered.toMarkdown(customization: Self.sleepCustomization)
+            XCTAssertTrue(filteredMarkdown.contains("sleep_deep_hours:"))
+            XCTAssertFalse(filteredMarkdown.contains("sleep_total_hours:"))
+        }
+    }
+
+    @MainActor
+    func test_issue198_rawCaptureDoesNotImplySleepSummaryOnWakeDate() async throws {
+        for zone in ["UTC", "Europe/Lisbon"] {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = try XCTUnwrap(TimeZone(identifier: zone))
+            let wakeDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 9, day: 22)))
+            let store = try issue198Store()
+            let sut = makeSUT(store: store)
+            let selected = selection(["sleep_total", "sleep_rem", "resting_heart_rate"])
+            let data = try await sut.fetchHealthData(
+                for: wakeDate, detailPolicy: .lossless, metricSelection: selected,
+                timeZone: calendar.timeZone, captureCalendar: calendar
+            )
+            let archive = try XCTUnwrap(data.healthKitRecordArchive)
+            XCTAssertEqual(archive.records.count, 40)
+            let query = try XCTUnwrap(archive.queryResults.first {
+                $0.objectTypeIdentifier == HKCategoryTypeIdentifier.sleepAnalysis.rawValue
+            })
+            XCTAssertEqual(query.status, .success)
+            XCTAssertEqual(query.recordCount, 40)
+            XCTAssertTrue(data.partialFailures.isEmpty)
+            // Lisbon is UTC+1 in September: the last 52 minutes cross local noon.
+            XCTAssertEqual(data.sleep.totalDuration, zone == "UTC" ? 0 : 52 * 60, accuracy: 0.01)
+            XCTAssertNil(data.heart.restingHeartRate, "Read access alone does not supply a measurement")
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(
+                with: Data(data.toJSONThrowing(customization: Self.sleepCustomization).utf8)
+            ) as? [String: Any])
+            let sleep = json["sleep"] as? [String: Any]
+            if zone == "UTC" {
+                XCTAssertNil(sleep)
+            } else {
+                XCTAssertEqual(sleep?["totalDuration"] as? Double, 52 * 60)
+                XCTAssertEqual(sleep?["remSleep"] as? Double, 52 * 60)
+            }
+            XCTAssertEqual(data.toMarkdown(customization: Self.sleepCustomization)
+                .contains("sleep_total_hours:"), zone != "UTC")
+
+            store.statisticsMostRecent[HKQuantityTypeIdentifier.restingHeartRate.rawValue] = 58
+            let withHeart = try await sut.fetchHealthData(
+                for: wakeDate, detailPolicy: .summary, metricSelection: selected,
+                timeZone: calendar.timeZone, captureCalendar: calendar
+            )
+            XCTAssertEqual(withHeart.heart.restingHeartRate, 58,
+                           "Resting heart rate is independent of the sleep-summary window")
+
+            store.errorsForCategorySamples[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = HealthKitFixtures.genericQueryError
+            let failed = try await sut.fetchHealthData(
+                for: wakeDate, detailPolicy: .lossless, metricSelection: selected,
+                timeZone: calendar.timeZone, captureCalendar: calendar
+            )
+            XCTAssertEqual(try XCTUnwrap(failed.healthKitRecordArchive).records.count, 40)
+            XCTAssertTrue(failed.partialFailures.contains { $0.dataType == "sleep" },
+                          "A successful archive must not hide a failed summary query")
+        }
+    }
+
     private static let source = HealthKitSourceRevision(
         name: "Archive Fixture",
         bundleIdentifier: "com.example.archive-fixture",

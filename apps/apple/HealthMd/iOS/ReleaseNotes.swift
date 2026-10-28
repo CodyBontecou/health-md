@@ -43,6 +43,11 @@ enum HealthMdReleaseNotes {
                             description: "Improved export history, connection recovery, and the export file browser."
                         ),
                         .init(
+                            symbolSystemName: "clock.arrow.circlepath",
+                            title: "Clearer Today Refresh notifications",
+                            description: "Success notifications now report the exported day count without calling today’s data yesterday’s."
+                        ),
+                        .init(
                             symbolSystemName: "hand.raised",
                             title: "Apple Ads measurement",
                             description: "On iPhone and iPad, Apple Ads campaign identifiers help measure which campaigns lead to purchases. Health data and purchase events are never sent to Apple Ads."

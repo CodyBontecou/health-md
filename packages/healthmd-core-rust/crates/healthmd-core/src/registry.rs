@@ -20,6 +20,8 @@ const WORKOUT_RANGE_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-r
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MetricRegistryProfile {
+    /// Historical Apple `healthmd.health_data` v7, with its original authority.
+    AppleHealthDataV7,
     /// Apple `healthmd.health_data` v8.
     AppleHealthDataV8,
     /// Android byte-frozen iOS-compatible v4.
@@ -37,6 +39,7 @@ impl MetricRegistryProfile {
     #[must_use]
     pub const fn id(self) -> &'static str {
         match self {
+            Self::AppleHealthDataV7 => "apple_health_data_v7",
             Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
@@ -49,9 +52,10 @@ impl MetricRegistryProfile {
     #[must_use]
     pub const fn registry_version(self) -> u32 {
         match self {
-            Self::AppleHealthDataV8 | Self::AndroidFrozenV4 | Self::AndroidAnalyticalV5 => {
-                REGISTRY_VERSION
-            }
+            Self::AppleHealthDataV7
+            | Self::AppleHealthDataV8
+            | Self::AndroidFrozenV4
+            | Self::AndroidAnalyticalV5 => REGISTRY_VERSION,
             Self::AppleHealthDataV11 | Self::AndroidSleepV6 => SLEEP_REGISTRY_VERSION,
         }
     }
@@ -342,6 +346,23 @@ pub fn metric_registry_snapshot(
     profile: MetricRegistryProfile,
     expected_registry_version: u32,
 ) -> Result<MetricRegistrySnapshot, CoreError> {
+    let hash = if profile == MetricRegistryProfile::AppleHealthDataV7 {
+        crate::authority::HISTORICAL_REGISTRY_SHA256
+    } else {
+        registry_hash(expected_registry_version)?
+    };
+    metric_registry_snapshot_at_authority(profile, expected_registry_version, hash)
+}
+
+/// Return only the exact retained profile/version/hash authority.
+///
+/// # Errors
+/// Unknown or incompatible authorities reject without selecting a current fallback.
+pub fn metric_registry_snapshot_at_authority(
+    profile: MetricRegistryProfile,
+    expected_registry_version: u32,
+    registry_sha256: &str,
+) -> Result<MetricRegistrySnapshot, CoreError> {
     if expected_registry_version != profile.registry_version()
         && !(expected_registry_version == WORKOUT_RANGE_REGISTRY_VERSION
             && matches!(
@@ -351,7 +372,11 @@ pub fn metric_registry_snapshot(
     {
         return Err(CoreError::UnsupportedRegistryVersion);
     }
-    project_snapshot(registry_document(expected_registry_version)?, profile)
+    let bytes = crate::authority::registry_bytes(registry_sha256, profile.id())?;
+    let document = decode_and_validate_version(bytes, false, expected_registry_version)?;
+    let mut snapshot = project_snapshot(&document, profile)?;
+    registry_sha256.clone_into(&mut snapshot.registry_sha256);
+    Ok(snapshot)
 }
 
 fn registry_document(version: u32) -> Result<&'static RegistryDocument, CoreError> {
@@ -453,7 +478,7 @@ fn validate_document(document: &RegistryDocument) -> Result<(), CoreError> {
             document.registry_version,
             REGISTRY_VERSION | SLEEP_REGISTRY_VERSION | WORKOUT_RANGE_REGISTRY_VERSION
         )
-        || document.profiles.len() != expected_profile_ids(document.registry_version).len()
+        || document.profiles.len() != expected_document_profiles(document).len()
         || document.known_capability_ids.is_empty()
     {
         return Err(CoreError::InvalidRegistry);
@@ -505,7 +530,7 @@ fn validate_document(document: &RegistryDocument) -> Result<(), CoreError> {
         .map(|profile| profile.id.clone())
         .collect::<Vec<_>>();
     let profile_ids: HashSet<&str> = unique_nonempty(&profile_id_values)?;
-    if profile_ids != expected_profile_ids(document.registry_version) {
+    if profile_ids != expected_document_profiles(document) {
         return Err(CoreError::InvalidRegistry);
     }
     for profile in &document.profiles {
@@ -541,6 +566,23 @@ fn validate_document(document: &RegistryDocument) -> Result<(), CoreError> {
         return Err(CoreError::InvalidRegistry);
     }
     Ok(())
+}
+
+fn expected_document_profiles(document: &RegistryDocument) -> HashSet<&'static str> {
+    if document.registry_version == REGISTRY_VERSION
+        && document
+            .profiles
+            .iter()
+            .any(|profile| profile.id == "apple_health_data_v7")
+    {
+        HashSet::from([
+            "apple_health_data_v7",
+            "android_frozen_v4",
+            "android_analytical_v5",
+        ])
+    } else {
+        expected_profile_ids(document.registry_version)
+    }
 }
 
 fn expected_profile_ids(version: u32) -> HashSet<&'static str> {

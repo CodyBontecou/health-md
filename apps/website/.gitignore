@@ -16,3 +16,6 @@ docs-src/dist/
 # Shoreman dev server
 dev.log
 .shoreman.pid
+
+# Public, reproducible starter-vault download (root ignores general ZIP artifacts).
+!assets/downloads/healthmd-obsidian-starter.zip

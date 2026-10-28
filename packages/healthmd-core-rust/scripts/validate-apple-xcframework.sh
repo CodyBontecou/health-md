@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-workspace_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-repo_root=$(CDPATH= cd -- "$workspace_root/../.." && pwd)
+workspace_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+repo_root=$(CDPATH='' cd -- "$workspace_root/../.." && pwd)
 package_root="$repo_root/apps/apple/Packages/HealthMdCoreRust"
 xcframework=${1:-"$package_root/Artifacts/HealthmdCore.xcframework"}
 
@@ -13,16 +13,23 @@ fail() {
 
 [ -f "$xcframework/Info.plist" ] || fail "missing XCFramework Info.plist: $xcframework"
 
-device_library="$xcframework/ios-arm64/libHealthmdCoreFFI.a"
-simulator_library="$xcframework/ios-arm64_x86_64-simulator/libHealthmdCoreFFI.a"
-macos_library="$xcframework/macos-arm64_x86_64/libHealthmdCoreFFI.a"
-
-[ -f "$device_library" ] || fail "missing arm64 iOS device slice"
-[ -f "$simulator_library" ] || fail "missing universal iOS Simulator slice"
-[ -f "$macos_library" ] || fail "missing universal macOS slice"
-
+scope=${HEALTHMD_CORE_APPLE_SCOPE:-full}
+case "$scope" in
+    full)
+        identifiers="ios-arm64 ios-arm64_x86_64-simulator macos-arm64_x86_64"
+        expected_count=3
+        ;;
+    ci-arm64)
+        identifiers="ios-arm64-simulator macos-arm64"
+        expected_count=2
+        ;;
+    *) fail "HEALTHMD_CORE_APPLE_SCOPE must be full or ci-arm64" ;;
+esac
+for identifier in $identifiers; do
+    [ -s "$xcframework/$identifier/libHealthmdCoreFFI.a" ] || fail "missing static library for $identifier"
+done
 library_count=$(find "$xcframework" -type f -name 'libHealthmdCoreFFI.a' | wc -l | tr -d ' ')
-[ "$library_count" = "3" ] || fail "expected exactly three static libraries, found $library_count"
+[ "$library_count" = "$expected_count" ] || fail "expected $expected_count static libraries, found $library_count"
 
 assert_architectures() {
     library=$1
@@ -43,16 +50,21 @@ assert_architectures() {
     done
 }
 
-assert_architectures "$device_library" "arm64"
-assert_architectures "$simulator_library" "arm64 x86_64"
-assert_architectures "$macos_library" "arm64 x86_64"
+for identifier in $identifiers; do
+    case "$identifier" in
+        *arm64_x86_64*) expected_architectures="arm64 x86_64" ;;
+        *) expected_architectures="arm64" ;;
+    esac
+    assert_architectures "$xcframework/$identifier/libHealthmdCoreFFI.a" "$expected_architectures"
+done
 
 required_symbols='uniffi_healthmd_core_uniffi_fn_func_get_build_info
 uniffi_healthmd_core_uniffi_fn_func_run_self_test
 uniffi_healthmd_core_uniffi_fn_func_validate_fixture
 ffi_healthmd_core_uniffi_uniffi_contract_version'
 
-for library in "$device_library" "$simulator_library" "$macos_library"; do
+for identifier in $identifiers; do
+    library="$xcframework/$identifier/libHealthmdCoreFFI.a"
     symbols_file=$(mktemp "${TMPDIR:-/tmp}/healthmd-core-symbols.XXXXXX")
     trap 'rm -f "$symbols_file"' EXIT HUP INT TERM
     xcrun nm -gjU "$library" > "$symbols_file" 2>/dev/null
@@ -72,7 +84,7 @@ if find "$xcframework" -type f \( -name '*.dylib' -o -name '*.so' \) | grep -q .
     fail "XCFramework contains a dynamic library"
 fi
 
-for identifier in ios-arm64 ios-arm64_x86_64-simulator macos-arm64_x86_64; do
+for identifier in $identifiers; do
     header_dir="$xcframework/$identifier/Headers"
     [ -f "$header_dir/HealthmdCoreFFI.h" ] || fail "missing generated header for $identifier"
     [ -f "$header_dir/module.modulemap" ] || fail "missing module map for $identifier"

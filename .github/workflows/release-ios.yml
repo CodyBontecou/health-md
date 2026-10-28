@@ -5,7 +5,7 @@
 #   - publishing a GitHub Release with a v* tag (legacy fallback)
 #
 # Gate: before any build or submission, the exact release SHA (the tag's commit,
-# or the branch head for branch-mode runs) must pass the full Apple CI suite via
+# or the branch head for branch-mode runs) must pass the portable CI gate via
 # the reusable apple-ci.yml workflow. Store submissions never run on an
 # unqualified commit.
 #
@@ -74,8 +74,9 @@ jobs:
     name: Resolve release SHA
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # GitHub only exposes draft releases to tokens with push access.
     permissions:
-      contents: read
+      contents: write
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
       tag: ${{ steps.resolve.outputs.tag }}
@@ -117,6 +118,9 @@ jobs:
     if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.type != 'Bot' && github.event.release.author.login != 'github-actions[bot]') }}
     name: Qualify exact Apple release SHA
     needs: resolve-release-sha
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/apple-ci.yml
     with:
       release_sha: ${{ needs.resolve-release-sha.outputs.sha }}
@@ -126,7 +130,7 @@ jobs:
     needs: [resolve-release-sha, qualify]
     if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.type != 'Bot' && github.event.release.author.login != 'github-actions[bot]') }}
     # Keep releases available when the optional self-hosted Mac is offline. The
-    # Apple CI suite qualifies this same hosted image and its Xcode toolchain.
+    # Portable CI qualifies the source; this job supplies Xcode for packaging.
     runs-on: macos-26
     timeout-minutes: 90
     env:

@@ -259,6 +259,7 @@ object CoreArtifactPlanConverter {
                 AndroidExportProfile.android_analytical_v5
             CoreMetricRegistryProfile.ANDROID_SLEEP_V6 ->
                 AndroidExportProfile.android_sleep_v6
+            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V7,
             CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V8,
             CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V11 ->
                 invalid(ExportArtifactPlanValidationIssue.PROFILE)

@@ -44,6 +44,32 @@ final class ExportLastNDaysIntentTests: XCTestCase {
         XCTAssertEqual(ExportLastNDaysIntent(days: 500).days, 500)
     }
 
+    func testIncludeTodayDefaultsOffForExistingShortcuts() {
+        XCTAssertFalse(ExportLastNDaysIntent().includeToday)
+        XCTAssertFalse(ExportLastNDaysIntent(days: 7).includeToday)
+        XCTAssertTrue(ExportLastNDaysIntent(days: 1, includeToday: true).includeToday)
+    }
+
+    func testIncludeTodayShiftsWindowWithoutIncreasingDayCount() {
+        let dates = ExportLastNDaysIntent.exportDates(days: 7, includeToday: true,
+            now: date(2026, 5, 11, hour: 8), calendar: calendar)
+        XCTAssertEqual(dates.count, 7)
+        XCTAssertEqual(dates.first, date(2026, 5, 5))
+        XCTAssertEqual(dates.last, date(2026, 5, 11))
+        XCTAssertEqual(ExportLastNDaysIntent.exportDates(days: 0, includeToday: true,
+            now: date(2026, 5, 11, hour: 8), calendar: calendar), [date(2026, 5, 11)])
+    }
+
+    func testIncludeTodayUsesCalendarDaysAcrossDST() {
+        var localCalendar = calendar
+        localCalendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let now = localCalendar.date(from: DateComponents(year: 2026, month: 3, day: 9, hour: 8))!
+        let dates = ExportLastNDaysIntent.exportDates(days: 3, includeToday: true, now: now, calendar: localCalendar)
+        XCTAssertEqual(dates.map { localCalendar.component(.day, from: $0) }, [7, 8, 9])
+        XCTAssertTrue(dates.allSatisfy { localCalendar.startOfDay(for: $0) == $0 })
+        XCTAssertEqual(dates[2].timeIntervalSince(dates[1]), 23 * 3600)
+    }
+
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -376,7 +402,7 @@ final class ExportIntentRunnerTests: XCTestCase {
             ExportIntentRunner.Dependencies(
                 refreshPurchaseStatus: {},
                 canExport: { true },
-                trackExportBlockedByQuota: {},
+                trackExportBlockedByQuota: { _ in },
                 hasVaultAccess: { [weak self] in
                     self?.destinationEvents.append("hasAccess")
                     return true
@@ -400,7 +426,7 @@ final class ExportIntentRunnerTests: XCTestCase {
                     self?.exportDatesCount += 1
                     return result
                 },
-                recordResult: { [weak self] result, _, _, _, _, _ in
+                recordResult: { [weak self] result, _, _, _, _, _, _ in
                     self?.recordedResults.append(result)
                 },
                 recordExportUse: { [weak self] in

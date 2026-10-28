@@ -3,7 +3,28 @@
 Automated checks are necessary but do not replace physical iPhone and Android runs against the
 exact Health.md builds advertised by a release.
 
+## CLI change consumers
+
+For command/flag, JSON-output, or MCP-catalog changes, review these consumers before pushing:
+
+| Consumer | Owner / check |
+| --- | --- |
+| Parser, structured guidance, and errors | [`main.rs`](../crates/healthmd-cli/src/main.rs), CLI guidance tests, [`command-guidance.md`](command-guidance.md) |
+| CLI/MCP declarations and profiles | [`registry.rs`](../crates/healthmd-operations/src/registry.rs), [`catalog.rs`](../crates/healthmd-mcp/src/catalog.rs), `python3 scripts/update-mcp-shared-assets.py --check` |
+| Local and native-matrix smoke | [`smoke-cli.py`](../scripts/smoke-cli.py), [`CLI CI`](../../../.github/workflows/cli-ci.yml) |
+| Packaged binary and signing probes | [`CLI release`](../../../.github/workflows/cli-release.yml), [`sign-macos-archive.sh`](../scripts/sign-macos-archive.sh) |
+| Development, operator, and QA skills | [Repository skills](../../../docs/agents/skills.md) |
+| Apple helper vs standalone public docs, mirrors, and locales | [Website source ownership and preflight](../../website/docs-src/README.md) |
+
+Resolve unfamiliar files with `git ls-files` in the active worktree before guessing source paths.
+
 ## Automated gate
+
+The shared smoke harness requires Python 3.11+ and builds only this CLI workspace. It uses temporary
+state and Codex configuration, performs no pairing or health queries, and validates both stdio
+profiles plus the compatibility launcher against the generated operation catalog. CI invokes the
+same script on macOS, Linux, and Windows. Missing Linux Secret Service remains an explicit,
+fail-closed outcome; macOS and Windows must pass their native credential checks.
 
 Run the independently locked shared-core workspace first:
 
@@ -37,14 +58,17 @@ python3 -m unittest \
   scripts/test_qualify_exact_ci.py \
   scripts/test_watch_cli_release.py
 python3 scripts/verify-release.py
+python3 -m unittest scripts/test_smoke_cli.py
+python3 scripts/smoke-cli.py
 dist plan --allow-dirty
 ```
 
 Do not run either workspace's Cargo command from the other directory or combine their lockfiles. CI must pass on macOS, Ubuntu, and Windows. The Android repository must also pass
-`:direct-protocol:test`, `:app:testDebugUnitTest`, and `:app:assembleDebug`. Run the ignored
+`:direct-protocol:test`, `:app:testPlayDebugUnitTest`, and `:app:assemblePlayDebug`.
+Validate F-Droid separately with `:app:testFdroidDebugUnitTest` and `:app:assembleFdroidDebug`. Run the ignored
 Rust/Kotlin live gate to verify real pairing, negotiation, status, binary artifact transfer, final
-acknowledgement, and completion. Also run `:app:connectedDebugAndroidTest` for hermetic Direct CLI
-Compose coverage. The opt-in real-app UI/transport gate is:
+acknowledgement, and completion. Also run `:app:connectedPlayDebugAndroidTest` and
+`:app:connectedFdroidDebugAndroidTest` for hermetic Direct CLI Compose coverage. The opt-in real-app UI/transport gate is:
 
 ```bash
 ANDROID_SERIAL=2C061FDH200CJN \
@@ -76,10 +100,11 @@ additive `wake_window_seconds`, and verify MCP progress-token calls emit bounded
 `notifications/progress` before the final response. `healthmd cancel` persists its durable marker
 before the wake wait, so wake expiry or local interruption there reports `direct_cancellation_pending`
 (the truthful pending state) rather than a terminal cancellation. Feed the
-same bounded stdio initialize/tools calls to both serve modes: the complete mode must expose 19
-tools, while read-only mode must expose exactly 13 tools with `readOnlyHint`, no pairing resource,
-and no pairing/export-job declarations. Guess all six omitted tool names and require `Unknown tool`
-before command dispatch. Confirm that neither stdio mode starts an MCP HTTP listener, that the
+same bounded stdio initialize/tools calls to both serve modes: the complete mode must match the
+authoritative `healthmd mcp schema` catalog, while read-only mode contains only approved readiness,
+catalog, and query tools with `readOnlyHint`, no pairing resource, and no pairing/export-job/artifact
+operations. The shared smoke harness derives the omitted names from the catalog and requires
+`Unknown tool` for every one before command dispatch. Confirm that neither stdio mode starts an MCP HTTP listener, that the
 default release rejects `mcp serve-http`, and that every build rejects the removed
 `mcp serve-hosted` command. Separately run
 source builds with `cargo run --features streamable-http -- mcp serve-http --help` and
@@ -99,6 +124,17 @@ Verify that the HTTP relay has no synchronization routes, health-data storage di
 job, account-data API, or query fallback when the paired foreground iPhone is unavailable. Audit the
 proxy, OAuth service, and process logs to ensure they do not retain MCP arguments or health results.
 Record the exact candidate in the [health-free release evidence template](release-evidence-template.md).
+
+## Native credential blockers
+
+`HEALTHMD_CLI_DATA_DIR` isolates file state, not the operating system's credential namespace.
+A local macOS debug binary may receive prompt-free `direct_storage_unavailable` when existing
+Keychain trust does not authorize that executable identity. Use the matching installed/signed
+identity or repair access through the supported credential-store workflow; preserve existing trust.
+Do not delete credentials, allow plaintext storage, fake the runner platform, or weaken the
+macOS/Windows smoke requirement to obtain a green result. Record a native-credential blocker
+separately from passing schema/catalog, Python, and Rust fixture checks. Physical pairing and
+health-data QA remain separate authorized work.
 
 ## Physical iPhone gate
 

@@ -3,7 +3,7 @@ import Combine
 import UIKit
 import os.log
 
-// MARK: - iPad Export View (matching macOS MacExportView glass card layout)
+// MARK: - iPad Export View
 
 struct iPadExportView: View {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "ExportPreview")
@@ -1154,7 +1154,7 @@ struct iPadExportView: View {
     }
 }
 
-// MARK: - iPad Metric Selection View (matching macOS MacMetricSelectionView)
+// MARK: - iPad Metric Selection View
 
 struct iPadMetricSelectionView: View {
     @ObservedObject var selectionState: MetricSelectionState

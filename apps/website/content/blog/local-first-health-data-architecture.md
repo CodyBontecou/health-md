@@ -8,6 +8,10 @@ verified: "2026-10-22"
 verified_by: "Codex (agent)"
 verified_method: mixed
 category: "Engineering"
+related:
+  - export-health-data-without-the-cloud
+  - private-health-data-webhooks
+  - healthmd-cli-direct-iphone-mcp
 draft: false
 tags:
   - healthmd

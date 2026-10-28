@@ -411,19 +411,22 @@ class AdvancedExportSettings: ObservableObject {
     @Published var generateRangeSummary: Bool {
         didSet { save() }
     }
+    /// Temporary rendering state restored from a known pending v7 operation.
+    /// It is never saved to preferences or offered as a new export setting.
+    var historicalCalendarRollupPeriods: [HealthRollupPeriod]? = nil
 
     // Source compatibility for historical Shared Setup v1/profile code. These
     // aliases are not persisted or encoded by new operation snapshots.
     var generateWeeklyRollups: Bool {
-        get { generateRangeSummary }
+        get { historicalCalendarRollupPeriods?.contains(.weekly) ?? generateRangeSummary }
         set { generateRangeSummary = newValue }
     }
     var generateMonthlyRollups: Bool {
-        get { generateRangeSummary }
+        get { historicalCalendarRollupPeriods?.contains(.monthly) ?? generateRangeSummary }
         set { if newValue { generateRangeSummary = true } }
     }
     var generateYearlyRollups: Bool {
-        get { generateRangeSummary }
+        get { historicalCalendarRollupPeriods?.contains(.yearly) ?? generateRangeSummary }
         set { if newValue { generateRangeSummary = true } }
     }
 
@@ -614,6 +617,7 @@ class AdvancedExportSettings: ObservableObject {
         compatibilityDetail = snapshot.compatibilityDetail
         healthKitSourceArchivePolicy = snapshot.healthKitSourceArchivePolicy
         generateRangeSummary = snapshot.generateRangeSummary
+        historicalCalendarRollupPeriods = snapshot.historicalCalendarRollupPeriods
         executionAppleExportEnginePin = snapshot.appleExportEnginePin
         executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
         executionSleepCaptureContext = snapshot.sleepCaptureContext
@@ -651,6 +655,7 @@ class AdvancedExportSettings: ObservableObject {
         writeMode = snapshot.writeMode
         detailPolicy = snapshot.detailPolicy
         generateRangeSummary = snapshot.generateRangeSummary
+        historicalCalendarRollupPeriods = snapshot.historicalCalendarRollupPeriods
         executionAppleExportEnginePin = snapshot.appleExportEnginePin
         executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
         // Loading an editable profile is new configuration, not durable recovery.
@@ -1205,7 +1210,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     var rollupSummariesEnabled: Bool {
-        generateRangeSummary
+        !configuredRollupPeriods.isEmpty
     }
 
     var effectiveFileExportMode: EffectiveFileExportMode {
@@ -1325,7 +1330,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     var configuredRollupPeriods: [HealthRollupPeriod] {
-        generateRangeSummary ? [.range] : []
+        historicalCalendarRollupPeriods ?? (generateRangeSummary ? [.range] : [])
     }
 
     /// Runtime periods are empty in Daily Notes Only mode while preserving the

@@ -97,6 +97,12 @@ The portable client does not require a macOS app build. If public exporter/metri
 
 ## Offline CLI smoke
 
+Run `python3 scripts/smoke-cli.py` from `apps/cli` with Python 3.11+. This is the same
+health-free harness used by the native CI matrix: temporary state/Codex configuration,
+registry-backed complete/read-only catalogs, compatibility-launcher parity, and no device
+contact. For flag, output, or catalog changes, follow the [consumer checklist](../../../apps/cli/docs/qa.md#cli-change-consumers).
+
+
 ```bash
 NO_COLOR=1 TERM=dumb timeout 15 healthmd --version </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd --help </dev/null

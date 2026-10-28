@@ -36,7 +36,7 @@ test("generated website catalog includes every plugin visualization exactly once
   assert.ok(Array.isArray(catalog.visualizations));
   const ids = catalog.visualizations.map((item) => item.type);
   assert.equal(new Set(ids).size, ids.length);
-  assert.ok(ids.length >= 58);
+  assert.ok(ids.length >= 62);
   for (const id of expectedV7Visualizations) assert.ok(ids.includes(id), id);
   for (const item of catalog.visualizations) {
     assert.ok(item.label, item.type);
@@ -145,9 +145,8 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
   assert.match(previewHTML, /<script src="health-rollups\.js"><\/script>/);
 });
 
-test("canonical plugin v9 fixtures are byte-identical to package contract fixtures", {
-  skip: !process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
-}, async () => {
+test("canonical plugin v9 fixtures are byte-identical to package contract fixtures", async () => {
+  assert.ok(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO, "Set HEALTHMD_OBSIDIAN_PLUGIN_REPO to the pinned consumer checkout");
   const pluginFixtureRoot = path.join(
     path.resolve(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO),
     "tests",

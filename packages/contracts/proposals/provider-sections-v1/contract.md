@@ -257,6 +257,19 @@ WHOOP API response
 
 Provider capture and provider rendering remain native-authoritative. The shared Rust core exposes the `apple_health_data_v8` profile for provider-free semantics/rendering; adapters reject provider-bearing records rather than dropping the typed section.
 
+## Platform traversal rollout (v1)
+
+The platform-neutral outcome is to follow valid WHOOP v2 continuation cursors to completion, including page 101 and later, without silently truncating a requested scope. Cycles, malformed or oversized cursors, cancellation, and resource exhaustion must fail safely; retained partial values must not be reported as a complete capture.
+
+Cross-platform completion is `planned`, with concrete target **WHOOP-ANDROID-PAGINATION-V1**. This is a staged implementation note, not a new daily grammar or a claim of current parity:
+
+- **Apple:** the provider client follows valid cursors beyond 100 pages with constant-memory cycle detection, strict continuation validation, and existing response/provider-day byte bounds. History discovery additionally uses one monotonic 15-minute deadline across its granted collections, including in-flight and terminal-page checks. That history deadline must not be described as a daily-capture deadline. Daily resource failures retain successful siblings and report partial capture. Focused synthetic client verification does not replace native or release qualification.
+- **Android:** the current WHOOP daily-projection and native-raw paths still stop at 100 pages. Native raw results report `pagination_cap`; the ordinary daily projection does not propagate that endpoint failure. The shared URLConnection transport's idle timeout is not a whole-operation deadline. A coroutine-only timeout does not abort its blocking body read. These are unresolved implementation gaps, not an OS/API reason to declare the outcome unavailable.
+
+The Android target requires a WHOOP-opt-in monotonic transport budget with real deadline/cancellation abort and cleanup, exact successful-response byte accounting before observers, bounded cursor-cycle state and cursor validation, and truthful partial-outcome propagation through daily repository/export consumers without discarding healthy siblings. Keep other providers' bounds and defaults unchanged. Verify valid page-101+ daily and raw reads, exact raw bytes, actual synthetic slow/hanging-body abort, terminal-page expiry, user-cancellation distinction, cleanup, and consumer-visible partial outcomes. Preserve frozen Android v4/v5 bytes and immutable accepted requests/jobs; review any required diagnostic boundary separately rather than inventing a status field.
+
+Historical v7 registry/semantic/render and native pending-job compatibility is a separate unresolved release blocker. Successful pagination is not evidence that v7 recovery works or that this branch is release-ready.
+
 ## Fixture
 
 [`fixtures/whoop-complete.providers.json`](fixtures/whoop-complete.providers.json) is synthetic and contains no production health data, credentials, account identity, endpoint URL, or pagination cursor. It represents the exact canonical value of a daily record's `providers` property and is described by [`provider-sections-v1.schema.json`](provider-sections-v1.schema.json).

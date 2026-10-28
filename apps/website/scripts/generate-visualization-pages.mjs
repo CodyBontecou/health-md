@@ -12,7 +12,6 @@ const outputRoot = outputFlagIndex >= 0
   : root;
 const sitemapPath = path.join(outputRoot, "sitemap.xml");
 const siteOrigin = "https://healthmd.app";
-const lastmod = "2026-07-16";
 
 const categoryLabels = {
   all: "All data",
@@ -122,11 +121,13 @@ function pageTitle(viz) {
 function pageDescription(viz, dataFilter, colorScheme) {
   const themeDescription = colorScheme === "theme" ? "current theme" : `the ${colorSchemeLabels[colorScheme] || colorScheme} theme`;
   const exportDescription = `Works with Health.md ${viz.exportSources.map((id) => exportSourceLabels[id]).join(", ")} exports.`;
-  return `${viz.description} ${exportDescription} Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact ${categoryLabels[dataFilter] || dataFilter} preview with ${themeDescription}.`;
+  const permissions = viz.category === "whoop" ? "WHOOP connection requirements" : "required Apple Health permissions";
+  return `${viz.description} ${exportDescription} Copy the Obsidian health-viz block, inspect ${permissions}, and share this exact ${categoryLabels[dataFilter] || dataFilter} preview with ${themeDescription}.`;
 }
 
 function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
   const url = `${siteOrigin}${pagePath(viz, dataFilter, colorScheme)}`;
+  const canonicalUrl = `${siteOrigin}${pagePath(viz, viz.category)}`;
   const title = pageTitle(viz);
   const description = pageDescription(viz, dataFilter, colorScheme);
   const jsonLd = {
@@ -135,7 +136,7 @@ function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
     name: `Health.md ${viz.label} visualization`,
     applicationCategory: "HealthApplication",
     operatingSystem: "iOS, macOS, Obsidian",
-    url,
+    url: canonicalUrl,
     description,
     featureList: viz.exportSources.map((id) => `Works with Health.md ${exportSourceLabels[id]} exports`),
     isPartOf: {
@@ -149,7 +150,7 @@ function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
   let html = template
     .replace(/<title>.*?<\/title>/s, `<title>${escapeHtml(title)}</title>`)
     .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${escapeHtml(description)}">`)
-    .replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${escapeHtml(url)}">`)
+    .replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${escapeHtml(canonicalUrl)}">`)
     .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${escapeHtml(title)}">`)
     .replace(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${escapeHtml(description)}">`)
     .replace(/<meta property="og:url" content="[^"]*">/, `<meta property="og:url" content="${escapeHtml(url)}">`)
@@ -162,7 +163,8 @@ function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
     .replace(/<span class="eyebrow" data-current-category>[\s\S]*?<\/span>/, `<span class="eyebrow" data-current-category>${escapeHtml(categoryLabels[viz.category] || viz.category)}</span>`)
     .replace(/<h1 data-current-title>[\s\S]*?<\/h1>/, `<h1 data-current-title>${escapeHtml(viz.label)}</h1>`)
     .replace(/<p data-current-description>[\s\S]*?<\/p>/, `<p data-current-description>${escapeHtml(viz.description)}</p>`)
-    .replace(/<span data-code-label>[\s\S]*?<\/span>/, `<span data-code-label>${escapeHtml(viz.id)}</span>`);
+    .replace(/<span data-code-label>[\s\S]*?<\/span>/, `<span data-code-label>${escapeHtml(viz.id)}</span>`)
+    .replace("data-whoop-preview-note hidden", viz.category === "whoop" ? "data-whoop-preview-note" : "data-whoop-preview-note hidden");
 
   html = html.replace(/\n  <script type="application\/ld\+json" data-viz-schema>[\s\S]*?<\/script>/, "");
   html = html.replace("\n</head>", `\n  <script type="application/ld+json" data-viz-schema>${JSON.stringify(jsonLd)}</script>\n</head>`);
@@ -192,21 +194,16 @@ async function updateSitemap(visualizations) {
   const sitemap = await fs.readFile(sitemapPath, "utf8");
   const start = "  <!-- BEGIN GENERATED VISUALIZATION URLS -->";
   const end = "  <!-- END GENERATED VISUALIZATION URLS -->";
-  const urls = visualizations.flatMap((viz) =>
-    ["all", viz.category].flatMap((dataFilter) =>
-      colorSchemes.map((colorScheme) => {
-        const loc = `${siteOrigin}${pagePath(viz, dataFilter, colorScheme)}`;
-        return [
-          "  <url>",
-          `    <loc>${escapeHtml(loc)}</loc>`,
-          `    <lastmod>${lastmod}</lastmod>`,
-          "    <changefreq>weekly</changefreq>",
-          "    <priority>0.7</priority>",
-          "  </url>"
-        ].join("\n");
-      })
-    )
-  ).join("\n");
+  // Palette and all-data routes remain usable share links. Only the existing
+  // category/theme representative is proposed for indexing. Omit lastmod until
+  // a per-page source modification date can be established.
+  const urls = visualizations.map((viz) => [
+    "  <url>",
+    `    <loc>${escapeHtml(`${siteOrigin}${pagePath(viz, viz.category)}`)}</loc>`,
+    "    <changefreq>weekly</changefreq>",
+    "    <priority>0.7</priority>",
+    "  </url>"
+  ].join("\n")).join("\n");
   const block = `${start}\n${urls}\n${end}`;
   let next;
   const markerRe = new RegExp(`\\n  <!-- BEGIN GENERATED VISUALIZATION URLS -->[\\s\\S]*?  <!-- END GENERATED VISUALIZATION URLS -->`);

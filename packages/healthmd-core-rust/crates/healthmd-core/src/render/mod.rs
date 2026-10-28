@@ -19,11 +19,14 @@ use crate::semantic::{
 mod android_analytical_v5;
 mod android_frozen_v4;
 mod apple_range_rollup_v9;
+mod apple_rollup_v7;
 mod apple_rollup_v8;
+mod apple_v7;
 mod apple_v8;
 pub mod artifact_plan;
 mod format;
 mod markdown_merge;
+mod markdown_merge_v1;
 mod sleep_profiles;
 pub mod stream;
 
@@ -735,8 +738,11 @@ impl RenderSession {
                 )
             })
             .collect();
-        let presentation_categories =
-            profile_presentation_categories(config.profile, config.registry_version)?;
+        let presentation_categories = profile_presentation_categories(
+            config.profile,
+            config.registry_version,
+            &config.registry_sha256,
+        )?;
         if let Some(keys) = &semantic.selected_output_keys {
             let selected = keys.iter().collect::<HashSet<_>>();
             if !config.profile.is_wake_date()
@@ -909,8 +915,12 @@ impl RenderSession {
 fn profile_presentation_categories(
     profile: SemanticProfile,
     registry_version: u32,
+    registry_sha256: &str,
 ) -> Result<HashMap<String, BTreeSet<String>>, RenderError> {
     let registry_profile = match profile {
+        SemanticProfile::AppleHealthDataV7 => {
+            crate::registry::MetricRegistryProfile::AppleHealthDataV7
+        }
         SemanticProfile::AppleHealthDataV8 => {
             crate::registry::MetricRegistryProfile::AppleHealthDataV8
         }
@@ -923,8 +933,12 @@ fn profile_presentation_categories(
         }
         SemanticProfile::AndroidSleepV6 => crate::registry::MetricRegistryProfile::AndroidSleepV6,
     };
-    let snapshot = crate::registry::metric_registry_snapshot(registry_profile, registry_version)
-        .map_err(|_| RenderError::InvalidConfig)?;
+    let snapshot = crate::registry::metric_registry_snapshot_at_authority(
+        registry_profile,
+        registry_version,
+        registry_sha256,
+    )
+    .map_err(|_| RenderError::InvalidConfig)?;
     let categories_by_selection = snapshot
         .metrics
         .into_iter()
@@ -997,9 +1011,15 @@ fn validate_config(
     if config.artifact_plan_version != plan_version {
         return Err(RenderError::UnsupportedArtifactPlanVersion);
     }
-    if config.render_profile_revision != RENDER_PROFILE_REVISION
-        || !matches!(config.profile_revision, 1 | 2)
-    {
+    if !crate::authority::supports_render(
+        &config.registry_sha256,
+        config.profile.id(),
+        config.render_profile_revision,
+    ) || !crate::authority::supports_semantic(
+        &config.registry_sha256,
+        config.profile.id(),
+        config.profile_revision,
+    ) {
         return Err(RenderError::UnsupportedProfileRevision);
     }
     if config.schema != "healthmd.render_session_config"
@@ -1007,9 +1027,10 @@ fn validate_config(
         || !config
             .profile
             .supports_registry_version(config.registry_version)
-        || config.registry_sha256
-            != crate::registry::registry_hash(config.registry_version)
-                .map_err(|_| RenderError::InvalidConfig)?
+        || !crate::authority::supports_registry_version(
+            &config.registry_sha256,
+            config.registry_version,
+        )
         || semantic.schema != "healthmd.semantic_result"
         || semantic.canonical_model_version != config.canonical_model_version
         || semantic.semantic_input_version != config.profile.semantic_input_version()
@@ -1256,7 +1277,9 @@ fn validate_day(
     }
     match (config.profile, &day.archive_diagnostics) {
         (
-            SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV11,
+            SemanticProfile::AppleHealthDataV7
+            | SemanticProfile::AppleHealthDataV8
+            | SemanticProfile::AppleHealthDataV11,
             Some(diagnostics),
         ) => {
             if !matches!(
@@ -1891,7 +1914,9 @@ fn render_plan(
             }
         }
     }
-    if config.profile == SemanticProfile::AppleHealthDataV8 {
+    if config.profile == SemanticProfile::AppleHealthDataV7 {
+        apple_v7::add_rollups(&mut builder, config, semantic)?;
+    } else if config.profile == SemanticProfile::AppleHealthDataV8 {
         apple_v8::add_rollups(&mut builder, config, semantic)?;
     }
     if config.profile == SemanticProfile::AppleHealthDataV11 {
@@ -1911,6 +1936,7 @@ fn render_day(
     format: RenderFormat,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
+        SemanticProfile::AppleHealthDataV7 => apple_v7::render_day(config, day, format),
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_day(config, day, format),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_day(config, day, format),
         SemanticProfile::AndroidAnalyticalV5 => {
@@ -1925,7 +1951,9 @@ fn render_day(
 fn ordered_formats(profile: SemanticProfile, requested: &[RenderFormat]) -> Vec<RenderFormat> {
     let mut formats = requested.to_vec();
     match profile {
-        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV11 => {
+        SemanticProfile::AppleHealthDataV7
+        | SemanticProfile::AppleHealthDataV8
+        | SemanticProfile::AppleHealthDataV11 => {
             formats.sort_by_key(|format| format.id());
         }
         SemanticProfile::AndroidFrozenV4
@@ -2198,6 +2226,7 @@ fn render_api_record(
     semantic: &SemanticResult,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
+        SemanticProfile::AppleHealthDataV7 => apple_v7::render_api_record(config, day),
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_record(config, day),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_record(config, day),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
@@ -2213,6 +2242,7 @@ fn render_api_envelope(
     records: &[(String, Vec<u8>)],
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
+        SemanticProfile::AppleHealthDataV7 => apple_v7::render_api_envelope(api, records),
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_envelope(api, records),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_envelope(api, records),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
@@ -2224,6 +2254,7 @@ fn render_api_envelope(
 
 pub(crate) const fn profile_id(profile: SemanticProfile) -> &'static str {
     match profile {
+        SemanticProfile::AppleHealthDataV7 => "apple_health_data_v7",
         SemanticProfile::AppleHealthDataV8 => "apple_health_data_v8",
         SemanticProfile::AndroidFrozenV4 => "android_frozen_v4",
         SemanticProfile::AndroidAnalyticalV5 => "android_analytical_v5",
@@ -2329,7 +2360,7 @@ mod tests {
                 .unwrap();
             let text = String::from_utf8(json.content.clone()).unwrap();
             match profile {
-                SemanticProfile::AppleHealthDataV8 => {
+                SemanticProfile::AppleHealthDataV7 | SemanticProfile::AppleHealthDataV8 => {
                     assert!(text.contains("\"schema\" : \"healthmd.health_data\""));
                     assert!(text.contains("\"schema_version\" : 8"));
                 }

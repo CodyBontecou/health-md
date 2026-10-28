@@ -50,7 +50,8 @@ class OAuthAuthorizationManager(
 
     suspend fun buildAuthorizationUrl(providerId: String): String? {
         val config = configRegistry.get(providerId)?.takeIf { it.isConfigured } ?: return null
-        val state = randomUrlSafeString()
+        // WHOOP requires exactly eight characters; six random bytes encode to eight base64url characters.
+        val state = if (providerId == "whoop") randomUrlSafeString(byteCount = 6) else randomUrlSafeString()
         val verifier = randomUrlSafeString(byteCount = 64)
         tokenStore.savePendingAuthorization(
             PendingOAuthAuthorization(
@@ -59,6 +60,10 @@ class OAuthAuthorizationManager(
                 codeVerifier = verifier,
             )
         )
+
+        config.healthMdBroker?.let { broker ->
+            return HealthMdOAuthBrokerClient(broker).authorize(config, state, codeChallenge(verifier))
+        }
 
         val params = buildMap {
             put("response_type", "code")
@@ -114,6 +119,12 @@ class OAuthAuthorizationManager(
                 reason = OAuthFailureReason.UNKNOWN_PROVIDER,
                 technicalMessage = "Unknown OAuth provider: ${pending.providerId}",
             )
+        val callback = URI(callbackUri)
+        val expectedCallback = URI(config.redirectUri)
+        if (callback.scheme != expectedCallback.scheme || callback.rawAuthority != expectedCallback.rawAuthority ||
+            callback.rawPath != expectedCallback.rawPath || callback.rawFragment != null) {
+            throw OAuthAuthorizationException(OAuthFailureReason.INVALID_CALLBACK, "OAuth callback endpoint did not match")
+        }
         val token = try {
             exchangeToken(
                 config = config,
@@ -163,6 +174,7 @@ class OAuthAuthorizationManager(
                     put("client_secret", config.clientSecret)
                 }
                 putAll(config.tokenExtraParams)
+                if (config.providerId == "whoop") put("scope", "offline")
             }
         )
         tokenStore.saveToken(token)
@@ -179,51 +191,62 @@ class OAuthAuthorizationManager(
         config: OAuthProviderConfig,
         params: Map<String, String>,
     ): OAuthToken = withContext(Dispatchers.IO) {
-        val body = formEncode(params)
-        val connection = (URL(config.tokenEndpoint).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            doOutput = true
-            connectTimeout = HTTP_TIMEOUT_MS
-            readTimeout = HTTP_TIMEOUT_MS
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-            if (config.clientAuthStyle == OAuthClientAuthStyle.Basic && config.clientSecret.isNotBlank()) {
-                val raw = "${config.clientId}:${config.clientSecret}"
-                setRequestProperty("Authorization", "Basic ${Base64.getEncoder().encodeToString(raw.toByteArray())}")
-            }
-        }
-        OutputStreamWriter(connection.outputStream).use { writer -> writer.write(body) }
-        val responseCode = connection.responseCode
-        val responseText = if (responseCode in 200..299) {
-            connection.inputStream.bufferedReader().use { it.readText() }
+        val response = if (config.healthMdBroker != null) {
+            HealthMdOAuthBrokerClient(config.healthMdBroker).token(config.providerId, params)
         } else {
-            connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-        }
-        if (responseCode !in 200..299) {
-            throw OAuthAuthorizationException(
-                reason = OAuthFailureReason.TOKEN_EXCHANGE_FAILED,
-                technicalMessage = "OAuth token request failed ($responseCode): $responseText",
-            )
-        }
-        val response = try {
-            json.parseToJsonElement(responseText) as JsonObject
-        } catch (error: Exception) {
-            throw OAuthAuthorizationException(
-                reason = OAuthFailureReason.INVALID_TOKEN_RESPONSE,
-                technicalMessage = "OAuth token response was not a JSON object",
-                cause = error,
-            )
+            val body = formEncode(params)
+            val connection = (URL(config.tokenEndpoint).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = HTTP_TIMEOUT_MS
+                readTimeout = HTTP_TIMEOUT_MS
+                setRequestProperty("Accept", "application/json")
+                setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+                if (config.clientAuthStyle == OAuthClientAuthStyle.Basic && config.clientSecret.isNotBlank()) {
+                    val raw = "${config.clientId}:${config.clientSecret}"
+                    setRequestProperty("Authorization", "Basic ${Base64.getEncoder().encodeToString(raw.toByteArray())}")
+                }
+            }
+            OutputStreamWriter(connection.outputStream).use { writer -> writer.write(body) }
+            val responseCode = connection.responseCode
+            val responseText = if (responseCode in 200..299) {
+                connection.inputStream.bufferedReader().use { it.readText() }
+            } else {
+                connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            }
+            if (responseCode !in 200..299) {
+                throw OAuthAuthorizationException(
+                    reason = OAuthFailureReason.TOKEN_EXCHANGE_FAILED,
+                    technicalMessage = "OAuth token request failed ($responseCode): $responseText",
+                )
+            }
+            try {
+                json.parseToJsonElement(responseText) as JsonObject
+            } catch (error: Exception) {
+                throw OAuthAuthorizationException(
+                    reason = OAuthFailureReason.INVALID_TOKEN_RESPONSE,
+                    technicalMessage = "OAuth token response was not a JSON object",
+                    cause = error,
+                )
+            }
         }
         val accessToken = response.string("access_token")
             ?: throw OAuthAuthorizationException(
                 reason = OAuthFailureReason.INVALID_TOKEN_RESPONSE,
                 technicalMessage = "OAuth token response did not include access_token",
             )
+        val refreshToken = response.string("refresh_token")
+        if (config.providerId == "whoop" && refreshToken.isNullOrBlank()) {
+            throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.INVALID_TOKEN_RESPONSE,
+                technicalMessage = "WHOOP token response did not include a rotated refresh_token",
+            )
+        }
         val expiresInSeconds = response.string("expires_in")?.toLongOrNull()
         OAuthToken(
             providerId = config.providerId,
             accessToken = accessToken,
-            refreshToken = response.string("refresh_token"),
+            refreshToken = refreshToken,
             tokenType = response.string("token_type") ?: "Bearer",
             scope = response.string("scope"),
             expiresAtEpochSeconds = expiresInSeconds?.let { (System.currentTimeMillis() / 1000) + it },
@@ -257,15 +280,17 @@ class OAuthAuthorizationManager(
 
     private fun queryParameters(uri: String): Map<String, String> {
         val rawQuery = URI(uri).rawQuery ?: return emptyMap()
-        return rawQuery
+        val pairs = rawQuery
             .split("&")
             .filter { it.isNotBlank() }
-            .associate { pair ->
+            .map { pair ->
                 val parts = pair.split("=", limit = 2)
                 val key = urlDecode(parts[0])
                 val value = parts.getOrNull(1)?.let(::urlDecode).orEmpty()
                 key to value
             }
+        require(pairs.map { it.first }.distinct().size == pairs.size) { "Duplicate OAuth callback parameters" }
+        return pairs.toMap()
     }
 
     private fun urlDecode(value: String): String =

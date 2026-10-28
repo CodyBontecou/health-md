@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+pub mod authority;
 pub mod registry;
 pub mod render;
 pub mod semantic;

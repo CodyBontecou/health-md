@@ -5,6 +5,7 @@ import com.healthmd.core.CoreMetricRegistrySnapshot
 import com.healthmd.core.HealthMdCoreReadiness
 import com.healthmd.core.HealthMdCoreService
 import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
+import com.healthmd.domain.model.HEALTHMD_CORE_REGISTRY_SHA256
 import java.time.ZoneId
 import java.util.Collections
 import kotlinx.serialization.EncodeDefault
@@ -133,6 +134,10 @@ data class ExportEnginePin(
     val ianaTimeZone: String,
 ) {
     companion object {
+        // Exact original registry at c77024b87170260531f8df8fc5b604ad35375466.
+        const val HISTORICAL_REGISTRY_SHA256: String = "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b"
+        fun supportsRegistryHash(hash: String): Boolean = hash == HEALTHMD_CORE_REGISTRY_SHA256 || hash == HISTORICAL_REGISTRY_SHA256
+
         const val PUBLIC_SCHEMA: String = "healthmd.health_data"
         const val EXPECTED_SEMANTIC_PROFILE_REVISION: UInt = 1u
 
@@ -216,11 +221,12 @@ class ExportEnginePinValidator {
         if (!readiness.isReady) {
             ExportEnginePinCompatibility(listOf(ExportEnginePinIssue.CORE_NOT_READY))
         } else {
-            validate(
-                pin,
-                readiness,
-                service.getMetricRegistry(pin.profile.coreProfile, pin.profile.contractVersions.registry),
-            )
+            val registry = if (pin.registrySha256 == readiness.buildInfo.registrySha256) {
+                service.getMetricRegistry(pin.profile.coreProfile, pin.registryVersion)
+            } else {
+                service.getMetricRegistryAtAuthority(pin.profile.coreProfile, pin.registryVersion, pin.registrySha256)
+            }
+            validate(pin, readiness, registry)
         }
     } catch (error: Throwable) {
         if (error.isFatalExportEngineFailure()) throw error
@@ -291,7 +297,8 @@ class ExportEnginePinValidator {
             issues += ExportEnginePinIssue.REGISTRY_VERSION
         }
         if (
-            (historical && pin.registrySha256 != info.registrySha256) ||
+            info.registrySha256 != HEALTHMD_CORE_REGISTRY_SHA256 ||
+            (historical && !ExportEnginePin.supportsRegistryHash(pin.registrySha256)) ||
             pin.registrySha256 != registry.registrySha256 ||
             (!historical && pin.registrySha256 != HEALTHMD_SLEEP_REGISTRY_SHA256) ||
             !pin.registrySha256.isLowercaseSha256()
@@ -305,7 +312,8 @@ class ExportEnginePinValidator {
         ) {
             issues += ExportEnginePinIssue.SEMANTIC_PROFILE_REVISION
         }
-        if (pin.renderProfileRevision != info.renderProfileRevision) {
+        val expectedRenderRevision = if (pin.registrySha256 == ExportEnginePin.HISTORICAL_REGISTRY_SHA256) 1u else 2u
+        if (info.renderProfileRevision != HealthMdCoreService.EXPECTED_RENDER_PROFILE_REVISION || pin.renderProfileRevision != expectedRenderRevision) {
             issues += ExportEnginePinIssue.RENDER_PROFILE_REVISION
         }
         // Source revision is provenance, not an equality gate. Compatible rollback builds may

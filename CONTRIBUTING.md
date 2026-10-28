@@ -20,6 +20,7 @@ Read the repository-root and nearest component `AGENTS.md` files before making c
 Use the [test selection guide](docs/testing-strategy.md) for focused iteration and escalation. The native tools and root convenience targets below provide component regressions; simulator/device QA still requires explicit current-task authorization under the [verification policy](AGENTS.md#verification-policy):
 
 ```bash
+make check-doc-navigation
 make test-contracts
 make test-core
 make core-bindings
@@ -31,6 +32,10 @@ make test-website
 ```
 
 Keep dependency updates and lockfile changes scoped to the component that needs them. In particular, `apps/cli/Cargo.lock` and `packages/healthmd-core-rust/Cargo.lock` are independently owned and must not be regenerated as a pair merely because the CLI consumes a path dependency from the core workspace.
+
+For documentation ownership and generators, use the [website source guide](apps/website/docs-src/README.md).
+For CLI flag/output/catalog changes, follow the [consumer checklist](apps/cli/docs/qa.md#cli-change-consumers)
+and run `make cli-smoke` with Python 3.11+ (`PYTHON=python3.14` selects a newer local interpreter).
 
 ## Public contracts
 

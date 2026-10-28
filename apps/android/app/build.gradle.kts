@@ -45,6 +45,10 @@ val instrumentedTestBuildType = providers.gradleProperty("healthmdInstrumentedTe
     .getOrElse("debug")
     .also { require(it in setOf("debug", "e2e")) }
 
+val ciAbi = providers.gradleProperty("healthmd.ciAbi").orNull?.also {
+    require(it in setOf("arm64-v8a", "x86_64")) { "healthmd.ciAbi must be arm64-v8a or x86_64" }
+}
+
 android {
     namespace = "com.healthmd"
     compileSdk = 36
@@ -57,10 +61,13 @@ android {
         versionCode = 42
         versionName = "1.9.4"
 
+        // Explicit opt-in; absent or malformed values keep claim entry points disabled.
+        buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", (configuredValue("MYSELF_CLAIM_ENABLED") == "true").toString())
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+            abiFilters += ciAbi?.let(::listOf) ?: listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
         }
 
         buildConfigField(
@@ -114,6 +121,8 @@ android {
             buildConfigField("String", "POLAR_TOKEN_BROKER_URL", configuredValue("POLAR_TOKEN_BROKER_URL").asBuildConfigString())
             buildConfigField("String", "WHOOP_CLIENT_ID", configuredValue("WHOOP_CLIENT_ID").asBuildConfigString())
             buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", configuredValue("WHOOP_TOKEN_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "WHOOP_HEALTHMD_BROKER_URL", configuredValue("WHOOP_HEALTHMD_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN", configuredValue("WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN").asBuildConfigString())
             buildConfigField("String", "CAMPAIGN_ATTRIBUTION_ENDPOINT_URL", campaignAttributionEndpointUrl.asBuildConfigString())
             buildConfigField("String", "CAMPAIGN_ATTRIBUTION_INGEST_TOKEN", campaignAttributionIngestToken.asBuildConfigString())
             buildConfigField("String", "ONBOARDING_ANALYTICS_ENDPOINT_URL", onboardingAnalyticsEndpointUrl.asBuildConfigString())
@@ -287,6 +296,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.work.testing)
     testImplementation("com.networknt:json-schema-validator:1.5.9")
+    androidTestImplementation(libs.truth)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
@@ -294,4 +304,13 @@ dependencies {
     androidTestImplementation(libs.uiautomator)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
+}
+
+// A test-only ABI selection must never produce a release application.
+if (ciAbi != null) {
+    tasks.configureEach {
+        if (name.contains("Release")) {
+            doFirst { error("healthmd.ciAbi is debug-only; release requires every supported ABI") }
+        }
+    }
 }

@@ -4,7 +4,7 @@ Use this runbook to validate the `ExportLastNDaysIntent` date window and its sup
 
 ## Export Last N Days
 
-The `Export Last N Days` shortcut is implemented by `ExportLastNDaysIntent`. It exports any positive multi-year day window ending yesterday; today is intentionally excluded because the health data for the current day is incomplete.
+The `Export Last N Days` shortcut is implemented by `ExportLastNDaysIntent`. It exports any positive multi-year day window ending yesterday by default. Include Today defaults to off; turning it on shifts the same N-day window to end today, including incomplete current-day data.
 
 ### Automated Coverage
 
@@ -27,6 +27,9 @@ xcodebuild test \
 This is the StoreKit-safe fixture path: it does not call StoreKit, HealthKit, Shortcuts UI, or the file system. The test directly covers the date window used by the App Intent runtime:
 
 - default `7` days ends yesterday and excludes today
+- Include Today defaults off for existing Shortcut initializers
+- Include Today shifts the N-day window, including `1` for today alone
+- calendar-day stepping preserves local midnight across daylight-saving changes
 - values below `1` clamp to a single-day export
 - multi-year values are preserved without a one-year clamp
 - the Shortcut initializer clamps only values below `1`
@@ -69,3 +72,11 @@ If there is no HealthKit fixture data for one or more days, the acceptable runti
 - [Purchase fixture/cutoff behavior](../../HealthMd/Shared/Managers/PurchaseManager.swift).
 
 Current issue ownership and milestones belong in the tracker, not this runbook.
+
+## API profile regression coverage (#252)
+
+`ExportIntentProfileResolutionTests` covers active and named API profiles using the profile snapshot and exact dates, bypassing folder checks and file export. It also covers endpoint/token binding, missing or invalid endpoint rejection, API history labels/targets, quota gates, committed cancellation, and locked-device failures without queuing mutable folder retries. `ExportIntentRunnerTests` retains the existing folder, pending-request, cancellation, and schedule-bookkeeping coverage.
+
+On a real unlocked iPhone, run Last N Days with an API profile, `1` day and Include Today enabled. Verify the endpoint receives today’s data and Export History shows an API upload with zero local files. Repeat with Include Today off and verify yesterday. Physical-device HealthKit/network validation remains separate from injected unit tests.
+
+API upload failures use the API-specific failure reason and recovery guidance in Shortcuts and history. `APIEndpointExportRunnerTests` and `APIEndpointExportEngineTests` cover server and transport rejection without counting undelivered records or retaining response bodies. `ExportProfileCoordinatorTests` covers persisting the newly chosen API binding rather than inheriting the active profile’s endpoint; `ExportProfilesJourneyUITests.testCreatingAPIProfileKeepsSelectedEndpointOnFirstSave` exercises the creation form.

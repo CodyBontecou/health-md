@@ -188,20 +188,28 @@ struct ExportSettingsSnapshot: Codable, Equatable {
 
     /// New v9 range-summary preference. New snapshots encode only this key.
     var generateRangeSummary: Bool
+    /// Decoded operation state, never a new setting or a new wire key. A known v7 pin
+    /// keeps the exact historical calendar keys instead of migrating its pending work.
+    private(set) var historicalCalendarRollupPeriods: [HealthRollupPeriod]? = nil
     var metricSelection: MetricSelectionSnapshot
+
+    var operationRollupPeriods: [HealthRollupPeriod] {
+        guard !dailyNotesOnlyModeEnabled else { return [] }
+        return historicalCalendarRollupPeriods ?? (generateRangeSummary ? [.range] : [])
+    }
 
     // Transitional source compatibility for call sites migrating to the single
     // range-summary preference. New durable snapshots never encode these keys.
     var generateWeeklyRollups: Bool {
-        get { generateRangeSummary }
+        get { historicalCalendarRollupPeriods?.contains(.weekly) ?? generateRangeSummary }
         set { generateRangeSummary = newValue }
     }
     var generateMonthlyRollups: Bool {
-        get { generateRangeSummary }
+        get { historicalCalendarRollupPeriods?.contains(.monthly) ?? generateRangeSummary }
         set { if newValue { generateRangeSummary = true } }
     }
     var generateYearlyRollups: Bool {
-        get { generateRangeSummary }
+        get { historicalCalendarRollupPeriods?.contains(.yearly) ?? generateRangeSummary }
         set { if newValue { generateRangeSummary = true } }
     }
     /// Immutable renderer provenance for newly planned Apple output. Missing means the snapshot
@@ -363,6 +371,20 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             AppleExportEnginePin.self,
             forKey: .appleExportEnginePin
         )
+        if appleExportEnginePin?.profile == "apple_health_data_v7",
+           appleExportEnginePin?.registrySHA256 == AppleExportEnginePin.historicalRegistrySHA256,
+           !container.contains(.generateRangeSummary),
+           [CodingKeys.generateWeeklyRollups, .generateMonthlyRollups, .generateYearlyRollups]
+            .contains(where: container.contains) {
+            historicalCalendarRollupPeriods = try [
+                (CodingKeys.generateWeeklyRollups, HealthRollupPeriod.weekly),
+                (.generateMonthlyRollups, .monthly),
+                (.generateYearlyRollups, .yearly)
+            ].compactMap { key, period in
+                try container.decodeIfPresent(Bool.self, forKey: key) == true ? period : nil
+            }
+            generateRangeSummary = false
+        }
         // Snapshots from builds before this marker are already durable work. Missing pin always
         // meant legacy, so decode the absent marker as frozen rather than consulting current flags.
         appleExportEngineAuthorityIsFrozen = try container.decodeIfPresent(
@@ -405,7 +427,13 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             detailPolicy.legacyIncludeGranularData,
             forKey: .includeGranularData
         )
-        try container.encode(generateRangeSummary, forKey: .generateRangeSummary)
+        if let periods = historicalCalendarRollupPeriods {
+            try container.encode(periods.contains(.weekly), forKey: .generateWeeklyRollups)
+            try container.encode(periods.contains(.monthly), forKey: .generateMonthlyRollups)
+            try container.encode(periods.contains(.yearly), forKey: .generateYearlyRollups)
+        } else {
+            try container.encode(generateRangeSummary, forKey: .generateRangeSummary)
+        }
         try container.encode(metricSelection, forKey: .metricSelection)
         try container.encodeIfPresent(appleExportEnginePin, forKey: .appleExportEnginePin)
         try container.encode(
@@ -603,6 +631,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     }
 
     func apply(to settings: AdvancedExportSettings) {
+        settings.historicalCalendarRollupPeriods = historicalCalendarRollupPeriods
         settings.exportFormats = exportFormats
         settings.includeMetadata = includeMetadata
         settings.groupByCategory = groupByCategory

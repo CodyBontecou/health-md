@@ -106,6 +106,7 @@ struct ExportPreviewView: View {
     @State private var estimatedExportSize: ExportPreviewSizeEstimate?
     @State private var permissionGuidance: ExportPermissionGuidance?
     @State private var isStartingExport = false
+    @State private var sleepWindowDescription = ""
 
     /// Cap how many dates we render so opening preview never feels slow.
     /// We also cap how many dates we'll *fetch* — preview is for shape, not census.
@@ -125,6 +126,20 @@ struct ExportPreviewView: View {
                     emptyStateView
                 } else {
                     contentList
+                }
+            }
+            .safeAreaInset(edge: .top) {
+                if !isLoading && settings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
+                    VStack(alignment: .leading, spacing: Spacing.s1) {
+                        Text(sleepWindowDescription)
+                            .font(.footnote.weight(.semibold))
+                        Text("If sleep is missing, try the preceding date. Morning sleep can appear in that date's summary even when its raw records are dated today. Query failures are listed separately; an empty result can also mean read access is unavailable.")
+                            .font(.footnote)
+                    }
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(Spacing.md)
+                    .background(Color.bgSecondary)
                 }
             }
             .background(Color.bgPrimary.ignoresSafeArea())
@@ -185,6 +200,16 @@ struct ExportPreviewView: View {
     }
 
     // MARK: - States
+
+    private func makeSleepWindowDescription(calendar: Calendar) -> String {
+        let start = HealthKitManager.sleepWindow(for: startDate, calendar: calendar).start
+        let end = HealthKitManager.sleepWindow(for: endDate, calendar: calendar).end
+        let formatter = DateFormatter()
+        formatter.timeZone = calendar.timeZone
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return String(localized: "Sleep window: \(formatter.string(from: start)) to \(formatter.string(from: end)) (\(calendar.timeZone.identifier)).")
+    }
 
     private func startExport() {
         guard !isLoading, !isStartingExport, let onExport else { return }
@@ -622,6 +647,30 @@ struct ExportPreviewView: View {
 
     // MARK: - Build previews
 
+    @MainActor
+    static func fetchPreviewRecord(
+        for date: Date,
+        targetType: PricingAnalyticsExportTargetType,
+        connectedAppsEnabled: Bool,
+        writesExternalProviderSidecars: Bool,
+        fetchHealthData: (Date) async -> HealthData?,
+        fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?
+    ) async -> HealthData? {
+        guard var record = await fetchHealthData(date) else { return nil }
+        // API previews capture providers in preparePreview. File previews must
+        // enrich the record before rendering, using the same policy as export.
+        if targetType != .apiEndpoint,
+           targetType != .agentDataGateway,
+           connectedAppsEnabled,
+           writesExternalProviderSidecars,
+           record.hasAnyData,
+           let fetchExternalDailyRecords {
+            let externalRecords = await fetchExternalDailyRecords(date)
+            record.providers = HealthProviderSections.normalized(from: externalRecords)
+        }
+        return record
+    }
+
     private var previewScope: ExportPreviewScope {
         ExportPreviewScope.make(
             selectedFormats: settings.exportFormats,
@@ -645,6 +694,7 @@ struct ExportPreviewView: View {
         let frozenTimeZone = settings.exportTimeZoneOverride ?? .current
         var frozenCalendar = Calendar(identifier: .gregorian)
         frozenCalendar.timeZone = frozenTimeZone
+        sleepWindowDescription = makeSleepWindowDescription(calendar: frozenCalendar)
         let dates = ExportOrchestrator.dateRange(
             from: startDate,
             to: endDate,
@@ -680,7 +730,14 @@ struct ExportPreviewView: View {
             if attempts >= Self.maxFetchAttempts { break }
             attempts += 1
 
-            guard let healthData = await fetchHealthData(date) else { continue }
+            guard let healthData = await Self.fetchPreviewRecord(
+                for: date,
+                targetType: targetType,
+                connectedAppsEnabled: connectedAppsEnabled,
+                writesExternalProviderSidecars: settings.writesExternalProviderSidecars,
+                fetchHealthData: fetchHealthData,
+                fetchExternalDailyRecords: fetchExternalDailyRecords
+            ) else { continue }
             warnings.append(contentsOf: healthData.partialFailures)
             guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
             rollupInputs.append(healthData)

@@ -69,11 +69,18 @@ class OAuthConfigRegistry(
                     providerTokenEndpoint = "https://api.prod.whoop.com/oauth/oauth2/token",
                 ),
                 clientId = BuildConfig.WHOOP_CLIENT_ID,
-                scopes = listOf("offline", "read:profile", "read:cycles", "read:recovery", "read:sleep", "read:workout", "read:body_measurement"),
+                scopes = listOf("offline", "read:cycles", "read:recovery", "read:sleep", "read:workout", "read:body_measurement"),
+                healthMdBroker = whoopHealthMdBroker(),
+                redirectUri = if (whoopHealthMdBroker() != null) "healthmd://oauth/callback" else OAuthProviderConfig.DEFAULT_REDIRECT_URI,
             ),
         )
 
         private fun tokenEndpoint(brokerUrl: String, providerTokenEndpoint: String): String =
             brokerUrl.takeIf { it.isNotBlank() } ?: providerTokenEndpoint
+
+        private fun whoopHealthMdBroker(): HealthMdOAuthBrokerConfig? =
+            if (BuildConfig.WHOOP_HEALTHMD_BROKER_URL.isNotBlank() || BuildConfig.WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN.isNotBlank()) {
+                HealthMdOAuthBrokerConfig(BuildConfig.WHOOP_HEALTHMD_BROKER_URL, BuildConfig.WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN)
+            } else null
     }
 }

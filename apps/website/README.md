@@ -65,6 +65,14 @@ authentic shared onboarding capture at `/docs/assets/docs/iphone-first-export/on
 retains the app's current English foreground copy, and the shared setup-required capture is also
 English; translated guides label both cases explicitly.
 
+## Free Obsidian starter vault
+
+`starter-vault/` contains the editable source notes for the downloadable sample vault. Run
+`npm run starter-vault:build` after editing them and commit the generated ZIP under
+`assets/downloads/`. `npm run starter-vault:check` and the site build reject stale downloads.
+See [the starter authoring notes](starter-vault/README.md) for compatibility checks and packaging.
+The existing Obsidian workflow article links the download; publication uses the normal website deployment.
+
 ## External Obsidian plugin source
 
 The Obsidian plugin remains in [`CodyBontecou/health-md-visualizations`](https://github.com/CodyBontecou/health-md-visualizations). CI checks out the revision recorded in `external-sources.json`.
@@ -78,9 +86,37 @@ HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations \
 
 Update `external-sources.json` deliberately when adopting a new plugin revision, regenerate assets, and commit both changes together. `visualizations:sync` also refreshes the shipped Apple onboarding bundle and its daily/roll-up sample wrappers; drift tests require those resources to remain byte-identical to the website outputs.
 
+### WHOOP gallery coverage
+
+The pinned plugin includes four WHOOP views in the gallery's **WHOOP** category:
+
+- [Recovery × strain](https://healthmd.app/visualizations/whoop/whoop-recovery-strain/theme-colors/)
+- [Sleep achieved vs need](https://healthmd.app/visualizations/whoop/whoop-sleep-need/theme-colors/)
+- [Sleep assessment trends](https://healthmd.app/visualizations/whoop/whoop-sleep-trends/theme-colors/)
+- [Workout strain & zones](https://healthmd.app/visualizations/whoop/whoop-workout-strain/theme-colors/)
+
+`visualizations:sync` layers deterministic synthetic WHOOP records onto the plugin's daily-v8 sample data using the reviewed `packages/contracts/proposals/provider-sections-v1/fixtures/whoop-complete.providers.json` shape. No WHOOP values are derived from or merged into Apple summaries. The samples demonstrate separate naps and workouts, negative nap adjustments, missing fields, and partial capture. They omit the current body-profile singleton rather than inventing a historical body series.
+
+Full WHOOP events and sleep-need components require Apple v8 daily JSON or structured CSV. Markdown/Bases provide limited single-record projections. Provider sidecars, Android native Raw API Snapshots, and roll-ups are not inputs to these charts. The gallery explains connection requirements rather than implying HealthKit permissions or Android format support. Copyable examples and caveats are in the translated `visualizations-roadmap.md` guide.
+
+After adopting a catalog revision, regenerate routes with `npm run visualizations:seo:source`; the production build also regenerates them in `dist`.
+
+## Documentation editing
+
+Use the [source-ownership guide](docs-src/README.md) to choose authored content or its generator.
+Run `npm run docs:navigation`, `npm run i18n:check`, and `npm run docs:check` before pushing
+contributor-guide, localized-guide, or reference-publication changes.
+
 ## Apple reference documentation
 
 Apple reference sources are read directly from the sibling `apps/apple` component. Override discovery with `HEALTHMD_APP_ROOT` or `--source` when testing another checkout.
+
+## SEO measurement
+
+Use `npm run seo:baseline -- --help` for the read-only Search Console reporting
+tool. See [SEO.md](SEO.md) for property selection, private output locations,
+comparison windows and data limitations. Live baseline collection requires
+authorized Search Console access; the reporting tool itself supplies no traffic data.
 
 ## Deployment
 

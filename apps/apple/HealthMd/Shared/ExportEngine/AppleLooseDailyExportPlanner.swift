@@ -82,9 +82,29 @@ extension AppleLooseDailyCoreExecuting {
         }
         return try await loadContext()
     }
+
+    /// A resumed operation chooses its original registry, not the new-operation default.
+    nonisolated func loadContext(pin: AppleExportEnginePin?) async throws -> AppleLooseDailyCoreContext {
+        let current = try await loadContext(profile: pin?.coreProfile ?? .appleHealthDataV8, expectedRegistryVersion: pin?.registryVersion ?? 1)
+        guard let pin,
+              pin.registrySHA256 != current.registry.registrySha256
+                || pin.profile != current.registry.profileId else { return current }
+        let registry = try await SystemAppleLooseDailyCoreExecutor.registry(for: pin)
+        return AppleLooseDailyCoreContext(buildInfo: current.buildInfo, registry: registry)
+    }
 }
 
 nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuting, Sendable {
+    static func registry(for pin: AppleExportEnginePin) async throws -> CoreMetricRegistrySnapshot {
+        try await SystemAppleLooseDailyCoreExecutor().runDetached {
+            try HealthMdCoreService().metricRegistryAtAuthority(
+                profile: pin.coreProfile,
+                expectedRegistryVersion: pin.registryVersion,
+                registrySHA256: pin.registrySHA256
+            )
+        }
+    }
+
     func loadContext() async throws -> AppleLooseDailyCoreContext {
         try await loadContext(profile: .appleHealthDataV8)
     }
@@ -95,7 +115,7 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
     }
 
     func loadContext(profile: CoreMetricRegistryProfile, expectedRegistryVersion: UInt32) async throws -> AppleLooseDailyCoreContext {
-        guard profile == .appleHealthDataV8 || profile == .appleHealthDataV11 else {
+        guard profile == .appleHealthDataV7 || profile == .appleHealthDataV8 || profile == .appleHealthDataV11 else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         return try await runDetached {
@@ -365,8 +385,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             requestedRange = nil
         }
         guard Set(ownerDates).count == ownerDates.count,
-              (!dailyOutputOwnerDates.isEmpty || requestedRange != nil),
-              requestedDailyOutputOwnerDates.isSubset(of: Set(ownerDates)),
+              (!dailyOutputOwnerDates.isEmpty || !settingsSnapshot.operationRollupPeriods.isEmpty),
+              dailyOutputOwnerDates.isSubset(of: Set(ownerDates)),
               requestedRange?.calendarTimeZoneIdentifier == nil
                 || requestedRange?.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
@@ -420,14 +440,17 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
 
         let context: AppleLooseDailyCoreContext
         do {
-            context = try await coreExecutor.loadContext(profile: wakeDateContext == nil
-                ? .appleHealthDataV8 : .appleHealthDataV11,
-                expectedRegistryVersion: suppliedPin?.registryVersion
-                    ?? (wakeDateContext == nil ? 1 : HealthMdSleepProfileContract.registryVersion))
+            if let suppliedPin {
+                context = try await coreExecutor.loadContext(pin: suppliedPin)
+            } else {
+                context = try await coreExecutor.loadContext(profile: wakeDateContext == nil
+                    ? .appleHealthDataV8 : .appleHealthDataV11,
+                    expectedRegistryVersion: wakeDateContext == nil ? 1 : HealthMdSleepProfileContract.registryVersion)
+            }
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            if requestedMode == .shadow {
+            if suppliedPin == nil, requestedMode == .shadow {
                 await emitRustFailure(pin: nil)
                 return .legacy
             }
@@ -501,7 +524,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 healthSubfolder: settingsSnapshot.healthSubfolder ?? "",
                 generatedAt: identity.capturedAt,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
-                requestedRange: requestedRange
+                requestedRange: requestedRange,
+                historicalCalendarPeriods: settingsSnapshot.historicalCalendarRollupPeriods
             )
             guard let planned = try? Self.makeNativePlan(
                 outputs: expectedOutputs,
@@ -527,7 +551,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 customization: frozenSettings.formatCustomization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
                 retainPlatformExtensions: false,
-                rollupPeriods: frozenSettings.enabledRollupPeriods,
+                rollupPeriods: settingsSnapshot.operationRollupPeriods,
                 requestedRange: requestedRange,
                 captureContext: wakeDateContext
             )
@@ -550,6 +574,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                     .sorted(by: { $0.rawValue < $1.rawValue })
                     .map(Self.renderFormatIdentifier)
             )
+            renderOptions.renderProfileRevision = pin.renderProfileRevision
             renderOptions.unitSystem = frozenSettings.formatCustomization.unitPreference == .imperial
                 ? "imperial"
                 : "metric"
@@ -564,7 +589,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             }
             renderOptions.rawCaptureStatus = captureStatus
             renderOptions.writeMode = "overwrite"
-            if !frozenSettings.enabledRollupPeriods.isEmpty {
+            if !settingsSnapshot.operationRollupPeriods.isEmpty {
                 renderOptions.rollupGeneratedAt = HealthRollupDateFormatting.timestampString(
                     identity.capturedAt
                 )
@@ -803,7 +828,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 || (settingsSnapshot.appleExportEnginePin?.isWakeDate == true
                     && settingsSnapshot.appleExportEnginePin?.engine == .rust))
             && (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .preview)
-        let hasConfiguredRollups = settingsSnapshot.generateRangeSummary
+        let hasConfiguredRollups = !settingsSnapshot.operationRollupPeriods.isEmpty
         let isRangeSurface = surface == .localVaultRangeWithoutSideEffects
             || surface == .directGeneratedFilesWithoutSideEffects
             || surface == .connectedReceivedRangeWithoutSideEffects
@@ -838,7 +863,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
 
     private func emitRustFailure(pin: AppleExportEnginePin?) async {
         await diagnosticSink(.rustRenderFailed(ShadowExportFailureDiagnostic(
-            profile: AppleExportEnginePin.profileID,
+            profile: pin?.profile ?? AppleExportEnginePin.profileID,
             semanticProfileRevision: pin?.semanticProfileRevision ?? 1,
             renderProfileRevision: pin?.renderProfileRevision ?? 2,
             kind: .rustRenderFailed
@@ -871,7 +896,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         healthSubfolder: String,
         generatedAt: Date,
         calendarTimeZoneIdentifier: String,
-        requestedRange: HealthRollupRangeRequest?
+        requestedRange: HealthRollupRangeRequest?,
+        historicalCalendarPeriods: [HealthRollupPeriod]? = nil
     ) throws -> [ExpectedOutput] {
         let root = URL(fileURLWithPath: "/__HealthMdPlanningRoot__", isDirectory: true)
         let daily = try preparedExports.flatMap { preparedExport -> [ExpectedOutput] in
@@ -897,14 +923,22 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 )
             }
         }
-        guard !settings.enabledRollupPeriods.isEmpty,
-              let requestedRange else { return daily }
-        let summaries = HealthRollupExporter.makeSummaries(
-            from: sourceHealthData,
-            requestedRange: requestedRange,
-            settings: settings,
-            generatedAt: generatedAt
-        )
+        let summaries: [HealthRollupSummary]
+        if let periods = historicalCalendarPeriods, !periods.isEmpty {
+            var calendar = Calendar.current
+            calendar.timeZone = TimeZone(identifier: calendarTimeZoneIdentifier) ?? .gmt
+            summaries = HealthRollupExporter.makeSummaries(
+                from: sourceHealthData, settings: settings, periods: periods,
+                generatedAt: generatedAt, calendar: calendar
+            )
+        } else if let requestedRange, !settings.enabledRollupPeriods.isEmpty {
+            summaries = HealthRollupExporter.makeSummaries(
+                from: sourceHealthData, requestedRange: requestedRange,
+                settings: settings, generatedAt: generatedAt
+            )
+        } else {
+            return daily
+        }
         let rollups = HealthRollupExporter.outputTargets(
             for: summaries,
             healthSubfolder: healthSubfolder,
@@ -926,9 +960,12 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         pin: AppleExportEnginePin
     ) throws -> NativeExportArtifactPlan {
         let artifacts = try outputs.map { output in
-            guard let nativeContent = output.nativeContent else {
+            guard let originalContent = output.nativeContent else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
+            let nativeContent = try HealthMdRenderInputAdapter.historicalNativeContent(
+                originalContent, format: output.format, profile: pin.profile
+            )
             let data = Data(nativeContent.utf8)
             let digest = NativeExportArtifact.sha256(of: data)
             let mediaType = mediaType(for: output.format)
@@ -938,7 +975,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 id: NativeExportArtifactPlan.artifactID(
                     requestID: identity.requestID,
                     sessionID: identity.sessionID,
-                    profile: .appleHealthDataV8,
+                    profile: pin.coreProfile,
                     relativePath: output.relativePath,
                     mediaType: mediaType,
                     writeMode: writeMode,
@@ -956,7 +993,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV8,
+            profile: pin.coreProfile,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin

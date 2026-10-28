@@ -7,7 +7,6 @@ import com.healthmd.data.health.HealthProviderRegistry
 import com.healthmd.data.health.HealthRepositoryImpl
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
-import com.healthmd.rawexport.DefaultRawHealthRepository
 import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
 import com.healthmd.rawexport.HealthConnectRawDataProvider
 import com.healthmd.rawexport.RawHealthRepository
@@ -50,8 +49,7 @@ object HealthModule {
 
     @Provides
     @Singleton
-    fun provideRawHealthRepository(provider: HealthConnectRawDataProvider): RawHealthRepository =
-        DefaultRawHealthRepository(provider)
+    fun provideRawHealthRepository(provider: HealthConnectRawDataProvider): RawHealthRepository = provider
 
     @Provides
     @Singleton

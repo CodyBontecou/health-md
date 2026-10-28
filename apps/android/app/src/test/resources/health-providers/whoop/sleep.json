@@ -1,9 +1,11 @@
 {
   "records": [
     {
-      "id": "sleep-1",
-      "start": "2026-06-01T22:00:00Z",
-      "end": "2026-06-02T06:00:00Z",
+      "id": "00000000-0000-4000-8000-000000000201",
+      "cycle_id": 101,
+      "nap": false,
+      "start": "2026-06-02T22:00:00Z",
+      "end": "2026-06-03T06:00:00Z",
       "score_state": "SCORED",
       "score": {
         "stage_summary": {

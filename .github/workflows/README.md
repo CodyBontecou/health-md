@@ -1,223 +1,39 @@
 # GitHub Actions CI and release pipeline
 
-## Required pull-request gates
+## Required pull-request gate
 
-Every pull request triggers the component CI workflows, and each reports one of seven stable final contexts suitable for branch protection:
+Require **`CI / CI`** after this change lands. The previous seven component contexts
+must be removed from branch protection in the same rollout; they no longer run as
+separate PR workflows. Branch protection is external configuration and is not changed
+by this patch. Keep the existing requirements until the replacement workflow is
+available, then switch them together to avoid pending checks or an unprotected gap.
 
-- `Apple CI / Apple CI`
-- `Android CI / Android CI`
-- `CLI CI / CLI CI`
-- `Core Rust CI / Core Rust CI`
-- `Practice CI / Practice CI`
-- `Wake CI / Wake CI`
-- `Website CI / Website CI`
+`.github/workflows/ci.yml` uses one Linux runner and runs six portable regression groups
+concurrently on every PR and main/testing push. Every group must pass from current,
+clean source within 90 seconds, and the complete workflow must fit 120 seconds including
+queue, checkout, toolchain setup, dependencies, caches and reporting. The final gate
+runs in the same job, avoiding another runner assignment and artifact transfers.
 
-Inside each workflow except Wake CI (whose single job finishes in well under a minute and stays always-on), a small `changes` job evaluates the pull request's changed files. Most use `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger; Apple and Android use the job planners described below. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
+See [the retained test strategy](../../docs/qa/two-minute-ci.md) for exact coverage,
+retired native/browser/build surfaces, local commands and timing evidence. No retired
+regression matrix is moved to nightly or hidden in release qualification. Compatibility
+wrappers preserve `release_sha` and `full_qualification` interfaces while invoking this
+same portable gate. Store signing/packaging and release identity checks remain intact.
 
-For workflows using the composite detector, the path map lives in two places — the `on.push.paths` trigger filter and the `changes` job's `paths` input — and the two copies must stay in sync. Apple's and Android's push filters and component job planners jointly define their triggers. Shared contract paths (`packages/contracts/**`) and shared-core paths (`packages/healthmd-core-rust/**`) intentionally trigger every consuming component, including Apple CI.
+Checkout is shallow and blob-filtered, omitting binary media. Cargo workspaces and npm
+components remain isolated. Cached compilation never supplies a passed test result.
+Explicit cache saving occurs before the final timing gate; no cache post-action runs
+later. Hosted completion timestamps, not local runtime alone, establish success.
 
-The final gate jobs require every selected job to succeed and accept only explicitly unselected skips. Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+## Android SDK setup
 
-## Apple CI selection
-
-`apps/apple/scripts/apple-ci-plan.py` selects existing jobs for pull requests.
-Reviewed documentation paths retain macOS coverage and generated-document checks;
-documents and resources read by shared XCTest assertions retain both unit suites.
-Embedded Apple Swift CLI changes retain macOS, and UI-test changes retain the UI job.
-Production sources, packages, project/build configuration, shared contracts/core,
-and unclassified inputs retain the full suite. The planner also includes the
-website resources and root workflows read by Apple tests.
-
-The lightweight changes job runs planner/gate regression checks and validates
-documentation links even when native jobs are unselected. PR file discovery
-must prove a complete, revision-pinned change list and include rename sources;
-uncertainty selects every job. The stable `Apple CI` gate requires all selected
-jobs to pass and rejects missing selection outputs or selected skips. The Rust
-artifact preparation job runs whenever an Xcode test job needs it. Main/testing
-pushes, manual runs, and reusable/exact-SHA qualification retain every job.
-
-### Apple critical-path execution
-
-All five Rust targets (iOS device, both iOS Simulator architectures, and both
-macOS architectures) compile in parallel with the unchanged pinned release
-profile. Each archive is paired with a source digest, commit, toolchain and byte
-hash receipt. The preparation job requires the complete five-slice inventory,
-checks generated bindings, assembles the same three-platform XCFramework and
-runs the existing architecture/symbol validator. Exact-source archive and
-XCFramework caches include the active Xcode/SDK fingerprint; nightly uses the
-same complete-artifact key and still validates source/bindings on cache hits.
-
-The iOS unit job begins booting its selected compatible simulator before
-compilation. Unit and UI products compile only the execution architecture and
-disable the unused compiler index store. The native XCFramework still
-contains all five previously qualified target architectures. Test results are
-never restored from a cache.
-
-The fourteen existing phone UI cases plus three history cases run across three
-phone shards; a fourth shard runs four App Review/history cases on iPad. The
-same history method intentionally runs once per device family. Entire XCTest
-classes remain together within a family to preserve shared fixture state.
-One SDK27 preparation job builds fresh app/runner/test products and publishes a
-qualified archive. Every shard verifies the producer archive SHA, exact source
-and current restored binary fingerprints before execution. The selected actual
-simulator must match its required device family. Setup and the single native
-invocation share an owned deadline inside the existing 35-minute phone or
-15-minute iPad step, with cleanup time reserved. Exact SDK27 compiler/signature
-and producer/consumer provenance checks remain mandatory for core and app jobs.
-
-Each shard checks the authoritative xcresult case tree and summary against its
-exact selection. Missing, duplicate within a device family, failed, skipped or
-unexpected cases fail qualification. The stable `iOS UI regressions` aggregate
-requires successful preparation and all four current-run/source receipts for
-21 device-attributed executions. Compile/runtime warning gates (including
-premature StateObject access), raw logs, process ownership records and xcresults
-remain mandatory. Fail-fast is disabled.
-
-These changes trade additional simultaneous runners for a shorter critical
-path; they do not remove test coverage or claim a fixed hosted-runner speedup.
-Compare cold/warm execution separately from dependency wait, queue time and
-summed runner work. F-Droid and Android Wear remain paused as described below.
-
-## Android CI selection and accessibility coverage
-
-On pull requests, `apps/android/scripts/android-ci-plan.py` selects the active Android
-jobs that consume changed files. Phone sources keep Play JVM tests and phone
-instrumentation; CLI changes keep instrumentation and live Rust/Kotlin interop.
-Shared contracts, shared Rust core, build configuration, and CI infrastructure
-retain every active consumer. Documentation and release tooling use the lightweight
-policy job, with JVM tests retained for source/document contract assertions.
-
-F-Droid and Wear builds are not currently distributed, so their CI jobs remain
-paused for all events, including push, manual, and reusable/release qualification.
-The planner emits `false` for those jobs and the final gate requires them to be
-skipped. The main JVM job does not build or test Wear. Shared wearable-contract
-JVM tests remain active because the phone consumes that module. Explicit build
-and release tooling remains available for future qualification.
-
-The planner paginates the PR files API, includes rename sources, and verifies the
-event's head/base revisions and file count before and after pagination. Incomplete
-or changing results run every active job. Selected jobs must succeed; a skipped
-job is accepted only when its selection output explicitly says `false`. The policy
-job's listing validator discovers every `scripts/tests/test_*.py`.
-
-Phone instrumentation uses six hosted shards with the same complete Play test inventory. Shard zero also runs the core
-suite and direct E2E; every shard runs the native-input readiness check using Play.
-The stable instrumentation gate validates the combined Play/core/E2E XML inventory.
-APK preparation reuses compilation outputs through the existing safe Gradle wrapper;
-requested Test tasks still execute freshly. Six workers trade more runner minutes
-for shorter device-test execution; hosted cache and queue evidence determine actual savings.
-Local runs remain unsharded unless shard index/count are explicitly supplied.
-
-Instrumentation runs every core and Play test method with the full ten-display
-accessibility matrix. The local `run-ci-instrumentation.sh` runner has the same
-Play-only scope. `make test-android` runs Play debug/release/E2E JVM tests plus
-shared core, wearable-contract, and direct-protocol tests.
-
-Main pushes, manual runs, and reusable/exact-SHA qualification run every active
-job. Main pushes remain filtered at the workflow trigger. Reusable calls default
-`full_qualification` to `true`; a nonempty `release_sha` forces full active
-qualification. Phone release recovery requires only active CI jobs to succeed.
-
-`.github/actions/android-native-cache` caches pinned cargo-ndk, Cargo downloads,
-and the actual component build directories selected by each job. Keys include
-OS/architecture, tool versions, lockfiles, and the checked-out source revision for
-compiled targets. Only successful main pushes publish caches; PRs restore them.
-Cargo still validates and builds the checked-out source. F-Droid clean builds
-restore downloads and tools only, without compiled project targets. The action
-selects Rust 1.88 for subsequent host commands as well as native preparation.
-
-F-Droid debug tests, lint, and debug APK assembly run in parallel with release
-APK assembly and the existing artifact/metadata/scanner checks on independent
-clean runners. Both lanes build all four native ABIs from source; neither restores
-compiled project outputs or uses the Gradle build/configuration cache. Fail-fast
-is disabled so a failed lane cannot cancel the other lane’s coverage. The stable
-`F-Droid clean build` gate requires both lanes, including for retained release
-qualification. Per-lane test XML, task profiles, and runner CPU/memory diagnostics
-are retained to separate build work from runner variation and queue time. This
-uses an extra runner concurrently and may increase total runner work.
-
-The JVM job also enables Gradle's task-output cache for compilation and lint via
-`apps/android/scripts/run-ci-gradle.sh`. Its CI init script always executes every
-`Test` task and prohibits restoring cached test results: contract tests can read
-repository files outside Gradle's declared task inputs. An offline real-Gradle
-fixture checks compilation reuse, fresh test execution, and failure after an
-external contract file changes. Test XML, per-invocation task profiles, and hosted
-runner CPU/memory details are retained on both successful and failed JVM jobs.
-
-## CLI packaged-source cache
-
-The packaged-crate smoke job retains verification targets under
-`apps/cli/target/packaged-crates` through `HEALTHMD_PACKAGED_CACHE_DIR`. Rust 1.85
-MSRV and Rust 1.88 targets are separated by compiler identity, and the workflow
-cache key includes both compilers plus manifests, lockfiles, and build settings.
-Archive generation, extraction, and MSRV dependency resolution remain fresh.
-Every invocation cleans the five extracted project crates before compiling them;
-only third-party compilation is reused. Full workspace tests, default-feature
-binary builds, and version/help/MCP schema compatibility smoke checks still run.
-Local use keeps temporary targets unless caching is explicitly enabled.
-
-## Optional Apple local pilot
-
-The Mac runner belongs exclusively to the private
-[`CodyBontecou/health-md-local-ci`](https://github.com/CodyBontecou/health-md-local-ci)
-controller repository. Public PRs cannot schedule this repository-scoped runner. Labels select
-machines; they do not enforce workflow access. Do not register an everyday development Mac
-against this public repository or use runner hooks as an access-control substitute.
-
-`scripts/local-actions/apple-local-pilot.yml.template` is the reviewed controller workflow.
-Copy it to `.github/workflows/apple-local-pilot.yml` in the private controller when updating it;
-compare the deployed workflow with this template. This public repository's
-`apple-local-pilot.yml` runs tooling safety tests on a hosted runner only.
-
-The controller permits manual dispatch from its `main` branch. A hosted resolver checks out
-public `health-md` main, validates an optional full 40-character `source_sha` against main
-history, rejects commits predating the pilot script, and runs tooling safety tests before
-scheduling the Mac. The default is the public main commit resolved at job start. The Mac then
-checks out that exact public SHA. The controller does not accept public PR triggers, reusable
-workflow calls, repository dispatches, or arbitrary source repositories.
-
-Register with `scripts/setup-local-actions-runner.py`. It refuses a public controller or a
-non-main default branch and uses **no default labels**, with only
-`healthmd-local-pilot-macos-arm64`. Its ignored `.external/local-actions-runner/_work` checkout
-is separate from development source. Registration does not install a background service.
-Run the listener in a foreground terminal when the Mac is available; stop with Control-C:
-
-```sh
-python3 scripts/setup-local-actions-runner.py
-cd .external/local-actions-runner
-env -u GH_TOKEN -u GITHUB_TOKEN -u GH_ENTERPRISE_TOKEN -u GITHUB_ENTERPRISE_TOKEN ./run.sh
-```
-
-From another terminal, dispatch and inspect the private run:
-
-```sh
-gh workflow run apple-local-pilot.yml --repo CodyBontecou/health-md-local-ci --ref main
-gh run list --repo CodyBontecou/health-md-local-ci --workflow apple-local-pilot.yml
-```
-
-To test an earlier eligible commit, add `-f source_sha=<full-main-commit-sha>` to the dispatch.
-Only trusted people should have write/dispatch access to the private controller. Keep runner
-registration credentials inside the ignored installation and never commit them. A custom-only
-label prevents generic self-hosted jobs from claiming this runner; private registration provides
-the public-PR access boundary. If the listener is offline, the optional Mac job waits for capacity.
-
-The component entry point `apps/apple/scripts/run-local-actions-pilot.sh` requires a clean
-committed checkout, native arm64 macOS, and installed Swift 6.3 or newer. It creates a fresh
-compatible iPhone simulator, runs the unsigned iOS unit suite with isolated DerivedData, checks
-for nonzero passing tests with no failures, and removes only its own simulator. Attempt-specific
-logs, xcresult and a receipt with source/toolchain/controller identity are retained for seven days.
-Cancellation preserves available diagnostics and records cleanup errors. It does not change
-global Xcode or Git settings. Keep the Mac awake while a run is active.
-
-This pilot is optional and is not the complete Apple CI matrix or release qualification.
-Its checks/artifacts appear in the private controller and do not satisfy public PR status gates.
-Existing required hosted CI, nightly, release, and exact-SHA qualification remain in place.
+Every Android workflow explicitly passes `packages: platform-tools` to the pinned `setup-android` action. Its default, `tools platform-tools`, requests the removed legacy `tools` package and fails before Gradle runs. The action still installs command-line tools and accepts SDK licenses; each job installs its NDK, build tools, and emulator images separately as needed. `apps/android/scripts/tests/test_android_workflow_action_pins.py` guards this override as well as action pins.
 
 ## Android release trigger
 
 Android `1.9.3` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
 
-`.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow re-runs the complete Android CI matrix against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
+`.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow runs the portable CI gate against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
 
 After Internal Testing succeeds, dispatch `.github/workflows/android-promote-production.yml` **from the exact annotated release tag** with the semantic version and phone version code. It requires the same tag/main/version bindings, retains a pre-mutation intent, verifies that the exact code is active on `internal` and that production has no newer code, applies the reviewed English listing while promoting that artifact to `production`, and submits the single edit for review. Success requires Google Play to report `IN_REVIEW`, `APPROVED_NOT_PUBLISHED`, or `PUBLISHED`. The workflow retains an attempt-qualified production receipt.
 
@@ -258,19 +74,19 @@ The canonical release path starts from a draft GitHub Release whose tag starts w
 
 Dispatch from `main` with `release_tag=v<version>`. Apple versions use `v<major>.<minor>[.<patch>]`; the tag must exist on `origin`, its commit and the workflow commit must be reachable from `origin/main`, and the tag version must match every committed `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`. The resolver also requires an existing draft GitHub Release before qualification for a non-dry-run manual submission. It never creates a source ledger after an upload.
 
-Before building, each workflow resolves the tag to an immutable SHA and runs the full Apple CI suite (`apple-ci.yml`) against it. The release job checks out **that same SHA**, not the dispatch branch head. Native tests, UI regressions, coverage, warnings, the connectivity package, and the workflow-policy job must all pass; a failed, cancelled, or skipped required job blocks the release. Release callers and reusable CI have distinct concurrency namespaces. Exact-SHA qualification groups are isolated by caller and run ID and cannot cancel their parent or another release; ordinary branch CI still cancels superseded runs.
+Before building, each workflow resolves the tag to an immutable SHA and invokes the portable CI gate through `apple-ci.yml` against it. The qualification job grants `contents: read` for source access and `actions: read` for the final run-timing check; Android release qualification grants the same permissions. The release job checks out **that same SHA**, not the dispatch branch head. All six portable regression groups and the final timing gate must pass; failed, cancelled, or skipped qualification blocks the release. Native tests, UI regressions, coverage, connectivity-package tests, and historical workflow-policy suites are explicit diagnostics, not release qualification requirements. Release callers and reusable CI have distinct concurrency namespaces. Exact-SHA qualification groups are isolated by caller and run ID and cannot cancel their parent or another release; ordinary branch CI still cancels superseded runs.
 
 Workflow-only recovery may dispatch newer `main` workflow code with the original `release_tag`. The release tag must be an ancestor of that workflow SHA, and the diff may change only `.github/workflows/`, `.github/actions/`, or `.github/scripts/`. Qualification and archives still use the original tag's product source, without an overlay from newer `main`. A product, dependency, build-script, version, or metadata fix needs a newly committed and tagged release; never move an existing release tag. Recovery can load the current workflow's source-policy script from Git into `$RUNNER_TEMP` even when the original tag predates that script.
 
 Both release jobs recheck the clean, qualified checkout and pushed tag object at checkout, immediately before and after archiving, and before publication. Staged, unstaged, and non-ignored untracked files fail closed; ignored build products are allowed. The macOS workflow does not remove package references or otherwise edit the tagged project to avoid package networking. Any required project change must be committed, qualified, and released as new source. Summaries record the archived source SHA separately from the executing workflow SHA.
 
-Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it. Human publication remains a legacy fallback, not the canonical submission path. Non-Apple tags (`healthmd-cli/v*`, `android/v*`) and bot-authored publications skip resolution, qualification, and release jobs, so they do not launch duplicate full Apple suites. Untagged branch dispatch is supported only with `dry_run=true`: it qualifies and archives the exact dispatch SHA and cannot upload or submit.
+Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it. Human publication remains a legacy fallback, not the canonical submission path. Non-Apple tags (`healthmd-cli/v*`, `android/v*`) and bot-authored publications skip resolution, qualification, and release jobs, so they do not launch duplicate Apple release qualification runs. Untagged branch dispatch is supported only with `dry_run=true`: it qualifies and archives the exact dispatch SHA and cannot upload or submit.
 
-The lightweight policy regressions run on Ubuntu in Apple CI and are included in its final gate. Release-workflow and `.github/scripts/**` changes are in both Apple CI path maps. To run them locally without signing or a native build (Python with `PyYAML==6.0.3`, Git, Bash, and jq):
+The historical Apple policy tests remain available as explicit diagnostics; some still describe the retired native CI layout and are not part of the portable gate. The release-source tests exercise immutable source identity without signing or a native build (Python with `PyYAML==6.0.3`, Git, Bash, and jq):
 
 ```sh
-python3 -m unittest discover -s .github/scripts/tests -p 'test_apple_*.py' -v
-actionlint .github/workflows/apple-ci.yml .github/workflows/release-ios.yml .github/workflows/release-macos.yml
+python3 -m unittest discover -s .github/scripts/tests -p 'test_apple_release_source.py' -v
+actionlint .github/workflows/ci.yml .github/workflows/apple-ci.yml .github/workflows/release-ios.yml .github/workflows/release-macos.yml
 ```
 
 The tests use local synthetic Git remotes and a stubbed release-record read; they never dispatch workflows, push, access signing credentials, or perform store operations.
@@ -348,16 +164,16 @@ Homebrew runbooks, and mobile compatibility requirements are documented in
 [`release-evidence-template.md`](../../apps/cli/docs/release-evidence-template.md) per candidate.
 Azure uses an environment-scoped federated credential and the minimum Artifact Signing Certificate
 Profile Signer role; it does not use a client secret. Pull requests
-never receive signing credentials and produce unsigned smoke candidates only. A missing signing
+never receive signing credentials. CLI distribution builds run on release tags only. A missing signing
 input, rejected notarization, absent timestamp, checksum mismatch, stale/extra draft asset, or
 credential-upgrade failure leaves the release in draft state.
 
 ## Direct CLI wake Worker
 
-`.github/workflows/wake-ci.yml` owns the `apps/wake` source gate. It installs the component's locked
-Node dependencies, runs the cross-language-pinned HMAC and notification policy tests, type-checks
-the Worker, and builds a Wrangler dry-run bundle without credentials or deployment. Main pushes are
-path-scoped; pull requests always report the stable `Wake CI / Wake CI` context.
+The Wake group in `.github/workflows/ci.yml` runs `scripts/ci/wake.sh` on every PR and
+main/testing push as part of `CI / CI`. It installs the component's locked Node dependencies,
+runs the cross-language-pinned HMAC and notification policy tests, and type-checks the Worker.
+Wrangler dry-run bundling remains an explicit diagnostic, outside the portable gate.
 
 The live Worker remains an independently deployed, notification-only service with its own D1 and
 APNs secrets. Deployment is not coupled to CLI artifact publication and must use committed, pushed

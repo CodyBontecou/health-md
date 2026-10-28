@@ -148,6 +148,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun useHealthConnectForExports() {
+        viewModelScope.launch {
+            settingsRepository.setSelectedHealthProviderId(HealthProviderId.HEALTH_CONNECT.wireId)
+        }
+    }
+
     fun disconnectHealthProvider(providerId: HealthProviderId) {
         viewModelScope.launch {
             providerConnectionManager.disconnect(providerId.wireId)

@@ -136,6 +136,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
         "automation.api-recovery-authority",
+        "automation.include-today",
         "direct.cli_agent_push_wake",
         "export.range-summary",
         "support.local-reporting-fallback",

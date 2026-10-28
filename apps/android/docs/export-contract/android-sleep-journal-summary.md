@@ -50,4 +50,11 @@ Granular rows preserve original instants, nanoseconds, identities and nullable s
 
 No shipped profile version or signature fixture changes. Existing historical expectations and bytes remain authoritative. JVM controls cover noon ownership, overnight/noon-spanning sessions, additive overlap, malformed/stage-less records, DST, source offsets and proposed calculations. Production repository, file, API, direct and preview controls also reject unapproved contexts without reads/output and retain pinned night-begins ownership after preference edits.
 
+WHOOP compatibility reads use the same journal query window and explicit overlap selection, but WHOOP's API only supplies whole-session stage aggregates. Those aggregates are not prorated across noon. The [provider ledger](cloud-raw-provider-ledger.md#whoop-compatibility-sleep-journal-window) documents this provider-specific limitation; the timestamped-stage clipping rules above apply to Health Connect.
+
+This change conforms Android to the already-documented noon-to-noon sleep ownership contract while
+preserving the aggregation meaning of the frozen `ios-v4` and shipped `android-analytical-v5`
+profiles. It changes no public key, JSON type, unit, label, aggregation rule or frontmatter key, so
+those profile versions and signature fixtures do not change.
+
 Native/device and external-consumer validation remain separate release gates. Local JVM/helper tests do not qualify physical Health Connect, VoiceOver or successor profiles.

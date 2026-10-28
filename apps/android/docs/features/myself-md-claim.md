@@ -1,5 +1,7 @@
 # Complimentary myself.md access
 
+The claim feature is **disabled by default** on Apple and Android. Settings entries and claim deep links are gated; disabled links do not read purchases or start verification. Android: build with `-PMYSELF_CLAIM_ENABLED=true` (or the equivalent build environment variable). Google Play purchase availability is still required; F-Droid stays unavailable. Enabling requires a new build; this is not a remote or user-facing toggle.
+
 Google Play purchasers can open Settings → **Claim myself.md access**, or the exact `healthmd://myself/claim` link. The screen first explains the transfer of purchase proof, one-account rule, and browser confirmation. Opening it does not query purchases, upload proof, sign in or claim an entitlement. F-Droid exposes no entry, route or Play billing dependency; included/free/grandfathered Android access is not paid purchase evidence.
 
 **Verify purchase and continue** queries the existing process-scoped Play Billing client for a fresh completed `health_md_premium_lifetime` INAPP purchase. Pending, missing, wrong-product or empty-token results cannot proceed. Cached unlock flags, debug overrides and installation dates do not supply evidence. The action never launches a checkout or consumes a purchase.

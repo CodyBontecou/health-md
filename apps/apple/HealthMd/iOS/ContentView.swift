@@ -3176,17 +3176,19 @@ struct SettingsTabView: View {
 
             SettingsRowDivider()
 
-            SettingsRow(
-                icon: "gift.fill",
-                title: "Claim myself.md access",
-                subtitle: "Verify an eligible purchase for complimentary Lifetime access.",
-                isActive: true,
-                accessibilityHint: "Double tap to review purchase verification for myself.md",
-                accessibilityIdentifier: "settings-myself-claim",
-                action: { showMyselfClaim = true }
-            )
+            if MyselfClaimFeature.isEnabled {
+                SettingsRow(
+                    icon: "gift.fill",
+                    title: "Claim myself.md access",
+                    subtitle: "Verify an eligible purchase for complimentary Lifetime access.",
+                    isActive: true,
+                    accessibilityHint: "Double tap to review purchase verification for myself.md",
+                    accessibilityIdentifier: "settings-myself-claim",
+                    action: { showMyselfClaim = true }
+                )
 
-            SettingsRowDivider()
+                SettingsRowDivider()
+            }
 
             SettingsRow(
                 icon: "folder.fill",
@@ -3265,7 +3267,7 @@ struct SettingsTabView: View {
             SettingsRow(
                 icon: "link.circle.fill",
                 title: "Third-Party Integrations",
-                subtitle: "Fitbit, Oura, WHOOP, Withings, and Strava",
+                subtitle: "WHOOP recovery, strain, sleep, and workouts",
                 status: externalIntegrationManager.connectedProviderCount == 0 ? "None" : "\(externalIntegrationManager.connectedProviderCount)",
                 statusTone: externalIntegrationManager.connectedProviderCount == 0 ? .muted : .success,
                 isActive: externalIntegrationManager.connectedProviderCount > 0,

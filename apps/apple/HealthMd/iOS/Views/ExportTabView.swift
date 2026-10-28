@@ -90,8 +90,10 @@ struct ExportTabView: View {
               externalIntegrations.connectedProviderCount > 0 else {
             return nil
         }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
         return { date in
-            await externalIntegrations.fetchDailyRecords(for: date)
+            await externalIntegrations.fetchDailyRecords(for: date, calendar: calendar)
         }
     }
 
@@ -551,6 +553,13 @@ struct ExportTabView: View {
                     configurationProtection.performConfigurationChange {
                         selectDateRangePreset(preset)
                     }
+                }
+
+                if advancedSettings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
+                    Text("Sleep covers noon on each selected date through noon the next day. For last night's sleep, choose Yesterday.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 if dateRangePreset == .custom {

@@ -4,7 +4,7 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
-## [3.4.4] - 2026-10-24
+## [3.4.4] - 2026-10-27
 
 ### Added
 - Guidance after a successful export helps you export again or set up a schedule.
@@ -15,6 +15,7 @@ All notable changes to Health.md will be documented in this file.
 - Updated privacy disclosures and localized App Store descriptions explain campaign-to-purchase measurement.
 
 ### Fixed
+- Today Refresh success notifications report the exported day count instead of incorrectly saying yesterday.
 - Improved export history, connection recovery, and the export file browser.
 
 ## [3.4.3] - 2026-10-07
