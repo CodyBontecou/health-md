@@ -174,7 +174,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(uploadCount, 0)
     }
 
-    func testUploadFailureReturnsFileWriteFailureWithoutCountingPreparedRecordsAsSuccess() async {
+    func testUploadFailureReturnsAPIUploadFailureWithoutCountingPreparedRecordsAsSuccess() async {
         let exportDate = date(year: 2026, month: 5, day: 10)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
@@ -196,8 +196,9 @@ final class APIEndpointExportRunnerTests: XCTestCase {
 
         XCTAssertEqual(result.successCount, 0)
         XCTAssertEqual(result.totalCount, 1)
-        XCTAssertEqual(result.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .apiUploadFailed)
         XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("500") == true)
+        XCTAssertEqual(result.primaryFailureReason?.shortDescription, "API upload failed")
     }
 
     func testUploadFailureIsPrimaryAndDoesNotPersistEndpointResponseBody() async {
@@ -229,7 +230,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         )
 
         XCTAssertEqual(result.successCount, 0)
-        XCTAssertEqual(result.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .apiUploadFailed)
         XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("500") == true)
         XCTAssertFalse(result.failedDateDetails.contains {
             $0.errorDetails?.contains("secret-token") == true
@@ -395,7 +396,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(result.totalCount, 15)
         XCTAssertFalse(result.didCompleteAllRequestedDates)
         XCTAssertTrue(result.failedDateDetails.contains {
-            $0.reason == .fileWriteError && ($0.errorDetails?.contains("500") ?? false)
+            $0.reason == .apiUploadFailed && ($0.errorDetails?.contains("500") ?? false)
         })
 
         // Every date from the failed batch onward (days 8-15) must be
@@ -713,7 +714,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
 
         XCTAssertEqual(uploadCallCount, 1)
         XCTAssertEqual(result.successCount, 0)
-        XCTAssertEqual(result.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .apiUploadFailed)
         XCTAssertEqual(result.failedDateDetails.count, dates.count)
         XCTAssertEqual(Set(result.failedDateDetails.map(\.date)), Set(dates))
         XCTAssertFalse(result.failedDateDetails.contains {
@@ -812,7 +813,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(result.completedDates, [dates[0]])
         XCTAssertEqual(result.failedDateDetails.first {
             Calendar.current.isDate($0.date, inSameDayAs: dates[1])
-        }?.reason, .fileWriteError)
+        }?.reason, .apiUploadFailed)
         XCTAssertEqual(result.failedDateDetails.first {
             Calendar.current.isDate($0.date, inSameDayAs: dates[2])
         }?.reason, .unknown)

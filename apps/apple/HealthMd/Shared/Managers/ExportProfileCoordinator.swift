@@ -526,6 +526,7 @@ final class ExportProfileCoordinator: ObservableObject {
         name: String,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
+        apiEndpointID: UUID? = nil,
         agentDataGatewayID: UUID? = nil,
         settings newSettings: ExportSettingsSnapshot? = nil
     ) -> ExportProfile? {
@@ -537,7 +538,7 @@ final class ExportProfileCoordinator: ObservableObject {
             settings: newSettings ?? ExportSettingsSnapshot.from(settings),
             target: target,
             folderVaultID: folderVaultID,
-            apiEndpointID: source.apiEndpointID
+            apiEndpointID: target == .apiEndpoint ? apiEndpointID : nil
         )
         if target == .agentDataGateway {
             let resolvedGatewayID = agentDataGatewayID

@@ -1662,7 +1662,7 @@ struct APIEndpointExportRunner {
         let uploadFailures = uploadFailureDates.map {
             FailedDateDetail(
                 date: $0,
-                reason: .fileWriteError,
+                reason: .apiUploadFailed,
                 errorDetails: failureMessage
             )
         }

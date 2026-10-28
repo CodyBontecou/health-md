@@ -20,7 +20,7 @@ User renames affect the written `key`; the data dictionary retains `canonicalKey
 
 ## Apple Shortcuts and App Intents
 
-Shortcut export intents invoke Health.md's ordinary export orchestration for a date, yesterday, last N days, or a date range. They do not define a separate daily file schema.
+Shortcut export intents invoke Health.md's ordinary export orchestration for a date, yesterday, last N days, or a date range. They honor the resolved profile’s API or local-folder destination and do not define a separate daily file schema. Last N Days ends yesterday by default; Include Today shifts the same N-day window to end today.
 
 Shortcut status/summary results are automation convenience values. Any files produced still follow the selected production format contracts. A shortcut reporting that an action completed does not replace per-day archive/query diagnostics.
 

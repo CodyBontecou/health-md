@@ -42,6 +42,7 @@ class ProductCapabilityManifestTest {
             setOf(
                 "core.shared-rust-profile-engine",
                 "automation.api-recovery-authority",
+                "automation.include-today",
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
@@ -168,6 +169,7 @@ class ProductCapabilityManifestTest {
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "source.private-platform-database",
             "automation.api-recovery-authority",
+            "automation.include-today",
             "direct.cli_agent_push_wake",
             "export.range-summary",
             "setup.share-portable-configuration",
