@@ -102,6 +102,52 @@ class HostCoreDailyAggregatePlannerTest {
         }
     }
 
+    @Test
+    fun freshWakeDateScheduleCapturesProductionPinAndRendersAfterPreferenceChange() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+            metricSelection = MetricSelectionState(enabledMetrics = setOf("steps")))
+        val pinPlanner = ExportEnginePinPlanner()
+        val pin = requireNotNull(pinPlanner.forScheduledExport(settings,
+            com.healthmd.domain.model.ExportTarget.DEVICE_FOLDER, context.zoneId))
+        assertThat(pin.profile).isEqualTo(AndroidExportProfile.android_sleep_v6)
+        assertThat(pin.engine).isEqualTo(ExportEngineMode.rust)
+        val snapshot = AndroidExportSettingsSnapshot.capture(settings, pin, context.zoneId)
+        val encoded = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+        val current = ExportSettings(executionSleepCaptureContext = AndroidCaptureContext(
+            ZoneId.of("Europe/Berlin"), SleepDayAttribution.NIGHT_BEGINS))
+        val restored = requireNotNull(com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory(
+            pinPlanner, mockk()).restoreForRun(com.healthmd.domain.model.ExportProfile(
+                id = "production-wake-schedule", name = "Synthetic schedule", settingsSnapshotJson = encoded,
+                target = com.healthmd.domain.model.ExportTarget.DEVICE_FOLDER,
+                createdAtEpochMillis = 0L, updatedAtEpochMillis = 0L), current, 2))
+        assertThat(pinPlanner.persistedPinAppliesToScheduledExport(restored,
+            com.healthmd.domain.model.ExportTarget.DEVICE_FOLDER, pin)).isTrue()
+        assertThat(pinPlanner.persistedPinAppliesToScheduledExport(current,
+            com.healthmd.domain.model.ExportTarget.DEVICE_FOLDER, pin)).isFalse()
+        val planner = AndroidDailyAggregateExportPlanner(
+            nativePlanner = DailyAggregateNativePlanBuilder { error("No historical rendering") },
+            policyResolver = LocalExportEnginePolicyResolver { error("No mutable policy during resume") })
+        val result = planner.plan(HealthData(date = LocalDate.of(2026, 11, 1),
+            activity = ActivityData(steps = 17)), restored)
+        assertThat(result).isInstanceOf(LocalDailyAggregatePlanningResult.Planned::class.java)
+        val plan = (result as LocalDailyAggregatePlanningResult.Planned).plan
+        assertThat(plan.items).hasSize(4)
+        for (item in plan.items) {
+            val text = item.content.decodeToString()
+            assertThat(text).contains("morning_ends")
+            assertThat(text).contains("Asia/Kathmandu")
+            assertThat(text).contains("android-sleep-v6")
+            assertThat(text).doesNotContain("Europe/Berlin")
+        }
+        assertThat(pinPlanner.forScheduledExport(settings.copy(executionSleepCaptureContext =
+            context.copy(exportProfileID = null)), com.healthmd.domain.model.ExportTarget.DEVICE_FOLDER,
+            context.zoneId)).isNull()
+        assertThat(pinPlanner.forDirectGeneratedFiles(settings, ZoneId.of("Europe/Berlin"))).isNull()
+        assertThat(pinPlanner.forDirectGeneratedFiles(settings, context.zoneId)).isEqualTo(pin)
+    }
+
     @Before
     fun useExplicitTaskOwnedHostCore() {
         val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")

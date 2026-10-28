@@ -582,8 +582,10 @@ class ExportScheduler @Inject constructor(
         val fingerprint = destinationFingerprint(settings, target)
         val context = com.healthmd.domain.model.AndroidCaptureContext(zoneId, settingsRepository.getSleepDayAttribution())
             .also { it.requireShippedProfile() }
-        val enginePin = enginePinPlanner.forScheduledExport(settings, target, zoneId)
-        val settingsSnapshot = AndroidExportSettingsSnapshot.capture(settings, enginePin, zoneId, context)
+        val captureSettings = settings.copy(executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true)
+        val enginePin = enginePinPlanner.forScheduledExport(captureSettings, target, zoneId)
+        val settingsSnapshot = AndroidExportSettingsSnapshot.capture(captureSettings, enginePin, zoneId, context)
         return ScheduledExportConfiguration.from(
             settings = settings,
             destinationFingerprint = fingerprint,
@@ -602,7 +604,8 @@ class ExportScheduler @Inject constructor(
         persisted: ScheduledExportConfiguration,
     ): ScheduledExportConfiguration? {
         val target = settings.scheduledExportTarget
-        if (!enginePinPlanner.persistedPinAppliesToScheduledExport(settings, target, persisted.enginePin)) {
+        val pinnedSettings = settings.copy(executionSleepCaptureContext = persisted.settingsSnapshot?.sleepCaptureContext)
+        if (!enginePinPlanner.persistedPinAppliesToScheduledExport(pinnedSettings, target, persisted.enginePin)) {
             return null
         }
         val persistedSnapshot = persisted.settingsSnapshot

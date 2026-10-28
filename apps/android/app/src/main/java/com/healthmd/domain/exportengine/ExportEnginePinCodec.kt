@@ -1,6 +1,8 @@
 package com.healthmd.domain.exportengine
 
+import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
 import com.healthmd.core.HealthMdCoreService
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -82,7 +84,10 @@ object ExportEnginePinCodec {
             canonicalModelVersion == contracts.canonicalModel &&
             renderInputVersion == contracts.renderInput &&
             artifactPlanVersion == contracts.artifactPlan &&
-            registryVersion == contracts.registry
+            registryVersion == contracts.registry &&
+            registrySha256 == HEALTHMD_SLEEP_REGISTRY_SHA256 &&
+            semanticProfileRevision == ExportEnginePin.EXPECTED_SEMANTIC_PROFILE_REVISION &&
+            renderProfileRevision == 2u
     }
 
     private fun canonicalize(element: JsonElement): JsonElement = when (element) {
@@ -116,6 +121,15 @@ class ExportEnginePinPlanner @Inject constructor() {
         zoneId: ZoneId,
     ): ExportEnginePin? {
         if (!supportsNewScheduledPin(settings, target)) return null
+        val wakeContext = settings.executionSleepCaptureContext?.takeIf {
+            it.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
+        }
+        if (wakeContext != null) {
+            if (target != ExportTarget.DEVICE_FOLDER || wakeContext.zoneId != zoneId ||
+                wakeContext.exportProfileID != AndroidExportProfile.android_sleep_v6.publicProfileId
+            ) return null
+            return pinBeforeCapture(wakeDatePolicy(), zoneId)
+        }
         val policy = if (target == ExportTarget.API_ENDPOINT) {
             // API v1 is permanently profile-frozen even when local files use analytical v5.
             policyResolver.resolveApiV1()
@@ -127,8 +141,21 @@ class ExportEnginePinPlanner @Inject constructor() {
 
     fun forDirectGeneratedFiles(settings: ExportSettings, zoneId: ZoneId): ExportEnginePin? {
         if (!supportsNewDirectGeneratedFilesPin(settings)) return null
+        val context = settings.executionSleepCaptureContext
+        if (context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+            if (context.zoneId != zoneId ||
+                context.exportProfileID != AndroidExportProfile.android_sleep_v6.publicProfileId
+            ) return null
+            return pinBeforeCapture(wakeDatePolicy(), zoneId)
+        }
         return pinBeforeCapture(policyResolver.resolveLocal(settings.localExportProfile()), zoneId)
     }
+
+    private fun wakeDatePolicy() = ResolvedExportEnginePolicy(
+        mode = ExportEngineMode.rust,
+        profile = AndroidExportProfile.android_sleep_v6,
+        target = ExportEnginePolicyTarget.ANDROID_SLEEP_V6,
+    )
 
     fun forApiV1(zoneId: ZoneId): ExportEnginePin? =
         pinBeforeCapture(policyResolver.resolveApiV1(), zoneId)
@@ -139,6 +166,16 @@ class ExportEnginePinPlanner @Inject constructor() {
         target: ExportTarget,
         pin: ExportEnginePin?,
     ): Boolean {
+        val context = settings.executionSleepCaptureContext
+        val isWakeDate = context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS ||
+            pin?.profile == AndroidExportProfile.android_sleep_v6
+        if (isWakeDate) {
+            return target == ExportTarget.DEVICE_FOLDER && supportsNewScheduledPin(settings, target) &&
+                context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
+                context.exportProfileID == AndroidExportProfile.android_sleep_v6.publicProfileId &&
+                pin?.profile == AndroidExportProfile.android_sleep_v6 &&
+                context.zoneId.id == pin.ianaTimeZone && ExportEnginePinCodec.isStructurallyValid(pin)
+        }
         if (pin == null) return true
         if (!supportsNewScheduledPin(settings, target)) return false
         val expectedProfile = if (target == ExportTarget.API_ENDPOINT) {

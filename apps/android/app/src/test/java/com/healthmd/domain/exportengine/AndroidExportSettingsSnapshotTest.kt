@@ -66,6 +66,53 @@ class AndroidExportSettingsSnapshotTest {
         }
     }
 
+    @Test
+    fun wakeDateSnapshotRetainsExactAuthorityAcrossPreferenceAndPresentationChanges() {
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        val pin = ExportEnginePin.create(
+            engine = ExportEngineMode.rust,
+            profile = AndroidExportProfile.android_sleep_v6,
+            ianaTimeZone = context.zoneId.id,
+            readiness = testReadiness(),
+            registry = testRegistry(AndroidExportProfile.android_sleep_v6).copy(
+                registryVersion = 2u, registrySha256 = com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256,
+            ),
+        )
+        for (presentation in CompatibilitySchemaProfile.entries) {
+            val accepted = ExportSettings(executionSleepCaptureContext = context,
+                executionSleepCaptureAuthorityIsFrozen = true,
+                formatCustomization = FormatCustomization(compatibilitySchemaProfile = presentation))
+            val snapshot = AndroidExportSettingsSnapshot.capture(accepted, pin, context.zoneId)
+            val bytes = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+            val decoded = AndroidExportSettingsSnapshotCodec.decode(bytes)
+            val current = ExportSettings(executionSleepCaptureContext = AndroidCaptureContext(
+                ZoneId.of("Europe/Berlin"), SleepDayAttribution.NIGHT_BEGINS))
+            val factory = ScheduledProfileSnapshotFactory(ExportEnginePinPlanner(), io.mockk.mockk())
+            val restored = requireNotNull(factory.restoreForRun(ExportProfile(
+                id = "wake-date", name = "Synthetic wake date", settingsSnapshotJson = bytes,
+                target = ExportTarget.DEVICE_FOLDER, createdAtEpochMillis = 0L, updatedAtEpochMillis = 0L,
+            ), current, 2))
+            assertThat(decoded.exportProfile).isEqualTo(AndroidExportProfile.android_sleep_v6)
+            assertThat(restored.executionSleepCaptureContext).isEqualTo(context)
+            assertThat(restored.executionEnginePin).isEqualTo(pin)
+            assertThat(restored.executionEngineAuthorityIsFrozen).isTrue()
+            assertThat(AndroidExportSettingsSnapshotCodec.encodeCanonical(decoded)).isEqualTo(bytes)
+            for (invalid in listOf(
+                decoded.copy(enginePin = null),
+                decoded.copy(enginePin = pin.copy(registrySha256 = "0".repeat(64))),
+                decoded.copy(enginePin = pin.copy(semanticProfileRevision = 2u)),
+                decoded.copy(enginePin = pin.copy(renderProfileRevision = 1u)),
+                decoded.copy(enginePin = pin.copy(semanticInputVersion = 1u)),
+                decoded.copy(enginePin = pin.copy(engine = ExportEngineMode.shadow)),
+                decoded.copy(sleepCaptureContext = context.copy(exportProfileID = null)),
+                decoded.copy(exportProfile = AndroidExportProfile.android_frozen_v4),
+                decoded.copy(sleepCaptureContext = AndroidCaptureContext(context.zoneId, SleepDayAttribution.NIGHT_BEGINS)),
+            )) {
+                assertThat(AndroidExportSettingsSnapshotCodec.isStructurallyValid(invalid)).isFalse()
+            }
+        }
+    }
+
     private val zone = ZoneId.of("America/Los_Angeles")
 
     @Test

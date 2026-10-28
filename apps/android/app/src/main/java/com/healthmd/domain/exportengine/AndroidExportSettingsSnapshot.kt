@@ -1,5 +1,7 @@
 package com.healthmd.domain.exportengine
 
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
@@ -155,7 +157,7 @@ data class AndroidExportSettingsSnapshot(
                     AndroidExportSettingsSnapshotError.INVALID_STRUCTURE,
                 )
             }
-            val operationProfile = settings.expectedScheduledExportProfile()
+            val operationProfile = settings.expectedScheduledExportProfile(captureContext)
             val snapshot = AndroidExportSettingsSnapshot(
                 version = if (captureContext == null) CURRENT_VERSION else CAPTURE_AUTHORITY_VERSION,
                 sleepCaptureContext = captureContext,
@@ -430,8 +432,15 @@ object AndroidExportSettingsSnapshotCodec {
             AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION -> {
                 val context = snapshot.sleepCaptureContext ?: return false
                 if (context.zoneId.id != snapshot.ianaTimeZone) return false
-                // Current snapshot export profiles are immutable v4/v5. They cannot carry wake-date authority.
-                if (context.sleepDayAttribution != com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS) return false
+                if (context.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+                    // A saved successor is one atomic capture/profile/renderer promise.
+                    // Missing draft markers or nil pins cannot gain authority on upgrade.
+                    if (context.exportProfileID != AndroidExportProfile.android_sleep_v6.publicProfileId ||
+                        snapshot.exportProfile != AndroidExportProfile.android_sleep_v6 ||
+                        snapshot.exportMode != ExportMode.COMPATIBILITY ||
+                        snapshot.enginePin?.registrySha256 != HEALTHMD_SLEEP_REGISTRY_SHA256
+                    ) return false
+                } else if (snapshot.exportProfile == AndroidExportProfile.android_sleep_v6) return false
                 if (context.exportProfileID != null && context.exportProfileID != snapshot.exportProfile.publicProfileId) return false
             }
             else -> return false
@@ -441,6 +450,8 @@ object AndroidExportSettingsSnapshotCodec {
         if (snapshot.rawSnapshot.pageSize !in RawSnapshotSettings.MIN_PAGE_SIZE..RawSnapshotSettings.MAX_PAGE_SIZE) {
             return false
         }
+        if (snapshot.exportProfile == AndroidExportProfile.android_sleep_v6 &&
+            snapshot.version != AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION) return false
         if (snapshot.exportProfile != snapshot.expectedOperationProfile()) return false
         if (snapshot.exportMode == ExportMode.RAW_SNAPSHOT && snapshot.enginePin != null) return false
 
@@ -476,15 +487,19 @@ object AndroidExportSettingsSnapshotCodec {
     private const val MAX_TIME_ZONE_CHARACTERS = 128
 }
 
-private fun ExportSettings.expectedScheduledExportProfile(): AndroidExportProfile =
-    if (scheduledExportTarget == ExportTarget.API_ENDPOINT) {
+private fun ExportSettings.expectedScheduledExportProfile(context: AndroidCaptureContext?): AndroidExportProfile =
+    if (context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+        AndroidExportProfile.android_sleep_v6
+    } else if (scheduledExportTarget == ExportTarget.API_ENDPOINT) {
         AndroidExportProfile.android_frozen_v4
     } else {
         formatCustomization.compatibilitySchemaProfile.toAndroidExportProfile()
     }
 
 private fun AndroidExportSettingsSnapshot.expectedOperationProfile(): AndroidExportProfile =
-    if (scheduledExportTarget == ExportTarget.API_ENDPOINT) {
+    if (sleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+        AndroidExportProfile.android_sleep_v6
+    } else if (scheduledExportTarget == ExportTarget.API_ENDPOINT) {
         AndroidExportProfile.android_frozen_v4
     } else {
         formatCustomization.compatibilitySchemaProfile.toAndroidExportProfile()
