@@ -293,7 +293,7 @@ struct iPadContentView: View {
                         vaultManager.clearVaultFolder()
                     }
                     if TestMode.useHealthKitExportPreviewFixtures {
-                        advancedSettings.exportFormats = [.markdown]
+                        advancedSettings.exportFormats = TestMode.healthKitExportPreviewFormats
                         advancedSettings.detailPolicy = TestMode.healthKitExportPreviewDetailPolicy
                         advancedSettings.metricSelection.selectAll()
                         advancedSettings.generateRangeSummary = TestMode.healthKitExportPreviewRangeSummary

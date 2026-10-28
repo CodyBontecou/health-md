@@ -1299,7 +1299,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
 nonisolated struct AppleLooseDailyPreviewArtifact: Equatable, Sendable {
     let format: ExportFormat
     let relativePath: String
-    let data: Data
+    let preview: ExportArtifactTextPreview
 }
 
 /// Async, destination-free helper used by preview UI. `nil` means the operation is deliberately
@@ -1338,13 +1338,19 @@ enum AppleLooseDailyExportPreviewPlanner {
         case .legacy:
             return nil
         case .planned(let operation):
-            return operation.artifacts.map {
-                AppleLooseDailyPreviewArtifact(
-                    format: $0.format,
-                    relativePath: $0.artifact.relativePath,
-                    data: $0.artifact.inlineData
-                )
+            let previews = try await textPreviews(for: operation.artifacts.map(\.artifact))
+            return zip(operation.artifacts, previews).map { planned, preview in
+                AppleLooseDailyPreviewArtifact(format: planned.format,
+                    relativePath: planned.artifact.relativePath, preview: preview)
             }
         }
     }
+
+    static func textPreviews(for artifacts: [NativeExportArtifact]) async throws -> [ExportArtifactTextPreview] {
+        let worker = Task.detached(priority: .utility) {
+            try artifacts.map { try ExportArtifactTextPreview.make(from: $0) }
+        }
+        return try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
+    }
+
 }

@@ -433,3 +433,61 @@ nonisolated final class BufferedExportByteWriter {
         buffer.removeAll(keepingCapacity: true)
     }
 }
+
+/// A bounded display projection, never a source for an export or destination write.
+nonisolated struct ExportArtifactTextPreview: Equatable, Sendable {
+    let head: String
+    let tail: String
+    let originalByteCount: Int
+    var omittedByteCount: Int { originalByteCount - head.utf8.count - tail.utf8.count }
+
+    static func make(from artifact: NativeExportArtifact) throws -> Self {
+        guard let count = Int(exactly: artifact.byteCount) else { throw CocoaError(.fileReadTooLarge) }
+        let truncated = count > 64 * 1024
+        let headLimit = truncated ? 48 * 1024 : count
+        let tailStart = truncated ? count - 16 * 1024 : count
+        var head = Data()
+        var tail = Data()
+        var offset = 0
+        var hasher = SHA256()
+        func consume(_ chunk: Data) throws {
+            try Task.checkCancellation()
+            hasher.update(data: chunk)
+            if offset < headLimit { head.append(chunk.prefix(headLimit - offset)) }
+            let end = offset.addingReportingOverflow(chunk.count)
+            guard !end.overflow, end.partialValue <= count else { throw CocoaError(.fileReadCorruptFile) }
+            if end.partialValue > tailStart {
+                tail.append(chunk.suffix(end.partialValue - max(offset, tailStart)))
+            }
+            offset = end.partialValue
+        }
+        switch artifact.content {
+        case .inline(let data): try consume(data)
+        case .file(let file): try file.forEachChunk(consume)
+        }
+        let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        guard offset == count, digest == artifact.sha256 else { throw CocoaError(.fileReadCorruptFile) }
+        // Only incomplete boundary scalars may be removed. Invalid interior UTF-8 rejects.
+        func decode(_ bytes: Data, trimHead: Bool) throws -> String {
+            for trim in 0...(truncated ? min(3, bytes.count) : 0) {
+                if trim > 0 {
+                    let removed = trimHead ? bytes.prefix(trim) : bytes.suffix(trim)
+                    if trimHead {
+                        guard removed.allSatisfy({ (0x80...0xbf).contains($0) }) else { continue }
+                    } else {
+                        guard let first = removed.first else { continue }
+                        let scalarLength = (0xc2...0xdf).contains(first) ? 2
+                            : ((0xe0...0xef).contains(first) ? 3 : ((0xf0...0xf4).contains(first) ? 4 : 0))
+                        guard scalarLength > trim,
+                              removed.dropFirst().allSatisfy({ (0x80...0xbf).contains($0) }) else { continue }
+                    }
+                }
+                let candidate = trimHead ? bytes.dropFirst(trim) : bytes.dropLast(trim)
+                if let value = String(data: candidate, encoding: .utf8) { return value }
+            }
+            throw CocoaError(.fileReadInapplicableStringEncoding)
+        }
+        return try Self(head: decode(head, trimHead: false), tail: decode(tail, trimHead: true),
+            originalByteCount: count)
+    }
+}

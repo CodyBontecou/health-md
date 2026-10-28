@@ -1,11 +1,57 @@
 import Foundation
 import Darwin
 import XCTest
+import HealthMdCoreRust
 @testable import HealthMd
 
 final class ExportArtifactIOTests: XCTestCase {
     private enum FixtureError: Error {
         case injected
+    }
+
+    private func previewArtifact(_ data: Data) throws -> NativeExportArtifact {
+        let file = try ExportArtifactIO.renderTemporary(prefix: "synthetic-preview", mediaType: "text/plain") {
+            try $0.write(data)
+        }
+        return try NativeExportArtifact(role: .file, id: String(repeating: "0", count: 64),
+            relativePath: "daily.txt", mediaType: "text/plain", writeMode: .overwrite, file: file,
+            byteCount: file.descriptor.byteCount, sha256: file.descriptor.sha256)
+    }
+
+    func testFilePreviewKeepsSmallUTF8BytesAndTrueEmptySize() throws {
+        for text in ["", "synthetic 🌙 é\n", String(repeating: "x", count: 64 * 1024)] {
+            let preview = try ExportArtifactTextPreview.make(from: previewArtifact(Data(text.utf8)))
+            XCTAssertEqual(preview.head, text)
+            XCTAssertEqual(preview.tail, "")
+            XCTAssertEqual(preview.originalByteCount, text.utf8.count)
+            XCTAssertEqual(preview.omittedByteCount, 0)
+        }
+    }
+
+    func testLargeFilePreviewHasBoundedUTF8WindowsAndFullSize() throws {
+        let text = "START\n" + String(repeating: "🌙é", count: 500000) + "\nEND"
+        let artifact = try previewArtifact(Data(text.utf8))
+        let preview = try ExportArtifactTextPreview.make(from: artifact)
+        XCTAssertTrue(preview.head.hasPrefix("START\n"))
+        XCTAssertTrue(preview.tail.hasSuffix("\nEND"))
+        XCTAssertLessThanOrEqual(preview.head.utf8.count, 48 * 1024)
+        XCTAssertLessThanOrEqual(preview.tail.utf8.count, 16 * 1024)
+        XCTAssertTrue(text.hasPrefix(preview.head))
+        XCTAssertTrue(text.hasSuffix(preview.tail))
+        XCTAssertEqual(preview.originalByteCount, text.utf8.count)
+        XCTAssertEqual(preview.omittedByteCount, text.utf8.count - preview.head.utf8.count - preview.tail.utf8.count)
+        let display = ExportPreviewDisplayContent.make(from: preview)
+        XCTAssertTrue(display.isTruncated)
+        XCTAssertEqual(display.originalByteCount, text.utf8.count)
+        XCTAssertTrue(display.text.contains("omitted from the middle"))
+        try Data(repeating: 0x78, count: text.utf8.count).write(to: XCTUnwrap(artifact.fileArtifact).url)
+        XCTAssertThrowsError(try ExportArtifactTextPreview.make(from: artifact))
+    }
+
+    func testPreviewRejectsMalformedBoundaryBytesInsteadOfRepairingThem() throws {
+        var bytes = Data(repeating: 0x78, count: 100000)
+        bytes[48 * 1024 - 1] = 0xff
+        XCTAssertThrowsError(try ExportArtifactTextPreview.make(from: previewArtifact(bytes)))
     }
 
     func testSecureFileCommitRejectsSameLengthMutationBeforeReplacingDestination() throws {

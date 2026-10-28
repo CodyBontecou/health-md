@@ -225,7 +225,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             operation.artifacts.map(\.artifact.relativePath)
         )
         XCTAssertEqual(
-            preview.map(\.data),
+            preview.map { Data($0.preview.head.utf8) },
             nativePlan.artifacts.map(\.inlineData)
         )
     }

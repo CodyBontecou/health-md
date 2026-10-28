@@ -121,6 +121,15 @@ enum TestMode {
         }
     }
 
+    static var healthKitExportPreviewFormats: Set<ExportFormat> {
+        env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FORMATS") == "all" ? Set(ExportFormat.allCases) : [.markdown]
+    }
+
+    /// Explicit synthetic large-source scenario; never reads or creates HealthKit records.
+    static var healthKitExportPreviewLargeArchive: Bool {
+        useHealthKitExportPreviewFixtures && env("UITEST_HEALTHKIT_EXPORT_PREVIEW_LARGE_ARCHIVE") == "true"
+    }
+
     static var healthKitExportPreviewRangeSummary: Bool {
         env("UITEST_HEALTHKIT_EXPORT_PREVIEW_RANGE_SUMMARY") != "false"
     }

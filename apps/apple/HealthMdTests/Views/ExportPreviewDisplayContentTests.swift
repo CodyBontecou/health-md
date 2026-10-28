@@ -46,10 +46,11 @@ final class ExportPreviewDisplayContentTests: XCTestCase {
             XCTAssertEqual(single?.map(\.format), [format], "Selecting \(format) alone must keep complete attestation")
         }
         for artifact in artifacts {
-            XCTAssertTrue(String(decoding: artifact.data, as: UTF8.self).contains("apple-v11"))
+            XCTAssertEqual(artifact.preview.omittedByteCount, 0)
+            XCTAssertTrue(artifact.preview.head.contains("apple-v11"))
         }
         let json = try XCTUnwrap(artifacts.first { $0.format == .json })
-        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: json.data) as? [String: Any])
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(json.preview.head.utf8)) as? [String: Any])
         XCTAssertEqual(object["schema_version"] as? Int, 11)
         let range = try HealthRollupRangeRequest(ownerDateIdentifiers: ["2026-07-02"],
             calendarTimeZoneIdentifier: zone.identifier)

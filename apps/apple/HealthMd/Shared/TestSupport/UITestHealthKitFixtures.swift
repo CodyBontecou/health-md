@@ -2,7 +2,8 @@
 import Foundation
 
 enum UITestHealthKitFixtures {
-    static func exportPreviewHealthData(for date: Date, includeGranularData: Bool) -> HealthData {
+    static func exportPreviewHealthData(for date: Date, includeGranularData: Bool,
+        includeLargeSourceArchive: Bool = false) -> HealthData {
         let context = AppleSleepCaptureContext.resolve(attribution: HealthKitManager.shared.sleepDayAttribution)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = context.timeZone
@@ -179,6 +180,23 @@ enum UITestHealthKitFixtures {
                 minHeartRate: 118
             )
         ]
+
+        if includeLargeSourceArchive {
+            let source = HealthKitRecord(originalUUID: UUID(uuidString: "10000000-0000-0000-0000-000000000091")!,
+                objectTypeIdentifier: "HKQuantityTypeIdentifierHeartRate", recordKind: .quantity,
+                selectedMetricIDs: ["heart_rate_avg"], includedBecause: .selectedMetric,
+                startDate: time(hour: 6), endDate: time(hour: 6),
+                sourceRevision: HealthKitSourceRevision(name: "Synthetic preview", bundleIdentifier: "com.example.synthetic-preview"),
+                metadata: ["synthetic_large_value": .string(String(repeating: "x", count: 9 * 1024 * 1024))],
+                payload: .quantity(HealthKitQuantityPayload(value: 55, unit: "count/min")))
+            data.healthKitRecordArchive = HealthKitRecordArchive(captureStatus: .complete,
+                dailyOwnership: HealthKitDailyOwnershipMetadata(
+                    ownerDate: HealthKitDailyOwnershipMetadata.ownerDate(for: day,
+                        calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier),
+                    intervalStart: day, intervalEnd: calendar.date(byAdding: .day, value: 1, to: day)!,
+                    calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier), records: [source])
+            data.healthKitRecordCaptureStatus = .complete
+        }
 
         return data
     }

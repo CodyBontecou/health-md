@@ -282,7 +282,9 @@ struct ExportTabView: View {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
                             includeGranularData: advancedSettings.effectiveDetailPolicy
-                                .includesSelectedTimeSeries
+                                .includesSelectedTimeSeries,
+                            includeLargeSourceArchive: TestMode.healthKitExportPreviewLargeArchive
+                                && advancedSettings.effectiveDetailPolicy.includesCanonicalArchive
                         )
                     }
                     #endif

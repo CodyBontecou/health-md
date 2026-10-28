@@ -778,7 +778,7 @@ struct ExportPreviewView: View {
 
             if settings.summaryOnlyModeEnabled { continue }
 
-            let plannedContentByFormat: [ExportFormat: String]?
+            let plannedContentByFormat: [ExportFormat: ExportPreviewDisplayContent]?
             if targetType == .localFile {
                 do {
                     if let artifacts = try await AppleLooseDailyExportPreviewPlanner.artifacts(
@@ -786,10 +786,9 @@ struct ExportPreviewView: View {
                         settingsSnapshot: operationSnapshot,
                         planner: appleLooseDailyPlanner
                     ) {
-                        var content: [ExportFormat: String] = [:]
+                        var content: [ExportFormat: ExportPreviewDisplayContent] = [:]
                         for artifact in artifacts {
-                            guard let rendered = String(data: artifact.data, encoding: .utf8),
-                                  content.updateValue(rendered, forKey: artifact.format) == nil else {
+                            guard content.updateValue(.make(from: artifact.preview), forKey: artifact.format) == nil else {
                                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                             }
                         }
@@ -826,7 +825,7 @@ struct ExportPreviewView: View {
                     if let plannedContentByFormat {
                         // The plan was validated as complete above; a selected shadow/Rust preview
                         // never reaches the legacy nonthrowing renderer.
-                        content = plannedContentByFormat[format]!
+                        content = plannedContentByFormat[format]!.text
                     } else {
                         content = healthData.export(format: format, settings: settings)
                     }
@@ -835,7 +834,8 @@ struct ExportPreviewView: View {
                         filename: filename,
                         folderPath: previewFolderPath(for: date, format: format),
                         kind: .exportFormat(format),
-                        content: content
+                        content: content,
+                        preparedDisplayContent: plannedContentByFormat?[format]
                     )
                 }
 
@@ -1061,14 +1061,15 @@ struct ExportPreviewView: View {
             let artifacts = try await AppleLooseDailyExportPreviewPlanner.rangeArtifacts(
                 healthData: healthData, requestedRange: requestedRange,
                 settingsSnapshot: settingsSnapshot, planner: planner)
-            let files = try artifacts.map { planned -> FilePreview in
-                guard let content = String(data: try planned.artifact.content.materializedData(), encoding: .utf8),
-                      let filename = planned.artifact.relativePath.split(separator: "/").last else {
+            let previews = try await AppleLooseDailyExportPreviewPlanner.textPreviews(for: artifacts.map(\.artifact))
+            let files = try zip(artifacts, previews).map { planned, preview -> FilePreview in
+                guard let filename = planned.artifact.relativePath.split(separator: "/").last else {
                     throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                 }
                 let folder = planned.artifact.relativePath.split(separator: "/").dropLast().joined(separator: "/")
                 return FilePreview(id: planned.artifact.id, filename: String(filename), folderPath: folder,
-                    kind: .rollupSummary(.range, planned.format), content: content)
+                    kind: .rollupSummary(.range, planned.format), content: ExportPreviewDisplayContent.make(from: preview).text,
+                    preparedDisplayContent: .make(from: preview))
             }
             return DatePreview(id: Date.distantFuture, date: Date.distantFuture,
                 dateLabel: "Roll-up summaries", folderPath: previewRollupFolderPath(for: nil), files: files)
@@ -1347,7 +1348,7 @@ private struct FileContentView: View {
     let file: FilePreview
 
     private var displayContent: ExportPreviewDisplayContent {
-        ExportPreviewDisplayContent.make(from: file.content)
+        file.preparedDisplayContent ?? ExportPreviewDisplayContent.make(from: file.content)
     }
 
     var body: some View {
@@ -1396,6 +1397,13 @@ struct ExportPreviewDisplayContent: Equatable {
     var isTruncated: Bool { omittedByteCount > 0 }
     var originalSizeLabel: String { Self.sizeLabel(for: originalByteCount) }
     var omittedSizeLabel: String { Self.sizeLabel(for: omittedByteCount) }
+
+    static func make(from preview: ExportArtifactTextPreview) -> ExportPreviewDisplayContent {
+        guard preview.omittedByteCount > 0 else { return make(from: preview.head) }
+        let marker = "\n\n… Preview truncated: \(sizeLabel(for: preview.omittedByteCount)) omitted from the middle of this \(sizeLabel(for: preview.originalByteCount)) file. …\n\n"
+        return ExportPreviewDisplayContent(text: preview.head + marker + preview.tail,
+            originalByteCount: preview.originalByteCount, omittedByteCount: preview.omittedByteCount)
+    }
 
     static func make(
         from content: String,
@@ -1504,7 +1512,9 @@ private struct FilePreview: Identifiable {
     let kind: PreviewFileKind
     let content: String
 
-    var byteCount: Int { content.utf8.count }
+    var preparedDisplayContent: ExportPreviewDisplayContent? = nil
+
+    var byteCount: Int { preparedDisplayContent?.originalByteCount ?? content.utf8.count }
 
     var sizeLabel: String {
         let bytes = byteCount

@@ -367,6 +367,16 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             XCTAssertGreaterThan(file.descriptor.byteCount, 8 * 1024 * 1024)
             try file.validateIntegrity()
         }
+        let optionalPreviews = try await AppleLooseDailyExportPreviewPlanner.artifacts(
+            healthData: day, settingsSnapshot: snapshot, planner: AppleLooseDailyExportPlanner())
+        let previews = try XCTUnwrap(optionalPreviews)
+        XCTAssertEqual(previews.count, 2)
+        for preview in previews {
+            let original = try XCTUnwrap(operation.artifacts.first { $0.artifact.relativePath == preview.relativePath })
+            XCTAssertEqual(UInt64(preview.preview.originalByteCount), original.artifact.byteCount)
+            XCTAssertGreaterThan(preview.preview.omittedByteCount, 8 * 1024 * 1024)
+            XCTAssertLessThanOrEqual(preview.preview.head.utf8.count + preview.preview.tail.utf8.count, 64 * 1024)
+        }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("SyntheticWakeVault-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
