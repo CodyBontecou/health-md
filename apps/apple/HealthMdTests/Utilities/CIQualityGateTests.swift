@@ -252,6 +252,7 @@ final class CIQualityGateTests: XCTestCase {
             return names
         }
         let expectedSelections: Set<String> = [
+            "ExportProfilesJourneyUITests/testCreatingAPIProfileKeepsSelectedEndpointOnFirstSave",
             "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
             "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
             "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
@@ -276,7 +277,7 @@ final class CIQualityGateTests: XCTestCase {
             "HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
             "HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot",
         ]
-        XCTAssertEqual(selections.count, 24, "PR smoke must preserve twenty phone and four tablet executions")
+        XCTAssertEqual(selections.count, 25, "PR smoke must preserve twenty-one phone and four tablet executions")
         XCTAssertEqual(Set(selections), expectedSelections, "PR smoke must retain the historical UI inventory plus configured gateway admission")
         XCTAssertTrue(content.contains("needs: [changes, prepare-ui-artifacts, ios-ui-shards]"))
         XCTAssertTrue(content.contains("test \"$SHARDS_RESULT\" = success"))

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Health.md | Move Your Health Forward</title>
-  <meta name="description" content="A local-first bridge from Apple Health and Health Connect to files, scripts, and agents. The optional single-owner Health.md Cloud pilot retains only intentionally uploaded exports; no public signup.">
+  <title>Export Apple Health and Health Connect | Health.md</title>
+  <meta name="description" content="Export selected Apple Health and Health Connect data to CSV, JSON, Markdown, or Obsidian Bases. Choose your metrics, dates, and destination folder.">
   <link rel="canonical" href="https://healthmd.app/">
   <link rel="alternate" hreflang="en" href="https://healthmd.app/">
   <link rel="alternate" hreflang="es" href="https://healthmd.app/es/">
@@ -16,13 +16,13 @@
   <meta property="og:site_name" content="Health.md">
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="es_ES">
-  <meta property="og:title" content="Move Your Health Forward">
-  <meta property="og:description" content="A local-first bridge from Apple Health and Health Connect to files, scripts, and agents. The optional single-owner Health.md Cloud pilot retains only intentionally uploaded exports; no public signup.">
+  <meta property="og:title" content="Apple Health and Health Connect exports">
+  <meta property="og:description" content="Export selected Apple Health and Health Connect data to CSV, JSON, Markdown, or Obsidian Bases. Choose your metrics, dates, and destination folder.">
   <meta property="og:url" content="https://healthmd.app/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Health.md | Move Your Health Forward">
-  <meta name="twitter:description" content="A private, local bridge from Apple Health and Health Connect to the tools you already use.">
+  <meta name="twitter:title" content="Export Apple Health and Health Connect | Health.md">
+  <meta name="twitter:description" content="Your Apple Health and Health Connect data as CSV, JSON, Markdown, or Obsidian Bases files. Select metrics and dates, then save to a folder you choose.">
   <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
 
   <link rel="icon" href="favicon.ico" sizes="any">
@@ -47,8 +47,7 @@
     "inLanguage": "en",
     "downloadUrl": [
       "https://apps.apple.com/us/app/health-md/id6757763969",
-      "https://play.google.com/store/apps/details?id=com.healthmd.android",
-      "https://f-droid.org/packages/com.healthmd.android/"
+      "https://play.google.com/store/apps/details?id=com.healthmd.android"
     ],
     "description": "Health.md is a private bridge from Apple Health and Android Health Connect to local files, automation, CLI workflows, and local agents.",
     "isAccessibleForFree": true,
@@ -56,7 +55,7 @@
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "USD",
-      "description": "Google Play offers a free trial and one-time purchase; F-Droid includes Full Access."
+      "description": "Android access: Google Play provides free manual exports and a lifetime purchase. F-Droid catalog publication is pending."
     },
     "publisher": {
       "@type": "Organization",
@@ -82,7 +81,10 @@
       </a>
 
       <div class="header-nav">
-        <nav aria-label="Documentation"><a class="header-docs-link" href="docs/">Docs</a></nav>
+        <nav aria-label="Main navigation">
+          <a class="header-docs-link" href="docs/">Docs</a>
+          <a class="header-docs-link" href="/blog/" hreflang="en">Guides</a>
+        </nav>
       </div>
     </div>
   </header>
@@ -90,7 +92,7 @@
   <main>
     <section class="hero" id="top" aria-labelledby="hero-title">
       <div class="hero-intro reveal">
-        <h1 id="hero-title">Move your<br>health forward.</h1>
+        <h1 id="hero-title">Export your<br>health data.</h1>
         <p>Your data. Your rules.</p>
       </div>
 
@@ -243,8 +245,8 @@
         <ul class="workflow-links" aria-label="Export walkthroughs">
           <li><a href="apple-health-export/">Choose an export workflow</a></li>
           <li><a href="apple-health-to-csv/">Export to CSV</a></li>
-          <li><a href="blog/export-apple-health-data-to-obsidian/">Add health data to Obsidian</a></li>
-          <li><a href="docs/android/">Export from Health Connect</a></li>
+          <li><a href="blog/export-apple-health-data-to-obsidian/">Add health data to Obsidian</a> · <a href="blog/export-apple-health-data-to-obsidian/#starter-vault">Try the free starter vault</a></li>
+          <li><a href="health-connect-export/">Export from Health Connect</a></li>
         </ul>
 
       </div>
@@ -544,7 +546,7 @@
           <img src="assets/app-icon/icon_80x80.png" width="72" height="72" loading="lazy" decoding="async" alt="">
         </div>
         <h2 id="download-title">Take your health data with you.</h2>
-        <p class="download-offer">Google Play: try 5 exports free, then make one lifetime purchase. F-Droid: Full Access is included.</p>
+        <p class="download-offer">Google Play offers free manual exports, then a one-time lifetime purchase. F-Droid catalog publication is pending.</p>
         <div class="download-actions" aria-label="Download Health.md">
           <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
             <img src="assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
@@ -552,8 +554,8 @@
           <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
             <img src="assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
           </a>
-          <a class="hero-store-badge hero-store-badge-fdroid" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener" aria-label="Get Health.md on F-Droid">
-            <span class="fdroid-badge-kicker">OPEN-SOURCE BUILD</span>
+          <a class="hero-store-badge hero-store-badge-fdroid" href="/docs/android/#distribution-status" target="_blank" rel="noopener" aria-label="F-Droid publication status">
+            <span class="fdroid-badge-kicker">PUBLICATION PENDING</span>
             <strong>F-Droid</strong>
           </a>
         </div>

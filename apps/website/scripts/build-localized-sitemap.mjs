@@ -9,7 +9,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = path.join(ROOT, 'sitemap.xml');
 const SITE_ORIGIN = 'https://healthmd.app';
 // Content revision dates, not build dates. Privacy and terms change independently.
-const HOME_LASTMOD = '2026-10-25';
+const HOME_LASTMOD = '2026-10-27';
 const LEGAL_LASTMOD = { privacy: '2026-10-24', terms: '2026-09-28' };
 
 function absoluteRoute(routeId, locale) {

@@ -29,3 +29,11 @@ For explicitly requested physical-device deployment or QA, target the Pixel 7 de
 - **ADB path:** `~/Library/Android/sdk/platform-tools/adb`
 
 Use `./gradlew :app:installPlayDebug` and pass the serial to install the default Google Play channel on the physical device. Use `:app:assembleFdroidDebug` only when explicitly validating the F-Droid channel.
+
+## Agent verification
+
+Use the root [test selection guide](../../docs/testing-strategy.md) for focused
+iteration checks and native handoff. Route native integration compilation through
+root `make verify-native` so concurrent worktrees share one build queue. Inspect
+`make plan-native` before relying on automatic platform selection. A passing build
+is compilation evidence; runtime/device QA follows the root opt-in policy.

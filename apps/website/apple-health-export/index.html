@@ -160,7 +160,10 @@
               </tbody>
             </table>
           </div>
-          <p>Using Android? Start with the <a href="/docs/android/">Health Connect export guide</a>. Available records and export detail differ by platform.</p>
+          <p>Already have Apple's archive? Follow the <a href="/blog/apple-health-xml-export/">Apple Health XML guide</a> to open <code>export.xml</code> and choose an archive conversion or a fresh CSV export.</p>
+          <p>Already tried an export? If records are missing or the file is empty, follow the <a href="/docs/troubleshooting/">Apple Health export troubleshooting checklist</a> before exporting a larger range.</p>
+          <p>Choosing an export app? <a href="/blog/health-md-vs-health-auto-export/">Compare Health.md and Health Auto Export</a> for notes, CSV files, destination integrations, and automation.</p>
+          <p>Using Android? Start with the <a href="/health-connect-export/">Health Connect export guide</a>. Available records and export detail differ by platform.</p>
         </section>
 
         <section class="about-section" id="how-it-works">
@@ -191,7 +194,7 @@
           <div class="about-card-grid">
             <div class="about-card">
               <h3>CSV</h3>
-              <p>One file per day with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Opens in Excel, Google Sheets, or any analysis tool. <a href="/apple-health-to-csv/#open-in-spreadsheet">Open your CSV in a spreadsheet</a></p>
+              <p>One file per day with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Opens in Excel, Google Sheets, or any analysis tool. <a href="/apple-health-to-csv/#open-in-spreadsheet">Open your CSV in a spreadsheet</a> or follow the <a href="/blog/apple-health-to-excel/">Apple Health to Excel walkthrough</a> or the <a href="/blog/apple-health-to-google-sheets/">Google Sheets walkthrough</a></p>
             </div>
             <div class="about-card">
               <h3>JSON</h3>
@@ -203,11 +206,11 @@
             </div>
             <div class="about-card">
               <h3>Obsidian vault</h3>
-              <p>Write straight into your vault — daily notes and Obsidian Bases included. <a href="/blog/export-apple-health-data-to-obsidian/">How the Obsidian export works</a></p>
+              <p>Write straight into your vault — daily notes and Obsidian Bases included. <a href="/blog/export-apple-health-data-to-obsidian/">How the Obsidian export works</a>. <a href="/blog/export-apple-health-data-to-obsidian/#starter-vault">Try the free starter vault</a> before connecting your data</p>
             </div>
             <div class="about-card">
               <h3>Folders</h3>
-              <p>Save exports to a writable folder available through Files and keep them alongside the rest of your files. <a href="/docs/export/">Export destinations</a></p>
+              <p>Save exports to a writable folder available through Files and keep them alongside the rest of your files. If your files or vault live on a Mac, follow the <a href="/blog/health-md-for-macos/">Apple Health to Mac export walkthrough</a>. <a href="/docs/export/">Export destinations</a></p>
             </div>
             <div class="about-card">
               <h3>API endpoints</h3>
@@ -222,7 +225,7 @@
           <p>Inspect the <a href="/docs/reference/generated/core/summary-day.csv" download>synthetic CSV</a>, <a href="/docs/reference/generated/core/summary-day.json" download>JSON</a>, or <a href="/docs/reference/generated/core/summary-day.md">Markdown example</a> before choosing a format. These production-generated reference files contain fictional data, not a person's records.</p>
           <ul>
             <li>Compare the exported date, units, and a metric with Apple Health. Availability depends on your data sources, permissions, OS, and installed app version.</li>
-            <li>For last night's sleep, select the day the session started. See <a href="/docs/sleep-date-attribution/">sleep dates and daily notes</a>.</li>
+            <li>For last night's daily sleep summary on Tuesday morning, select Monday, usually Yesterday. The local journal window runs from Monday noon to Tuesday noon, including sleep that began after midnight on Tuesday. Raw source records use separate day-ownership rules. Follow the <a href="/blog/export-apple-health-sleep-data/">Apple Health sleep export guide</a>, including <a href="/docs/sleep-date-attribution/">sleep dates and daily notes</a>.</li>
             <li>If a value is missing, check the selected metrics, source synchronization, and Health permissions. Missing does not mean zero.</li>
             <li>If Preview succeeds but saving fails, check the <a href="/docs/folder-vault/">destination folder and file provider</a>.</li>
           </ul>
@@ -235,6 +238,7 @@
           <h2>Private by design</h2>
           <p class="section-lede"><strong>Core exports are local-first by default.</strong> Processing happens on your devices, and your records go to the destinations you choose. Core exports and direct device queries do not create a Health.md server copy.</p>
           <p>No account is required for core export workflows. The separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it, with no public signup and no automatic device sync. Read the <a href="/privacy-policy.html#retention">privacy policy</a> for retention, deletion, and the pilot's unbacked storage limits. Synced folders and other endpoints follow their own terms.</p>
+          <p>For a non-synced destination, follow the <a href="/blog/export-health-data-without-the-cloud/">export health data without the cloud guide</a>, including its separate checks for backups and downstream apps.</p>
         </section>
 
         <section class="about-section" id="keep-going">
@@ -242,8 +246,24 @@
           <h2>What to do with your export</h2>
           <div class="about-card-grid">
             <div class="about-card">
+              <h3>Create a PDF report</h3>
+              <p>Choose measurements and dates, review coverage, then explicitly save or share a document with the <a href="/blog/export-apple-health-data-pdf/">Apple Health PDF export guide</a>.</p>
+            </div>
+            <div class="about-card">
+              <h3>Export steps data</h3>
+              <p>Verify one daily total, then build a spreadsheet trend with the <a href="/blog/export-apple-health-steps-data/">Apple Health steps export guide</a>, including source-record and duplicate checks.</p>
+            </div>
+            <div class="about-card">
+              <h3>Export heart rate data</h3>
+              <p>Choose daily statistics or available timestamped samples with the <a href="/blog/export-apple-health-heart-rate/">Apple Health heart rate export guide</a>, including separate resting-rate and HRV selections. For SDNN averages or individual readings, follow the <a href="/blog/export-apple-health-hrv/">HRV export guide</a>.</p>
+            </div>
+            <div class="about-card">
+              <h3>Export workout sessions</h3>
+              <p>Inspect duration, distance, and available workout details with the <a href="/blog/export-apple-health-workouts/">Apple Health workout export guide</a>. Choose CSV for inspection or JSON to keep sessions separate.</p>
+            </div>
+            <div class="about-card">
               <h3>Analyze it with AI</h3>
-              <p>Drop a CSV or JSON export into Claude or ChatGPT, or connect an agent directly with scoped MCP queries. <a href="/health-data-for-ai/">Use Apple Health with AI</a></p>
+              <p>Drop a CSV or JSON export into Claude or ChatGPT, or connect an agent directly with scoped MCP queries. <a href="/health-data-for-ai/">Use Apple Health with AI</a> or follow the <a href="/blog/analyze-apple-health-with-claude/">Apple Health to Claude walkthrough</a> or <a href="/blog/apple-health-to-chatgpt/">ChatGPT walkthrough</a>.</p>
             </div>
             <div class="about-card">
               <h3>Just need CSV?</h3>

@@ -45,6 +45,10 @@ val instrumentedTestBuildType = providers.gradleProperty("healthmdInstrumentedTe
     .getOrElse("debug")
     .also { require(it in setOf("debug", "e2e")) }
 
+val ciAbi = providers.gradleProperty("healthmd.ciAbi").orNull?.also {
+    require(it in setOf("arm64-v8a", "x86_64")) { "healthmd.ciAbi must be arm64-v8a or x86_64" }
+}
+
 android {
     namespace = "com.healthmd"
     compileSdk = 36
@@ -63,7 +67,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+            abiFilters += ciAbi?.let(::listOf) ?: listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
         }
 
         buildConfigField(
@@ -284,4 +288,13 @@ dependencies {
     androidTestImplementation(libs.uiautomator)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
+}
+
+// A test-only ABI selection must never produce a release application.
+if (ciAbi != null) {
+    tasks.configureEach {
+        if (name.contains("Release")) {
+            doFirst { error("healthmd.ciAbi is debug-only; release requires every supported ABI") }
+        }
+    }
 }

@@ -8,9 +8,10 @@ description: Android용 Health.md를 설정하고, Health Connect 데이터를 M
   <p>Android용 Health.md는 기기 내 Health Connect 데이터를 읽고 Markdown, Obsidian Bases, JSON 또는 CSV 형식으로 사용자가 선택한 폴더에 저장합니다. 이 폴더 내보내기에는 Health.md 계정, 건강 데이터 클라우드 또는 구독이 필요하지 않습니다.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Google Play에서 다운로드</a>
-    <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">F-Droid에서 다운로드</a>
+    <a class="docs-button-secondary" href="#distribution-status">F-Droid 게시 상태</a>
     <a class="docs-button-secondary" href="/ko/docs/export/">내보내기 문서 읽기</a>
   </div>
+  <p id="distribution-status">F-Droid 카탈로그 게시는 대기 중입니다. 현재 Android 버전은 Google Play에서 받을 수 있습니다.</p>
 </div>
 
 <div class="reference-stats">

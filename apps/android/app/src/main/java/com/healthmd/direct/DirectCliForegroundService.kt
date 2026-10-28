@@ -34,6 +34,7 @@ class DirectCliForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var operation: Job? = null
     @Volatile private var stopRequested = false
+    private val notificationLock = Any()
 
     override fun onCreate() {
         super.onCreate()
@@ -56,8 +57,7 @@ class DirectCliForegroundService : Service() {
             coordinator.cancelActive()
             operation?.cancel()
             coordinator.reportDisconnected()
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
+            removeDirectForegroundNotification()
             stopSelf(startId)
             return START_NOT_STICKY
         }
@@ -65,6 +65,7 @@ class DirectCliForegroundService : Service() {
             stopRequested = true
             coordinator.cancelActive()
             operation?.cancel()
+            removeDirectForegroundNotification()
             operation = scope.launch {
                 try {
                     coordinator.forget()
@@ -139,42 +140,51 @@ class DirectCliForegroundService : Service() {
     }
 
     private fun updateNotification(state: DirectCliConnectionState) {
-        val manager = getSystemService(NotificationManager::class.java)
-        if (stopRequested && state is DirectCliConnectionState.Idle) {
-            manager.cancel(NOTIFICATION_ID)
-            return
-        }
-        val notification = when (state) {
-            DirectCliConnectionState.Idle -> notification(
-                getString(R.string.direct_cli_notification_idle),
-            )
-            DirectCliConnectionState.Pairing -> notification(
-                getString(R.string.direct_cli_notification_pairing),
-                true,
-            )
-            DirectCliConnectionState.WaitingForCli -> notification(
-                getString(R.string.direct_cli_notification_connecting),
-                true,
-            )
-            is DirectCliConnectionState.Connected -> notification(
-                getString(R.string.direct_cli_status_connected, state.listenerName),
-                true,
-            )
-            is DirectCliConnectionState.Transferring -> {
-                val progress = if (state.totalBytes > 0) {
-                    ((state.completedBytes * 100) / state.totalBytes).toInt().coerceIn(0, 100)
-                } else {
-                    0
-                }
-                notification(
-                    getString(R.string.direct_cli_notification_transferring),
-                    progress = progress,
+        synchronized(notificationLock) {
+            val manager = getSystemService(NotificationManager::class.java)
+            if (stopRequested) return@synchronized
+            val notification = when (state) {
+                DirectCliConnectionState.Idle -> notification(
+                    getString(R.string.direct_cli_notification_idle),
                 )
+                DirectCliConnectionState.Pairing -> notification(
+                    getString(R.string.direct_cli_notification_pairing),
+                    true,
+                )
+                DirectCliConnectionState.WaitingForCli -> notification(
+                    getString(R.string.direct_cli_notification_connecting),
+                    true,
+                )
+                is DirectCliConnectionState.Connected -> notification(
+                    getString(R.string.direct_cli_status_connected, state.listenerName),
+                    true,
+                )
+                is DirectCliConnectionState.Transferring -> {
+                    val progress = if (state.totalBytes > 0) {
+                        ((state.completedBytes * 100) / state.totalBytes).toInt().coerceIn(0, 100)
+                    } else {
+                        0
+                    }
+                    notification(
+                        getString(R.string.direct_cli_notification_transferring),
+                        progress = progress,
+                    )
+                }
+                is DirectCliConnectionState.Completed -> notification(completionText(state.outcome))
+                is DirectCliConnectionState.Failed -> notification(failureText(state.reason))
             }
-            is DirectCliConnectionState.Completed -> notification(completionText(state.outcome))
-            is DirectCliConnectionState.Failed -> notification(failureText(state.reason))
+            manager.notify(NOTIFICATION_ID, notification)
         }
-        manager.notify(NOTIFICATION_ID, notification)
+    }
+
+    private fun removeDirectForegroundNotification() {
+        // A publication already in progress must retire before final removal.
+        // Queued state emissions cannot recreate the notification after stop.
+        synchronized(notificationLock) {
+            stopRequested = true
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
+        }
     }
 
     private fun notification(

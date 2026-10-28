@@ -1621,12 +1621,21 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         var address = sockaddr_in()
         address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         address.sin_family = sa_family_t(AF_INET)
-        address.sin_port = 0
-        address.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
-        let result = withUnsafePointer(to: &address) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Darwin.bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+        // NWListener binds wildcard addresses. Probe the same scope, outside
+        // the OS ephemeral range used concurrently by the Rust socket suite.
+        // A loopback-only port-zero probe can select a port already occupied on
+        // another interface, or immediately reused by an outgoing connection.
+        address.sin_addr = in_addr(s_addr: INADDR_ANY)
+        var result: Int32 = -1
+        for _ in 0..<32 {
+            address.sin_port = UInt16.random(in: 20_000...40_000).bigEndian
+            result = withUnsafePointer(to: &address) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                    Darwin.bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+                }
             }
+            if result == 0 { break }
+            guard errno == EADDRINUSE else { throw POSIXError(.EIO) }
         }
         guard result == 0 else { throw POSIXError(.EADDRINUSE) }
         var bound = sockaddr_in()

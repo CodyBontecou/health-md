@@ -40,6 +40,7 @@ EXPECTED_TESTS = [
     "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab",
     "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
     "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
+    "ExportProfilesJourneyUITests/testCreatingAPIProfileKeepsSelectedEndpointOnFirstSave",
     "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
     "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
     "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
@@ -519,7 +520,7 @@ class WorkflowExecutionTests(unittest.TestCase):
 
     def test_every_phone_and_tablet_case_has_an_implemented_test_method(self) -> None:
         from ios_ui_shards import SHARDS
-        self.assertEqual(sum(map(len, SHARDS)), 24)
+        self.assertEqual(sum(map(len, SHARDS)), 25)
         for lane in SHARDS:
             for selection in lane:
                 suite, method = selection.split("/")

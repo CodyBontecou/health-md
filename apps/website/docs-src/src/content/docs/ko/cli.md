@@ -1,6 +1,6 @@
 ---
-title: "Health.md CLI"
-description: "독립 실행형 healthmd CLI를 macOS, Linux, Windows에 설치하고 iPhone 또는 Android 기기와 직접 페어링하여 준비 상태 확인, 데이터 내보내기, 쿼리 실행, 영속 작업 관리를 수행합니다. Mac 앱이 필요 없습니다."
+title: "Apple Health 및 Health Connect CLI"
+description: "Health.md로 터미널에서 Apple Health 또는 Health Connect 데이터를 내보내세요. macOS, Linux, Windows용 미리보기 CLI이며 휴대전화에서 앱을 열고 페어링합니다."
 ---
 
 독립 실행형 `healthmd` CLI는 macOS, Linux, Windows에서 작동하며 iPhone(프로토콜 v1) 또는 Android(프로토콜 v2)에서 열린 Health.md 앱과 직접 페어링합니다. Mac용 Health.md를 전혀 필요로 하지 않고, 백엔드 선택도 존재하지 않으며, 컴퓨터에서 Apple Health나 Health Connect를 읽지 않습니다.
@@ -18,6 +18,22 @@ description: "독립 실행형 healthmd CLI를 macOS, Linux, Windows에 설치�
 </div>
 
 macOS 또는 Linux에서는 <code>brew install CodyBontecou/tap/healthmd</code>로 미리보기를 설치합니다. 출시 증거가 명시하는 정확한 모바일 빌드를 사용하세요. 패키지 게시는 모바일 호환성을 증명하지 않습니다.
+
+## 휴대전화에서 첫 내보내기
+
+Windows와 다른 설치 방법은 [설치 안내](/ko/docs/cli/installation/)를 확인하세요. 페어링 전에 [호환 모바일 빌드](/ko/docs/cli-direct/)를 확인합니다. 휴대전화에서 Health.md를 계속 열어 두고 Direct CLI Access를 활성화한 뒤 내보낼 건강 카테고리를 허용하세요.
+
+컴퓨터에 폴더를 만들고 아래 `/absolute/path/to/HealthVault`를 해당 기존 폴더의 절대 경로로 바꾸세요. Windows에서는 전체 Windows 경로를 사용합니다. 페어링 안내를 따르고 준비 상태를 확인한 다음 하루를 내보냅니다.
+
+```bash
+healthmd direct pair --transport manual-ip
+healthmd status
+healthmd export --yesterday --destination /absolute/path/to/HealthVault
+```
+
+성공하면 대상 폴더를 열어 기록된 파일을 확인하세요. 휴대전화가 내보내기를 생성하고 CLI가 검증된 파일을 컴퓨터에 저장합니다. 시간이 초과되면 취소되었다고 가정하지 말고 [상태를 확인하고 작업을 재개](/ko/docs/cli-jobs/)하세요.
+
+### 지원 플랫폼
 
 독립 실행형 Rust CLI는 macOS, Linux, Windows에서 작동하고 Manual IP 또는 Tailscale 직접 연결을 사용하며 Mac 앱이 필요 없습니다. 프로토콜 v1으로 iPhone 소스와, 프로토콜 v2로 Android 소스와 페어링하며 Swift↔Rust 및 Kotlin↔Rust 자동 호환성 게이트를 갖춥니다. 프로토콜 호환성은 구현되었지만, 첫 검증된 안정 버전 전에 실기기 출시 QA를 완료해야 합니다. 체크섬 아카이브, PowerShell 설치 관리자, `cargo install healthmd-cli --locked`가 매 출시에 함께 제공됩니다.
 

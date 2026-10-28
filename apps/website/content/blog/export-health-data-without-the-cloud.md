@@ -1,11 +1,18 @@
 ---
-title: "How to export your health data without the cloud."
-description: "Keep your Apple Health export fully local: what to check in any exporter, and how Health.md keeps the cloud out of the path."
-lead: "Local export is a checklist, not a vibe: where the read happens, where the file lands, and who else gets a copy."
+title: "How to export health data without the cloud"
+description: "Export Apple Health to a local folder with Health.md. Choose On My iPhone, verify saved files, and check sync, backup, and analysis settings before sharing records."
+lead: "For a local Apple Health export, choose a non-synced folder on your iPhone, export a small selection, and inspect the saved file. Review backups and any app you open it in separately."
 date: "2026-09-26T12:00:00.000Z"
-updated: "2026-09-26T12:00:00.000Z"
+updated: "2026-10-25"
 category: "Workflow guide"
-draft: true
+related:
+  - local-first-health-data-architecture
+  - export-apple-health-data-to-obsidian
+  - apple-health-xml-export
+draft: false
+verified: "2026-10-25"
+verified_by: "Codex (agent)"
+verified_method: traced
 tags:
   - healthmd
   - apple-health
@@ -13,59 +20,82 @@ tags:
   - local-first
 ---
 
-Exporting your health data sounds like a local operation. It usually isn't. Plenty of "export" apps route your data through their own servers, require an account before you can even start, or hand the file to a sync service without telling you. None of that is visible in the App Store screenshots.
+You can export selected Apple Health data with Health.md without sending that export through a Health.md server. The iPhone reads authorized HealthKit data, builds the output on the device, and writes it to the folder you choose. No Health.md account is required for this local folder workflow.
 
-If you want an export that stays yours — no server in the middle, no account, no mystery copy — you don't need to read a whitepaper. You need a short checklist and a tool that passes it.
+Keeping the resulting files out of cloud storage takes another decision: choose a **non-synced local folder**, then check its backup settings and what happens when you open or share the files. Selecting a local destination does not change your existing Apple Health, iCloud, or device-backup settings.
 
-## Four questions for any health exporter
+<a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
-For a local folder export, ask these before you trust the tool with your health data. The answers should be obvious in under a minute; if they're buried in a privacy policy, that's an answer too.
+Health.md includes **5 free export actions**, followed by a single lifetime unlock. This manual iPhone workflow needs no Mac. The steps below are for Apple Health; for Android's source and folder picker, use the [Health Connect export guide](/health-connect-export/).
 
-**1. Where does the read happen — on your phone or their server?**
-The read should happen on your device, through the platform's health API. If the app uploads your health records to process them, you're not exporting from your phone — you're giving a server your data and getting a file back.
+## What “without the cloud” covers
 
-**2. Does it need an account?**
-Writing a local file shouldn't require a login, a profile, or an email address. A cloud destination is different: ask what its account controls and what data the service retains.
+This guide keeps the **export path** on your phone: Apple Health → Health.md → a chosen local folder. It does not certify that your phone, its backups, or every app you use is cloud-free.
 
-**3. Where does the file land — a folder you chose?**
-A local folder export ends with a file in a place you picked: a folder, your notes vault, your own computer. If the file lands "in the app" with a share button as the only way out, the app is the destination, not a stop along the way.
+| Choice | What to check |
+| --- | --- |
+| On My iPhone | Local storage location; review app/device backup settings separately. |
+| iCloud Drive or a cloud-backed Files provider | The provider can sync the exported file under its own rules. An offline copy is not evidence that no cloud copy exists. |
+| An Obsidian vault or desktop folder | Inspect the actual location, sync software, and backups; the folder name alone does not establish where copies go. |
+| An API destination or AI upload | Selected records leave the folder workflow for that endpoint or model provider. |
 
-**4. Does anything get uploaded — and if so, where exactly?**
-Sometimes an upload is legitimate: you might *want* the file in your cloud storage. The question is whether the destination is your explicit choice, or a silent hop through the vendor's cloud on the way there.
+Apple distinguishes [On My iPhone, iCloud Drive, external storage, and third-party Files locations](https://support.apple.com/en-us/102570). Use the location shown in Files, not just a folder called “Private” or “Health.”
 
-A vendor's own server should never be an unlisted stop on the route.
+The separate opt-in, single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it, has no public signup and no automatic device sync, and is not generally available. This local folder export does not upload to that pilot. See [Health.md's retention and destination policy](/privacy-policy.html#retention).
 
-## Doing it with Health.md
+## 1. Pick a local destination before exporting
 
-Health.md's local folder export passes that checklist, so the walkthrough is short:
+1. In Files, open **Browse → On My iPhone** and identify a writable local folder for the export. If the location is unavailable or you cannot create/select a folder there, resolve that before exporting; do not substitute iCloud Drive and assume it has the same storage boundary.
+2. In Health.md, select the **Local iPhone Folder** target and choose that folder through the folder control.
+3. Check the selected folder's location. For this walkthrough, it should be under On My iPhone, rather than iCloud Drive or a cloud provider's Files location.
 
-1. **Install and authorize.** Download Health.md and authorize the Apple Health categories you want to share. Health permissions stay under your control, and no Health.md account is required for this local folder workflow.
-2. **Pick what, where, and when.** Choose the metrics, a format (CSV, JSON, Markdown, or Obsidian), a non-synced local folder such as one under On My iPhone, and a date range.
-3. **Preview, then export.** You see exactly what will be written before anything is created. The files land where you chose — ready for spreadsheets, notes, or analysis tools.
+A folder on the phone is distinct from a guarantee about backups. Apple's [iCloud Backup documentation](https://support.apple.com/en-us/108770) explains that app data can be backed up even when it is not synced through iCloud Drive. Review the backup behavior of the app/location that owns your folder and any device or computer backup you use. This guide does not disable or change backups for you.
 
-For this local folder workflow, the read happens on your iPhone through HealthKit and the file is built on-device. The export goes directly to the folder you chose, without uploading it to a Health.md server. Local files still need protection: they can contain sensitive records and identifiers.
+If your requirement is that no copy ever reaches cloud storage, resolve both sync and backup settings before exporting personal records. Keep an appropriate recovery plan for the files you choose to retain; local storage alone does not protect against device loss.
 
-A folder is only fully local if it isn't synced. If *you* choose iCloud Drive, Google Drive, or Obsidian Sync as the destination, that provider's own sync and privacy model applies to the file. Check the folder's sync and backup settings before calling the export cloud-free.
+## 2. Authorize a small selection and preview it
 
-This guide doesn't use the separate opt-in, single-owner Health.md Cloud pilot. That pilot retains only API exports intentionally sent to it, has no public signup or automatic device sync, and is not generally available. See the [privacy policy](/privacy-policy.html) for that separate destination's boundaries.
+1. Authorize the Apple Health categories you want Health.md to read. Start with a metric such as Steps and one known day.
+2. Choose a format: **CSV** for a spreadsheet, **JSON** for structured processing, or **Markdown/Obsidian Bases** for notes. Start with **Summary** and add detail only when you need it.
+3. Tap **Preview** and inspect the date, selected values, and units. Previewing is a check of the requested output; verify the saved files after export too.
+4. Confirm that the local folder target is ready, then run the export.
 
-## What "private export" means in practice
+Follow [your first iPhone export](/docs/iphone-first-export/) for setup and permissions. A longer date range produces daily files; one export action can write multiple days and formats. See [formats and data detail](/docs/format/) for Summary, Detailed Time-Series, and the Apple-only Lossless Health Records archive.
 
-For this local folder workflow, there are a few concrete properties you can verify:
+Export only what you need for the task. A plain file is not anonymized: records and files can contain sensitive dates, source identifiers, provenance, and, with selected detailed/lossless data, additional records or attachments.
 
-- **No Health.md login for local export.** That doesn't anonymize your records; they can still contain identifiers from the source health data.
-- **Plain files you can delete.** You can open, move, or delete the local file yourself. Copies in synced folders, backups, or a recipient's service follow that destination's retention and deletion rules.
-- **No health values in product analytics.** Health.md's product telemetry excludes health values, health dates, and export contents. Those exclusions are separate from any upload you choose.
+## 3. Verify the actual saved file
 
-Keeping the folder off sync services keeps this export out of cloud storage. Choosing a synced folder or sending the file elsewhere changes that boundary.
+Open the selected folder in Files and inspect the output from the one-day export:
 
-## Going deeper
+- Confirm the file is in the intended **On My iPhone** location, not a similarly named synced folder.
+- Check the filename/date and open the file. Compare its values and units with the preview and intended selection.
+- If a metric or day is absent, check the source records, authorization, selected date, and metrics before expanding the range. An absent value does not establish a measured zero or identify a particular permission state.
+- If no file was saved, check folder access and reselect the destination if necessary. See [export troubleshooting](/docs/troubleshooting/).
 
-If you want the engineering version of this — where reads happen, how destinations and credentials are handled, and where the cloud boundaries are drawn — read [What local-first health-data architecture actually means](/blog/local-first-health-data-architecture/). That's the design contract; this post is the consumer checklist.
+For CSV, the header is `Date,Category,Metric,Value,Unit,Timestamp`. Value is mixed-type, so filter the metric and unit before numeric analysis. Some summary rows omit the final Timestamp field. The [CSV guide](/apple-health-to-csv/) explains the row shapes and provides a synthetic sample for testing imports without personal records.
 
-And if you're ready to try it: [export your Apple Health data](/apple-health-export/) with the formats and destinations above.
+Checking a saved file establishes its location and content. It is not a network audit or proof that backup software has no copy. The verification record for this article is based on source and documentation tracing, not a newly executed device export or traffic capture.
 
-<div class="cta-row">
-<a class="button" href="/apple-health-export/">Export your Apple Health data</a>
-<a class="button secondary" href="/docs/">Read the product docs</a>
-</div>
+## 4. Keep the same boundary when using the files
+
+Opening a local file in a different app can change where its data is stored. Inspect the destination for each next step:
+
+- **Spreadsheets:** choose a local workbook location and review that application's sync and backup behavior. Saving to OneDrive or importing into Google Sheets creates a provider-managed copy. The [Excel guide](/blog/apple-health-to-excel/) explains the import steps.
+- **Notes:** confirm the Obsidian vault's actual location and whether iCloud, Obsidian Sync, another sync tool, or backup software handles it. See [Apple Health to Obsidian](/blog/export-apple-health-data-to-obsidian/).
+- **AI analysis:** uploading a CSV or JSON to a model provider shares those records with that provider. Local CLI/MCP transport is a separate workflow; returned values still follow the agent's transcript, storage, and model-provider settings. See [health data and AI](/health-data-for-ai/).
+- **Sharing or API delivery:** inspect the intended recipient or endpoint and its storage rules before sending. An export that started locally can still gain remote copies later.
+
+Manual folder export does not mean the app never uses a network. Purchases, optional scheduling, provider authorization, and product operations have their own data paths. Health.md's [privacy policy](/privacy-policy.html#operations) describes those boundaries and the exclusions on health data in telemetry. Use this guide to choose a health-data destination, not as a promise that every request from the device is disabled.
+
+## Copies, backups, and deletion
+
+You can manage the saved file in Files, but deleting one copy is not a command to delete every other copy. Synced copies, backups, recipient services, app imports, and derived reports follow their own retention and deletion rules. Check those destinations separately when removing an export.
+
+Changing the export destination now does not relocate or delete older exports. Review previous folders and uploads if you used a synced or remote destination before. Protect retained files and the device or computer holding them as sensitive records.
+
+## A final check before exporting more
+
+Confirm the source is Apple Health on this iPhone, the target is your intended non-synced folder, the saved sample has the right date and contents, and sync/backup/downstream-app behavior matches your requirement. Then increase the range or selected metrics.
+
+For the broader export choices, see [how to export Apple Health data](/apple-health-export/). For the engineering explanation of device reads and destination boundaries, read [local-first health-data architecture](/blog/local-first-health-data-architecture/).

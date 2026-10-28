@@ -1,13 +1,17 @@
 ---
-title: "How to export Apple Health data to Obsidian."
-description: "Export Apple Health to Obsidian with Health.md: choose a vault, preview one day, and merge health metrics into daily notes or query frontmatter in Bases."
+title: "Apple Health to Obsidian: Daily Notes and a Free Starter Vault"
+description: "Try a free Obsidian vault with fictional health notes, charts, and a weekly review. Then export your own Apple Health data to daily notes with Health.md."
 lead: "Health.md writes selected Apple Health data into your Obsidian vault as Markdown or Bases-ready frontmatter. Choose a folder, preview one day, then export a separate health note or update an existing daily note."
 date: "2026-06-13"
-updated: "2026-10-25"
-verified: "2026-10-25"
+updated: "2026-10-27"
+verified: "2026-10-27"
 verified_by: "Codex (agent)"
 verified_method: mixed
 category: "Workflow guide"
+related:
+  - export-apple-health-sleep-data
+  - export-health-connect-to-obsidian
+  - health-md-for-macos
 draft: false
 image: "/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-configuration.png"
 imageAlt: "Health.md export configuration screen"
@@ -17,12 +21,64 @@ tags:
   - apple-health
   - obsidian
 ---
-<figure class="phone-shot">
-<img alt="Health.md export configuration screen showing Health, vault, export target, and date range controls" src="/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-configuration.png"/>
-<figcaption>Start with Health authorization, a vault destination, an export target, and the date range you want to write.</figcaption>
-</figure>
+
 
 Use Health.md when you want steps, sleep, heart metrics, or workouts beside your journal and training notes. You select the health data and destination; this Obsidian folder workflow does not create a Health.md server copy of your health data.
+
+<div id="starter-vault"></div>
+
+## Try a free starter vault first
+
+<div class="cta-row starter-actions">
+<a class="button" href="/assets/downloads/healthmd-obsidian-starter.zip">Download the free starter vault</a>
+<a class="button secondary" href="#your-first-note">Use your own health data</a>
+</div>
+
+No account, purchase, or health permissions are needed to explore it. All sample measurements and journal entries are fictional.
+
+<figure class="starter-chart">
+<img src="/assets/downloads/healthmd-starter-preview.svg" width="960" height="330" alt="Daily steps chart from the fictional starter vault: September 28 to October 25, 2026, with 28 observed days." decoding="async"/>
+<figcaption>A fixed chart snapshot from the download, generated from its fictional daily notes. The starter also includes sleep and resting heart rate snapshots.</figcaption>
+</figure>
+
+<div class="starter-preview-grid">
+<section class="starter-preview-card">
+<p class="starter-label">One daily note</p>
+<h3>Monday, October 19</h3>
+<dl><div><dt>Steps</dt><dd>8,450</dd></div><div><dt>Sleep</dt><dd>7.6 hours</dd></div><div><dt>Resting heart rate</dt><dd>59 bpm</dd></div></dl>
+<p>“A short walk before work. Kept the evening quiet.”</p>
+<p class="starter-caption">From Health/2026-10-19.md in the sample. Numeric properties sit beside a little journal context.</p>
+</section>
+<section class="starter-preview-card">
+<p class="starter-label">A completed weekly review</p>
+<h3>A week with more room to walk</h3>
+<p>October 19–25: <strong>66,580 steps</strong> and <strong>7.63 hours</strong> average sleep, each with 7 of 7 days observed.</p>
+<p>“The lunch walks and Saturday outing gave this week a rhythm I enjoyed.”</p>
+<p class="starter-caption">A filled-in fictional example. The review table and prose do not update automatically.</p>
+</section>
+</div>
+
+### A sortable log, ready to explore
+
+Open **Views/Health log.base → All days** in the downloaded vault. Here are three rows from the sample; the full log has 28 notes. Sleep and heart-rate values stay numeric, with units in the column names.
+
+<div class="starter-log-scroll" role="region" aria-label="Fictional starter vault log" tabindex="0">
+
+| Date | Steps | Sleep (hours) | Resting heart rate (bpm) |
+| --- | ---: | ---: | ---: |
+| 2026-10-19 | 8450 | 7.6 | 59 |
+| 2026-10-20 | 9630 | 7.8 | 58 |
+| 2026-10-21 | 7210 | 6.9 | 61 |
+
+</div>
+
+This is a web preview of the sample's contents, not an Obsidian screenshot. The vault includes a day with missing sleep so you can see how an absent measurement differs from zero.
+
+[Download the free Obsidian starter vault](/assets/downloads/healthmd-obsidian-starter.zip) to explore the workflow before connecting any health data. It includes 28 fictional daily notes, three chart snapshots, a sortable Bases log, a completed weekly review, and reusable review and reflection templates. No purchase or community plugin is needed to explore it.
+
+Unzip the download, choose **Open folder as vault** in Obsidian, and select **Health.md Starter**. Start with **Start here**. Use Obsidian 1.12 or later; enable the built-in Bases plugin for the log. The chart images are fixed sample snapshots. An included guide explains optional interactive charts using the separately installed Health.md Visualizations plugin.
+
+All sample measurements and journal entries are made up. When you are ready for your own data, follow the vault's **Use your own data** guide to keep the fictional files separate from real exports. The starter is free; the Health.md exporter has its own [trial and purchase terms](/about/#key-facts).
 
 ## Before you start
 
@@ -32,7 +88,19 @@ Use Health.md when you want steps, sleep, heart metrics, or workouts beside your
 
 This guide covers Apple Health on iPhone. For Android, follow [Health Connect to Obsidian](/blog/export-health-connect-to-obsidian/); the platforms do not expose identical metrics or export profiles. For current trial and purchase details, see [Health.md pricing](/about/#key-facts).
 
-## The quick workflow
+<div id="your-first-note"></div>
+
+## Export your first real note
+
+Keep the starter intact as a reference. Use a separate vault for your measurements, or back up your existing vault first. Copy the starter's **Templates** and **Views** if you want them; leave its fictional Health notes, completed review, and fixed charts behind. Follow **Guides/Use your own data** inside the download.
+
+<div class="cta-row starter-actions">
+<a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Export your own data with Health.md</a>
+</div>
+
+The app includes 5 free export actions, then a one-time lifetime unlock. The starter vault remains free.
+
+### The quick workflow
 
 1. Install Health.md on the iPhone that has access to Apple Health.
 2. Grant Health permissions for the metrics you want to export.
@@ -40,6 +108,11 @@ This guide covers Apple Health on iPhone. For Android, follow [Health Connect to
 4. Choose the export formats: Markdown, Obsidian Bases, JSON, CSV, or a mix.
 5. Start with Yesterday or a custom one-day range, tap Preview, then Export Data. Review the result and open the file in Obsidian.
 6. Optionally enable Daily Note Injection to merge metrics into existing daily notes.
+
+<figure class="phone-shot">
+<img alt="Health.md export configuration screen showing Health, vault, export target, and date range controls" src="/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-configuration.png"/>
+<figcaption>Start with Health authorization, a vault destination, an export target, and the date range you want to write.</figcaption>
+</figure>
 
 ## Choose an Obsidian destination
 
@@ -153,7 +226,7 @@ That local-first shape matters for health data. You can back up the vault, sync 
 ## Troubleshooting notes
 
 - If exports are empty, review Health.md’s Health permissions, selected categories, date range, and capture warnings. Empty output alone does not prove that the source contains no records.
-- If last night's sleep is missing, export the day the sleep session started. A session from Monday night to Tuesday morning belongs to Monday. See [sleep-date attribution](/blog/why-sleep-is-in-yesterdays-note/).
+- If last night's sleep is missing, check the local noon-to-noon sleep journal window. Monday night belongs to Monday, including bedtime after midnight on Tuesday. See [sleep-date attribution](/blog/why-sleep-is-in-yesterdays-note/).
 - Check that your watch or source app has synchronized and that the selected day contains the metric. An absent value is not a measured zero.
 - If Obsidian does not see the files, confirm the destination folder is inside the vault Obsidian is opening on that device.
 - If you use scheduled exports, remember that iOS background refresh is opportunistic. Treat the scheduled time as a target, not a guarantee.
@@ -161,7 +234,7 @@ That local-first shape matters for health data. You can back up the vault, sync 
 
 ## What to read next
 
-For exact field names, examples, and app screens, start with the Export docs, Daily Note Injection docs, and the production-backed Export Reference.
+Want to explore first? [Download the free starter vault](/assets/downloads/healthmd-obsidian-starter.zip). Ready for your own notes? [Get Health.md for iPhone](https://apps.apple.com/us/app/health-md/id6757763969) and verify one day before setting up a schedule. For exact field names and merge behavior, use the references below.
 
 <div class="cta-row">
 <a class="button" href="/docs/export/">Read Export docs</a>

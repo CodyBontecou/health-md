@@ -1180,6 +1180,7 @@ struct ExportProfileEditorSheet: View {
                 name: trimmedName,
                 target: target,
                 folderVaultID: target == .localIPhoneFolder ? folderVaultID : nil,
+                apiEndpointID: target == .apiEndpoint ? apiEndpointID : nil,
                 agentDataGatewayID: target == .agentDataGateway ? agentDataGatewayID : nil,
                 settings: snapshot
             )
@@ -1194,6 +1195,7 @@ struct ExportProfileEditorSheet: View {
                 String(localized: "Name", comment: "Profile editor name field label"),
                 text: $name
             )
+            .accessibilityIdentifier("export.profiles.editor.name")
         } header: {
             Text("Profile")
         } footer: {
@@ -1548,6 +1550,7 @@ private struct ExportProfileEndpointFormSheet: View {
                         text: $url
                     )
                     .keyboardType(.URL)
+                    .accessibilityIdentifier("export.profiles.editor.endpointURL")
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
 
