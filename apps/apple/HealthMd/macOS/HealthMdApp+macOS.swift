@@ -328,7 +328,21 @@ struct HealthMdApp: App {
         }
     }
 
+    @SceneBuilder
     var body: some Scene {
+        if TestMode.isUnitTesting {
+            // Mounting runtime views realizes their StateObjects and onAppear
+            // work even when the app's own startup task is suppressed.
+            Window("Health.md Unit Test Host", id: "unit-test-host") {
+                EmptyView()
+            }
+        } else {
+            runtimeScenes
+        }
+    }
+
+    @SceneBuilder
+    private var runtimeScenes: some Scene {
         Window("Mac Destination", id: "main-window") {
             MacContentView()
                 .environmentObject(schedulingManager)

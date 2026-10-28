@@ -6,6 +6,15 @@ import XCTest
 
 @MainActor
 final class MacUnitTestHostIsolationTests: XCTestCase {
+    func testUnitHostMountsOnlyItsEmptySceneInsteadOfRuntimeViews() {
+        XCTAssertTrue(TestMode.isUnitTesting)
+        let titles = NSApplication.shared.windows.map(\.title)
+        XCTAssertTrue(titles.contains("Health.md Unit Test Host"),
+                      "The app-hosted suite must mount its isolated test scene")
+        XCTAssertFalse(titles.contains("Mac Destination"),
+                       "Runtime views start discovery and must not mount in the unit host")
+    }
+
     func testUnitHostLaunchDoesNotInstallTheAppsNotificationDelegate() {
         XCTAssertTrue(TestMode.isUnitTesting)
         let center = UNUserNotificationCenter.current()
