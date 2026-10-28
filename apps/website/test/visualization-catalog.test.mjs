@@ -32,7 +32,7 @@ test("generated website catalog includes every plugin visualization exactly once
   assert.ok(Array.isArray(catalog.visualizations));
   const ids = catalog.visualizations.map((item) => item.type);
   assert.equal(new Set(ids).size, ids.length);
-  assert.ok(ids.length >= 58);
+  assert.ok(ids.length >= 62);
   for (const id of expectedV7Visualizations) assert.ok(ids.includes(id), id);
   for (const item of catalog.visualizations) {
     assert.ok(item.label, item.type);
@@ -133,7 +133,7 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
     readFile(new URL("plugin-activity-rings-preview.html", appleResourceRoot), "utf8"),
   ]);
 
-  assert.equal(externalSources.obsidian_plugin.revision, "368dba1ae80adb967e21fb887f52c8115c170b8c");
+  assert.equal(externalSources.obsidian_plugin.revision, "f1c07d1cdbc0af9c51c5e7169304722a3129f48c");
   assert.deepEqual(appleBundle, websiteBundle);
   assert.equal(appleDays, `window.HealthMdSampleData = ${websiteDays.trim()};\n`);
   assert.equal(appleRollups, `window.HealthMdRollupSampleData = ${websiteRollups.trim()};\n`);

@@ -25,4 +25,3 @@ is preserved under the Apple component. Its results log was never filled; actual
 corrected production timeline are recorded in the $19.99 note above. The plan's three-export
 assumption is historical and does not describe current quota behavior. Imported history retains
 its former path at `1511ae5ea:docs/experiments/health-md-1499-lifetime-price-experiment.md`.
-

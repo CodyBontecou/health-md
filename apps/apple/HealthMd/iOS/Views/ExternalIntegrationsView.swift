@@ -3,6 +3,7 @@ import SwiftUI
 struct ExternalIntegrationsView: View {
     @ObservedObject var manager: ExternalIntegrationManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isTroubleshootingExpanded = false
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
@@ -14,9 +15,6 @@ struct ExternalIntegrationsView: View {
                     providersSection
                     privacyNote
                     troubleshootingSection
-                    if let status = manager.statusMessage {
-                        statusCard(status)
-                    }
                 }
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.md)
@@ -31,10 +29,30 @@ struct ExternalIntegrationsView: View {
                 }
             }
         }
-        .overlay(alignment: .top) {
-            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if hasBottomStatus {
+                VStack(spacing: Spacing.s2) {
+                    ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                    if let status = manager.connectionStatus {
+                        connectionStatusBanner(status)
+                    }
+                }
                 .padding(.horizontal, Spacing.s4)
                 .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(reduceMotion ? nil : AnimationTimings.standard, value: hasBottomStatus)
+        .task(id: manager.connectionStatus?.id) {
+            guard let status = manager.connectionStatus else { return }
+            UIAccessibility.post(notification: .announcement, argument: status.message)
+            // Progress stays until the operation completes. Errors stay until
+            // dismissed/retried, so there is time to read actionable guidance.
+            guard status.kind != .progress, status.kind != .error, !TestMode.isUITesting else { return }
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            manager.dismissConnectionStatus(id: status.id)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {
@@ -255,13 +273,45 @@ struct ExternalIntegrationsView: View {
         return provider.defaultScopes.filter { $0 != "offline" && !granted.contains($0) }
     }
 
-    private func statusCard(_ status: String) -> some View {
-        SectionCard {
-            Label(status, systemImage: "info.circle.fill")
-                .font(.footnote)
-                .foregroundStyle(Color.textSecondary)
-                .padding(Spacing.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private var hasBottomStatus: Bool {
+        manager.connectionStatus != nil || configurationProtection.blockedChangeToastID != nil
+    }
+
+    private func connectionStatusBanner(_ status: ExternalIntegrationConnectionStatus) -> some View {
+        let title: String
+        let icon: String
+        let tint: Color
+        switch status.kind {
+        case .progress:
+            title = String(localized: "Connection in progress")
+            icon = "link"
+            tint = .accent
+        case .success:
+            title = String(localized: "Connection updated")
+            icon = "checkmark.circle.fill"
+            tint = .success
+        case .warning:
+            title = String(localized: "Connection needs attention")
+            icon = "exclamationmark.circle.fill"
+            tint = .warning
+        case .error:
+            title = String(localized: "Connection failed")
+            icon = "exclamationmark.triangle.fill"
+            tint = .error
         }
+        return ExportActivityBanner(
+            title: title,
+            systemImage: icon,
+            tint: tint,
+            message: status.message,
+            messageLineLimit: nil,
+            progress: nil,
+            showsIndeterminateProgress: status.kind == .progress,
+            progressAccessibilityLabel: String(localized: "Connection progress"),
+            details: [],
+            trailingText: nil,
+            accessibilityIdentifier: AccessibilityID.Status.connectionStatusBanner,
+            onDismiss: status.kind == .progress ? nil : { manager.dismissConnectionStatus(id: status.id) }
+        )
     }
 }

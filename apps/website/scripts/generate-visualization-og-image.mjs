@@ -15,7 +15,7 @@ const iconPath = path.join(root, "assets", "app-icon", "icon_1024x1024.png");
 const categoryLabels = {
   all: "All data", summary: "Summary & cards", activity: "Activity", heart: "Heart",
   respiratory: "Respiratory & oxygen", vitals: "Vitals & metabolism", body: "Body composition",
-  sleep: "Sleep", mental: "Mood & mind", medications: "Medications", mobility: "Mobility",
+  sleep: "Sleep", whoop: "WHOOP", mental: "Mood & mind", medications: "Medications", mobility: "Mobility",
   workouts: "Workouts", nutrition: "Nutrition", symptoms: "Symptoms",
   reproductive: "Reproductive health", hearing: "Hearing", "data-quality": "Export coverage"
 };
@@ -95,6 +95,7 @@ function htmlForOgCard({ viz, sampleData, rollupData, colors, theme }) {
   const chartBg = isDark ? "#000000" : "#ffffff";
   const subtleShadow = isDark ? "0 1px 2px rgba(0,0,0,.16)" : "0 2px 2px rgba(0,0,0,.04)";
   const codeSnippet = `health-viz · ${viz.id} · ${colors} / ${theme}`;
+  const chartHeight = viz.category === "whoop" ? 420 : 470;
 
   return `<!doctype html>
 <html>
@@ -164,6 +165,11 @@ function htmlForOgCard({ viz, sampleData, rollupData, colors, theme }) {
     .chart-wrap { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; border: 1px solid ${border}; border-radius: 16px; background: ${chartBg}; overflow: hidden; }
     canvas, .html-preview { position: relative; z-index: 1; max-width: 100%; }
     .html-preview { width: 640px; transform: scale(.94); transform-origin: center; }
+    ${viz.category === "whoop" ? `.frame { grid-template-rows: minmax(0, 1fr); }
+    .copy { gap: 24px; }
+    h1 { font-size: 40px; line-height: 44px; letter-spacing: -1.6px; }
+    p { width: auto; margin-top: 16px; font-size: 18px; line-height: 26px; letter-spacing: -.2px; }
+    .chart-column, .chart-wrap { min-height: 0; }` : ""}
   </style>
 </head>
 <body class="theme-${theme}">
@@ -178,9 +184,9 @@ function htmlForOgCard({ viz, sampleData, rollupData, colors, theme }) {
       <div class="code-card">${codeSnippet}</div>
     </section>
     <section class="chart-column">
-      <div class="chart-header"><span>Obsidian Plugin Preview</span><span class="palette"><span class="swatch"></span>${colors} / ${theme}</span></div>
+      <div class="chart-header"><span>${viz.category === "whoop" ? "Synthetic WHOOP preview" : "Obsidian Plugin Preview"}</span><span class="palette"><span class="swatch"></span>${colors} / ${theme}</span></div>
       <div class="chart-wrap">
-        <canvas id="chart" width="1280" height="940" style="width:640px;height:470px"></canvas>
+        <canvas id="chart" width="1280" height="${chartHeight * 2}" style="width:640px;height:${chartHeight}px"></canvas>
         <div id="html-preview" class="html-preview" hidden></div>
       </div>
     </section>
@@ -190,7 +196,9 @@ function htmlForOgCard({ viz, sampleData, rollupData, colors, theme }) {
     const rawRollupData = ${JSON.stringify(rollupData)};
     const viz = ${JSON.stringify({ id: viz.id, renderer: viz.renderer })};
     const baseConfig = ${JSON.stringify(viz.config)};
-    const config = Object.assign({}, baseConfig, { theme: "${theme}", colorScheme: "${colors}", height: Math.min(Number(baseConfig.height) || 360, 470) });
+    const config = Object.assign({}, baseConfig, { theme: "${theme}", colorScheme: "${colors}", height: Math.min(Number(baseConfig.height) || 360, ${chartHeight}) });
+    // Use fewer rows in the compact social card; the gallery keeps catalog defaults.
+    if (viz.id === "whoop-workout-strain") config.limit = Math.min(Number(config.limit) || 8, 8);
 
     function applyCreateOptions(el, options) {
       if (!options) return;
@@ -247,7 +255,7 @@ function htmlForOgCard({ viz, sampleData, rollupData, colors, theme }) {
       const canvas = document.getElementById("chart");
       const ctx = canvas.getContext("2d");
       ctx.setTransform(2, 0, 0, 2, 0, 0);
-      renderer(ctx, filteredData(config), 640, 470, config, themeObj, document.createElement("div"), { add() {} }, context);
+      renderer(ctx, filteredData(config), 640, ${chartHeight}, config, themeObj, document.createElement("div"), { add() {} }, context);
     }
     window.__OG_READY__ = true;
   </script>
@@ -314,8 +322,11 @@ async function waitForScreenshot(filePath, child, timeoutMs = 15000) {
 
 const chrome = spawn(chromePath, chromeArgs, { stdio: ["ignore", "pipe", "pipe"] });
 chrome.on("error", (error) => { throw error; });
+// Attach before screenshot polling: Chrome may exit as soon as it writes the
+// image, otherwise a late close listener leaves top-level await unsettled.
+const chromeClosed = new Promise((resolve) => chrome.once("close", resolve));
 await waitForScreenshot(outPath, chrome);
-await new Promise((resolve) => chrome.once("close", resolve));
+await chromeClosed;
 
 await fs.rm(tempDir, { recursive: true, force: true });
 console.log(`Generated ${path.relative(root, outPath)}`);
