@@ -4,6 +4,15 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.4.5] - 2026-10-28
+
+### Added
+- EU Dot (DD.MM.YYYY) date format, saved across launches and included in shared setups on Apple and Android.
+- WHOOP connection for recovery, strain, sleep, and workout exports.
+
+### Changed
+- Sleep-date guidance explains which night each export covers.
+
 ## [3.4.4] - 2026-10-27
 
 ### Added
