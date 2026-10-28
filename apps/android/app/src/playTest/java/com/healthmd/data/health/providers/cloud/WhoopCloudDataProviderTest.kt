@@ -20,6 +20,108 @@ class WhoopCloudDataProviderTest {
     private val clock = Clock.fixed(Instant.parse("2026-06-02T18:00:00Z"), ZoneOffset.UTC)
 
     @Test
+    fun dailySleepDoesNotAddThePreviousNightsOverlappingApiRecord() = runTest {
+        val previousNight = sleep(201, 7 * 3_600_000L)
+            .replace("2026-06-02T22:00:00Z", "2026-06-01T23:00:00Z")
+            .replace("2026-06-02T23:00:00Z", "2026-06-02T06:00:00Z")
+        val requestedNight = sleep(202, 8 * 3_600_000L)
+            .replace("2026-06-02T22:00:00Z", "2026-06-02T22:00:00Z")
+            .replace("2026-06-02T23:00:00Z", "2026-06-03T06:00:00Z")
+        val requests = mutableListOf<CloudHttpRequest>()
+        val data = provider { request ->
+            requests += request
+            if (request.url.path.endsWith("/sleep")) {
+                response("""{"records":[$requestedNight,$previousNight]}""")
+            } else if (request.url.path.endsWith("/body")) response("{}")
+            else response("""{"records":[]}""")
+        }.fetchHealthData(date)
+
+        assertThat(data.sleep.totalDuration.inWholeHours).isEqualTo(8)
+        assertThat(data.sleep.sessions).hasSize(1)
+        val sleepRequest = requests.single { it.url.path.endsWith("/sleep") }
+        assertThat(sleepRequest.url.query).startsWith("start=2026-06-02T12%3A00%3A00Z&end=2026-06-03T12%3A00%3A00Z")
+
+        val adjacentDays = provider { request ->
+            if (request.url.path.endsWith("/sleep")) response("""{"records":[$requestedNight,$previousNight]}""")
+            else if (request.url.path.endsWith("/body")) response("{}") else response("""{"records":[]}""")
+        }.fetchHealthDataRange(listOf(date.minusDays(1), date), zoneId = ZoneOffset.UTC)
+        assertThat(adjacentDays.map { it.sleep.totalDuration.inWholeHours }).containsExactly(7L, 8L).inOrder()
+    }
+
+    @Test
+    fun sleepWindowKeepsNapsAdditiveAndExcludesInvalidAndExactBoundaryRecords() = runTest {
+        fun session(id: Int, start: String, end: String, minutes: Long) = sleep(id, minutes * 60_000)
+            .replace("2026-06-02T22:00:00Z", start)
+            .replace("2026-06-02T23:00:00Z", end)
+        val records = listOf(
+            session(201, "2026-06-02T11:00:00Z", "2026-06-02T12:00:00Z", 60),
+            session(202, "2026-06-03T12:00:00Z", "2026-06-03T13:00:00Z", 60),
+            session(203, "2026-06-02T12:00:00Z", "2026-06-02T13:00:00Z", 60),
+            session(204, "2026-06-02T15:00:00Z", "2026-06-02T15:30:00Z", 30),
+            session(205, "2026-06-02T15:00:00Z", "2026-06-02T15:00:00Z", 60),
+            session(206, "2026-06-02T16:00:00Z", "2026-06-02T15:00:00Z", 60),
+            session(207, "not-a-timestamp", "2026-06-02T18:00:00Z", 60),
+        )
+        val data = provider { request ->
+            if (request.url.path.endsWith("/sleep")) response("""{"records":[${records.joinToString(",")}]}""")
+            else if (request.url.path.endsWith("/body")) response("{}") else response("""{"records":[]}""")
+        }.fetchHealthData(date)
+        assertThat(data.sleep.totalDuration.inWholeMinutes).isEqualTo(90)
+        assertThat(data.sleep.sessions).hasSize(2)
+    }
+
+    @Test
+    fun rangeUsesCapturedExportZoneAndMatchesSingleDayInThatZone() = runTest {
+        val zone = ZoneId.of("America/Los_Angeles")
+        val records = sleep(201)
+            .replace("2026-06-02T22:00:00Z", "2026-06-03T16:00:00Z")
+            .replace("2026-06-02T23:00:00Z", "2026-06-03T17:00:00Z")
+        val requests = mutableListOf<CloudHttpRequest>()
+        val transport: (CloudHttpRequest) -> CloudHttpResponse = { request ->
+            requests += request
+            if (request.url.path.endsWith("/sleep")) response("""{"records":[$records]}""")
+            else if (request.url.path.endsWith("/body")) response("{}") else response("""{"records":[]}""")
+        }
+        val ranged = provider(clock, transport).fetchHealthDataRange(listOf(date), zoneId = zone).single()
+        val single = provider(clock.withZone(zone), transport).fetchHealthData(date)
+        assertThat(ranged.sleep).isEqualTo(single.sleep)
+        assertThat(ranged.sleep.totalDuration.inWholeMinutes).isEqualTo(60)
+        requests.filter { it.url.path.endsWith("/sleep") }.forEach {
+            assertThat(it.url.query).startsWith("start=2026-06-02T19%3A00%3A00Z&end=2026-06-03T19%3A00%3A00Z")
+        }
+    }
+
+    @Test
+    fun sleepNoonsRespectBothDstTransitions() = runTest {
+        val zone = ZoneId.of("America/Los_Angeles")
+        for ((day, bounds) in listOf(
+            "2026-03-07" to ("2026-03-07T20%3A00%3A00Z" to "2026-03-08T19%3A00%3A00Z"),
+            "2026-10-31" to ("2026-10-31T19%3A00%3A00Z" to "2026-11-01T20%3A00%3A00Z"),
+        )) {
+            val requests = mutableListOf<CloudHttpRequest>()
+            provider(clock.withZone(zone)) { request -> requests += request; response("""{"records":[]}""") }
+                .fetchHealthData(LocalDate.parse(day))
+            val request = requests.single { it.url.path.endsWith("/sleep") }
+            assertThat(request.url.query).isEqualTo("start=${bounds.first}&end=${bounds.second}&limit=25")
+        }
+    }
+
+    @Test
+    fun crossingNoonPreservesWholeProviderStageAggregatesAndSourceTimes() = runTest {
+        val source = sleep(201, 90 * 60_000)
+            .replace("2026-06-02T22:00:00Z", "2026-06-02T11:00:00Z")
+            .replace("2026-06-02T23:00:00Z", "2026-06-02T13:00:00Z")
+        val data = provider { request ->
+            if (request.url.path.endsWith("/sleep")) response("""{"records":[$source]}""")
+            else if (request.url.path.endsWith("/body")) response("{}") else response("""{"records":[]}""")
+        }.fetchHealthData(date)
+        // WHOOP supplies whole-session stage totals, not timestamped stage intervals.
+        assertThat(data.sleep.totalDuration.inWholeMinutes).isEqualTo(90)
+        assertThat(data.sleep.sessions.single().startTime.hour).isEqualTo(11)
+        assertThat(data.sleep.sessions.single().endTime.hour).isEqualTo(13)
+    }
+
+    @Test
     fun compatibilityCollectionsFollowV2PagesAndKeepNewestScoredRecovery() = runTest {
         val requests = mutableListOf<CloudHttpRequest>()
         val provider = provider { request ->
@@ -54,7 +156,8 @@ class WhoopCloudDataProviderTest {
         assertThat(data.body.weight).isEqualTo(78.4)
         assertThat(requests).hasSize(7)
         requests.filterNot { it.url.path.endsWith("/body") }.forEach {
-            assertThat(it.url.query).startsWith("start=2026-06-02T00%3A00%3A00Z&end=2026-06-03T00%3A00%3A00Z&limit=25")
+            val hour = if (it.url.path.endsWith("/sleep")) "12" else "00"
+            assertThat(it.url.query).startsWith("start=2026-06-02T${hour}%3A00%3A00Z&end=2026-06-03T${hour}%3A00%3A00Z&limit=25")
             assertThat(it.url.query).doesNotContain("cycleId")
         }
         assertThat(requests.none { it.url.path.endsWith("/cycle") }).isTrue()
@@ -105,7 +208,10 @@ class WhoopCloudDataProviderTest {
         }.fetchHealthData(LocalDate.parse("2026-11-01"))
 
         requests.forEach {
-            assertThat(it.url.query).isEqualTo("start=2026-11-01T07%3A00%3A00Z&end=2026-11-02T08%3A00%3A00Z&limit=25")
+            val expected = if (it.url.path.endsWith("/sleep"))
+                "start=2026-11-01T20%3A00%3A00Z&end=2026-11-02T20%3A00%3A00Z&limit=25"
+            else "start=2026-11-01T07%3A00%3A00Z&end=2026-11-02T08%3A00%3A00Z&limit=25"
+            assertThat(it.url.query).isEqualTo(expected)
         }
         assertThat(data.workouts.single().duration.inWholeMilliseconds).isEqualTo(3_600_125L)
         assertThat(data.workouts.single().calories).isNull()
@@ -282,7 +388,7 @@ class WhoopCloudDataProviderTest {
 
     private fun sleep(id: Int?, lightMs: Long = 3_600_000) = """
         {"id":${id?.let { "\"00000000-0000-4000-8000-${it.toString().padStart(12, '0')}\"" } ?: "null"},
-         "start":"2026-06-02T00:00:00Z","end":"2026-06-02T01:00:00Z","score_state":"SCORED",
+         "start":"2026-06-02T22:00:00Z","end":"2026-06-02T23:00:00Z","score_state":"SCORED",
          "score":{"stage_summary":{"total_light_sleep_time_milli":$lightMs,"total_in_bed_time_milli":3600000}}}
     """.trimIndent()
 

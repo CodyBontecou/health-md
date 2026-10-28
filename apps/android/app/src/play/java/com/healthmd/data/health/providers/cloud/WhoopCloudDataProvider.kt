@@ -4,6 +4,7 @@ import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.BodyData
 import com.healthmd.domain.model.HeartData
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.SleepData
 import com.healthmd.domain.model.SleepSessionEntry
 import com.healthmd.domain.model.WorkoutData
@@ -123,10 +124,33 @@ class WhoopCloudDataProvider(
     override suspend fun fetchHealthData(date: LocalDate): HealthData {
         // Freeze this read's calendar zone, not the singleton provider's creation-time zone.
         val captureClock = clock ?: Clock.systemDefaultZone()
-        val zone = captureClock.zone
+        return fetchHealthData(date, captureClock.zone, LocalDate.now(captureClock))
+    }
+
+    override suspend fun fetchHealthDataRange(
+        dates: List<LocalDate>,
+        dataTypes: DataTypeSelection,
+        includeGranularData: Boolean,
+        zoneId: ZoneId,
+        pinnedCalendarDays: Boolean,
+    ): List<HealthData> {
+        val today = LocalDate.now((clock ?: Clock.systemUTC()).withZone(zoneId))
+        return dates.map { fetchHealthData(it, zoneId, today).filtered(dataTypes) }
+    }
+
+    private suspend fun fetchHealthData(date: LocalDate, zone: ZoneId, today: LocalDate): HealthData {
         val start = date.atStartOfDay(zone).toInstant().toString()
         val end = date.plusDays(1).atStartOfDay(zone).toInstant().toString()
-        val sleep = fetchCollection(SLEEP, start, end)
+        val sleepStart = date.atTime(12, 0).atZone(zone).toInstant()
+        val sleepEnd = date.plusDays(1).atTime(12, 0).atZone(zone).toInstant()
+        // WHOOP returns whole records intersecting its bounds. Select the sleep
+        // journal window independently of ordinary calendar-day metrics.
+        val sleep = fetchCollection(SLEEP, sleepStart.toString(), sleepEnd.toString()).filter { record ->
+            val sourceStart = (record["start"] as? JsonPrimitive)?.contentOrNull?.let { runCatching { Instant.parse(it) }.getOrNull() }
+            val sourceEnd = (record["end"] as? JsonPrimitive)?.contentOrNull?.let { runCatching { Instant.parse(it) }.getOrNull() }
+            sourceStart != null && sourceEnd != null && sourceEnd > sourceStart &&
+                sourceStart < sleepEnd && sourceEnd > sleepStart
+        }
         // Fetch once so daily energy and workout projections use the same provider snapshot.
         val workouts = fetchCollection(WORKOUT, start, end)
         val recoveries = fetchCollection(RECOVERY, start, end)
@@ -140,7 +164,7 @@ class WhoopCloudDataProvider(
             },
             heart = mapSectionOrDefault(HeartData()) { mapRecovery(recoveries) },
             // WHOOP provides a current profile, not a historical body measurement.
-            body = if (date == LocalDate.now(captureClock)) fetchBody() else BodyData(),
+            body = if (date == today) fetchBody() else BodyData(),
             workouts = mapSectionOrDefault(emptyList()) { mapWorkouts(workouts, zone) },
         )
     }

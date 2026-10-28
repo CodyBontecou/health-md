@@ -59,6 +59,8 @@ inferring them from the compatibility headline.
 
 ## Schema decision
 
+WHOOP compatibility reads use the same journal query window and explicit overlap selection, but WHOOP's API only supplies whole-session stage aggregates. Those aggregates are not prorated across noon. The [provider ledger](cloud-raw-provider-ledger.md#whoop-compatibility-sleep-journal-window) documents this provider-specific limitation; the timestamped-stage clipping rules above apply to Health Connect.
+
 This change conforms Android to the already-documented noon-to-noon sleep ownership contract while
 preserving the aggregation meaning of the frozen `ios-v4` and shipped `android-analytical-v5`
 profiles. It changes no public key, JSON type, unit, label, aggregation rule or frontmatter key, so
