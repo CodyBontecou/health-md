@@ -1,6 +1,9 @@
 package com.healthmd.domain.exportengine
 
 import com.healthmd.core.HealthMdCoreService
+import com.healthmd.data.export.frozenForAPIAction
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.data.export.APIExportEnvelopeBuilder
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FailedDateDetail
@@ -46,7 +49,7 @@ class FrozenAPIExportRequest private constructor(
     requestedDates: List<LocalDate>,
     records: List<HealthData>,
     failedDateDetails: List<FailedDateDetail>,
-    val settings: ExportSettings,
+    settings: ExportSettings,
     val mode: ExportEngineMode,
     val ids: APIExportIds,
     val calendarTimeZone: String,
@@ -55,16 +58,49 @@ class FrozenAPIExportRequest private constructor(
     val maxEncodedBytes: ULong,
     val suppliedPin: ExportEnginePin?,
 ) {
-    val profile: AndroidExportProfile = AndroidExportProfile.android_frozen_v4
+    val settings: ExportSettings = settings.frozenForAPIAction()
+    val captureContext: AndroidCaptureContext? = this.settings.executionSleepCaptureContext?.copy()
+    val profile: AndroidExportProfile = if (captureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS ||
+        suppliedPin?.profile == AndroidExportProfile.android_sleep_v6) AndroidExportProfile.android_sleep_v6
+        else AndroidExportProfile.android_frozen_v4
+    val envelopeVersion: Int = if (profile == AndroidExportProfile.android_sleep_v6)
+        APIExportEnvelopeBuilder.WAKE_DATE_API_EXPORT_SCHEMA_VERSION else APIExportEnvelopeBuilder.API_EXPORT_SCHEMA_VERSION
     val requestedDates: List<LocalDate> =
         Collections.unmodifiableList(requestedDates.toList())
-    val records: List<HealthData> = Collections.unmodifiableList(records.toList())
+    val records: List<HealthData> = Collections.unmodifiableList(if (profile == AndroidExportProfile.android_sleep_v6)
+            records.map { it.filtered(this.settings.metricSelection).immutableWakeDateSource() } else records.toList())
     val failedDateDetails: List<FailedDateDetail> =
         Collections.unmodifiableList(failedDateDetails.map { it.copy() })
     val dateRangeStart: LocalDate = this.requestedDates.first()
     val dateRangeEnd: LocalDate = this.requestedDates.last()
 
     init {
+        require(!this.settings.executionSleepCaptureAuthorityIsFrozen || captureContext != null) {
+            "API immutable capture authority is missing"
+        }
+        require(captureContext == null || captureContext.zoneId.id == calendarTimeZone) {
+            "API capture clock is incompatible"
+        }
+        if (profile == AndroidExportProfile.android_sleep_v6) {
+            require(mode == ExportEngineMode.rust && captureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
+                captureContext.exportProfileID == profile.publicProfileId && captureContext.zoneId.id == calendarTimeZone) {
+                "API successor capture authority is incompatible"
+            }
+            require(!this.settings.executionEngineAuthorityIsFrozen || suppliedPin != null) {
+                "API successor renderer authority is missing"
+            }
+            require(this.records.none { it.compatibilityProvenance != null || it.plannedWorkouts.isNotEmpty() || it.medicalResources.hasData }) {
+                "API successor native source is incompatible"
+            }
+        } else {
+            require(captureContext == null || captureContext.sleepDayAttribution == SleepDayAttribution.NIGHT_BEGINS) {
+                "historical API capture authority is incompatible"
+            }
+        }
+        require(suppliedPin == null || (suppliedPin.profile == profile && suppliedPin.engine == mode &&
+            suppliedPin.ianaTimeZone == calendarTimeZone && ExportEnginePinCodec.isStructurallyValid(suppliedPin))) {
+            "API renderer authority is incompatible"
+        }
         require(this.requestedDates.isNotEmpty()) { "API export date scope is empty" }
         require(this.requestedDates == this.requestedDates.distinct().sorted()) {
             "API export date scope is invalid"
@@ -130,6 +166,9 @@ class ProductionAPIExportNativePlanBuilder(
     private val envelopeBuilder: APIExportEnvelopeBuilder,
 ) : APIExportNativePlanBuilder {
     override fun plan(request: FrozenAPIExportRequest): ExportArtifactPlan {
+        require(request.profile == AndroidExportProfile.android_frozen_v4) {
+            "Successor API requires the Rust renderer"
+        }
         val batches = envelopeBuilder.buildBatches(
             requestedDates = request.requestedDates,
             records = request.records,
@@ -139,6 +178,7 @@ class ProductionAPIExportNativePlanBuilder(
             calendarTimeZone = request.calendarTimeZone,
             maxDaysPerBatch = request.maxDaysPerBatch,
             maxEncodedBytes = request.maxEncodedBytes,
+            captureContext = request.captureContext?.takeIf { request.profile == AndroidExportProfile.android_sleep_v6 },
         )
         val items = batches.mapIndexed { index, batch ->
             val content = batch.payload.encodeToByteArray()
@@ -163,7 +203,7 @@ class ProductionAPIExportNativePlanBuilder(
         }
         return ExportArtifactPlan(
             schema = ExportArtifactPlan.SCHEMA,
-            artifactPlanVersion = ExportArtifactPlan.VERSION,
+            artifactPlanVersion = request.profile.contractVersions.artifactPlan,
             requestId = request.ids.requestId,
             sessionId = request.ids.sessionId,
             profile = request.profile,
@@ -189,8 +229,12 @@ class HealthMdRustAPIExportPlanner(
 ) : APIExportRustPlanner {
     override suspend fun plan(request: FrozenAPIExportRequest): APIExportRustPlan =
         withContext(defaultDispatcher) {
-            require(request.profile == AndroidExportProfile.android_frozen_v4) {
-                "API v1 requires the frozen-v4 profile"
+            if (request.profile == AndroidExportProfile.android_sleep_v6 &&
+                request.requestedDates.zipWithNext().any { (first, second) -> first.plusDays(1) != second }) {
+                return@withContext planSparseSuccessor(request)
+            }
+            require(request.profile != AndroidExportProfile.android_analytical_v5) {
+                "API requires an explicit supported native profile"
             }
             require(request.mode != ExportEngineMode.legacy) {
                 "legacy API work cannot invoke the Rust planner"
@@ -198,7 +242,7 @@ class HealthMdRustAPIExportPlanner(
             val readiness = coreService.checkReadiness()
             val registry = request.suppliedPin?.let {
                 coreService.getMetricRegistryAtAuthority(request.profile.coreProfile, it.registryVersion, it.registrySha256)
-            } ?: coreService.getMetricRegistry(request.profile.coreProfile)
+            } ?: coreService.getMetricRegistry(request.profile.coreProfile, request.profile.contractVersions.registry)
             val pin = request.suppliedPin?.also { persisted ->
                 val compatibility = ExportEnginePinValidator().validate(persisted, readiness, registry)
                 if (!compatibility.isCompatible ||
@@ -215,24 +259,31 @@ class HealthMdRustAPIExportPlanner(
                 readiness = readiness,
                 registry = registry,
             )
-            val frozenCustomization = request.settings.formatCustomization.forFrozenApiV4()
+            val wakeDate = request.profile == AndroidExportProfile.android_sleep_v6
+            val frozenCustomization = if (wakeDate) request.settings.formatCustomization.copy(
+                unitPreference = UnitPreference.METRIC, includeLegacyAndroidAliases = false)
+                else request.settings.formatCustomization.forFrozenApiV4()
+            val semanticProfile = if (wakeDate) HealthMdSemanticInputAdapter.Profile.SLEEP_V6
+                else HealthMdSemanticInputAdapter.Profile.FROZEN_V4
             val semanticConfiguration = HealthMdSemanticInputAdapter.sessionConfiguration(
                 sessionId = request.ids.sessionId,
-                profile = HealthMdSemanticInputAdapter.Profile.FROZEN_V4,
+                profile = semanticProfile,
                 selection = request.settings.metricSelection,
                 registry = registry,
                 calendarTimeZone = request.calendarTimeZone,
                 retainPlatformExtensions = false,
+                captureContext = request.captureContext,
             )
             val semanticBatches = HealthMdSemanticInputAdapter.boundedBatches(
                 sessionId = request.ids.sessionId,
-                profile = HealthMdSemanticInputAdapter.Profile.FROZEN_V4,
+                profile = semanticProfile,
                 healthData = request.records,
                 registry = registry,
                 converter = frozenCustomization.unitConverter,
                 calendarTimeZone = request.calendarTimeZone,
                 timeFormat = frozenCustomization.timeFormat,
                 includeLegacyAndroidAliases = false,
+                captureContext = request.captureContext,
             ).map { it.bytes }
             val semanticResult = HealthMdSemanticSessionRunner.process(
                 configurationBytes = semanticConfiguration,
@@ -258,7 +309,7 @@ class HealthMdRustAPIExportPlanner(
                     rawCaptureStatus = "not_requested",
                     writeMode = "overwrite",
                     api = HealthMdRenderInputAdapter.ApiOptions(
-                        envelopeVersion = APIExportEnvelopeBuilder.API_EXPORT_SCHEMA_VERSION,
+                        envelopeVersion = request.envelopeVersion,
                         exportedAt = request.exportedAt.toString(),
                         source = "android",
                         dateRangeStart = request.dateRangeStart.toString(),
@@ -280,6 +331,7 @@ class HealthMdRustAPIExportPlanner(
                 ),
                 presentationByOwnerDate = request.records.associateBy { it.date.toString() },
                 presentationCustomization = frozenCustomization,
+                captureContext = request.captureContext,
             )
             val fullPlan = rustEngine.render(
                 input = ExportRenderInput(
@@ -308,6 +360,35 @@ class HealthMdRustAPIExportPlanner(
                 plan = fullPlan.copy(items = apiItems),
             )
         }
+
+    /** Render each requested run without inventing outcomes for omitted retry dates. */
+    private suspend fun planSparseSuccessor(request: FrozenAPIExportRequest): APIExportRustPlan {
+        val groups = mutableListOf<MutableList<LocalDate>>()
+        for (date in request.requestedDates) {
+            if (groups.lastOrNull()?.lastOrNull()?.plusDays(1) != date) groups.add(mutableListOf())
+            groups.last().add(date)
+        }
+        val plans = groups.map { dates ->
+            val scope = dates.toSet()
+            plan(FrozenAPIExportRequest.capture(dates, request.records.filter { it.date in scope },
+                request.failedDateDetails.filter { it.date in scope }, request.settings, request.mode,
+                request.ids, request.calendarTimeZone, request.exportedAt, request.maxDaysPerBatch,
+                request.maxEncodedBytes))
+        }
+        val pin = plans.first().pin
+        require(plans.all { it.pin == pin }) { "API partitions disagree on renderer authority" }
+        val items = plans.flatMap { it.plan.items }.mapIndexed { index, item ->
+            val path = apiArtifactPath(request.ids.requestId, index)
+            ExportArtifactPlanItem(artifactId = artifactIdHex(request.ids.requestId, request.ids.sessionId,
+                request.profile, path, item.mediaType, item.writeMode, item.sha256),
+                relativePath = path, mediaType = item.mediaType, writeMode = item.writeMode,
+                content = item.content, sha256 = item.sha256)
+        }
+        return APIExportRustPlan(pin, ExportArtifactPlan(ExportArtifactPlan.SCHEMA,
+            request.profile.contractVersions.artifactPlan, request.ids.requestId, request.ids.sessionId,
+            request.profile, items))
+    }
+
 }
 
 internal const val API_MEDIA_TYPE = "application/json"
@@ -325,7 +406,7 @@ internal fun validateAPIPlan(
     if (plan.sessionId != request.ids.sessionId) {
         throw ExportArtifactPlanValidationException(ExportArtifactPlanValidationIssue.SESSION_ID)
     }
-    if (plan.profile != AndroidExportProfile.android_frozen_v4) {
+    if (plan.profile != request.profile || plan.artifactPlanVersion != request.profile.contractVersions.artifactPlan) {
         throw ExportArtifactPlanValidationException(ExportArtifactPlanValidationIssue.PROFILE)
     }
     if (plan.items.isEmpty()) {

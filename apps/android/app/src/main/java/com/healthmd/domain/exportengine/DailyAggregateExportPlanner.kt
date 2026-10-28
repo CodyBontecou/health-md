@@ -116,58 +116,7 @@ class FrozenDailyAggregateExportRequest private constructor(
             }
             val customization = settings.formatCustomization.frozenCopy()
             return FrozenDailyAggregateExportRequest(
-                data = if (profile == AndroidExportProfile.android_sleep_v6) data.copy(
-                    activity = data.activity.copy(
-                        stepSamples = freezeQuantitySamples(data.activity.stepSamples),
-                        activityIntensityEntries = Collections.unmodifiableList(data.activity.activityIntensityEntries.map { entry ->
-                            entry.copy(metadata = Collections.unmodifiableMap(entry.metadata.toMap()))
-                        }),
-                    ),
-                    heart = data.heart.copy(
-                        samples = freezeQuantitySamples(data.heart.samples),
-                        hrvSamples = freezeQuantitySamples(data.heart.hrvSamples),
-                    ),
-                    vitals = data.vitals.copy(
-                        bloodOxygenSamples = freezeQuantitySamples(data.vitals.bloodOxygenSamples),
-                        bloodGlucoseSamples = freezeQuantitySamples(data.vitals.bloodGlucoseSamples),
-                        respiratoryRateSamples = freezeQuantitySamples(data.vitals.respiratoryRateSamples),
-                        bodyTemperatureSamples = freezeQuantitySamples(data.vitals.bodyTemperatureSamples),
-                        basalBodyTemperatureSamples = freezeQuantitySamples(data.vitals.basalBodyTemperatureSamples),
-                        skinTemperatureDeltas = freezeQuantitySamples(data.vitals.skinTemperatureDeltas),
-                        bloodPressureSamples = Collections.unmodifiableList(data.vitals.bloodPressureSamples.map { sample ->
-                            sample.copy(metadata = Collections.unmodifiableMap(sample.metadata.toMap()))
-                        }),
-                    ),
-                    sleep = data.sleep.copy(
-                        stages = Collections.unmodifiableList(data.sleep.stages.toList()),
-                        sessions = Collections.unmodifiableList(data.sleep.sessions.map { session ->
-                            session.copy(metadata = Collections.unmodifiableMap(session.metadata.toMap()))
-                        }),
-                    ),
-                    mindfulness = data.mindfulness.copy(
-                        sessions = Collections.unmodifiableList(data.mindfulness.sessions.map { session ->
-                            session.copy(metadata = Collections.unmodifiableMap(session.metadata.toMap()))
-                        }),
-                    ),
-                    nutrition = data.nutrition.copy(
-                        meals = Collections.unmodifiableList(data.nutrition.meals.map { meal ->
-                            meal.copy(metadata = Collections.unmodifiableMap(meal.metadata.toMap()))
-                        }),
-                    ),
-                    reproductiveHealth = data.reproductiveHealth.copy(
-                        menstruationPeriods = Collections.unmodifiableList(data.reproductiveHealth.menstruationPeriods.map { period ->
-                            period.copy(metadata = Collections.unmodifiableMap(period.metadata.toMap()))
-                        }),
-                    ),
-                    workouts = freezeWorkouts(data.workouts),
-                    // These sources are rejected when populated at acceptance. Freeze the empty
-                    // collections too, so later caller mutation cannot change that decision.
-                    plannedWorkouts = Collections.unmodifiableList(data.plannedWorkouts.toList()),
-                    medicalResources = data.medicalResources.copy(
-                        resources = Collections.unmodifiableList(data.medicalResources.resources.toList()),
-                        countsByType = Collections.unmodifiableMap(data.medicalResources.countsByType.toMap()),
-                    ),
-                ) else data,
+                data = if (profile == AndroidExportProfile.android_sleep_v6) data.immutableWakeDateSource() else data,
                 profile = profile,
                 mode = mode,
                 ids = ids.copy(),
@@ -700,3 +649,57 @@ private fun freezeWorkouts(workouts: List<com.healthmd.domain.model.WorkoutData>
             }),
         )
     })
+
+/** Freeze admitted native facts before any asynchronous local/API planning. */
+internal fun HealthData.immutableWakeDateSource(): HealthData = copy(
+    activity = this.activity.copy(
+        stepSamples = freezeQuantitySamples(this.activity.stepSamples),
+        activityIntensityEntries = Collections.unmodifiableList(this.activity.activityIntensityEntries.map { entry ->
+            entry.copy(metadata = Collections.unmodifiableMap(entry.metadata.toMap()))
+        }),
+    ),
+    heart = this.heart.copy(
+        samples = freezeQuantitySamples(this.heart.samples),
+        hrvSamples = freezeQuantitySamples(this.heart.hrvSamples),
+    ),
+    vitals = this.vitals.copy(
+        bloodOxygenSamples = freezeQuantitySamples(this.vitals.bloodOxygenSamples),
+        bloodGlucoseSamples = freezeQuantitySamples(this.vitals.bloodGlucoseSamples),
+        respiratoryRateSamples = freezeQuantitySamples(this.vitals.respiratoryRateSamples),
+        bodyTemperatureSamples = freezeQuantitySamples(this.vitals.bodyTemperatureSamples),
+        basalBodyTemperatureSamples = freezeQuantitySamples(this.vitals.basalBodyTemperatureSamples),
+        skinTemperatureDeltas = freezeQuantitySamples(this.vitals.skinTemperatureDeltas),
+        bloodPressureSamples = Collections.unmodifiableList(this.vitals.bloodPressureSamples.map { sample ->
+            sample.copy(metadata = Collections.unmodifiableMap(sample.metadata.toMap()))
+        }),
+    ),
+    sleep = this.sleep.copy(
+        stages = Collections.unmodifiableList(this.sleep.stages.toList()),
+        sessions = Collections.unmodifiableList(this.sleep.sessions.map { session ->
+            session.copy(metadata = Collections.unmodifiableMap(session.metadata.toMap()))
+        }),
+    ),
+    mindfulness = this.mindfulness.copy(
+        sessions = Collections.unmodifiableList(this.mindfulness.sessions.map { session ->
+            session.copy(metadata = Collections.unmodifiableMap(session.metadata.toMap()))
+        }),
+    ),
+    nutrition = this.nutrition.copy(
+        meals = Collections.unmodifiableList(this.nutrition.meals.map { meal ->
+            meal.copy(metadata = Collections.unmodifiableMap(meal.metadata.toMap()))
+        }),
+    ),
+    reproductiveHealth = this.reproductiveHealth.copy(
+        menstruationPeriods = Collections.unmodifiableList(this.reproductiveHealth.menstruationPeriods.map { period ->
+            period.copy(metadata = Collections.unmodifiableMap(period.metadata.toMap()))
+        }),
+    ),
+    workouts = freezeWorkouts(this.workouts),
+    // These sources are rejected when populated at acceptance. Freeze the empty
+    // collections too, so later caller mutation cannot change that decision.
+    plannedWorkouts = Collections.unmodifiableList(this.plannedWorkouts.toList()),
+    medicalResources = this.medicalResources.copy(
+        resources = Collections.unmodifiableList(this.medicalResources.resources.toList()),
+        countsByType = Collections.unmodifiableMap(this.medicalResources.countsByType.toMap()),
+    ),
+)

@@ -19,6 +19,33 @@ import org.junit.Test
 
 class APIExportEnginePlannerTest {
     @Test
+    fun successorApiRejectsConflictingOrMissingAuthorityBeforePlanning() {
+        val date = LocalDate.of(2026, 11, 1)
+        val context = com.healthmd.domain.model.AndroidCaptureContext(java.time.ZoneId.of("America/New_York"),
+            com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val accepted = ExportSettings(executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true)
+        val invalid = listOf(
+            accepted.copy(executionSleepCaptureContext = context.copy(exportProfileID = null)),
+            accepted.copy(executionSleepCaptureContext = null),
+            accepted.copy(executionEngineAuthorityIsFrozen = true, executionEnginePin = null),
+            accepted.copy(executionEnginePin = testPin()),
+        )
+        for (settings in invalid) {
+            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                FrozenAPIExportRequest.capture(listOf(date), listOf(HealthData(date)), emptyList(),
+                    settings, ExportEngineMode.rust, APIExportIds("authority-api", "authority-session"),
+                    context.zoneId.id, Instant.parse("2026-11-02T12:00:00Z"))
+            }
+        }
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            FrozenAPIExportRequest.capture(listOf(date), listOf(HealthData(date)), emptyList(),
+                accepted, ExportEngineMode.shadow, APIExportIds("authority-api", "authority-session"),
+                context.zoneId.id, Instant.parse("2026-11-02T12:00:00Z"))
+        }
+    }
+
+    @Test
     fun nativePlanUsesExactBuilderBodiesOrderingAndArtifactIdentity() {
         val first = LocalDate.of(2026, 7, 24)
         val second = first.plusDays(1)

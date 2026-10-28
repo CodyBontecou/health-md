@@ -138,9 +138,6 @@ object HealthMdRenderInputAdapter {
             throw AdapterException("capture and completed semantic authority are incompatible")
         }
         val nativeWakeDateContext = if (handoffVersion == 2 && presentationByOwnerDate.isNotEmpty()) {
-            if (options.api != null) {
-                throw AdapterException("wake-date native profile documents are not qualified")
-            }
             if (captureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
                 captureContext.exportProfileID != "android-sleep-v6" || captureContext.zoneId.id != calendarTimeZone) {
                 throw AdapterException("wake-date native capture authority is incompatible")
@@ -366,10 +363,16 @@ object HealthMdRenderInputAdapter {
             selectedOutputKeys.filterNot { it == "sleep_bedtime" || it == "sleep_wake" }.associateWith { key ->
                 val output = outputs[key] ?: throw AdapterException("registry output is invalid")
                 output.unit.ifEmpty {
-                    val units = output.selectionIds.map { selection ->
-                        metricsBySelection[selection]?.unit ?: throw AdapterException("registry unit is invalid")
-                    }.distinct()
-                    units.singleOrNull() ?: throw AdapterException("registry unit is ambiguous")
+                    if (options.api != null) {
+                        // One workout selection emits quantities with different units.
+                        day.getValue("values").jsonArray.first { it.jsonObject["output_key"]?.jsonPrimitive?.content == key }
+                            .jsonObject.getValue("value").jsonObject["unit"]?.jsonObject?.get("id")?.jsonPrimitive?.content.orEmpty()
+                    } else {
+                        val units = output.selectionIds.map { selection ->
+                            metricsBySelection[selection]?.unit ?: throw AdapterException("registry unit is invalid")
+                        }.distinct()
+                        units.singleOrNull() ?: throw AdapterException("registry unit is ambiguous")
+                    }
                 }
             }
         } else emptyMap()
@@ -418,7 +421,10 @@ object HealthMdRenderInputAdapter {
                     } else metric.referenceName
                 } else metric.referenceName)
                 put("frontmatter_key", frontmatterKey)
-                put("json_path", buildJsonArray { add(JsonPrimitive(categoryIdentifier(metric.categoryId))); add(JsonPrimitive(outputKey)) })
+                put("json_path", buildJsonArray {
+                    if (nativeWakeDateContext != null && options.api != null) add(JsonPrimitive("summary"))
+                    add(JsonPrimitive(categoryIdentifier(metric.categoryId))); add(JsonPrimitive(outputKey))
+                })
                 put("public_value", public)
                 // Human clocks follow the selected time format; quantities keep the
                 // completed semantic precision rather than native display rounding.
@@ -483,6 +489,7 @@ object HealthMdRenderInputAdapter {
                     selectedOutputKeys,
                     nativeWakeDateContext,
                     canonicalSummaryUnits,
+                    metrics,
                 ),
             )
         }
@@ -830,6 +837,7 @@ object HealthMdRenderInputAdapter {
         semanticOutputKeys: List<String>,
         nativeWakeDateContext: AndroidCaptureContext?,
         canonicalSummaryUnits: Map<String, String>,
+        metrics: List<JsonObject>,
     ): JsonObject {
         if (data == null) {
             return buildJsonObject {
@@ -884,8 +892,25 @@ object HealthMdRenderInputAdapter {
                 // Standalone preparation supplies v2 defaults. A completed semantic
                 // result owns the selected dictionary and its exact frozen registry;
                 // unselected presentation fields cannot widen that authority.
-                val units = canonicalSummaryUnits.toSortedMap().mapValues { JsonPrimitive(it.value) }
-                JsonObject(root.toMutableMap().apply { put("units", JsonObject(units)) })
+                val units = canonicalSummaryUnits.filterValues { it.isNotEmpty() }.toSortedMap().mapValues { JsonPrimitive(it.value) }
+                JsonObject(root.toMutableMap().apply {
+                    put("units", JsonObject(units))
+                    if (options.api != null) {
+                        // Canonical API summaries use the completed semantic paths/values.
+                        // Keep the complete native document alongside them, including all
+                        // exact source intervals; never infer facts from rounded local text.
+                        require(!containsKey("summary")) { "API native summary namespace is reserved" }
+                        val summary = mutableMapOf<String, JsonElement>()
+                        for (metric in metrics) {
+                            val path = metric.getValue("json_path").jsonArray.map { it.jsonPrimitive.content }
+                            require(path.size == 3 && path[0] == "summary") { "API summary path is incompatible" }
+                            val category = (summary[path[1]] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+                            category[path[2]] = metric.getValue("public_value")
+                            summary[path[1]] = JsonObject(category)
+                        }
+                        put("summary", JsonObject(summary))
+                    }
+                })
             } else payload
             orderedJson(prepared)
         } else {

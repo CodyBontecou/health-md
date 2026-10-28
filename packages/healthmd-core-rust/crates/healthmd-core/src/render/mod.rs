@@ -1184,7 +1184,11 @@ fn validate_config(
                 SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidSleepV6
             ) && (!api.external_records.is_empty()
                 || api.external_record_schema.is_some()
-                || api.envelope_version != 1
+                || (if config.profile == SemanticProfile::AndroidSleepV6 {
+                    !matches!(api.envelope_version, 1 | 2)
+                } else {
+                    api.envelope_version != 1
+                })
                 || api.source != "android"))
             || (config.profile.is_apple()
                 && ((api.envelope_version == 1

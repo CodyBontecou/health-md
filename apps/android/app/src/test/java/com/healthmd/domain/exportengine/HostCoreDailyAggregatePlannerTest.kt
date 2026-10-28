@@ -148,6 +148,85 @@ class HostCoreDailyAggregatePlannerTest {
         assertThat(pinPlanner.forDirectGeneratedFiles(settings, context.zoneId)).isEqualTo(pin)
     }
 
+    @Test
+    fun successorApiUsesProductionNativeRecordsAndKeepsFailedBatchAuthority() = runTest {
+        val zone = ZoneId.of("America/New_York")
+        val context = AndroidCaptureContext(zone, SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 11, 1)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = Instant.parse("2026-11-01T06:30:00.123456789Z")
+        val metadata = mutableMapOf("synthetic" to "original source")
+        val sessions = mutableListOf(com.healthmd.domain.model.SleepSessionEntry(
+            startTime = start.atZone(zone).toLocalDateTime(), endTime = end.atZone(zone).toLocalDateTime(),
+            exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.of("-04:00")),
+            exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.of("-05:00")),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "api-sleep-source"), metadata = metadata))
+        val workout = com.healthmd.domain.model.WorkoutData(
+            workoutType = com.healthmd.domain.model.WorkoutType.RUNNING, id = "api-workout-source",
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "api-workout-source"),
+            startTime = start.atZone(zone).toLocalDateTime(), endTime = end.atZone(zone).toLocalDateTime(),
+            duration = 60.minutes, metadata = metadata,
+            exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.of("-04:00")),
+            exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.of("-05:00")))
+        val data = HealthData(date, activity = ActivityData(steps = 17), workouts = listOf(workout),
+            sleep = SleepData(totalDuration = 60.minutes, sessions = sessions))
+        val settings = ExportSettings(includeGranularData = true,
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+            formatCustomization = FormatCustomization.analyticalDefault().copy(unitPreference = UnitPreference.IMPERIAL),
+            metricSelection = MetricSelectionState(enabledMetrics = setOf("sleep_total", "steps", "workouts")))
+        val request = FrozenAPIExportRequest.capture(listOf(date, date.plusDays(1)), listOf(data),
+            listOf(com.healthmd.domain.model.FailedDateDetail(date.plusDays(1), com.healthmd.domain.model.ExportFailureReason.NO_HEALTH_DATA)),
+            settings, ExportEngineMode.rust, APIExportIds("successor-api-request", "successor-api-session"), zone.id,
+            Instant.parse("2026-11-03T12:00:00Z"), maxDaysPerBatch = 1)
+        sessions.clear(); metadata["synthetic"] = "changed after acceptance"
+        val result = HealthMdRustAPIExportPlanner().plan(request)
+        validateAPIPlan(result.plan, request)
+        assertThat(result.pin.profile).isEqualTo(AndroidExportProfile.android_sleep_v6)
+        assertThat(result.pin.registryVersion).isEqualTo(2u)
+        assertThat(result.plan.items).hasSize(2)
+        for (item in result.plan.items) {
+            val root = Json.parseToJsonElement(item.content.decodeToString()).jsonObject
+            assertThat(root.getValue("schema_version").jsonPrimitive.content).isEqualTo("2")
+            assertThat(root.getValue("daily_record_schema_version").jsonPrimitive.content).isEqualTo("6")
+            assertThat(root.getValue("daily_record_schema_profile").jsonPrimitive.content).isEqualTo("android-sleep-v6")
+            assertThat(root.getValue("daily_record_time_context").jsonObject.getValue("calendar_timezone").jsonPrimitive.content).isEqualTo(zone.id)
+            assertThat(item.content.decodeToString()).doesNotContain("changed after acceptance")
+        }
+        val record = Json.parseToJsonElement(result.plan.items.first().content.decodeToString())
+            .jsonObject.getValue("records").jsonArray.single().jsonObject
+        assertThat(record.getValue("summary").jsonObject.getValue("sleep").jsonObject.getValue("sleep_total_hours").jsonPrimitive.content).isEqualTo("1.0")
+        assertThat(record.getValue("workouts").jsonArray.single().jsonObject.getValue("identity").jsonObject.getValue("nativeId").jsonPrimitive.content).isEqualTo("api-workout-source")
+        assertThat(record.getValue("summary").jsonObject.getValue("workouts").jsonObject).isNotEmpty()
+        assertThat(record.getValue("units").jsonObject.getValue("workout_count").jsonPrimitive.content).isEqualTo("count")
+        assertThat(record.getValue("units").jsonObject.getValue("workout_minutes").jsonPrimitive.content).isEqualTo("minute")
+        assertThat(record.getValue("sleep").jsonObject.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(3600.0)
+        assertThat(result.plan.items.first().content.decodeToString()).contains("api-sleep-source")
+        assertThat(result.plan.items.first().content.decodeToString()).contains(start.toString())
+        assertThat(result.plan.items.last().content.decodeToString()).doesNotContain("api-sleep-source")
+        val sparse = FrozenAPIExportRequest.capture(listOf(date, date.plusDays(3)), request.records,
+            listOf(request.failedDateDetails.single().copy(date = date.plusDays(3))), settings,
+            ExportEngineMode.rust, APIExportIds("sparse-api", "sparse-session"), zone.id, request.exportedAt)
+        val sparseResult = HealthMdRustAPIExportPlanner().plan(sparse)
+        validateAPIPlan(sparseResult.plan, sparse)
+        assertThat(sparseResult.plan.items.map { it.relativePath }).containsExactly(
+            "api/sparse-api-0000.json", "api/sparse-api-0001.json").inOrder()
+        val scopes = sparseResult.plan.items.map { Json.parseToJsonElement(it.content.decodeToString())
+            .jsonObject.getValue("date_range").jsonObject }
+        assertThat(scopes.first().getValue("start").jsonPrimitive.content).isEqualTo(date.toString())
+        assertThat(scopes.first().getValue("end").jsonPrimitive.content).isEqualTo(date.toString())
+        assertThat(scopes.last().getValue("start").jsonPrimitive.content).isEqualTo(date.plusDays(3).toString())
+        assertThat(scopes.last().getValue("end").jsonPrimitive.content).isEqualTo(date.plusDays(3).toString())
+        val failedOnly = FrozenAPIExportRequest.capture(listOf(date.plusDays(1)), emptyList(),
+            request.failedDateDetails, settings, ExportEngineMode.rust, APIExportIds("failure-api", "failure-session"),
+            zone.id, request.exportedAt)
+        val failedResult = HealthMdRustAPIExportPlanner().plan(failedOnly)
+        validateAPIPlan(failedResult.plan, failedOnly)
+        val failedEnvelope = Json.parseToJsonElement(failedResult.plan.items.single().content.decodeToString()).jsonObject
+        assertThat(failedEnvelope.getValue("records").jsonArray).isEmpty()
+        assertThat(failedEnvelope.getValue("daily_record_schema_profile").jsonPrimitive.content).isEqualTo("android-sleep-v6")
+        assertThat(failedEnvelope.getValue("daily_record_time_context").jsonObject.getValue("sleep_day_attribution").jsonPrimitive.content).isEqualTo("morning_ends")
+    }
+
     @Before
     fun useExplicitTaskOwnedHostCore() {
         val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")

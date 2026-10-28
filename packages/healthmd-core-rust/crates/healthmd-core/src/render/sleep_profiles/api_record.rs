@@ -76,20 +76,27 @@ fn canonical_day(
             .find(|value| value.output_key == metric.output_key)
             .ok_or(RenderError::InvalidSemanticResult)?;
         let unit = if output.unit.is_empty() {
-            let units = registry
+            // Derived outputs (for example count, minutes and calories from one
+            // workout selection) have distinct canonical units. The selection's
+            // display unit cannot describe all of them.
+            let selection_units = registry
                 .metrics
                 .iter()
                 .filter(|selection| output.selection_ids.contains(&selection.selection_id))
                 .map(|selection| selection.unit.as_str())
                 .collect::<std::collections::BTreeSet<_>>();
-            if units.len() != 1 {
-                return Err(RenderError::InvalidSemanticResult);
+            let selection_unit = if selection_units.len() == 1 {
+                selection_units.first().copied()
+            } else {
+                None
+            };
+            match &value.value {
+                SemanticValue::Number { unit, .. } => selection_unit
+                    .filter(|label| target_internal_unit(label) == Some(unit.id.as_str()))
+                    .unwrap_or(&unit.id)
+                    .to_owned(),
+                _ => String::new(),
             }
-            units
-                .first()
-                .copied()
-                .ok_or(RenderError::InvalidSemanticResult)?
-                .to_owned()
         } else {
             output.unit.clone()
         };
@@ -100,7 +107,9 @@ fn canonical_day(
             ..
         } = &value.value
         {
-            if target_internal_unit(&unit) != Some(canonical_unit.id.as_str()) {
+            if unit != canonical_unit.id
+                && target_internal_unit(&unit) != Some(canonical_unit.id.as_str())
+            {
                 return Err(RenderError::InvalidSemanticResult);
             }
         }

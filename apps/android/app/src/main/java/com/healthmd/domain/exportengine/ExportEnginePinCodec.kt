@@ -125,7 +125,7 @@ class ExportEnginePinPlanner @Inject constructor() {
             it.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
         }
         if (wakeContext != null) {
-            if (target != ExportTarget.DEVICE_FOLDER || wakeContext.zoneId != zoneId ||
+            if (target !in setOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT) || wakeContext.zoneId != zoneId ||
                 wakeContext.exportProfileID != AndroidExportProfile.android_sleep_v6.publicProfileId
             ) return null
             return pinBeforeCapture(wakeDatePolicy(), zoneId)
@@ -170,7 +170,7 @@ class ExportEnginePinPlanner @Inject constructor() {
         val isWakeDate = context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS ||
             pin?.profile == AndroidExportProfile.android_sleep_v6
         if (isWakeDate) {
-            return target == ExportTarget.DEVICE_FOLDER && supportsNewScheduledPin(settings, target) &&
+            return target in setOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT) && supportsNewScheduledPin(settings, target) &&
                 context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
                 context.exportProfileID == AndroidExportProfile.android_sleep_v6.publicProfileId &&
                 pin?.profile == AndroidExportProfile.android_sleep_v6 &&

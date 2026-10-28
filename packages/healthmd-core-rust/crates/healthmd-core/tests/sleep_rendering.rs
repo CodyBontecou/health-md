@@ -637,6 +637,48 @@ fn supplied_native_json_retains_its_payload_but_cannot_relabel_historical_author
     }
 }
 
+#[test]
+fn android_successor_envelope_v2_retains_authority_without_apple_external_records() {
+    let (mut config, mut semantic, mut batches) = android_successor_input();
+    enable_successor_api(&mut config, "android");
+    config["api"]["envelope_version"] = json!(2);
+    for failure_only in [false, true] {
+        if failure_only {
+            semantic["days"] = json!([]);
+            batches[0]["days"] = json!([]);
+            config["api"]["failed_date_details"] = json!([{
+                "owner_date":"2026-07-25", "timestamp":"2026-07-24T18:15:00Z",
+                "reason":"health_data_unavailable", "error_details":null
+            }]);
+        }
+        let plan = render(&config, &semantic, &batches);
+        let item = plan
+            .items
+            .iter()
+            .find(|item| item.relative_path.starts_with("api/"))
+            .unwrap();
+        let envelope: Value = serde_json::from_slice(&item.content).unwrap();
+        assert_eq!(envelope["schema_version"], 2);
+        assert_eq!(envelope["daily_record_schema_version"], 6);
+        assert_eq!(envelope["daily_record_schema_profile"], "android-sleep-v6");
+        assert_eq!(
+            envelope["daily_record_time_context"]["sleep_day_attribution"],
+            "morning_ends"
+        );
+        assert_eq!(envelope["record_count"], i32::from(!failure_only));
+        assert!(envelope.get("external_record_schema").is_none());
+    }
+    config["api"]["external_record_schema"] = json!("healthmd.external_record");
+    config["api"]["external_record_schema_version"] = json!(1);
+    assert!(
+        RenderSession::from_json(
+            &serde_json::to_vec(&config).unwrap(),
+            &serde_json::to_vec(&semantic).unwrap()
+        )
+        .is_err()
+    );
+}
+
 fn enable_successor_api(config: &mut Value, source: &str) {
     config["api"] = json!({
         "enabled":true, "envelope_version":1, "exported_at":"2026-07-25T00:00:00Z",

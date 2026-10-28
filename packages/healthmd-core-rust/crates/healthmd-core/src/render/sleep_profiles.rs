@@ -181,7 +181,7 @@ pub(crate) fn render_api_envelope(
         "date_range":{"start":api.date_range_start, "end":api.date_range_end},
         "record_count":records.len(), "records":records, "failed_date_details":failures
     });
-    if api.envelope_version == 2 {
+    if api.envelope_version == 2 && config.profile.is_apple() {
         envelope["external_record_schema"] = Value::String(
             api.external_record_schema
                 .clone()
