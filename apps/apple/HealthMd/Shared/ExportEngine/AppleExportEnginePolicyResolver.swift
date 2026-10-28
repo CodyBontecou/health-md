@@ -112,9 +112,9 @@ nonisolated struct AppleExportEnginePolicyResolver: Sendable {
         buildInfo: CoreBuildInfo,
         registrySnapshot: CoreMetricRegistrySnapshot
     ) -> ExportEngineMode {
-        guard profile == .appleHealthDataV8,
-              let pin,
-              pin.profile == AppleExportEnginePin.profileID else {
+        guard let pin,
+              profile == pin.coreProfile,
+              pin.profile == "apple_health_data_v7" || pin.profile == AppleExportEnginePin.profileID else {
             return .legacy
         }
         guard pin.engine != .legacy else { return .legacy }

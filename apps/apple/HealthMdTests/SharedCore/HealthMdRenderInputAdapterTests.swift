@@ -76,6 +76,33 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         XCTAssertEqual(plan.items.first(where: { $0.relativePath.hasSuffix(".json") })?.writeMode, .overwrite)
     }
 
+    func testHistoricalNativeProjectionMatchesAuthenticPreV8Goldens() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let bytes = try Data(contentsOf: root.appendingPathComponent("packages/contracts/render-input/v1/fixtures/native-apple-v7.json"))
+        let golden = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        let cases = try XCTUnwrap(golden["cases"] as? [[String: Any]])
+        let data = ExportFixtures.partialDay
+        let partial = try XCTUnwrap(cases.first { $0["id"] as? String == "partial-default" })
+        for output in try XCTUnwrap(partial["outputs"] as? [[String: Any]]) {
+            let name = try XCTUnwrap(output["format"] as? String)
+            let format: ExportFormat
+            let native: String
+            switch name {
+            case "markdown": format = .markdown; native = data.toMarkdown()
+            case "obsidian_bases": format = .obsidianBases; native = data.toObsidianBases()
+            case "json": format = .json; native = try data.toJSONThrowing()
+            case "csv": format = .csv; native = try data.toCSVThrowing()
+            default: return XCTFail("Unreviewed historical format")
+            }
+            let projected = try HealthMdRenderInputAdapter.historicalNativeContent(native, format: format, profile: "apple_health_data_v7")
+            let expected = try XCTUnwrap(Data(base64Encoded: XCTUnwrap(output["bytes_base64"] as? String)))
+            XCTAssertEqual(Data(projected.utf8), expected, name)
+            XCTAssertEqual(try HealthMdRenderInputAdapter.historicalNativeContent(native, format: format, profile: "apple_health_data_v8"), native)
+        }
+    }
+
     func testAppleAllFormatsMatchNativeV8RendererAcrossSyntheticCases() throws {
         let imperial = FormatCustomization()
         imperial.unitPreference = .imperial

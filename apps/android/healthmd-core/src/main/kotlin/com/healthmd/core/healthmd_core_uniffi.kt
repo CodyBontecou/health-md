@@ -703,6 +703,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry(
     ): Int
+    external fun uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry_at_authority(
+    ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_merge_profile_rendered_markdown(
     ): Int
     external fun uniffi_healthmd_core_uniffi_checksum_func_merge_rendered_markdown(
@@ -814,6 +816,8 @@ internal object UniffiLib {
     external fun uniffi_healthmd_core_uniffi_fn_func_get_direct_protocol_info(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_get_metric_registry(`profile`: RustBuffer.ByValue,`expectedRegistryVersion`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_healthmd_core_uniffi_fn_func_get_metric_registry_at_authority(`profile`: RustBuffer.ByValue,`expectedRegistryVersion`: Int,`registrySha256`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_healthmd_core_uniffi_fn_func_merge_profile_rendered_markdown(`profile`: RustBuffer.ByValue,`existing`: RustBuffer.ByValue,`generated`: RustBuffer.ByValue,`preservePreamble`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -989,6 +993,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry() and 0xffff) != 44495) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry_at_authority() and 0xffff) != 54132) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_healthmd_core_uniffi_checksum_func_merge_profile_rendered_markdown() and 0xffff) != 15241) {
@@ -3832,7 +3839,11 @@ enum class CoreMetricRegistryProfile {
     /**
      * Android analytical v5.
      */
-    ANDROID_ANALYTICAL_V5;
+    ANDROID_ANALYTICAL_V5,
+    /**
+     * Historical Apple `healthmd.health_data` v7; appended to retain existing FFI discriminants.
+     */
+    APPLE_HEALTH_DATA_V7;
 
     
 
@@ -5665,6 +5676,26 @@ public object FfiConverterSequenceTypeCoreRegistryUnavailableMetric: FfiConverte
         
         FfiConverterTypeCoreMetricRegistryProfile.lower(`profile`),
         FfiConverterUInt.lower(`expectedRegistryVersion`),_status)
+}
+    )
+    }
+    
+
+        /**
+         * Retrieve an exact retained registry authority without rewriting the caller's pin.
+         *
+         * # Errors
+         * Unknown authorities and incompatible profile/version pairs fail closed.
+         */
+    @Throws(HealthmdCoreException::class) fun `getMetricRegistryAtAuthority`(`profile`: CoreMetricRegistryProfile, `expectedRegistryVersion`: kotlin.UInt, `registrySha256`: kotlin.String): CoreMetricRegistrySnapshot {
+            return FfiConverterTypeCoreMetricRegistrySnapshot.lift(
+    uniffiRustCallWithError(HealthmdCoreException) { _status ->
+    UniffiLib.uniffi_healthmd_core_uniffi_fn_func_get_metric_registry_at_authority(
+    
+        
+        FfiConverterTypeCoreMetricRegistryProfile.lower(`profile`),
+        FfiConverterUInt.lower(`expectedRegistryVersion`),
+        FfiConverterString.lower(`registrySha256`),_status)
 }
     )
     }
