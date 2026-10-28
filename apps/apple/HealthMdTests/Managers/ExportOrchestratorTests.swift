@@ -1124,6 +1124,13 @@ final class ExportOrchestratorTests: XCTestCase {
         settings.dailyNoteInjection.dailyNotesOnly = true
         settings.dailyNoteInjection.createIfMissing = true
         settings.dailyNoteInjection.folderPath = "Daily"
+        let accepted = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+            healthSubfolder: vaultManager.healthSubfolder,
+            calendarTimeZone: settings.exportTimeZoneOverride,
+            surface: .localVaultRangeWithoutSideEffects)
+        XCTAssertNil(accepted.appleExportEnginePin, "Daily-note-only work must preserve native authority")
+        XCTAssertTrue(accepted.dailyNotesOnlyModeEnabled)
+        XCTAssertTrue(accepted.makeAdvancedExportSettings().dailyNotesOnlyModeEnabled)
 
         let result = await ExportOrchestrator.exportDates(
             [HealthKitFixtures.referenceDate],
@@ -1132,7 +1139,7 @@ final class ExportOrchestratorTests: XCTestCase {
             settings: settings
         )
 
-        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.successCount, 1, "\(result.failedDateDetails)")
         XCTAssertEqual(result.formatsPerDate, 0)
         XCTAssertEqual(result.totalFilesWritten, 0)
         XCTAssertEqual(result.dailyNoteUpdateCount, 1)
@@ -1488,7 +1495,62 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
-    func testUnapprovedSleepAttributionWritesNoFormatAndMissingRecoveryContextDoesNotRepin() async {
+    func testFreshMorningForegroundRangeCapturesWholeSessionAndCommitsEveryFormatUnderFrozenV11() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 1)))
+        let wake = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: first))
+        let start = try XCTUnwrap(calendar.date(bySettingHour: 10, minute: 0, second: 0, of: first))
+        let end = try XCTUnwrap(calendar.date(bySettingHour: 13, minute: 0, second: 0, of: wake))
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)
+        ]
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        manager.setSleepDayAttribution(.morningEnds)
+        let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/MorningRangeRealPipeline")
+        let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: [.range])
+        settings.executionSleepCaptureContext = nil
+        settings.exportTimeZoneOverride = zone
+        settings.metricSelection.deselectAll()
+        settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
+        settings.detailPolicy = .summary
+        settings.includeDataDictionary = false
+        let result = await ExportOrchestrator.exportDates([first, wake], healthKitManager: manager,
+            vaultManager: vault, settings: settings, onProgress: { _, _, _ in
+                manager.setSleepDayAttribution(.nightBegins)
+                settings.exportTimeZoneOverride = TimeZone(identifier: "Europe/Berlin")
+                settings.generateRangeSummary = false
+            })
+        XCTAssertEqual(result.successCount, 2, "\(result.failedDateDetails)")
+        XCTAssertTrue(result.failedDateDetails.isEmpty)
+        XCTAssertEqual(fileSystem.files.count, 12, "Two daily files per format plus one range file per format")
+        for content in fileSystem.files.values {
+            let normalized = content.replacingOccurrences(of: "\\/", with: "/")
+            XCTAssertTrue(normalized.contains("morning_ends"))
+            XCTAssertTrue(normalized.contains("Asia/Kathmandu"))
+            XCTAssertFalse(normalized.contains("Europe/Berlin"))
+        }
+        let json = try fileSystem.files.filter { $0.key.hasSuffix(".json") }.map {
+            try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.value.utf8)) as? [String: Any])
+        }
+        let daily = json.filter { $0["date"] as? String != nil }
+        XCTAssertEqual(daily.count, 2)
+        let sleepDays = daily.filter { $0["sleep"] != nil }
+        XCTAssertEqual(sleepDays.count, 1)
+        let owned = try XCTUnwrap(sleepDays.first)
+        XCTAssertEqual(owned["date"] as? String, "2026-07-02")
+        let sleep = try XCTUnwrap(owned["sleep"] as? [String: Any])
+        XCTAssertEqual(sleep["totalDuration"] as? Double, 27 * 60 * 60)
+        XCTAssertTrue(daily.allSatisfy { $0["schema_version"] as? Int == 11 })
+        let range = try XCTUnwrap(json.first { $0["rollup_rules_version"] as? Int == 12 })
+        XCTAssertEqual(range["schema_version"] as? Int, 11)
+    }
+
+    @MainActor
+    func testFrozenMissingMorningRendererWritesNoFormatAndMissingRecoveryContextDoesNotRepin() async {
         let date = HealthKitFixtures.referenceDate
         let store = FakeHealthStore()
         HealthKitFixtures.populateAllCategories(store, date: date)
@@ -1497,11 +1559,14 @@ final class ExportOrchestratorTests: XCTestCase {
         for format in ExportFormat.allCases {
             let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/SleepUnavailable-\(format.rawValue)")
             let settings = makeExportSettings(formats: [format], rollupPeriods: [])
-            settings.executionSleepCaptureContext = nil
+            settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: settings.exportTimeZoneOverride!,
+                sleepDayAttribution: .morningEnds)
+            settings.executionSleepCaptureContextIsFrozen = true
+            settings.executionAppleExportEngineAuthorityIsFrozen = true
             let result = await ExportOrchestrator.exportDates([date], healthKitManager: manager, vaultManager: vault, settings: settings)
             XCTAssertEqual(result.successCount, 0)
             XCTAssertTrue(fileSystem.files.isEmpty)
-            XCTAssertEqual(result.failedDateDetails.first?.errorDetails, AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution.localizedDescription)
+            XCTAssertEqual(result.failedDateDetails.first?.errorDetails, AppleSleepCaptureContext.AvailabilityError.incompatibleDurableAuthority.localizedDescription)
         }
         manager.setSleepDayAttribution(.nightBegins)
         let settings = makeExportSettings(formats: [.json], rollupPeriods: [])

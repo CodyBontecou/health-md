@@ -20,6 +20,8 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     static let profileID = "apple_health_data_v8"
     static let wakeDateProfileID = "apple_health_data_v11"
     static let wakeDateHandoffVersion: UInt32 = 2
+    static let wakeDateDailyRegistryVersion = HealthMdSleepProfileContract.registryVersion
+    static let wakeDateRangeRegistryVersion: UInt32 = 3
     // Exact pre-v8 authority; never treat registry version 1 as a wildcard.
     static let historicalRegistrySHA256 = "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b"
 

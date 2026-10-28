@@ -111,6 +111,20 @@ enum TestMode {
         env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES") == "true"
     }
 
+    /// Explicit synthetic QA configuration; existing preview journeys retain Lossless + range.
+    static var healthKitExportPreviewDetailPolicy: AppleExportDetailPolicy {
+        switch env("UITEST_HEALTHKIT_EXPORT_PREVIEW_DETAIL_POLICY") {
+        case "summary": .summary
+        case "detailed_time_series": .detailedTimeSeries
+        case "archive_only": .archiveOnly
+        default: .lossless
+        }
+    }
+
+    static var healthKitExportPreviewRangeSummary: Bool {
+        env("UITEST_HEALTHKIT_EXPORT_PREVIEW_RANGE_SUMMARY") != "false"
+    }
+
     /// Whether UI-test launch should start with every export format deselected.
     static var noExportFormats: Bool {
         env("UITEST_NO_EXPORT_FORMATS") == "true"

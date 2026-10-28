@@ -940,9 +940,20 @@ struct ExportPreviewView: View {
         } catch {
             requestedRange = nil
         }
-        let rollupSection = targetType == .apiEndpoint
-            ? nil
-            : requestedRange.flatMap { rollupSummaryPreviewSection(for: rollupInputs, requestedRange: $0) }
+        var rollupSection: DatePreview?
+        if targetType != .apiEndpoint, let requestedRange {
+            do {
+                rollupSection = try await rollupSummaryPreviewSection(for: rollupInputs,
+                    requestedRange: requestedRange, settingsSnapshot: operationSnapshot)
+            } catch is CancellationError {
+                isLoading = false
+                return
+            } catch {
+                warnings.append(ExportPartialFailure(date: dates.first ?? startDate,
+                    dataType: "Range Summary", dateRangeDescription: rangeDescription(dates: dates, timeZone: frozenTimeZone),
+                    errorDescription: "The selected renderer could not prepare this preview."))
+            }
+        }
         if scope.includesSupplementalFiles, let rollupSection {
             built.insert(rollupSection, at: 0)
         }
@@ -1038,9 +1049,30 @@ struct ExportPreviewView: View {
 
     private func rollupSummaryPreviewSection(
         for healthData: [HealthData],
-        requestedRange: HealthRollupRangeRequest
-    ) -> DatePreview? {
-        guard HealthRollupExporter.isEnabled(settings: settings) else { return nil }
+        requestedRange: HealthRollupRangeRequest,
+        settingsSnapshot: ExportSettingsSnapshot
+    ) async throws -> DatePreview? {
+        let settings = settingsSnapshot.makeAdvancedExportSettings()
+        guard HealthRollupExporter.isEnabled(settings: settings), !healthData.isEmpty else { return nil }
+        if settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds {
+            guard let planner = appleLooseDailyPlanner as? any AppleLooseDailyRangeExportPlanning else {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+            let artifacts = try await AppleLooseDailyExportPreviewPlanner.rangeArtifacts(
+                healthData: healthData, requestedRange: requestedRange,
+                settingsSnapshot: settingsSnapshot, planner: planner)
+            let files = try artifacts.map { planned -> FilePreview in
+                guard let content = String(data: try planned.artifact.content.materializedData(), encoding: .utf8),
+                      let filename = planned.artifact.relativePath.split(separator: "/").last else {
+                    throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                }
+                let folder = planned.artifact.relativePath.split(separator: "/").dropLast().joined(separator: "/")
+                return FilePreview(id: planned.artifact.id, filename: String(filename), folderPath: folder,
+                    kind: .rollupSummary(.range, planned.format), content: content)
+            }
+            return DatePreview(id: Date.distantFuture, date: Date.distantFuture,
+                dateLabel: "Roll-up summaries", folderPath: previewRollupFolderPath(for: nil), files: files)
+        }
 
         let summaries = HealthRollupExporter.makeSummaries(
             from: healthData,

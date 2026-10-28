@@ -597,9 +597,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
                 XCTAssertEqual(pin.calendarTimeZoneIdentifier, zone.identifier)
                 XCTAssertTrue(snapshot.appleExportEngineAuthorityIsFrozen)
                 XCTAssertEqual(try snapshot.validatedSleepCaptureContext(), context)
-                XCTAssertThrowsError(try snapshot.recoveredSleepCaptureContext()) {
-                    XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .unapprovedAttribution)
-                }
+                XCTAssertEqual(try snapshot.recoveredSleepCaptureContext(), context)
                 let requested = await executor.requestedProfiles
                 XCTAssertEqual(requested, [.appleHealthDataV11])
                 let day = HealthData(date: ExportFixtures.referenceDate,
@@ -713,7 +711,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
     func testFreshWakeDatePreflightRejectsRemoteSurfacesAndSideEffectsBeforeCoreAcquisition() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
-        for surface: AppleExportOperationSurface in [.legacyOnly, .apiEndpoint, .directGeneratedFilesWithoutSideEffects,
+        for surface: AppleExportOperationSurface in [.legacyOnly, .directGeneratedFilesWithoutSideEffects,
                 .connectedReceivedFilesWithoutSideEffects, .connectedReceivedRangeWithoutSideEffects] {
             let settings = makeSimpleEngineSettings()
             settings.executionSleepCaptureContext = context

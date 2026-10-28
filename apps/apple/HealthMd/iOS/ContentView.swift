@@ -563,11 +563,9 @@ struct ContentView: View {
                 }
                 if TestMode.useHealthKitExportPreviewFixtures {
                     advancedSettings.exportFormats = [.markdown]
-                    advancedSettings.detailPolicy = .lossless
+                    advancedSettings.detailPolicy = TestMode.healthKitExportPreviewDetailPolicy
                     advancedSettings.metricSelection.selectAll()
-                    advancedSettings.generateWeeklyRollups = true
-                    advancedSettings.generateMonthlyRollups = true
-                    advancedSettings.generateYearlyRollups = true
+                    advancedSettings.generateRangeSummary = TestMode.healthKitExportPreviewRangeSummary
                 }
                 if TestMode.noExportFormats {
                     advancedSettings.exportFormats = []

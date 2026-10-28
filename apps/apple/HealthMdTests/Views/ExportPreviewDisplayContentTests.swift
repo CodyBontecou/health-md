@@ -15,15 +15,18 @@ final class ExportPreviewDisplayContentTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = AdvancedExportSettings(userDefaults: defaults)
         settings.exportFormats = Set(ExportFormat.allCases)
+        settings.metricSelection.selectAll()
         settings.detailPolicy = .summary
-        settings.generateRangeSummary = false
+        settings.generateRangeSummary = true
         settings.writeMode = .overwrite
         settings.archiveExportFiles = false
         settings.executionSleepCaptureContext = context
         settings.executionSleepCaptureContextIsFrozen = true
         let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
-            healthSubfolder: "health", calendarTimeZone: zone, surface: .preview)
+            healthSubfolder: "", calendarTimeZone: zone, surface: .preview)
         XCTAssertEqual(try snapshot.recoveredSleepCaptureContext(), context)
+        XCTAssertEqual(snapshot.appleExportEnginePin?.registryVersion, 3)
+        XCTAssertEqual(snapshot.operationRollupPeriods, [.range])
         let record = await AppleSleepCaptureContext.pinned.withValue(context) {
             UITestHealthKitFixtures.exportPreviewHealthData(for: date, includeGranularData: false)
         }
@@ -35,12 +38,30 @@ final class ExportPreviewDisplayContentTests: XCTestCase {
             healthData: record, settingsSnapshot: snapshot, planner: AppleLooseDailyExportPlanner())
         let artifacts = try XCTUnwrap(planned)
         XCTAssertEqual(Set(artifacts.map(\.format)), Set(ExportFormat.allCases))
+        for format in ExportFormat.allCases {
+            var singleFormat = snapshot
+            singleFormat.exportFormats = [format]
+            let single = try await AppleLooseDailyExportPreviewPlanner.artifacts(
+                healthData: record, settingsSnapshot: singleFormat, planner: AppleLooseDailyExportPlanner())
+            XCTAssertEqual(single?.map(\.format), [format], "Selecting \(format) alone must keep complete attestation")
+        }
         for artifact in artifacts {
             XCTAssertTrue(String(decoding: artifact.data, as: UTF8.self).contains("apple-v11"))
         }
         let json = try XCTUnwrap(artifacts.first { $0.format == .json })
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: json.data) as? [String: Any])
         XCTAssertEqual(object["schema_version"] as? Int, 11)
+        let range = try HealthRollupRangeRequest(ownerDateIdentifiers: ["2026-07-02"],
+            calendarTimeZoneIdentifier: zone.identifier)
+        let rollups = try await AppleLooseDailyExportPreviewPlanner.rangeArtifacts(
+            healthData: [record], requestedRange: range, settingsSnapshot: snapshot,
+            planner: AppleLooseDailyExportPlanner())
+        XCTAssertEqual(Set(rollups.map(\.format)), Set(ExportFormat.allCases))
+        XCTAssertTrue(rollups.allSatisfy { $0.kind == .rollup })
+        XCTAssertEqual(snapshot.operationRollupPeriods, [.range], "Daily preview must not erase range output authority")
+        for artifact in rollups {
+            XCTAssertTrue(String(decoding: artifact.artifact.inlineData, as: UTF8.self).contains("morning_ends"))
+        }
     }
 
     @MainActor

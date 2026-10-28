@@ -355,6 +355,15 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             if wakeDateContext != nil { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
             return .legacy
         }
+        // Frozen nil authority is an explicit legacy decision. Native-only outputs
+        // (for example daily-note-only work) need not satisfy core file-plan topology.
+        // Wake-date contradictions have already failed above and cannot downgrade here.
+        if settingsSnapshot.appleExportEnginePin == nil,
+           settingsSnapshot.appleExportEngineAuthorityIsFrozen
+                || surface == .connectedReceivedFilesWithoutSideEffects
+                || surface == .connectedReceivedRangeWithoutSideEffects {
+            return .legacy
+        }
         let calendarTimeZoneIdentifier = settingsSnapshot.calendarTimeZoneIdentifier ?? ""
         let orderedRecords = records.sorted {
             HealthKitDailyOwnershipMetadata.ownerDate(
@@ -832,6 +841,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         let isRangeSurface = surface == .localVaultRangeWithoutSideEffects
             || surface == .directGeneratedFilesWithoutSideEffects
             || surface == .connectedReceivedRangeWithoutSideEffects
+            || (surface == .preview && settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds)
         let isSummaryOnly = settingsSnapshot.summaryOnlyExport
             && hasConfiguredRollups
             && !settingsSnapshot.exportFormats.isEmpty
@@ -1283,6 +1293,25 @@ nonisolated struct AppleLooseDailyPreviewArtifact: Equatable, Sendable {
 /// legacy; a Rust planning failure is thrown and never converted into a legacy preview.
 @MainActor
 enum AppleLooseDailyExportPreviewPlanner {
+    static func rangeArtifacts(
+        healthData: [HealthData], requestedRange: HealthRollupRangeRequest,
+        settingsSnapshot: ExportSettingsSnapshot,
+        planner: any AppleLooseDailyRangeExportPlanning
+    ) async throws -> [AppleLooseDailyPlannedArtifact] {
+        guard settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds,
+              settingsSnapshot.generateRangeSummary else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        let resolution = try await planner.planRange(healthData: healthData,
+            dailyOutputOwnerDates: [], requestedRange: requestedRange,
+            settingsSnapshot: settingsSnapshot, surface: .preview, operationIdentity: nil)
+        guard case .planned(let operation) = resolution,
+              operation.artifacts.allSatisfy({ $0.kind == .rollup }) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        return operation.artifacts
+    }
+
     static func artifacts(
         healthData: HealthData,
         settingsSnapshot: ExportSettingsSnapshot,
@@ -1290,7 +1319,7 @@ enum AppleLooseDailyExportPreviewPlanner {
     ) async throws -> [AppleLooseDailyPreviewArtifact]? {
         switch try await planner.plan(
             healthData: healthData,
-            settingsSnapshot: settingsSnapshot,
+            settingsSnapshot: settingsSnapshot.forDailyArtifactPreview(),
             surface: .preview
         ) {
         case .legacy:

@@ -515,6 +515,16 @@ struct ExportSettingsSnapshot: Codable, Equatable {
 
     /// Freezes the nondeterministic Apple operation inputs only while planning new work. Persisted
     /// snapshots must be copied directly and must never call this factory during resume.
+    /// Preview daily files separately from the operation's range outputs, retaining
+    /// its captured profile, registry and clock. The original snapshot remains intact.
+    func forDailyArtifactPreview() -> Self {
+        guard sleepCaptureContext?.sleepDayAttribution == .morningEnds else { return self }
+        var daily = self
+        daily.generateRangeSummary = false
+        daily.historicalCalendarRollupPeriods = nil
+        return daily
+    }
+
     static func forNewAppleOperation(
         _ settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
@@ -563,7 +573,10 @@ struct ExportSettingsSnapshot: Codable, Equatable {
                     : AppleLooseDailyExportPlanner.supportsNewWakeDateSettings(
                         settingsSnapshot: snapshot, surface: surface)) else { return snapshot }
             snapshot.appleExportEnginePin = await policyResolver.pinForNewWakeDateOperation(
-                calendarTimeZoneIdentifier: identifier, coreExecutor: coreExecutor)
+                calendarTimeZoneIdentifier: identifier,
+                expectedRegistryVersion: surface != .apiEndpoint && snapshot.generateRangeSummary ? AppleExportEnginePin.wakeDateRangeRegistryVersion
+                    : AppleExportEnginePin.wakeDateDailyRegistryVersion,
+                coreExecutor: coreExecutor)
             return snapshot
         }
         guard !hasNativeOnlyCompanionAction,

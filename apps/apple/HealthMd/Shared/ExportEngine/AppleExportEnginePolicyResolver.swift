@@ -94,16 +94,19 @@ nonisolated struct AppleExportEnginePolicyResolver: Sendable {
     /// Apple-v8 rollout overrides cannot retag or select this successor.
     func pinForNewWakeDateOperation(
         calendarTimeZoneIdentifier: String,
+        expectedRegistryVersion: UInt32 = HealthMdSleepProfileContract.registryVersion,
         coreExecutor: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor()
     ) async -> AppleExportEnginePin? {
         await pinForProfile(calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
-            profile: .appleHealthDataV11, requestedMode: .rust, coreExecutor: coreExecutor)
+            profile: .appleHealthDataV11, requestedMode: .rust,
+            expectedRegistryVersion: expectedRegistryVersion, coreExecutor: coreExecutor)
     }
 
     private func pinForProfile(
         calendarTimeZoneIdentifier: String,
         profile: CoreMetricRegistryProfile,
         requestedMode: ExportEngineMode,
+        expectedRegistryVersion: UInt32? = nil,
         coreExecutor: any AppleLooseDailyCoreExecuting
     ) async -> AppleExportEnginePin? {
         // Legacy authority persists as nil without loading the packaged core. Capture the request
@@ -113,11 +116,17 @@ nonisolated struct AppleExportEnginePolicyResolver: Sendable {
             ? AppleExportEnginePin.wakeDateProfileID : AppleExportEnginePin.profileID
         guard requestedMode != .legacy,
               profile != .appleHealthDataV11 || requestedMode == .rust,
-              AppleExportEnginePin.isIANAIdentifier(calendarTimeZoneIdentifier),
-              let context = try? await coreExecutor.loadContext(profile: profile),
-              context.registry.profileId == expectedProfileID else {
-            return nil
-        }
+              AppleExportEnginePin.isIANAIdentifier(calendarTimeZoneIdentifier) else { return nil }
+        let context: AppleLooseDailyCoreContext
+        do {
+            if let expectedRegistryVersion {
+                context = try await coreExecutor.loadContext(profile: profile,
+                    expectedRegistryVersion: expectedRegistryVersion)
+            } else {
+                context = try await coreExecutor.loadContext(profile: profile)
+            }
+        } catch { return nil }
+        guard context.registry.profileId == expectedProfileID else { return nil }
         // Pin construction validates the selected profile's complete contract.
         // Successors require Rust; a historical/legacy compatibility probe cannot
         // establish their authority or substitute a different returned registry.

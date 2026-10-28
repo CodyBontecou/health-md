@@ -804,8 +804,10 @@ enum HealthMdRenderInputAdapter {
         }
         let requested = Set(options.formats)
         if let captureContext, captureContext.sleepDayAttribution == .morningEnds {
+            // The native document attests the captured values for every output format.
+            // Keeping it in the handoff does not select a JSON output artifact.
             let json: Any
-            if requested.contains("json") {
+            do {
                 let bytes = try data.toJSONDataThrowing(customization: customization, captureContext: captureContext)
                 guard var root = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
                     throw AdapterError.invalidPresentation
@@ -826,8 +828,6 @@ enum HealthMdRenderInputAdapter {
                     root["units"] = units
                 }
                 json = try orderedJSON(root)
-            } else {
-                json = NSNull()
             }
             // Other formats use completed successor projections, never historical native bodies.
             return [
@@ -872,8 +872,9 @@ enum HealthMdRenderInputAdapter {
         } else {
             jsonRoot = NSNull()
         }
+        let hasProfileDocument = !(markdown is NSNull && csvRows is NSNull && jsonRoot is NSNull)
         return [
-            "semantic_output_keys": semanticOutputKeys.sorted(),
+            "semantic_output_keys": hasProfileDocument ? semanticOutputKeys.sorted() : [],
             "markdown_body": markdown,
             "csv_rows": csvRows,
             "json_root": jsonRoot,
