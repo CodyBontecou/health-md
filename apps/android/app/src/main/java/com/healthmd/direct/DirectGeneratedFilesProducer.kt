@@ -106,20 +106,26 @@ class DirectGeneratedFilesProducer private constructor(
     ): List<ProducedGeneratedFile> {
         require(dates.isNotEmpty())
         captureContext.requireShippedProfile()
+        require(!settings.executionSleepCaptureAuthorityIsFrozen ||
+            settings.executionSleepCaptureContext == captureContext) {
+            "Direct generated capture authority conflicts with frozen settings."
+        }
+        val capturedSettings = settings.copy(executionSleepCaptureContext = captureContext,
+            executionSleepCaptureAuthorityIsFrozen = true)
         val output = File(jobDirectory, "generated").apply {
             check(mkdirs() || isDirectory) { "Unable to create direct generated-file storage." }
         }
-        val effectiveSelection = settings.effectiveDataTypeSelection()
+        val effectiveSelection = capturedSettings.effectiveDataTypeSelection()
         val staged = linkedMapOf<String, StagedContent>()
         var completed = 0
-        val chunkSize = if (settings.shouldFetchGranularData()) 7 else 30
+        val chunkSize = if (capturedSettings.shouldFetchGranularData()) 7 else 30
         dates.chunked(chunkSize).forEach { chunk ->
             currentCoroutineContext().ensureActive()
             val byDate = try {
                 healthRepository.fetchHealthDataRange(
                     dates = chunk,
                     dataTypes = effectiveSelection,
-                    includeGranularData = settings.shouldFetchGranularData(),
+                    includeGranularData = capturedSettings.shouldFetchGranularData(),
                     zoneId = captureContext.zoneId,
                     sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
                 ).associateBy(HealthData::date)
@@ -132,11 +138,11 @@ class DirectGeneratedFilesProducer private constructor(
                 currentCoroutineContext().ensureActive()
                 val data = (byDate[date] ?: HealthData(date))
                     .filtered(effectiveSelection)
-                    .filtered(settings.metricSelection)
+                    .filtered(capturedSettings.metricSelection)
                 if (data.hasAnyData) {
-                    (plannedAggregateFiles(data, settings) +
-                        dailyNote(data, settings) +
-                        individualEntries(data, settings))
+                    (plannedAggregateFiles(data, capturedSettings) +
+                        dailyNote(data, capturedSettings) +
+                        individualEntries(data, capturedSettings))
                         .forEach { stage(it, staged, output) }
                 }
                 completed += 1

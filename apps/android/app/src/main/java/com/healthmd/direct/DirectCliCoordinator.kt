@@ -11,6 +11,7 @@ import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportProfileResolution
 import com.healthmd.domain.model.ExportProfileRules
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.direct.protocol.ANDROID_APPLICATION_PROTOCOL_VERSION
 import com.healthmd.direct.protocol.ANDROID_PAIRING_PROTOCOL_VERSION
@@ -100,6 +101,16 @@ internal fun resolveDirectGeneratedFilesEnginePin(
     settings.executionEngineAuthorityIsFrozen -> settings.executionEnginePin
     settings.executionEnginePin != null -> settings.executionEnginePin
     else -> planFreshPin()
+}
+
+/** A profile carries frozen capture authority; saved-device policy captures it once. */
+internal suspend fun resolveDirectGeneratedFilesCaptureContext(
+    settings: ExportSettings,
+    captureFreshContext: suspend () -> AndroidCaptureContext,
+): AndroidCaptureContext = if (settings.executionSleepCaptureAuthorityIsFrozen) {
+    AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
+} else {
+    captureFreshContext().also { it.requireShippedProfile() }
 }
 
 /** Initial pause before the direct session reconnects to a listening CLI. */
@@ -666,7 +677,9 @@ class DirectCliCoordinator @Inject constructor(
         }
         val zoneId = ZoneId.systemDefault()
         val captureContext = if (productId == ProductId.GENERATED_FILES_V1) {
-            healthRepository.resolveCaptureContext(zoneId)
+            resolveDirectGeneratedFilesCaptureContext(settings) {
+                healthRepository.resolveCaptureContext(zoneId)
+            }
         } else {
             null
         }
@@ -675,7 +688,11 @@ class DirectCliCoordinator @Inject constructor(
             // A profile basis carries its frozen engine authority (restored with the
             // snapshot); only the saved-device basis plans a fresh direct pin.
             ProductId.GENERATED_FILES_V1 -> resolveDirectGeneratedFilesEnginePin(settings) {
-                enginePinPlanner.forDirectGeneratedFiles(settings, zoneId)
+                enginePinPlanner.forDirectGeneratedFiles(settings.copy(
+                    executionSleepCaptureContext = captureContext,
+                    executionSleepCaptureAuthorityIsFrozen = true,
+                    exportTarget = ExportTarget.DEVICE_FOLDER,
+                ), requireNotNull(captureContext).zoneId)
             }
             ProductId.ANDROID_DAILY_RECORDS_V1 -> enginePinPlanner.forApiV1(zoneId)
         }
@@ -797,6 +814,8 @@ class DirectCliCoordinator @Inject constructor(
                     settings = settings.copy(
                         executionEnginePin = enginePin,
                         executionEngineAuthorityIsFrozen = true,
+                        executionSleepCaptureContext = captureContext,
+                        executionSleepCaptureAuthorityIsFrozen = true,
                         exportTarget = ExportTarget.DEVICE_FOLDER,
                     ),
                     captureContext = requireNotNull(captureContext),

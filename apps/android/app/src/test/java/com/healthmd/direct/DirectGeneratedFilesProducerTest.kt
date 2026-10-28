@@ -68,6 +68,23 @@ class DirectGeneratedFilesProducerTest {
     }
 
     @Test
+    fun rejectsConflictingFrozenCaptureBeforeCreatingGeneratedFiles() = runTest {
+        val fixture = fixtureProducer("# synthetic\n".encodeToByteArray())
+        try {
+            val conflicting = fixture.settings.copy(
+                executionSleepCaptureContext = AndroidCaptureContext(ZoneId.of("Europe/Berlin"),
+                    SleepDayAttribution.NIGHT_BEGINS), executionSleepCaptureAuthorityIsFrozen = true)
+            val failure = runCatching {
+                fixture.producer.produce(fixture.root, listOf(fixture.date), conflicting, captureContext())
+            }.exceptionOrNull()
+            assertThat(failure).isInstanceOf(IllegalArgumentException::class.java)
+            assertThat(File(fixture.root, "generated").exists()).isFalse()
+        } finally {
+            fixture.root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun preservesExactAuthoritativePlanBytesDuringDirectStaging() = runTest {
         val bytes = "# Café 🫀\n".encodeToByteArray()
         val fixture = fixtureProducer(bytes)
@@ -174,7 +191,9 @@ class DirectGeneratedFilesProducerTest {
             writeMode = ExportArtifactWriteMode.overwrite,
             content = bytes,
         )
-        val planner = LocalDailyAggregateExportPlanner { _, _ ->
+        val planner = LocalDailyAggregateExportPlanner { _, captured ->
+            assertThat(captured.executionSleepCaptureContext).isEqualTo(captureContext())
+            assertThat(captured.executionSleepCaptureAuthorityIsFrozen).isTrue()
             LocalDailyAggregatePlanningResult.Planned(
                 mode = ExportEngineMode.rust,
                 plan = ExportArtifactPlan(
