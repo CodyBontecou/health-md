@@ -161,10 +161,15 @@ test("all WHOOP palette routes, sitemap entries, and translated examples are gen
       for (const color of colors) {
         const route = `/visualizations/${category}/${id}/${color}-colors/`;
         const page = await read(`..${route}index.html`);
-        assert.ok(page.includes(`rel="canonical" href="https://healthmd.app${route}"`));
+        const canonical = `https://healthmd.app/visualizations/whoop/${id}/theme-colors/`;
+        assert.ok(page.includes(`rel="canonical" href="${canonical}"`));
+        assert.ok(page.includes(`<meta property="og:url" content="https://healthmd.app${route}">`));
+        const schema = page.match(/<script type="application\/ld\+json" data-viz-schema>(.*?)<\/script>/s);
+        assert.equal(JSON.parse(schema[1]).url, canonical);
         assert.match(page, /WHOOP connection requirements/);
         assert.ok(page.includes("data-whoop-preview-note>"));
-        assert.ok(sitemap.includes(`https://healthmd.app${route}`));
+        const sitemapEntry = `<loc>https://healthmd.app${route}</loc>`;
+        assert.equal(sitemap.includes(sitemapEntry), category === "whoop" && color === "theme");
         assert.ok(page.includes(`https://healthmd.app/assets/visualization-og/${id}/${color}-colors-dark-theme.png`));
       }
     }
