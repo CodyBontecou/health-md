@@ -22,6 +22,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.WriteMode
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.forCaptureOperation
 import java.io.File
 import java.time.LocalDate
 import java.util.UUID
@@ -113,6 +114,13 @@ class DirectGeneratedFilesProducer private constructor(
         }
         val capturedSettings = settings.copy(executionSleepCaptureContext = captureContext,
             executionSleepCaptureAuthorityIsFrozen = true)
+        val operationRepository = try {
+            healthRepository.forCaptureOperation()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            throw IllegalStateException("Export source selection is unavailable.")
+        }
         val output = File(jobDirectory, "generated").apply {
             check(mkdirs() || isDirectory) { "Unable to create direct generated-file storage." }
         }
@@ -123,7 +131,7 @@ class DirectGeneratedFilesProducer private constructor(
         dates.chunked(chunkSize).forEach { chunk ->
             currentCoroutineContext().ensureActive()
             val byDate = try {
-                healthRepository.fetchHealthDataRange(
+                operationRepository.fetchHealthDataRange(
                     dates = chunk,
                     dataTypes = effectiveSelection,
                     includeGranularData = capturedSettings.shouldFetchGranularData(),

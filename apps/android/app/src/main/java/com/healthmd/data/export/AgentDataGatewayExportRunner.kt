@@ -28,6 +28,7 @@ import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.forCaptureOperation
 import com.healthmd.rawexport.allowsInteractiveRouteConsent
 import java.time.LocalDate
 import java.time.ZoneId
@@ -48,12 +49,15 @@ interface AgentDataGatewayCaptureSource {
 
 /** Resolve the device preference once, before consent or any provider capture. */
 internal interface OperationScopedAgentDataGatewayCaptureSource : AgentDataGatewayCaptureSource {
+    suspend fun forCaptureOperation(): AgentDataGatewayCaptureSource = this
     suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext
 }
 
 private class HealthRepositoryAgentDataGatewayCaptureSource(
     private val healthRepository: HealthRepository,
 ) : OperationScopedAgentDataGatewayCaptureSource {
+    override suspend fun forCaptureOperation(): AgentDataGatewayCaptureSource =
+        HealthRepositoryAgentDataGatewayCaptureSource(healthRepository.forCaptureOperation())
     override suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext =
         healthRepository.resolveCaptureContext(zoneId)
 
@@ -168,8 +172,10 @@ class AgentDataGatewayExportRunner private constructor(
         if (captureSource.isBeforeFirstUnlock()) {
             return configurationFailure(normalizedDates, ExportFailureReason.DEVICE_LOCKED)
         }
-        val capturedSettings = try {
-            snapshotForCapture(settings.frozenForAPIAction())
+        val (capturedSettings, operationSource) = try {
+            val frozen = snapshotForCapture(settings.frozenForAPIAction())
+            val source = (captureSource as? OperationScopedAgentDataGatewayCaptureSource)?.forCaptureOperation() ?: captureSource
+            frozen to source
         } catch (_: CancellationException) {
             return cancelledResult(normalizedDates, emptyList())
         } catch (error: Throwable) {
@@ -182,9 +188,9 @@ class AgentDataGatewayExportRunner private constructor(
         val outcomes = mutableListOf<AgentDataArtifactOutcome>()
         var lastStatusCode: Int? = null
 
-        if (coroutineContext.allowsInteractiveRouteConsent() && !captureSource.isBeforeFirstUnlock()) {
+        if (coroutineContext.allowsInteractiveRouteConsent() && !operationSource.isBeforeFirstUnlock()) {
             try {
-                captureSource.authorizeExerciseRouteConsent(normalizedDates, capturedSettings)
+                operationSource.authorizeExerciseRouteConsent(normalizedDates, capturedSettings)
             } catch (_: CancellationException) {
                 return cancelledResult(normalizedDates, outcomes)
             } catch (_: Exception) {
@@ -201,13 +207,13 @@ class AgentDataGatewayExportRunner private constructor(
             }
             onProgress?.invoke(index + 1, normalizedDates.size, date.toString())
 
-            if (captureSource.isBeforeFirstUnlock()) {
+            if (operationSource.isBeforeFirstUnlock()) {
                 failures += FailedDateDetail(date, ExportFailureReason.DEVICE_LOCKED)
                 continue
             }
 
             val data = try {
-                captureSource.capture(date, capturedSettings)
+                operationSource.capture(date, capturedSettings)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: SecurityException) {
@@ -325,8 +331,10 @@ class AgentDataGatewayExportRunner private constructor(
             return ExportPreview(normalizedDates.size, 0, normalizedDates.size > previewCandidates.size,
                 previewCandidates.map { ExportPreviewDay(it, failureReason = ExportFailureReason.DEVICE_LOCKED) })
         }
-        val capturedSettings = try {
-            snapshotForCapture(settings.frozenForAPIAction())
+        val (capturedSettings, operationSource) = try {
+            val frozen = snapshotForCapture(settings.frozenForAPIAction())
+            val source = (captureSource as? OperationScopedAgentDataGatewayCaptureSource)?.forCaptureOperation() ?: captureSource
+            frozen to source
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
@@ -342,11 +350,11 @@ class AgentDataGatewayExportRunner private constructor(
             attemptedDateCount++
             onProgress?.invoke(attemptedDateCount, previewCandidates.size, date.toString())
 
-            val previewDay = if (captureSource.isBeforeFirstUnlock()) {
+            val previewDay = if (operationSource.isBeforeFirstUnlock()) {
                 ExportPreviewDay(date = date, failureReason = ExportFailureReason.DEVICE_LOCKED)
             } else {
                 try {
-                    val data = captureSource.capture(date, capturedSettings)
+                    val data = operationSource.capture(date, capturedSettings)
                     if (!data.hasAnyData) {
                         ExportPreviewDay(date = date, failureReason = ExportFailureReason.NO_HEALTH_DATA)
                     } else {
