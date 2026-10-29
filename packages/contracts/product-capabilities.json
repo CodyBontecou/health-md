@@ -151,7 +151,7 @@
       "id": "export.sleep-summary",
       "name": "Sleep summaries and stages",
       "classification": "shared",
-      "summary": "Export sleep duration and the stages that both platform APIs expose using the shipped night_begins noon-to-noon summary window. Wake-date ownership is unavailable in these immutable profiles pending settings.sleep-attribution successor-profile approval. Historical Apple v8 granular stages are window-clipped; Android v4/v5 detailed stages and parent records retain source intervals. This profile-specific detail difference does not imply equivalent raw projections or change summary ownership.",
+      "summary": "Export sleep duration and the stages that both platform APIs expose using the shipped night_begins noon-to-noon summary window. Wake-date ownership requires the independently approved successor meanings and remains unavailable in these immutable profiles; production qualification is tracked by settings.sleep-attribution. Historical Apple v8 granular stages are window-clipped; Android v4/v5 detailed stages and parent records retain source intervals. This profile-specific detail difference does not imply equivalent raw projections or change summary ownership.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -181,11 +181,11 @@
       "platforms": {
         "apple": {
           "state": "planned",
-          "target": "Issue #104 sleep-attribution-successor-profile-review: approve versioned owner-day/clipping semantics with exported attribution metadata, qualify Apple/core/CLI/website/API/direct and external Obsidian readers, and pass immutable operation/durable recovery gates before enabling morning_ends. Apple v11 and unified-v9 remain unapproved candidates."
+          "target": "Issue #104 sleep-attribution-successor-profile-review: Apple-v11 whole-session wake-up-date ownership, no noon clipping, frozen export timezone and explicit attribution metadata were owner-approved on 2026-10-29. Qualify Apple/core/CLI/website/API/direct and external Obsidian readers, immutable operation/durable recovery, complete producer admission and native accessibility before enabling morning_ends. This approval does not approve unified-v9 or enable production."
         },
         "android": {
           "state": "planned",
-          "target": "Issue #104 sleep-attribution-successor-profile-review: approve versioned owner-day/clipping semantics with exported attribution metadata, qualify Android/core/CLI/website/API/direct and external Obsidian readers, and pass immutable operation/durable recovery gates before enabling morning_ends. Android v6 and unified-v9 remain unapproved candidates."
+          "target": "Issue #104 sleep-attribution-successor-profile-review: Android-sleep-v6 whole-session wake-up-date ownership, no noon clipping, frozen export timezone and explicit attribution metadata were owner-approved on 2026-10-29. Qualify Android/core/CLI/website/API/direct and external Obsidian readers, immutable operation/durable recovery, complete producer admission and native accessibility before enabling morning_ends. This approval does not approve unified-v9 or enable production."
         }
       },
       "evidence": [
