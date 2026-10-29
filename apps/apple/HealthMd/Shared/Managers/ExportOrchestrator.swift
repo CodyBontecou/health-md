@@ -508,6 +508,7 @@ struct ExportOrchestrator {
             )
         }
         #endif
+        let externalIntegrations = externalIntegrations?.forCaptureOperation()
         externalIntegrations?.beginExportAction()
         defer { externalIntegrations?.endExportAction() }
         vaultManager.clearLastExportPresentationTarget()
@@ -1308,6 +1309,7 @@ struct ExportOrchestrator {
             )
         }
         #endif
+        let externalIntegrations = externalIntegrations?.forCaptureOperation()
         externalIntegrations?.beginExportAction()
         defer { externalIntegrations?.endExportAction() }
         vaultManager.clearLastExportPresentationTarget()

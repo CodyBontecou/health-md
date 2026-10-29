@@ -10,6 +10,8 @@ nonisolated struct ExternalProviderHistoryDiscovery: Equatable, Sendable {
 @MainActor
 protocol ExternalIntegrationDailyRecordProviding: AnyObject {
     var connectedProviderCount: Int { get }
+    /// Accept the provider/account selection once for this in-memory capture.
+    func forCaptureOperation() -> any ExternalIntegrationDailyRecordProviding
     func beginExportAction()
     func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord]
     func fetchDailyRecords(
@@ -32,6 +34,8 @@ protocol ExternalIntegrationDailyRecordProviding: AnyObject {
 }
 
 extension ExternalIntegrationDailyRecordProviding {
+    func forCaptureOperation() -> any ExternalIntegrationDailyRecordProviding { self }
+
     func beginExportAction() {}
 
     func fetchDailyRecords(

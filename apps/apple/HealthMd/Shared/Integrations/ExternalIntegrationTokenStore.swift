@@ -17,9 +17,15 @@ extension SystemKeychainStore: ExternalIntegrationSecureStoring {}
 
 enum ExternalIntegrationTokenStoreError: LocalizedError, Equatable {
     case persistenceVerificationFailed
+    case connectionChanged
 
     var errorDescription: String? {
-        "Health.md could not verify the provider credentials in Keychain."
+        switch self {
+        case .persistenceVerificationFailed:
+            "Health.md could not verify the provider credentials in Keychain."
+        case .connectionChanged:
+            "The provider connection changed. Start a new export."
+        }
     }
 }
 
@@ -34,6 +40,9 @@ final class ExternalIntegrationTokenStore {
     /// Process-local credential snapshots avoid repeated Keychain decoding for
     /// every provider/day in a multi-day export. Mutations still verify the
     /// authoritative Keychain value before updating this cache.
+    // Process-local leases identify a connection, independently of token rotation.
+    // They are deliberately not durable export/recovery authority.
+    private var connectionIDs: [ExternalIntegrationProvider: UUID] = [:]
     private var tokenCache: [ExternalIntegrationProvider: ExternalIntegrationToken] = [:]
 
     private let keychain: any ExternalIntegrationSecureStoring
@@ -52,6 +61,12 @@ final class ExternalIntegrationTokenStore {
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601
         loadAccounts()
+        connectionIDs = accounts.mapValues { _ in UUID() }
+    }
+
+    func connectionID(for provider: ExternalIntegrationProvider) -> UUID? {
+        guard accounts[provider] != nil else { return nil }
+        return connectionIDs[provider]
     }
 
     func token(for provider: ExternalIntegrationProvider) -> ExternalIntegrationToken? {
@@ -70,6 +85,9 @@ final class ExternalIntegrationTokenStore {
         provider: ExternalIntegrationProvider,
         connectedAt: Date = Date()
     ) throws {
+        // Even an unsuccessful replacement invalidates readers that accepted the
+        // previous connection: a failed rollback can leave credentials uncertain.
+        connectionIDs[provider] = UUID()
         let previousToken = keychain.readString(key: tokenKey(for: provider))
         try persist(token: token, provider: provider)
 
@@ -115,8 +133,12 @@ final class ExternalIntegrationTokenStore {
     /// a successfully stored pair after WHOOP invalidated the old one.
     func saveRotatedToken(
         _ token: ExternalIntegrationToken,
-        provider: ExternalIntegrationProvider
+        provider: ExternalIntegrationProvider,
+        replacingConnection connectionID: UUID? = nil
     ) throws {
+        if let connectionID, self.connectionID(for: provider) != connectionID {
+            throw ExternalIntegrationTokenStoreError.connectionChanged
+        }
         try persist(token: token, provider: provider)
         let account = updatedAccount(for: provider, token: token, connectedAt: Date())
         if (try? persist(account: account)) != nil {
@@ -133,6 +155,7 @@ final class ExternalIntegrationTokenStore {
     }
 
     func disconnect(provider: ExternalIntegrationProvider) throws {
+        connectionIDs.removeValue(forKey: provider)
         var firstError: Error?
         do {
             try keychain.removeOrThrow(key: tokenKey(for: provider))

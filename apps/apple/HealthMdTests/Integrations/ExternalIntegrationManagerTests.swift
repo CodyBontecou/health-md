@@ -749,6 +749,147 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         ))
     }
 
+    func testCaptureOperationDoesNotAdoptLaterConnection() async throws {
+        let manager = makeManager { url in
+            let state = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "state" }?.value)
+            return URL(string: "healthmd://oauth/callback?code=code&state=\(state)")!
+        }
+        let accepted = manager.forCaptureOperation()
+        var apiCalls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            if request.url?.path == "/v1/oauth/authorize-url" { return try Self.authorizationResponse(request) }
+            if request.url?.host == "broker.example.com" {
+                return Self.response(request, status: 200, json: ["access_token": "new-account", "refresh_token": "new-refresh"])
+            }
+            apiCalls += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        await manager.connect(provider: .whoop)
+        XCTAssertTrue(manager.isConnected(.whoop))
+        XCTAssertEqual(accepted.connectedProviderCount, 0)
+        let oldRecords = await accepted.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertTrue(oldRecords.isEmpty)
+        XCTAssertEqual(apiCalls, 0)
+        let next = manager.forCaptureOperation()
+        XCTAssertEqual(next.connectedProviderCount, 1)
+        let records = await next.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertEqual(records.count, 1)
+        XCTAssertFalse(records[0].payloads.isEmpty)
+        XCTAssertGreaterThan(apiCalls, 0)
+    }
+
+    func testCaptureOperationRejectsReplacementAndDoesNotAcknowledgeItsAccount() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "original"), provider: .whoop)
+        let manager = makeManager()
+        let accepted = manager.forCaptureOperation()
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            Self.response(request, status: 200, json: ["records": []])
+        }
+        accepted.beginExportAction()
+        let first = await accepted.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertFalse(try XCTUnwrap(first.first).payloads.isEmpty)
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "replacement"), provider: .whoop)
+        accepted.endExportAction(succeeded: true)
+        XCTAssertNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt,
+                     "Old accepted bytes cannot acknowledge a newly connected account")
+        var apiCalls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            apiCalls += 1
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer replacement")
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let rejected = await accepted.fetchDailyRecords(for: Self.day(2026, 7, 13))
+        XCTAssertTrue(try XCTUnwrap(rejected.first).payloads.isEmpty)
+        XCTAssertFalse(try XCTUnwrap(rejected.first).warnings.isEmpty)
+        XCTAssertEqual(apiCalls, 0)
+        let next = await manager.forCaptureOperation().fetchDailyRecords(for: Self.day(2026, 7, 13))
+        XCTAssertFalse(try XCTUnwrap(next.first).payloads.isEmpty)
+        XCTAssertGreaterThan(apiCalls, 0)
+    }
+
+    func testCaptureOperationDiscardsOldAccountResponseAfterAwait() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "original"), provider: .whoop)
+        let manager = makeManager()
+        let accepted = manager.forCaptureOperation()
+        let started = expectation(description: "Accepted account query reached provider")
+        let release = DispatchSemaphore(value: 0)
+        let firstRequest = ExternalConnectionFirstRequest()
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer original")
+            if firstRequest.take() {
+                started.fulfill()
+                guard release.wait(timeout: .now() + 10) == .success else { throw URLError(.timedOut) }
+            }
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        accepted.beginExportAction()
+        let pending = Task { await accepted.fetchDailyRecords(for: Self.day(2026, 7, 12)) }
+        await fulfillment(of: [started], timeout: 5)
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "replacement"), provider: .whoop)
+        release.signal()
+        let records = await pending.value
+        accepted.endExportAction(succeeded: true)
+        let record = try XCTUnwrap(records.first)
+        XCTAssertTrue(record.payloads.isEmpty, "Late bytes from the old account cannot enter this capture")
+        XCTAssertEqual(record.warnings, [ExternalIntegrationTokenStoreError.connectionChanged.localizedDescription])
+        XCTAssertNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt)
+    }
+
+    func testStaleRefreshCannotOverwriteReplacementOrJoinItsRefresh() async throws {
+        let original = ExternalIntegrationToken(accessToken: "original", refreshToken: "original-refresh")
+        try tokenStore.save(token: original, provider: .whoop)
+        let manager = makeManager()
+        let started = expectation(description: "Original refresh reached broker")
+        let release = DispatchSemaphore(value: 0)
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.externalIntegrationHTTPBody()) as? [String: Any])
+            let refresh = try XCTUnwrap(body["refresh_token"] as? String)
+            if refresh == "original-refresh" {
+                started.fulfill()
+                guard release.wait(timeout: .now() + 10) == .success else { throw URLError(.timedOut) }
+            }
+            return Self.response(request, status: 200, json: [
+                "access_token": refresh + "-rotated", "refresh_token": refresh + "-next", "expires_in": 3600
+            ])
+        }
+        let old = Task { try await manager.refreshToken(for: .whoop, replacing: original) }
+        await fulfillment(of: [started], timeout: 5)
+        let replacement = ExternalIntegrationToken(accessToken: "replacement", refreshToken: "replacement-refresh")
+        try tokenStore.save(token: replacement, provider: .whoop)
+        let fresh = Task { try await manager.refreshToken(for: .whoop, replacing: replacement) }
+        // Give the new MainActor task a chance to look up the in-flight table.
+        await Task.yield()
+        release.signal()
+        do {
+            _ = try await old.value
+            XCTFail("A stale refresh must not commit into the replacement connection")
+        } catch {
+            XCTAssertEqual(error as? ExternalIntegrationTokenStoreError, .connectionChanged)
+        }
+        let rotated = try await fresh.value
+        XCTAssertEqual(rotated.accessToken, "replacement-refresh-rotated")
+        XCTAssertEqual(tokenStore.token(for: .whoop), rotated)
+    }
+
+    func testConnectionLeaseSurvivesRotationButNotReplacementOrDisconnect() throws {
+        let original = ExternalIntegrationToken(accessToken: "original", refreshToken: "refresh")
+        try tokenStore.save(token: original, provider: .whoop)
+        let first = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
+        let rotated = ExternalIntegrationToken(accessToken: "rotated", refreshToken: "next")
+        try tokenStore.saveRotatedToken(rotated, provider: .whoop, replacingConnection: first)
+        XCTAssertEqual(tokenStore.connectionID(for: .whoop), first)
+        try tokenStore.save(token: original, provider: .whoop)
+        XCTAssertNotEqual(tokenStore.connectionID(for: .whoop), first)
+        XCTAssertThrowsError(try tokenStore.saveRotatedToken(rotated, provider: .whoop, replacingConnection: first))
+        XCTAssertEqual(tokenStore.token(for: .whoop), original)
+        let replacement = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
+        try tokenStore.disconnect(provider: .whoop)
+        XCTAssertNil(tokenStore.connectionID(for: .whoop))
+        XCTAssertThrowsError(try tokenStore.saveRotatedToken(rotated, provider: .whoop, replacingConnection: replacement))
+        XCTAssertNil(tokenStore.token(for: .whoop))
+        XCTAssertNil(tokenStore.accounts[.whoop])
+    }
+
     private func makeManager(
         authenticate: (@MainActor (URL) async throws -> URL)? = nil
     ) -> ExternalIntegrationManager {
@@ -818,6 +959,18 @@ final class ExternalIntegrationManagerTests: XCTestCase {
             )!,
             data
         )
+    }
+}
+
+private final class ExternalConnectionFirstRequest {
+    private let lock = NSLock()
+    private var isFirst = true
+    func take() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        let result = isFirst
+        isFirst = false
+        return result
     }
 }
 

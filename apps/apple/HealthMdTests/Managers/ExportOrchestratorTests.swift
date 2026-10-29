@@ -1754,6 +1754,31 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testForegroundBindsProviderAdapterOnceBeforeProgressChangesSelection() async throws {
+        guard ConnectedAppsFeature.isEnabled else { throw XCTSkip("Requires Connected Apps test host") }
+        let first = HealthKitFixtures.referenceDate
+        let next = try XCTUnwrap(Calendar.current.date(byAdding: .day, value: 1, to: first))
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        manager.setSleepDayAttribution(.nightBegins)
+        let (vault, _) = makeVaultManager(vaultPath: "/tmp/BoundProviderAdapter")
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.executionSleepCaptureContext = nil
+        settings.includeDataDictionary = false
+        let providers = BoundProviderAdapterProbe()
+        let result = await ExportOrchestrator.exportDates([first, next], healthKitManager: manager,
+            vaultManager: vault, settings: settings, externalIntegrations: providers,
+            onProgress: { _, _, _ in providers.connectedCount = 0 })
+        XCTAssertEqual(result.successCount, 2, "\(result.failedDateDetails)")
+        XCTAssertEqual(providers.bindCount, 1)
+        XCTAssertEqual(providers.fetchCount, 0, "The live adapter cannot serve accepted capture")
+        XCTAssertEqual(providers.bound.fetchCount, 2)
+        XCTAssertEqual(providers.bound.beginCount, 1)
+        XCTAssertEqual(providers.bound.endCount, 1)
+    }
+
+    @MainActor
     func testMorningSummaryOnlyDoesNotAcquireSuppressedConnectedProviderAuthority() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
         var calendar = Calendar(identifier: .gregorian)
@@ -2075,6 +2100,43 @@ final class ExportOrchestratorTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         return defaults
+    }
+}
+
+@MainActor
+private final class BoundProviderAdapterProbe: ExternalIntegrationDailyRecordProviding {
+    var connectedCount = 1
+    var connectedProviderCount: Int { connectedCount }
+    var bindCount = 0
+    var fetchCount = 0
+    let bound = Bound()
+    func forCaptureOperation() -> any ExternalIntegrationDailyRecordProviding {
+        bindCount += 1
+        return bound
+    }
+    func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
+        fetchCount += 1
+        XCTFail("Live provider selection was queried after binding")
+        return []
+    }
+    func fetchDailyRecords(for date: Date, providerIDs: Set<String>) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(for: date)
+    }
+    @MainActor
+    final class Bound: ExternalIntegrationDailyRecordProviding {
+        var connectedProviderCount: Int { 1 }
+        var fetchCount = 0
+        var beginCount = 0
+        var endCount = 0
+        func beginExportAction() { beginCount += 1 }
+        func endExportAction(succeeded: Bool) { endCount += 1 }
+        func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
+            fetchCount += 1
+            return []
+        }
+        func fetchDailyRecords(for date: Date, providerIDs: Set<String>) async -> [ExternalDailyRecord] {
+            await fetchDailyRecords(for: date)
+        }
     }
 }
 
