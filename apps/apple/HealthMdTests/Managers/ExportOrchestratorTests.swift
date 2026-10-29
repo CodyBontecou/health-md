@@ -1716,6 +1716,44 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testForegroundDoesNotAdoptProviderConnectedAfterRendererSelection() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 1)))
+        let wake = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: first))
+        for mode in SleepDayAttribution.allCases {
+            let store = FakeHealthStore()
+            store.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
+            let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+            manager.setSleepDayAttribution(mode)
+            let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/ProviderConnectedMidExport-\(mode.rawValue)")
+            let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: [])
+            settings.executionSleepCaptureContext = nil
+            settings.exportTimeZoneOverride = zone
+            settings.metricSelection.enabledMetrics = ["steps"]
+            settings.detailPolicy = .summary
+            settings.includeDataDictionary = false
+            let providers = SuppressedMorningProviderProbe(connectedCount: 0)
+            let result = await ExportOrchestrator.exportDates([first, wake], healthKitManager: manager,
+                vaultManager: vault, settings: settings, externalIntegrations: providers,
+                onProgress: { _, _, _ in providers.connectedCount = 1 })
+            XCTAssertEqual(result.successCount, 2, "\(result.failedDateDetails)")
+            XCTAssertEqual(result.totalFilesWritten, 8)
+            XCTAssertEqual(result.externalRecordFileCount, 0)
+            XCTAssertEqual(fileSystem.files.count, 8)
+            XCTAssertEqual(providers.fetchCount, 0,
+                "A new connection cannot join an already accepted export")
+            XCTAssertEqual(providers.connectedProviderCountReads, ConnectedAppsFeature.isEnabled ? 1 : 0)
+            for file in fileSystem.files where file.key.hasSuffix(".json") {
+                let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(file.value.utf8)) as? [String: Any])
+                XCTAssertEqual(root["schema_version"] as? Int, mode == .morningEnds ? 11 : 8)
+                XCTAssertNil(root["providers"])
+            }
+        }
+    }
+
+    @MainActor
     func testMorningSummaryOnlyDoesNotAcquireSuppressedConnectedProviderAuthority() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
         var calendar = Calendar(identifier: .gregorian)
@@ -2042,15 +2080,17 @@ final class ExportOrchestratorTests: XCTestCase {
 
 @MainActor
 private final class SuppressedMorningProviderProbe: ExternalIntegrationDailyRecordProviding {
+    var connectedCount: Int
+    init(connectedCount: Int = 1) { self.connectedCount = connectedCount }
     private(set) var connectedProviderCountReads = 0
     var connectedProviderCount: Int {
         connectedProviderCountReads += 1
-        return 1
+        return connectedCount
     }
     private(set) var fetchCount = 0
     func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
         fetchCount += 1
-        XCTFail("Summary-only exports must not capture suppressed provider sidecars")
+        XCTFail("This operation did not accept provider sidecar capture")
         return []
     }
     func fetchDailyRecords(for date: Date, providerIDs: Set<String>) async -> [ExternalDailyRecord] {

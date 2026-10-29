@@ -639,10 +639,8 @@ struct ExportOrchestrator {
                 )
                 let externalRecords: [ExternalDailyRecord]
                 if healthData.hasAnyData,
-                   settings.writesExternalProviderSidecars,
-                   ConnectedAppsFeature.isEnabled,
-                   let externalIntegrations,
-                   externalIntegrations.connectedProviderCount > 0 {
+                   hasProviderSideEffects,
+                   let externalIntegrations {
                     var providerCalendar = Calendar(identifier: .gregorian)
                     providerCalendar.timeZone = sourceTimeZone
                     externalRecords = await externalIntegrations.fetchDailyRecords(
