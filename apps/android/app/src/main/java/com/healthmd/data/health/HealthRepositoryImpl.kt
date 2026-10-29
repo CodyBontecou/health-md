@@ -1,6 +1,8 @@
 package com.healthmd.data.health
 
 import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.HealthProviderCaptureAuthority
+import com.healthmd.domain.repository.RestorableHealthRepository
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
@@ -16,7 +18,7 @@ class HealthRepositoryImpl private constructor(
     private val providerRegistry: HealthProviderRegistry,
     private val settingsRepository: SettingsRepository,
     private val acceptedProviders: ProviderSelection?,
-) : HealthRepository, OperationScopedHealthRepository {
+) : HealthRepository, OperationScopedHealthRepository, RestorableHealthRepository {
 
     constructor(providerRegistry: HealthProviderRegistry, settingsRepository: SettingsRepository) :
         this(providerRegistry, settingsRepository, null)
@@ -31,6 +33,29 @@ class HealthRepositoryImpl private constructor(
         val acceptedIds = if (selectedId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID) connectedIds.toSet() else setOf(selectedId)
         val boundRegistry = providerRegistry.forCaptureOperation(acceptedIds)
         return HealthRepositoryImpl(boundRegistry, settingsRepository, ProviderSelection(selectedId, connectedIds))
+    }
+
+    override suspend fun captureProviderAuthority(): HealthProviderCaptureAuthority {
+        val accepted = forCaptureOperation() as HealthRepositoryImpl
+        val selection = requireNotNull(accepted.acceptedProviders)
+        val ids = if (selection.selectedId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID)
+            selection.connectedIds else listOf(selection.selectedId)
+        return HealthProviderCaptureAuthority(selectedProviderId = selection.selectedId, providerIds = ids,
+            connectionIds = accepted.providerRegistry.acceptedConnectionIds(ids)).validatedCopy()
+    }
+
+    override suspend fun restoreProviderAuthority(authority: HealthProviderCaptureAuthority): HealthRepository {
+        val frozen = authority.validatedCopy()
+        if (acceptedProviders != null) {
+            require(captureProviderAuthority() == frozen) { "Provider capture authority cannot be replaced" }
+            return this
+        }
+        require(frozen.selectedProviderId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID ||
+            providerRegistry.containsProvider(frozen.selectedProviderId)) { "Accepted provider is unavailable" }
+        val registry = providerRegistry.restoringConnections(frozen.connectionIds)
+        val connectedIds = if (frozen.selectedProviderId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID)
+            frozen.providerIds else emptyList()
+        return HealthRepositoryImpl(registry, settingsRepository, ProviderSelection(frozen.selectedProviderId, connectedIds))
     }
 
     private suspend fun selectedProviderId(): String =

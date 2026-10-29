@@ -52,3 +52,9 @@ interface HealthDataProvider {
 interface OperationScopedHealthDataProvider {
     suspend fun forCaptureOperation(): HealthDataProvider
 }
+
+/** Account-backed sources can expose and restore an opaque accepted grant without reading health. */
+interface RestorableHealthDataProvider {
+    suspend fun acceptedConnectionId(): String?
+    fun forAcceptedConnection(connectionId: String?): HealthDataProvider
+}

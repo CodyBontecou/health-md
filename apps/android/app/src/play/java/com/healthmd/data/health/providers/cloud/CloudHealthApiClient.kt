@@ -55,6 +55,20 @@ class CloudHealthApiClient private constructor(
             mapOf(providerId to oauthAuthorizationManager.connectionId(providerId)))
     }
 
+    /** Restores private job authority; null remains unavailable even after a later login. */
+    fun forAcceptedConnection(providerId: String, connectionId: String?): CloudHealthApiClient {
+        if (acceptedConnections != null) {
+            check(providerId in acceptedConnections && acceptedConnections[providerId] == connectionId) {
+                "Provider capture authority cannot be replaced"
+            }
+            return this
+        }
+        return CloudHealthApiClient(oauthAuthorizationManager, responseObserver, transport, clock, maxResponseBytes,
+            mapOf(providerId to connectionId))
+    }
+
+    suspend fun captureConnectionId(providerId: String): String? = acceptedConnectionId(providerId)
+
     suspend fun isConfigured(providerId: String): Boolean =
         (acceptedConnections == null || providerId in acceptedConnections) && oauthAuthorizationManager.isConfigured(providerId)
 

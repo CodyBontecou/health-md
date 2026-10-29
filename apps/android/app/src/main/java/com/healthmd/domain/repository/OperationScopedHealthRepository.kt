@@ -7,3 +7,9 @@ interface OperationScopedHealthRepository {
 
 suspend fun HealthRepository.forCaptureOperation(): HealthRepository =
     (this as? OperationScopedHealthRepository)?.forCaptureOperation() ?: this
+
+/** Private persistence boundary; restoration must not resolve current provider/account choices. */
+interface RestorableHealthRepository {
+    suspend fun captureProviderAuthority(): com.healthmd.domain.model.HealthProviderCaptureAuthority
+    suspend fun restoreProviderAuthority(authority: com.healthmd.domain.model.HealthProviderCaptureAuthority): HealthRepository
+}

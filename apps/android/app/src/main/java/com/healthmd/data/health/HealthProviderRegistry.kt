@@ -21,6 +21,27 @@ class HealthProviderRegistry(
         },
     )
 
+    suspend fun acceptedConnectionIds(providerIds: List<String>): Map<String, String?> =
+        providerIds.filterNot { it == healthConnectDataProvider.providerId }.associateWith { id ->
+            val provider = exportProviders.firstOrNull { it.providerId == id }
+            if (provider == null) null else {
+                require(provider is RestorableHealthDataProvider) { "Provider cannot preserve capture authority" }
+                provider.acceptedConnectionId()
+            }
+        }
+
+    fun restoringConnections(connections: Map<String, String?>): HealthProviderRegistry = HealthProviderRegistry(
+        healthConnectDataProvider,
+        exportProviders.filter { it.providerId != healthConnectDataProvider.providerId }.map { provider ->
+            if (provider.providerId !in connections) provider else {
+                require(provider is RestorableHealthDataProvider) { "Provider cannot restore capture authority" }
+                provider.forAcceptedConnection(connections[provider.providerId])
+            }
+        },
+    )
+
+    fun containsProvider(providerId: String): Boolean = exportProviders.any { it.providerId == providerId }
+
     fun primaryExportProvider(): HealthDataProvider = healthConnectDataProvider
 
     fun providerFor(providerId: String): HealthDataProvider =

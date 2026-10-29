@@ -13,6 +13,10 @@ import com.healthmd.data.health.oauth.OAuthProviderConfig
 import com.healthmd.data.health.oauth.OAuthToken
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.HealthProviderCaptureAuthority
+import com.healthmd.domain.repository.RestorableHealthRepository
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.repository.SettingsRepository
@@ -102,8 +106,93 @@ class HealthRepositoryGrantBindingTest {
         assertThat(requests).isEmpty()
     }
 
+    @Test
+    fun serializedAuthorityRestoresGrantAcrossRepositoryRecreationAndRotation() = runTest {
+        val tokens = InMemoryOAuthTokenStore(listOf(OAuthToken("whoop", "accepted")))
+        val requests = mutableListOf<CloudHttpRequest>()
+        val original = repository(tokens, requests)
+        val authority = original.captureProviderAuthority()
+        val saved = Json.encodeToString(authority)
+        assertThat(saved).doesNotContain("accepted")
+        assertThat(saved).doesNotContain("accessToken")
+        val rotated = requireNotNull(tokens.getCredential("whoop"))
+        assertThat(tokens.saveRotatedToken(OAuthToken("whoop", "rotated"), rotated)).isTrue()
+        // A new manager/client/repository and a different current source choice simulate reopening.
+        val reopened = repository(tokens, requests, selectedId = "health_connect")
+        val restored = reopened.restoreProviderAuthority(Json.decodeFromString<HealthProviderCaptureAuthority>(saved))
+        restored.fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
+            SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS))
+        assertThat(requests).isNotEmpty()
+        assertThat(requests.all { it.authorization == "Bearer rotated" }).isTrue()
+        assertThat((restored as RestorableHealthRepository).captureProviderAuthority()).isEqualTo(authority)
+        val wrong = authority.copy(connectionIds = mapOf("whoop" to java.util.UUID.randomUUID().toString()))
+        assertThat(runCatching { restored.restoreProviderAuthority(wrong) }.exceptionOrNull())
+            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun reopenedAuthorityCannotAdoptReplacementOrReconnectedAccount() = runTest {
+        for (disconnect in listOf(false, true)) {
+            val tokens = InMemoryOAuthTokenStore(listOf(OAuthToken("whoop", "accepted")))
+            val requests = mutableListOf<CloudHttpRequest>()
+            val saved = Json.encodeToString(repository(tokens, requests).captureProviderAuthority())
+            if (disconnect) tokens.clearToken("whoop")
+            tokens.saveToken(OAuthToken("whoop", "replacement"))
+            val reopened = repository(tokens, requests)
+            val restored = reopened.restoreProviderAuthority(Json.decodeFromString<HealthProviderCaptureAuthority>(saved))
+            val failure = runCatching {
+                restored.fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
+                    SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS))
+            }.exceptionOrNull()
+            assertThat(failure).isInstanceOf(CloudHealthRequestException::class.java)
+            assertThat(requests).isEmpty()
+            reopened.fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
+                SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS))
+            assertThat(requests).isNotEmpty()
+            assertThat(requests.all { it.authorization == "Bearer replacement" }).isTrue()
+        }
+    }
+
+    @Test
+    fun serializedUnavailableGrantStaysUnavailableAndHealthConnectSelectionStaysLocal() = runTest {
+        val tokens = InMemoryOAuthTokenStore()
+        val requests = mutableListOf<CloudHttpRequest>()
+        val authority = repository(tokens, requests).captureProviderAuthority()
+        assertThat(authority.connectionIds).containsEntry("whoop", null)
+        val saved = Json.encodeToString(authority)
+        tokens.saveToken(OAuthToken("whoop", "late-login"))
+        val reopened = repository(tokens, requests)
+        val restored = reopened.restoreProviderAuthority(Json.decodeFromString<HealthProviderCaptureAuthority>(saved))
+        assertThat(restored.hasPermissions()).isFalse()
+        val local = repository(tokens, requests, selectedId = "health_connect").captureProviderAuthority()
+        val localRestored = reopened.restoreProviderAuthority(Json.decodeFromString<HealthProviderCaptureAuthority>(Json.encodeToString(local)))
+        val data = localRestored.fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
+            SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS)).single()
+        assertThat(data.activity.steps).isEqualTo(10)
+        assertThat(requests).isEmpty()
+    }
+
+    @Test
+    fun restoredAllConnectedRetainsUnavailableSourceFactsAndUnknownSourceNeverFallsBack() = runTest {
+        val tokens = InMemoryOAuthTokenStore()
+        val requests = mutableListOf<CloudHttpRequest>()
+        val authority = repository(tokens, requests, allConnected = true).captureProviderAuthority()
+        tokens.saveToken(OAuthToken("whoop", "late-login"))
+        val reopened = repository(tokens, requests)
+        val restored = reopened.restoreProviderAuthority(Json.decodeFromString<HealthProviderCaptureAuthority>(Json.encodeToString(authority)))
+        val data = restored.fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
+            SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS)).single()
+        assertThat(data.activity.steps).isEqualTo(10)
+        assertThat(data.compatibilityProvenance?.providerFailures?.single()?.providerId).isEqualTo("whoop")
+        assertThat(requests).isEmpty()
+        val unknown = HealthProviderCaptureAuthority(selectedProviderId = "unknown", providerIds = listOf("unknown"),
+            connectionIds = mapOf("unknown" to null))
+        assertThat(runCatching { reopened.restoreProviderAuthority(unknown) }.exceptionOrNull())
+            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
     private fun repository(tokens: InMemoryOAuthTokenStore, requests: MutableList<CloudHttpRequest>,
-        allConnected: Boolean = false): HealthRepositoryImpl {
+        allConnected: Boolean = false, selectedId: String = "whoop"): HealthRepositoryImpl {
         val sdk = mockk<HealthConnectManager>()
         coEvery { sdk.isAvailable() } returns true
         coEvery { sdk.hasAllPermissions() } returns true
@@ -111,7 +200,7 @@ class HealthRepositoryGrantBindingTest {
             firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 10)) }
         }
         val settings = mockk<SettingsRepository>()
-        coEvery { settings.getSelectedHealthProviderId() } returns if (allConnected) HealthDataMerger.ALL_CONNECTED_PROVIDER_ID else "whoop"
+        coEvery { settings.getSelectedHealthProviderId() } returns if (allConnected) HealthDataMerger.ALL_CONNECTED_PROVIDER_ID else selectedId
         coEvery { settings.getConnectedHealthProviderIds() } returns setOf("health_connect", "whoop")
         val config = OAuthProviderConfig("whoop", "WHOOP", "https://auth.example.test", "https://token.example.test",
             "synthetic-client", scopes = listOf("read:sleep"))
