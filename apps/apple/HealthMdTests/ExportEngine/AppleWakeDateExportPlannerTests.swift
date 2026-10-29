@@ -104,6 +104,13 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
                     let data = try planned.artifact.content.materializedData()
                     XCTAssertEqual(planned.artifact.sha256, NativeExportArtifact.sha256(of: data))
                     let text = String(decoding: data, as: UTF8.self)
+                    if policy == .summary,
+                       let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                        let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-whoop-\(metadata)")
+                            .appendingPathComponent(planned.artifact.relativePath)
+                        try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                        try data.write(to: output)
+                    }
                     switch planned.format {
                     case .json:
                         let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
