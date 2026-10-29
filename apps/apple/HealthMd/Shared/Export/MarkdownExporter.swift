@@ -86,7 +86,7 @@ extension HealthData {
         return markdown
     }
 
-    private func whoopProviderMarkdown(
+    func whoopProviderMarkdown(
         snapshot: ExportDataSnapshot,
         headerPrefix: String
     ) -> String {

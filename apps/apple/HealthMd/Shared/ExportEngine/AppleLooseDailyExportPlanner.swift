@@ -566,7 +566,11 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             )
             let semanticBatches = try HealthMdSemanticInputAdapter.boundedBatches(
                 sessionID: identity.sessionID,
-                healthData: orderedRecords,
+                healthData: orderedRecords.map { record in
+                    var aggregate = record
+                    if wakeDateContext != nil { aggregate.providers = nil }
+                    return aggregate
+                },
                 registry: context.registry,
                 customization: frozenSettings.formatCustomization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
@@ -626,7 +630,11 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             if requestedMode == .shadow || wakeDateContext != nil {
                 // Successor JSON preparation is explicit, not a call to a historical writer.
                 presentationByOwnerDate = Dictionary(
-                    uniqueKeysWithValues: zip(ownerDates, preparedExports.map(\.filteredData))
+                    uniqueKeysWithValues: zip(ownerDates, preparedExports.map { prepared in
+                        var aggregate = prepared.filteredData
+                        if wakeDateContext != nil { aggregate.providers = nil }
+                        return aggregate
+                    })
                 )
             } else {
                 // Rust authority must not call `toMarkdown`, `toCSVThrowing`, or
@@ -696,7 +704,9 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         }
 
         if wakeDateContext != nil,
-           settingsSnapshot.detailPolicy.includesCanonicalArchive || preparedExports.contains(where: { !$0.snapshot.partialFailures.isEmpty }) {
+           settingsSnapshot.detailPolicy.includesCanonicalArchive || preparedExports.contains(where: {
+               !$0.snapshot.partialFailures.isEmpty || $0.snapshot.providers?.isEmpty == false
+           }) {
             rustPlan = try await AppleWakeDateArchiveComposer.compose(plan: rustPlan, pin: pin,
                 prepared: preparedExports, settings: frozenSettings,
                 healthSubfolder: settingsSnapshot.healthSubfolder ?? "",
@@ -779,7 +789,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
     ) -> Bool {
         (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .preview)
             && !settings.exportFormats.isEmpty && settings.exportFormats.isSubset(of: Set(ExportFormat.allCases))
-            && records.allSatisfy { $0.providers?.isEmpty != false }
+            // Provider facts are composed natively after aggregate attestation.
             // Registry 2's original workout extrema fold as sums. Keep those immutable rules
             // out of new workout range planning until separately versioned rules are qualified.
             && !(settings.generateRangeSummary && settings.appleExportEnginePin?.registryVersion == 2

@@ -1089,7 +1089,7 @@ nonisolated enum ExportDiagnosticSerializer {
         try sink.write(Data("\n\(headerPrefix) Capture Diagnostics\n\n| Native Partial Failure (JSON) |\n|---|\n".utf8))
         for failure in sorted(failures) {
             try sink.write(Data("| `".utf8))
-            let escaped = MarkdownDiagnosticJSONSink(output: sink)
+            let escaped = MarkdownJSONCodeCellSink(output: sink)
             try write(failure, to: escaped)
             _ = try escaped.finish()
             try sink.write(Data("` |\n".utf8))
@@ -1145,7 +1145,7 @@ nonisolated private struct CanonicalPartialFailure: Encodable {
 }
 
 /// Retains canonical JSON values inside a Markdown code cell without table/HTML delimiters.
-nonisolated private final class MarkdownDiagnosticJSONSink: ExportByteSink {
+nonisolated final class MarkdownJSONCodeCellSink: ExportByteSink {
     private let output: ExportByteSink
     private var hasher = SHA256()
     private var count: UInt64 = 0

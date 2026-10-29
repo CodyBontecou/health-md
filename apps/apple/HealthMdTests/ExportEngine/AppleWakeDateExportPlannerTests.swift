@@ -13,6 +13,117 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedManagers: [VaultManager] = []
 
+    func testWHOOPLabelsCannotIntroduceFrontmatterKeysOrBreakNativeJSONCells() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let label = "run | ` <&\n---\nforged: true 🌙"
+        var root = try XCTUnwrap(ExportFixtures.whoopDay.providers).foundationJSONObject()
+        var whoop = try XCTUnwrap(root["whoop"] as? [String: Any])
+        var workouts = try XCTUnwrap(whoop["workouts"] as? [[String: Any]])
+        workouts[0]["sport_name"] = label
+        whoop["workouts"] = workouts
+        root["whoop"] = whoop
+        let providers = try JSONDecoder().decode(HealthProviderSections.self, from: JSONSerialization.data(withJSONObject: root))
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 1), providers: providers)
+        var snapshot = try acceptedSnapshot(context: context, formats: [.markdown, .obsidianBases], selectionIDs: ["steps"])
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Expected provider label projection") }
+        for artifact in operation.artifacts {
+            let text = String(decoding: try artifact.artifact.content.materializedData(), as: UTF8.self)
+            let lines = text.components(separatedBy: "\n")
+            let field = try XCTUnwrap(lines.first { $0.hasPrefix("whoop_workout_sport_name: ") })
+            let decoded = try JSONSerialization.jsonObject(with: Data(field.dropFirst("whoop_workout_sport_name: ".count).utf8), options: .fragmentsAllowed) as? String
+            XCTAssertEqual(decoded, label)
+            XCTAssertFalse(lines.contains("forged: true 🌙"))
+            let row = try XCTUnwrap(lines.first { $0.hasPrefix("| `{") && $0.contains("healthmd.provider.whoop_daily") })
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: Data(row.dropFirst(3).dropLast(3).utf8)) as? NSDictionary, root as NSDictionary)
+            XCTAssertEqual(lines.filter { $0.hasPrefix("  whoop_hrv_rmssd_ms:") }.count, 1)
+        }
+        snapshot.formatCustomization.frontmatterConfig.customFields["whoop_hrv_rmssd_ms"] = "999"
+        do {
+            _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot,
+                surface: .localVaultWithoutSideEffects)
+            XCTFail("Conflicting user keys must not shadow provider facts")
+        } catch {}
+    }
+
+    func testLocalWHOOPNotRequestedAndSuccessfulEmptyRemainDistinct() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        for status in [WHOOPCaptureStatus.notRequested, .complete] {
+            let providers = HealthProviderSections(whoop: WHOOPDailyProviderSection(captureStatus: status,
+                fetchedAt: status == .notRequested ? nil : "2026-03-15T18:00:00Z",
+                resources: status == .notRequested ? [] : [WHOOPResourceResult(resource: .cycles, status: .success, recordCount: 0, error: nil)],
+                cycles: [], recoveries: [], sleep: [], workouts: [], body: nil, warnings: []))
+            let day = HealthData(date: ExportFixtures.referenceDate,
+                timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+                activity: ActivityData(steps: 1), providers: providers)
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["steps"])
+            snapshot.includeMetadata = false
+            guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Expected explicit provider capture state") }
+            for artifact in operation.artifacts {
+                let data = try artifact.artifact.content.materializedData()
+                let text = String(decoding: data, as: UTF8.self)
+                let root: [String: Any]
+                if artifact.format == .json {
+                    let document = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+                    root = try XCTUnwrap(document["providers"] as? [String: Any])
+                } else if artifact.format == .csv {
+                    XCTAssertTrue(text.contains(",WHOOP Capture,Capture Status,\(status.rawValue),"))
+                    continue
+                } else {
+                    let row = try XCTUnwrap(text.components(separatedBy: "\n").first { $0.hasPrefix("| `{") && $0.contains("healthmd.provider.whoop_daily") })
+                    root = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(row.dropFirst(3).dropLast(3).utf8)) as? [String: Any])
+                }
+                let whoop = try XCTUnwrap(root["whoop"] as? [String: Any])
+                XCTAssertEqual(whoop["capture_status"] as? String, status.rawValue)
+                XCTAssertEqual((whoop["resources"] as? [Any])?.count, status == .notRequested ? 0 : 1)
+                if status == .notRequested { XCTAssertTrue(whoop["fetched_at"] is NSNull) }
+            }
+        }
+    }
+
+    func testTypedWHOOPFactsReachAllLocalMorningFormatsWithoutChangingAppleMetrics() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 1), providers: ExportFixtures.whoopDay.providers)
+        let expected = try XCTUnwrap(day.providers).foundationJSONObject() as NSDictionary
+        for policy: AppleExportDetailPolicy in [.summary, .detailedTimeSeries, .archiveOnly, .lossless] {
+            for metadata in [true, false] {
+                var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["steps"])
+                snapshot.detailPolicy = policy
+                snapshot.includeMetadata = metadata
+                guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                    settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+                    return XCTFail("Typed provider facts must not force historical fallback")
+                }
+                XCTAssertEqual(operation.artifacts.count, 4)
+                for planned in operation.artifacts {
+                    let data = try planned.artifact.content.materializedData()
+                    XCTAssertEqual(planned.artifact.sha256, NativeExportArtifact.sha256(of: data))
+                    let text = String(decoding: data, as: UTF8.self)
+                    switch planned.format {
+                    case .json:
+                        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+                        XCTAssertEqual(root["providers"] as? NSDictionary, expected)
+                        XCTAssertEqual((root["activity"] as? [String: Any])?["steps"] as? Int, 1)
+                        XCTAssertNil((root["heart"] as? [String: Any])?["hrv"])
+                    case .csv:
+                        XCTAssertTrue(text.contains(",WHOOP Cycle,Cycle Record,"))
+                        XCTAssertTrue(text.contains(",WHOOP Recovery,HRV (RMSSD),54.3,ms,"))
+                    case .markdown, .obsidianBases:
+                        let row = try XCTUnwrap(text.components(separatedBy: "\n").first { $0.hasPrefix("| `{") && $0.contains("healthmd.provider.whoop_daily") })
+                        let object = try JSONSerialization.jsonObject(with: Data(row.dropFirst(3).dropLast(3).utf8)) as? NSDictionary
+                        XCTAssertEqual(object, expected)
+                        XCTAssertEqual(text.contains("whoop_hrv_rmssd_ms: 54.3"), metadata)
+                    }
+                }
+            }
+        }
+    }
+
     func testNativeStateOfMindRecordsReachEverySuccessorFormatWithoutLosingSourceFacts() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
