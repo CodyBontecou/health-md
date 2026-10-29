@@ -72,6 +72,7 @@ object HealthMdRenderInputAdapter {
         val groupByCategory: Boolean = true,
         val includePlatformExtensions: Boolean = false,
         val includeGranularData: Boolean = false,
+        val composeSleepRecordsNatively: Boolean = false,
         val rawCaptureStatus: String = "not_requested",
         val writeMode: String = "overwrite",
         val useEmoji: Boolean = true,
@@ -136,6 +137,9 @@ object HealthMdRenderInputAdapter {
             (handoffVersion == 1 && (captureContext.sleepDayAttribution != SleepDayAttribution.NIGHT_BEGINS ||
                 (captureContext.exportProfileID != null && captureContext.exportProfileID != registry.publicProfileId))))) {
             throw AdapterException("capture and completed semantic authority are incompatible")
+        }
+        if (options.composeSleepRecordsNatively && handoffVersion != 2) {
+            throw AdapterException("native sleep composition requires successor authority")
         }
         val nativeWakeDateContext = if (handoffVersion == 2 && presentationByOwnerDate.isNotEmpty()) {
             if (captureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
@@ -459,12 +463,12 @@ object HealthMdRenderInputAdapter {
             put("bases_frontmatter_blocks", buildJsonArray {})
             put("metrics", JsonArray(metrics))
             if (nativeWakeDateContext != null && presentationData != null) {
-                val native = json.parseToJsonElement(JsonExporter().export(presentationData,
-                    presentationCustomization, options.includeGranularData, captureContext = nativeWakeDateContext)).jsonObject
+                val native = json.parseToJsonElement(nativePresentation(presentationData,
+                    presentationCustomization, options, nativeWakeDateContext)).jsonObject
                 val sleep = native["sleep"]?.jsonObject ?: buildJsonObject {}
                 val stages = sleep["sleepStages"]?.jsonArray ?: JsonArray(emptyList())
                 val sessions = sleep["sleepSessions"]?.jsonArray ?: JsonArray(emptyList())
-                if (options.includeGranularData && (stages.size != presentationData.sleep.stages.size || sessions.size != presentationData.sleep.sessions.size)) {
+                if (options.includeGranularData && !options.composeSleepRecordsNatively && (stages.size != presentationData.sleep.stages.size || sessions.size != presentationData.sleep.sessions.size)) {
                     throw AdapterException("wake-date native sleep details are incompatible")
                 }
                 val selected = frozenSelectedOutputKeys ?: selectedOutputKeys
@@ -552,7 +556,7 @@ object HealthMdRenderInputAdapter {
         }
     }
 
-    private fun mergeDetails(first: JsonObject, second: JsonObject): JsonObject = buildJsonObject {
+    internal fun mergeDetails(first: JsonObject, second: JsonObject): JsonObject = buildJsonObject {
         put("output_keys", JsonArray((first.getValue("output_keys").jsonArray + second.getValue("output_keys").jsonArray)
             .distinct().sortedBy { it.jsonPrimitive.content }))
         for (field in listOf("csv_rows", "markdown_blocks", "bases_frontmatter_blocks")) {
@@ -753,7 +757,7 @@ object HealthMdRenderInputAdapter {
         }
     }
 
-    private fun sleepDetails(stages: JsonArray, sessions: JsonArray, ownerDate: String, selectedOutputKeys: List<String>): JsonObject {
+    internal fun sleepDetails(stages: JsonArray, sessions: JsonArray, ownerDate: String, selectedOutputKeys: List<String>): JsonObject {
         val keysByStage = mapOf("deep" to "sleep_deep_hours", "rem" to "sleep_rem_hours",
             "light" to "sleep_light_hours", "awake" to "sleep_awake_hours",
             "wake" to "sleep_awake_hours", "sleeping" to "sleep_total_hours",
@@ -830,6 +834,11 @@ object HealthMdRenderInputAdapter {
         }
     }
 
+    private fun nativePresentation(data: HealthData, customization: FormatCustomization,
+        options: Options, context: AndroidCaptureContext?): String = if (options.composeSleepRecordsNatively) {
+        JsonExporter().exportWithoutSleepRecords(data, customization, options.includeGranularData, requireNotNull(context))
+    } else JsonExporter().export(data, customization, options.includeGranularData, captureContext = context)
+
     private fun profileDocuments(
         data: HealthData?,
         customization: FormatCustomization,
@@ -884,7 +893,7 @@ object HealthMdRenderInputAdapter {
             JsonNull
         }
         val jsonRoot = if ("json" in options.formats || options.api != null) {
-            val rendered = JsonExporter().export(data, customization, options.includeGranularData, captureContext = nativeWakeDateContext)
+            val rendered = nativePresentation(data, customization, options, nativeWakeDateContext)
             val payload = json.parseToJsonElement(rendered)
             val prepared = if (nativeWakeDateContext != null) {
                 val root = payload as? JsonObject ?: throw AdapterException("native JSON units are invalid")

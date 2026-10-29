@@ -7,8 +7,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.*
 import kotlin.coroutines.coroutineContext
 
-/** Typed captured quantities remain native; shared-core summaries retain separate authority. */
-internal object AndroidWakeDateQuantityProjection {
+/** Typed captured source details remain native; shared-core summaries retain separate authority. */
+internal object AndroidWakeDateSourceProjection {
     private val json = Json { prettyPrint = true }
 
     fun aggregate(data: HealthData): HealthData = data.copy(
@@ -22,20 +22,25 @@ internal object AndroidWakeDateQuantityProjection {
         val context = requireNotNull(request.captureContext)
         require(request.profile == AndroidExportProfile.android_sleep_v6 && context.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS)
         val selected = request.data.filtered(request.metricSelection, context)
-        val source = HealthData(date = selected.date,
+        val source = HealthData(date = selected.date, sleep = selected.sleep,
             heart = HeartData(samples = selected.heart.samples, hrvSamples = selected.heart.hrvSamples),
             vitals = VitalsData(bloodOxygenSamples = selected.vitals.bloodOxygenSamples,
                 bloodGlucoseSamples = selected.vitals.bloodGlucoseSamples, respiratoryRateSamples = selected.vitals.respiratoryRateSamples))
-        if (!source.heart.hasData && !source.vitals.hasData) return plan
+        if (!source.heart.hasData && !source.vitals.hasData && source.sleep.stages.isEmpty() && source.sleep.sessions.isEmpty()) return plan
         val root = Json.parseToJsonElement(JsonExporter().export(source, request.customization, true, context)).jsonObject
         val keys = Json.parseToJsonElement(semanticResult.decodeToString()).jsonObject.getValue("selected_output_keys").jsonArray
             .map { it.jsonPrimitive.content }
         require(keys.distinct().size == keys.size)
         // Reuse native unit, clock, numeric and frozen-output-owner validation.
         val enabledKeys = keys.filter { request.customization.frontmatterConfig.outputKey(it) != null }
-        val details = HealthMdRenderInputAdapter.quantityDetails(root, source.date.toString(), enabledKeys)
+        val sleep = root["sleep"]?.jsonObject
+        val details = HealthMdRenderInputAdapter.mergeDetails(
+            HealthMdRenderInputAdapter.quantityDetails(root, source.date.toString(), enabledKeys),
+            HealthMdRenderInputAdapter.sleepDetails(sleep?.get("sleepStages")?.jsonArray ?: JsonArray(emptyList()),
+                sleep?.get("sleepSessions")?.jsonArray ?: JsonArray(emptyList()), source.date.toString(), enabledKeys))
         val sourceArrays = listOf("heart" to "heartRateSamples", "heart" to "hrvSamples", "vitals" to "bloodOxygenSamples",
-            "vitals" to "bloodGlucoseSamples", "vitals" to "respiratoryRateSamples")
+            "vitals" to "bloodGlucoseSamples", "vitals" to "respiratoryRateSamples",
+            "sleep" to "sleepStages", "sleep" to "sleepSessions")
         val formats = request.formats.associateBy(request::relativePath)
         val items = plan.items.map { item ->
             coroutineContext.ensureActive()
@@ -79,8 +84,10 @@ internal object AndroidWakeDateQuantityProjection {
                         append(aggregate.substring(0, end))
                         for (block in details.getValue("bases_frontmatter_blocks").jsonArray) {
                             val value = block.jsonObject
-                            require(value.getValue("key").jsonPrimitive.content == "native_quantity_details")
-                            append("\nnative_quantity_details:\n")
+                            val key = value.getValue("key").jsonPrimitive.content
+                            require(key in setOf("native_quantity_details", "sleep_stage_details", "sleep_session_details"))
+                            require(!aggregate.substring(0, end).contains("\n$key:"))
+                            append("\n").append(key).append(":\n")
                             for (line in value.getValue("lines").jsonArray) append(line.jsonPrimitive.content).append('\n')
                         }
                         append(aggregate.substring(end))

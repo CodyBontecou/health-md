@@ -49,6 +49,106 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun denseWakeDateSleepRecordsRemainCompleteAcrossEveryFormat() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T02:00:00.123456789Z")
+        val end = Instant.parse("2026-11-01T12:00:00.987654321Z")
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, context.zoneId.rules.getOffset(value))
+        val stages = (0 until 2_000).map { index ->
+            val a = start.plusSeconds(index * 10L); val b = a.plusSeconds(10)
+            com.healthmd.domain.model.SleepStageEntry(a.atZone(context.zoneId).toLocalDateTime(), b.atZone(context.zoneId).toLocalDateTime(),
+                "light", exact(a), exact(b), com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-stage-$index"))
+        }
+        val parent = com.healthmd.domain.model.SleepSessionEntry(start.atZone(context.zoneId).toLocalDateTime(),
+            end.atZone(context.zoneId).toLocalDateTime(), title = "Synthetic|sleep", notes = "source `clock`", source = "synthetic",
+            metadata = mapOf("synthetic" to "source-parent"), exactStartTime = exact(start), exactEndTime = exact(end),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-parent"))
+        val data = HealthData(LocalDate.of(2026, 11, 1), sleep = SleepData(stages = stages, sessions = listOf(parent),
+            sessionStart = parent.startTime, sessionEnd = parent.endTime), heart = HeartData(samples = listOf(
+                com.healthmd.domain.model.TimestampedSample(parent.startTime, Math.nextUp(72.125), exactTime = exact(start),
+                    identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-sleep-heart")))))
+        val selection = MetricSelectionState(enabledMetrics = setOf("sleep_total", "sleep_light", "sleep_bedtime", "sleep_wake", "avg_hr"))
+        for (metadata in listOf(false, true)) {
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+                includeMetadata = metadata, metricSelection = selection,
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data.filtered(selection, context), settings,
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust, DailyAggregateExportIds("dense-sleep", "dense-sleep-session"))
+            val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request)
+            val native = Json.parseToJsonElement(com.healthmd.data.export.JsonExporter().export(
+                request.data, request.customization, true, captureContext = context)).jsonObject.getValue("sleep").jsonObject
+            assertThat(result.plan.items).hasSize(4)
+            for (item in result.plan.items) {
+                val text = item.content.decodeToString()
+                if (item.relativePath.endsWith(".json")) {
+                    val sleep = Json.parseToJsonElement(text).jsonObject.getValue("sleep").jsonObject
+                    assertThat(sleep.getValue("sleepStages")).isEqualTo(native.getValue("sleepStages"))
+                    assertThat(sleep.getValue("sleepSessions")).isEqualTo(native.getValue("sleepSessions"))
+                    assertThat(sleep["totalDuration"]).isNull()
+                    assertThat(sleep["lightSleep"]).isNull()
+                    assertThat(sleep.getValue("bedtimeISO")).isEqualTo(native.getValue("bedtimeISO"))
+                    assertThat(sleep.getValue("wakeTimeISO")).isEqualTo(native.getValue("wakeTimeISO"))
+                } else if (item.relativePath.endsWith(".csv")) {
+                    assertThat(text.lineSequence().count { it.contains(",Sleep Detail,Sleep Stage,") }).isEqualTo(2_000)
+                    assertThat(text.lineSequence().count { it.contains(",Sleep Detail,Sleep Session,") }).isEqualTo(1)
+                } else {
+                    assertThat(text).contains("synthetic-stage-1999")
+                    assertThat(text).contains("synthetic-parent")
+                }
+                System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { directory ->
+                    val output = File(directory, "android-v6-dense-sleep-$metadata/${item.relativePath}")
+                    val parentDirectory = checkNotNull(output.parentFile)
+                    check(parentDirectory.mkdirs() || parentDirectory.isDirectory)
+                    output.writeBytes(item.content)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun composedSleepSourcesKeepOwnershipAndDisabledOutputValidation() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T01:00:00.123456789Z")
+        val end = start.plusSeconds(3600)
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, ZoneOffset.UTC)
+        val stage = com.healthmd.domain.model.SleepStageEntry(start.atZone(context.zoneId).toLocalDateTime(),
+            end.atZone(context.zoneId).toLocalDateTime(), "light", exact(start), exact(end))
+        val session = com.healthmd.domain.model.SleepSessionEntry(stage.startTime, stage.endTime,
+            exactStartTime = exact(start), exactEndTime = exact(end))
+        val data = HealthData(LocalDate.of(2026, 11, 1), sleep = SleepData(stages = listOf(stage), sessions = listOf(session)))
+        suspend fun plan(candidate: HealthData, enabled: Set<String>, disabled: List<String> = emptyList()): ExportArtifactPlan {
+            val selection = MetricSelectionState(enabledMetrics = enabled)
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+                metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+                formatCustomization = FormatCustomization(frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(
+                    fields = disabled.map { com.healthmd.domain.model.CustomFrontmatterField(it, isEnabled = false) })))
+            val request = FrozenDailyAggregateExportRequest.capture(candidate.filtered(selection, context), settings,
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust, DailyAggregateExportIds("sleep-boundary", "sleep-boundary-session"))
+            return HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+        }
+        val owners = setOf("sleep_total", "sleep_light")
+        assertThat(runCatching { plan(data, owners, listOf("sleep_light_hours")) }.isFailure).isTrue()
+        assertThat(runCatching { plan(data, owners, listOf("sleep_total_hours", "sleep_in_bed_hours")) }.isFailure).isTrue()
+        val reversed = data.copy(sleep = data.sleep.copy(stages = listOf(stage.copy(
+            startTime = stage.endTime, endTime = stage.startTime, exactStartTime = exact(end), exactEndTime = exact(start)))))
+        assertThat(runCatching { plan(reversed, owners) }.isFailure).isTrue()
+        val zero = data.copy(sleep = data.sleep.copy(stages = listOf(stage.copy(endTime = stage.startTime, exactEndTime = exact(start)))))
+        val zeroPlan = plan(zero, owners)
+        val zeroSleep = Json.parseToJsonElement(zeroPlan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString())
+            .jsonObject.getValue("sleep").jsonObject
+        assertThat(zeroSleep.getValue("sleepStages").jsonArray.single().jsonObject.getValue("durationSeconds").jsonPrimitive.content.toDouble()).isEqualTo(0.0)
+
+        assertThat(runCatching { plan(data.copy(date = data.date.minusDays(1)), owners) }.isFailure).isTrue()
+        val steps = reversed.copy(activity = ActivityData(steps = 42))
+        val onlySteps = plan(steps, setOf("steps"))
+        assertThat(onlySteps.items).hasSize(4)
+        for (item in onlySteps.items) {
+            assertThat(item.content.decodeToString()).doesNotContain("sleepStages")
+            assertThat(item.content.decodeToString()).doesNotContain("sleep_stage_details")
+        }
+    }
+
+    @Test
     fun denseWakeDateQuantitySourcesRemainExportableAcrossEveryFormat() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val base = Instant.parse("2026-11-01T01:30:00.123456789Z")

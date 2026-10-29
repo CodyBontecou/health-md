@@ -132,7 +132,15 @@ class JsonExporter {
         customization: FormatCustomization = FormatCustomization(),
         includeGranularData: Boolean = false,
         captureContext: AndroidCaptureContext? = null,
-    ): String {
+    ): String = render(data, customization, includeGranularData, captureContext, includeSleepRecords = true)
+
+    /** Aggregate projection retains original sleep data for ownership and clock validation. */
+    internal fun exportWithoutSleepRecords(data: HealthData, customization: FormatCustomization,
+        includeGranularData: Boolean, captureContext: AndroidCaptureContext): String =
+        render(data, customization, includeGranularData, captureContext, includeSleepRecords = false)
+
+    private fun render(data: HealthData, customization: FormatCustomization, includeGranularData: Boolean,
+        captureContext: AndroidCaptureContext?, includeSleepRecords: Boolean): String {
         val authority = captureContext?.let(::WakeDateJsonDocument)
         if (authority != null) require(!customization.includeLegacyAndroidAliases) {
             "wake-date native JSON cannot use historical aliases"
@@ -146,7 +154,7 @@ class JsonExporter {
             JsonElement.serializer(), nativePayload(data, effectiveCustomization, includeGranularData, false),
         )
         return try {
-            val payload = nativePayload(data, effectiveCustomization, includeGranularData, true)
+            val payload = nativePayload(data, effectiveCustomization, includeGranularData, true, includeSleepRecords)
             Json { prettyPrint = true }.encodeToString(JsonElement.serializer(), authority.finish(payload, data))
         } catch (error: RuntimeException) {
             if (error is java.util.concurrent.CancellationException) throw error
@@ -161,6 +169,7 @@ class JsonExporter {
         customization: FormatCustomization,
         includeGranularData: Boolean,
         nativeSuccessor: Boolean,
+        includeSleepRecords: Boolean = true,
     ): JsonObject {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
@@ -304,7 +313,7 @@ class JsonExporter {
                     }
 
                     // T0-01/02/03/04: renamed array + ISO timestamps + durationSeconds
-                    if (includeGranularData && s.stages.isNotEmpty()) {
+                    if (includeGranularData && includeSleepRecords && s.stages.isNotEmpty()) {
                         putJsonArray("sleepStages") {
                             for (stage in s.stages) {
                                 addJsonObject {
@@ -321,7 +330,7 @@ class JsonExporter {
                             }
                         }
                     }
-                    if (includeGranularData && s.sessions.isNotEmpty()) {
+                    if (includeGranularData && includeSleepRecords && s.sessions.isNotEmpty()) {
                         putJsonArray("sleepSessions") {
                             for (session in s.sessions) {
                                 addJsonObject {

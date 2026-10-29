@@ -40,9 +40,15 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
         require(data.sleep.stages.none { it.stage.equals("core", ignoreCase = true) }) {
             "wake-date native sleep stage identity is incompatible"
         }
+        data.sleep.stages.forEach { stage ->
+            require(instant(stage.exactEndTime) >= instant(stage.exactStartTime)) {
+                "wake-date native sleep stage interval is incompatible"
+            }
+        }
         val intervals = data.sleep.sessions.map { session ->
             val start = instant(session.exactStartTime)
             val end = instant(session.exactEndTime)
+            require(end >= start) { "wake-date native sleep session interval is incompatible" }
             require(runCatching { end.atZone(context.zoneId).toLocalDate() == data.date }.getOrDefault(false)) {
                 "wake-date native session owner is incompatible"
             }
@@ -133,7 +139,8 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
             }
             DERIVED_DURATION_FIELDS[path.lastOrNull()]?.let { field ->
                 val elapsed = Duration.between(instant(value["exactStartTime"]), instant(value["exactEndTime"]))
-                if (elapsed.isNegative || elapsed.isZero) children.remove(field)
+                if (elapsed.isZero && path.lastOrNull() == "sleepStages") children[field] = JsonPrimitive(0.0)
+                else if (elapsed.isNegative || elapsed.isZero) children.remove(field)
                 else children[field] = JsonPrimitive(elapsed.seconds.toDouble() + elapsed.nano / 1_000_000_000.0)
             }
             JsonObject(children)

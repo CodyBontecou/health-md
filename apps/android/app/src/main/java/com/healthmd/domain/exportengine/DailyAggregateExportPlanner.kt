@@ -280,8 +280,8 @@ class HealthMdRustDailyAggregatePlanner(
             batches = semanticBatches,
             service = coreService,
         )
-        val composeQuantities = request.profile == AndroidExportProfile.android_sleep_v6 && request.includeGranularData
-        val presentationData = if (composeQuantities) AndroidWakeDateQuantityProjection.aggregate(request.data) else request.data
+        val composeNativeSources = request.profile == AndroidExportProfile.android_sleep_v6 && request.includeGranularData
+        val presentationData = if (composeNativeSources) AndroidWakeDateSourceProjection.aggregate(request.data) else request.data
         val markdown = request.customization.markdownTemplate
         val renderInput = HealthMdRenderInputAdapter.encode(
             semanticResult = semanticResult,
@@ -289,6 +289,7 @@ class HealthMdRustDailyAggregatePlanner(
             calendarTimeZone = timeZone,
             options = HealthMdRenderInputAdapter.Options(
                 requestId = request.ids.requestId,
+                composeSleepRecordsNatively = composeNativeSources,
                 formats = request.formats.map(ExportFormat::renderWireValue),
                 renderProfileRevision = pin.renderProfileRevision,
                 unitSystem = when (request.customization.unitPreference) {
@@ -346,7 +347,7 @@ class HealthMdRustDailyAggregatePlanner(
         val aggregatePlan = rustEngine.render(input, readiness, registry)
         DailyAggregateRustPlan(
             pin = pin,
-            plan = if (composeQuantities) AndroidWakeDateQuantityProjection.compose(request, aggregatePlan, semanticResult) else aggregatePlan,
+            plan = if (composeNativeSources) AndroidWakeDateSourceProjection.compose(request, aggregatePlan, semanticResult) else aggregatePlan,
         )
     }
 }
