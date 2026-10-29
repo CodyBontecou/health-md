@@ -46,6 +46,10 @@ Daily Note Injection und API-Endpoint-Übersichten nutzen dasselbe Fenster. Bei 
 
 Rohe oder kanonische Datensätze behalten ursprüngliche Zeitstempel und eigene Zuordnungsregeln. Rekonstruiere Sitzungen nicht aus einer Tagessumme und addiere Quellintervalle nicht als zusätzlichen Schlaf dazu.
 
+Auf Apple werden Datensätze im Roharchiv anhand ihres ursprünglichen Beginns dem lokalen Kalendertag von Mitternacht bis Mitternacht zugeordnet. Die Schlafübersicht schneidet Intervalle dagegen auf das Tagebuchfenster von Mittag bis Mittag zu. Eine erfolgreiche rohe Sleep-Analysis-Abfrage kann deshalb morgendliche Datensätze enthalten, während die Schlafübersicht dieses Datums leer ist. Exportiere das vorherige Tagebuchdatum und prüfe `time_context.calendar_timezone`, bevor du eine fehlende Übersicht untersuchst. Beispielsweise gehören Datensätze vom 22. September, 04:03–11:52 UTC, in UTC vollständig zur Übersicht des 21. September; in Europe/Lisbon liegen die letzten 52 Minuten nach dem lokalen Mittag und zählen stattdessen zum 22. September.
+
+Schlafstadien benötigen keinen ausdrücklichen `inBed`-Datensatz: Fehlt er, verwenden Apple-Übersichten die Vereinigungsmenge der verfügbaren als schlafend klassifizierten Intervalle. Fehlende Bettzeitdaten erzeugen keine Bettzeitdauer. Eine fehlgeschlagene Übersichtsabfrage sollte unter `diagnostics.partial_failures` erscheinen; eine erfolgreiche Abfrage ohne passende Intervalle ist ein gültiges Ergebnis ohne Daten. Der Ruhepuls verwendet eine separate Kalendertagsabfrage und erfordert eine tatsächliche Ruhepulsmessung; Schlafstadien oder eine Leseberechtigung allein liefern keine solche Messung.
+
 `healthmd_sleep_sessions` benötigt eine unterstützte **Apple Health**-CLI/MCP-Konfiguration. Typisierte Android-MCP-Abfragen werden derzeit nicht unterstützt. Siehe [Plattformfähigkeiten](/de/docs/guides/platform-features/) und [MCP](/de/docs/mcp/).
 
 Weitere Hilfe: [Zeitpläne](/de/docs/scheduling/), [Fehlersuche](/de/docs/troubleshooting/) und [Exportformate](/de/docs/format/).

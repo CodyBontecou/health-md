@@ -46,6 +46,10 @@ Daily Note Injection e i riepiloghi API Endpoint usano la stessa finestra. Per d
 
 I record grezzi o canonici mantengono timestamp e regole di appartenenza propri. Non ricostruire sessioni da un totale giornaliero e non sommare gli intervalli come ulteriore sonno.
 
+Su Apple, l’archivio grezzo assegna i record in base all’ora di inizio originale nel giorno locale, da mezzanotte a mezzanotte. Il riepilogo del sonno, invece, ritaglia gli intervalli nella finestra del diario, da mezzogiorno a mezzogiorno. Una query riuscita sui record grezzi di Sleep Analysis può quindi contenere record del mattino mentre il riepilogo del sonno di quella data è vuoto. Esporta la data precedente del diario e controlla `time_context.calendar_timezone` prima di indagare su un riepilogo mancante. Per esempio, i record del 22 settembre dalle 04:03 alle 11:52 UTC appartengono interamente al riepilogo del 21 settembre in UTC; in Europe/Lisbon, gli ultimi 52 minuti sono successivi al mezzogiorno locale e contribuiscono invece al 22 settembre.
+
+Il sonno suddiviso in fasi non richiede un record esplicito `inBed`: quando manca, i riepiloghi Apple usano l’unione degli intervalli disponibili delle fasi di sonno. L’assenza di dati sul tempo a letto non crea una durata a letto. Una query di riepilogo non riuscita deve comparire in `diagnostics.partial_failures`; una query riuscita senza intervalli idonei rappresenta una valida assenza di dati. La frequenza cardiaca a riposo usa una query separata per giorno di calendario e richiede una vera misurazione della frequenza cardiaca a riposo; le fasi di sonno o il solo permesso di lettura non la forniscono.
+
 `healthmd_sleep_sessions` richiede una configurazione CLI/MCP **Apple Health** supportata. Le query MCP tipizzate Android non sono attualmente supportate. Vedi [capacità per piattaforma](/it/docs/guides/platform-features/) e [MCP](/it/docs/mcp/).
 
 Altre guide: [pianificazione](/it/docs/scheduling/), [risoluzione dei problemi](/it/docs/troubleshooting/) e [formati](/it/docs/format/).

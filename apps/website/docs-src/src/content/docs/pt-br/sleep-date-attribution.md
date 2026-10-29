@@ -46,6 +46,10 @@ Daily Note Injection e os resumos API Endpoint usam a mesma janela. Para dados a
 
 Registros brutos ou canônicos mantêm horários e regras de pertencimento próprios. Não reconstrua sessões a partir de um total diário nem some intervalos de origem como sono extra.
 
+Na Apple, o arquivo bruto atribui os registros conforme o horário de início original dentro do dia local, de meia-noite a meia-noite. Já o resumo do sono recorta os intervalos à janela do diário, de meio-dia a meio-dia. Assim, uma consulta bem-sucedida aos registros brutos de Sleep Analysis pode conter registros da manhã enquanto o resumo do sono daquela data está vazio. Exporte a data anterior do diário e confira `time_context.calendar_timezone` antes de investigar um resumo ausente. Por exemplo, os registros de 22 de setembro das 04:03 às 11:52 UTC pertencem inteiramente ao resumo de 21 de setembro em UTC; em Europe/Lisbon, os últimos 52 minutos ficam depois do meio-dia local e contribuem para 22 de setembro.
+
+O sono dividido em estágios não exige um registro explícito `inBed`: quando ele está ausente, os resumos da Apple usam a união dos intervalos disponíveis dos estágios de sono. A falta de dados de tempo na cama não cria uma duração na cama. Uma consulta de resumo que falhou deve aparecer em `diagnostics.partial_failures`; uma consulta bem-sucedida sem intervalos válidos representa uma ausência de dados válida. A frequência cardíaca em repouso usa uma consulta separada por dia do calendário e exige uma medição real de frequência cardíaca em repouso; os estágios de sono ou apenas a permissão de leitura não a fornecem.
+
 `healthmd_sleep_sessions` requer uma configuração CLI/MCP compatível com **Apple Health**. Consultas MCP tipadas no Android não são suportadas atualmente. Veja [capacidades por plataforma](/pt-br/docs/guides/platform-features/) e [MCP](/pt-br/docs/mcp/).
 
 Outros guias: [agendamento](/pt-br/docs/scheduling/), [solução de problemas](/pt-br/docs/troubleshooting/) e [formatos](/pt-br/docs/format/).

@@ -46,6 +46,10 @@ Daily Note Injection et les résumés API Endpoint suivent la même fenêtre. Si
 
 Les enregistrements bruts ou canoniques gardent leurs horodatages et leurs propres règles d’appartenance. Ne reconstruisez pas une session depuis un total quotidien et n’y ajoutez pas les intervalles comme du sommeil supplémentaire.
 
+Sur Apple, l’archive brute attribue les enregistrements selon leur heure de début d’origine dans la journée locale, de minuit à minuit. Le résumé du sommeil découpe au contraire les intervalles selon la fenêtre du journal, de midi à midi. Une requête brute Sleep Analysis réussie peut donc contenir des enregistrements du matin alors que le résumé du sommeil de cette date est vide. Exportez la date précédente du journal et vérifiez `time_context.calendar_timezone` avant de rechercher la cause d’un résumé manquant. Par exemple, les enregistrements du 22 septembre de 04:03 à 11:52 UTC appartiennent entièrement au résumé du 21 septembre en UTC ; dans Europe/Lisbon, les 52 dernières minutes sont après midi local et contribuent plutôt au 22 septembre.
+
+Les phases de sommeil ne nécessitent pas d’enregistrement explicite `inBed` : en son absence, les résumés Apple utilisent l’union des intervalles disponibles des phases de sommeil. L’absence de données de temps au lit ne crée pas de durée au lit. Une requête de résumé échouée doit apparaître dans `diagnostics.partial_failures` ; une requête réussie sans intervalle admissible constitue une absence de données valide. La fréquence cardiaque au repos utilise une requête distincte par jour civil et nécessite une véritable mesure de fréquence cardiaque au repos ; les phases de sommeil ou la seule autorisation de lecture ne la fournissent pas.
+
 `healthmd_sleep_sessions` exige une configuration CLI/MCP **Apple Health** prise en charge. Les requêtes MCP typées Android ne sont pas disponibles actuellement. Consultez les [capacités par plateforme](/fr/docs/guides/platform-features/) et [MCP](/fr/docs/mcp/).
 
 Voir aussi la [planification](/fr/docs/scheduling/), le [dépannage](/fr/docs/troubleshooting/) et les [formats](/fr/docs/format/).
