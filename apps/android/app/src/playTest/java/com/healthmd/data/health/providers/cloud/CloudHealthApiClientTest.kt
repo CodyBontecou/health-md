@@ -241,6 +241,47 @@ class CloudHealthApiClientTest {
         ).inOrder()
     }
 
+    @Test
+    fun replacementOrDisconnectDuringRequestPreventsObservationAndReturn() = runTest {
+        for (disconnect in listOf(false, true)) {
+            val store = InMemoryOAuthTokenStore(listOf(OAuthToken("whoop", "accepted")))
+            val manager = OAuthAuthorizationManager(OAuthConfigRegistry(emptyList()), store)
+            val started = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val observed = mutableListOf<CloudHealthRawResponse>()
+            val client = CloudHealthApiClient.forTesting(manager, transport = CloudHttpTransport { request ->
+                assertThat(request.authorization).isEqualTo("Bearer accepted")
+                started.complete(Unit)
+                release.await()
+                CloudHttpResponse(200, body = "{\"value\":7}".toByteArray())
+            }, responseObserver = CloudRawResponseObserver { observed += it })
+            val pending = async { runCatching { client.getRawJsonResponse("whoop", "https://api.example.test/native") } }
+            started.await()
+            if (disconnect) store.clearToken("whoop") else store.saveToken(OAuthToken("whoop", "replacement"))
+            release.complete(Unit)
+            assertThat(pending.await().exceptionOrNull()).isInstanceOf(SecurityException::class.java)
+            assertThat(observed).isEmpty()
+        }
+    }
+
+    @Test
+    fun disconnectInFirstObserverStopsLaterObserverAndPageReturn() = runTest {
+        val store = InMemoryOAuthTokenStore(listOf(OAuthToken("whoop", "accepted")))
+        val manager = OAuthAuthorizationManager(OAuthConfigRegistry(emptyList()), store)
+        var first = 0
+        var second = 0
+        val client = CloudHealthApiClient.forTesting(manager,
+            transport = CloudHttpTransport { CloudHttpResponse(200, body = "{}".toByteArray()) },
+            responseObserver = CloudRawResponseObserver { first += 1; store.clearToken("whoop") })
+        val result = runCatching {
+            client.getRawJsonResponse("whoop", "https://api.example.test/native",
+                observer = CloudRawResponseObserver { second += 1 })
+        }
+        assertThat(result.exceptionOrNull()).isInstanceOf(SecurityException::class.java)
+        assertThat(first).isEqualTo(1)
+        assertThat(second).isEqualTo(0)
+    }
+
     private fun client(
         response: CloudHttpResponse = CloudHttpResponse(200, body = "{}".toByteArray()),
         observer: CloudRawResponseObserver? = null,

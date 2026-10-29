@@ -80,7 +80,9 @@ class CloudHealthApiClient private constructor(
         val endpoint = parseAndValidateEndpoint(url)
         val endpointIdentifier = CloudRequestSanitizer.endpointIdentifier(safeProviderId, endpoint)
         val queryMetadata = CloudRequestSanitizer.queryMetadata(query)
-        val token = oauthAuthorizationManager.validAccessToken(safeProviderId)
+        val connectionId = oauthAuthorizationManager.connectionId(safeProviderId)
+            ?: throw SecurityException("$safeProviderId is not connected")
+        val token = oauthAuthorizationManager.validAccessToken(safeProviderId, connectionId)
             ?: throw SecurityException("$safeProviderId is not connected")
         val requestUrl = URL(if (query.isEmpty()) endpoint.toString() else "$endpoint?${formEncode(query)}")
 
@@ -97,6 +99,7 @@ class CloudHealthApiClient private constructor(
             throw CloudHealthRequestException(safeProviderId)
         }
 
+        requireConnection(safeProviderId, connectionId)
         if (transportResponse.status !in 200..299) {
             throw CloudHealthRequestException(safeProviderId, transportResponse.status)
         }
@@ -143,9 +146,22 @@ class CloudHealthApiClient private constructor(
             false
         }
         if (!accepted) throw CloudHealthApplicationException(safeProviderId)
-        responseObserver?.onResponse(response)
-        if (observer !== responseObserver) observer?.onResponse(response)
+        requireConnection(safeProviderId, connectionId)
+        if (responseObserver != null) {
+            responseObserver.onResponse(response)
+            requireConnection(safeProviderId, connectionId)
+        }
+        if (observer != null && observer !== responseObserver) {
+            observer.onResponse(response)
+            requireConnection(safeProviderId, connectionId)
+        }
         return response
+    }
+
+    private suspend fun requireConnection(providerId: String, connectionId: String) {
+        if (oauthAuthorizationManager.connectionId(providerId) != connectionId) {
+            throw SecurityException("Provider connection changed")
+        }
     }
 
     private fun parseAndValidateEndpoint(rawUrl: String): URL {
