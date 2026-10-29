@@ -695,19 +695,22 @@ nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
     /// Data-dictionary artifact written beside the planned range outputs.
     /// Defaults to zero so stored journals and older call sites stay valid.
     let dataDictionaryFileCount: Int
+    let providerSidecarFileCount: Int
 
     init(
         dailyFileCount: Int,
         rollupFileCount: Int,
-        dataDictionaryFileCount: Int = 0
+        dataDictionaryFileCount: Int = 0,
+        providerSidecarFileCount: Int = 0
     ) {
         self.dailyFileCount = max(dailyFileCount, 0)
         self.rollupFileCount = max(rollupFileCount, 0)
         self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
+        self.providerSidecarFileCount = max(providerSidecarFileCount, 0)
     }
 
     var totalFileCount: Int {
-        dailyFileCount + rollupFileCount + dataDictionaryFileCount
+        dailyFileCount + rollupFileCount + dataDictionaryFileCount + providerSidecarFileCount
     }
 }
 
@@ -726,6 +729,23 @@ nonisolated struct AppleLooseDailyRangeMaterialization: Equatable, Sendable {
     let operation: AppleLooseDailyPlannedOperation
     let dataDictionary: AppleLooseDailyMaterializedFile?
     let result: AppleLooseDailyRangeWriteResult
+    let providerSidecars: [AppleLooseDailyMaterializedFile]
+
+    init(operation: AppleLooseDailyPlannedOperation, dataDictionary: AppleLooseDailyMaterializedFile?,
+         result: AppleLooseDailyRangeWriteResult, providerSidecars: [AppleLooseDailyMaterializedFile] = []) {
+        self.operation = operation
+        self.dataDictionary = dataDictionary
+        self.result = result
+        self.providerSidecars = providerSidecars
+    }
+
+    func addingProviderSidecars(_ files: [AppleLooseDailyMaterializedFile]) -> Self {
+        let all = providerSidecars + files
+        return Self(operation: operation, dataDictionary: dataDictionary,
+            result: AppleLooseDailyRangeWriteResult(dailyFileCount: result.dailyFileCount,
+                rollupFileCount: result.rollupFileCount, dataDictionaryFileCount: result.dataDictionaryFileCount,
+                providerSidecarFileCount: all.count), providerSidecars: all)
+    }
 
     /// Merge already materialized portions of one successor operation without reopening sources.
     static func combining(_ parts: [Self]) throws -> Self {
@@ -754,6 +774,7 @@ nonisolated struct AppleLooseDailyRangeMaterialization: Equatable, Sendable {
             dataDictionary: dictionaries.first,
             result: AppleLooseDailyRangeWriteResult(dailyFileCount: artifacts.count { $0.kind == .daily },
                 rollupFileCount: artifacts.count { $0.kind == .rollup }, dataDictionaryFileCount: dictionaries.count))
+            .addingProviderSidecars(parts.flatMap(\.providerSidecars))
     }
 }
 
@@ -2650,10 +2671,19 @@ final class VaultManager: ObservableObject {
                 try file.validateIntegrity()
             }
         }
-        try preflightExportArtifactPaths(
-            materialized.operation.artifacts.map(\.artifact.relativePath)
-                + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
-        )
+        let allPaths = materialized.operation.artifacts.map(\.artifact.relativePath)
+            + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
+            + materialized.providerSidecars.map(\.relativePath)
+        guard Set(allPaths).count == allPaths.count else { throw AppleExactDestinationError.unsafeRelativePath }
+        try preflightExportArtifactPaths(allPaths)
+        let providerRequests = try materialized.providerSidecars.map { file in
+            guard String(data: file.data, encoding: .utf8) != nil else {
+                throw CocoaError(.fileWriteInapplicableStringEncoding)
+            }
+            let url = ExportPathPlanner.appendingRelativePath(file.relativePath, to: vaultURL, isDirectory: false)
+            return AggregateFileWriteRequest(fileURL: url, filename: url.lastPathComponent,
+                newContent: String(decoding: file.data, as: UTF8.self), behavior: .overwrite)
+        }
 
         let dictionaryRequest = try materialized.dataDictionary.map { file in
             guard let content = String(data: file.data, encoding: .utf8) else {
@@ -2714,6 +2744,10 @@ final class VaultManager: ObservableObject {
                     relativePath: planned.artifact.relativePath,
                     format: planned.format
                 ))
+            }
+            for (file, request) in zip(materialized.providerSidecars, providerRequests) {
+                _ = try await aggregateFileWriter.write(secureRequest(request,
+                    rootURL: vaultURL, relativePath: file.relativePath, binding: destinationBinding))
             }
             try await barrier.transition(to: .completed)
             lastExportStatus = "Exported \(writtenFiles.count) files from one frozen range plan"
@@ -3296,6 +3330,22 @@ final class VaultManager: ObservableObject {
         } catch {
             try? await barrier.transition(to: .failed)
             throw error
+        }
+    }
+
+    /// Encodes provider-native v1 sidecars without destination effects. They join
+    /// the daily/range materialization's path and destination-binding preflight.
+    func materializeExternalDailyRecords(_ records: [ExternalDailyRecord],
+                                        healthSubfolder: String) throws -> [AppleLooseDailyMaterializedFile] {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return try records.filter(\.shouldExport).map { record in
+            guard record.hasValidExportDate else { throw ExternalProviderExportError.invalidDate(record.date) }
+            let path = [healthSubfolder, "integrations", record.provider.exportFolderName, "\(record.date).json"]
+                .filter { !$0.isEmpty }.joined(separator: "/")
+            return AppleLooseDailyMaterializedFile(relativePath: path, mediaType: "application/json",
+                                                   data: try encoder.encode(record))
         }
     }
 

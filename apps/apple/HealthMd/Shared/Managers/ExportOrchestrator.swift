@@ -529,9 +529,19 @@ struct ExportOrchestrator {
         let hasProviderSideEffects = settings.writesExternalProviderSidecars
             && ConnectedAppsFeature.isEnabled
             && (externalIntegrations?.connectedProviderCount ?? 0) > 0
+        let stagesWakeDateProviders = hasProviderSideEffects
+            && AppleSleepCaptureContext.pinned.wrappedValue?.sleepDayAttribution == .morningEnds
         let operationSurface: AppleExportOperationSurface = hasProviderSideEffects
-            ? .legacyOnly
+            ? (stagesWakeDateProviders ? .localVaultRangeWithProviderSidecars : .legacyOnly)
             : .localVaultRangeWithoutSideEffects
+        let acceptedProviderDestination: AppleLooseDailyRangeDestination?
+        do {
+            acceptedProviderDestination = stagesWakeDateProviders ? try vaultManager.freezeHealthDataRangeDestination() : nil
+        } catch {
+            return ExportResult(successCount: 0, totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .fileWriteError, errorDetails: error.localizedDescription) },
+                formatsPerDate: looseFormatsPerDate(settings: settings))
+        }
         let sourceTimeZone = AppleSleepCaptureContext.pinned.wrappedValue?.timeZone ?? settings.exportTimeZoneOverride ?? .current
         // Foreground ranges freeze renderer authority and calendar ownership once before the first
         // HealthKit read. Per-day planning must never inherit a flag or timezone changed mid-run.
@@ -540,8 +550,12 @@ struct ExportOrchestrator {
             healthSubfolder: vaultManager.healthSubfolder,
             calendarTimeZone: sourceTimeZone,
             surface: operationSurface,
-            hasNativeOnlyCompanionAction: hasProviderSideEffects
+            hasNativeOnlyCompanionAction: hasProviderSideEffects && !stagesWakeDateProviders
         )
+        if stagesWakeDateProviders && operationSettingsSnapshot.appleExportEnginePin?.isWakeDate != true {
+            return unavailableSleepContextResult(dates: dates, settings: settings,
+                error: AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution)
+        }
         let frozenOperationSettings = operationSettingsSnapshot.makeAdvancedExportSettings()
         frozenOperationSettings.exportTimeZoneOverride = sourceTimeZone
         let settings = frozenOperationSettings
@@ -575,7 +589,7 @@ struct ExportOrchestrator {
         // Daily-only operations commit and release each detailed capture before the next
         // query. Rollups still require the range planner's shared summary corpus.
         if operationSettingsSnapshot.appleExportEnginePin != nil,
-           !operationSettingsSnapshot.operationRollupPeriods.isEmpty {
+           !operationSettingsSnapshot.operationRollupPeriods.isEmpty || stagesWakeDateProviders {
             return await exportForegroundPinnedSimpleRange(
                 dates,
                 healthKitManager: healthKitManager,
@@ -583,6 +597,8 @@ struct ExportOrchestrator {
                 settingsSnapshot: operationSettingsSnapshot,
                 operationSurface: operationSurface,
                 sourceTimeZone: sourceTimeZone,
+                externalIntegrations: stagesWakeDateProviders ? externalIntegrations : nil,
+                acceptedDestination: acceptedProviderDestination,
                 onProgress: onProgress
             )
         }
@@ -901,6 +917,8 @@ struct ExportOrchestrator {
         settingsSnapshot: ExportSettingsSnapshot,
         operationSurface: AppleExportOperationSurface,
         sourceTimeZone: TimeZone,
+        externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
+        acceptedDestination: AppleLooseDailyRangeDestination? = nil,
         onProgress: ((Int, Int, String) -> Void)?
     ) async -> ExportResult {
         let totalCount = dates.count
@@ -956,11 +974,13 @@ struct ExportOrchestrator {
             latestAllowedDate: max(Date(), dates.max() ?? Date())
         )
         let captureDates = sourceDates.isEmpty ? dates : sourceDates
-        let stageDailyArtifacts = !isSummaryOnly && !effectiveSettingsSnapshot.operationRollupPeriods.isEmpty
+        let stageDailyArtifacts = !isSummaryOnly
+            && (!effectiveSettingsSnapshot.operationRollupPeriods.isEmpty || externalIntegrations != nil)
             && effectiveSettingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
         let identity = AppleExportOperationIdentitySource().capture(calendarTimeZoneIdentifier: sourceTimeZone.identifier)
         let dailySnapshot = effectiveSettingsSnapshot.forDailyArtifactPreview()
         var dailyMaterializations: [AppleLooseDailyRangeMaterialization] = []
+        var providerSidecars: [AppleLooseDailyMaterializedFile] = []
         var preparationFailure: Error?
         var records: [HealthData] = []
         var hasRenderableCapture = false
@@ -975,7 +995,11 @@ struct ExportOrchestrator {
 
         let stagedDestination: AppleLooseDailyRangeDestination?
         do {
-            stagedDestination = stageDailyArtifacts ? try vaultManager.freezeHealthDataRangeDestination() : nil
+            if stageDailyArtifacts {
+                stagedDestination = try acceptedDestination ?? vaultManager.freezeHealthDataRangeDestination()
+            } else {
+                stagedDestination = nil
+            }
         } catch {
             return ExportResult(successCount: 0, totalCount: totalCount,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .fileWriteError, errorDetails: error.localizedDescription) },
@@ -1001,12 +1025,20 @@ struct ExportOrchestrator {
             // capture ranges are many times larger than the selected range).
             await Task.yield()
             do {
-                let record = try await healthKitManager.fetchHealthData(
+                var record = try await healthKitManager.fetchHealthData(
                     for: date,
                     detailPolicy: isSelected && !isSummaryOnly ? frozenSettings.effectiveDetailPolicy : .summary,
                     metricSelection: frozenSettings.metricSelection,
                     timeZone: sourceTimeZone
                 )
+                if isSelected, !isSummaryOnly, record.hasAnyData, let externalIntegrations {
+                    var providerCalendar = Calendar(identifier: .gregorian)
+                    providerCalendar.timeZone = sourceTimeZone
+                    let providerRecords = await externalIntegrations.fetchDailyRecords(for: date, calendar: providerCalendar)
+                    record.providers = HealthProviderSections.normalized(from: providerRecords)
+                    providerSidecars.append(contentsOf: try vaultManager.materializeExternalDailyRecords(providerRecords,
+                        healthSubfolder: effectiveSettingsSnapshot.healthSubfolder ?? ""))
+                }
                 partialFailures.append(contentsOf: record.partialFailures)
                 // Drain Foundation render intermediates before staging this day's
                 // details and retaining the summary projection for range preparation.
@@ -1028,7 +1060,8 @@ struct ExportOrchestrator {
                             do {
                                 guard let materialized = try await vaultManager.materializeHealthDataRange(
                                     [record], settingsSnapshot: dailySnapshot, operationSurface: operationSurface,
-                                    operationIdentity: identity, includeDataDictionary: false
+                                    operationIdentity: identity, includeDataDictionary:
+                                        effectiveSettingsSnapshot.operationRollupPeriods.isEmpty && dailyMaterializations.isEmpty
                                 ) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
                                 dailyMaterializations.append(materialized)
                             } catch {
@@ -1134,11 +1167,16 @@ struct ExportOrchestrator {
         do {
             let writeResult: AppleLooseDailyRangeWriteResult
             if stageDailyArtifacts {
-                guard let rollups = try await vaultManager.materializeHealthDataRange(
-                    records, settingsSnapshot: effectiveSettingsSnapshot, operationSurface: operationSurface,
-                    dailyOutputOwnerDates: [], requestedRange: requestedRange, operationIdentity: identity
-                ) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
-                let materialized = try AppleLooseDailyRangeMaterialization.combining(dailyMaterializations + [rollups])
+                var parts = dailyMaterializations
+                if !effectiveSettingsSnapshot.operationRollupPeriods.isEmpty {
+                    guard let rollups = try await vaultManager.materializeHealthDataRange(
+                        records, settingsSnapshot: effectiveSettingsSnapshot, operationSurface: operationSurface,
+                        dailyOutputOwnerDates: [], requestedRange: requestedRange, operationIdentity: identity
+                    ) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+                    parts.append(rollups)
+                }
+                let materialized = try AppleLooseDailyRangeMaterialization.combining(parts)
+                    .addingProviderSidecars(providerSidecars)
                 guard let stagedDestination else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
                 writeResult = try await vaultManager.commitHealthDataRangeMaterialization(materialized, destination: stagedDestination)
             } else {
@@ -1182,7 +1220,8 @@ struct ExportOrchestrator {
             let authoritativeFileCount = Self.saturatingSum(
                 writeResult.dailyFileCount,
                 writeResult.rollupFileCount,
-                writeResult.dataDictionaryFileCount
+                writeResult.dataDictionaryFileCount,
+                writeResult.providerSidecarFileCount
             )
             return ExportResult(
                 successCount: selectedRecordDates.count,
@@ -1193,6 +1232,7 @@ struct ExportOrchestrator {
                 looseAggregateFileCount: writeResult.dailyFileCount,
                 dataDictionaryFileCount: writeResult.dataDictionaryFileCount,
                 rollupFileCount: writeResult.rollupFileCount,
+                externalRecordFileCount: writeResult.providerSidecarFileCount,
                 authoritativeFileCount: authoritativeFileCount,
                 isFileCategoryBreakdownComplete: true,
                 completedDates: completedDates
