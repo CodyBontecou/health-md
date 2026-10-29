@@ -1,0 +1,149 @@
+package com.healthmd.data.health.providers.cloud
+
+import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.*
+import com.healthmd.data.health.*
+import com.healthmd.data.health.oauth.*
+import com.healthmd.domain.model.*
+import com.healthmd.domain.repository.SettingsRepository
+import io.mockk.coEvery
+import io.mockk.mockk
+import java.time.*
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.*
+import org.junit.Before
+import org.junit.Test
+
+class WhoopMorningEndsExportTest {
+    @Before
+    fun loadCore() {
+        val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")
+        org.junit.Assume.assumeTrue(!library.isNullOrBlank())
+        System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library!!)
+    }
+
+    @Test
+    fun actualApiProducerOwnsWholeWhoopSessionsOnWakeDate() = runTest {
+        val cases = listOf(
+            Case("overnight", "Asia/Kathmandu", "2026-07-02", "2026-07-01T16:15:00Z", "2026-07-02T00:15:00Z", 28_800_000),
+            Case("long", "Asia/Kathmandu", "2026-07-02", "2026-07-01T04:15:00Z", "2026-07-02T07:15:00Z", 97_200_000),
+            Case("midnight", "Asia/Kathmandu", "2026-07-02", "2026-07-01T17:15:00Z", "2026-07-01T18:15:00Z", 3_600_000),
+            Case("fold", "America/Los_Angeles", "2026-11-01", "2026-11-01T01:15:00-07:00", "2026-11-01T01:45:00-08:00", 5_400_000),
+        )
+        for (case in cases) {
+            val zone = ZoneId.of(case.zone)
+            val owner = LocalDate.parse(case.owner)
+            val context = AndroidCaptureContext(zone, SleepDayAttribution.MORNING_ENDS)
+            val requests = mutableListOf<CloudHttpRequest>()
+            val repository = repository(case, requests)
+            val payloads = mutableListOf<String>()
+            val json = JsonExporter()
+            val runner = APIEndpointExportRunner(repository, APIExportEnvelopeBuilder(json), json,
+                object : APIExportUploader {
+                    override suspend fun upload(endpointUrl: String, payload: String, authorizationHeader: String?,
+                        requestHeaders: List<APIExportRequestHeader>): APIExportUploadResult {
+                        payloads += payload
+                        return APIExportUploadResult(202)
+                    }
+                }, object : APIExportCredentialStore {
+                    override suspend fun authorizationHeader(): String? = null
+                    override suspend fun hasAuthorization() = false
+                    override suspend fun saveAuthorization(value: String) = Unit
+                    override suspend fun clearAuthorization() = Unit
+                })
+            val settings = ExportSettings(exportFormat = ExportFormat.JSON, exportFormats = setOf(ExportFormat.JSON),
+                includeGranularData = true, exportTarget = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = "https://api.example.invalid/healthmd", executionSleepCaptureContext = context,
+                executionSleepCaptureAuthorityIsFrozen = true)
+            val dates = listOf(owner.minusDays(1), owner, owner.plusDays(1))
+            val result = runner.exportDates(dates, settings)
+            assertThat(result.successCount).isEqualTo(1)
+            assertThat(payloads).hasSize(1)
+            val records = Json.parseToJsonElement(payloads.single()).jsonObject.getValue("records").jsonArray
+            val sleepRecords = records.map { it.jsonObject }.filter { "sleep" in it }
+            assertThat(sleepRecords).hasSize(1)
+            val record = sleepRecords.single()
+            assertThat(record.getValue("date").jsonPrimitive.content).isEqualTo(case.owner)
+            assertThat(record.getValue("schema_version").jsonPrimitive.int).isEqualTo(6)
+            val sleep = record.getValue("sleep").jsonObject
+            assertThat(sleep.getValue("totalDuration").jsonPrimitive.double).isEqualTo(case.millis / 1000.0)
+            assertThat(record.toString()).contains("morning_ends")
+            assertThat(record.toString()).contains(zone.id)
+            writeEvidence(case.name, record.toString())
+            val domain = repository.forCaptureOperation().fetchHealthDataRange(dates, zoneId = zone,
+                sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride)
+            val sessions = domain.flatMap { it.sleep.sessions }
+            assertThat(sessions).hasSize(1)
+            assertThat(sessions.single().exactStartTime?.instant()).isEqualTo(Instant.parse(case.start))
+            assertThat(sessions.single().exactEndTime?.instant()).isEqualTo(Instant.parse(case.end))
+            assertThat(sessions.single().identity?.nativeId).isEqualTo(ID)
+            assertThat(sessions.single().exactStartTime?.offset).isEqualTo(OffsetDateTime.parse(case.start).offset.id)
+            assertThat(sessions.single().exactEndTime?.offset).isEqualTo(OffsetDateTime.parse(case.end).offset.id)
+            val expectedBounds = dates.map { day ->
+                day.atStartOfDay(zone).toInstant().minusSeconds(1).toString() to day.plusDays(1).atStartOfDay(zone).toInstant().toString()
+            }.toSet()
+            val actualBounds = requests.filter { it.url.path.endsWith("/sleep") }.map { request ->
+                val query = request.url.query.split('&').associate {
+                    val parts = it.split('=', limit = 2)
+                    parts[0] to java.net.URLDecoder.decode(parts[1], "UTF-8")
+                }
+                requireNotNull(query["start"]) to requireNotNull(query["end"])
+            }.toSet()
+            assertThat(actualBounds).isEqualTo(expectedBounds)
+            assertThat(domain.single { it.date == owner }.sleep.stages).isEmpty()
+        }
+    }
+
+    @Test
+    fun morningWorkoutRetainsExactSourceClocksAndElapsedNanoseconds() = runTest {
+        val case = Case("workout", "America/Los_Angeles", "2026-11-01",
+            "2026-11-01T01:15:00.000000001-07:00", "2026-11-01T01:45:00.000000123-08:00", 0, workout = true)
+        val owner = LocalDate.parse(case.owner)
+        val context = AndroidCaptureContext(ZoneId.of(case.zone), SleepDayAttribution.MORNING_ENDS)
+        val data = repository(case, mutableListOf()).forCaptureOperation().fetchHealthDataRange(listOf(owner),
+            zoneId = context.zoneId, sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride).single()
+        val workout = data.workouts.single()
+        assertThat(workout.exactStartTime?.instant()).isEqualTo(Instant.parse(case.start))
+        assertThat(workout.exactEndTime?.instant()).isEqualTo(Instant.parse(case.end))
+        assertThat(workout.duration.inWholeNanoseconds).isEqualTo(5_400_000_000_122L)
+        assertThat(workout.identity?.nativeId).isEqualTo(ID)
+        val output = JsonExporter().export(data, includeGranularData = true, captureContext = context)
+        assertThat(Json.parseToJsonElement(output).jsonObject.getValue("schema_version").jsonPrimitive.int).isEqualTo(6)
+        assertThat(output).contains("morning_ends")
+        writeEvidence(case.name, output)
+    }
+
+    private fun writeEvidence(name: String, json: String) {
+        val folder = System.getenv("HEALTHMD_WHOOP_V6_QA_OUTPUT_DIR") ?: return
+        val path = java.nio.file.Path.of(folder)
+        java.nio.file.Files.createDirectories(path)
+        java.nio.file.Files.write(path.resolve("whoop-$name-v6.json"), json.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun repository(case: Case, requests: MutableList<CloudHttpRequest>): HealthRepositoryImpl {
+        val token = OAuthToken("whoop", "synthetic")
+        val config = OAuthProviderConfig("whoop", "WHOOP", "https://auth.example.test", "https://token.example.test",
+            "synthetic-client", scopes = listOf("read:sleep"))
+        val client = CloudHealthApiClient.forTesting(
+            OAuthAuthorizationManager(OAuthConfigRegistry(listOf(config)), InMemoryOAuthTokenStore(listOf(token))),
+            CloudHttpTransport { request ->
+                requests += request
+                // Deliberately overreturn the same whole record. Ownership must be enforced locally.
+                val body = if (request.url.path.endsWith("/sleep") && !case.workout) """
+                    {"records":[{"id":"$ID","start":"${case.start}","end":"${case.end}","score_state":"SCORED",
+                    "score":{"stage_summary":{"total_light_sleep_time_milli":${case.millis},"total_in_bed_time_milli":${case.millis}}}}]}
+                """ else if (request.url.path.endsWith("/workout") && case.workout) """
+                    {"records":[{"id":"$ID","start":"${case.start}","end":"${case.end}","sport_name":"walking","score_state":"SCORED"}]}
+                """ else """{"records":[]}"""
+                CloudHttpResponse(200, "application/json", body = body.toByteArray())
+            })
+        val provider = WhoopCloudDataProvider(client, clock = Clock.fixed(Instant.parse("2027-01-01T12:00:00Z"), ZoneOffset.UTC))
+        val settings = mockk<SettingsRepository>()
+        coEvery { settings.getSelectedHealthProviderId() } returns "whoop"
+        coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.NIGHT_BEGINS
+        return HealthRepositoryImpl(HealthProviderRegistry(HealthConnectDataProvider(mockk(relaxed = true)), listOf(provider)), settings)
+    }
+
+    private data class Case(val name: String, val zone: String, val owner: String, val start: String, val end: String, val millis: Long, val workout: Boolean = false)
+    companion object { private const val ID = "00000000-0000-4000-8000-000000000201" }
+}

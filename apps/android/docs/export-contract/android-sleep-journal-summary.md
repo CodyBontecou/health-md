@@ -1,12 +1,12 @@
 # Android sleep journal summary
 
-**Status:** shipped compatibility rule; alternate ownership is `planned`
+**Status:** Night begins is shipped; approved Morning ends successor meanings remain guarded in development
 
 **Shipped rule ID:** `noon-to-noon-sleep-window-v1`
 
-**Proposed calculation rule:** `wake-date-sleep-window-v1` (unavailable in production profiles)
+**Successor calculation rule:** `wake-date-sleep-window-v1` (unavailable in production profiles)
 
-**Scope:** Health Connect compatibility summaries and detailed sleep records
+**Scope:** Health Connect compatibility summaries and detailed records, with independently specified WHOOP aggregate capture below
 
 ## Journal-day ownership
 
@@ -20,9 +20,9 @@ Health Connect sleep reads use a sleep-only interval. For requested dates `first
 
 `settings.sleep-attribution` is **planned** on both platforms. The exact target is **Issue #104 sleep-attribution-successor-profile-review**, documented in `apps/apple/docs/features/sleep-attribution-profile-gate.md`.
 
-`morning_ends` would assign a whole source session to the calendar date of its end, without noon clipping. That changes public meaning and cannot ship under immutable Apple v8 or Android v4/v5 identities. The repository and current writer contexts reject this mode before provider reads or output. The settings control disables new selection; stored values remain unchanged and unavailable, rather than being coerced to `night_begins`. A changed preference applies only to a separately requested new operation, never to a saved explicit capture context.
+`morning_ends` assigns a whole source session to the calendar date of its end, without noon clipping. It cannot ship under immutable Apple v8 or Android v4/v5 identities. Qualified development paths use explicit Apple-v11 or Android-sleep-v6 contexts and attribution metadata. Release gates remain closed; missing, unversioned or conflicting authority is rejected rather than coerced to `night_begins`. A changed preference applies only to a separately requested new operation, never to a saved explicit capture context.
 
-Apple v11, Android v6 and unified-v9 are unapproved candidates. Enabling alternate attribution requires profile approval, exported metadata, consumer adoption and durable-context qualification. It is not authorized by an internal window-rule constant or a unchanged structural signature.
+The owner approved Apple-v11 and Android-sleep-v6 meanings on 2026-10-29: whole-session wake-date ownership, no noon clipping, frozen export timezone and explicit attribution metadata. Unified-v9 remains an unapproved proposal. Meaning approval does not enable production; producer, consumer and durable-context qualification remain required. An internal rule constant or unchanged structural signature does not authorize relabeling historical output.
 
 The same device-local raw values remain in DataStore (`sleep_day_attribution`) and Apple UserDefaults (`healthKit.sleepDayAttribution`). Portable Share My Setup does not import them. Apple internal durable journals now retain their operation context separately from portable/wire encoding; missing or unapproved recovery contexts remain unavailable without journal erasure. Android passes one explicit context across capture chunks and does not substitute provider-native single-day semantics after an empty authoritative range.
 
@@ -48,9 +48,9 @@ Granular rows preserve original instants, nanoseconds, identities and nullable s
 
 ## Compatibility and verification
 
-No shipped profile version or signature fixture changes. Existing historical expectations and bytes remain authoritative. JVM controls cover noon ownership, overnight/noon-spanning sessions, additive overlap, malformed/stage-less records, DST, source offsets and proposed calculations. Production repository, file, API, direct and preview controls also reject unapproved contexts without reads/output and retain pinned night-begins ownership after preference edits.
+No shipped profile version or signature fixture changes. Existing historical expectations and bytes remain authoritative. JVM controls cover noon ownership, overnight/noon-spanning sessions, additive overlap, malformed/stage-less records, DST, source offsets and proposed calculations. Repository, file, API, direct and preview controls reject missing or unversioned contexts without reads/output and retain accepted ownership after preference edits. Supported development successor paths exercise explicit versioned authority; this is separate from production enablement.
 
-WHOOP compatibility reads use the same journal query window and explicit overlap selection, but WHOOP's API only supplies whole-session stage aggregates. Those aggregates are not prorated across noon. The [provider ledger](cloud-raw-provider-ledger.md#whoop-compatibility-sleep-journal-window) documents this provider-specific limitation; the timestamped-stage clipping rules above apply to Health Connect.
+WHOOP Night begins compatibility reads use the same journal query window and explicit overlap selection, but WHOOP's API only supplies whole-session stage aggregates. Those aggregates are not prorated across noon. The [provider ledger](cloud-raw-provider-ledger.md#whoop-compatibility-sleep-journal-window) documents this provider-specific limitation; the timestamped-stage clipping rules above apply to Health Connect. The [Morning ends successor path](cloud-raw-provider-ledger.md#whoop-morning-ends-successor-capture) instead selects whole WHOOP sessions by end date, preserves provider-reported aggregates and exact parent clocks, and does not fabricate a timestamped stage sequence.
 
 This change conforms Android to the already-documented noon-to-noon sleep ownership contract while
 preserving the aggregation meaning of the frozen `ios-v4` and shipped `android-analytical-v5`
