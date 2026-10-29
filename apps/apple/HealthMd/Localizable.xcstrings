@@ -1,6 +1,226 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Double tap to disable individual entry tracking" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Doppeltippen, um die Verfolgung von Einzeleinträgen zu deaktivieren"}},
+      "es":{"stringUnit":{"state":"translated","value":"Toca dos veces para desactivar el registro de entradas individuales"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Touchez deux fois pour désactiver le suivi des entrées individuelles"}},
+      "it":{"stringUnit":{"state":"translated","value":"Tocca due volte per disattivare il monitoraggio delle voci individuali"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ダブルタップして個別エントリの追跡を無効にします"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이중 탭하여 개별 항목 추적을 비활성화합니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Tik dubbel om het bijhouden van afzonderlijke items uit te schakelen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Toque duas vezes para desativar o monitoramento de entradas individuais"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"轻点两下以停用单条记录跟踪"}}
+    }},
+    "Double tap to enable individual entry tracking" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Doppeltippen, um die Verfolgung von Einzeleinträgen zu aktivieren"}},
+      "es":{"stringUnit":{"state":"translated","value":"Toca dos veces para activar el registro de entradas individuales"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Touchez deux fois pour activer le suivi des entrées individuelles"}},
+      "it":{"stringUnit":{"state":"translated","value":"Tocca due volte per attivare il monitoraggio delle voci individuali"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ダブルタップして個別エントリの追跡を有効にします"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이중 탭하여 개별 항목 추적을 활성화합니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Tik dubbel om het bijhouden van afzonderlijke items in te schakelen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Toque duas vezes para ativar o monitoramento de entradas individuais"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"轻点两下以启用单条记录跟踪"}}
+    }},
+    "Double tap to disable all individual tracking." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Doppeltippen, um die gesamte Einzelverfolgung zu deaktivieren."}},
+      "es":{"stringUnit":{"state":"translated","value":"Toca dos veces para desactivar todo el registro individual."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Touchez deux fois pour désactiver tout suivi individuel."}},
+      "it":{"stringUnit":{"state":"translated","value":"Tocca due volte per disattivare tutto il monitoraggio individuale."}},
+      "ja":{"stringUnit":{"state":"translated","value":"ダブルタップしてすべての個別追跡を無効にします。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이중 탭하여 모든 개별 추적을 비활성화합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Tik dubbel om het bijhouden van alle afzonderlijke items uit te schakelen."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Toque duas vezes para desativar todo o monitoramento individual."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"轻点两下以停用所有单条记录跟踪。"}}
+    }},
+    "Double tap to track all enabled metrics individually." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Doppeltippen, um alle aktivierten Metriken einzeln zu verfolgen."}},
+      "es":{"stringUnit":{"state":"translated","value":"Toca dos veces para registrar individualmente todas las métricas activadas."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Touchez deux fois pour suivre individuellement tous les indicateurs activés."}},
+      "it":{"stringUnit":{"state":"translated","value":"Tocca due volte per monitorare singolarmente tutte le metriche attivate."}},
+      "ja":{"stringUnit":{"state":"translated","value":"ダブルタップして有効なすべての指標を個別に追跡します。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이중 탭하여 활성화된 모든 항목을 개별적으로 추적합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Tik dubbel om alle ingeschakelde meetwaarden afzonderlijk bij te houden."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Toque duas vezes para monitorar individualmente todas as métricas ativadas."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"轻点两下以单独跟踪所有已启用的指标。"}}
+    }},
+    "Metrics currently enabled in Health Metrics: %lld." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Derzeit unter Gesundheitsmetriken aktiviert: %lld."}},
+      "es":{"stringUnit":{"state":"translated","value":"Métricas activadas actualmente en Métricas de salud: %lld."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Indicateurs actuellement activés dans Indicateurs de santé : %lld."}},
+      "it":{"stringUnit":{"state":"translated","value":"Metriche attualmente attivate in Metriche di salute: %lld."}},
+      "ja":{"stringUnit":{"state":"translated","value":"「ヘルス指標」で現在有効な指標：%lld。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"건강 항목에서 현재 활성화된 항목: %lld개."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Momenteel ingeschakelde meetwaarden bij Gezondheidsmeetwaarden: %lld."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Métricas atualmente ativadas em Métricas de saúde: %lld."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"“健康指标”中当前已启用的指标：%lld。"}}
+    }},
+    "Tracked: %lld of %lld" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Erfasst: %lld von %lld"}},
+      "es":{"stringUnit":{"state":"translated","value":"Registro: %lld de %lld"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Suivi : %lld sur %lld"}},
+      "it":{"stringUnit":{"state":"translated","value":"Monitoraggio: %lld su %lld"}},
+      "ja":{"stringUnit":{"state":"translated","value":"追跡中：%lld／%lld"}},
+      "ko":{"stringUnit":{"state":"translated","value":"추적: %lld / %lld"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Bijgehouden: %lld van %lld"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Monitoramento: %lld de %lld"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"已跟踪：%lld，共 %lld"}}
+    }},
+    "%@, tracked: %lld of %lld" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"%@, erfasst: %lld von %lld"}},
+      "es":{"stringUnit":{"state":"translated","value":"%@, registro: %lld de %lld"}},
+      "fr":{"stringUnit":{"state":"translated","value":"%@, suivi : %lld sur %lld"}},
+      "it":{"stringUnit":{"state":"translated","value":"%@, monitoraggio: %lld su %lld"}},
+      "ja":{"stringUnit":{"state":"translated","value":"%@、追跡中：%lld／%lld"}},
+      "ko":{"stringUnit":{"state":"translated","value":"%@, 추적: %lld / %lld"}},
+      "nl":{"stringUnit":{"state":"translated","value":"%@, bijgehouden: %lld van %lld"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"%@, monitoramento: %lld de %lld"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"%@，已跟踪：%lld，共 %lld"}}
+    }},
+    "Double tap to stop tracking individual entry files for %@" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Doppeltippen, um die Verfolgung von Einzeleintragsdateien für %@ zu beenden"}},
+      "es":{"stringUnit":{"state":"translated","value":"Toca dos veces para dejar de registrar archivos de entradas individuales de %@"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Touchez deux fois pour arrêter le suivi des fichiers d’entrées individuelles pour %@"}},
+      "it":{"stringUnit":{"state":"translated","value":"Tocca due volte per interrompere il monitoraggio dei file delle voci individuali per %@"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ダブルタップして%@の個別エントリファイルの追跡を停止します"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이중 탭하여 %@의 개별 항목 파일 추적을 중지합니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Tik dubbel om het bijhouden van afzonderlijke itembestanden voor %@ te stoppen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Toque duas vezes para parar de monitorar os arquivos de entradas individuais de %@"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"轻点两下以停止跟踪%@的单条记录文件"}}
+    }},
+    "Double tap to track individual entry files for %@" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Doppeltippen, um Einzeleintragsdateien für %@ zu verfolgen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Toca dos veces para registrar archivos de entradas individuales de %@"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Touchez deux fois pour suivre les fichiers d’entrées individuelles pour %@"}},
+      "it":{"stringUnit":{"state":"translated","value":"Tocca due volte per monitorare i file delle voci individuali per %@"}},
+      "ja":{"stringUnit":{"state":"translated","value":"ダブルタップして%@の個別エントリファイルを追跡します"}},
+      "ko":{"stringUnit":{"state":"translated","value":"이중 탭하여 %@의 개별 항목 파일을 추적합니다"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Tik dubbel om afzonderlijke itembestanden voor %@ bij te houden"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Toque duas vezes para monitorar os arquivos de entradas individuais de %@"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"轻点两下以跟踪%@的单条记录文件"}}
+    }},
+    "Disables individual tracking for every metric." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Deaktiviert die Einzelverfolgung für jede Metrik."}},
+      "es":{"stringUnit":{"state":"translated","value":"Desactiva el registro individual de todas las métricas."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Désactive le suivi individuel pour chaque indicateur."}},
+      "it":{"stringUnit":{"state":"translated","value":"Disattiva il monitoraggio individuale per ogni metrica."}},
+      "ja":{"stringUnit":{"state":"translated","value":"すべての指標の個別追跡を無効にします。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"모든 항목의 개별 추적을 비활성화합니다."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Schakelt het afzonderlijk bijhouden van elke meetwaarde uit."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Desativa o monitoramento individual de todas as métricas."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"停用每个指标的单独跟踪。"}}
+    }},
+    "Enter the folder path for individual entry files." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Geben Sie den Ordnerpfad für Einzeleintragsdateien ein."}},
+      "es":{"stringUnit":{"state":"translated","value":"Introduce la ruta de la carpeta de los archivos de entradas individuales."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Saisissez le chemin du dossier des fichiers d’entrées individuelles."}},
+      "it":{"stringUnit":{"state":"translated","value":"Inserisci il percorso della cartella per i file delle voci individuali."}},
+      "ja":{"stringUnit":{"state":"translated","value":"個別エントリファイルのフォルダパスを入力してください。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"개별 항목 파일의 폴더 경로를 입력하세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Voer het mappad voor afzonderlijke itembestanden in."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Insira o caminho da pasta para os arquivos de entradas individuais."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"输入单条记录文件的文件夹路径。"}}
+    }},
+    "Enter the filename template for individual entry files." : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Geben Sie die Dateinamenvorlage für Einzeleintragsdateien ein."}},
+      "es":{"stringUnit":{"state":"translated","value":"Introduce la plantilla de nombre de archivo para las entradas individuales."}},
+      "fr":{"stringUnit":{"state":"translated","value":"Saisissez le modèle de nom de fichier des entrées individuelles."}},
+      "it":{"stringUnit":{"state":"translated","value":"Inserisci il modello di nome file per le voci individuali."}},
+      "ja":{"stringUnit":{"state":"translated","value":"個別エントリファイルのファイル名テンプレートを入力してください。"}},
+      "ko":{"stringUnit":{"state":"translated","value":"개별 항목 파일의 파일명 템플릿을 입력하세요."}},
+      "nl":{"stringUnit":{"state":"translated","value":"Voer de bestandsnaamsjabloon voor afzonderlijke items in."}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Insira o modelo de nome de arquivo para as entradas individuais."}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"输入单条记录文件的文件名模板。"}}
+    }},
+    "Suggested" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Empfohlen"}},
+      "es":{"stringUnit":{"state":"translated","value":"Sugerida"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Suggestion"}},
+      "it":{"stringUnit":{"state":"translated","value":"Suggerita"}},
+      "ja":{"stringUnit":{"state":"translated","value":"おすすめ"}},
+      "ko":{"stringUnit":{"state":"translated","value":"추천"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Aanbevolen"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Sugerida"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"建议"}}
+    }},
+    "Daily: sum" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Täglich: Summe"}},
+      "es":{"stringUnit":{"state":"translated","value":"Diario: suma"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Par jour : somme"}},
+      "it":{"stringUnit":{"state":"translated","value":"Giornaliero: somma"}},
+      "ja":{"stringUnit":{"state":"translated","value":"日次：合計"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일별: 합계"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Dagelijks: som"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Diário: soma"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每日：总和"}}
+    }},
+    "Daily: average" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Täglich: Durchschnitt"}},
+      "es":{"stringUnit":{"state":"translated","value":"Diario: promedio"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Par jour : moyenne"}},
+      "it":{"stringUnit":{"state":"translated","value":"Giornaliero: media"}},
+      "ja":{"stringUnit":{"state":"translated","value":"日次：平均"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일별: 평균"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Dagelijks: gemiddelde"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Diário: média"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每日：平均值"}}
+    }},
+    "Daily: minimum" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Täglich: Minimum"}},
+      "es":{"stringUnit":{"state":"translated","value":"Diario: mínimo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Par jour : minimum"}},
+      "it":{"stringUnit":{"state":"translated","value":"Giornaliero: minimo"}},
+      "ja":{"stringUnit":{"state":"translated","value":"日次：最小値"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일별: 최솟값"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Dagelijks: minimum"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Diário: mínimo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每日：最小值"}}
+    }},
+    "Daily: maximum" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Täglich: Maximum"}},
+      "es":{"stringUnit":{"state":"translated","value":"Diario: máximo"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Par jour : maximum"}},
+      "it":{"stringUnit":{"state":"translated","value":"Giornaliero: massimo"}},
+      "ja":{"stringUnit":{"state":"translated","value":"日次：最大値"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일별: 최댓값"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Dagelijks: maximum"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Diário: máximo"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每日：最大值"}}
+    }},
+    "Daily: latest" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Täglich: letzter Wert"}},
+      "es":{"stringUnit":{"state":"translated","value":"Diario: último valor"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Par jour : dernière valeur"}},
+      "it":{"stringUnit":{"state":"translated","value":"Giornaliero: ultimo valore"}},
+      "ja":{"stringUnit":{"state":"translated","value":"日次：最新値"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일별: 최신 값"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Dagelijks: laatste waarde"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Diário: valor mais recente"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每日：最新值"}}
+    }},
+    "Daily: total time" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Täglich: Gesamtzeit"}},
+      "es":{"stringUnit":{"state":"translated","value":"Diario: tiempo total"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Par jour : durée totale"}},
+      "it":{"stringUnit":{"state":"translated","value":"Giornaliero: tempo totale"}},
+      "ja":{"stringUnit":{"state":"translated","value":"日次：合計時間"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일별: 총 시간"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Dagelijks: totale tijd"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Diário: tempo total"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每日：总时长"}}
+    }},
+    "Daily: count" : {"localizations":{
+      "de":{"stringUnit":{"state":"translated","value":"Täglich: Anzahl"}},
+      "es":{"stringUnit":{"state":"translated","value":"Diario: recuento"}},
+      "fr":{"stringUnit":{"state":"translated","value":"Par jour : nombre"}},
+      "it":{"stringUnit":{"state":"translated","value":"Giornaliero: conteggio"}},
+      "ja":{"stringUnit":{"state":"translated","value":"日次：件数"}},
+      "ko":{"stringUnit":{"state":"translated","value":"일별: 개수"}},
+      "nl":{"stringUnit":{"state":"translated","value":"Dagelijks: aantal"}},
+      "pt-BR":{"stringUnit":{"state":"translated","value":"Diário: contagem"}},
+      "zh-Hans":{"stringUnit":{"state":"translated","value":"每日：次数"}}
+    }},
     "Double tap to disable daily note injection" : {
       "localizations" : {
         "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um die tägliche Notizeinfügung zu deaktivieren"}},
@@ -9534,6 +9754,17 @@
       }
     },
     "All tracked" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Alle erfasst"}},
+        "es":{"stringUnit":{"state":"translated","value":"Todas seguidas"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Tous suivis"}},
+        "it":{"stringUnit":{"state":"translated","value":"Tutte monitorate"}},
+        "ja":{"stringUnit":{"state":"translated","value":"すべて追跡中"}},
+        "ko":{"stringUnit":{"state":"translated","value":"모두 추적 중"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Alles bijgehouden"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Todas rastreadas"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"全部已追踪"}}
+      }
 
     },
     "All Tracked" : {
@@ -47650,6 +47881,17 @@
       }
     },
     "Enable individual entry tracking" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Individuelle Eintragserfassung aktivieren"}},
+        "es":{"stringUnit":{"state":"translated","value":"Habilitar seguimiento de entradas individuales"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Activer le suivi individuel des entrées"}},
+        "it":{"stringUnit":{"state":"translated","value":"Abilita monitoraggio voci individuali"}},
+        "ja":{"stringUnit":{"state":"translated","value":"個別エントリトラッキングを有効にする"}},
+        "ko":{"stringUnit":{"state":"translated","value":"개별 항목 추적 활성화"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Individueel bijhouden inschakelen"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Ativar Rastreamento de Entrada Individual"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"启用单条记录追踪"}}
+      }
 
     },
     "Enable Individual Entry Tracking" : {
@@ -47827,6 +48069,17 @@
       }
     },
     "Enable metrics in Health Metrics first." : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Aktivieren Sie zuerst Metriken unter Gesundheitsmetriken."}},
+        "es":{"stringUnit":{"state":"translated","value":"Activa primero las métricas en Métricas de salud."}},
+        "fr":{"stringUnit":{"state":"translated","value":"Activez d’abord des indicateurs dans Indicateurs de santé."}},
+        "it":{"stringUnit":{"state":"translated","value":"Attiva prima le metriche in Metriche di salute."}},
+        "ja":{"stringUnit":{"state":"translated","value":"まず「ヘルス指標」で指標を有効にしてください。"}},
+        "ko":{"stringUnit":{"state":"translated","value":"먼저 건강 항목에서 항목을 활성화하세요."}},
+        "nl":{"stringUnit":{"state":"translated","value":"Schakel eerst meetwaarden in bij Gezondheidsmeetwaarden."}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Primeiro, ative as métricas em Métricas de saúde."}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"请先在“健康指标”中启用指标。"}}
+      }
 
     },
     "Enable scheduled exports" : {
@@ -49134,6 +49387,17 @@
       }
     },
     "Entries folder" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Eintragsordner"}},
+        "es":{"stringUnit":{"state":"translated","value":"Carpeta de entradas"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Dossier des entrées"}},
+        "it":{"stringUnit":{"state":"translated","value":"Cartella voci"}},
+        "ja":{"stringUnit":{"state":"translated","value":"エントリフォルダ"}},
+        "ko":{"stringUnit":{"state":"translated","value":"항목 폴더"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Vermeldingsmap"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Pasta de Entradas"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"条目文件夹"}}
+      },
       "comment" : "Profile editor entries folder field"
     },
     "Entries Folder" : {
@@ -50624,6 +50888,17 @@
       }
     },
     "Example individual entry frontmatter" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Beispiel für die Frontmatter eines Einzeleintrags"}},
+        "es":{"stringUnit":{"state":"translated","value":"Ejemplo de propiedades YAML de una entrada individual"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Exemple de métadonnées YAML d’une entrée individuelle"}},
+        "it":{"stringUnit":{"state":"translated","value":"Esempio di frontmatter di una voce individuale"}},
+        "ja":{"stringUnit":{"state":"translated","value":"個別エントリのフロントマターの例"}},
+        "ko":{"stringUnit":{"state":"translated","value":"개별 항목 프런트매터 예시"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Voorbeeld van frontmatter voor een afzonderlijk item"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Exemplo de frontmatter de uma entrada individual"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"单条记录的前置元数据示例"}}
+      }
 
     },
     "Example: %@" : {
@@ -57869,6 +58144,17 @@
       }
     },
     "Filename template" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Dateinamenvorlage"}},
+        "es":{"stringUnit":{"state":"translated","value":"Plantilla de nombre de archivo"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Modèle de nom de fichier"}},
+        "it":{"stringUnit":{"state":"translated","value":"Modello nome file"}},
+        "ja":{"stringUnit":{"state":"translated","value":"ファイル名テンプレート"}},
+        "ko":{"stringUnit":{"state":"translated","value":"파일 이름 템플릿"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Bestandsnaamsjabloon"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Modelo de Nome de Arquivo"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"文件名模板"}}
+      },
       "comment" : "Profile editor filename template field"
     },
     "Filename Template" : {
@@ -68800,6 +69086,17 @@
 
     },
     "Individual Entry Tracking, %@" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Verfolgung von Einzeleinträgen, %@"}},
+        "es":{"stringUnit":{"state":"translated","value":"Registro de entradas individuales, %@"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Suivi des entrées individuelles, %@"}},
+        "it":{"stringUnit":{"state":"translated","value":"Monitoraggio delle voci individuali, %@"}},
+        "ja":{"stringUnit":{"state":"translated","value":"個別エントリの追跡、%@"}},
+        "ko":{"stringUnit":{"state":"translated","value":"개별 항목 추적, %@"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Afzonderlijke items bijhouden, %@"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Monitoramento de entradas individuais, %@"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"单条记录跟踪，%@"}}
+      }
 
     },
     "Individual Tracking" : {
@@ -84491,6 +84788,17 @@
 
     },
     "Not all tracked" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Nicht alle erfasst"}},
+        "es":{"stringUnit":{"state":"translated","value":"No todas registradas"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Suivi incomplet"}},
+        "it":{"stringUnit":{"state":"translated","value":"Non tutte monitorate"}},
+        "ja":{"stringUnit":{"state":"translated","value":"一部未追跡"}},
+        "ko":{"stringUnit":{"state":"translated","value":"일부 항목 미추적"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Niet alles bijgehouden"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Nem todas monitoradas"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"部分未跟踪"}}
+      }
 
     },
     "Not complete" : {
@@ -84820,6 +85128,17 @@
       }
     },
     "Not tracked" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Nicht erfasst"}},
+        "es":{"stringUnit":{"state":"translated","value":"Sin seguimiento"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Non suivi"}},
+        "it":{"stringUnit":{"state":"translated","value":"Non monitorata"}},
+        "ja":{"stringUnit":{"state":"translated","value":"未追跡"}},
+        "ko":{"stringUnit":{"state":"translated","value":"추적 안 함"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Niet bijgehouden"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Não monitorada"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"未追踪"}}
+      }
 
     },
     "Not Tracked" : {
@@ -87981,6 +88300,17 @@
       }
     },
     "Organize individual entries by category" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Einzeleinträge nach Kategorie organisieren"}},
+        "es":{"stringUnit":{"state":"translated","value":"Organizar las entradas individuales por categoría"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Organiser les entrées individuelles par catégorie"}},
+        "it":{"stringUnit":{"state":"translated","value":"Organizza le voci individuali per categoria"}},
+        "ja":{"stringUnit":{"state":"translated","value":"個別エントリをカテゴリ別に整理"}},
+        "ko":{"stringUnit":{"state":"translated","value":"개별 항목을 카테고리별로 정리"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Afzonderlijke items per categorie ordenen"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Organizar entradas individuais por categoria"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"按类别整理单条记录"}}
+      }
 
     },
     "Organizes health data under category headings" : {
@@ -116113,6 +116443,17 @@
       }
     },
     "Track all enabled metrics" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Alle aktivierten Metriken verfolgen"}},
+        "es":{"stringUnit":{"state":"translated","value":"Registrar todas las métricas activadas"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Suivre tous les indicateurs activés"}},
+        "it":{"stringUnit":{"state":"translated","value":"Monitora tutte le metriche attivate"}},
+        "ja":{"stringUnit":{"state":"translated","value":"有効なすべての指標を追跡"}},
+        "ko":{"stringUnit":{"state":"translated","value":"활성화된 모든 항목 추적"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Alle ingeschakelde meetwaarden bijhouden"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Monitorar todas as métricas ativadas"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"跟踪所有已启用的指标"}}
+      }
 
     },
     "Track All Enabled Metrics" : {
@@ -116233,6 +116574,17 @@
       }
     },
     "Tracked" : {
+      "localizations" : {
+        "de":{"stringUnit":{"state":"translated","value":"Erfasst"}},
+        "es":{"stringUnit":{"state":"translated","value":"Registrada"}},
+        "fr":{"stringUnit":{"state":"translated","value":"Suivi actif"}},
+        "it":{"stringUnit":{"state":"translated","value":"Monitorata"}},
+        "ja":{"stringUnit":{"state":"translated","value":"追跡中"}},
+        "ko":{"stringUnit":{"state":"translated","value":"추적 중"}},
+        "nl":{"stringUnit":{"state":"translated","value":"Bijgehouden"}},
+        "pt-BR":{"stringUnit":{"state":"translated","value":"Monitorada"}},
+        "zh-Hans":{"stringUnit":{"state":"translated","value":"已跟踪"}}
+      }
 
     },
     "Tracked Metrics" : {

@@ -15,6 +15,11 @@ struct IndividualTrackingView: View {
     var setIndividuallyTracked: (String, Bool) -> Void = { _, _ in }
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.locale) private var locale
+
+    private var copy: IndividualTrackingPresentation {
+        IndividualTrackingPresentation(locale: locale)
+    }
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var expandedCategories: Set<HealthMetricCategory> = []
 
@@ -68,14 +73,12 @@ struct IndividualTrackingView: View {
                 )
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Individual Entry Tracking, \(headerStateTitle)")
+            .accessibilityLabel(copy.headerLabel(headerStateTitle))
         }
     }
 
     private var headerStateTitle: String {
-        guard settings.globalEnabled else { return String(localized: "Disabled") }
-        guard settings.totalEnabledCount > 0 else { return String(localized: "Needs Metrics") }
-        return String(localized: "\(settings.totalEnabledCount) Tracked")
+        copy.headerState(isEnabled: settings.globalEnabled, count: settings.totalEnabledCount)
     }
 
     private var headerStateColor: Color {
@@ -101,8 +104,8 @@ struct IndividualTrackingView: View {
             }
             .tint(Color.accent)
             .accessibilityLabel("Enable individual entry tracking")
-            .accessibilityValue(settings.globalEnabled ? "Enabled" : "Disabled")
-            .accessibilityHint("Double tap to \(settings.globalEnabled ? "disable" : "enable") individual entry tracking")
+            .accessibilityValue(copy.status(isEnabled: settings.globalEnabled))
+            .accessibilityHint(copy.toggleHint(isEnabled: settings.globalEnabled))
         }
     }
 
@@ -155,8 +158,8 @@ struct IndividualTrackingView: View {
                         .strokeBorder(Color.borderSubtle, lineWidth: 1)
                 )
                 .accessibilityLabel("Track all enabled metrics")
-                .accessibilityValue(tracksAllEnabledMetrics ? "All tracked" : "Not all tracked")
-                .accessibilityHint(individualTrackableMetrics.isEmpty ? "Enable metrics in Health Metrics first." : "Double tap to \(tracksAllEnabledMetrics ? "disable all individual tracking" : "track all enabled metrics individually").")
+                .accessibilityValue(copy.bulkValue(tracksAll: tracksAllEnabledMetrics))
+                .accessibilityHint(copy.bulkHint(hasMetrics: !individualTrackableMetrics.isEmpty, tracksAll: tracksAllEnabledMetrics))
 
                 quickActionButton(
                     title: "Disable All",
@@ -204,8 +207,8 @@ struct IndividualTrackingView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .accessibilityHint(accessibilityHint)
+        .accessibilityLabel(LocalizedStringKey(title))
+        .accessibilityHint(LocalizedStringKey(accessibilityHint))
     }
 
     // MARK: - Metric Selection
@@ -217,7 +220,7 @@ struct IndividualTrackingView: View {
             title: "Per-Metric Tracking",
             badge: settings.totalEnabledCount == 0
                 ? String(localized: "No Metrics")
-                : String(localized: "\(settings.totalEnabledCount) Tracked")
+                : copy.trackedTitle(settings.totalEnabledCount)
         ) {
             if categories.isEmpty {
                 emptyMetricsState
@@ -330,7 +333,7 @@ struct IndividualTrackingView: View {
                         .foregroundStyle(Color.textPrimary)
                 }
 
-                Text(entryPreview)
+                Text(verbatim: entryPreview)
                     .font(.caption.monospaced())
                     .foregroundStyle(Color.textPrimary)
                     .textSelection(.enabled)
@@ -378,10 +381,10 @@ struct IndividualTrackingView: View {
 
     private func fieldLabel(title: String, helper: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Color.textPrimary)
-            Text(helper)
+            Text(LocalizedStringKey(helper))
                 .font(.footnote)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -394,7 +397,7 @@ struct IndividualTrackingView: View {
         accessibilityLabel: String,
         accessibilityHint: String
     ) -> some View {
-        TextField(placeholder, text: configurationProtection.protecting(text))
+        TextField(placeholder, text: configurationProtection.protecting(text), prompt: Text(verbatim: placeholder))
             .font(.footnote.monospaced())
             .foregroundStyle(Color.textPrimary)
             .multilineTextAlignment(usesAccessibilityLayout ? .leading : .trailing)
@@ -410,8 +413,8 @@ struct IndividualTrackingView: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
-            .accessibilityLabel(accessibilityLabel)
-            .accessibilityHint(accessibilityHint)
+            .accessibilityLabel(LocalizedStringKey(accessibilityLabel))
+            .accessibilityHint(LocalizedStringKey(accessibilityHint))
     }
 
     private func toggleRow(
@@ -422,18 +425,18 @@ struct IndividualTrackingView: View {
     ) -> some View {
         Toggle(isOn: configurationProtection.protecting(isOn)) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .tint(Color.accent)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(isOn.wrappedValue ? "Enabled" : "Disabled")
+        .accessibilityLabel(LocalizedStringKey(accessibilityLabel))
+        .accessibilityValue(copy.status(isEnabled: isOn.wrappedValue))
     }
 
     private func previewRow(icon: String, title: String, value: String) -> some View {
@@ -446,10 +449,10 @@ struct IndividualTrackingView: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
-                Text(value)
+                Text(verbatim: value)
                     .font(.footnote.monospaced())
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -457,7 +460,7 @@ struct IndividualTrackingView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(title)
+        .accessibilityLabel(LocalizedStringKey(title))
         .accessibilityValue(value)
     }
 
@@ -475,7 +478,7 @@ struct IndividualTrackingView: View {
                 if let badge {
                     IndividualTrackingStatePill(
                         title: badge,
-                        color: badge == "No Metrics" ? Color.warning : Color.accent
+                        color: settings.totalEnabledCount == 0 ? Color.warning : Color.accent
                     )
                 }
             }
@@ -561,18 +564,11 @@ struct IndividualTrackingView: View {
     }
 
     private var quickActionToggleSubtitle: String {
-        let total = individualTrackableMetrics.count
-        guard total > 0 else {
-            return String(localized: "Enable metrics in Health Metrics before choosing individual entries.")
-        }
-
-        if tracksAllEnabledMetrics {
-            return String(localized: "Switch off to disable individual tracking for all enabled Health Metrics.")
-        }
-        if enabledTrackableMetricCount == 0 {
-            return String(localized: "Tracks all \(total) metrics currently enabled in Health Metrics.")
-        }
-        return String(localized: "\(enabledTrackableMetricCount) of \(total) enabled metrics are currently tracked.")
+        copy.bulkSubtitle(
+            total: individualTrackableMetrics.count,
+            tracked: enabledTrackableMetricCount,
+            tracksAll: tracksAllEnabledMetrics
+        )
     }
 
     private func setTracksAllEnabledMetrics(_ shouldTrack: Bool) {
@@ -672,6 +668,11 @@ struct CategoryTrackingRow: View {
     var setIndividuallyTracked: (String, Bool) -> Void = { _, _ in }
     let isExpanded: Bool
     let onToggleExpand: () -> Void
+    @Environment(\.locale) private var locale
+
+    private var copy: IndividualTrackingPresentation {
+        IndividualTrackingPresentation(locale: locale)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -685,11 +686,11 @@ struct CategoryTrackingRow: View {
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(LocalizedStringKey(category.rawValue))
+                        Text(verbatim: category.displayName)
                             .font(.body.weight(.semibold))
                             .foregroundStyle(Color.textPrimary)
 
-                        Text("\(enabledCount) of \(enabledMetricsInCategory.count) tracked")
+                        Text(verbatim: copy.trackedSummary(tracked: enabledCount, total: enabledMetricsInCategory.count))
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                     }
@@ -708,9 +709,9 @@ struct CategoryTrackingRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(category.rawValue), \(enabledCount) of \(enabledMetricsInCategory.count) individual metrics tracked")
+            .accessibilityLabel(copy.categoryLabel(category.displayName, tracked: enabledCount, total: enabledMetricsInCategory.count))
             .accessibilityValue(categoryStateTitle)
-            .accessibilityHint("Double tap to \(isExpanded ? "collapse" : "expand")")
+            .accessibilityHint(copy.expansionHint(isExpanded: isExpanded))
 
             if isExpanded {
                 metricsList
@@ -783,6 +784,11 @@ struct MetricTrackingRow: View {
     @ObservedObject var settings: IndividualTrackingSettings
     var setIndividuallyTracked: (String, Bool) -> Void = { _, _ in }
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @Environment(\.locale) private var locale
+
+    private var copy: IndividualTrackingPresentation {
+        IndividualTrackingPresentation(locale: locale)
+    }
 
     var body: some View {
         Toggle(isOn: configurationProtection.protecting(Binding(
@@ -791,25 +797,25 @@ struct MetricTrackingRow: View {
         ))) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: Spacing.xs) {
-                    Text(metric.name)
+                    Text(verbatim: metric.localizedDisplayName)
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
                     if IndividualTrackingSettings.isSuggested(metric.id) {
-                        IndividualTrackingStatePill(title: "Suggested", color: Color.accent)
+                        IndividualTrackingStatePill(title: String(localized: "Suggested"), color: Color.accent)
                     }
                 }
 
-                Text(metric.isArchiveOnly ? "Source records only" : aggregationDescription(metric.aggregation))
+                Text(LocalizedStringKey(metric.isArchiveOnly ? "Source records only" : aggregationDescription(metric.aggregation)))
                     .font(.caption)
                     .foregroundStyle(Color.textMuted)
             }
         }
         .tint(Color.accent)
         .padding(.vertical, 8)
-        .accessibilityLabel(metric.name)
-        .accessibilityValue(settings.shouldTrackIndividually(metric.id) ? "Tracked" : "Not tracked")
-        .accessibilityHint("Double tap to \(settings.shouldTrackIndividually(metric.id) ? "stop tracking" : "track") individual entry files for \(metric.name)")
+        .accessibilityLabel(metric.localizedDisplayName)
+        .accessibilityValue(copy.metricValue(isTracked: settings.shouldTrackIndividually(metric.id)))
+        .accessibilityHint(copy.metricHint(isTracked: settings.shouldTrackIndividually(metric.id), displayName: metric.localizedDisplayName))
     }
 
     private func aggregationDescription(_ aggregation: HealthMetricDefinition.AggregationType) -> String {
@@ -830,7 +836,7 @@ private struct IndividualTrackingStatePill: View {
     let color: Color
 
     var body: some View {
-        Text(LocalizedStringKey(title))
+        Text(verbatim: title)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
             .lineLimit(1)
