@@ -798,6 +798,12 @@ struct ExportMindfulnessDerivation {
 }
 
 enum ExportFrontmatterMetricBuilder {
+    private static func moodPercentage(from valence: Double) -> Int? {
+        // Preserve truncation for valid values without trapping on malformed
+        // source data. Downstream validation still receives the original valence.
+        Int(exactly: (((valence + 1.0) / 2.0) * 100).rounded(.towardZero))
+    }
+
     static func deriveMindfulness(from mindfulness: MindfulnessData) -> ExportMindfulnessDerivation {
         // Every metric is a view over the unchanged source population. In
         // particular, average valence must not change when the umbrella, daily,
@@ -814,7 +820,7 @@ enum ExportFrontmatterMetricBuilder {
             averageValence = nil
         }
 
-        let averageValencePercent = averageValence.map { Int((($0 + 1.0) / 2.0) * 100) }
+        let averageValencePercent = averageValence.flatMap { moodPercentage(from: $0) }
 
         let averageDailyMoodValence: Double?
         if !dailyMoods.isEmpty {
@@ -1298,8 +1304,8 @@ enum ExportFrontmatterMetricBuilder {
         }
         if !derivedMindfulness.dailyMoods.isEmpty {
             m["daily_mood_count"] = "\(derivedMindfulness.dailyMoods.count)"
-            if let avgDaily = derivedMindfulness.averageDailyMoodValence {
-                let dailyPct = Int(((avgDaily + 1.0) / 2.0) * 100)
+            if let avgDaily = derivedMindfulness.averageDailyMoodValence,
+               let dailyPct = moodPercentage(from: avgDaily) {
                 m["daily_mood_percent"] = "\(dailyPct)"
             }
         }
