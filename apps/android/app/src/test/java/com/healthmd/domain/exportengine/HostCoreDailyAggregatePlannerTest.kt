@@ -49,6 +49,106 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun denseWakeDateQuantitySourcesRemainExportableAcrossEveryFormat() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val base = Instant.parse("2026-11-01T01:30:00.123456789Z")
+        fun samples(value: Double, family: String) = (0 until 2_000).map { index ->
+            val instant = base.plusSeconds(index.toLong())
+            com.healthmd.domain.model.TimestampedSample(
+                java.time.LocalDateTime.ofInstant(instant, context.zoneId), value,
+                source = "synthetic", metadata = mapOf("synthetic" to "dense-quantity-$family-$index"),
+                exactTime = com.healthmd.domain.model.ExactSourceTimestamp.from(instant, ZoneOffset.UTC),
+                identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-quantity-$family-$index"))
+        }
+        val selection = MetricSelectionState(enabledMetrics = setOf("avg_hr", "hrv", "blood_oxygen", "blood_glucose", "respiratory_rate"))
+        val data = HealthData(LocalDate.of(2026, 11, 1), heart = HeartData(samples = samples(Math.nextUp(72.125), "heart"), hrvSamples = samples(Math.nextUp(31.875), "hrv")),
+            vitals = VitalsData(bloodOxygenSamples = samples(Math.nextUp(0.97125), "oxygen"), bloodGlucoseSamples = samples(Math.nextUp(101.875), "glucose"),
+                respiratoryRateSamples = samples(Math.nextUp(16.125), "respiratory"))).filtered(selection, context)
+        for (metadata in listOf(false, true)) {
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+                includeMetadata = metadata, metricSelection = selection, executionSleepCaptureContext = context,
+                executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings,
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust, DailyAggregateExportIds("dense-quantity", "dense-quantity-session"))
+            val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request)
+            val native = Json.parseToJsonElement(com.healthmd.data.export.JsonExporter().export(
+                data, request.customization, true, captureContext = context)).jsonObject
+            assertThat(result.plan.items).hasSize(4)
+            for (item in result.plan.items) {
+                val text = item.content.decodeToString()
+                assertThat(text).contains("android-sleep-v6")
+                val fixtureRoot = System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")
+                if (!fixtureRoot.isNullOrBlank()) {
+                    val output = File(fixtureRoot, "android-v6-dense-quantities-$metadata/${item.relativePath}")
+                    val parent = checkNotNull(output.parentFile)
+                    check(parent.mkdirs() || parent.isDirectory)
+                    output.writeBytes(item.content)
+                }
+                if (item.relativePath.endsWith(".json")) {
+                    val root = Json.parseToJsonElement(text).jsonObject
+                    val source = root.getValue("heart").jsonObject.getValue("heartRateSamples").jsonArray
+                    assertThat(source).isEqualTo(native.getValue("heart").jsonObject.getValue("heartRateSamples"))
+                    assertThat(source).hasSize(2_000)
+                    assertThat(source.last().jsonObject.getValue("value").jsonPrimitive.content.toDouble()).isEqualTo(Math.nextUp(72.125))
+                    assertThat(source.last().jsonObject.getValue("metadata").jsonObject.getValue("synthetic").jsonPrimitive.content).isEqualTo("dense-quantity-heart-1999")
+                    assertThat(root.getValue("heart").jsonObject["averageHeartRate"]).isNull()
+                    for ((category, field, value) in listOf(Triple("heart", "hrvSamples", Math.nextUp(31.875)),
+                        Triple("vitals", "bloodOxygenSamples", Math.nextUp(0.97125)), Triple("vitals", "bloodGlucoseSamples", Math.nextUp(101.875)),
+                        Triple("vitals", "respiratoryRateSamples", Math.nextUp(16.125)))) {
+                        val values = root.getValue(category).jsonObject.getValue(field).jsonArray
+                        assertThat(values).isEqualTo(native.getValue(category).jsonObject.getValue(field))
+                        assertThat(values).hasSize(2_000)
+                        assertThat(values.last().jsonObject.getValue("value").jsonPrimitive.content.toDouble()).isEqualTo(value)
+                    }
+                } else if (item.relativePath.endsWith(".csv")) {
+                    assertThat(text.lineSequence().count { it.contains(",Native Detail,Quantity Sample,") }).isEqualTo(10_000)
+                } else if (item.relativePath.endsWith("-bases.md")) {
+                    assertThat(text).contains("native_quantity_details:")
+                    assertThat(text).contains("synthetic-quantity-heart-1999")
+                } else {
+                    assertThat(text.lineSequence().count { it.startsWith("| 2026-") }).isEqualTo(10_000)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun nativeQuantityCompositionRejectsInvalidSelectedSourcesAndDisabledOwners() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val instant = Instant.parse("2026-11-01T01:30:00.123456789Z")
+        fun sample(value: Double) = com.healthmd.domain.model.TimestampedSample(
+            instant.atZone(context.zoneId).toLocalDateTime(), value,
+            exactTime = com.healthmd.domain.model.ExactSourceTimestamp.from(instant, ZoneOffset.UTC))
+        suspend fun plan(data: HealthData, selection: Set<String>, disabled: List<String> = emptyList()): ExportArtifactPlan {
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+                metricSelection = MetricSelectionState(enabledMetrics = selection),
+                formatCustomization = FormatCustomization(frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(
+                    fields = disabled.map { com.healthmd.domain.model.CustomFrontmatterField(it, isEnabled = false) })),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("quantity-boundary", "quantity-boundary-session"))
+            return HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+        }
+        val date = LocalDate.of(2026, 11, 1)
+        for (value in listOf(Double.NaN, Double.POSITIVE_INFINITY, -0.01, 1.01)) {
+            val data = HealthData(date, vitals = VitalsData(bloodOxygenSamples = listOf(sample(value))))
+            assertThat(runCatching { plan(data, setOf("blood_oxygen")) }.isFailure).isTrue()
+        }
+        val heart = HealthData(date, heart = HeartData(samples = listOf(sample(72.125))))
+        assertThat(runCatching { plan(heart, setOf("avg_hr"), listOf("average_heart_rate", "heart_rate_min", "heart_rate_max")) }.isFailure).isTrue()
+        val unselected = heart.copy(activity = ActivityData(steps = 42),
+            vitals = VitalsData(bloodOxygenSamples = listOf(sample(Double.NaN))))
+        val selectedPlan = plan(unselected, setOf("steps"))
+        assertThat(selectedPlan.items).hasSize(4)
+        for (item in selectedPlan.items) {
+            val text = item.content.decodeToString()
+            assertThat(text).doesNotContain("heartRateSamples")
+            assertThat(text).doesNotContain("bloodOxygenSamples")
+            assertThat(text).doesNotContain("native_quantity_details")
+        }
+    }
+
+    @Test
     fun nativeMindfulnessSessionsReachEverySuccessorFormatWithExactClocks() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
         val start = Instant.parse("2026-11-01T05:30:00.123456789Z")

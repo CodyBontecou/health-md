@@ -599,7 +599,7 @@ object HealthMdRenderInputAdapter {
     private data class QuantityDetail(val category: String, val field: String, val identity: String,
         val unit: String, val owners: List<String>, val label: String)
 
-    private fun quantityDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun quantityDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
         val definitions = listOf(
             QuantityDetail("heart", "heartRateSamples", "heart_rate", "bpm", listOf("average_heart_rate", "heart_rate_min", "heart_rate_max"), "Heart Rate"),
             QuantityDetail("heart", "hrvSamples", "hrv_rmssd", "ms", listOf("hrv_ms"), "HRV RMSSD"),

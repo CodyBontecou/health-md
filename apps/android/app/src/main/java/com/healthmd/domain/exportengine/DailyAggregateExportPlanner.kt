@@ -280,6 +280,8 @@ class HealthMdRustDailyAggregatePlanner(
             batches = semanticBatches,
             service = coreService,
         )
+        val composeQuantities = request.profile == AndroidExportProfile.android_sleep_v6 && request.includeGranularData
+        val presentationData = if (composeQuantities) AndroidWakeDateQuantityProjection.aggregate(request.data) else request.data
         val markdown = request.customization.markdownTemplate
         val renderInput = HealthMdRenderInputAdapter.encode(
             semanticResult = semanticResult,
@@ -329,7 +331,7 @@ class HealthMdRustDailyAggregatePlanner(
                 basesSuffix = "-bases",
                 api = null,
             ),
-            presentationByOwnerDate = mapOf(request.data.date.toString() to request.data),
+            presentationByOwnerDate = mapOf(request.data.date.toString() to presentationData),
             presentationCustomization = request.customization,
             captureContext = request.captureContext,
         )
@@ -341,9 +343,10 @@ class HealthMdRustDailyAggregatePlanner(
             semanticResultBytes = semanticResult,
             renderBatches = renderInput.batches,
         )
+        val aggregatePlan = rustEngine.render(input, readiness, registry)
         DailyAggregateRustPlan(
             pin = pin,
-            plan = rustEngine.render(input, readiness, registry),
+            plan = if (composeQuantities) AndroidWakeDateQuantityProjection.compose(request, aggregatePlan, semanticResult) else aggregatePlan,
         )
     }
 }
