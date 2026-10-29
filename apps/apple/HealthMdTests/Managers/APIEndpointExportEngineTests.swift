@@ -9,7 +9,156 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
-    func testMorningEndsAPIRejectsUncomposedPartialFailuresRatherThanOmittingThem() async throws {
+    func testMorningSourceSingletonKeepsFullDiagnosticBeyondBatchTarget() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.detailPolicy = .summary
+        settings.metricSelection.enabledMetrics = ["steps"]
+        let message = "begin-" + String(repeating: "x", count: 9 * 1024 * 1024) + "-end"
+        let resolution = try await APIEndpointExportRunner.prepare(dates: days(count: 1), settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false,
+            fetchHealthData: { date, _, _ in HealthData(date: date,
+                timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                activity: ActivityData(steps: 42), partialFailures: [ExportPartialFailure(date: date,
+                    dataType: "sleep", dateRangeDescription: "synthetic", errorDescription: message)]) })
+        guard case .prepared(let operation) = resolution else { return XCTFail("Expected file-backed source body") }
+        XCTAssertEqual(operation.batches.count, 1)
+        let batch = try XCTUnwrap(operation.batches.first)
+        XCTAssertGreaterThan(batch.bodyByteCount, UInt64(APIEndpointExportRunner.defaultMaxBatchPayloadBytes))
+        try batch.bodyArtifact.validateIntegrity()
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+        let record = try XCTUnwrap((root["records"] as? [[String: Any]])?.first)
+        let diagnostics = try XCTUnwrap(record["diagnostics"] as? [String: Any])
+        let failure = try XCTUnwrap((diagnostics["partial_failures"] as? [[String: Any]])?.first)
+        XCTAssertEqual(failure["error_description"] as? String, message)
+        XCTAssertEqual(operation.selectedPlan.artifacts.first?.sha256, batch.bodyArtifact.descriptor.sha256)
+    }
+
+    func testMorningSourceArchiveRejectsConflictingOwnerBeforeCommit() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.detailPolicy = .archiveOnly
+        do {
+            _ = try await APIEndpointExportRunner.prepare(dates: days(count: 1), settings: settings,
+                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false,
+                fetchHealthData: { date, _, _ in HealthData(date: date,
+                    timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                    healthKitRecordArchive: HealthKitRecordArchive(captureStatus: .complete,
+                        dailyOwnership: HealthKitDailyOwnershipMetadata(ownerDate: "1900-01-01",
+                            intervalStart: date, intervalEnd: date.addingTimeInterval(86400),
+                            calendarTimeZoneIdentifier: zone.identifier)), healthKitRecordCaptureStatus: .complete) })
+            XCTFail("Conflicting native source ownership must reject the whole operation")
+        } catch {
+            XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
+        }
+    }
+
+    func testMorningSourceBodiesRebatchByFinalBytesAndKeepFailuresAndExactNativeFacts() async throws {
+        let dates = days(count: 4)
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let large = String(repeating: "x", count: 5 * 1024 * 1024)
+        for connected in [false, true] {
+            let settings = makeSettings()
+            settings.exportTimeZoneOverride = zone
+            settings.executionSleepCaptureContext = context
+            settings.executionSleepCaptureContextIsFrozen = true
+            settings.detailPolicy = .lossless
+            settings.metricSelection.enabledMetrics = ["steps", "active_energy"]
+            settings.formatCustomization.unitPreference = .imperial
+            let resolution = try await APIEndpointExportRunner.prepare(dates: dates, settings: settings,
+                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: connected,
+                fetchHealthData: { date, _, _ in
+                    guard let index = dates.firstIndex(of: date), index != 1 else {
+                        return HealthData(date: date, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+                    }
+                    let owner = HealthKitDailyOwnershipMetadata.ownerDate(for: date,
+                        calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier)
+                    let archive: HealthKitRecordArchive? = index == 0 || index == 2 ? HealthKitRecordArchive(captureStatus: .complete,
+                        dailyOwnership: HealthKitDailyOwnershipMetadata(ownerDate: owner, intervalStart: date,
+                            intervalEnd: date.addingTimeInterval(86400), calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier),
+                        records: [HealthKitRecord(originalUUID: UUID(), objectTypeIdentifier: "HKQuantityTypeIdentifierStepCount",
+                            recordKind: .quantity, selectedMetricIDs: ["steps"], includedBecause: .selectedMetric,
+                            startDate: date, endDate: date, sourceRevision: HealthKitSourceRevision(name: "Synthetic", bundleIdentifier: "com.example.synthetic"),
+                            metadata: ["large": .string(large), "exact": .unsignedInteger(.max)],
+                            payload: .quantity(HealthKitQuantityPayload(value: 42, unit: "count")))]) : nil
+                    return HealthData(date: date,
+                        timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                        activity: ActivityData(steps: 42, activeCalories: 123.875.nextUp),
+                        partialFailures: index == 2 ? [ExportPartialFailure(date: date, dataType: "sleep",
+                            dateRangeDescription: owner, errorDescription: "synthetic missing sleep")] : [],
+                        healthKitRecordArchive: archive)
+                })
+            guard case .prepared(let operation) = resolution else { return XCTFail("Native source work must keep explicit successor authority") }
+            XCTAssertEqual(operation.batches.map { $0.requestedDates.count }, [2, 2])
+            XCTAssertEqual(operation.batches.map { $0.records.count }, [1, 2])
+            XCTAssertEqual(operation.selectedPlan.artifacts.count, 2)
+            for (index, batch) in operation.batches.enumerated() {
+                XCTAssertGreaterThan(batch.bodyByteCount, 5 * 1024 * 1024)
+                XCTAssertLessThan(batch.bodyByteCount, 8 * 1024 * 1024)
+                XCTAssertEqual(operation.selectedPlan.artifacts[index].sha256, batch.bodyArtifact.descriptor.sha256)
+                let envelope = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+                XCTAssertEqual(envelope["schema_version"] as? Int, connected ? 2 : 1)
+                XCTAssertEqual(envelope["daily_record_schema_profile"] as? String, "apple-v11")
+                let records = try XCTUnwrap(envelope["records"] as? [[String: Any]])
+                for record in records {
+                    let summary = try XCTUnwrap(record["summary"] as? [String: Any])
+                    let activity = try XCTUnwrap(summary["activity"] as? [String: Any])
+                    XCTAssertEqual((activity["active_calories"] as? Double)?.bitPattern, 123.875.nextUp.bitPattern)
+                    XCTAssertEqual(record["unit_system"] as? String, "metric")
+                }
+                XCTAssertTrue(String(decoding: batch.body, as: UTF8.self).contains("18446744073709551615"))
+            }
+            settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .nightBegins)
+            settings.detailPolicy = .summary
+            var sends = 0
+            let result = await APIEndpointExportRunner.commitPreparedOperation(operation) { batch, _ in
+                sends += 1
+                try batch.bodyArtifact.validateIntegrity()
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }
+            XCTAssertEqual(sends, 2)
+            XCTAssertEqual(result.successCount, 3)
+            XCTAssertEqual(result.failedDateDetails.count, 1)
+            XCTAssertEqual(result.partialFailures.count, 1)
+            XCTAssertTrue(result.didCompleteAllRequestedDates)
+        }
+    }
+
+    func testPreparedSourceBodyMutationRejectsWholeOperationBeforeFirstUpload() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let settings = makeSettings()
+        settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.exportTimeZoneOverride = zone
+        settings.detailPolicy = .summary
+        let dates = days(count: 2)
+        let resolution = try await APIEndpointExportRunner.prepare(dates: dates, settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false,
+            fetchHealthData: { date, _, _ in HealthData(date: date,
+                timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                activity: ActivityData(steps: 1), partialFailures: [ExportPartialFailure(date: date,
+                    dataType: "sleep", dateRangeDescription: "one day", errorDescription: "synthetic")]) }, maxBatchDaySpan: 1)
+        guard case .prepared(let operation) = resolution else { return XCTFail("Expected source-composed operation") }
+        let last = try XCTUnwrap(operation.batches.last)
+        try Data(repeating: 0x78, count: Int(last.bodyByteCount)).write(to: last.bodyArtifact.url)
+        var sends = 0
+        let result = await APIEndpointExportRunner.commitPreparedOperation(operation) { _, _ in
+            sends += 1
+            return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+        }
+        XCTAssertEqual(sends, 0)
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertTrue(result.isFailure)
+    }
+
+    func testMorningEndsAPIComposesPartialFailuresIntoFinalBody() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         let settings = makeSettings()
@@ -27,16 +176,24 @@ final class APIEndpointExportEngineTests: XCTestCase {
             activity: ActivityData(steps: 42), partialFailures: [ExportPartialFailure(
                 date: ExportFixtures.referenceDate, dataType: "sleep", dateRangeDescription: "synthetic day",
                 errorDescription: "synthetic missing source")])
-        do {
-            _ = try await APIEndpointExportRunner.preparePreview(records: [day], settings: frozen,
-                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false)
-            XCTFail("An aggregate-only envelope must not silently erase native failure facts")
-        } catch {
-            XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
-        }
+        let optional = try await APIEndpointExportRunner.preparePreview(records: [day], settings: frozen,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false)
+        let operation = try XCTUnwrap(optional)
+        let batch = try XCTUnwrap(operation.batches.first)
+        let envelope = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+        XCTAssertEqual(envelope["daily_record_schema_version"] as? Int, 11)
+        XCTAssertEqual(envelope["daily_record_schema_profile"] as? String, "apple-v11")
+        let record = try XCTUnwrap((envelope["records"] as? [[String: Any]])?.first)
+        let failure = try XCTUnwrap(((record["diagnostics"] as? [String: Any])?["partial_failures"] as? [[String: Any]])?.first)
+        XCTAssertEqual(failure["data_type"] as? String, "sleep")
+        XCTAssertEqual(failure["error_description"] as? String, "synthetic missing source")
+        XCTAssertEqual(operation.selectedPlan.artifacts.first?.sha256, batch.bodyArtifact.descriptor.sha256)
+        XCTAssertNotNil(operation.selectedPlan.artifacts.first?.fileArtifact)
+        XCTAssertNil(operation.nativePlan)
+        XCTAssertEqual((record["time_context"] as? [String: String])?["sleep_day_attribution"], "morning_ends")
     }
 
-    func testMorningEndsAPIRejectsCanonicalArchiveBeforeAggregateOnlyAttestation() async throws {
+    func testMorningEndsAPIComposesCanonicalArchiveIntoFinalBody() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         let settings = makeSettings()
@@ -57,13 +214,24 @@ final class APIEndpointExportEngineTests: XCTestCase {
         let day = HealthData(date: date,
             timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
             healthKitRecordArchive: archive, healthKitRecordCaptureStatus: .complete)
-        do {
-            _ = try await APIEndpointExportRunner.preparePreview(records: [day], settings: frozen,
-                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false)
-            XCTFail("An API envelope must not silently omit a canonical archive")
-        } catch {
-            XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
+        let optional = try await APIEndpointExportRunner.preparePreview(records: [day], settings: frozen,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false)
+        let operation = try XCTUnwrap(optional)
+        let batch = try XCTUnwrap(operation.batches.first)
+        let envelope = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+        let record = try XCTUnwrap((envelope["records"] as? [[String: Any]])?.first)
+        let actual = try XCTUnwrap(record["healthkit_record_archive"] as? NSDictionary)
+        XCTAssertEqual(actual, try JSONSerialization.jsonObject(with: HealthKitRecordArchiveSerializer.data(for: archive)) as? NSDictionary)
+        XCTAssertEqual(record["raw_capture_status"] as? String, "complete")
+        XCTAssertEqual(envelope["daily_record_schema_profile"] as? String, "apple-v11")
+        var sends = 0
+        let result = await APIEndpointExportRunner.commitPreparedOperation(operation) { sent, _ in
+            sends += 1
+            XCTAssertEqual(sent.bodyArtifact.descriptor, batch.bodyArtifact.descriptor)
+            return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
         }
+        XCTAssertEqual(sends, 1)
+        XCTAssertEqual(result.successCount, 1)
     }
 
     func testMorningEndsAPISelectsV11BeforeCaptureAndKeepsNativeRecordsAndFailedBatchAuthority() async throws {

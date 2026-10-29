@@ -5,6 +5,46 @@ use super::super::{OrderedJsonValue, RenderBatch, RenderError};
 use serde::Deserialize;
 use serde_json::{Number, Value, value::RawValue};
 
+/// Successor API envelopes assemble already-validated records. Preserve their binary64
+/// values when moving them into an envelope; the default Value parser can round twice.
+pub(super) fn exact_api_record(bytes: &[u8]) -> Result<Value, RenderError> {
+    fn read(raw: &RawValue, depth: usize) -> Result<Value, RenderError> {
+        if depth > 64 {
+            return Err(RenderError::SerializationFailed);
+        }
+        let text = raw.get();
+        Ok(match text.as_bytes().first() {
+            Some(b'{') => {
+                let fields: std::collections::BTreeMap<String, &RawValue> =
+                    serde_json::from_str(text).map_err(|_| RenderError::SerializationFailed)?;
+                Value::Object(
+                    fields
+                        .into_iter()
+                        .map(|(key, value)| Ok((key, read(value, depth + 1)?)))
+                        .collect::<Result<_, RenderError>>()?,
+                )
+            }
+            Some(b'[') => {
+                let items: Vec<&RawValue> =
+                    serde_json::from_str(text).map_err(|_| RenderError::SerializationFailed)?;
+                Value::Array(
+                    items
+                        .into_iter()
+                        .map(|value| read(value, depth + 1))
+                        .collect::<Result<_, _>>()?,
+                )
+            }
+            Some(b'-' | b'0'..=b'9') => exact_ordered_value(&OrderedJsonValue::Number {
+                decimal: text.to_owned(),
+            })?,
+            _ => serde_json::from_str(text).map_err(|_| RenderError::SerializationFailed)?,
+        })
+    }
+    let raw: &RawValue =
+        serde_json::from_slice(bytes).map_err(|_| RenderError::SerializationFailed)?;
+    read(raw, 0)
+}
+
 #[derive(Deserialize)]
 struct RawBatch<'a> {
     #[serde(borrow)]

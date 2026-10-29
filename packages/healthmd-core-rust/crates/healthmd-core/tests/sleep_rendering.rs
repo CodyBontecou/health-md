@@ -697,7 +697,11 @@ fn successor_native_api_attestation_keeps_exact_decimals_and_rejects_one_bit_cha
             "android",
         ),
     ] {
-        for value in [f64::from_bits(0x3fed_d40b_a583_eb65), -0.0] {
+        for value in [
+            f64::from_bits(0x3fed_d40b_a583_eb65),
+            f64::from_bits(123.875_f64.to_bits() + 1),
+            -0.0,
+        ] {
             let (mut config, mut semantic, mut batches) = input();
             let key = semantic["days"][0]["values"][0]["output_key"].clone();
             semantic["days"][0]["values"][0]["value"]["number"] =
@@ -728,7 +732,29 @@ fn successor_native_api_attestation_keeps_exact_decimals_and_rejects_one_bit_cha
                 .collect();
             batches[0]["days"][0]["profile_documents"] = json!({"semantic_output_keys":keys,"json_root":ordered(&native),"markdown_body":null,"csv_rows":null});
             enable_successor_api(&mut config, source);
-            render(&config, &semantic, &batches);
+            let plan = render(&config, &semantic, &batches);
+            let envelope = plan
+                .items
+                .iter()
+                .find(|item| item.relative_path.starts_with("api/"))
+                .unwrap();
+            let root: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
+                serde_json::from_slice(&envelope.content).unwrap();
+            let records: Vec<Box<serde_json::value::RawValue>> =
+                serde_json::from_str(root["records"].get()).unwrap();
+            let mut raw = records.into_iter().next().unwrap();
+            for key in &path {
+                let mut object: std::collections::BTreeMap<
+                    String,
+                    Box<serde_json::value::RawValue>,
+                > = serde_json::from_str(raw.get()).unwrap();
+                raw = object.remove(key).unwrap();
+            }
+            assert_eq!(
+                raw.get().parse::<f64>().unwrap().to_bits(),
+                value.to_bits(),
+                "API envelope must preserve the attested scalar exactly"
+            );
             *native.pointer_mut(&pointer).unwrap() = json!(if value == 0.0 {
                 0.0
             } else {

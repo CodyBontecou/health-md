@@ -129,6 +129,16 @@ struct APIEndpointExportRunner {
                 try APIExportClient.makeJSONData(from: $0)
             }
         }
+
+        init(copying source: PreparedOutcome, recordArtifact: ExportArtifactFile?) {
+            self.sourceDate = source.sourceDate
+            self.record = source.record
+            self.recordArtifact = recordArtifact
+            self.failure = source.failure
+            self.failureData = source.failureData
+            self.externalRecords = source.externalRecords
+            self.externalRecordData = source.externalRecordData
+        }
     }
 
     private struct AccumulatingBatch {
@@ -143,17 +153,20 @@ struct APIEndpointExportRunner {
         let connectedAppsEnabled: Bool
         let calendarTimeZone: TimeZone
         let artifactDirectory: URL
+        let captureContext: AppleSleepCaptureContext?
 
         init(
             exportedAt: Date = Date(),
             connectedAppsEnabled: Bool,
             calendarTimeZone: TimeZone = .current,
-            artifactDirectory: URL
+            artifactDirectory: URL,
+            captureContext: AppleSleepCaptureContext? = nil
         ) {
             self.exportedAt = exportedAt
             self.connectedAppsEnabled = connectedAppsEnabled
             self.calendarTimeZone = calendarTimeZone
             self.artifactDirectory = artifactDirectory
+            self.captureContext = captureContext
         }
 
         mutating func append(_ outcome: PreparedOutcome) {
@@ -181,7 +194,8 @@ struct APIEndpointExportRunner {
                 dateRangeEnd: end,
                 exportedAt: exportedAt,
                 connectedAppsEnabled: connectedAppsEnabled,
-                calendarTimeZone: calendarTimeZone
+                calendarTimeZone: calendarTimeZone,
+                captureContext: captureContext
             )
         }
 
@@ -198,7 +212,8 @@ struct APIEndpointExportRunner {
                 exportedAt: exportedAt,
                 connectedAppsEnabled: connectedAppsEnabled,
                 calendarTimeZone: calendarTimeZone,
-                directoryURL: artifactDirectory
+                directoryURL: artifactDirectory,
+                captureContext: captureContext
             )
             return PreparedBatch(
                 requestedDates: requestedDates,
@@ -811,8 +826,9 @@ struct APIEndpointExportRunner {
         }
 
         let rustPlan: NativeExportArtifactPlan?
+        var sourceComposedBatches: [PreparedBatch]?
         do {
-            rustPlan = try await makeRustPlan(
+            let aggregatePlan = try await makeRustPlan(
                 outcomes: preparedOutcomes,
                 normalizedDates: normalizedDates,
                 settings: frozenSettings,
@@ -825,6 +841,24 @@ struct APIEndpointExportRunner {
                 context: context,
                 coreExecutor: coreExecutor
             )
+            if pin.isWakeDate, preparedOutcomes.contains(where: {
+                $0.record?.healthKitRecordArchive != nil || $0.record?.partialFailures.isEmpty == false
+            }) {
+                guard let wakeContext = captureContext else { throw EngineError.invalidPreparedPlan }
+                let boundedBatches = try materializeBatches(plan: aggregatePlan, outcomes: preparedOutcomes,
+                    normalizedDates: normalizedDates, exportedAt: identity.capturedAt,
+                    connectedAppsEnabled: connectedAppsEnabled, calendarTimeZone: calendarTimeZone,
+                    requestID: identity.requestID)
+                let composed = try await composeWakeDateSources(boundedBatches: boundedBatches,
+                    outcomes: preparedOutcomes, identity: identity, pin: pin,
+                    connectedAppsEnabled: connectedAppsEnabled, calendarTimeZone: calendarTimeZone,
+                    maxBatchDaySpan: dayLimit, maxBatchPayloadBytes: byteLimit, artifactDirectory: artifactDirectory,
+                    captureContext: wakeContext)
+                rustPlan = composed.plan
+                sourceComposedBatches = composed.batches
+            } else {
+                rustPlan = aggregatePlan
+            }
         } catch is CancellationError {
             throw CancellationError()
         } catch {
@@ -867,7 +901,7 @@ struct APIEndpointExportRunner {
             guard let rustPlan else { throw EngineError.rustPlanningFailed }
             selectedPlan = rustPlan
             do {
-                selectedBatches = try materializeBatches(
+                selectedBatches = try sourceComposedBatches ?? materializeBatches(
                     plan: rustPlan,
                     outcomes: preparedOutcomes,
                     normalizedDates: normalizedDates,
@@ -910,7 +944,8 @@ struct APIEndpointExportRunner {
         calendarTimeZone: TimeZone,
         maxBatchDaySpan: Int,
         maxBatchPayloadBytes: Int,
-        artifactDirectory: URL
+        artifactDirectory: URL,
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> [PreparedBatch] {
         var batches: [PreparedBatch] = []
         var current: AccumulatingBatch?
@@ -919,7 +954,8 @@ struct APIEndpointExportRunner {
                 exportedAt: exportedAt,
                 connectedAppsEnabled: connectedAppsEnabled,
                 calendarTimeZone: calendarTimeZone,
-                artifactDirectory: artifactDirectory
+                artifactDirectory: artifactDirectory,
+                captureContext: captureContext
             )
             candidate.append(outcome)
             let exceedsDayLimit = candidate.requestedDates.count > maxBatchDaySpan
@@ -930,7 +966,8 @@ struct APIEndpointExportRunner {
                     exportedAt: exportedAt,
                     connectedAppsEnabled: connectedAppsEnabled,
                     calendarTimeZone: calendarTimeZone,
-                    artifactDirectory: artifactDirectory
+                    artifactDirectory: artifactDirectory,
+                    captureContext: captureContext
                 )
                 singleton.append(outcome)
                 current = singleton
@@ -947,6 +984,7 @@ struct APIEndpointExportRunner {
         identity: AppleExportOperationIdentity,
         pin: AppleExportEnginePin
     ) throws -> NativeExportArtifactPlan {
+        let profile: CoreMetricRegistryProfile = pin.isWakeDate ? .appleHealthDataV11 : .appleHealthDataV8
         let artifacts = try batches.enumerated().map { index, batch in
             let path = apiArtifactPath(requestID: identity.requestID, index: index)
             let digest = batch.bodyArtifact.descriptor.sha256
@@ -955,7 +993,7 @@ struct APIEndpointExportRunner {
                 id: NativeExportArtifactPlan.artifactID(
                     requestID: identity.requestID,
                     sessionID: identity.sessionID,
-                    profile: .appleHealthDataV8,
+                    profile: profile,
                     relativePath: path,
                     mediaType: "application/json",
                     writeMode: .apiPost,
@@ -969,13 +1007,18 @@ struct APIEndpointExportRunner {
                 sha256: digest
             )
         }
+        let total = try artifacts.reduce(UInt64(0)) { sum, artifact in
+            let next = sum.addingReportingOverflow(artifact.byteCount)
+            guard !next.overflow else { throw EngineError.invalidPreparedPlan }
+            return next.partialValue
+        }
         return try NativeExportArtifactPlan(
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV8,
+            profile: profile,
             artifacts: artifacts,
-            totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
+            totalByteCount: total,
             pin: pin
         )
     }
@@ -1013,7 +1056,8 @@ struct APIEndpointExportRunner {
             registry: context.registry,
             customization: customization,
             calendarTimeZoneIdentifier: pin.calendarTimeZoneIdentifier,
-            captureContext: captureContext
+            captureContext: captureContext,
+            includeArchiveExtensions: !pin.isWakeDate
         )
         let semanticResult = try await coreExecutor.processSemantic(
             configuration: semanticConfiguration,
@@ -1085,11 +1129,13 @@ struct APIEndpointExportRunner {
             maxDaysPerBatch: maxBatchDaySpan,
             maxEncodedBytes: UInt64(maxBatchPayloadBytes)
         )
-        let presentationByOwnerDate = Dictionary(uniqueKeysWithValues: records.map {
-            (
-                APIExportClient.dayString(from: $0.date, timeZone: calendarTimeZone),
-                $0
-            )
+        let presentationByOwnerDate = Dictionary(uniqueKeysWithValues: records.map { record in
+            var aggregate = record
+            if pin.isWakeDate {
+                aggregate.healthKitRecordArchive = nil
+                aggregate.partialFailures = []
+            }
+            return (APIExportClient.dayString(from: record.date, timeZone: calendarTimeZone), aggregate)
         })
         let renderInput = try HealthMdRenderInputAdapter.encode(
             semanticResult: semanticResult,
@@ -1122,6 +1168,43 @@ struct APIEndpointExportRunner {
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin
         )
+    }
+
+    private static func composeWakeDateSources(boundedBatches: [PreparedBatch], outcomes: [PreparedOutcome],
+        identity: AppleExportOperationIdentity, pin: AppleExportEnginePin, connectedAppsEnabled: Bool,
+        calendarTimeZone: TimeZone, maxBatchDaySpan: Int, maxBatchPayloadBytes: Int,
+        artifactDirectory: URL, captureContext: AppleSleepCaptureContext
+    ) async throws -> (plan: NativeExportArtifactPlan, batches: [PreparedBatch]) {
+        var aggregates: [String: Data] = [:]
+        for batch in boundedBatches {
+            guard let root = try JSONSerialization.jsonObject(with: batch.body) as? [String: Any],
+                  let records = root["records"] as? [[String: Any]] else { throw EngineError.invalidPreparedPlan }
+            for record in records {
+                guard let owner = record["date"] as? String,
+                      aggregates.updateValue(try JSONSerialization.data(withJSONObject: record, options: [.sortedKeys]),
+                        forKey: owner) == nil else { throw EngineError.invalidPreparedPlan }
+            }
+        }
+        let sources = try outcomes.compactMap { outcome -> AppleWakeDateAPIRecordComposer.Source? in
+            guard let record = outcome.record else { return nil }
+            let owner = APIExportClient.dayString(from: outcome.sourceDate, timeZone: calendarTimeZone)
+            guard let aggregate = aggregates[owner] else { throw EngineError.invalidPreparedPlan }
+            return AppleWakeDateAPIRecordComposer.Source(ownerDate: owner, aggregate: aggregate,
+                archive: record.healthKitRecordArchive, partialFailures: record.partialFailures,
+                captureStatus: HealthKitRecordArchiveSerializer.captureStatusString(record.healthKitRecordCaptureStatus))
+        }
+        guard sources.count == aggregates.count else { throw EngineError.invalidPreparedPlan }
+        let files = try await AppleWakeDateAPIRecordComposer.compose(sources: sources,
+            calendarTimeZoneIdentifier: calendarTimeZone.identifier, directory: artifactDirectory)
+        let prepared = outcomes.map { outcome in
+            PreparedOutcome(copying: outcome, recordArtifact: files[APIExportClient.dayString(from: outcome.sourceDate,
+                timeZone: calendarTimeZone)])
+        }
+        let batches = try makePreparedBatches(outcomes: prepared, exportedAt: identity.capturedAt,
+            connectedAppsEnabled: connectedAppsEnabled, calendarTimeZone: calendarTimeZone,
+            maxBatchDaySpan: maxBatchDaySpan, maxBatchPayloadBytes: maxBatchPayloadBytes,
+            artifactDirectory: artifactDirectory, captureContext: captureContext)
+        return (try makeNativePlan(batches: batches, identity: identity, pin: pin), batches)
     }
 
     private static func materializeBatches(
@@ -1261,11 +1344,23 @@ struct APIEndpointExportRunner {
             }
             do {
                 if !commitStarted {
+                    guard operation.selectedPlan.artifacts.count == operation.batches.count else {
+                        throw EngineError.invalidPreparedPlan
+                    }
+                    for (batchIndex, candidate) in operation.batches.enumerated() {
+                        let artifact = operation.selectedPlan.artifacts[batchIndex]
+                        guard artifact.role == .apiRequest,
+                              artifact.relativePath == apiArtifactPath(requestID: operation.identity.requestID, index: batchIndex),
+                              artifact.sha256 == candidate.bodyArtifact.descriptor.sha256,
+                              artifact.byteCount == candidate.bodyByteCount else { throw EngineError.invalidPreparedPlan }
+                        try candidate.bodyArtifact.validateIntegrity()
+                    }
                     // This is deliberately adjacent to the first uploader call: no authority read,
                     // fallback, or rerender is possible after the one-way transition.
                     try await barrier.transition(to: .committing)
                     commitStarted = true
                 }
+                if index > 0 { try batch.bodyArtifact.validateIntegrity() }
                 _ = try await upload(batch, operation.destination)
                 totalSuccessCount += batch.records.count
                 completedDates.formUnion(batch.records.map {

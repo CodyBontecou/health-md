@@ -150,9 +150,7 @@ pub(crate) fn render_api_envelope(
 ) -> Result<Vec<u8>, RenderError> {
     let records = records
         .iter()
-        .map(|record| {
-            serde_json::from_slice::<Value>(&record.1).map_err(|_| RenderError::SerializationFailed)
-        })
+        .map(|record| public_numbers::exact_api_record(&record.1))
         .collect::<Result<Vec<_>, _>>()?;
     let failures = api
         .failed_date_details
