@@ -1432,16 +1432,23 @@ class SchedulingManager: ObservableObject {
         case .localIPhoneFolder:
             let providers = settings.writesExternalProviderSidecars && ConnectedAppsFeature.isEnabled
                 ? scheduledExternalIntegrations?.forCaptureOperation() : nil
-            let hasNativeOnlyCompanionAction = (providers?.connectedProviderCount ?? 0) > 0
-            var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
-                settings,
-                healthSubfolder: VaultManager().healthSubfolder,
-                calendarTimeZone: calendarTimeZone,
-                surface: .localVaultRangeWithoutSideEffects,
-                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
-            )
-            snapshot.externalProviderCaptureAuthority = providers?.captureAuthority
-                ?? (hasNativeOnlyCompanionAction ? nil : ExternalProviderCaptureAuthority(connections: [:]))
+            let hasProviders = (providers?.connectedProviderCount ?? 0) > 0
+            let authority = providers?.captureAuthority
+                ?? (hasProviders ? nil : ExternalProviderCaptureAuthority(connections: [:]))
+            let context = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.resolve(
+                timeZone: calendarTimeZone, attribution: HealthKitManager.shared.sleepDayAttribution)
+            let stagesWakeDateProviders = hasProviders && authority != nil
+                && context.sleepDayAttribution == .morningEnds
+            var snapshot = await AppleSleepCaptureContext.pinned.withValue(context) {
+                await ExportSettingsSnapshot.forNewAppleOperation(
+                    settings,
+                    healthSubfolder: VaultManager().healthSubfolder,
+                    calendarTimeZone: calendarTimeZone,
+                    surface: stagesWakeDateProviders ? .localVaultRangeWithProviderSidecars : .localVaultRangeWithoutSideEffects,
+                    hasNativeOnlyCompanionAction: hasProviders && !stagesWakeDateProviders
+                )
+            }
+            snapshot.externalProviderCaptureAuthority = authority
             return snapshot
         case .apiEndpoint:
             return await ExportSettingsSnapshot.forNewAppleOperation(

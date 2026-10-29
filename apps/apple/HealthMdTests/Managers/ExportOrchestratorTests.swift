@@ -905,8 +905,9 @@ final class ExportOrchestratorTests: XCTestCase {
             }
             let result: ExportOrchestrator.ExportResult
             if background {
-                let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+                var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
                     calendarTimeZone: .gmt, surface: .localVaultRangeWithoutSideEffects)
+                snapshot.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: [:])
                 manager.setSleepDayAttribution(.nightBegins)
                 result = await ExportOrchestrator.exportDatesBackground(dates, healthKitManager: manager,
                     vaultManager: vault, settings: settings, frozenSettingsSnapshot: snapshot,
@@ -1000,8 +1001,9 @@ final class ExportOrchestratorTests: XCTestCase {
                     }
                     let result: ExportOrchestrator.ExportResult
                     if background {
-                        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+                        var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
                             calendarTimeZone: .gmt, surface: .localVaultRangeWithoutSideEffects)
+                        snapshot.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: [:])
                         manager.setSleepDayAttribution(.nightBegins)
                         result = await ExportOrchestrator.exportDatesBackground(dates, healthKitManager: manager,
                             vaultManager: vault, settings: settings, frozenSettingsSnapshot: snapshot,
@@ -2086,6 +2088,13 @@ final class ExportOrchestratorTests: XCTestCase {
             XCTAssertTrue(try XCTUnwrap(providers.accepted).calendars.isEmpty)
             XCTAssertEqual(snapshot.appleExportEnginePin, originalPin)
         }
+        let withoutCurrentProviders = await ExportOrchestrator.exportDatesBackground([HealthKitFixtures.referenceDate],
+            healthKitManager: manager, vaultManager: vault, settings: settings,
+            frozenSettingsSnapshot: snapshot, operationSurface: .localVaultRangeWithProviderSidecars)
+        XCTAssertEqual(withoutCurrentProviders.successCount, 0,
+                       "Missing saved source authority cannot be inferred from today's empty provider list")
+        XCTAssertTrue(files.files.isEmpty)
+        XCTAssertTrue(store.queriedSumIdentifiers.isEmpty)
     }
 
     @MainActor
@@ -2261,9 +2270,10 @@ final class ExportOrchestratorTests: XCTestCase {
                 if background {
                     let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: manager.sleepDayAttribution)
                     settings.executionSleepCaptureContext = context
-                    let accepted = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+                    var accepted = await ExportSettingsSnapshot.forNewAppleOperation(settings,
                         healthSubfolder: vault.healthSubfolder, calendarTimeZone: zone,
                         surface: .localVaultRangeWithoutSideEffects)
+                    accepted.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: [:])
                     XCTAssertTrue(accepted.appleExportEnginePin?.hasExplicitWakeDateContracts == true)
                     let recovered = accepted.makeAdvancedExportSettings()
                     Self.retainedSettings.append(recovered)

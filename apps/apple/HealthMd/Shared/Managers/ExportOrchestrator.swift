@@ -1381,12 +1381,13 @@ struct ExportOrchestrator {
         let sourceSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings() ?? settings
         let hasProviderSideEffects = sourceSettings.writesExternalProviderSidecars
             && ConnectedAppsFeature.isEnabled && (externalIntegrations?.connectedProviderCount ?? 0) > 0
-        // A saved renderer pin is not provider/account capture authority. Until
-        // that authority is persisted, recovered work cannot select a live grant.
+        // A saved renderer pin alone cannot prove the original provider selection.
+        // Recovery requires an explicit saved selection, including an empty one.
         let hasFrozenAuthority = frozenSettingsSnapshot != nil
             || settings.executionAppleExportEngineAuthorityIsFrozen
             || settings.executionSleepCaptureContextIsFrozen
-        if isWakeDate && hasProviderSideEffects && hasFrozenAuthority {
+        if isWakeDate && sourceSettings.writesExternalProviderSidecars && hasFrozenAuthority
+            && frozenSettingsSnapshot?.externalProviderCaptureAuthority == nil {
             return unavailableSleepContextResult(dates: dates, settings: settings,
                 error: AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution)
         }
@@ -1394,7 +1395,14 @@ struct ExportOrchestrator {
         var admittedSurface = operationSurface
         var acceptedDestination: AppleLooseDailyRangeDestination?
         let isFreshWakeDate = isWakeDate && frozenSettingsSnapshot == nil
-        if isFreshWakeDate {
+        let stagesWakeDateProviders = isWakeDate && hasProviderSideEffects
+        if isWakeDate, sourceSettings.writesExternalProviderSidecars,
+           frozenSettingsSnapshot?.externalProviderCaptureAuthority?.connections.isEmpty == false,
+           !ConnectedAppsFeature.isEnabled {
+            return unavailableSleepContextResult(dates: dates, settings: settings,
+                error: ExternalProviderCaptureAuthority.RecoveryError.unavailable)
+        }
+        if isFreshWakeDate || stagesWakeDateProviders {
             do { acceptedDestination = try vaultManager.freezeHealthDataRangeDestination() }
             catch {
                 return ExportResult(successCount: 0, totalCount: dates.count,
@@ -1402,9 +1410,11 @@ struct ExportOrchestrator {
                     formatsPerDate: looseFormatsPerDate(settings: settings))
             }
             admittedSurface = hasProviderSideEffects ? .localVaultRangeWithProviderSidecars : .localVaultRangeWithoutSideEffects
-            operationSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
-                healthSubfolder: vaultManager.healthSubfolder, calendarTimeZone: wakeDateContext?.timeZone,
-                surface: admittedSurface)
+            if isFreshWakeDate {
+                operationSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+                    healthSubfolder: vaultManager.healthSubfolder, calendarTimeZone: wakeDateContext?.timeZone,
+                    surface: admittedSurface)
+            }
             guard operationSnapshot?.appleExportEnginePin?.isWakeDate == true else {
                 return unavailableSleepContextResult(dates: dates, settings: settings,
                     error: AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution)
@@ -1459,7 +1469,7 @@ struct ExportOrchestrator {
 
         if let frozenSettingsSnapshot,
            frozenSettingsSnapshot.appleExportEnginePin != nil,
-           !frozenSettingsSnapshot.operationRollupPeriods.isEmpty || isFreshWakeDate {
+           !frozenSettingsSnapshot.operationRollupPeriods.isEmpty || isFreshWakeDate || stagesWakeDateProviders {
             guard let identifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
                   let sourceTimeZone = TimeZone(identifier: identifier) else {
                 return ExportResult(
@@ -1483,7 +1493,7 @@ struct ExportOrchestrator {
                 settingsSnapshot: frozenSettingsSnapshot,
                 operationSurface: operationSurface,
                 sourceTimeZone: sourceTimeZone,
-                externalIntegrations: isFreshWakeDate && hasProviderSideEffects ? externalIntegrations : nil,
+                externalIntegrations: stagesWakeDateProviders ? externalIntegrations : nil,
                 acceptedDestination: acceptedDestination,
                 onProgress: onProgress
             )

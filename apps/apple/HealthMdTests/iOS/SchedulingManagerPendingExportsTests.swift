@@ -1489,8 +1489,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             await manager.makeSettingsSnapshotForNewScheduledOperation(target: .localIPhoneFolder,
                 settings: settings, calendarTimeZone: Self.calendar.timeZone)
         }
-        XCTAssertNil(requiresProvider.appleExportEnginePin,
-                     "Requested provider work still needs durable account authority before scheduling")
+        XCTAssertTrue(try XCTUnwrap(requiresProvider.appleExportEnginePin).isWakeDate,
+                      "A durable provider selection can use the staged local Morning producer")
         XCTAssertEqual(requiresProvider.externalProviderCaptureAuthority, provider.captureAuthority)
         XCTAssertGreaterThan(provider.countReads, 0)
         XCTAssertEqual(provider.fetches, 0)
