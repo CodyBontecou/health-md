@@ -338,6 +338,10 @@ class SchedulingManager: ObservableObject {
         self.scheduledExportCoordinator.shouldRetainRequest = { [weak self] request in
             self?.shouldRetainScheduledRequest(request) == true
         }
+        self.scheduledExportCoordinator.makeProfileSettingsSnapshot = { [weak self] profile in
+            guard let self else { throw ScheduledExportPreparationError.invalidated }
+            return await self.makeSettingsSnapshotForNewScheduledProfileOperation(profile)
+        }
         refreshPendingRecoveryProfiles()
     }
 
@@ -1480,6 +1484,43 @@ class SchedulingManager: ObservableObject {
                 hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
             )
         }
+    }
+
+    @MainActor
+    func makeSettingsSnapshotForNewScheduledProfileOperation(
+        _ profile: ScheduledExportCoordinator.ScheduledProfileRequestContext
+    ) async -> ExportSettingsSnapshot {
+        guard profile.target == .localIPhoneFolder else { return profile.settings }
+        let zone = profile.settings.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:)) ?? .current
+        let context = AppleSleepCaptureContext.resolve(timeZone: zone,
+            attribution: HealthKitManager.shared.sleepDayAttribution)
+        let settings = profile.settings.makeAdvancedExportSettings(forNewConfiguration: true)
+        if context.sleepDayAttribution == .nightBegins {
+            // Preserve historical renderer and calendar-rollup authority for Night profiles.
+            var snapshot = profile.settings
+            snapshot.sleepCaptureContext = context
+            let providers = settings.writesExternalProviderSidecars && ConnectedAppsFeature.isEnabled
+                ? scheduledExternalIntegrations?.forCaptureOperation() : nil
+            let hasProviders = (providers?.connectedProviderCount ?? 0) > 0
+            snapshot.externalProviderCaptureAuthority = providers?.captureAuthority
+                ?? (hasProviders ? nil : ExternalProviderCaptureAuthority(connections: [:]))
+            return snapshot
+        }
+        guard profile.settings.operationRollupPeriods.allSatisfy({ $0 == .range }) else {
+            // A historical calendar profile cannot silently become a range summary.
+            var snapshot = profile.settings
+            snapshot.sleepCaptureContext = context
+            return snapshot
+        }
+        // This is a new occurrence, not recovery of a pending profile job. Its
+        // Morning renderer must be qualified against the profile's saved output settings.
+        settings.executionAppleExportEnginePin = nil
+        settings.executionAppleExportEngineAuthorityIsFrozen = false
+        settings.executionSleepCaptureContext = context
+        var snapshot = await makeSettingsSnapshotForNewScheduledOperation(target: profile.target,
+            settings: settings, calendarTimeZone: context.timeZone)
+        snapshot.healthSubfolder = profile.settings.healthSubfolder
+        return snapshot
     }
 
     @MainActor

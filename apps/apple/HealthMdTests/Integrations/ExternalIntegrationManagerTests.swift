@@ -1113,113 +1113,145 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         let wake = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: first))
         let start = try XCTUnwrap(calendar.date(bySettingHour: 10, minute: 0, second: 0, of: first))
         let end = try XCTUnwrap(calendar.date(bySettingHour: 13, minute: 0, second: 0, of: wake))
-        for range in [false, true] {
-            for mutation in ["unchanged", "rotated", "replaced", "disconnected", "late_connection"] {
-                try tokenStore.save(token: ExternalIntegrationToken(accessToken: "accepted"), provider: .whoop)
-                let connection = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
-                let acceptsProvider = mutation != "late_connection"
-                if !acceptsProvider { try tokenStore.disconnect(provider: .whoop) }
-                let settings = AdvancedExportSettings(userDefaults: defaults)
-                Self.retainedRuntime.append(settings)
-                settings.exportFormats = Set(ExportFormat.allCases)
-                settings.generateRangeSummary = range
-                settings.summaryOnlyExport = false
-                settings.detailPolicy = .summary
-                settings.includeDataDictionary = false
-                settings.includeMetadata = true
-                settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "sleep_core"]
-                let scheduler = SchedulingManager(pendingExportStore: PendingExportStore(userDefaults: defaults),
-                    initialSchedule: ExportSchedule(), persistScheduleChanges: false, systemSideEffectsEnabled: false)
-                Self.retainedRuntime.append(scheduler)
-                let accepting = makeManager()
-                let sync = SyncService()
-                Self.retainedRuntime.append(contentsOf: [accepting, sync])
-                scheduler.configureScheduledExportDependencies(syncService: sync, externalIntegrations: accepting)
-                let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
-                settings.executionSleepCaptureContext = context
-                let snapshot = await scheduler.makeSettingsSnapshotForNewScheduledOperation(target: .localIPhoneFolder,
-                    settings: settings, calendarTimeZone: zone)
-                XCTAssertTrue(try XCTUnwrap(snapshot.appleExportEnginePin).isWakeDate,
-                    "Scheduled provider output must acquire its qualified Morning renderer")
-                if acceptsProvider {
-                    XCTAssertEqual(snapshot.externalProviderCaptureAuthority?.connections["whoop"] ?? nil, connection)
-                } else { XCTAssertEqual(snapshot.externalProviderCaptureAuthority?.connections.count, 0) }
-                let request = PendingExportRequest(dates: [first, wake], source: .scheduled,
-                    exportTarget: .localIPhoneFolder, settingsSnapshot: snapshot, calendar: calendar)
-                let journal = PendingExportStore(userDefaults: defaults)
-                try journal.upsert(request)
-                let recovered = try XCTUnwrap(try PendingExportStore(userDefaults: defaults).loadAll().first { $0.id == request.id })
-                let saved = try XCTUnwrap(recovered.settingsSnapshot)
-                XCTAssertEqual(saved, snapshot)
-                let other = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
-                if !acceptsProvider {
-                    try other.save(token: ExternalIntegrationToken(accessToken: "late-connection"), provider: .whoop)
-                } else if mutation == "rotated" {
-                    try other.saveRotatedToken(ExternalIntegrationToken(accessToken: "rotated"),
-                        provider: .whoop, replacingConnection: connection)
-                } else if mutation == "replaced" {
-                    try other.save(token: ExternalIntegrationToken(accessToken: "replacement"), provider: .whoop)
-                } else if mutation == "disconnected" { try other.disconnect(provider: .whoop) }
-                var calls = 0
-                ExternalIntegrationURLProtocolStub.setHandler { request in
-                    calls += 1
-                    XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"),
-                        "Bearer " + (mutation == "rotated" ? "rotated" : "accepted"))
-                    let cycles: [[String: Any]] = request.url?.path.contains("cycle") == true
-                        ? [["id": 1, "start": "2026-07-01T00:00:00Z", "score": ["strain": 10.0]]] : []
-                    return Self.response(request, status: 200, json: ["records": cycles])
+        for profileBased in [false, true] {
+            for range in [false, true] {
+                for mutation in ["unchanged", "rotated", "replaced", "disconnected", "late_connection"] {
+                    try tokenStore.save(token: ExternalIntegrationToken(accessToken: "accepted"), provider: .whoop)
+                    let connection = try XCTUnwrap(tokenStore.connectionID(for: .whoop))
+                    let acceptsProvider = mutation != "late_connection"
+                    if !acceptsProvider { try tokenStore.disconnect(provider: .whoop) }
+                    let settings = AdvancedExportSettings(userDefaults: defaults)
+                    Self.retainedRuntime.append(settings)
+                    settings.exportFormats = Set(ExportFormat.allCases)
+                    settings.generateRangeSummary = range
+                    settings.summaryOnlyExport = false
+                    settings.detailPolicy = .summary
+                    settings.includeDataDictionary = false
+                    settings.includeMetadata = true
+                    settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "sleep_core"]
+                    let scheduler = SchedulingManager(pendingExportStore: PendingExportStore(userDefaults: defaults),
+                        initialSchedule: ExportSchedule(), persistScheduleChanges: false, systemSideEffectsEnabled: false)
+                    Self.retainedRuntime.append(scheduler)
+                    let accepting = makeManager()
+                    let sync = SyncService()
+                    Self.retainedRuntime.append(contentsOf: [accepting, sync])
+                    scheduler.configureScheduledExportDependencies(syncService: sync, externalIntegrations: accepting)
+                    let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+                    settings.executionSleepCaptureContext = context
+                    let journal = PendingExportStore(userDefaults: defaults)
+                    let request: PendingExportRequest
+                    let snapshot: ExportSettingsSnapshot
+                    if profileBased {
+                        var template = ExportSettingsSnapshot.from(settings, healthSubfolder: "ProfileHealth",
+                            appleExportEnginePin: try makeSyntheticAppleExportEnginePin(),
+                            calendarTimeZoneIdentifier: zone.identifier)
+                        template.exportFormats = [.json, .csv]
+                        let storedProfile = try JSONDecoder().decode(ExportSettingsSnapshot.self,
+                            from: JSONEncoder().encode(template))
+                        XCTAssertNil(storedProfile.sleepCaptureContext)
+                        let profile = ScheduledExportCoordinator.ScheduledProfileRequestContext(profileID: UUID(),
+                            profileName: "Morning profile", target: .localIPhoneFolder, settings: storedProfile)
+                        let fire = wake.addingTimeInterval(86400 + 8 * 3600)
+                        let coordinator = ScheduledExportCoordinator(pendingExportStore: journal,
+                            exportNotificationScheduler: InspectableExportNotificationScheduler(), calendar: calendar, now: { fire })
+                        coordinator.makeProfileSettingsSnapshot = { await scheduler.makeSettingsSnapshotForNewScheduledProfileOperation($0) }
+                        request = try await AppleSleepCaptureContext.pinned.withValue(context) {
+                            try await coordinator.preparePendingScheduledExport(
+                                schedule: ExportSchedule(isEnabled: true, frequency: .weekly, lookbackDays: 2),
+                                fireDate: fire, profile: profile)
+                        }
+                        snapshot = try XCTUnwrap(request.settingsSnapshot)
+                        XCTAssertEqual(request.dates, [first, wake])
+                        XCTAssertEqual(snapshot.exportFormats, [.json, .csv], "Saved profile formats override current live settings")
+                        XCTAssertEqual(snapshot.healthSubfolder, "ProfileHealth")
+                        XCTAssertEqual(storedProfile.appleExportEnginePin, template.appleExportEnginePin,
+                                       "Accepting a new job cannot mutate the profile template")
+                    } else {
+                        snapshot = await scheduler.makeSettingsSnapshotForNewScheduledOperation(target: .localIPhoneFolder,
+                            settings: settings, calendarTimeZone: zone)
+                        request = PendingExportRequest(dates: [first, wake], source: .scheduled,
+                            exportTarget: .localIPhoneFolder, settingsSnapshot: snapshot, calendar: calendar)
+                    }
+                    XCTAssertTrue(try XCTUnwrap(snapshot.appleExportEnginePin).isWakeDate,
+                        "Scheduled provider output must acquire its qualified Morning renderer")
+                    if acceptsProvider {
+                        XCTAssertEqual(snapshot.externalProviderCaptureAuthority?.connections["whoop"] ?? nil, connection)
+                    } else { XCTAssertEqual(snapshot.externalProviderCaptureAuthority?.connections.count, 0) }
+                    try journal.upsert(request)
+                    let recovered = try XCTUnwrap(try PendingExportStore(userDefaults: defaults).loadAll().first { $0.id == request.id })
+                    let saved = try XCTUnwrap(recovered.settingsSnapshot)
+                    XCTAssertEqual(saved, snapshot)
+                    let other = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+                    if !acceptsProvider {
+                        try other.save(token: ExternalIntegrationToken(accessToken: "late-connection"), provider: .whoop)
+                    } else if mutation == "rotated" {
+                        try other.saveRotatedToken(ExternalIntegrationToken(accessToken: "rotated"),
+                            provider: .whoop, replacingConnection: connection)
+                    } else if mutation == "replaced" {
+                        try other.save(token: ExternalIntegrationToken(accessToken: "replacement"), provider: .whoop)
+                    } else if mutation == "disconnected" { try other.disconnect(provider: .whoop) }
+                    var calls = 0
+                    ExternalIntegrationURLProtocolStub.setHandler { request in
+                        calls += 1
+                        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"),
+                            "Bearer " + (mutation == "rotated" ? "rotated" : "accepted"))
+                        let cycles: [[String: Any]] = request.url?.path.contains("cycle") == true
+                            ? [["id": 1, "start": "2026-07-01T00:00:00Z", "score": ["strain": 10.0]]] : []
+                        return Self.response(request, status: 200, json: ["records": cycles])
+                    }
+                    let health = FakeHealthStore()
+                    health.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
+                    health.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+                        CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)
+                    ]
+                    let healthManager = HealthKitManager(store: health, userDefaults: defaults)
+                    healthManager.setSleepDayAttribution(.nightBegins)
+                    settings.exportTimeZoneOverride = TimeZone(identifier: "Europe/Berlin")
+                    let vaultDefaults = FakeUserDefaults()
+                    let root = "/tmp/ScheduledMorningProvider-" + UUID().uuidString
+                    vaultDefaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+                    vaultDefaults.storage["obsidianVaultPath"] = root
+                    let resolver = FakeBookmarkResolver()
+                    resolver.resolvedURL = URL(fileURLWithPath: root)
+                    let files = FakeFileSystem()
+                    let vault = VaultManager(defaults: vaultDefaults, fileSystem: files, bookmarkResolver: resolver,
+                        identityProbe: FakeVaultFolderIdentityProbe())
+                    Self.retainedRuntime.append(vault)
+                    let reopened = ExternalIntegrationManager(tokenStore: other, enabledProviders: [.whoop],
+                        brokerClient: ExternalOAuthBrokerClient(baseURL: URL(string: "https://broker.example")!,
+                            clientToken: "test-client", session: session), apiClient: ExternalProviderAPIClient(session: session))
+                    let result = await ExportOrchestrator.exportDatesBackground(recovered.dates,
+                        healthKitManager: healthManager, vaultManager: vault, settings: settings,
+                        frozenSettingsSnapshot: saved, operationSurface: .localVaultRangeWithoutSideEffects,
+                        externalIntegrations: reopened)
+                    XCTAssertEqual(result.successCount, 2, "\(range)/\(mutation): \(result.failedDateDetails)")
+                    let sidecarCount = acceptsProvider ? 2 : 0
+                    let formats = profileBased ? 2 : 4
+                    let expectedFiles = (range ? 3 : 2) * formats + sidecarCount
+                    XCTAssertEqual(result.externalRecordFileCount, sidecarCount)
+                    XCTAssertEqual(result.totalFilesWritten, expectedFiles)
+                    XCTAssertEqual(files.files.count, expectedFiles)
+                    let unavailable = ["replaced", "disconnected"].contains(mutation)
+                    XCTAssertEqual(calls, unavailable || !acceptsProvider ? 0 : 8)
+                    let sidecars = files.files.filter { $0.key.contains("/integrations/") }
+                    XCTAssertEqual(sidecars.count, sidecarCount)
+                    for text in sidecars.values {
+                        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+                        let record = try decoder.decode(ExternalDailyRecord.self, from: Data(text.utf8))
+                        XCTAssertEqual(record.warnings.isEmpty, !unavailable)
+                        XCTAssertFalse(text.contains("accessToken"))
+                        XCTAssertFalse(text.contains(connection.uuidString))
+                    }
+                    let daily = try files.files.filter { $0.key.hasSuffix(".json") && !$0.key.contains("/integrations/") }
+                        .map { try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.value.utf8)) as? [String: Any]) }
+                        .filter { $0["date"] as? String != nil }
+                    XCTAssertEqual(daily.count, 2)
+                    let owned = try XCTUnwrap(daily.first { $0["sleep"] != nil })
+                    XCTAssertEqual(owned["date"] as? String, "2026-07-02")
+                    XCTAssertEqual((owned["sleep"] as? [String: Any])?["totalDuration"] as? Double, 27 * 60 * 60)
+                    XCTAssertTrue(daily.allSatisfy { $0["schema_version"] as? Int == 11 })
+                    try journal.remove(id: request.id)
                 }
-                let health = FakeHealthStore()
-                health.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
-                health.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
-                    CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)
-                ]
-                let healthManager = HealthKitManager(store: health, userDefaults: defaults)
-                healthManager.setSleepDayAttribution(.nightBegins)
-                settings.exportTimeZoneOverride = TimeZone(identifier: "Europe/Berlin")
-                let vaultDefaults = FakeUserDefaults()
-                let root = "/tmp/ScheduledMorningProvider-" + UUID().uuidString
-                vaultDefaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
-                vaultDefaults.storage["obsidianVaultPath"] = root
-                let resolver = FakeBookmarkResolver()
-                resolver.resolvedURL = URL(fileURLWithPath: root)
-                let files = FakeFileSystem()
-                let vault = VaultManager(defaults: vaultDefaults, fileSystem: files, bookmarkResolver: resolver,
-                    identityProbe: FakeVaultFolderIdentityProbe())
-                Self.retainedRuntime.append(vault)
-                let reopened = ExternalIntegrationManager(tokenStore: other, enabledProviders: [.whoop],
-                    brokerClient: ExternalOAuthBrokerClient(baseURL: URL(string: "https://broker.example")!,
-                        clientToken: "test-client", session: session), apiClient: ExternalProviderAPIClient(session: session))
-                let result = await ExportOrchestrator.exportDatesBackground(recovered.dates,
-                    healthKitManager: healthManager, vaultManager: vault, settings: settings,
-                    frozenSettingsSnapshot: saved, operationSurface: .localVaultRangeWithoutSideEffects,
-                    externalIntegrations: reopened)
-                XCTAssertEqual(result.successCount, 2, "\(range)/\(mutation): \(result.failedDateDetails)")
-                let sidecarCount = acceptsProvider ? 2 : 0
-                let expectedFiles = (range ? 12 : 8) + sidecarCount
-                XCTAssertEqual(result.externalRecordFileCount, sidecarCount)
-                XCTAssertEqual(result.totalFilesWritten, expectedFiles)
-                XCTAssertEqual(files.files.count, expectedFiles)
-                let unavailable = ["replaced", "disconnected"].contains(mutation)
-                XCTAssertEqual(calls, unavailable || !acceptsProvider ? 0 : 8)
-                let sidecars = files.files.filter { $0.key.contains("/integrations/") }
-                XCTAssertEqual(sidecars.count, sidecarCount)
-                for text in sidecars.values {
-                    let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
-                    let record = try decoder.decode(ExternalDailyRecord.self, from: Data(text.utf8))
-                    XCTAssertEqual(record.warnings.isEmpty, !unavailable)
-                    XCTAssertFalse(text.contains("accessToken"))
-                    XCTAssertFalse(text.contains(connection.uuidString))
-                }
-                let daily = try files.files.filter { $0.key.hasSuffix(".json") && !$0.key.contains("/integrations/") }
-                    .map { try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.value.utf8)) as? [String: Any]) }
-                    .filter { $0["date"] as? String != nil }
-                XCTAssertEqual(daily.count, 2)
-                let owned = try XCTUnwrap(daily.first { $0["sleep"] != nil })
-                XCTAssertEqual(owned["date"] as? String, "2026-07-02")
-                XCTAssertEqual((owned["sleep"] as? [String: Any])?["totalDuration"] as? Double, 27 * 60 * 60)
-                XCTAssertTrue(daily.allSatisfy { $0["schema_version"] as? Int == 11 })
-                try journal.remove(id: request.id)
             }
         }
     }

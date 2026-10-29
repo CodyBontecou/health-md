@@ -1439,6 +1439,78 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(try store.loadAll(), [])
     }
 
+    func testNewProfileOccurrencePreservesNightAuthorityAndNeverConvertsCalendarRollups() async throws {
+        let suite = "ScheduledNightProfile.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.exportFormats = [.csv]
+        settings.detailPolicy = .summary
+        settings.generateRangeSummary = false
+        settings.filenameFormat = "'profile-'yyyy-MM-dd"
+        settings.includeDataDictionary = false
+        let pin = try makeSyntheticAppleExportEnginePin(calendarTimeZoneIdentifier: "UTC")
+        let original = ExportSettingsSnapshot.from(settings, healthSubfolder: "SavedProfile", appleExportEnginePin: pin,
+            calendarTimeZoneIdentifier: "UTC")
+        let profile = ScheduledExportCoordinator.ScheduledProfileRequestContext(profileID: UUID(), profileName: "Night",
+            target: .localIPhoneFolder, settings: original)
+        let manager = makeManager(store: TestPendingExportStore(),
+            notificationScheduler: InspectableExportNotificationScheduler()) { dates, _ in
+                XCTFail("Profile preparation cannot execute an export")
+                return ExportOrchestrator.ExportResult(successCount: 0, totalCount: dates.count, failedDateDetails: [])
+            }
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .nightBegins)
+        let snapshot = await AppleSleepCaptureContext.pinned.withValue(context) {
+            await manager.makeSettingsSnapshotForNewScheduledProfileOperation(profile)
+        }
+        XCTAssertEqual(snapshot.appleExportEnginePin, pin)
+        XCTAssertEqual(snapshot.exportFormats, original.exportFormats)
+        XCTAssertEqual(snapshot.filenameFormat, original.filenameFormat)
+        XCTAssertEqual(snapshot.healthSubfolder, "SavedProfile")
+        XCTAssertEqual(snapshot.sleepCaptureContext, context)
+        XCTAssertEqual(snapshot.externalProviderCaptureAuthority?.connections.count, 0)
+        XCTAssertNil(original.externalProviderCaptureAuthority)
+        for weekly in [false, true] {
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+            var oldPin = try XCTUnwrap(object["appleExportEnginePin"] as? [String: Any])
+            oldPin["profile"] = "apple_health_data_v7"
+            oldPin["public_schema_version"] = 7
+            oldPin["render_profile_revision"] = 1
+            oldPin["registry_sha256"] = AppleExportEnginePin.historicalRegistrySHA256
+            object["appleExportEnginePin"] = oldPin
+            object.removeValue(forKey: "generateRangeSummary")
+            object["generateWeeklyRollups"] = weekly
+            object["generateMonthlyRollups"] = false
+            object["generateYearlyRollups"] = false
+            let legacy = try JSONDecoder().decode(ExportSettingsSnapshot.self,
+                from: JSONSerialization.data(withJSONObject: object))
+            XCTAssertEqual(legacy.historicalCalendarRollupPeriods, weekly ? [.weekly] : [])
+            let legacyProfile = ScheduledExportCoordinator.ScheduledProfileRequestContext(profileID: UUID(), profileName: "Legacy",
+                target: .localIPhoneFolder, settings: legacy)
+            let morning = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+            let accepted = await AppleSleepCaptureContext.pinned.withValue(morning) {
+                await manager.makeSettingsSnapshotForNewScheduledProfileOperation(legacyProfile)
+            }
+            if weekly {
+                XCTAssertEqual(accepted.appleExportEnginePin, legacy.appleExportEnginePin,
+                               "Unsupported Morning output cannot discard the historical calendar authority")
+                XCTAssertEqual(accepted.operationRollupPeriods, [.weekly])
+                let encoder = JSONEncoder()
+                encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+                let restarted = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: encoder.encode(accepted))
+                XCTAssertEqual(restarted.operationRollupPeriods, [.weekly])
+                XCTAssertThrowsError(try restarted.recoveredSleepCaptureContext(),
+                                     "Conflicting Morning/calendar authority remains unavailable after reload")
+            } else {
+                XCTAssertTrue(try XCTUnwrap(accepted.appleExportEnginePin).isWakeDate,
+                    "A historical profile without calendar output can accept a new Morning daily operation")
+                XCTAssertTrue(accepted.operationRollupPeriods.isEmpty)
+            }
+            XCTAssertEqual(accepted.exportFormats, [.csv])
+            XCTAssertEqual(accepted.healthSubfolder, "SavedProfile")
+        }
+    }
+
     func testScheduledSnapshotIgnoresProvidersWhenSummarySuppressesSidecars() async throws {
         XCTAssertTrue(ConnectedAppsFeature.isEnabled, "Run with CONNECTED_APPS_WHOOP_ENABLED=YES")
         let suite = "ScheduledMorningSummary.\(UUID().uuidString)"
