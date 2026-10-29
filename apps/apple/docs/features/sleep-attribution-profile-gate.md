@@ -12,7 +12,7 @@ A daily export must have one stable owner-day meaning for the whole operation. C
 
 `morning_ends` assigns a whole session to its wake-up date without noon clipping. It changes meaning, even though the existing JSON/CSV/frontmatter shapes can represent the resulting values. It remains unavailable in shipped production capture/export routes. The pickers disable new selection of this mode. Previously stored values remain visible and unchanged, with an unavailable explanation; production captures reject them rather than substituting `night_begins` or exporting zeros.
 
-Successor implementation is owner-authorized, but production qualification is incomplete. Explicit Apple-v11 and Android-v6 native JSON preparation and shared successor rendering are implemented; they do not enable production operations. Historical daily defaults, signatures, API envelopes and direct protocols retain their existing identities. The existing Apple range-summary v9 is independent; the proposed successor roll-up v11 must not repurpose it.
+Successor implementation is owner-authorized. On 2026-10-29, the owner explicitly approved the Apple-v11 and Android-sleep-v6 public meanings: whole sessions belong to the wake-up date, without noon clipping, using the frozen export timezone and explicit attribution metadata. This approves profile meaning; production qualification and release admission remain incomplete. Explicit Apple-v11 and Android-v6 native JSON preparation and shared successor rendering are implemented; they do not enable production operations. Historical daily defaults, signatures, API envelopes and direct protocols retain their existing identities. The existing Apple range-summary v9 is independent; the proposed successor roll-up v11 must not repurpose it.
 
 ## Operation and persistence authority
 
@@ -68,7 +68,7 @@ The explicit native Apple-v11 summary planner accepts metric and imperial prefer
 
 The target above must include all of the following before the mode becomes available:
 
-1. Explicit owner approval of successor public profiles with owner-day, clipping, timezone and exported attribution metadata. Do not invent version approval or reuse Apple v8/Android v4-v5.
+1. **Profile meaning approved on 2026-10-29.** The owner explicitly approved Apple-v11 and Android-sleep-v6: whole-session wake-up-date ownership, no noon clipping, the frozen export timezone and explicit attribution metadata. This approval does not reuse Apple v8/Android v4-v5 or complete the remaining production/release checks.
 2. Reader adoption and mixed-version tests for Apple, Android, shared Rust core, CLI, website, API/direct/connected receivers and the external Obsidian plugin.
 3. Approved durable-job profile/context selection, downgrade/resume behavior and migration/rollback rules. Portable configuration remains a separate contract.
 4. Synthetic overnight and noon-spanning fixtures through every format and surface, both preference-mutation directions, separate concurrent operations and partial recovery.
