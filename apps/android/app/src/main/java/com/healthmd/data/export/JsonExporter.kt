@@ -132,15 +132,17 @@ class JsonExporter {
         customization: FormatCustomization = FormatCustomization(),
         includeGranularData: Boolean = false,
         captureContext: AndroidCaptureContext? = null,
-    ): String = render(data, customization, includeGranularData, captureContext, includeSleepRecords = true)
+    ): String = render(data, customization, includeGranularData, captureContext, includeSleepRecords = true, includeWorkoutRecords = true)
 
-    /** Aggregate projection retains original sleep data for ownership and clock validation. */
-    internal fun exportWithoutSleepRecords(data: HealthData, customization: FormatCustomization,
-        includeGranularData: Boolean, captureContext: AndroidCaptureContext): String =
-        render(data, customization, includeGranularData, captureContext, includeSleepRecords = false)
+    /** Aggregate projection retains original data for source authority and summary validation. */
+    internal fun exportForNativeComposition(data: HealthData, customization: FormatCustomization,
+        includeGranularData: Boolean, captureContext: AndroidCaptureContext,
+        composeSleepRecords: Boolean, composeWorkoutRecords: Boolean): String =
+        render(data, customization, includeGranularData, captureContext,
+            includeSleepRecords = !composeSleepRecords, includeWorkoutRecords = !composeWorkoutRecords)
 
     private fun render(data: HealthData, customization: FormatCustomization, includeGranularData: Boolean,
-        captureContext: AndroidCaptureContext?, includeSleepRecords: Boolean): String {
+        captureContext: AndroidCaptureContext?, includeSleepRecords: Boolean, includeWorkoutRecords: Boolean): String {
         val authority = captureContext?.let(::WakeDateJsonDocument)
         if (authority != null) require(!customization.includeLegacyAndroidAliases) {
             "wake-date native JSON cannot use historical aliases"
@@ -154,7 +156,7 @@ class JsonExporter {
             JsonElement.serializer(), nativePayload(data, effectiveCustomization, includeGranularData, false),
         )
         return try {
-            val payload = nativePayload(data, effectiveCustomization, includeGranularData, true, includeSleepRecords)
+            val payload = nativePayload(data, effectiveCustomization, includeGranularData, true, includeSleepRecords, includeWorkoutRecords)
             Json { prettyPrint = true }.encodeToString(JsonElement.serializer(), authority.finish(payload, data))
         } catch (error: RuntimeException) {
             if (error is java.util.concurrent.CancellationException) throw error
@@ -170,6 +172,7 @@ class JsonExporter {
         includeGranularData: Boolean,
         nativeSuccessor: Boolean,
         includeSleepRecords: Boolean = true,
+        includeWorkoutRecords: Boolean = true,
     ): JsonObject {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
@@ -929,7 +932,7 @@ class JsonExporter {
             }
 
             // ── Workouts ───────────────────────────────────────────────────────────────────────
-            if (data.workouts.isNotEmpty()) {
+            if (includeWorkoutRecords && data.workouts.isNotEmpty()) {
                 putJsonArray("workouts") {
                     for (workout in data.workouts) {
                         addJsonObject {

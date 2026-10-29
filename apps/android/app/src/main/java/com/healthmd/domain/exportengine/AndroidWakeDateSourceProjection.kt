@@ -22,12 +22,12 @@ internal object AndroidWakeDateSourceProjection {
         val context = requireNotNull(request.captureContext)
         require(request.profile == AndroidExportProfile.android_sleep_v6 && context.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS)
         val selected = request.data.filtered(request.metricSelection, context)
-        val source = HealthData(date = selected.date, sleep = selected.sleep,
+        val source = HealthData(date = selected.date, sleep = selected.sleep, workouts = selected.workouts,
             heart = HeartData(samples = selected.heart.samples, hrvSamples = selected.heart.hrvSamples),
             vitals = VitalsData(bloodOxygenSamples = selected.vitals.bloodOxygenSamples,
                 bloodGlucoseSamples = selected.vitals.bloodGlucoseSamples, respiratoryRateSamples = selected.vitals.respiratoryRateSamples))
-        if (!source.heart.hasData && !source.vitals.hasData && source.sleep.stages.isEmpty() && source.sleep.sessions.isEmpty()) return plan
-        val root = Json.parseToJsonElement(JsonExporter().export(source, request.customization, true, context)).jsonObject
+        if (!source.heart.hasData && !source.vitals.hasData && source.sleep.stages.isEmpty() && source.sleep.sessions.isEmpty() && source.workouts.isEmpty()) return plan
+        val root = Json.parseToJsonElement(JsonExporter().export(source, request.customization, request.includeGranularData, context)).jsonObject
         val keys = Json.parseToJsonElement(semanticResult.decodeToString()).jsonObject.getValue("selected_output_keys").jsonArray
             .map { it.jsonPrimitive.content }
         require(keys.distinct().size == keys.size)
@@ -35,9 +35,11 @@ internal object AndroidWakeDateSourceProjection {
         val enabledKeys = keys.filter { request.customization.frontmatterConfig.outputKey(it) != null }
         val sleep = root["sleep"]?.jsonObject
         val details = HealthMdRenderInputAdapter.mergeDetails(
-            HealthMdRenderInputAdapter.quantityDetails(root, source.date.toString(), enabledKeys),
-            HealthMdRenderInputAdapter.sleepDetails(sleep?.get("sleepStages")?.jsonArray ?: JsonArray(emptyList()),
-                sleep?.get("sleepSessions")?.jsonArray ?: JsonArray(emptyList()), source.date.toString(), enabledKeys))
+            HealthMdRenderInputAdapter.mergeDetails(
+                HealthMdRenderInputAdapter.quantityDetails(root, source.date.toString(), enabledKeys),
+                HealthMdRenderInputAdapter.sleepDetails(sleep?.get("sleepStages")?.jsonArray ?: JsonArray(emptyList()),
+                    sleep?.get("sleepSessions")?.jsonArray ?: JsonArray(emptyList()), source.date.toString(), enabledKeys)),
+            HealthMdRenderInputAdapter.workoutDetails(root, source.date.toString(), enabledKeys))
         val sourceArrays = listOf("heart" to "heartRateSamples", "heart" to "hrvSamples", "vitals" to "bloodOxygenSamples",
             "vitals" to "bloodGlucoseSamples", "vitals" to "respiratoryRateSamples",
             "sleep" to "sleepStages", "sleep" to "sleepSessions")
@@ -55,6 +57,10 @@ internal object AndroidWakeDateSourceProjection {
                         require(field !in values)
                         values[field] = samples
                         result[category] = JsonObject(values)
+                    }
+                    root["workouts"]?.let { workouts ->
+                        require("workouts" !in result)
+                        result["workouts"] = workouts
                     }
                     json.encodeToString(JsonElement.serializer(), JsonObject(result))
                 }
@@ -85,7 +91,7 @@ internal object AndroidWakeDateSourceProjection {
                         for (block in details.getValue("bases_frontmatter_blocks").jsonArray) {
                             val value = block.jsonObject
                             val key = value.getValue("key").jsonPrimitive.content
-                            require(key in setOf("native_quantity_details", "sleep_stage_details", "sleep_session_details"))
+                            require(key in setOf("native_quantity_details", "sleep_stage_details", "sleep_session_details", "native_workout_details"))
                             require(!aggregate.substring(0, end).contains("\n$key:"))
                             append("\n").append(key).append(":\n")
                             for (line in value.getValue("lines").jsonArray) append(line.jsonPrimitive.content).append('\n')

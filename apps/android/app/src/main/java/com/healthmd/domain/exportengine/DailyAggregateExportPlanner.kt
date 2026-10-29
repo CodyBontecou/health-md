@@ -280,7 +280,7 @@ class HealthMdRustDailyAggregatePlanner(
             batches = semanticBatches,
             service = coreService,
         )
-        val composeNativeSources = request.profile == AndroidExportProfile.android_sleep_v6 && request.includeGranularData
+        val composeNativeSources = request.profile == AndroidExportProfile.android_sleep_v6
         val presentationData = if (composeNativeSources) AndroidWakeDateSourceProjection.aggregate(request.data) else request.data
         val markdown = request.customization.markdownTemplate
         val renderInput = HealthMdRenderInputAdapter.encode(
@@ -290,6 +290,7 @@ class HealthMdRustDailyAggregatePlanner(
             options = HealthMdRenderInputAdapter.Options(
                 requestId = request.ids.requestId,
                 composeSleepRecordsNatively = composeNativeSources,
+                composeWorkoutRecordsNatively = composeNativeSources,
                 formats = request.formats.map(ExportFormat::renderWireValue),
                 renderProfileRevision = pin.renderProfileRevision,
                 unitSystem = when (request.customization.unitPreference) {

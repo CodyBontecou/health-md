@@ -49,6 +49,100 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun denseWakeDateWorkoutRecordsRemainCompleteAcrossEveryFormat() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = start.plusSeconds(3600).plusNanos(864197532)
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, context.zoneId.rules.getOffset(value))
+        val samples = (0 until 2_000).map { index ->
+            val instant = start.plusSeconds(index.toLong())
+            com.healthmd.domain.model.TimestampedSample(instant.atZone(context.zoneId).toLocalDateTime(), Math.nextUp(160.125),
+                metadata = mapOf("synthetic" to "dense-workout-$index"), context = mapOf("synthetic" to "context|value"),
+                exactTime = exact(instant), identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-workout-sample-$index"))
+        }
+        val route = samples.mapIndexed { index, sample -> com.healthmd.domain.model.WorkoutRoutePointData(sample.time,
+            40.125, -70.875, altitude = Math.nextUp(12.125), horizontalAccuracy = 2.125, verticalAccuracy = 3.125,
+            exactTime = sample.exactTime, identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-route-$index")) }
+        val workout = com.healthmd.domain.model.WorkoutData(com.healthmd.domain.model.WorkoutType.RUNNING,
+            start.atZone(context.zoneId).toLocalDateTime(), end.atZone(context.zoneId).toLocalDateTime(), duration = kotlin.time.Duration.parse("1800.5s"),
+            metadata = mapOf("synthetic" to "workout `source` | notes"), route = route,
+            routeAccess = com.healthmd.domain.model.WorkoutRouteAccess.DATA, heartRateSamples = samples,
+            speedSamples = samples.take(2), cyclingCadenceSamples = samples.take(2), stepsCadenceSamples = samples.take(2),
+            powerSamples = samples.take(2), elevationSamples = samples.take(2), exactStartTime = exact(start), exactEndTime = exact(end),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-dense-workout"),
+            correlatedSourceIds = mapOf("heart_rate" to listOf("synthetic-correlated-id")),
+            laps = listOf(com.healthmd.domain.model.WorkoutLapData(start.atZone(context.zoneId).toLocalDateTime(),
+                end.atZone(context.zoneId).toLocalDateTime(), length = 1000.125, exactStartTime = exact(start), exactEndTime = exact(end))),
+            segments = listOf(com.healthmd.domain.model.WorkoutSegmentData(start.atZone(context.zoneId).toLocalDateTime(),
+                end.atZone(context.zoneId).toLocalDateTime(), type = "running", exactStartTime = exact(start), exactEndTime = exact(end))),
+            splits = listOf(com.healthmd.domain.model.WorkoutSplitData(1, start.atZone(context.zoneId).toLocalDateTime(),
+                end.atZone(context.zoneId).toLocalDateTime(), duration = kotlin.time.Duration.parse("1800.5s"), distance = 1000.125,
+                exactStartTime = exact(start), exactEndTime = exact(end))))
+        val data = HealthData(LocalDate.of(2026, 11, 1), workouts = listOf(workout))
+        for (metadata in listOf(false, true)) for (granular in listOf(false, true)) {
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = granular,
+                includeMetadata = metadata, metricSelection = MetricSelectionState(enabledMetrics = setOf("workouts")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("dense-workout", "dense-workout-session"))
+            val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+            val native = Json.parseToJsonElement(com.healthmd.data.export.JsonExporter().export(request.data,
+                request.customization, granular, captureContext = context)).jsonObject.getValue("workouts").jsonArray
+            assertThat(plan.items).hasSize(4)
+            for (item in plan.items) {
+                val text = item.content.decodeToString()
+                if (item.relativePath.endsWith(".json")) {
+                    val actual = Json.parseToJsonElement(text).jsonObject.getValue("workouts").jsonArray
+                    assertThat(actual).isEqualTo(native)
+                    assertThat(actual.single().jsonObject["avgHeartRate"]).isNull()
+                }
+                if (granular) {
+                    if (item.relativePath.endsWith(".json")) assertThat(text).contains("synthetic-route-1999")
+                    if (item.relativePath.endsWith(".csv")) assertThat(text.lineSequence().count { it.contains(",Native Detail,Workout,") }).isEqualTo(1)
+                    System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { directory ->
+                        val output = File(directory, "android-v6-dense-workout-$metadata/${item.relativePath}")
+                        val parent = checkNotNull(output.parentFile); check(parent.mkdirs() || parent.isDirectory); output.writeBytes(item.content)
+                    }
+                } else assertThat(text).doesNotContain("synthetic-route-1999")
+            }
+        }
+    }
+
+    @Test
+    fun nativeWorkoutCompositionKeepsSelectedAuthorityAndRejectsInvalidSource() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T01:00:00.123456789Z")
+        val end = start.plusSeconds(3600)
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, ZoneOffset.UTC)
+        val workout = com.healthmd.domain.model.WorkoutData(com.healthmd.domain.model.WorkoutType.RUNNING,
+            start.atZone(context.zoneId).toLocalDateTime(), end.atZone(context.zoneId).toLocalDateTime(),
+            duration = 30.minutes, exactStartTime = exact(start), exactEndTime = exact(end))
+        suspend fun plan(candidate: com.healthmd.domain.model.WorkoutData, enabled: Set<String>, disabled: List<String> = emptyList()): ExportArtifactPlan {
+            val selection = MetricSelectionState(enabledMetrics = enabled)
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+                metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+                formatCustomization = FormatCustomization(frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(
+                    fields = disabled.map { com.healthmd.domain.model.CustomFrontmatterField(it, isEnabled = false) })))
+            val data = HealthData(LocalDate.of(2026, 11, 1), workouts = listOf(candidate), activity = ActivityData(steps = 42)).filtered(selection, context)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("workout-boundary", "workout-boundary-session"))
+            return HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+        }
+        val registry = HealthMdCoreService().getMetricRegistry(com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6, 2u)
+        val owners = registry.outputs.filter { it.key == "workouts" || it.key.startsWith("workout_") }.map { it.key }
+        assertThat(runCatching { plan(workout, setOf("workouts"), owners) }.isFailure).isTrue()
+        val reversed = workout.copy(endTime = workout.startTime.minusSeconds(1), exactEndTime = exact(start.minusSeconds(1)))
+        assertThat(runCatching { plan(reversed, setOf("workouts")) }.isFailure).isTrue()
+        val nonfinite = workout.copy(heartRateSamples = listOf(com.healthmd.domain.model.TimestampedSample(
+            workout.startTime, Double.NaN, exactTime = exact(start))))
+        assertThat(runCatching { plan(nonfinite, setOf("workouts")) }.isFailure).isTrue()
+        for (item in plan(reversed, setOf("steps")).items) {
+            assertThat(item.content.decodeToString()).doesNotContain("native_workout_details")
+            assertThat(item.content.decodeToString()).doesNotContain("startTimeISO")
+        }
+    }
+
+    @Test
     fun denseWakeDateSleepRecordsRemainCompleteAcrossEveryFormat() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
         val start = Instant.parse("2026-11-01T02:00:00.123456789Z")

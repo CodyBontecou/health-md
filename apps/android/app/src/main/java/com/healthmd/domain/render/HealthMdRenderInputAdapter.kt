@@ -73,6 +73,7 @@ object HealthMdRenderInputAdapter {
         val includePlatformExtensions: Boolean = false,
         val includeGranularData: Boolean = false,
         val composeSleepRecordsNatively: Boolean = false,
+        val composeWorkoutRecordsNatively: Boolean = false,
         val rawCaptureStatus: String = "not_requested",
         val writeMode: String = "overwrite",
         val useEmoji: Boolean = true,
@@ -138,8 +139,8 @@ object HealthMdRenderInputAdapter {
                 (captureContext.exportProfileID != null && captureContext.exportProfileID != registry.publicProfileId))))) {
             throw AdapterException("capture and completed semantic authority are incompatible")
         }
-        if (options.composeSleepRecordsNatively && handoffVersion != 2) {
-            throw AdapterException("native sleep composition requires successor authority")
+        if ((options.composeSleepRecordsNatively || options.composeWorkoutRecordsNatively) && handoffVersion != 2) {
+            throw AdapterException("native record composition requires successor authority")
         }
         val nativeWakeDateContext = if (handoffVersion == 2 && presentationByOwnerDate.isNotEmpty()) {
             if (captureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
@@ -566,7 +567,7 @@ object HealthMdRenderInputAdapter {
         }
     }
 
-    private fun workoutDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun workoutDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
         val workouts = root["workouts"]?.jsonArray ?: JsonArray(emptyList())
         val owner = listOf("workout_count", "workouts", "workout_minutes").firstOrNull(selected::contains)
             ?: selected.sorted().firstOrNull { it.startsWith("workout_") }
@@ -835,8 +836,9 @@ object HealthMdRenderInputAdapter {
     }
 
     private fun nativePresentation(data: HealthData, customization: FormatCustomization,
-        options: Options, context: AndroidCaptureContext?): String = if (options.composeSleepRecordsNatively) {
-        JsonExporter().exportWithoutSleepRecords(data, customization, options.includeGranularData, requireNotNull(context))
+        options: Options, context: AndroidCaptureContext?): String = if (options.composeSleepRecordsNatively || options.composeWorkoutRecordsNatively) {
+        JsonExporter().exportForNativeComposition(data, customization, options.includeGranularData, requireNotNull(context),
+            options.composeSleepRecordsNatively, options.composeWorkoutRecordsNatively)
     } else JsonExporter().export(data, customization, options.includeGranularData, captureContext = context)
 
     private fun profileDocuments(
