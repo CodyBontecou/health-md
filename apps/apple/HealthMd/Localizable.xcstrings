@@ -1,6 +1,149 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Double tap to disable daily note injection" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um die tägliche Notizeinfügung zu deaktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para desactivar la inyección en notas diarias"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour désactiver l’injection dans les notes quotidiennes"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per disattivare l’iniezione nelle note giornaliere"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップしてデイリーノート注入を無効にします"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 일일 노트 주입을 비활성화하세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om dagelijkse notitie-injectie uit te schakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para desativar a injeção em notas diárias"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以停用每日笔记注入"}}
+      }
+    },
+    "Double tap to enable daily note injection" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um die tägliche Notizeinfügung zu aktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para activar la inyección en notas diarias"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour activer l’injection dans les notes quotidiennes"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per attivare l’iniezione nelle note giornaliere"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップしてデイリーノート注入を有効にします"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 일일 노트 주입을 활성화하세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om dagelijkse notitie-injectie in te schakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para ativar a injeção em notas diárias"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以启用每日笔记注入"}}
+      }
+    },
+    "Daily Notes Disabled" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Tägliche Notizen deaktiviert"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Notas diarias desactivadas"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Notes quotidiennes désactivées"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Note giornaliere disattivate"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"デイリーノートは無効です"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"일일 노트 비활성화됨"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Dagelijkse notities uitgeschakeld"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Notas Diárias desativadas"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"每日笔记已停用"}}
+      }
+    },
+    "Turn on Daily Note Injection to merge selected metrics into the daily notes you already keep in Obsidian." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Aktiviere die tägliche Notizeinfügung, um ausgewählte Metriken in deine vorhandenen täglichen Notizen in Obsidian einzufügen."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Activa la inyección en notas diarias para combinar las métricas seleccionadas con tus notas diarias existentes en Obsidian."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Activez l’injection dans les notes quotidiennes pour intégrer les mesures sélectionnées à vos notes quotidiennes existantes dans Obsidian."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Attiva l’iniezione nelle note giornaliere per unire le metriche selezionate alle note giornaliere già presenti in Obsidian."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"デイリーノート注入を有効にすると、Obsidianの既存のデイリーノートに選択した指標を統合できます。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"일일 노트 주입을 켜서 선택한 항목을 Obsidian에 보관 중인 기존 일일 노트에 병합하세요."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Schakel dagelijkse notitie-injectie in om geselecteerde meetwaarden samen te voegen met je bestaande dagelijkse notities in Obsidian."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Ative a Injeção em Nota Diária para incorporar as métricas selecionadas às notas diárias que você já mantém no Obsidian."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"启用每日笔记注入，将所选指标合并到 Obsidian 中已有的每日笔记。"}}
+      }
+    },
+    "Vault Root Location" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Stammverzeichnis des Vaults"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Ubicación raíz de la bóveda"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Emplacement racine du coffre"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Posizione radice del vault"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"保管庫のルート位置"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"보관함 루트 위치"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Hoofdmap van de kluis"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Local da raiz do cofre"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"仓库根目录位置"}}
+      }
+    },
+    "With Folder set to Daily, notes are written to Daily/… at the vault root, not %@/Daily/…." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Wenn der Ordner auf Daily gesetzt ist, werden Notizen unter Daily/… im Stammverzeichnis des Vaults geschrieben, nicht unter %@/Daily/…."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Con la carpeta establecida en Daily, las notas se escriben en Daily/… en la raíz de la bóveda, no en %@/Daily/…."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Si le dossier est défini sur Daily, les notes sont écrites dans Daily/… à la racine du coffre, et non dans %@/Daily/…."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Con la cartella impostata su Daily, le note vengono scritte in Daily/… alla radice del vault, non in %@/Daily/…."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"フォルダをDailyに設定すると、ノートは保管庫のルートのDaily/…に書き込まれます。%@/Daily/…ではありません。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"폴더를 Daily로 설정하면 노트는 보관함 루트의 Daily/…에 기록되며, %@/Daily/…에는 기록되지 않습니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Als de map op Daily staat, worden notities geschreven naar Daily/… in de hoofdmap van de kluis, niet naar %@/Daily/…."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Com a pasta definida como Daily, as notas são gravadas em Daily/… na raiz do cofre, não em %@/Daily/…."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"将文件夹设为 Daily 时，笔记会写入仓库根目录下的 Daily/…，而不是 %@/Daily/…。"}}
+      }
+    },
+    "Enter a vault-relative path, such as Daily or Journal slash Daily. Leave empty for the vault root." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Gib einen Pfad relativ zum Vault ein, etwa Daily oder Journal Schrägstrich Daily. Lass das Feld für das Stammverzeichnis leer."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Introduce una ruta relativa a la bóveda, como Daily o Journal barra Daily. Déjala vacía para usar la raíz de la bóveda."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Saisissez un chemin relatif au coffre, comme Daily ou Journal barre oblique Daily. Laissez vide pour la racine du coffre."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Inserisci un percorso relativo al vault, come Daily o Journal barra Daily. Lascia vuoto per la radice del vault."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"DailyやJournalスラッシュDailyなど、保管庫からの相対パスを入力します。保管庫のルートを使う場合は空欄にします。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"Daily 또는 Journal 슬래시 Daily처럼 보관함을 기준으로 하는 상대 경로를 입력하세요. 보관함 루트를 사용하려면 비워 두세요."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Voer een pad relatief aan de kluis in, zoals Daily of Journal schuine streep Daily. Laat leeg voor de hoofdmap van de kluis."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Digite um caminho relativo ao cofre, como Daily ou Journal barra Daily. Deixe vazio para usar a raiz do cofre."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"输入相对于仓库的路径，例如 Daily 或 Journal 斜杠 Daily。留空表示仓库根目录。"}}
+      }
+    },
+    "Enter the filename pattern without an extension." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Gib das Dateinamenmuster ohne Dateiendung ein."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Introduce el patrón del nombre de archivo sin extensión."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Saisissez le modèle de nom de fichier sans extension."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Inserisci il modello del nome file senza estensione."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"拡張子を付けずにファイル名のパターンを入力します。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"확장자 없이 파일 이름 패턴을 입력하세요."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Voer het bestandsnaampatroon zonder extensie in."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Digite o padrão do nome do arquivo sem extensão."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"输入不含扩展名的文件名模式。"}}
+      }
+    },
+    "Create daily note if missing" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Fehlende tägliche Notiz erstellen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Crear la nota diaria si no existe"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Créer la note quotidienne si elle manque"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Crea la nota giornaliera se manca"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"デイリーノートがない場合は作成"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"일일 노트가 없으면 만들기"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Dagelijkse notitie maken als deze ontbreekt"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Criar nota diária se não existir"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"每日笔记不存在时创建"}}
+      }
+    },
+    "Update daily notes only" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Nur tägliche Notizen aktualisieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Actualizar solo las notas diarias"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Mettre à jour uniquement les notes quotidiennes"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Aggiorna solo le note giornaliere"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"デイリーノートのみ更新"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"일일 노트만 업데이트"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Alleen dagelijkse notities bijwerken"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Atualizar apenas as notas diárias"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"仅更新每日笔记"}}
+      }
+    },
+    "Inject metric sections into the note body" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Metrikabschnitte in den Notiztext einfügen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Inyectar secciones de métricas en el cuerpo de la nota"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Injecter les sections de mesures dans le corps de la note"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Inserisci le sezioni delle metriche nel corpo della nota"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ノート本文に指標セクションを注入"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"노트 본문에 항목 섹션 주입"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Meetwaardesecties in de notitietekst invoegen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Injetar seções de métricas no corpo da nota"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"将指标章节注入笔记正文"}}
+      }
+    },
     "Empty Value" : {
       "localizations" : {
         "de" : {"stringUnit":{"state":"translated","value":"Leerer Wert"}},
@@ -3942,7 +4085,18 @@
       }
     },
     "%lld metrics enabled" : {
-
+      "localizations" : {
+        "en" : {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld metric enabled"}},"other":{"stringUnit":{"state":"translated","value":"%lld metrics enabled"}}}}},
+        "de" : {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld Metrik aktiviert"}},"other":{"stringUnit":{"state":"translated","value":"%lld Metriken aktiviert"}}}}},
+        "es" : {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld métrica activada"}},"other":{"stringUnit":{"state":"translated","value":"%lld métricas activadas"}}}}},
+        "fr" : {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld mesure activée"}},"other":{"stringUnit":{"state":"translated","value":"%lld mesures activées"}}}}},
+        "it" : {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld metrica attivata"}},"other":{"stringUnit":{"state":"translated","value":"%lld metriche attivate"}}}}},
+        "ja" : {"variations":{"plural":{"other":{"stringUnit":{"state":"translated","value":"指標%lld個が有効"}}}}},
+        "ko" : {"variations":{"plural":{"other":{"stringUnit":{"state":"translated","value":"항목 %lld개 활성화됨"}}}}},
+        "nl" : {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld meetwaarde ingeschakeld"}},"other":{"stringUnit":{"state":"translated","value":"%lld meetwaarden ingeschakeld"}}}}},
+        "pt-BR" : {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld métrica ativada"}},"other":{"stringUnit":{"state":"translated","value":"%lld métricas ativadas"}}}}},
+        "zh-Hans" : {"variations":{"plural":{"other":{"stringUnit":{"state":"translated","value":"已启用 %lld 个指标"}}}}}
+      }
     },
     "%lld metrics selected" : {
 
@@ -15291,7 +15445,17 @@
       }
     },
     "Change selected metrics from Export Settings, Health Metrics" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Ändere die ausgewählten Metriken unter Exporteinstellungen, Gesundheitsmetriken"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Cambia las métricas seleccionadas en Ajustes de exportación, Métricas de salud"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Modifiez les mesures sélectionnées dans Réglages d’export, Mesures de santé"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Modifica le metriche selezionate in Impostazioni di esportazione, Metriche sanitarie"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"書き出し設定のヘルス指標で選択する指標を変更します"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"내보내기 설정의 건강 항목에서 선택한 항목을 변경하세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Wijzig de geselecteerde meetwaarden in Exportinstellingen, Gezondheidsmeetwaarden"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Altere as métricas selecionadas em Ajustes de exportação, Métricas de saúde"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"在“导出设置”的“健康指标”中更改所选指标"}}
+      }
     },
     "Change Vault" : {
       "extractionState" : "stale",
@@ -39247,10 +39411,30 @@
       }
     },
     "Daily Note Injection, %@" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Tägliche-Notiz-Einfügung, %@"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Inyección en nota diaria, %@"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Injection dans les notes quotidiennes, %@"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Iniezione nota giornaliera, %@"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"デイリーノート注入、%@"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"일일 노트 주입, %@"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Dagelijkse notitie-injectie, %@"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Injeção em Nota Diária, %@"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"每日笔记注入，%@"}}
+      }
     },
     "Daily note preview path" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Vorschaupfad der täglichen Notiz"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Ruta de vista previa de la nota diaria"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Chemin d’aperçu de la note quotidienne"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Percorso di anteprima della nota giornaliera"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"デイリーノートのプレビューパス"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"일일 노트 미리보기 경로"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Voorbeeldpad van de dagelijkse notitie"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Caminho de prévia da nota diária"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"每日笔记预览路径"}}
+      }
     },
     "Daily Note Settings" : {
       "localizations" : {
@@ -44722,7 +44906,17 @@
 
     },
     "Double tap to %@ daily note injection" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um die tägliche Notizeinfügung zu %@"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para %@ la inyección en notas diarias"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour %@ l’injection dans les notes quotidiennes"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per %@ l’iniezione nelle note giornaliere"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップしてデイリーノート注入を%@します"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 일일 노트 주입을 %@합니다"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om dagelijkse notitie-injectie te %@"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para %@ a injeção em notas diárias"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以%@每日笔记注入"}}
+      }
     },
     "Double tap to %@ individual entry files for %@" : {
       "localizations" : {
@@ -55616,7 +55810,17 @@
 
     },
     "Exports update only your daily notes. Other generated files stay configured but are skipped." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Exporte aktualisieren nur deine täglichen Notizen. Andere Ausgabedateien bleiben konfiguriert, werden aber übersprungen."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Las exportaciones solo actualizan tus notas diarias. Los demás archivos de salida conservan su configuración, pero se omiten."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Les exports mettent à jour uniquement vos notes quotidiennes. Les autres fichiers de sortie restent configurés, mais sont ignorés."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Le esportazioni aggiornano solo le note giornaliere. Gli altri file di output restano configurati ma vengono saltati."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"書き出しではデイリーノートのみを更新します。ほかの出力ファイルの設定は保持されますが、作成はスキップされます。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"내보내기는 일일 노트만 업데이트합니다. 다른 출력 파일의 설정은 유지되지만 생성은 건너뜁니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Exports werken alleen je dagelijkse notities bij. Andere uitvoerbestanden blijven ingesteld, maar worden overgeslagen."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"As exportações atualizam apenas suas notas diárias. Os outros arquivos de saída mantêm a configuração, mas são ignorados."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"导出仅更新每日笔记。其他输出文件保留配置，但会被跳过。"}}
+      }
     },
     "Exports update YAML frontmatter in the daily notes you already keep, while normal export files still follow your selected formats." : {
       "localizations" : {
@@ -78899,7 +79103,17 @@
       }
     },
     "Metrics to inject" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Einzufügende Metriken"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Métricas que inyectar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Mesures à injecter"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Metriche da inserire"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"注入する指標"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"주입할 항목"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"In te voegen meetwaarden"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Métricas a injetar"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"要注入的指标"}}
+      }
     },
     "Metrics to Inject" : {
       "extractionState" : "stale",
@@ -78961,7 +79175,17 @@
       }
     },
     "Metrics To Inject" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Einzufügende Metriken"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Métricas que inyectar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Mesures à injecter"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Metriche da inserire"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"注入する指標"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"주입할 항목"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"In te voegen meetwaarden"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Métricas a injetar"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"要注入的指标"}}
+      }
     },
     "Metrics to inject: %lld enabled" : {
       "extractionState" : "stale",
@@ -83642,7 +83866,17 @@
       }
     },
     "No metrics enabled" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Keine Metriken aktiviert"}},
+        "es" : {"stringUnit":{"state":"translated","value":"No hay métricas activadas"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Aucune mesure activée"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Nessuna metrica attivata"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"有効な指標はありません"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"활성화된 항목 없음"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Geen meetwaarden ingeschakeld"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Nenhuma métrica ativada"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"未启用任何指标"}}
+      }
     },
     "No metrics in this category match your search." : {
       "localizations" : {
@@ -91952,7 +92186,17 @@
 
     },
     "Preview Path" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Pfadvorschau"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Vista previa de la ruta"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Aperçu du chemin"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Anteprima del percorso"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"パスのプレビュー"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"경로 미리보기"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Padvoorbeeld"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Prévia do caminho"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"路径预览"}}
+      }
     },
     "Preview: %@" : {
       "localizations" : {
@@ -119401,7 +119645,17 @@
       }
     },
     "Uses the same metric selection configured in Export Settings → Health Metrics." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Verwendet dieselbe Metrikauswahl wie unter Exporteinstellungen → Gesundheitsmetriken."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Usa la misma selección de métricas que en Ajustes de exportación → Métricas de salud."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Utilise la même sélection de mesures que dans Réglages d’export → Mesures de santé."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Usa le stesse metriche selezionate in Impostazioni di esportazione → Metriche sanitarie."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"書き出し設定 → ヘルス指標で選択したものと同じ指標を使用します。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"내보내기 설정 → 건강 항목에서 구성한 항목 선택을 그대로 사용합니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Gebruikt dezelfde meetwaardeselectie als in Exportinstellingen → Gezondheidsmeetwaarden."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Usa a mesma seleção de métricas configurada em Ajustes de exportação → Métricas de saúde."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"使用与“导出设置 → 健康指标”中相同的指标选择。"}}
+      }
     },
     "UV Exposure" : {
       "comment" : "macOS Health metric picker UI",
