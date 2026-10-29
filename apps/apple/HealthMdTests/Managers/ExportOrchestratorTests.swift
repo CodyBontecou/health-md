@@ -833,6 +833,82 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testDetailedPinnedDailyExportsCommitBeforeNextCaptureWithOneAcceptedPin() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 15)))
+        let dates = (0..<3).map { first.addingTimeInterval(Double($0) * 86400) }
+        for background in [false, true] {
+            let store = FakeHealthStore()
+            store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = dates.flatMap { owner in
+                let start = owner.addingTimeInterval(-2 * 3600)
+                return (0..<2000).map { ordinal in
+                    CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                        startDate: start.addingTimeInterval(Double(ordinal) * 28.8),
+                        endDate: start.addingTimeInterval(Double(ordinal + 1) * 28.8))
+                }
+            }
+            let probe = DetailedPinnedDayProbe()
+            let planner = DetailedPinnedDayPlanner(probe: probe)
+            let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/DetailedPinned-\(background)", planner: planner)
+            vault.dailyExportDidCommitForTesting = { probe.commits += 1 }
+            store.beforeQueryCategorySamples = { identifier in
+                guard identifier == .sleepAnalysis else { return }
+                await MainActor.run {
+                    XCTAssertEqual(probe.commits, probe.captures, "Each completed source day must leave the capture working set before the next read")
+                    probe.captures += 1
+                }
+            }
+            let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+            manager.setSleepDayAttribution(.morningEnds)
+            let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: [])
+            settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+            settings.exportTimeZoneOverride = .gmt
+            settings.detailPolicy = .detailedTimeSeries
+            settings.includeDataDictionary = false
+            settings.metricSelection.enabledMetrics = ["sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
+            let progress: (Int, Int, String) -> Void = { _, _, _ in
+                settings.filenameFormat = "'changed-'yyyy-MM-dd"
+                settings.exportTimeZoneOverride = TimeZone(identifier: "Asia/Tokyo")!
+                settings.detailPolicy = .summary
+                manager.setSleepDayAttribution(.nightBegins)
+            }
+            let result: ExportOrchestrator.ExportResult
+            if background {
+                let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+                    calendarTimeZone: .gmt, surface: .localVaultRangeWithoutSideEffects)
+                manager.setSleepDayAttribution(.nightBegins)
+                result = await ExportOrchestrator.exportDatesBackground(dates, healthKitManager: manager,
+                    vaultManager: vault, settings: settings, frozenSettingsSnapshot: snapshot,
+                    operationSurface: .localVaultRangeWithoutSideEffects, onProgress: progress)
+            } else {
+                result = await ExportOrchestrator.exportDates(dates, healthKitManager: manager,
+                    vaultManager: vault, settings: settings, onProgress: progress)
+            }
+            XCTAssertEqual(result.successCount, 3, "\(result.failedDateDetails)")
+            XCTAssertEqual(probe.captures, 3)
+            XCTAssertEqual(probe.commits, 3)
+            XCTAssertEqual(probe.stageCounts, [2000, 2000, 2000])
+            XCTAssertTrue(probe.rangeBatchSizes.isEmpty)
+            XCTAssertEqual(probe.pins.count, 3)
+            let pin = try XCTUnwrap(probe.pins.first)
+            XCTAssertTrue(pin.hasExplicitWakeDateContracts)
+            XCTAssertTrue(probe.pins.allSatisfy { $0 == pin })
+            XCTAssertEqual(fileSystem.files.count, 12)
+            for (path, text) in fileSystem.files {
+                XCTAssertFalse(path.contains("changed-"))
+                XCTAssertTrue(text.contains("morning_ends"))
+                if path.hasSuffix(".json") {
+                    let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+                    let sleep = try XCTUnwrap(root["sleep"] as? [String: Any])
+                    XCTAssertEqual((sleep["sleepStages"] as? [[String: Any]])?.count, 2000)
+                    XCTAssertEqual(sleep["totalDuration"] as? Double, 57600)
+                }
+            }
+        }
+    }
+
+    @MainActor
     func testDerivedOutputRetention_releasesLooseDaysAndStripsRollupArchives() {
         let date = HealthKitFixtures.referenceDate
         let end = Calendar.current.date(byAdding: .day, value: 1, to: date)!
@@ -1792,5 +1868,44 @@ private final class RecordingBackgroundAppleExportPlanner: AppleLooseDailyExport
     ) async throws -> AppleLooseDailyPlanResolution {
         calls.append(Call(snapshot: settingsSnapshot, surface: surface))
         return .legacy
+    }
+}
+
+@MainActor
+private final class DetailedPinnedDayProbe {
+    var captures = 0
+    var commits = 0
+    var stageCounts: [Int] = []
+    var pins: [AppleExportEnginePin] = []
+    var rangeBatchSizes: [Int] = []
+    nonisolated deinit {}
+}
+
+@MainActor
+private final class DetailedPinnedDayPlanner: AppleLooseDailyRangeExportPlanning {
+    let probe: DetailedPinnedDayProbe
+    let delegate = AppleLooseDailyExportPlanner()
+    init(probe: DetailedPinnedDayProbe) { self.probe = probe }
+    nonisolated deinit {}
+
+    func plan(healthData: HealthData, settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface) async throws -> AppleLooseDailyPlanResolution {
+        probe.stageCounts.append(healthData.sleep.stages.count)
+        if let pin = settingsSnapshot.appleExportEnginePin { probe.pins.append(pin) }
+        return try await delegate.plan(healthData: healthData, settingsSnapshot: settingsSnapshot, surface: surface)
+    }
+
+    func planRange(healthData: [HealthData], settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface) async throws -> AppleLooseDailyPlanResolution {
+        probe.rangeBatchSizes.append(healthData.count)
+        return try await delegate.planRange(healthData: healthData, settingsSnapshot: settingsSnapshot, surface: surface)
+    }
+
+    func planRange(healthData: [HealthData], dailyOutputOwnerDates: Set<String>, requestedRange: HealthRollupRangeRequest?,
+        settingsSnapshot: ExportSettingsSnapshot, surface: AppleExportOperationSurface,
+        operationIdentity: AppleExportOperationIdentity?) async throws -> AppleLooseDailyPlanResolution {
+        probe.rangeBatchSizes.append(healthData.count)
+        return try await delegate.planRange(healthData: healthData, dailyOutputOwnerDates: dailyOutputOwnerDates,
+            requestedRange: requestedRange, settingsSnapshot: settingsSnapshot, surface: surface, operationIdentity: operationIdentity)
     }
 }

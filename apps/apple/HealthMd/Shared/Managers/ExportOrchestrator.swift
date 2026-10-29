@@ -513,7 +513,6 @@ struct ExportOrchestrator {
         vaultManager.clearLastExportPresentationTarget()
 
         let totalDays = dates.count
-        let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
         var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
@@ -543,6 +542,8 @@ struct ExportOrchestrator {
         )
         let frozenOperationSettings = operationSettingsSnapshot.makeAdvancedExportSettings()
         frozenOperationSettings.exportTimeZoneOverride = sourceTimeZone
+        let settings = frozenOperationSettings
+        let formatsPerDate = looseFormatsPerDate(settings: settings)
         do {
             try vaultManager.preflightExportDestinations(
                 settings: frozenOperationSettings,
@@ -569,7 +570,10 @@ struct ExportOrchestrator {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
-        if operationSettingsSnapshot.appleExportEnginePin != nil {
+        // Daily-only operations commit and release each detailed capture before the next
+        // query. Rollups still require the range planner's shared summary corpus.
+        if operationSettingsSnapshot.appleExportEnginePin != nil,
+           !operationSettingsSnapshot.operationRollupPeriods.isEmpty {
             return await exportForegroundPinnedSimpleRange(
                 dates,
                 healthKitManager: healthKitManager,
@@ -1262,7 +1266,6 @@ struct ExportOrchestrator {
         externalIntegrations?.beginExportAction()
         defer { externalIntegrations?.endExportAction() }
         vaultManager.clearLastExportPresentationTarget()
-        let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
         var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
@@ -1277,6 +1280,8 @@ struct ExportOrchestrator {
         var shouldWriteDataDictionary = true
         let frozenOperationSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings()
             ?? settings
+        let settings = frozenOperationSettings
+        let formatsPerDate = looseFormatsPerDate(settings: settings)
         do {
             try vaultManager.preflightExportDestinations(
                 settings: frozenOperationSettings,
@@ -1304,7 +1309,8 @@ struct ExportOrchestrator {
         defer { archiveSpool?.cleanup() }
 
         if let frozenSettingsSnapshot,
-           frozenSettingsSnapshot.appleExportEnginePin != nil {
+           frozenSettingsSnapshot.appleExportEnginePin != nil,
+           !frozenSettingsSnapshot.operationRollupPeriods.isEmpty {
             guard let identifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
                   let sourceTimeZone = TimeZone(identifier: identifier) else {
                 return ExportResult(
