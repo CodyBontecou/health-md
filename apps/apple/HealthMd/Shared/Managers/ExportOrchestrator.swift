@@ -921,6 +921,12 @@ struct ExportOrchestrator {
         acceptedDestination: AppleLooseDailyRangeDestination? = nil,
         onProgress: ((Int, Int, String) -> Void)?
     ) async -> ExportResult {
+        // The outer caller can share the manager with other phases. A failed
+        // staged capture must veto acknowledgement even when its caller ends
+        // an enclosing action through the historical success convenience.
+        externalIntegrations?.beginExportAction()
+        var providerCaptureCommitted = false
+        defer { externalIntegrations?.endExportAction(succeeded: providerCaptureCommitted) }
         let totalCount = dates.count
         var calendar = Calendar.current
         calendar.timeZone = sourceTimeZone
@@ -975,7 +981,8 @@ struct ExportOrchestrator {
         )
         let captureDates = sourceDates.isEmpty ? dates : sourceDates
         let stageDailyArtifacts = !isSummaryOnly
-            && (!effectiveSettingsSnapshot.operationRollupPeriods.isEmpty || externalIntegrations != nil)
+            && (!effectiveSettingsSnapshot.operationRollupPeriods.isEmpty || externalIntegrations != nil
+                || acceptedDestination != nil)
             && effectiveSettingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
         let identity = AppleExportOperationIdentitySource().capture(calendarTimeZoneIdentifier: sourceTimeZone.identifier)
         let dailySnapshot = effectiveSettingsSnapshot.forDailyArtifactPreview()
@@ -1189,6 +1196,7 @@ struct ExportOrchestrator {
                 }
                 writeResult = result
             }
+            providerCaptureCommitted = writeResult.totalFileCount > 0
             if isSummaryOnly {
                 let filesWritten = writeResult.rollupFileCount
                     + writeResult.dataDictionaryFileCount
@@ -1350,6 +1358,42 @@ struct ExportOrchestrator {
         }
         #endif
         let externalIntegrations = externalIntegrations?.forCaptureOperation()
+        let wakeDateContext = AppleSleepCaptureContext.pinned.wrappedValue
+        let isWakeDate = wakeDateContext?.sleepDayAttribution == .morningEnds
+        let sourceSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings() ?? settings
+        let hasProviderSideEffects = sourceSettings.writesExternalProviderSidecars
+            && ConnectedAppsFeature.isEnabled && (externalIntegrations?.connectedProviderCount ?? 0) > 0
+        // A saved renderer pin is not provider/account capture authority. Until
+        // that authority is persisted, recovered work cannot select a live grant.
+        let hasFrozenAuthority = frozenSettingsSnapshot != nil
+            || settings.executionAppleExportEngineAuthorityIsFrozen
+            || settings.executionSleepCaptureContextIsFrozen
+        if isWakeDate && hasProviderSideEffects && hasFrozenAuthority {
+            return unavailableSleepContextResult(dates: dates, settings: settings,
+                error: AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution)
+        }
+        var operationSnapshot = frozenSettingsSnapshot
+        var admittedSurface = operationSurface
+        var acceptedDestination: AppleLooseDailyRangeDestination?
+        let isFreshWakeDate = isWakeDate && frozenSettingsSnapshot == nil
+        if isFreshWakeDate {
+            do { acceptedDestination = try vaultManager.freezeHealthDataRangeDestination() }
+            catch {
+                return ExportResult(successCount: 0, totalCount: dates.count,
+                    failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .fileWriteError, errorDetails: error.localizedDescription) },
+                    formatsPerDate: looseFormatsPerDate(settings: settings))
+            }
+            admittedSurface = hasProviderSideEffects ? .localVaultRangeWithProviderSidecars : .localVaultRangeWithoutSideEffects
+            operationSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+                healthSubfolder: vaultManager.healthSubfolder, calendarTimeZone: wakeDateContext?.timeZone,
+                surface: admittedSurface)
+            guard operationSnapshot?.appleExportEnginePin?.isWakeDate == true else {
+                return unavailableSleepContextResult(dates: dates, settings: settings,
+                    error: AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution)
+            }
+        }
+        let frozenSettingsSnapshot = operationSnapshot
+        let operationSurface = admittedSurface
         externalIntegrations?.beginExportAction()
         defer { externalIntegrations?.endExportAction() }
         vaultManager.clearLastExportPresentationTarget()
@@ -1397,7 +1441,7 @@ struct ExportOrchestrator {
 
         if let frozenSettingsSnapshot,
            frozenSettingsSnapshot.appleExportEnginePin != nil,
-           !frozenSettingsSnapshot.operationRollupPeriods.isEmpty {
+           !frozenSettingsSnapshot.operationRollupPeriods.isEmpty || isFreshWakeDate {
             guard let identifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
                   let sourceTimeZone = TimeZone(identifier: identifier) else {
                 return ExportResult(
@@ -1421,6 +1465,8 @@ struct ExportOrchestrator {
                 settingsSnapshot: frozenSettingsSnapshot,
                 operationSurface: operationSurface,
                 sourceTimeZone: sourceTimeZone,
+                externalIntegrations: isFreshWakeDate && hasProviderSideEffects ? externalIntegrations : nil,
+                acceptedDestination: acceptedDestination,
                 onProgress: onProgress
             )
         }

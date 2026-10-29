@@ -1831,88 +1831,191 @@ final class ExportOrchestratorTests: XCTestCase {
         let wake = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: first))
         let start = try XCTUnwrap(calendar.date(bySettingHour: 10, minute: 0, second: 0, of: first))
         let end = try XCTUnwrap(calendar.date(bySettingHour: 13, minute: 0, second: 0, of: wake))
-        for scenario in ["daily", "range", "destination", "cancel", "invalid"] {
-            let includeRange = scenario != "daily"
-            let store = FakeHealthStore()
-            store.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
-            store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
-                CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)
-            ]
-            let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
-            manager.setSleepDayAttribution(.morningEnds)
-            let (vault, files) = makeVaultManager(vaultPath: "/tmp/MorningProvider-\(includeRange)")
-            let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: includeRange ? [.range] : [])
-            settings.executionSleepCaptureContext = nil
-            settings.exportTimeZoneOverride = zone
-            settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
-            settings.detailPolicy = .summary
-            settings.includeDataDictionary = false
-            settings.includeMetadata = true
-            let providers = MorningProviderRangeProbe()
-            providers.invalidDate = scenario == "invalid"
-            let pending = Task { await ExportOrchestrator.exportDates([first, wake], healthKitManager: manager,
-                vaultManager: vault, settings: settings, externalIntegrations: providers,
-                onProgress: { _, _, _ in
+        for background in [false, true] {
+            for scenario in ["daily", "range", "primary", "primary_daily", "destination", "cancel", "invalid"] {
+                let includeRange = !["daily", "primary_daily"].contains(scenario)
+                let includesProvider = !["primary", "primary_daily"].contains(scenario)
+                let expectedSidecars = includesProvider ? 2 : 0
+                let store = FakeHealthStore()
+                store.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
+                store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+                    CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)
+                ]
+                let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+                manager.setSleepDayAttribution(.morningEnds)
+                let (vault, files) = makeVaultManager(vaultPath: "/tmp/MorningProvider-\(includeRange)")
+                let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: includeRange ? [.range] : [])
+                settings.executionSleepCaptureContext = nil
+                settings.exportTimeZoneOverride = zone
+                settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
+                settings.detailPolicy = .summary
+                settings.includeDataDictionary = false
+                settings.includeMetadata = true
+                let providers = MorningProviderRangeProbe()
+                providers.invalidDate = scenario == "invalid"
+                let progress: (Int, Int, String) -> Void = { _, _, _ in
                     providers.strain = 999
                     vault.healthSubfolder = "Changed"
                     if scenario == "destination" { vault.vaultURL = URL(fileURLWithPath: "/tmp/MorningProviderChanged") }
                     if scenario == "cancel" { withUnsafeCurrentTask { $0?.cancel() } }
                     manager.setSleepDayAttribution(.nightBegins)
                     settings.exportTimeZoneOverride = TimeZone(identifier: "Europe/Berlin")
-                }) }
-            let result = await pending.value
-            if ["destination", "cancel", "invalid"].contains(scenario) {
-                XCTAssertEqual(result.successCount, 0, scenario)
-                XCTAssertEqual(result.totalFilesWritten, 0, scenario)
-                XCTAssertTrue(files.files.isEmpty, "Every byte must be staged and preflighted before destination effects: " + scenario)
-                if scenario == "cancel" { XCTAssertTrue(result.wasCancelled) }
-                else { XCTAssertFalse(result.failedDateDetails.isEmpty) }
-                continue
+                }
+                let pending = Task {
+                    if background {
+                        return await ExportOrchestrator.exportDatesBackground([first, wake], healthKitManager: manager,
+                            vaultManager: vault, settings: settings, externalIntegrations: includesProvider ? providers : nil, onProgress: progress)
+                    }
+                    return await ExportOrchestrator.exportDates([first, wake], healthKitManager: manager,
+                        vaultManager: vault, settings: settings, externalIntegrations: includesProvider ? providers : nil, onProgress: progress)
+                }
+                let result = await pending.value
+                if ["destination", "cancel", "invalid"].contains(scenario) {
+                    XCTAssertEqual(result.successCount, 0, scenario)
+                    XCTAssertEqual(result.totalFilesWritten, 0, scenario)
+                    XCTAssertTrue(files.files.isEmpty, "Every byte must be staged and preflighted before destination effects: " + scenario)
+                    XCTAssertTrue(try XCTUnwrap(providers.accepted).completionSignals.contains(false),
+                                  "An uncommitted provider capture must mark the enclosing action unsuccessful")
+                    if scenario == "cancel" { XCTAssertTrue(result.wasCancelled) }
+                    else { XCTAssertFalse(result.failedDateDetails.isEmpty) }
+                    continue
+                }
+                XCTAssertFalse(files.files.keys.contains { $0.contains("/Changed/") })
+                XCTAssertEqual(result.successCount, 2, "\(result.failedDateDetails)")
+                XCTAssertEqual(result.externalRecordFileCount, expectedSidecars)
+                XCTAssertEqual(result.looseAggregateFileCount, 8)
+                XCTAssertEqual(result.rollupFileCount, includeRange ? 4 : 0)
+                XCTAssertEqual(result.totalFilesWritten, (includeRange ? 12 : 8) + expectedSidecars)
+                XCTAssertEqual(files.files.count, (includeRange ? 12 : 8) + expectedSidecars)
+                XCTAssertEqual(providers.bindCount, includesProvider ? 1 : 0)
+                XCTAssertEqual(providers.liveFetchCount, 0)
+                if includesProvider {
+                    let child = try XCTUnwrap(providers.accepted)
+                    XCTAssertEqual(child.calendars, [zone.identifier, zone.identifier])
+                    XCTAssertFalse(child.completionSignals.isEmpty)
+                    XCTAssertTrue(child.completionSignals.allSatisfy { $0 })
+                }
+                let sidecars = files.files.filter { $0.key.contains("/integrations/") }
+                XCTAssertEqual(sidecars.count, expectedSidecars)
+                for value in sidecars.values {
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let record = try decoder.decode(ExternalDailyRecord.self, from: Data(value.utf8))
+                    XCTAssertEqual(record.schemaVersion, 1)
+                    XCTAssertEqual(record.provider, .whoop)
+                    XCTAssertFalse(record.payloads.isEmpty)
+                    XCTAssertFalse(value.contains("999"))
+                    XCTAssertFalse(value.contains("morning_ends"), "Provider-native facts keep independent semantics")
+                }
+                let dailyFormats = files.files.filter { !$0.key.contains("/integrations/") && !$0.key.contains("Rollups") }
+                XCTAssertEqual(dailyFormats.count, 8)
+                for content in dailyFormats.values {
+                    XCTAssertEqual(content.lowercased().contains("whoop"), includesProvider,
+                                   "Provider participation must match the accepted source")
+                    XCTAssertTrue(content.contains("morning_ends"))
+                    XCTAssertTrue(content.replacingOccurrences(of: "\\/", with: "/").contains(zone.identifier))
+                    XCTAssertFalse(content.contains("Europe/Berlin"))
+                }
+                let daily = try files.files.filter { $0.key.hasSuffix(".json") && !$0.key.contains("/integrations/") }.map {
+                    try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.value.utf8)) as? [String: Any])
+                }.filter { $0["date"] as? String != nil }
+                XCTAssertEqual(daily.count, 2)
+                for object in daily {
+                    XCTAssertEqual(object["schema_version"] as? Int, 11)
+                    if includesProvider {
+                        let provider = try XCTUnwrap((object["providers"] as? [String: Any])?["whoop"] as? [String: Any])
+                        XCTAssertEqual(provider["schema_version"] as? Int, 1)
+                    } else { XCTAssertNil(object["providers"]) }
+                }
+                let owned = try XCTUnwrap(daily.first { $0["sleep"] != nil })
+                XCTAssertEqual(owned["date"] as? String, "2026-07-02")
+                XCTAssertEqual((owned["sleep"] as? [String: Any])?["totalDuration"] as? Double, 27 * 60 * 60)
             }
-            XCTAssertFalse(files.files.keys.contains { $0.contains("/Changed/") })
-            XCTAssertEqual(result.successCount, 2, "\(result.failedDateDetails)")
-            XCTAssertEqual(result.externalRecordFileCount, 2)
-            XCTAssertEqual(result.looseAggregateFileCount, 8)
-            XCTAssertEqual(result.rollupFileCount, includeRange ? 4 : 0)
-            XCTAssertEqual(result.totalFilesWritten, includeRange ? 14 : 10)
-            XCTAssertEqual(files.files.count, includeRange ? 14 : 10)
-            XCTAssertEqual(providers.bindCount, 1)
-            XCTAssertEqual(providers.liveFetchCount, 0)
-            let child = try XCTUnwrap(providers.accepted)
-            XCTAssertEqual(child.calendars, [zone.identifier, zone.identifier])
-            let sidecars = files.files.filter { $0.key.contains("/integrations/") }
-            XCTAssertEqual(sidecars.count, 2)
-            for value in sidecars.values {
-                let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .iso8601
-                let record = try decoder.decode(ExternalDailyRecord.self, from: Data(value.utf8))
-                XCTAssertEqual(record.schemaVersion, 1)
-                XCTAssertEqual(record.provider, .whoop)
-                XCTAssertFalse(record.payloads.isEmpty)
-                XCTAssertFalse(value.contains("999"))
-                XCTAssertFalse(value.contains("morning_ends"), "Provider-native facts keep independent semantics")
-            }
-            let dailyFormats = files.files.filter { !$0.key.contains("/integrations/") && !$0.key.contains("Rollups") }
-            XCTAssertEqual(dailyFormats.count, 8)
-            for content in dailyFormats.values {
-                XCTAssertTrue(content.lowercased().contains("whoop"), "Each selected format must retain native provider facts")
-                XCTAssertTrue(content.contains("morning_ends"))
-                XCTAssertTrue(content.replacingOccurrences(of: "\\/", with: "/").contains(zone.identifier))
-                XCTAssertFalse(content.contains("Europe/Berlin"))
-            }
-            let daily = try files.files.filter { $0.key.hasSuffix(".json") && !$0.key.contains("/integrations/") }.map {
-                try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.value.utf8)) as? [String: Any])
-            }.filter { $0["date"] as? String != nil }
-            XCTAssertEqual(daily.count, 2)
-            for object in daily {
-                XCTAssertEqual(object["schema_version"] as? Int, 11)
-                let provider = try XCTUnwrap((object["providers"] as? [String: Any])?["whoop"] as? [String: Any])
-                XCTAssertEqual(provider["schema_version"] as? Int, 1)
-            }
-            let owned = try XCTUnwrap(daily.first { $0["sleep"] != nil })
-            XCTAssertEqual(owned["date"] as? String, "2026-07-02")
-            XCTAssertEqual((owned["sleep"] as? [String: Any])?["totalDuration"] as? Double, 27 * 60 * 60)
         }
+    }
+
+    @MainActor
+    func testFrozenMorningBackgroundCannotAcquireLiveProviderAuthority() async throws {
+        guard ConnectedAppsFeature.isEnabled else { throw XCTSkip("Requires Connected Apps test host") }
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        manager.setSleepDayAttribution(.morningEnds)
+        let (vault, files) = makeVaultManager(vaultPath: "/tmp/FrozenMorningProviderAuthority")
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.executionSleepCaptureContext = nil
+        settings.exportTimeZoneOverride = zone
+        settings.includeDataDictionary = false
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let snapshot = await AppleSleepCaptureContext.pinned.withValue(context) {
+            await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: vault.healthSubfolder,
+                calendarTimeZone: zone, surface: .localVaultRangeWithProviderSidecars)
+        }
+        XCTAssertTrue(try XCTUnwrap(snapshot.appleExportEnginePin).isWakeDate)
+        let originalPin = snapshot.appleExportEnginePin
+        manager.setSleepDayAttribution(.nightBegins)
+        settings.exportTimeZoneOverride = TimeZone(identifier: "Europe/Berlin")
+        settings.summaryOnlyExport = true
+        XCTAssertFalse(settings.writesExternalProviderSidecars)
+        XCTAssertTrue(snapshot.makeAdvancedExportSettings().writesExternalProviderSidecars)
+        for passesSnapshot in [true, false] {
+            let providers = MorningProviderRangeProbe()
+            let suppliedSettings = passesSnapshot ? settings : snapshot.makeAdvancedExportSettings()
+            let result = await ExportOrchestrator.exportDatesBackground([HealthKitFixtures.referenceDate],
+                healthKitManager: manager, vaultManager: vault, settings: suppliedSettings,
+                frozenSettingsSnapshot: passesSnapshot ? snapshot : nil, operationSurface: .localVaultRangeWithProviderSidecars,
+                externalIntegrations: providers)
+            XCTAssertEqual(result.successCount, 0)
+            XCTAssertEqual(result.totalFilesWritten, 0)
+            XCTAssertFalse(result.failedDateDetails.isEmpty)
+            XCTAssertTrue(files.files.isEmpty)
+            XCTAssertTrue(store.queriedSumIdentifiers.isEmpty)
+            XCTAssertTrue(try XCTUnwrap(providers.accepted).calendars.isEmpty)
+            XCTAssertEqual(snapshot.appleExportEnginePin, originalPin)
+        }
+    }
+
+    @MainActor
+    func testFrozenMorningSummaryIgnoresLiveProviderParticipationChanges() async throws {
+        guard ConnectedAppsFeature.isEnabled else { throw XCTSkip("Requires Connected Apps test host") }
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        manager.setSleepDayAttribution(.morningEnds)
+        let (vault, files) = makeVaultManager(vaultPath: "/tmp/FrozenMorningProviderAuthority")
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.executionSleepCaptureContext = nil
+        settings.exportTimeZoneOverride = zone
+        settings.includeDataDictionary = false
+        settings.summaryOnlyExport = true
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let snapshot = await AppleSleepCaptureContext.pinned.withValue(context) {
+            await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: vault.healthSubfolder,
+                calendarTimeZone: zone, surface: .localVaultRangeWithoutSideEffects)
+        }
+        XCTAssertTrue(try XCTUnwrap(snapshot.appleExportEnginePin).isWakeDate)
+        let originalPin = snapshot.appleExportEnginePin
+        manager.setSleepDayAttribution(.nightBegins)
+        settings.exportTimeZoneOverride = TimeZone(identifier: "Europe/Berlin")
+        settings.summaryOnlyExport = false
+        XCTAssertTrue(settings.writesExternalProviderSidecars)
+        XCTAssertFalse(snapshot.makeAdvancedExportSettings().writesExternalProviderSidecars)
+        let providers = MorningProviderRangeProbe()
+        let result = await ExportOrchestrator.exportDatesBackground([HealthKitFixtures.referenceDate],
+            healthKitManager: manager, vaultManager: vault, settings: settings,
+            frozenSettingsSnapshot: snapshot, operationSurface: .localVaultRangeWithoutSideEffects,
+            externalIntegrations: providers)
+        XCTAssertEqual(result.successCount, 1, "\(result.failedDateDetails)")
+        XCTAssertEqual(result.totalFilesWritten, 1)
+        XCTAssertEqual(result.rollupFileCount, 1)
+        XCTAssertEqual(result.externalRecordFileCount, 0)
+        XCTAssertTrue(result.failedDateDetails.isEmpty)
+        XCTAssertEqual(files.files.count, 1)
+        XCTAssertFalse(store.queriedSumIdentifiers.isEmpty)
+        XCTAssertTrue(try XCTUnwrap(providers.accepted).calendars.isEmpty)
+        XCTAssertEqual(snapshot.appleExportEnginePin, originalPin)
     }
 
     @MainActor
@@ -2224,6 +2327,8 @@ private final class MorningProviderRangeProbe: ExternalIntegrationDailyRecordPro
         let strain: Double
         let invalidDate: Bool
         var calendars: [String] = []
+        var completionSignals: [Bool] = []
+        func endExportAction(succeeded: Bool) { completionSignals.append(succeeded) }
         var connectedProviderCount: Int { 1 }
         init(strain: Double, invalidDate: Bool) { self.strain = strain; self.invalidDate = invalidDate }
         func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
