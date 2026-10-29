@@ -37,20 +37,7 @@ class WhoopMorningEndsExportTest {
             val requests = mutableListOf<CloudHttpRequest>()
             val repository = repository(case, requests)
             val payloads = mutableListOf<String>()
-            val json = JsonExporter()
-            val runner = APIEndpointExportRunner(repository, APIExportEnvelopeBuilder(json), json,
-                object : APIExportUploader {
-                    override suspend fun upload(endpointUrl: String, payload: String, authorizationHeader: String?,
-                        requestHeaders: List<APIExportRequestHeader>): APIExportUploadResult {
-                        payloads += payload
-                        return APIExportUploadResult(202)
-                    }
-                }, object : APIExportCredentialStore {
-                    override suspend fun authorizationHeader(): String? = null
-                    override suspend fun hasAuthorization() = false
-                    override suspend fun saveAuthorization(value: String) = Unit
-                    override suspend fun clearAuthorization() = Unit
-                })
+            val runner = runner(repository, payloads)
             val settings = ExportSettings(exportFormat = ExportFormat.JSON, exportFormats = setOf(ExportFormat.JSON),
                 includeGranularData = true, exportTarget = ExportTarget.API_ENDPOINT,
                 apiEndpointUrl = "https://api.example.invalid/healthmd", executionSleepCaptureContext = context,
@@ -113,6 +100,86 @@ class WhoopMorningEndsExportTest {
         writeEvidence(case.name, output)
     }
 
+    @Test
+    fun selectedMorningEndpointFailuresCannotUploadPartialDays() = runTest {
+        val case = Case("failure", "Etc/UTC", "2026-07-02", "2026-07-01T22:00:00Z", "2026-07-02T06:00:00Z", 28_800_000)
+        for (mode in listOf("empty", "http", "malformed", "envelope", "cycle", "cap", "http-workout", "http-recovery")) {
+            val requests = mutableListOf<CloudHttpRequest>()
+            val payloads = mutableListOf<String>()
+            val repository = repository(case, requests, mode)
+            val context = AndroidCaptureContext(ZoneId.of(case.zone), SleepDayAttribution.MORNING_ENDS)
+            val settings = ExportSettings(exportFormat = ExportFormat.JSON, exportFormats = setOf(ExportFormat.JSON),
+                includeGranularData = true, exportTarget = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = "https://api.example.invalid/healthmd", executionSleepCaptureContext = context,
+                executionSleepCaptureAuthorityIsFrozen = true)
+            val result = runner(repository, payloads).exportDates(listOf(LocalDate.parse(case.owner)), settings)
+            if (mode == "empty") {
+                assertThat(result.successCount).isEqualTo(1)
+                assertThat(result.failedDateDetails).isEmpty()
+                assertThat(payloads).hasSize(1)
+            } else {
+                assertThat(result.successCount).isEqualTo(0)
+                assertThat(result.failedDateDetails.map { it.date }).containsExactly(LocalDate.parse(case.owner))
+                assertThat(payloads).hasSize(1)
+                val envelope = Json.parseToJsonElement(payloads.single()).jsonObject
+                assertThat(envelope.getValue("records").jsonArray).isEmpty()
+                assertThat(envelope.getValue("failed_date_details").jsonArray).hasSize(1)
+                assertThat(payloads.single()).contains("whoop cloud request failed")
+            }
+        }
+    }
+
+    @Test
+    fun unselectedMorningEndpointsAreNotRequestedAndNightRetainsTolerance() = runTest {
+        val case = Case("selection", "UTC", "2027-01-01", "2026-07-01T22:00:00Z", "2026-07-02T06:00:00Z", 28_800_000)
+        val requests = mutableListOf<CloudHttpRequest>()
+        val repository = repository(case, requests, "http").forCaptureOperation()
+        val day = LocalDate.parse(case.owner)
+        val data = repository.fetchHealthDataRange(listOf(day),
+            dataTypes = DataTypeSelection().deselectAll().copy(heart = true), zoneId = ZoneOffset.UTC,
+            sleepDayAttributionOverride = AndroidCaptureContext(ZoneOffset.UTC, SleepDayAttribution.MORNING_ENDS).explicitSleepDayAttributionOverride).single()
+        assertThat(data.heart.restingHeartRate).isEqualTo(55.0)
+        assertThat(requests.map { it.url.path.substringAfterLast('/') }).containsExactly("recovery")
+        requests.clear()
+        val night = repository.fetchHealthDataRange(listOf(day), zoneId = ZoneOffset.UTC,
+            sleepDayAttributionOverride = AndroidCaptureContext(ZoneOffset.UTC, SleepDayAttribution.NIGHT_BEGINS).explicitSleepDayAttributionOverride).single()
+        assertThat(night.heart.restingHeartRate).isEqualTo(55.0)
+        assertThat(night.sleep.sessions).isEmpty()
+        assertThat(requests.map { it.url.path.substringAfterLast('/') }).containsExactly("sleep", "workout", "recovery", "body")
+    }
+
+    @Test
+    fun selectedCurrentBodyFailureCannotBecomeEmptyMorningData() = runTest {
+        val case = Case("body", "Etc/UTC", "2027-01-01", "2026-12-31T22:00:00Z", "2027-01-01T06:00:00Z", 28_800_000)
+        val requests = mutableListOf<CloudHttpRequest>()
+        val repository = repository(case, requests, "http-body").forCaptureOperation()
+        val error = try {
+            repository.fetchHealthDataRange(listOf(LocalDate.parse(case.owner)),
+                dataTypes = DataTypeSelection().deselectAll().copy(body = true), zoneId = ZoneId.of(case.zone),
+                sleepDayAttributionOverride = AndroidCaptureContext(ZoneId.of(case.zone), SleepDayAttribution.MORNING_ENDS).explicitSleepDayAttributionOverride)
+            null
+        } catch (error: CloudHealthRequestException) { error }
+        assertThat(error?.message).isEqualTo("whoop cloud request failed")
+        assertThat(requests.map { it.url.path.substringAfterLast('/') }).containsExactly("body")
+    }
+
+    private fun runner(repository: HealthRepositoryImpl, payloads: MutableList<String>): APIEndpointExportRunner {
+        val json = JsonExporter()
+        return APIEndpointExportRunner(repository, APIExportEnvelopeBuilder(json), json,
+                object : APIExportUploader {
+                    override suspend fun upload(endpointUrl: String, payload: String, authorizationHeader: String?,
+                        requestHeaders: List<APIExportRequestHeader>): APIExportUploadResult {
+                        payloads += payload
+                        return APIExportUploadResult(202)
+                    }
+                }, object : APIExportCredentialStore {
+                    override suspend fun authorizationHeader(): String? = null
+                    override suspend fun hasAuthorization() = false
+                    override suspend fun saveAuthorization(value: String) = Unit
+                    override suspend fun clearAuthorization() = Unit
+                })
+    }
+
     private fun writeEvidence(name: String, json: String) {
         val folder = System.getenv("HEALTHMD_WHOOP_V6_QA_OUTPUT_DIR") ?: return
         val path = java.nio.file.Path.of(folder)
@@ -120,7 +187,7 @@ class WhoopMorningEndsExportTest {
         java.nio.file.Files.write(path.resolve("whoop-$name-v6.json"), json.toByteArray(Charsets.UTF_8))
     }
 
-    private fun repository(case: Case, requests: MutableList<CloudHttpRequest>): HealthRepositoryImpl {
+    private fun repository(case: Case, requests: MutableList<CloudHttpRequest>, failure: String? = null): HealthRepositoryImpl {
         val token = OAuthToken("whoop", "synthetic")
         val config = OAuthProviderConfig("whoop", "WHOOP", "https://auth.example.test", "https://token.example.test",
             "synthetic-client", scopes = listOf("read:sleep"))
@@ -135,7 +202,23 @@ class WhoopMorningEndsExportTest {
                 """ else if (request.url.path.endsWith("/workout") && case.workout) """
                     {"records":[{"id":"$ID","start":"${case.start}","end":"${case.end}","sport_name":"walking","score_state":"SCORED"}]}
                 """ else """{"records":[]}"""
-                CloudHttpResponse(200, "application/json", body = body.toByteArray())
+                val isSleep = request.url.path.endsWith("/sleep")
+                val responseBody = when {
+                    isSleep && failure == "empty" -> """{"records":[]}"""
+                    isSleep && failure == "malformed" -> "not json"
+                    isSleep && failure == "envelope" -> "{}"
+                    isSleep && failure in listOf("cycle", "cap") -> body.trim().dropLast(1) +
+                        ",\"next_token\":\"${if (failure == "cycle") "repeat" else requests.size}\"}"
+                    request.url.path.endsWith("/recovery") && failure != null ->
+                        """{"records":[{"cycle_id":42,"score":{"resting_heart_rate":55}}]}"""
+                    else -> body
+                }
+                val httpFailure = (isSleep && failure == "http") ||
+                    (failure == "http-workout" && request.url.path.endsWith("/workout")) ||
+                    (failure == "http-recovery" && request.url.path.endsWith("/recovery")) ||
+                    (failure == "http-body" && request.url.path.endsWith("/body"))
+                CloudHttpResponse(if (httpFailure) 503 else 200,
+                    "application/json", body = responseBody.toByteArray())
             })
         val provider = WhoopCloudDataProvider(client, clock = Clock.fixed(Instant.parse("2027-01-01T12:00:00Z"), ZoneOffset.UTC))
         val settings = mockk<SettingsRepository>()

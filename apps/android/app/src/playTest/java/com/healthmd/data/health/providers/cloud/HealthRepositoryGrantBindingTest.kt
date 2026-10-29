@@ -51,7 +51,14 @@ class HealthRepositoryGrantBindingTest {
             tokens.saveToken(OAuthToken("whoop", "replacement"))
             requests.clear()
             assertThat(accepted.hasPermissions()).isFalse()
-            accepted.fetchHealthDataRange(listOf(next), zoneId = ZoneOffset.UTC, sleepDayAttributionOverride = context)
+            val failure = runCatching {
+                accepted.fetchHealthDataRange(listOf(next), zoneId = ZoneOffset.UTC, sleepDayAttributionOverride = context)
+            }.exceptionOrNull()
+            if (mode == SleepDayAttribution.MORNING_ENDS) {
+                assertThat(failure).isInstanceOf(CloudHealthRequestException::class.java)
+            } else {
+                assertThat(failure).isNull()
+            }
             assertThat(requests).isEmpty()
             repository.forCaptureOperation().fetchHealthDataRange(listOf(next), zoneId = ZoneOffset.UTC,
                 sleepDayAttributionOverride = context)
@@ -68,8 +75,11 @@ class HealthRepositoryGrantBindingTest {
         val accepted = repository.forCaptureOperation()
         tokens.saveToken(OAuthToken("whoop", "late-login"))
         assertThat(accepted.hasPermissions()).isFalse()
-        accepted.fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
-            SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS))
+        val failure = runCatching {
+            accepted.fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
+                SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS))
+        }.exceptionOrNull()
+        assertThat(failure).isInstanceOf(CloudHealthRequestException::class.java)
         assertThat(requests).isEmpty()
         repository.forCaptureOperation().fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
             SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS))

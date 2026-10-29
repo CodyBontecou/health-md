@@ -115,11 +115,11 @@ class WhoopCloudDataProvider(
         return CloudNativeEndpointResult(endpointKey, pages.toLong(), failure)
     }
 
-    private suspend fun fetchCollection(endpointKey: String, start: String, end: String): List<JsonObject> {
+    private suspend fun fetchCollection(endpointKey: String, start: String, end: String, requireComplete: Boolean = false): List<JsonObject> {
         val records = mutableListOf<JsonObject>()
         val identityKey = if (endpointKey == RECOVERY) "cycle_id" else "id"
         val seenIds = mutableSetOf<String>()
-        readCollection(endpointKey, start, end, onPage = { page ->
+        val result = readCollection(endpointKey, start, end, onPage = { page ->
             page.array("records")!!.mapNotNull { it.obj() }.forEach { record ->
                 val identity = (record[identityKey] as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank)
                 // Keep the first captured view; absent identities must not collapse unrelated records.
@@ -127,6 +127,9 @@ class WhoopCloudDataProvider(
                 if (identity == null || seenIds.add(identity)) records += record
             }
         })
+        // Legacy projections tolerate failed endpoints. Morning must not publish a
+        // selected category as empty or complete when traversal stopped early.
+        if (requireComplete && result.failure != null) throw CloudHealthRequestException(providerId)
         return records
     }
 
@@ -146,11 +149,12 @@ class WhoopCloudDataProvider(
     ): List<HealthData> {
         AndroidCaptureContext(zoneId, sleepDayAttribution).requireShippedProfile()
         val today = LocalDate.now((clock ?: Clock.systemUTC()).withZone(zoneId))
-        return dates.map { fetchHealthData(it, zoneId, today, sleepDayAttribution).filtered(dataTypes) }
+        return dates.map { fetchHealthData(it, zoneId, today, sleepDayAttribution, dataTypes).filtered(dataTypes) }
     }
 
     private suspend fun fetchHealthData(date: LocalDate, zone: ZoneId, today: LocalDate,
-        attribution: SleepDayAttribution = SleepDayAttribution.NIGHT_BEGINS): HealthData {
+        attribution: SleepDayAttribution = SleepDayAttribution.NIGHT_BEGINS,
+        dataTypes: DataTypeSelection = DataTypeSelection()): HealthData {
         val wakeDate = attribution == SleepDayAttribution.MORNING_ENDS
         val start = date.atStartOfDay(zone).toInstant().toString()
         val end = date.plusDays(1).atStartOfDay(zone).toInstant().toString()
@@ -160,7 +164,7 @@ class WhoopCloudDataProvider(
         // includes a session ending exactly at local midnight; ownership remains
         // the exact half-open end-date interval, with no finite duration lookback.
         val queryStart = if (wakeDate) sleepStart.minusSeconds(1) else sleepStart
-        val sleep = fetchCollection(SLEEP, queryStart.toString(), sleepEnd.toString()).filter { record ->
+        val sleep = if (wakeDate && !dataTypes.sleep) emptyList() else fetchCollection(SLEEP, queryStart.toString(), sleepEnd.toString(), wakeDate).filter { record ->
             val sourceStart = (record["start"] as? JsonPrimitive)?.contentOrNull?.let { runCatching { Instant.parse(it) }.getOrNull() }
             val sourceEnd = (record["end"] as? JsonPrimitive)?.contentOrNull?.let { runCatching { Instant.parse(it) }.getOrNull() }
             sourceStart != null && sourceEnd != null && sourceEnd > sourceStart &&
@@ -168,28 +172,31 @@ class WhoopCloudDataProvider(
                 else sourceStart < sleepEnd && sourceEnd > sleepStart
         }
         // Fetch once so daily energy and workout projections use the same provider snapshot.
-        val workouts = fetchCollection(WORKOUT, start, end)
-        val recoveries = fetchCollection(RECOVERY, start, end)
+        val workouts = if (wakeDate && !dataTypes.workouts && !dataTypes.activity) emptyList()
+            else fetchCollection(WORKOUT, start, end, wakeDate)
+        val recoveries = if (wakeDate && !dataTypes.heart) emptyList()
+            else fetchCollection(RECOVERY, start, end, wakeDate)
         return HealthData(
             date = date,
-            sleep = mapSectionOrDefault(SleepData()) { mapSleep(sleep, zone, wakeDate) },
-            activity = mapSectionOrDefault(ActivityData()) {
+            sleep = mapSectionOrDefault(SleepData(), wakeDate) { mapSleep(sleep, zone, wakeDate) },
+            activity = mapSectionOrDefault(ActivityData(), wakeDate) {
                 ActivityData(activeCalories = workouts.mapNotNull {
                     it.obj("score")?.double("kilojoule")?.div(4.184)
                 }.takeIf { it.isNotEmpty() }?.sum())
             },
-            heart = mapSectionOrDefault(HeartData()) { mapRecovery(recoveries) },
+            heart = mapSectionOrDefault(HeartData(), wakeDate) { mapRecovery(recoveries) },
             // WHOOP provides a current profile, not a historical body measurement.
-            body = if (date == today) fetchBody() else BodyData(),
-            workouts = mapSectionOrDefault(emptyList()) { mapWorkouts(workouts, zone, wakeDate) },
+            body = if (date == today && (!wakeDate || dataTypes.body)) fetchBody(wakeDate) else BodyData(),
+            workouts = mapSectionOrDefault(emptyList(), wakeDate) { mapWorkouts(workouts, zone, wakeDate) },
         )
     }
 
-    private inline fun <T> mapSectionOrDefault(defaultValue: T, map: () -> T): T = try {
+    private inline fun <T> mapSectionOrDefault(defaultValue: T, requireComplete: Boolean = false, map: () -> T): T = try {
         map()
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (_: Exception) {
+        if (requireComplete) throw CloudHealthRequestException(providerId)
         defaultValue
     }
 
@@ -249,8 +256,9 @@ class WhoopCloudDataProvider(
         )
     }
 
-    private suspend fun fetchBody(): BodyData = try {
+    private suspend fun fetchBody(requireComplete: Boolean = false): BodyData = try {
         val measurement = getJson("$baseUrl/user/measurement/body").obj()
+        if (requireComplete && measurement == null) throw CloudHealthRequestException(providerId)
         BodyData(
             height = measurement?.double("height_meter"),
             weight = measurement?.double("weight_kilogram"),
@@ -258,6 +266,7 @@ class WhoopCloudDataProvider(
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (_: Exception) {
+        if (requireComplete) throw CloudHealthRequestException(providerId)
         BodyData()
     }
 
