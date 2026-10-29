@@ -984,7 +984,7 @@ struct ExportOrchestrator {
             do {
                 let record = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: false,
+                    detailPolicy: isSelected && !isSummaryOnly ? frozenSettings.effectiveDetailPolicy : .summary,
                     metricSelection: frozenSettings.metricSelection,
                     timeZone: sourceTimeZone
                 )
