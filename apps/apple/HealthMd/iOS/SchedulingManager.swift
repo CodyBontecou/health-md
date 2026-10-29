@@ -1421,14 +1421,17 @@ class SchedulingManager: ObservableObject {
     }
 
     @MainActor
-    private func makeSettingsSnapshotForNewScheduledOperation(
-        target: ExportTargetSelection
+    func makeSettingsSnapshotForNewScheduledOperation(
+        target: ExportTargetSelection,
+        settings: AdvancedExportSettings? = nil,
+        calendarTimeZone: TimeZone? = nil
     ) async -> ExportSettingsSnapshot {
-        let settings = AdvancedExportSettings()
-        let calendarTimeZone = TimeZone.current
+        let settings = settings ?? AdvancedExportSettings()
+        let calendarTimeZone = calendarTimeZone ?? TimeZone.current
         switch target {
         case .localIPhoneFolder:
-            let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
+            let hasNativeOnlyCompanionAction = settings.writesExternalProviderSidecars
+                && ConnectedAppsFeature.isEnabled
                 && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
             return await ExportSettingsSnapshot.forNewAppleOperation(
                 settings,
@@ -1447,7 +1450,8 @@ class SchedulingManager: ObservableObject {
             // The gateway materializes artifacts exactly as a folder
             // destination does over its staging root before uploading, so its
             // snapshot surface matches the local-folder range surface.
-            let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
+            let hasNativeOnlyCompanionAction = settings.writesExternalProviderSidecars
+                && ConnectedAppsFeature.isEnabled
                 && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
             return await ExportSettingsSnapshot.forNewAppleOperation(
                 settings,
@@ -1456,7 +1460,8 @@ class SchedulingManager: ObservableObject {
                 hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
             )
         case .connectedMac:
-            let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
+            let hasNativeOnlyCompanionAction = settings.writesExternalProviderSidecars
+                && ConnectedAppsFeature.isEnabled
                 && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
             return await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
                 settings,

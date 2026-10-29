@@ -1439,6 +1439,61 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(try store.loadAll(), [])
     }
 
+    func testScheduledSnapshotIgnoresProvidersWhenSummarySuppressesSidecars() async throws {
+        XCTAssertTrue(ConnectedAppsFeature.isEnabled, "Run with CONNECTED_APPS_WHOOP_ENABLED=YES")
+        let suite = "ScheduledMorningSummary.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        settings.summaryOnlyExport = true
+        settings.detailPolicy = .summary
+        settings.includeDataDictionary = false
+        XCTAssertFalse(settings.writesExternalProviderSidecars)
+        let manager = makeManager(store: TestPendingExportStore(),
+            notificationScheduler: InspectableExportNotificationScheduler()) { dates, _ in
+                XCTFail("Snapshot admission must not start an export")
+                return ExportOrchestrator.ExportResult(successCount: 0, totalCount: dates.count, failedDateDetails: [])
+            }
+        let provider = ScheduledSummaryProviderProbe()
+        let sync = SyncService()
+        manager.configureScheduledExportDependencies(syncService: sync, externalIntegrations: provider)
+        let context = AppleSleepCaptureContext(timeZone: Self.calendar.timeZone, sleepDayAttribution: .morningEnds)
+        for target in [ExportTargetSelection.localIPhoneFolder, .agentDataGateway, .connectedMac] {
+            provider.count = 0
+            provider.countReads = 0
+            let withoutProvider = await AppleSleepCaptureContext.pinned.withValue(context) {
+                await manager.makeSettingsSnapshotForNewScheduledOperation(target: target,
+                    settings: settings, calendarTimeZone: Self.calendar.timeZone)
+            }
+            provider.count = 1
+            provider.countReads = 0
+            let withSuppressedProvider = await AppleSleepCaptureContext.pinned.withValue(context) {
+                await manager.makeSettingsSnapshotForNewScheduledOperation(target: target,
+                    settings: settings, calendarTimeZone: Self.calendar.timeZone)
+            }
+            XCTAssertTrue(withSuppressedProvider == withoutProvider,
+                          "Suppressed provider work cannot change accepted settings: \(target)")
+            XCTAssertEqual(provider.countReads, 0, "Admission must not inspect providers when sidecars are suppressed")
+            XCTAssertEqual(provider.fetches, 0)
+            if target == .localIPhoneFolder {
+                XCTAssertTrue(try XCTUnwrap(withSuppressedProvider.appleExportEnginePin).isWakeDate)
+                XCTAssertEqual(withSuppressedProvider.sleepCaptureContext, context)
+            }
+        }
+        settings.summaryOnlyExport = false
+        XCTAssertTrue(settings.writesExternalProviderSidecars)
+        let requiresProvider = await AppleSleepCaptureContext.pinned.withValue(context) {
+            await manager.makeSettingsSnapshotForNewScheduledOperation(target: .localIPhoneFolder,
+                settings: settings, calendarTimeZone: Self.calendar.timeZone)
+        }
+        XCTAssertNil(requiresProvider.appleExportEnginePin,
+                     "Requested provider work still needs durable account authority before scheduling")
+        XCTAssertGreaterThan(provider.countReads, 0)
+        XCTAssertEqual(provider.fetches, 0)
+    }
+
     private func makeManager(
         store: TestPendingExportStore,
         notificationScheduler: InspectableExportNotificationScheduler,
@@ -1611,6 +1666,21 @@ private final class TestPendingExportStore: PendingExportStoring {
 
     func notificationIdentifier(for request: PendingExportRequest) -> String {
         ExportNotificationIdentifiers.pendingExport(for: request)
+    }
+}
+@MainActor
+private final class ScheduledSummaryProviderProbe: ExternalIntegrationDailyRecordProviding {
+    var count = 1
+    var countReads = 0
+    var fetches = 0
+    var connectedProviderCount: Int { countReads += 1; return count }
+    func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
+        fetches += 1
+        XCTFail("Snapshot admission cannot fetch provider data")
+        return []
+    }
+    func fetchDailyRecords(for date: Date, providerIDs: Set<String>) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(for: date)
     }
 }
 #endif
