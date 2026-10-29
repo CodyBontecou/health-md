@@ -53,6 +53,10 @@ def validate(catalog: dict, manifest: dict, sources: dict[str, str]) -> list[str
     found: set[str] = set()
     for path, spec in manifest["sources"].items():
         source = sources[path]
+        if "after" in spec:
+            if spec["after"] not in source:
+                errors.append(f"{path}: missing reviewed source boundary")
+            source = source.split(spec["after"], 1)[-1]
         if "before" in spec:
             if spec["before"] not in source:
                 errors.append(f"{path}: missing reviewed source boundary")
@@ -96,8 +100,8 @@ def validate(catalog: dict, manifest: dict, sources: dict[str, str]) -> list[str
     return errors
 
 
-def load_inputs() -> tuple[dict, dict, dict[str, str]]:
-    manifest = json.loads(MANIFEST_PATH.read_text())
+def load_inputs(manifest_path: Path = MANIFEST_PATH) -> tuple[dict, dict, dict[str, str]]:
+    manifest = json.loads(manifest_path.read_text())
     return (
         json.loads(CATALOG_PATH.read_text()),
         manifest,

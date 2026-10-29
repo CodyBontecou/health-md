@@ -1,0 +1,73 @@
+{
+  "locales": ["de", "es", "fr", "it", "ja", "ko", "nl", "pt-BR", "zh-Hans"],
+  "keys": [
+    "%@ renamed to %@",
+    "%lld of %lld health metric fields enabled, %lld custom fields, %lld placeholder fields",
+    "Add Field",
+    "Add Placeholder",
+    "Add a custom field that will be included in every export.",
+    "Add a field that will export with an empty value for manual entry.",
+    "Disable All Fields",
+    "Double tap to disable this field",
+    "Double tap to enable this field",
+    "Empty Value",
+    "Empty on export",
+    "Enable All Fields",
+    "Enabled: %lld of %lld",
+    "Enter a custom name for %@.",
+    "Frontmatter field actions",
+    "Included in frontmatter",
+    "Not exported",
+    "Opens actions for frontmatter fields and key styles",
+    "Renamed to %@",
+    "Reset Name",
+    "Save Name",
+    "Search Fields",
+    "Search frontmatter fields",
+    "Type to filter health metric field keys"
+  ],
+  "displayDependencies": ["Sleep", "Activity", "Heart", "Vitals", "Body", "Nutrition", "Mindfulness", "Mobility", "Hearing", "Workouts", "Enabled", "Disabled"],
+  "sources": {
+    "HealthMd/iOS/Views/FormatCustomizationView.swift": {
+      "after": "// MARK: - Frontmatter Customization View",
+      "before": "// MARK: - Markdown Template View",
+      "localizedStringKeys": ["Enabled: %lld of %lld", "Empty on export"],
+      "requiredBindings": [
+        "Text(LocalizedStringKey(category.name))",
+        "ForEach(Array(fieldCategories.enumerated()), id: \\.element.name)",
+        "return (name: category.name, fields: fields)",
+        "placeholder: LocalizedStringKey(\"\\(renameTargetKey ?? \"\")\")",
+        "key: key,",
+        "value: FrontmatterFieldPresentation.customValue(value)",
+        "originalKey: field.originalKey,",
+        "customKey: field.customKey,",
+        "isEnabled: configurationProtection.protecting($field.isEnabled)",
+        "onRename(field.originalKey, field.customKey)"
+      ],
+      "forbiddenBindings": ["Text(category.name)", "LocalizedStringKey(renameTargetKey ??", "String(localized: key)", "String(localized: value)"]
+    },
+    "HealthMd/iOS/Components/FormatA11yComponents.swift": {
+      "after": "struct FormatFrontmatterFieldContent",
+      "before": "struct FormatTemplateEditor",
+      "requiredBindings": [
+        "FrontmatterFieldPresentation(originalKey: originalKey, customKey: customKey,",
+        "isEnabled: isEnabled, locale: locale)",
+        "Toggle(isOn: $isEnabled)",
+        "Text(verbatim: copy.originalKey)",
+        "Text(verbatim: copy.detail)",
+        "Text(verbatim: key)",
+        "Text(verbatim: value)",
+        ".accessibilityLabel(copy.accessibilityLabel)",
+        ".accessibilityValue(copy.accessibilityValue)",
+        ".accessibilityHint(copy.accessibilityHint)",
+        "format.field.toggle.\\(originalKey)"
+      ],
+      "forbiddenBindings": ["Text(LocalizedStringKey(key))", "Text(LocalizedStringKey(value))", "\\(isEnabled ? \"disable\" : \"enable\")"]
+    },
+    "HealthMd/Shared/Utilities/FrontmatterFieldPresentation.swift": {
+      "localizedStringKeys": ["%@ renamed to %@", "Renamed to %@", "Double tap to disable this field", "Double tap to enable this field", "Empty Value", "Included in frontmatter", "Not exported"],
+      "requiredBindings": ["self.originalKey = originalKey", "self.customKey = customKey", "renamed = customKey != originalKey && !customKey.isEmpty", "value.isEmpty ? String(localized: \"Empty Value\", bundle: bundle, locale: locale) : value"],
+      "forbiddenBindings": ["NSLocalizedString(originalKey", "NSLocalizedString(customKey", "NSLocalizedString(value", "trimmingCharacters"]
+    }
+  }
+}

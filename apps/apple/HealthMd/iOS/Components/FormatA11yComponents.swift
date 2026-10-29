@@ -323,12 +323,17 @@ struct FormatFrontmatterFieldContent<RenameButton: View>: View {
     @Binding var isEnabled: Bool
     @ViewBuilder var renameButton: () -> RenameButton
 
-    private var renamed: Bool { customKey != originalKey && !customKey.isEmpty }
+    @Environment(\.locale) private var locale
+
+    private var copy: FrontmatterFieldPresentation {
+        FrontmatterFieldPresentation(originalKey: originalKey, customKey: customKey,
+                                     isEnabled: isEnabled, locale: locale)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Toggle(isOn: $isEnabled) {
-                Text(originalKey)
+                Text(verbatim: copy.originalKey)
                     .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textPrimary) // Off is still an operable control.
                     .fixedSize(horizontal: false, vertical: true)
@@ -337,20 +342,20 @@ struct FormatFrontmatterFieldContent<RenameButton: View>: View {
             }
             .toggleStyle(A11ySwitchToggleStyle())
             .tint(Color.accent)
-            .accessibilityLabel(renamed ? "\(originalKey) renamed to \(customKey)" : originalKey)
-            .accessibilityValue(isEnabled ? "Enabled" : "Disabled")
-            .accessibilityHint("Double tap to \(isEnabled ? "disable" : "enable") this field")
+            .accessibilityLabel(copy.accessibilityLabel)
+            .accessibilityValue(copy.accessibilityValue)
+            .accessibilityHint(copy.accessibilityHint)
             .accessibilityIdentifier("format.field.toggle.\(originalKey)")
 
-            if renamed {
-                Text("Renamed to \(customKey)")
+            if copy.renamed {
+                Text(verbatim: copy.detail)
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
                     .accessibilityHidden(true) // Included in the toggle's full label.
             } else {
-                Text(isEnabled ? "Included in frontmatter" : "Not exported")
+                Text(verbatim: copy.detail)
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -371,12 +376,12 @@ struct FormatFrontmatterEntry: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(key)
+            Text(verbatim: key)
                 .font(Typography.monoEmphasis())
                 .foregroundStyle(Color.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
-            Text(value)
+            Text(verbatim: value)
                 .font(.footnote)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

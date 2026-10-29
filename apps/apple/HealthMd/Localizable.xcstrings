@@ -1,6 +1,71 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Empty Value" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Leerer Wert"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Valor vacío"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Valeur vide"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Valore vuoto"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"空の値"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"빈 값"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Lege waarde"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Valor vazio"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"空值"}}
+      }
+    },
+    "%@ renamed to %@" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"%@ umbenannt in %@"}},
+        "es" : {"stringUnit":{"state":"translated","value":"%@ renombrado a %@"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"%@ renommé en %@"}},
+        "it" : {"stringUnit":{"state":"translated","value":"%@ rinominato in %@"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"%@を%@に名前変更"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"%@의 이름이 %@로 변경됨"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"%@ hernoemd naar %@"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"%@ renomeado para %@"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"%@ 已重命名为 %@"}}
+      }
+    },
+    "Double tap to disable this field" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um dieses Feld zu deaktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para desactivar este campo"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour désactiver ce champ"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per disattivare questo campo"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップしてこのフィールドを無効にします"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 이 필드를 비활성화하세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om dit veld uit te schakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para desativar este campo"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以停用此字段"}}
+      }
+    },
+    "Double tap to enable this field" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um dieses Feld zu aktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para activar este campo"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour activer ce champ"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per attivare questo campo"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップしてこのフィールドを有効にします"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 이 필드를 활성화하세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om dit veld in te schakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para ativar este campo"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以启用此字段"}}
+      }
+    },
+    "Enabled: %lld of %lld" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Aktiviert: %lld von %lld"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Activados: %lld de %lld"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Activés : %lld sur %lld"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Attivati: %lld di %lld"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"有効：%lld個（全%lld個）"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"활성화됨: %lld/%lld"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Ingeschakeld: %lld van %lld"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Ativados: %lld de %lld"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"已启用：%lld 个（共 %lld 个）"}}
+      }
+    },
     "Expanded" : {
       "localizations" : {
         "de" : {"stringUnit":{"state":"translated","value":"Aufgeklappt"}},
@@ -4394,6 +4459,15 @@
     },
     "%lld of %lld health metric fields enabled, %lld custom fields, %lld placeholder fields" : {
       "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Aktivierte Gesundheitsmetrikfelder: %lld von %lld; benutzerdefinierte Felder: %lld; Platzhalterfelder: %lld"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Campos de métricas de salud activados: %lld de %lld; campos personalizados: %lld; campos de marcador de posición: %lld"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Champs de mesures de santé activés : %lld sur %lld ; champs personnalisés : %lld ; champs réservés : %lld"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Campi delle metriche sanitarie attivati: %lld di %lld; campi personalizzati: %lld; campi segnaposto: %lld"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"健康指標フィールド%lld個が有効（全%lld個）、カスタムフィールド%lld個、プレースホルダーフィールド%lld個"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"건강 지표 필드 %lld개 활성화(전체 %lld개), 사용자 지정 필드 %lld개, 자리 표시자 필드 %lld개"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Ingeschakelde velden voor gezondheidsmetingen: %lld van %lld; aangepaste velden: %lld; velden met tijdelijke aanduidingen: %lld"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Campos de métricas de saúde ativados: %lld de %lld; campos personalizados: %lld; campos de espaço reservado: %lld"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"已启用 %lld 个健康指标字段（共 %lld 个），%lld 个自定义字段，%lld 个占位字段"}},
         "en" : {
           "stringUnit" : {
             "state" : "new",
@@ -7318,10 +7392,30 @@
       }
     },
     "Add a custom field that will be included in every export." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Füge ein benutzerdefiniertes Feld hinzu, das in jedem Export enthalten ist."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Añade un campo personalizado que se incluirá en cada exportación."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Ajoutez un champ personnalisé qui sera inclus dans chaque export."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Aggiungi un campo personalizzato da includere in ogni esportazione."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"毎回の書き出しに含めるカスタムフィールドを追加します。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"모든 내보내기에 포함할 사용자 지정 필드를 추가합니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Voeg een aangepast veld toe dat in elke export wordt opgenomen."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Adicione um campo personalizado que será incluído em cada exportação."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"添加一个将在每次导出中包含的自定义字段。"}}
+      }
     },
     "Add a field that will export with an empty value for manual entry." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Füge ein Feld hinzu, das mit einem leeren Wert zur manuellen Eingabe exportiert wird."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Añade un campo que se exportará vacío para rellenarlo manualmente."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Ajoutez un champ exporté avec une valeur vide à remplir manuellement."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Aggiungi un campo da esportare con un valore vuoto da compilare manualmente."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"書き出し後に手入力できるよう、空の値で書き出すフィールドを追加します。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"직접 입력할 수 있도록 빈 값으로 내보낼 필드를 추가합니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Voeg een veld toe dat met een lege waarde wordt geëxporteerd om handmatig in te vullen."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Adicione um campo que será exportado com um valor vazio para preenchimento manual."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"添加一个以空值导出的字段，以便手动填写。"}}
+      }
     },
     "Add a field that will export with an empty value for you to fill in manually" : {
       "extractionState" : "stale",
@@ -7450,7 +7544,17 @@
       "comment" : "Profile editor action adding a new API endpoint"
     },
     "Add Field" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Feld hinzufügen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Añadir campo"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Ajouter un champ"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Aggiungi campo"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"フィールドを追加"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"필드 추가"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Veld toevoegen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Adicionar campo"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"添加字段"}}
+      }
     },
     "Add fields that export with empty values for manual entry (e.g., omron_systolic, omron_diastolic)" : {
       "extractionState" : "stale",
@@ -7716,7 +7820,17 @@
 
     },
     "Add Placeholder" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Platzhalter hinzufügen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Añadir marcador de posición"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Ajouter un espace réservé"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Aggiungi segnaposto"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"プレースホルダーを追加"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"자리 표시자 추가"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tijdelijke aanduiding toevoegen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Adicionar espaço reservado"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"添加占位字段"}}
+      }
     },
     "Add Placeholder Field" : {
       "localizations" : {
@@ -43438,7 +43552,17 @@
       }
     },
     "Disable All Fields" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Alle Felder deaktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Desactivar todos los campos"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Désactiver tous les champs"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Disattiva tutti i campi"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"すべてのフィールドを無効にする"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"모든 필드 비활성화"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Alle velden uitschakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Desativar todos os campos"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"停用所有字段"}}
+      }
     },
     "Disable All Metrics" : {
       "extractionState" : "stale",
@@ -47054,7 +47178,17 @@
       }
     },
     "Empty on export" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Beim Export leer"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Vacío al exportar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Vide à l’export"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Vuoto all’esportazione"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"書き出し時は空欄"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"내보낼 때 빈 값"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Leeg bij export"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Vazio ao exportar"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"导出时为空"}}
+      }
     },
     "Enable All" : {
       "extractionState" : "stale",
@@ -47122,7 +47256,17 @@
       }
     },
     "Enable All Fields" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Alle Felder aktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Activar todos los campos"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Activer tous les champs"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Attiva tutti i campi"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"すべてのフィールドを有効にする"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"모든 필드 활성화"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Alle velden inschakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Ativar todos os campos"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"启用所有字段"}}
+      }
     },
     "Enable All Metrics" : {
       "localizations" : {
@@ -48592,7 +48736,17 @@
       }
     },
     "Enter a custom name for %@." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Gib einen benutzerdefinierten Namen für %@ ein."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Introduce un nombre personalizado para %@."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Saisissez un nom personnalisé pour %@."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Inserisci un nome personalizzato per %@."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"%@のカスタム名を入力してください。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"%@의 사용자 지정 이름을 입력하세요."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Voer een aangepaste naam in voor %@."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Digite um nome personalizado para %@."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"为 %@ 输入自定义名称。"}}
+      }
     },
     "Enter a name for the subfolder where your health data will be exported." : {
       "extractionState" : "stale",
@@ -59677,7 +59831,17 @@
       }
     },
     "Frontmatter field actions" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Frontmatter-Feldaktionen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Acciones de campos del frontmatter"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Actions sur les champs du frontmatter"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Azioni dei campi del frontmatter"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"フロントマターフィールドの操作"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"프런트매터 필드 작업"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Acties voor frontmattervelden"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Ações dos campos do frontmatter"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"前置元数据字段操作"}}
+      }
     },
     "Frontmatter fields" : {
 
@@ -67913,7 +68077,17 @@
       }
     },
     "Included in frontmatter" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"In Frontmatter enthalten"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Incluido en el frontmatter"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Inclus dans le frontmatter"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Incluso nel frontmatter"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"フロントマターに含まれます"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"프런트매터에 포함됨"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Opgenomen in frontmatter"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Incluído no frontmatter"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"包含在前置元数据中"}}
+      }
     },
     "Individual entries" : {
       "comment" : "Profile detail individual tracking row\nProfile editor individual tracking toggle"
@@ -84267,7 +84441,17 @@
       "comment" : "Accessibility value before copying the profile ID"
     },
     "Not exported" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Nicht exportiert"}},
+        "es" : {"stringUnit":{"state":"translated","value":"No exportado"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Non exporté"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Non esportato"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"書き出されません"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"내보내지 않음"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Niet geëxporteerd"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Não exportado"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"不导出"}}
+      }
     },
     "Not ready" : {
       "comment" : "Reviewed macOS display localization",
@@ -86790,7 +86974,17 @@
       }
     },
     "Opens actions for frontmatter fields and key styles" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Öffnet Aktionen für Frontmatter-Felder und Schlüsselstile"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Abre acciones para los campos del frontmatter y los estilos de claves"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Ouvre les actions sur les champs du frontmatter et les styles de clés"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Apre le azioni per i campi del frontmatter e gli stili delle chiavi"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"フロントマターフィールドとキーのスタイルの操作を開きます"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"프런트매터 필드 및 키 스타일 작업을 엽니다"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Opent acties voor frontmattervelden en sleutelstijlen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Abre ações para campos do frontmatter e estilos de chaves"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"打开前置元数据字段和键名样式的操作"}}
+      }
     },
     "Opens actions for selecting or expanding metric groups" : {
       "localizations" : {
@@ -96378,7 +96572,17 @@
       "comment" : "Action renaming this profile"
     },
     "Renamed to %@" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Umbenannt in %@"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Renombrado a %@"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Renommé en %@"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Rinominato in %@"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"%@に名前を変更"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"%@로 이름 변경됨"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Hernoemd naar %@"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Renomeado para %@"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"已重命名为 %@"}}
+      }
     },
     "Reopens the iPad navigation sidebar" : {
 
@@ -97115,7 +97319,17 @@
 
     },
     "Reset Name" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Namen zurücksetzen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Restablecer nombre"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Réinitialiser le nom"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Ripristina nome"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"名前をリセット"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이름 재설정"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Naam herstellen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Redefinir nome"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"重置名称"}}
+      }
     },
     "Reset Names" : {
       "localizations" : {
@@ -99727,7 +99941,17 @@
       }
     },
     "Save Name" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Namen speichern"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Guardar nombre"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Enregistrer le nom"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Salva nome"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"名前を保存"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이름 저장"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Naam opslaan"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Salvar nome"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"保存名称"}}
+      }
     },
     "Save to Files" : {
 
@@ -100725,10 +100949,30 @@
       }
     },
     "Search Fields" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Felder suchen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Buscar campos"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Rechercher des champs"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Cerca campi"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"フィールドを検索"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"필드 검색"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Velden zoeken"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Buscar campos"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"搜索字段"}}
+      }
     },
     "Search frontmatter fields" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Frontmatter-Felder suchen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Buscar campos del frontmatter"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Rechercher des champs du frontmatter"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Cerca campi del frontmatter"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"フロントマターフィールドを検索"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"프런트매터 필드 검색"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Frontmattervelden zoeken"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Buscar campos do frontmatter"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"搜索前置元数据字段"}}
+      }
     },
     "Search metrics" : {
       "localizations" : {
@@ -116530,7 +116774,17 @@
       }
     },
     "Type to filter health metric field keys" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Tippe, um Feldschlüssel für Gesundheitsmetriken zu filtern"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Escribe para filtrar las claves de campos de métricas de salud"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Saisissez du texte pour filtrer les clés des champs de mesures de santé"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Digita per filtrare le chiavi dei campi delle metriche sanitarie"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"入力して健康指標のフィールドキーを絞り込みます"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"입력하여 건강 지표 필드 키를 필터링하세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Typ om veldsleutels voor gezondheidsmetingen te filteren"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Digite para filtrar as chaves dos campos de métricas de saúde"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"输入以筛选健康指标字段的键名"}}
+      }
     },
     "Type to filter metrics by name" : {
       "extractionState" : "stale",
