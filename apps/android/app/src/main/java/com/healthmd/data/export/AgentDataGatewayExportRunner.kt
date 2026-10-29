@@ -19,6 +19,7 @@ import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
+import com.healthmd.domain.model.ExportPreviewSleepWindow
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportResult
@@ -386,6 +387,8 @@ class AgentDataGatewayExportRunner private constructor(
             previewedDateCount = days.count { it.hasOutput },
             isTruncated = normalizedDates.size > attemptedDateCount,
             days = days,
+            sleepWindow = ExportPreviewSleepWindow.capture(normalizedDates, capturedSettings,
+                capturedSettings.executionSleepCaptureContext),
         )
     }
 

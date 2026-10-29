@@ -40,6 +40,7 @@ import com.healthmd.domain.model.SleepAttributionUnavailableException
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
+import com.healthmd.domain.model.ExportPreviewSleepWindow
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportPreviewIssue
@@ -448,12 +449,15 @@ class APIEndpointExportRunner private constructor(
         )
         coroutineContext.ensureActive()
         val attemptedDates = capture.attemptedDates.sorted()
+        val sleepWindow = ExportPreviewSleepWindow.capture(normalizedDates, snapshot.settings,
+            snapshot.settings.executionSleepCaptureContext)
         if (attemptedDates.isEmpty()) {
             return ExportPreview(
                 requestedDateCount = normalizedDates.size,
                 previewedDateCount = 0,
                 isTruncated = normalizedDates.isNotEmpty(),
                 days = emptyList(),
+                sleepWindow = sleepWindow,
             )
         }
         if (snapshot.mode == ExportEngineMode.legacy && capture.records.isEmpty()) {
@@ -464,6 +468,7 @@ class APIEndpointExportRunner private constructor(
                 days = capture.failedDateDetails
                     .filter { it.reason != ExportFailureReason.NO_HEALTH_DATA }
                     .map { ExportPreviewDay(it.date, failureReason = it.reason) },
+                sleepWindow = sleepWindow,
             )
         }
         val request = try {
@@ -510,6 +515,7 @@ class APIEndpointExportRunner private constructor(
             previewedDateCount = capture.records.size,
             isTruncated = normalizedDates.size > capture.attemptedDates.size,
             days = days,
+            sleepWindow = sleepWindow,
         )
     }
 

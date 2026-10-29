@@ -351,6 +351,7 @@ class APIEndpointExportRunnerTest {
     @Test
     fun apiPreviewUsesExplicitGranularPrivacySetting() = runTest {
         val date = LocalDate.of(2026, 7, 10)
+        val acceptedContext = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.NIGHT_BEGINS)
         val rangeFlags = mutableListOf<Boolean>()
         val runner = runner(
             dataByDate = mapOf(
@@ -369,6 +370,8 @@ class APIEndpointExportRunnerTest {
         val preview = runner.previewDates(
             dates = listOf(date),
             settings = ExportSettings(
+                executionSleepCaptureContext = acceptedContext,
+                executionSleepCaptureAuthorityIsFrozen = true,
                 includeGranularData = false,
                 individualTracking = IndividualTrackingSettings(
                     globalEnabled = true,
@@ -379,6 +382,9 @@ class APIEndpointExportRunnerTest {
 
         assertThat(rangeFlags).containsExactly(true)
         assertThat(preview.days.single().files.single().content).doesNotContain("stepSamples")
+        assertThat(preview.sleepWindow?.captureContext).isEqualTo(acceptedContext)
+        assertThat(preview.sleepWindow?.startDate).isEqualTo(date)
+        assertThat(preview.sleepWindow?.endDate).isEqualTo(date)
     }
 
     private fun runner(

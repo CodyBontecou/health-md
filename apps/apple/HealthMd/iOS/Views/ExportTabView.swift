@@ -544,6 +544,15 @@ struct ExportTabView: View {
 
     // MARK: - Date Range
 
+    private var sleepDateGuidance: LocalizedStringKey {
+        switch healthKitManager.sleepDayAttribution {
+        case .nightBegins:
+            "Sleep covers noon on each selected date through noon the next day. For last night's sleep, choose Yesterday."
+        case .morningEnds:
+            "Whole sleep sessions belong to the date they end in the export's time zone. For last night's sleep, choose Today."
+        }
+    }
+
     private var dateRangeSection: some View {
         sectionCard(title: "Date Range") {
             VStack(spacing: Spacing.md) {
@@ -560,10 +569,11 @@ struct ExportTabView: View {
                 }
 
                 if advancedSettings.metricSelection.enabledMetricCount(for: .sleep) > 0 {
-                    Text("Sleep covers noon on each selected date through noon the next day. For last night's sleep, choose Yesterday.")
+                    Text(sleepDateGuidance)
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier(AccessibilityID.Export.sleepDateGuidance)
                 }
 
                 if dateRangePreset == .custom {

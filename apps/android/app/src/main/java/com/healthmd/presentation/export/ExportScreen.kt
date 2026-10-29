@@ -80,6 +80,7 @@ import com.healthmd.domain.model.ExportPreviewSideEffectAction
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthMetricCategory
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.components.ExportProgressDialog
 import com.healthmd.presentation.i18n.localizedDisplayName
@@ -93,7 +94,6 @@ import com.healthmd.util.runCatchingCancellable
 import com.healthmd.rawexport.ExportMode
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.text.NumberFormat
@@ -106,6 +106,7 @@ fun ExportScreen(
     onNavigateToAdvancedSettings: () -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToUpgrade: () -> Unit = onNavigateToPaywall,
+    sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -392,9 +393,6 @@ fun ExportScreen(
     if (uiState.isPreviewing || uiState.preview != null) {
         ExportPreviewDialog(
             preview = uiState.preview,
-            sleepWindow = if (uiState.settings.exportMode != ExportMode.RAW_SNAPSHOT &&
-                uiState.settings.metricSelection.enabledMetricCount(HealthMetricCategory.SLEEP) > 0
-            ) uiState.startDate to uiState.endDate else null,
             isLoading = uiState.isPreviewing,
             destinationLabel = uiState.destinationLabel ?: stringResource(
                 when (uiState.selectedTarget) {
@@ -628,6 +626,7 @@ fun ExportScreen(
 
         ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
         DateRangeSelectionSection(
+            sleepDayAttribution = sleepDayAttribution,
             selectedOption = selectedDateRangeOption,
             showSleepGuidance = uiState.settings.exportMode != ExportMode.RAW_SNAPSHOT &&
                 uiState.settings.metricSelection.enabledMetricCount(HealthMetricCategory.SLEEP) > 0,
@@ -1722,7 +1721,6 @@ fun ExportFailureDiagnosticGroup.dateSampleText(): String {
 @Composable
 private fun ExportPreviewDialog(
     preview: ExportPreview?,
-    sleepWindow: Pair<LocalDate, LocalDate>?,
     isLoading: Boolean,
     destinationLabel: String?,
     formatsPerDay: Int,
@@ -1778,7 +1776,6 @@ private fun ExportPreviewDialog(
                 selectedFile != null -> PreviewFileContent(selectedFile!!)
                 preview != null -> ExportPreviewFileList(
                     preview = preview,
-                    sleepWindow = sleepWindow,
                     destinationLabel = destinationLabel,
                     formatsPerDay = formatsPerDay,
                     onFileSelected = { selectedFile = it },
@@ -1844,7 +1841,6 @@ private fun ExportPreviewLoadingContent() {
 @Composable
 private fun ExportPreviewFileList(
     preview: ExportPreview,
-    sleepWindow: Pair<LocalDate, LocalDate>?,
     destinationLabel: String?,
     formatsPerDay: Int,
     onFileSelected: (PreviewFileDetails) -> Unit,
@@ -1856,19 +1852,22 @@ private fun ExportPreviewFileList(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        sleepWindow?.let { (start, end) ->
+        preview.sleepWindow?.let { window ->
+            val morningEnds = window.captureContext.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS
             Text(
                 text = stringResource(
-                    R.string.export_sleep_preview_window,
-                    formatPreviewDate(start),
-                    formatPreviewDate(end.plusDays(1)),
-                    ZoneId.systemDefault().id,
+                    if (morningEnds) R.string.export_sleep_preview_window_morning_ends
+                    else R.string.export_sleep_preview_window,
+                    formatPreviewDate(window.startDate),
+                    formatPreviewDate(if (morningEnds) window.endDate else window.endDate.plusDays(1)),
+                    window.captureContext.zoneId.id,
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textSecondary,
             )
             Text(
-                text = stringResource(R.string.export_sleep_preview_guidance),
+                text = stringResource(if (morningEnds) R.string.export_sleep_preview_guidance_morning_ends
+                    else R.string.export_sleep_preview_guidance),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textSecondary,
             )

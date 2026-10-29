@@ -347,6 +347,7 @@ class ExportOrchestrator(
             previewedDateCount = days.count { it.hasOutput },
             isTruncated = normalizedDates.size > attemptedDateCount,
             days = days,
+            sleepWindow = ExportPreviewSleepWindow.capture(normalizedDates, operationSettings, captureContext),
         )
     }
 

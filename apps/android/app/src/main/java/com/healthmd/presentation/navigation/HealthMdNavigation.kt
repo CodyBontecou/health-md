@@ -276,6 +276,7 @@ fun HealthMdNavigation(
 
             composable(NavDestination.EXPORT.route) {
                 ExportScreen(
+                    sleepDayAttribution = sleepDayAttribution,
                     onNavigateToPaywall = {
                         if (settingsViewModel.distributionPolicy.purchasesAvailable) {
                             navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)

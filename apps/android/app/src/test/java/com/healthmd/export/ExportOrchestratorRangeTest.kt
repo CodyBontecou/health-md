@@ -45,8 +45,7 @@ class ExportOrchestratorRangeTest {
     fun `missing draft and unqualified recovered authority cannot recapture render or write`() = runTest {
         val dates = listOf(LocalDate.of(2026, 3, 15))
         for (context in listOf(null,
-            AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS, null),
-            AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS))) {
+            AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS, null))) {
             val health = mockk<HealthRepository>()
             val destination = mockk<ExportRepository>()
             val settings = ExportSettings(executionSleepCaptureContext = context,
@@ -116,6 +115,39 @@ class ExportOrchestratorRangeTest {
         assertThat(settings.executionSleepCaptureContext).isNull()
         assertThat(settings.executionSleepCaptureAuthorityIsFrozen).isFalse()
         io.mockk.coVerify(exactly = 2) { health.resolveCaptureContext(any(), any()) }
+    }
+
+    @Test
+    fun `preview retains accepted dates and sleep context after live preference and timezone changes`() = runTest {
+        val previousZone = TimeZone.getDefault()
+        try {
+            for (mode in SleepDayAttribution.entries) {
+                val dates = mutableListOf(LocalDate.of(2026, 3, 15), LocalDate.of(2026, 3, 16))
+                val accepted = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), mode)
+                var liveContext = accepted
+                val health = mockk<HealthRepository>()
+                every { health.isBeforeFirstUnlock() } returns false
+                coEvery { health.resolveCaptureContext(any(), any()) } answers { liveContext }
+                coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+                    assertThat(arg<ZoneId>(3)).isEqualTo(accepted.zoneId)
+                    assertThat(arg<SleepDayAttributionOverride>(5)).isEqualTo(accepted.explicitSleepDayAttributionOverride)
+                    firstArg<List<LocalDate>>().map { dataFor(it) }
+                }
+                val preview = ExportOrchestrator(health, RecordingExportRepository()).previewDates(
+                    dates, ExportSettings(), onProgress = { _, _, _ ->
+                        liveContext = AndroidCaptureContext(ZoneId.of("Europe/Berlin"), SleepDayAttribution.DEFAULT)
+                        TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"))
+                    })
+                dates.clear()
+                assertThat(preview.previewedDateCount).isEqualTo(2)
+                assertThat(preview.sleepWindow?.startDate).isEqualTo(LocalDate.of(2026, 3, 15))
+                assertThat(preview.sleepWindow?.endDate).isEqualTo(LocalDate.of(2026, 3, 16))
+                assertThat(preview.sleepWindow?.captureContext).isEqualTo(accepted)
+                io.mockk.coVerify(exactly = 1) { health.resolveCaptureContext(any(), any()) }
+            }
+        } finally {
+            TimeZone.setDefault(previousZone)
+        }
     }
 
     @Test
@@ -411,13 +443,14 @@ class ExportOrchestratorRangeTest {
     }
 
     @Test
-    fun `unapproved ownership is unavailable for every format and preview without provider or destination work`() = runTest {
+    fun `missing saved authority rejects every format and preview without provider or destination work`() = runTest {
         val fixture = SleepAttributionCaptureFixture()
         val destination = RecordingExportRepository()
         val orchestrator = ExportOrchestrator(fixture.repository, destination)
         val dates = listOf(fixture.startDay, fixture.wakeDay)
         for (format in ExportFormat.entries) {
-            val settings = ExportSettings(exportFormat = format, exportFormats = setOf(format), dataTypes = fixture.selection)
+            val settings = ExportSettings(exportFormat = format, exportFormats = setOf(format), dataTypes = fixture.selection,
+                executionSleepCaptureContext = null, executionSleepCaptureAuthorityIsFrozen = true)
             val result = orchestrator.exportDates(dates, settings)
             assertThat(result.successCount).isEqualTo(0)
             assertThat(result.failedDateDetails.map { it.reason }).containsExactly(ExportFailureReason.UNKNOWN, ExportFailureReason.UNKNOWN)
