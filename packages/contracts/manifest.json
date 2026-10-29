@@ -710,6 +710,12 @@
           "sha256": "949821b96090e866f3a53479bed3ebd063b1d13ca4050a94b2ab1d1f65b11e3b",
           "provenance": "Emitted by the successor Rust renderer from the native handoff; Kotlin verifies plan identities, content descriptors and defensive copies. Not production readiness evidence.",
           "mirrors": []
+        },
+        {
+          "path": "packages/contracts/render-input/v2/fixtures/core-android-v6-summary-facts-artifact-plan.json",
+          "sha256": "542cc6a6662350849ddb1bfd31236b2b0c0b8339b9926139347da7df3f66b113",
+          "provenance": "Successor Rust replay of the unchanged native Android handoff with exact metadata-off sleep summary facts. The original artifact-plan fixture remains immutable migration evidence. Not production readiness evidence.",
+          "mirrors": []
         }
       ]
     },

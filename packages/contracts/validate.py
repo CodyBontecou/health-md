@@ -3919,9 +3919,10 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
             expected_paths = {
                 "packages/contracts/render-input/v2/fixtures/native-android-v6-handoff.json",
                 "packages/contracts/render-input/v2/fixtures/core-android-v6-artifact-plan.json",
+                "packages/contracts/render-input/v2/fixtures/core-android-v6-summary-facts-artifact-plan.json",
             }
-            if len(fixtures) != 2 or any(not isinstance(item, dict) for item in fixtures) or {item.get("path") for item in fixtures} != expected_paths:
-                fail(f"{context}: both successor interoperability fixtures must be inventoried")
+            if len(fixtures) != 3 or any(not isinstance(item, dict) for item in fixtures) or {item.get("path") for item in fixtures} != expected_paths:
+                fail(f"{context}: all successor interoperability fixtures must be inventoried")
         for fixture_index, fixture in enumerate(fixtures):
             fixture_context = f"{context}.fixtures[{fixture_index}]"
             if not isinstance(fixture, dict):
@@ -3995,7 +3996,7 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                 validate_sleep_successor_pair(
                     root,
                     load_json(directory / "native-android-v6-handoff.json", "native successor handoff"),
-                    load_json(directory / "core-android-v6-artifact-plan.json", "core successor plan"),
+                    load_json(fixture_path if fixture_path.name != "native-android-v6-handoff.json" else directory / "core-android-v6-artifact-plan.json", "core successor plan"),
                 )
             elif identifier == "healthmd.rollup_summary.sleep":
                 validate_sleep_rollup_fixture(root, fixture_path)

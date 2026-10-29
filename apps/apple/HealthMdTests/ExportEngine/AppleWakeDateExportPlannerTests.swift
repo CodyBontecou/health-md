@@ -13,6 +13,101 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedManagers: [VaultManager] = []
 
+    func testNativeStagesRejectInvalidBoundsAndKeepZeroLengthSourceFactsWithoutSummaries() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let date = ExportFixtures.referenceDate
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["sleep_core"])
+        snapshot.detailPolicy = .detailedTimeSeries
+        let parentStart = date.addingTimeInterval(-3600), parentEnd = date.addingTimeInterval(7200)
+        for invalid in ["missing-parent", "wrong-owner", "reversed", "outside-parent"] {
+            let start = invalid == "outside-parent" ? parentStart.addingTimeInterval(-1) : date
+            let end = invalid == "reversed" ? date.addingTimeInterval(-1) : date.addingTimeInterval(60)
+            let sleep = SleepData(sessionStart: invalid == "missing-parent" ? nil : parentStart,
+                sessionEnd: invalid == "missing-parent" ? nil : invalid == "wrong-owner" ? date.addingTimeInterval(86400) : parentEnd,
+                stages: [SleepStageSample(stage: "core", startDate: start, endDate: end)])
+            let day = HealthData(date: date, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds), sleep: sleep)
+            do {
+                _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+                XCTFail("Invalid captured stage must reject before delivery: \(invalid)")
+            } catch {}
+        }
+        let day = HealthData(date: date, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            sleep: SleepData(sessionStart: parentStart, sessionEnd: parentEnd,
+                stages: [SleepStageSample(stage: "core", startDate: date, endDate: date, metadata: ["synthetic": "zero-source"])]))
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Valid zero-length native source must not create a summary") }
+        let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json })
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: json.artifact.content.materializedData()) as? [String: Any])
+        let sleep = try XCTUnwrap(root["sleep"] as? [String: Any])
+        XCTAssertNil(sleep["totalDuration"])
+        let stage = try XCTUnwrap((sleep["sleepStages"] as? [[String: Any]])?.first)
+        XCTAssertEqual(stage["durationSeconds"] as? Double, 0)
+        XCTAssertEqual((stage["metadata"] as? [String: String])?["synthetic"], "zero-source")
+    }
+
+    func testDenseCapturedSleepStagesKeepWholeDSTSessionAcrossAllFormats() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let clock = ExportDateFormatting.utcISO8601Formatter()
+        let owner = try XCTUnwrap(clock.date(from: "2026-11-01T04:00:00Z"))
+        let start = try XCTUnwrap(clock.date(from: "2026-10-31T23:30:00Z")).addingTimeInterval(0.125)
+        let end = start.addingTimeInterval(75_000)
+        let store = FakeHealthStore()
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.inBed.rawValue, startDate: start, endDate: end)
+        ] + (0..<2_000).map { index in
+            CategorySampleValue(value: index.isMultiple(of: 2) ? HKCategoryValueSleepAnalysis.asleepCore.rawValue : HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+                startDate: start.addingTimeInterval(Double(index) * 37.5),
+                endDate: start.addingTimeInterval(Double(index + 1) * 37.5), metadata: ["synthetic": "dense-stage-\(index) | ` <source> &"])
+        }
+        let suite = "DenseSleepPlanner.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let manager = HealthKitManager(store: store, userDefaults: defaults)
+        let sleep = try await manager.fetchSleepProjection(for: owner, attribution: .morningEnds, timeZone: zone, includeDetailedTimeSeries: true)
+        XCTAssertEqual(sleep.stages.count, 2_001)
+        XCTAssertEqual(sleep.totalDuration, 75_000)
+        var day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds), sleep: sleep)
+        day.heart.heartRateSamples = [TimeSample(timestamp: owner.addingTimeInterval(3600), value: 72.125.nextUp)]
+        let native = try XCTUnwrap(try JSONSerialization.jsonObject(with: day.toJSONDataThrowing(captureContext: context)) as? [String: Any])
+        let expectedStages = try XCTUnwrap((native["sleep"] as? [String: Any])?["sleepStages"] as? NSArray)
+        for metadata in [true, false] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                selectionIDs: ["sleep_total", "sleep_core", "sleep_rem", "sleep_in_bed", "sleep_bedtime", "sleep_wake", "heart_rate_avg"])
+            snapshot.detailPolicy = .detailedTimeSeries
+            snapshot.includeMetadata = metadata
+            guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Dense whole-session stages must remain exportable") }
+            for artifact in operation.artifacts {
+                let data = try artifact.artifact.content.materializedData()
+                let text = String(decoding: data, as: UTF8.self)
+                XCTAssertEqual(artifact.artifact.sha256, NativeExportArtifact.sha256(of: data))
+                switch artifact.format {
+                case .json:
+                    let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+                    let stageData = try XCTUnwrap((root["sleep"] as? [String: Any])?["sleepStages"] as? [[String: Any]])
+                    XCTAssertEqual(stageData as NSArray, expectedStages)
+                    XCTAssertEqual(stageData.count, 2_001)
+                    XCTAssertTrue(stageData.contains { $0["startDate"] as? String == "2026-10-31T23:30:00.125000000Z" })
+                    XCTAssertTrue(stageData.contains { $0["endDate"] as? String == "2026-11-01T20:20:00.125000000Z" })
+                case .csv:
+                    XCTAssertEqual(text.components(separatedBy: "\n").filter { $0.contains(",Sleep Detail,Sleep Stage,") }.count, 2_001)
+                case .markdown:
+                    XCTAssertEqual(text.components(separatedBy: "\n").filter { $0.hasPrefix("| 2026-") }.count, 2_002)
+                    XCTAssertTrue(text.contains("\\u007c"))
+                case .obsidianBases:
+                    XCTAssertEqual(text.components(separatedBy: "\"stage\":").count - 1, 2_001)
+                    XCTAssertTrue(text.contains("native_quantity_details:"))
+                }
+                if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                    let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-dense-sleep-\(metadata)").appendingPathComponent(artifact.artifact.relativePath)
+                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try data.write(to: output)
+                }
+            }
+        }
+    }
+
     func testLargeNativeQuantityMetadataStaysFileBackedWithBoundedPreview() async throws {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
         let payload = String(repeating: "x", count: 9 * 1024 * 1024)

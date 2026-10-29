@@ -73,13 +73,8 @@ nonisolated struct AppleWakeDateQuantityProjection: Sendable {
         }
     }
 
-    func writeBases(aggregate: Data, to sink: ExportByteSink) throws {
-        guard let text = String(data: aggregate, encoding: .utf8), text.hasPrefix("---\n"),
-              let closing = text.range(of: "\n---\n", range: text.index(text.startIndex, offsetBy: 4)..<text.endIndex),
-              !text[..<closing.lowerBound].components(separatedBy: "\n").contains(where: { $0.hasPrefix("native_quantity_details:") }) else {
-            throw ProjectionError.invalidAggregate
-        }
-        try sink.write(Data(text[..<closing.lowerBound].utf8))
+    func writeFrontmatterBlock(to sink: ExportByteSink) throws {
+        guard hasRecords else { return }
         try sink.write(Data("\nnative_quantity_details:\n".utf8))
         for item in series {
             for sample in item.samples {
@@ -89,6 +84,5 @@ nonisolated struct AppleWakeDateQuantityProjection: Sendable {
                 try sink.write(Data("\n".utf8))
             }
         }
-        try sink.write(Data(text[closing.lowerBound...].utf8))
     }
 }

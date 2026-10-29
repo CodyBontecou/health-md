@@ -24,10 +24,12 @@ class SleepAttributionValidationTests(unittest.TestCase):
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0]["status"], "deferred")
         self.assertEqual({Path(item["path"]).name for item in entries[0]["fixtures"]},
-                         {"native-android-v6-handoff.json", "core-android-v6-artifact-plan.json"})
+                         {"native-android-v6-handoff.json", "core-android-v6-artifact-plan.json", "core-android-v6-summary-facts-artifact-plan.json"})
         validate.validate_manifest(ROOT)
 
     def test_native_handoff_and_core_plan(self):
+        self.check()
+        self.plan = json.loads((FIXTURES / "core-android-v6-summary-facts-artifact-plan.json").read_text())
         self.check()
 
     def test_explicit_registry_three_tuple_and_mixed_versions(self):

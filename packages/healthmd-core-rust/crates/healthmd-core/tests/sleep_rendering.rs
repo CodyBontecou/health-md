@@ -116,6 +116,68 @@ fn render(config: &Value, semantic: &Value, batches: &[Value]) -> ArtifactPlan {
 }
 
 #[test]
+fn successor_metadata_off_summary_facts_keep_selected_exact_sdk_authority() {
+    for (mut config, semantic, mut batches) in [apple_successor_input(), android_successor_input()]
+    {
+        config["formats"] = json!(["markdown"]);
+        config["include_metadata"] = json!(false);
+        for metric in batches[0]["days"][0]["metrics"].as_array_mut().unwrap() {
+            if metric["category_id"] == "sleep" {
+                metric["human_presentation"] = json!({"display_value":"8,3", "unit":"Stunden"});
+            }
+        }
+        for custom in [false, true] {
+            if custom {
+                config["markdown"]["custom_template"] = json!("# My day\n{{all_metrics}}");
+            }
+            let plan = render(&config, &semantic, &batches);
+            let text = std::str::from_utf8(&plan.items[0].content).unwrap();
+            assert!(!text.starts_with("---"));
+            let line = text
+                .lines()
+                .find(|line| line.starts_with("> Sleep summary facts: `"))
+                .unwrap();
+            let facts: Value = serde_json::from_str(
+                line.strip_prefix("> Sleep summary facts: `")
+                    .unwrap()
+                    .strip_suffix('`')
+                    .unwrap(),
+            )
+            .unwrap();
+            let expected = batches[0]["days"][0]["metrics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|metric| metric["category_id"] == "sleep")
+                .map(|metric| {
+                    (
+                        metric["output_key"].as_str().unwrap().to_owned(),
+                        metric["public_value"].clone(),
+                    )
+                })
+                .collect::<serde_json::Map<_, _>>();
+            assert_eq!(facts, Value::Object(expected));
+            assert!(!line.contains("Stunden"));
+        }
+        batches[0]["days"][0]["metrics"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|metric| metric["category_id"] != "sleep");
+        let mut no_sleep = semantic.clone();
+        no_sleep["days"][0]["values"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|value| !value["output_key"].as_str().unwrap().starts_with("sleep_"));
+        let plan = render(&config, &no_sleep, &batches);
+        assert!(
+            std::str::from_utf8(&plan.items[0].content)
+                .unwrap()
+                .contains("> Sleep summary facts: `{}`")
+        );
+    }
+}
+
+#[test]
 fn successor_render_binding_keeps_exact_binary64_round_trips() {
     for input in [apple_successor_input, android_successor_input] {
         let converted_height = 175.1_f64 * 0.01;
@@ -246,7 +308,7 @@ fn native_android_v6_handoffs_replay_without_legacy_aliases_or_clock_reinterpret
     assert_eq!(plan.items.len(), 4);
     let plan_fixture = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../../contracts/render-input/v2/fixtures/core-android-v6-artifact-plan.json"
+        "/../../../contracts/render-input/v2/fixtures/core-android-v6-summary-facts-artifact-plan.json"
     );
     let mut plan_bytes = serde_json::to_vec(&plan).unwrap();
     plan_bytes.push(b'\n');

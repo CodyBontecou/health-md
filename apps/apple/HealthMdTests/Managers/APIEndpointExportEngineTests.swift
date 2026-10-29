@@ -9,6 +9,37 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testDenseSleepStagesRemainOutsideAPIRenderInputAndKeepOriginalSessionClocks() async throws {
+        let zone = TimeZone.gmt
+        let date = try XCTUnwrap(days(count: 1).first)
+        let start = date.addingTimeInterval(-3600 + 0.125), end = start.addingTimeInterval(30_000)
+        let stages = (0..<2_000).map { index in SleepStageSample(stage: "core",
+            startDate: start.addingTimeInterval(Double(index) * 15), endDate: start.addingTimeInterval(Double(index + 1) * 15),
+            metadata: ["synthetic": "api-stage-\(index)"]) }
+        let day = HealthData(date: date, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            sleep: SleepData(totalDuration: 30_000, coreSleep: 30_000, sessionStart: start, sessionEnd: end, stages: stages))
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.detailPolicy = .detailedTimeSeries
+        settings.metricSelection.enabledMetrics = ["sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
+        let resolution = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day },
+            coreExecutor: APIRecordingCoreExecutor(events: APIEngineEventRecorder(), requireAggregateOnlyConfiguration: true))
+        guard case .prepared(let operation) = resolution else { return XCTFail("Expected file-backed stage composition") }
+        let batch = try XCTUnwrap(operation.batches.first)
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+        let record = try XCTUnwrap((root["records"] as? [[String: Any]])?.first)
+        let sleep = try XCTUnwrap(record["sleep"] as? [String: Any])
+        let values = try XCTUnwrap(sleep["sleepStages"] as? [[String: Any]])
+        XCTAssertEqual(values.count, 2_000)
+        XCTAssertEqual(values.first?["startDate"] as? String, CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: start))
+        XCTAssertEqual(values.last?["endDate"] as? String, CanonicalRFC3339UTC.stringPreservingReferencePrecision(from: end))
+        XCTAssertEqual((values.last?["metadata"] as? [String: String])?["synthetic"], "api-stage-1999")
+        try batch.bodyArtifact.validateIntegrity()
+    }
+
     func testDenseSelectedQuantityOnlyDayKeepsAllFiveFamiliesOutsideAPICoreInput() async throws {
         let zone = TimeZone.gmt
         let date = try XCTUnwrap(days(count: 1).first)

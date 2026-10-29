@@ -15,6 +15,7 @@ nonisolated enum AppleWakeDateArchiveComposer {
         let providerMarkdown: String
         let includeMetadata: Bool
         let quantities: AppleWakeDateQuantityProjection
+        let sleepStages: AppleWakeDateSleepStageProjection
     }
 
     @MainActor
@@ -38,6 +39,7 @@ nonisolated enum AppleWakeDateArchiveComposer {
             let providerMarkdown = day.filteredData.whoopProviderMarkdown(snapshot: day.snapshot,
                 headerPrefix: String(repeating: "#", count: settings.formatCustomization.markdownTemplate.sectionHeaderLevel))
             let quantities = AppleWakeDateQuantityProjection(data: day.filteredData)
+            let sleepStages = AppleWakeDateSleepStageProjection(data: day.filteredData)
             for target in ExportPathPlanner.aggregateOutputTargets(vaultURL: root,
                 healthSubfolder: healthSubfolder, settings: settings, date: day.filteredData.date) {
                 guard sources.updateValue(Source(ownerDate: owner, format: target.format,
@@ -48,7 +50,7 @@ nonisolated enum AppleWakeDateArchiveComposer {
                     headerPrefix: String(repeating: "#", count: settings.formatCustomization.markdownTemplate.sectionHeaderLevel),
                     providers: day.snapshot.providers,
                     providerMarkdown: providerMarkdown,
-                    includeMetadata: settings.includeMetadata, quantities: quantities), forKey: target.relativePath) == nil else {
+                    includeMetadata: settings.includeMetadata, quantities: quantities, sleepStages: sleepStages), forKey: target.relativePath) == nil else {
                     throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                 }
             }
@@ -70,9 +72,10 @@ nonisolated enum AppleWakeDateArchiveComposer {
             guard let source = sources[artifact.relativePath] else { return artifact }
             let hasProviders = source.providers?.isEmpty == false
             let hasQuantities = source.quantities.hasRecords
-            if source.format == .obsidianBases && source.partialFailures.isEmpty && !hasProviders && !hasQuantities { return artifact }
-            if source.format == .json, case .none = source.archive, source.partialFailures.isEmpty && !hasProviders && !hasQuantities { return artifact }
-            if source.format == .markdown && source.markdownDiagnostics.isEmpty && source.partialFailures.isEmpty && !hasProviders && !hasQuantities { return artifact }
+            let hasSleepStages = source.sleepStages.hasRecords
+            if source.format == .obsidianBases && source.partialFailures.isEmpty && !hasProviders && !hasQuantities && !hasSleepStages { return artifact }
+            if source.format == .json, case .none = source.archive, source.partialFailures.isEmpty && !hasProviders && !hasQuantities && !hasSleepStages { return artifact }
+            if source.format == .markdown && source.markdownDiagnostics.isEmpty && source.partialFailures.isEmpty && !hasProviders && !hasQuantities && !hasSleepStages { return artifact }
             var aggregate = try artifact.content.materializedData()
             if let providers = source.providers, hasProviders {
                 _ = try AppleWakeDateProviderProjection.lazyJSONObject(providers)
@@ -99,6 +102,7 @@ nonisolated enum AppleWakeDateArchiveComposer {
                         object["providers"] = try AppleWakeDateProviderProjection.lazyJSONObject(providers)
                     }
                     try source.quantities.addJSON(to: &object)
+                    try source.sleepStages.addJSON(to: &object)
                     try HealthKitRecordArchiveSerializer.writeDailyJSONObject(object, archive: source.archive,
                         to: sink, outputFormatting: [.prettyPrinted, .sortedKeys])
                 case .csv:
@@ -118,12 +122,18 @@ nonisolated enum AppleWakeDateArchiveComposer {
                         ownerDate: source.ownerDate, to: sink)
                     if let providers = source.providers { try WHOOPCSVProjection.write(providers, ownerDate: source.ownerDate, to: sink) }
                     try HealthKitArchiveCSVProjection.writeQuantities(source.quantities, ownerDate: source.ownerDate, to: sink)
+                    try HealthKitArchiveCSVProjection.writeSleepStages(source.sleepStages, ownerDate: source.ownerDate, to: sink)
                 case .markdown, .obsidianBases:
-                    if source.format == .obsidianBases && hasQuantities {
-                        try source.quantities.writeBases(aggregate: aggregate, to: sink)
+                    if source.format == .obsidianBases && (hasQuantities || hasSleepStages) {
+                        let keys = (hasQuantities ? ["native_quantity_details"] : []) + (hasSleepStages ? ["sleep_stage_details"] : [])
+                        try AppleWakeDateSourceFrontmatter.write(aggregate: aggregate, keys: keys, to: sink) { output in
+                            try source.quantities.writeFrontmatterBlock(to: output)
+                            try source.sleepStages.writeFrontmatterBlock(to: output)
+                        }
                     } else { try sink.write(aggregate) }
                     if source.format == .markdown { try sink.write(Data(source.markdownDiagnostics.utf8)) }
                     if source.format == .markdown { try source.quantities.writeMarkdown(headerPrefix: source.headerPrefix, to: sink) }
+                    if source.format == .markdown { try source.sleepStages.writeMarkdown(headerPrefix: source.headerPrefix, to: sink) }
                     try ExportDiagnosticSerializer.writeMarkdownSection(source.partialFailures,
                         headerPrefix: source.headerPrefix, to: sink)
                     if let providers = source.providers, hasProviders {

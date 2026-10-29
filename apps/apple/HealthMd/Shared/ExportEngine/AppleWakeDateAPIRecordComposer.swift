@@ -10,6 +10,7 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
         let captureStatus: String
         let providers: HealthProviderSections?
         let quantities: AppleWakeDateQuantityProjection
+        let sleepStages: AppleWakeDateSleepStageProjection
     }
 
     @MainActor
@@ -42,6 +43,7 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
                 }
                 root["raw_capture_status"] = source.captureStatus
                 try source.quantities.addJSON(to: &root)
+                try source.sleepStages.addJSON(to: &root)
                 if let providers = source.providers, !providers.isEmpty {
                     root["providers"] = try AppleWakeDateProviderProjection.lazyJSONObject(providers)
                 }

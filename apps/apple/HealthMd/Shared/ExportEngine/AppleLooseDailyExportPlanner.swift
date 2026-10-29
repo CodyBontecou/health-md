@@ -638,6 +638,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                         if wakeDateContext != nil {
                             aggregate.providers = nil
                             aggregate = AppleWakeDateQuantityProjection.aggregateRecord(from: aggregate)
+                            aggregate = AppleWakeDateSleepStageProjection.aggregatePresentation(from: aggregate)
                         }
                         return aggregate
                     })
@@ -713,6 +714,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
            settingsSnapshot.detailPolicy.includesCanonicalArchive || preparedExports.contains(where: {
                !$0.snapshot.partialFailures.isEmpty || $0.snapshot.providers?.isEmpty == false
                    || AppleWakeDateQuantityProjection(data: $0.filteredData).hasRecords
+                   || !$0.filteredData.sleep.stages.isEmpty
            }) {
             rustPlan = try await AppleWakeDateArchiveComposer.compose(plan: rustPlan, pin: pin,
                 prepared: preparedExports, settings: frozenSettings,

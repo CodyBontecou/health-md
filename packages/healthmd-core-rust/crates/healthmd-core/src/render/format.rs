@@ -252,6 +252,29 @@ pub(crate) fn render_markdown(
     } else {
         String::new()
     };
+    if config.profile.is_wake_date() && !config.include_metadata {
+        // SDK summaries and optional stages have independent authority. Readers must
+        // never reconstruct a selected/missing summary from overlapping source detail
+        // or from rounded, localized human prose. The empty object is meaningful.
+        let summaries = sorted_metrics(day)
+            .into_iter()
+            .filter(|metric| {
+                metric.category_id == "sleep"
+                    && !config
+                        .disabled_frontmatter_keys
+                        .contains(&metric.output_key)
+                    && !config
+                        .disabled_frontmatter_keys
+                        .contains(&metric.frontmatter_key)
+            })
+            .map(|metric| (metric.output_key.clone(), metric.public_value.clone()))
+            .collect::<BTreeMap<_, _>>();
+        let facts = serde_json::to_string(&summaries)
+            .map_err(|_| RenderError::SerializationFailed)?
+            .replace('`', "\\u0060");
+        writeln!(frontmatter, "> Sleep summary facts: `{facts}`\n")
+            .map_err(|_| RenderError::SerializationFailed)?;
+    }
     if let Some(document) = &day.profile_documents.markdown_body {
         append_line_document(&mut frontmatter, document);
         return Ok(frontmatter.into_bytes());
