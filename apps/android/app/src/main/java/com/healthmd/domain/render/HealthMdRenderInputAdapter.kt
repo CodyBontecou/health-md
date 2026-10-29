@@ -515,7 +515,7 @@ object HealthMdRenderInputAdapter {
         encoded.replace("|", "\\u007c").replace("`", "\\u0060")
             .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + "`"
 
-    private fun mindfulnessDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun mindfulnessDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
         val samples = root["mindfulness"]?.jsonObject?.get("sessions")?.jsonArray ?: JsonArray(emptyList())
         val owner = listOf("mindful_minutes", "mindful_sessions").firstOrNull(selected::contains)
         val rows = mutableListOf<JsonObject>()
@@ -651,7 +651,7 @@ object HealthMdRenderInputAdapter {
     }
 
     /** Existing Android-native interval records; never reinterpret intensity as Apple exercise time. */
-    private fun activityDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun activityDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
         val activity = root["activity"]?.jsonObject
         val rows = mutableListOf<JsonObject>()
         val records = mutableListOf<String>()
@@ -722,7 +722,7 @@ object HealthMdRenderInputAdapter {
         }
     }
 
-    private fun bloodPressureDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun bloodPressureDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
         val samples = root["vitals"]?.jsonObject?.get("bloodPressureSamples")?.jsonArray ?: JsonArray(emptyList())
         val keys = listOf("blood_pressure_systolic", "blood_pressure_diastolic")
         val rows = mutableListOf<JsonObject>()

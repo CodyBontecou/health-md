@@ -49,6 +49,118 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun denseWakeDatePressureActivityAndMindfulnessRemainCompleteAcrossFormats() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T01:00:00.123456789Z")
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, ZoneOffset.UTC)
+        val pressure = (0 until 2_000).map { index ->
+            val a = start.plusSeconds(index.toLong())
+            com.healthmd.domain.model.BloodPressureSample(a.atZone(context.zoneId).toLocalDateTime(), Math.nextUp(120.125), Math.nextUp(80.125),
+                measurementLocation = "left_arm", bodyPosition = "sitting", source = "synthetic", metadata = mapOf("synthetic" to "pressure-$index"),
+                exactTime = exact(a), identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-pressure-$index"))
+        }
+        val steps = pressure.mapIndexed { index, sample ->
+            val a = start.plusSeconds(index.toLong())
+            com.healthmd.domain.model.TimestampedSample(sample.time, 2_147_483_648.0, source = "synthetic", metadata = mapOf("synthetic" to "steps-$index"),
+                exactTime = exact(a), exactEndTime = exact(a.plusNanos(500_000_000)),
+                identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-steps-$index"))
+        }
+        val intensity = steps.mapIndexed { index, sample ->
+            val end = start.plusSeconds(index.toLong()).plusNanos(500_000_000)
+            com.healthmd.domain.model.ActivityIntensityEntry(sample.time, end.atZone(context.zoneId).toLocalDateTime(), kotlin.time.Duration.parse("0.5s"),
+                "moderate", source = "synthetic", metadata = mapOf("synthetic" to "intensity|`source-$index"),
+                exactStartTime = sample.exactTime, exactEndTime = sample.exactEndTime,
+                identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-intensity-$index"))
+        }
+        val mind = intensity.mapIndexed { index, value -> com.healthmd.domain.model.MindfulnessSessionEntry(value.startTime, value.endTime,
+            sessionType = "meditation", title = "Synthetic|session", notes = "notes `source`", source = "synthetic", metadata = mapOf("synthetic" to "mind-$index"),
+            exactStartTime = value.exactStartTime, exactEndTime = value.exactEndTime,
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-mind-$index")) }
+        val data = HealthData(LocalDate.of(2026, 11, 1), vitals = VitalsData(bloodPressureSamples = pressure),
+            activity = ActivityData(stepSamples = steps, activityIntensityEntries = intensity),
+            mindfulness = com.healthmd.domain.model.MindfulnessData(sessions = mind))
+        val selection = MetricSelectionState(enabledMetrics = setOf("bp_systolic", "bp_diastolic", "steps", "activity_intensity_minutes", "mindful_minutes"))
+        for (metadata in listOf(false, true)) {
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true, includeMetadata = metadata,
+                metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data.filtered(selection, context), settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("dense-native", "dense-native-session"))
+            val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+            val native = Json.parseToJsonElement(com.healthmd.data.export.JsonExporter().export(request.data,
+                request.customization, true, captureContext = context)).jsonObject
+            assertThat(plan.items).hasSize(4)
+            for (item in plan.items) {
+                val text = item.content.decodeToString()
+                if (item.relativePath.endsWith(".json")) {
+                    val root = Json.parseToJsonElement(text).jsonObject
+                    for ((category, field) in listOf("vitals" to "bloodPressureSamples", "activity" to "stepSamples",
+                        "activity" to "activityIntensity", "mindfulness" to "sessions")) {
+                        assertThat(root.getValue(category).jsonObject.getValue(field)).isEqualTo(native.getValue(category).jsonObject.getValue(field))
+                    }
+                    assertThat(root.getValue("activity").jsonObject["steps"]).isNull()
+                    assertThat(root.getValue("mindfulness").jsonObject["mindfulMinutes"]).isNull()
+                } else if (item.relativePath.endsWith(".csv")) {
+                    assertThat(text.lineSequence().count { it.contains(",Native Detail,") }).isEqualTo(8_000)
+                } else if (item.relativePath.endsWith("-bases.md")) {
+                    for (key in listOf("native_correlation_details", "native_activity_details", "native_mindfulness_details")) assertThat(text).contains("$key:")
+                }
+                System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { directory ->
+                    val output = File(directory, "android-v6-dense-native-$metadata/${item.relativePath}")
+                    val parent = checkNotNull(output.parentFile); check(parent.mkdirs() || parent.isDirectory); output.writeBytes(item.content)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun nativePressureActivityAndMindfulnessRejectInvalidSelectedOrDisabledSources() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T01:00:00.123456789Z"); val end = start.plusSeconds(1)
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, ZoneOffset.UTC)
+        val localStart = start.atZone(context.zoneId).toLocalDateTime(); val localEnd = end.atZone(context.zoneId).toLocalDateTime()
+        val pressure = com.healthmd.domain.model.BloodPressureSample(localStart, 120.125, 80.125, exactTime = exact(start))
+        val step = com.healthmd.domain.model.TimestampedSample(localStart, 42.0, exactTime = exact(start), exactEndTime = exact(end))
+        val intensity = com.healthmd.domain.model.ActivityIntensityEntry(localStart, localEnd, kotlin.time.Duration.parse("1s"),
+            "moderate", exactStartTime = exact(start), exactEndTime = exact(end))
+        val mind = com.healthmd.domain.model.MindfulnessSessionEntry(localStart, localEnd, exactStartTime = exact(start), exactEndTime = exact(end))
+        val data = HealthData(LocalDate.of(2026, 11, 1), vitals = VitalsData(bloodPressureSamples = listOf(pressure)),
+            activity = ActivityData(stepSamples = listOf(step), activityIntensityEntries = listOf(intensity)),
+            mindfulness = com.healthmd.domain.model.MindfulnessData(sessions = listOf(mind)), heart = HeartData(averageHeartRate = 72.125))
+        suspend fun plan(candidate: HealthData, enabled: Set<String>, disabled: List<String> = emptyList()): ExportArtifactPlan {
+            val selection = MetricSelectionState(enabledMetrics = enabled)
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+                metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+                formatCustomization = FormatCustomization(frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(
+                    fields = disabled.map { com.healthmd.domain.model.CustomFrontmatterField(it, isEnabled = false) })))
+            val request = FrozenDailyAggregateExportRequest.capture(candidate.filtered(selection, context), settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("native-boundary", "native-boundary-session"))
+            return HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+        }
+        for ((selection, disabled) in listOf(setOf("bp_systolic", "bp_diastolic") to listOf("blood_pressure_systolic"),
+            setOf("steps") to listOf("steps"), setOf("activity_intensity_minutes") to listOf("activity_intensity_minutes"),
+            setOf("mindful_minutes") to listOf("mindful_minutes", "mindful_sessions"))) {
+            assertThat(runCatching { plan(data, selection, disabled) }.isFailure).isTrue()
+        }
+        val badPressure = data.copy(vitals = VitalsData(bloodPressureSamples = listOf(pressure.copy(systolic = Double.NaN))))
+        assertThat(runCatching { plan(badPressure, setOf("bp_systolic", "bp_diastolic")) }.isFailure).isTrue()
+        val badSteps = data.copy(activity = data.activity.copy(stepSamples = listOf(step.copy(value = 1.5))))
+        assertThat(runCatching { plan(badSteps, setOf("steps")) }.isFailure).isTrue()
+        val badIntensity = data.copy(activity = data.activity.copy(activityIntensityEntries = listOf(intensity.copy(
+            endTime = localStart.minusSeconds(1), exactEndTime = exact(start.minusSeconds(1))))))
+        assertThat(runCatching { plan(badIntensity, setOf("activity_intensity_minutes")) }.isFailure).isTrue()
+        val badMind = data.copy(mindfulness = com.healthmd.domain.model.MindfulnessData(sessions = listOf(mind.copy(
+            endTime = localStart, exactEndTime = exact(start)))))
+        assertThat(runCatching { plan(badMind, setOf("mindful_minutes")) }.isFailure).isTrue()
+        for (candidate in listOf(badPressure, badSteps, badIntensity, badMind)) {
+            val plan = plan(candidate, setOf("avg_hr"))
+            assertThat(plan.items).hasSize(4)
+            for (item in plan.items) for (label in listOf("native_activity_details", "native_mindfulness_details", "native_correlation_details")) {
+                assertThat(item.content.decodeToString()).doesNotContain(label)
+            }
+        }
+    }
+
+    @Test
     fun denseWakeDateWorkoutRecordsRemainCompleteAcrossEveryFormat() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
         val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
