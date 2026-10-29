@@ -843,6 +843,7 @@ struct APIEndpointExportRunner {
             )
             if pin.isWakeDate, preparedOutcomes.contains(where: {
                 $0.record?.healthKitRecordArchive != nil || $0.record?.partialFailures.isEmpty == false
+                    || $0.record?.providers?.isEmpty == false
             }) {
                 guard let wakeContext = captureContext else { throw EngineError.invalidPreparedPlan }
                 let boundedBatches = try materializeBatches(plan: aggregatePlan, outcomes: preparedOutcomes,
@@ -1037,6 +1038,11 @@ struct APIEndpointExportRunner {
         coreExecutor: any AppleLooseDailyCoreExecuting
     ) async throws -> NativeExportArtifactPlan {
         let records = outcomes.compactMap(\.record)
+        let aggregateRecords = records.map { record in
+            var aggregate = record
+            if pin.isWakeDate { aggregate.providers = nil }
+            return aggregate
+        }
         let captureContext = settings.executionSleepCaptureContext
         let customization = settings.formatCustomization
         if pin.isWakeDate { customization.unitPreference = .metric }
@@ -1052,7 +1058,7 @@ struct APIEndpointExportRunner {
         )
         let semanticBatches = try HealthMdSemanticInputAdapter.boundedBatches(
             sessionID: identity.sessionID,
-            healthData: records,
+            healthData: aggregateRecords,
             registry: context.registry,
             customization: customization,
             calendarTimeZoneIdentifier: pin.calendarTimeZoneIdentifier,
@@ -1134,6 +1140,7 @@ struct APIEndpointExportRunner {
             if pin.isWakeDate {
                 aggregate.healthKitRecordArchive = nil
                 aggregate.partialFailures = []
+                aggregate.providers = nil
             }
             return (APIExportClient.dayString(from: record.date, timeZone: calendarTimeZone), aggregate)
         })
@@ -1191,7 +1198,8 @@ struct APIEndpointExportRunner {
             guard let aggregate = aggregates[owner] else { throw EngineError.invalidPreparedPlan }
             return AppleWakeDateAPIRecordComposer.Source(ownerDate: owner, aggregate: aggregate,
                 archive: record.healthKitRecordArchive, partialFailures: record.partialFailures,
-                captureStatus: HealthKitRecordArchiveSerializer.captureStatusString(record.healthKitRecordCaptureStatus))
+                captureStatus: HealthKitRecordArchiveSerializer.captureStatusString(record.healthKitRecordCaptureStatus),
+                providers: record.providers)
         }
         guard sources.count == aggregates.count else { throw EngineError.invalidPreparedPlan }
         let files = try await AppleWakeDateAPIRecordComposer.compose(sources: sources,

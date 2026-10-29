@@ -8,6 +8,7 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
         let archive: HealthKitRecordArchive?
         let partialFailures: [ExportPartialFailure]
         let captureStatus: String
+        let providers: HealthProviderSections?
     }
 
     @MainActor
@@ -28,7 +29,8 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
                       root["schema_profile"] as? String == "apple-v11",
                       root["unit_system"] as? String == "metric",
                       root["time_context"] as? [String: String] == expectedContext,
-                      root["healthkit_record_archive"] == nil, root["diagnostics"] == nil else {
+                      root["healthkit_record_archive"] == nil, root["diagnostics"] == nil,
+                      root["providers"] == nil else {
                     throw APIEndpointExportRunner.EngineError.invalidPreparedPlan
                 }
                 if let archive = source.archive {
@@ -38,6 +40,9 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
                     }
                 }
                 root["raw_capture_status"] = source.captureStatus
+                if let providers = source.providers, !providers.isEmpty {
+                    root["providers"] = try AppleWakeDateProviderProjection.lazyJSONObject(providers)
+                }
                 if !source.partialFailures.isEmpty {
                     root["diagnostics"] = ExportDiagnosticSerializer.lazyDiagnostics(source.partialFailures)
                 }

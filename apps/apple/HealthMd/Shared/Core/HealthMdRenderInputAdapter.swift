@@ -183,8 +183,8 @@ enum HealthMdRenderInputAdapter {
             throw AdapterError.invalidPresentation
         }
 
-        // API envelopes have no native source composition phase. Until that route
-        // is qualified, never attest aggregates while omitting archives or failures.
+        // API runners compose native source facts after bounded aggregate attestation.
+        // Raw adapter callers must supply that aggregate projection explicitly.
         if registry.profileId == AppleExportEnginePin.wakeDateProfileID, options.api != nil,
            presentationByOwnerDate.values.contains(where: { $0.healthKitRecordArchive != nil || !$0.partialFailures.isEmpty }) {
             throw AdapterError.invalidPresentation
