@@ -38,6 +38,8 @@ Recovery rules:
 
 Android resolves one explicit context across chunks. Its current repository and writer contexts reject `morning_ends` before physical capture/render/upload. Stored preferences are not migrated. The native sleep reducer's proposed-mode tests remain qualification controls; shipped writer controls use the historical rule and include unavailable-context negatives.
 
+Android folder exports and previews also bind the selected provider and the All connected membership to an independent repository view before the first capture callback. Later preference changes affect a new operation, while availability and read permissions remain live checks on the accepted sources. Binding cancellation stops capture; other binding failures produce an unknown failure without exposing settings diagnostics. Durable folder recovery that already has retained journal bytes returns before this fresh-source binding. This process-local view does not add persisted source authority or qualify API, gateway and direct capture selection; those producer adapters still require operation binding.
+
 ## Explicit native JSON preparation
 
 The throwing String/Data/sink/OutputStream entrypoints in `JSONExporter.swift` accept an optional `AppleSleepCaptureContext`. A matching Morning ends context with the `apple-v11` marker selects daily schema 11 and emits complete calendar/UTC/attribution/owner/clipping authority. Missing, draft, conflicting or unowned sleep authority rejects with a static error before authority-related stream bytes are written. Explicit authority is required even on an empty day. Omitted-context historical Night begins callers retain their existing bytes; Morning ends cannot silently become v8.

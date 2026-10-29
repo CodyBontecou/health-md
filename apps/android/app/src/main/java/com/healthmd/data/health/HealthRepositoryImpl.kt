@@ -6,26 +6,44 @@ import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
 import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.OperationScopedHealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.util.runCatchingCancellable
 import java.time.LocalDate
 import java.time.ZoneId
 
-class HealthRepositoryImpl(
+class HealthRepositoryImpl private constructor(
     private val providerRegistry: HealthProviderRegistry,
     private val settingsRepository: SettingsRepository,
-) : HealthRepository {
+    private val acceptedProviders: ProviderSelection?,
+) : HealthRepository, OperationScopedHealthRepository {
+
+    constructor(providerRegistry: HealthProviderRegistry, settingsRepository: SettingsRepository) :
+        this(providerRegistry, settingsRepository, null)
+
+    private data class ProviderSelection(val selectedId: String, val connectedIds: List<String>)
+
+    override suspend fun forCaptureOperation(): HealthRepository {
+        if (acceptedProviders != null) return this
+        val selectedId = settingsRepository.getSelectedHealthProviderId()
+        val connectedIds = if (selectedId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID)
+            settingsRepository.getConnectedHealthProviderIds().distinct().sorted() else emptyList()
+        return HealthRepositoryImpl(providerRegistry, settingsRepository, ProviderSelection(selectedId, connectedIds))
+    }
+
+    private suspend fun selectedProviderId(): String =
+        acceptedProviders?.selectedId ?: settingsRepository.getSelectedHealthProviderId()
 
     private suspend fun activeProvider(): HealthDataProvider {
-        val selectedProviderId = settingsRepository.getSelectedHealthProviderId()
+        val selectedProviderId = selectedProviderId()
         return providerRegistry.providerFor(selectedProviderId)
     }
 
     private suspend fun shouldUseAllConnected(): Boolean =
-        settingsRepository.getSelectedHealthProviderId() == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID
+        selectedProviderId() == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID
 
     private suspend fun configuredProviderIds(): List<String> =
-        settingsRepository.getConnectedHealthProviderIds().distinct().sorted()
+        acceptedProviders?.connectedIds ?: settingsRepository.getConnectedHealthProviderIds().distinct().sorted()
 
     private fun configuredProviders(connectedProviderIds: List<String>): List<HealthDataProvider> {
         val connectedIds = connectedProviderIds.toSet()
@@ -110,8 +128,9 @@ class HealthRepositoryImpl(
         val context = resolveCaptureContext(zoneId, sleepDayAttributionOverride)
         val captureZoneId = context.zoneId
         val attribution = context.sleepDayAttribution
-        if (!shouldUseAllConnected()) {
-            return activeProvider().fetchHealthDataRange(
+        val selectedId = selectedProviderId()
+        if (selectedId != HealthDataMerger.ALL_CONNECTED_PROVIDER_ID) {
+            return providerRegistry.providerFor(selectedId).fetchHealthDataRange(
                 dates,
                 dataTypes,
                 includeGranularData,

@@ -5,6 +5,7 @@ import com.healthmd.domain.model.*
 import com.healthmd.domain.repository.DurableScheduledFolderOperationStart
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.forCaptureOperation
 import com.healthmd.data.isHealthConnectRateLimit
 import com.healthmd.rawexport.allowsInteractiveRouteConsent
 import kotlinx.coroutines.CancellationException
@@ -105,8 +106,9 @@ class ExportOrchestrator(
             }
         }
 
-        val captureContext = try {
-            resolveOperationCaptureContext(settings)
+        val (operationRepository, captureContext) = try {
+            val context = resolveOperationCaptureContext(settings)
+            healthRepository.forCaptureOperation() to context
         } catch (_: CancellationException) {
             return cancelledResult()
         } catch (error: Exception) {
@@ -128,10 +130,10 @@ class ExportOrchestrator(
         // before canonical chunk capture. The repository is a no-op for every noninteractive path.
         if (coroutineContext.allowsInteractiveRouteConsent() &&
             effectiveSelection.workouts &&
-            !healthRepository.isBeforeFirstUnlock()
+            !operationRepository.isBeforeFirstUnlock()
         ) {
             try {
-                healthRepository.authorizeExerciseRouteConsent(
+                operationRepository.authorizeExerciseRouteConsent(
                     dates = dates,
                     dataTypes = effectiveSelection,
                     includeGranularData = settings.shouldFetchGranularData(),
@@ -151,7 +153,7 @@ class ExportOrchestrator(
                 return cancelledResult()
             }
 
-            if (healthRepository.isBeforeFirstUnlock()) {
+            if (operationRepository.isBeforeFirstUnlock()) {
                 for ((index, date) in chunk.withIndex()) {
                     onProgress?.invoke(processedDays + index + 1, totalDays, date.toString())
                     failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.DEVICE_LOCKED))
@@ -161,7 +163,7 @@ class ExportOrchestrator(
             }
 
             val healthDataByDate = try {
-                healthRepository.fetchHealthDataRange(
+                operationRepository.fetchHealthDataRange(
                     dates = chunk,
                     dataTypes = effectiveSelection,
                     includeGranularData = settings.shouldFetchGranularData(),
@@ -285,9 +287,12 @@ class ExportOrchestrator(
         val previewCandidates = normalizedDates.take(MAX_PREVIEW_FETCH_ATTEMPTS)
         val days = mutableListOf<ExportPreviewDay>()
         var attemptedDateCount = 0
-        val captureContext = try {
-            resolveOperationCaptureContext(settings)
-        } catch (_: SleepAttributionUnavailableException) {
+        val (operationRepository, captureContext) = try {
+            val context = resolveOperationCaptureContext(settings)
+            healthRepository.forCaptureOperation() to context
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
             return ExportPreview(requestedDateCount = normalizedDates.size, previewedDateCount = 0,
                 isTruncated = false, days = previewCandidates.map { ExportPreviewDay(it, failureReason = ExportFailureReason.UNKNOWN) })
         }
@@ -302,12 +307,12 @@ class ExportOrchestrator(
             attemptedDateCount++
             onProgress?.invoke(attemptedDateCount, previewCandidates.size, date.toString())
 
-            val previewDay = if (healthRepository.isBeforeFirstUnlock()) {
+            val previewDay = if (operationRepository.isBeforeFirstUnlock()) {
                 ExportPreviewDay(date = date, failureReason = ExportFailureReason.DEVICE_LOCKED)
             } else {
                 try {
                     val effectiveSelection = settings.effectiveDataTypeSelection()
-                    val healthData = healthRepository.fetchHealthDataRange(
+                    val healthData = operationRepository.fetchHealthDataRange(
                         dates = listOf(date),
                         dataTypes = effectiveSelection,
                         includeGranularData = settings.shouldFetchGranularData(),

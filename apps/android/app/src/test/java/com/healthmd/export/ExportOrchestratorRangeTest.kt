@@ -392,6 +392,82 @@ class ExportOrchestratorRangeTest {
     }
 
     @Test
+    fun `provider binding failure and cancellation never capture or leak settings diagnostics`() = runTest {
+        val date = LocalDate.of(2026, 7, 1)
+        for (failure in listOf(java.io.IOException("private settings diagnostic"),
+            kotlinx.coroutines.CancellationException("binding cancelled"))) {
+            val health = mockk<HealthRepository>()
+            coEvery { health.resolveCaptureContext(any(), any()) } returns
+                AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.NIGHT_BEGINS)
+            val source = object : HealthRepository by health,
+                com.healthmd.domain.repository.OperationScopedHealthRepository {
+                override suspend fun forCaptureOperation(): HealthRepository = throw failure
+            }
+            val destination = RecordingExportRepository()
+            val orchestrator = ExportOrchestrator(source, destination)
+            val result = orchestrator.exportDates(listOf(date), ExportSettings())
+            assertThat(result.successCount).isEqualTo(0)
+            assertThat(result.wasCancelled).isEqualTo(failure is kotlinx.coroutines.CancellationException)
+            assertThat(result.failedDateDetails.all { it.errorDetails == null }).isTrue()
+            val preview = runCatching { orchestrator.previewDates(listOf(date), ExportSettings()) }
+            if (failure is kotlinx.coroutines.CancellationException) {
+                assertThat(preview.exceptionOrNull()).isInstanceOf(kotlinx.coroutines.CancellationException::class.java)
+            } else {
+                assertThat(preview.getOrThrow().days.single().failureReason).isEqualTo(ExportFailureReason.UNKNOWN)
+                assertThat(preview.getOrThrow().totalFileCount).isEqualTo(0)
+            }
+            assertThat(destination.exported).isEmpty()
+            assertThat(destination.previewed).isEmpty()
+            io.mockk.coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        }
+    }
+
+    @Test
+    fun `folder export and preview keep provider selection while new operations see the changed choice`() = runTest {
+        val dates = (0 until 31).map { LocalDate.of(2026, 7, 1).plusDays(it.toLong()) }
+        for (mode in SleepDayAttribution.entries) {
+            var selected = "health_connect"
+            val calls = mutableListOf<String>()
+            val manager = mockk<HealthConnectManager>()
+            every { manager.isBeforeFirstUnlock() } returns false
+            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+                calls += "health_connect"
+                firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 10)) }
+            }
+            val alternate = mockk<com.healthmd.data.health.HealthDataProvider>()
+            coEvery { alternate.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+                calls += "whoop"
+                firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 999)) }
+            }
+            val registry = mockk<HealthProviderRegistry>()
+            val primary = HealthConnectDataProvider(manager)
+            every { registry.providerFor("health_connect") } returns primary
+            every { registry.providerFor("whoop") } returns alternate
+            every { registry.primaryExportProvider() } returns primary
+            val preferences = mockk<SettingsRepository>()
+            coEvery { preferences.getSelectedHealthProviderId() } answers { selected }
+            coEvery { preferences.getSleepDayAttribution() } returns mode
+            val destination = RecordingExportRepository()
+            val orchestrator = ExportOrchestrator(HealthRepositoryImpl(registry, preferences), destination)
+            val settings = ExportSettings(exportFormats = setOf(ExportFormat.JSON))
+            val result = orchestrator.exportDates(dates, settings, onProgress = { _, _, _ -> selected = "whoop" })
+            assertThat(result.successCount).isEqualTo(31)
+            assertThat(calls).containsExactly("health_connect", "health_connect").inOrder()
+            assertThat(destination.exported.map { it.activity.steps }.distinct()).containsExactly(10)
+            calls.clear()
+            selected = "health_connect"
+            val preview = orchestrator.previewDates(dates.take(2), settings,
+                onProgress = { _, _, _ -> selected = "whoop" })
+            assertThat(preview.previewedDateCount).isEqualTo(2)
+            assertThat(calls).containsExactly("health_connect", "health_connect").inOrder()
+            calls.clear()
+            assertThat(orchestrator.exportDates(dates.take(1), settings).successCount).isEqualTo(1)
+            assertThat(calls).containsExactly("whoop")
+            assertThat(destination.exported.last().activity.steps).isEqualTo(999)
+        }
+    }
+
+    @Test
     fun `empty authoritative range is not retried through stale single day semantics`() = runTest {
         val dates = listOf(LocalDate.of(2026, 5, 4), LocalDate.of(2026, 5, 5))
         val healthRepository = FakeHealthRepository(

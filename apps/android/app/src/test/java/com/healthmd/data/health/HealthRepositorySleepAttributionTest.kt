@@ -3,13 +3,56 @@ package com.healthmd.data.health
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.SleepDayAttributionOverride
+import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.domain.repository.forCaptureOperation
+import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.mockk
+import java.time.LocalDate
 import java.util.TimeZone
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.time.Duration.Companion.minutes
 
 class HealthRepositorySleepAttributionTest {
+    @Test
+    fun operationKeepsConnectedMembershipButRechecksRevokedReadPermission() = runTest {
+        val date = LocalDate.of(2026, 7, 1)
+        var selected = HealthDataMerger.ALL_CONNECTED_PROVIDER_ID
+        val connected = mutableSetOf("health_connect")
+        var permission = true
+        val manager = mockk<HealthConnectManager>()
+        coEvery { manager.isAvailable() } returns true
+        coEvery { manager.hasAllPermissions() } answers { permission }
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 10)) }
+        }
+        val alternate = mockk<HealthDataProvider>()
+        io.mockk.every { alternate.providerId } returns "whoop"
+        val preferences = mockk<SettingsRepository>()
+        coEvery { preferences.getSelectedHealthProviderId() } answers { selected }
+        coEvery { preferences.getConnectedHealthProviderIds() } answers { connected }
+        val repository = HealthRepositoryImpl(HealthProviderRegistry(HealthConnectDataProvider(manager), listOf(alternate)), preferences)
+        val accepted = repository.forCaptureOperation()
+        connected += "whoop"
+        selected = "whoop"
+        val captured = accepted.fetchHealthDataRange(listOf(date),
+            sleepDayAttributionOverride = SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS)).single()
+        assertThat(captured.activity.steps).isEqualTo(10)
+        assertThat(captured.compatibilityProvenance?.providerIdsAttempted).containsExactly("health_connect")
+        permission = false
+        val revoked = accepted.fetchHealthDataRange(listOf(date),
+            sleepDayAttributionOverride = SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS)).single()
+        assertThat(revoked.activity.steps).isNull()
+        assertThat(revoked.compatibilityProvenance?.providerFailures?.single()?.errorType).isEqualTo("PermissionDenied")
+        coVerify(exactly = 1) { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { alternate.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { preferences.getSelectedHealthProviderId() }
+        coVerify(exactly = 1) { preferences.getConnectedHealthProviderIds() }
+    }
+
     @Test
     fun singleDateReadsHonorShippedNightOwnerAndMatchRangeWithoutDuplicateNight() = runTest {
         val fixture = SleepAttributionCaptureFixture()
