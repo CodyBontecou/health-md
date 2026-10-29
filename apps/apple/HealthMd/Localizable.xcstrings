@@ -142104,6 +142104,32 @@
         "pt-BR": {"stringUnit":{"state":"translated","value":"não configurado"}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"未配置"}}
       }
+    },
+    "Connect WHOOP" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"WHOOP verbinden"}},
+        "es": {"stringUnit":{"state":"translated","value":"Conectar WHOOP"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Connecter WHOOP"}},
+        "it": {"stringUnit":{"state":"translated","value":"Connetti WHOOP"}},
+        "ja": {"stringUnit":{"state":"translated","value":"WHOOPに接続"}},
+        "ko": {"stringUnit":{"state":"translated","value":"WHOOP 연결"}},
+        "nl": {"stringUnit":{"state":"translated","value":"WHOOP verbinden"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Conectar WHOOP"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"连接 WHOOP"}}
+      }
+    },
+    "Disconnect WHOOP" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"WHOOP trennen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Desconectar WHOOP"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Déconnecter WHOOP"}},
+        "it": {"stringUnit":{"state":"translated","value":"Disconnetti WHOOP"}},
+        "ja": {"stringUnit":{"state":"translated","value":"WHOOPとの接続を解除"}},
+        "ko": {"stringUnit":{"state":"translated","value":"WHOOP 연결 해제"}},
+        "nl": {"stringUnit":{"state":"translated","value":"WHOOP loskoppelen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Desconectar WHOOP"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"断开 WHOOP 连接"}}
+      }
     }
   },
   "version" : "1.0"
