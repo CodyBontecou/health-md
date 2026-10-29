@@ -22,7 +22,7 @@ struct ReadingMetricToggle: View {
         .contentShape(Rectangle())
         .disabled(isUnavailable)
         .accessibilityLabel(detail.isEmpty ? name : "\(name), \(detail)")
-        .accessibilityValue(isOn ? "Enabled" : "Disabled")
+        .accessibilityValue(isOn ? String(localized: "Enabled") : String(localized: "Disabled"))
         .accessibilityHint(accessibilityHint)
     }
 }
@@ -94,8 +94,10 @@ struct ReadingMetricCategoryHeader<Status: View>: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-        .accessibilityHint("Double tap anywhere on the category to \(isExpanded ? "collapse" : "expand")")
+        .accessibilityValue(isExpanded ? String(localized: "Expanded") : String(localized: "Collapsed"))
+        .accessibilityHint(isExpanded
+            ? String(localized: "Double tap to collapse this category")
+            : String(localized: "Double tap to expand this category"))
     }
 }
 

@@ -1,6 +1,214 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Expanded" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Aufgeklappt"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Expandido"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Développé"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Espanso"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"展開済み"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"펼쳐짐"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Uitgevouwen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Expandido"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"已展开"}}
+      }
+    },
+    "Collapsed" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Zugeklappt"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Contraído"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Réduit"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Compresso"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"折りたたみ済み"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"접힘"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Ingevouwen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Recolhido"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"已折叠"}}
+      }
+    },
+    "Locked" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Gesperrt"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Bloqueado"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Verrouillé"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Bloccato"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ロック中"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"잠김"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Vergrendeld"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Bloqueado"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"已锁定"}}
+      }
+    },
+    "Double tap to disable standard health metrics. Medications require a separate permission step." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um Standard-Gesundheitsmetriken zu deaktivieren. Medikamente erfordern einen separaten Berechtigungsschritt."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para desactivar las métricas de salud estándar. Los medicamentos requieren un paso de permiso aparte."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour désactiver les mesures de santé standard. Les médicaments nécessitent une autorisation distincte."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per disattivare le metriche sanitarie standard. I farmaci richiedono un’autorizzazione separata."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップして標準の健康指標を無効にします。服薬情報には別途許可が必要です。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 기본 건강 지표를 비활성화합니다. 복약 정보는 별도의 권한 허용 단계가 필요합니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om standaardgezondheidsmetingen uit te schakelen. Voor medicijnen is een aparte toestemmingsstap nodig."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para desativar as métricas de saúde padrão. Os medicamentos exigem uma etapa de permissão separada."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以停用标准健康指标。药物信息需要单独授权。"}}
+      }
+    },
+    "Double tap to enable standard health metrics. Medications require a separate permission step." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um Standard-Gesundheitsmetriken zu aktivieren. Medikamente erfordern einen separaten Berechtigungsschritt."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para activar las métricas de salud estándar. Los medicamentos requieren un paso de permiso aparte."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour activer les mesures de santé standard. Les médicaments nécessitent une autorisation distincte."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per attivare le metriche sanitarie standard. I farmaci richiedono un’autorizzazione separata."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップして標準の健康指標を有効にします。服薬情報には別途許可が必要です。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 기본 건강 지표를 활성화합니다. 복약 정보는 별도의 권한 허용 단계가 필요합니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om standaardgezondheidsmetingen in te schakelen. Voor medicijnen is een aparte toestemmingsstap nodig."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para ativar as métricas de saúde padrão. Os medicamentos exigem uma etapa de permissão separada."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以启用标准健康指标。药物信息需要单独授权。"}}
+      }
+    },
+    "Double tap to disable" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen zum Deaktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para desactivar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour désactiver"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per disattivare"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップして無効にします"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 비활성화"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om uit te schakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para desativar"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以停用"}}
+      }
+    },
+    "Double tap to enable" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen zum Aktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para activar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour activer"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per attivare"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップして有効にします"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 활성화"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om in te schakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para ativar"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以启用"}}
+      }
+    },
+    "Double tap to collapse this category" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um diese Kategorie zuzuklappen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para contraer esta categoría"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour réduire cette catégorie"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per comprimere questa categoria"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップしてこのカテゴリを折りたたみます"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 이 카테고리를 접으세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om deze categorie in te vouwen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para recolher esta categoria"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以折叠此类别"}}
+      }
+    },
+    "Double tap to expand this category" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um diese Kategorie aufzuklappen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para expandir esta categoría"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour développer cette catégorie"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per espandere questa categoria"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップしてこのカテゴリを展開します"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 이 카테고리를 펼치세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om deze categorie uit te vouwen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para expandir esta categoria"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以展开此类别"}}
+      }
+    },
+    "Medication export unavailable" : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Medikamentenexport nicht verfügbar"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Exportación de medicamentos no disponible"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Export des médicaments indisponible"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Esportazione dei farmaci non disponibile"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"服薬情報を書き出せません"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"복약 정보를 내보낼 수 없음"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Medicijnen exporteren niet beschikbaar"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Exportação de medicamentos indisponível"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"药物导出不可用"}}
+      }
+    },
+    "Medication export requires iOS 26 or later. Other Health metrics can still be exported." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Der Medikamentenexport erfordert iOS 26 oder neuer. Andere Gesundheitsmetriken können weiterhin exportiert werden."}},
+        "es" : {"stringUnit":{"state":"translated","value":"La exportación de medicamentos requiere iOS 26 o posterior. Las demás métricas de Salud se pueden seguir exportando."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"L’export des médicaments nécessite iOS 26 ou version ultérieure. Les autres mesures de Santé restent exportables."}},
+        "it" : {"stringUnit":{"state":"translated","value":"L’esportazione dei farmaci richiede iOS 26 o versioni successive. Le altre metriche di Salute possono ancora essere esportate."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"服薬情報の書き出しにはiOS 26以降が必要です。ほかのヘルスケア指標は引き続き書き出せます。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"복약 정보를 내보내려면 iOS 26 이상이 필요합니다. 다른 건강 지표는 계속 내보낼 수 있습니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Medicijnen exporteren vereist iOS 26 of nieuwer. Andere Gezondheid-metingen kunnen nog steeds worden geëxporteerd."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"A exportação de medicamentos requer iOS 26 ou posterior. As outras métricas do Saúde ainda podem ser exportadas."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"导出药物信息需要 iOS 26 或更高版本。其他健康指标仍可导出。"}}
+      }
+    },
+    "Health.md exports only the medications you selected in Apple's permission sheet. You can reopen the selector anytime." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Health.md exportiert nur die Medikamente, die du in Apples Berechtigungsdialog ausgewählt hast. Du kannst die Auswahl jederzeit erneut öffnen."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Health.md solo exporta los medicamentos que seleccionaste en el permiso de Apple. Puedes volver a abrir el selector en cualquier momento."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Health.md exporte uniquement les médicaments sélectionnés dans la fenêtre d’autorisation d’Apple. Vous pouvez rouvrir le sélecteur à tout moment."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Health.md esporta solo i farmaci selezionati nella schermata di autorizzazione di Apple. Puoi riaprire il selettore in qualsiasi momento."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"Health.mdは、Appleの許可画面で選択した薬だけを書き出します。選択画面はいつでも開き直せます。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"Health.md는 Apple 권한 화면에서 선택한 약만 내보냅니다. 언제든지 선택 화면을 다시 열 수 있습니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Health.md exporteert alleen de medicijnen die je in het toestemmingsvenster van Apple hebt geselecteerd. Je kunt de kiezer altijd opnieuw openen."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"O Health.md exporta apenas os medicamentos selecionados na tela de permissão da Apple. Você pode reabrir o seletor a qualquer momento."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"Health.md 只导出你在 Apple 授权界面中选择的药物。你可以随时重新打开选择器。"}}
+      }
+    },
+    "Medications use Apple's per-medication permission sheet instead of the standard Health access prompt." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Medikamente verwenden Apples individuellen Berechtigungsdialog pro Medikament statt der üblichen Health-Zugriffsabfrage."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Los medicamentos usan el permiso individual de Apple para cada medicamento en lugar de la solicitud estándar de acceso a Salud."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Les médicaments utilisent une autorisation Apple par médicament plutôt que la demande d’accès standard à Santé."}},
+        "it" : {"stringUnit":{"state":"translated","value":"I farmaci utilizzano l’autorizzazione di Apple per ogni singolo farmaco anziché la richiesta standard di accesso a Salute."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"服薬情報では、通常のヘルスケアへのアクセス要求ではなく、薬ごとに許可するAppleの画面を使用します。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"복약 정보는 일반적인 건강 접근 권한 요청 대신 약별로 허용하는 Apple의 권한 화면을 사용합니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Medicijnen gebruiken het toestemmingsvenster van Apple per medicijn in plaats van de standaardvraag om toegang tot Gezondheid."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Os medicamentos usam a tela de permissão individual da Apple por medicamento, em vez da solicitação padrão de acesso ao Saúde."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"药物信息使用 Apple 按药物逐一授权的界面，而不是标准的健康访问权限提示。"}}
+      }
+    },
+    "Vision prescription access requires a supported iOS runtime." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Der Zugriff auf Sehhilfenverordnungen erfordert eine unterstützte iOS-Version."}},
+        "es" : {"stringUnit":{"state":"translated","value":"El acceso a recetas ópticas requiere una versión de iOS compatible."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"L’accès aux ordonnances optiques nécessite une version d’iOS compatible."}},
+        "it" : {"stringUnit":{"state":"translated","value":"L’accesso alle prescrizioni oculistiche richiede una versione di iOS supportata."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"視力処方箋へのアクセスには、対応するiOSが必要です。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"시력 처방전에 접근하려면 지원되는 iOS 버전이 필요합니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Toegang tot brilrecepten vereist een ondersteunde iOS-versie."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"O acesso a receitas oftalmológicas requer uma versão compatível do iOS."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"访问视力处方需要受支持的 iOS 版本。"}}
+      }
+    },
+    "Apple's vision prescription selector did not complete (%@, code %lld)." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Apples Auswahl für Sehhilfenverordnungen wurde nicht abgeschlossen (%@, Code %lld)."}},
+        "es" : {"stringUnit":{"state":"translated","value":"El selector de recetas ópticas de Apple no se completó (%@, código %lld)."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Le sélecteur d’ordonnances optiques d’Apple n’a pas abouti (%@, code %lld)."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Il selettore delle prescrizioni oculistiche di Apple non è stato completato (%@, codice %lld)."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"Appleの視力処方箋の選択が完了しませんでした（%@、コード%lld）。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"Apple의 시력 처방전 선택이 완료되지 않았습니다(%@, 코드 %lld)."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"De brilreceptkiezer van Apple is niet voltooid (%@, code %lld)."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"O seletor de receitas oftalmológicas da Apple não foi concluído (%@, código %lld)."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"Apple 视力处方选择器未完成（%@，代码 %lld）。"}}
+      }
+    },
+    "Medication export requires iOS 26 or later. You can still export all other Health metrics." : {
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Der Medikamentenexport erfordert iOS 26 oder neuer. Alle anderen Gesundheitsmetriken können weiterhin exportiert werden."}},
+        "es" : {"stringUnit":{"state":"translated","value":"La exportación de medicamentos requiere iOS 26 o posterior. Puedes seguir exportando todas las demás métricas de Salud."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"L’export des médicaments nécessite iOS 26 ou version ultérieure. Vous pouvez toujours exporter toutes les autres mesures de Santé."}},
+        "it" : {"stringUnit":{"state":"translated","value":"L’esportazione dei farmaci richiede iOS 26 o versioni successive. Puoi ancora esportare tutte le altre metriche di Salute."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"服薬情報の書き出しにはiOS 26以降が必要です。ほかのすべてのヘルスケア指標は引き続き書き出せます。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"복약 정보를 내보내려면 iOS 26 이상이 필요합니다. 다른 모든 건강 지표는 계속 내보낼 수 있습니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Medicijnen exporteren vereist iOS 26 of nieuwer. Je kunt alle andere Gezondheid-metingen nog steeds exporteren."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"A exportação de medicamentos requer iOS 26 ou posterior. Você ainda pode exportar todas as outras métricas do Saúde."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"导出药物信息需要 iOS 26 或更高版本。你仍可导出所有其他健康指标。"}}
+      }
+    },
     "" : {
 
     },
@@ -1596,7 +1804,17 @@
       }
     },
     "%@, pending Apple permission" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"%@, Apple-Berechtigung ausstehend"}},
+        "es" : {"stringUnit":{"state":"translated","value":"%@, permiso de Apple pendiente"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"%@, autorisation Apple en attente"}},
+        "it" : {"stringUnit":{"state":"translated","value":"%@, autorizzazione Apple in attesa"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"%@、Appleの許可待ち"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"%@, Apple 권한 대기 중"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"%@, wacht op toestemming van Apple"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"%@, permissão da Apple pendente"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"%@，等待 Apple 授权"}}
+      }
     },
     "%@: %@" : {
       "localizations" : {
@@ -4565,7 +4783,17 @@
       }
     },
     "%lld percent enabled" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"%lld Prozent aktiviert"}},
+        "es" : {"stringUnit":{"state":"translated","value":"%lld por ciento activado"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"%lld pour cent activé"}},
+        "it" : {"stringUnit":{"state":"translated","value":"%lld per cento attivato"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"%lldパーセント有効"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"%lld퍼센트 활성화됨"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"%lld procent ingeschakeld"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"%lld por cento ativado"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"已启用百分之 %lld"}}
+      }
     },
     "%lld source days" : {
       "comment" : "macOS production UI",
@@ -10375,7 +10603,17 @@
       }
     },
     "Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Apple behandelt Medikamente anders als andere Gesundheitsdaten. Du wählst einzeln aus, welche Medikamente Health.md lesen darf. Exporte enthalten nur die ausgewählten Medikamente."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Apple trata los medicamentos de forma distinta a los demás datos de Salud. Elegirás qué medicamentos puede leer Health.md y las exportaciones solo incluirán los que selecciones."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Apple traite les médicaments différemment des autres données de Santé. Vous choisirez les médicaments que Health.md peut lire, et les exports incluront uniquement ceux que vous sélectionnez."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Apple gestisce i farmaci diversamente dagli altri dati di Salute. Sceglierai i singoli farmaci che Health.md può leggere e le esportazioni includeranno solo quelli selezionati."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"Appleでは、服薬情報はほかのヘルスケアデータとは異なる方法で扱われます。Health.mdに読み取りを許可する薬を個別に選択し、選択した薬だけが書き出されます。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"Apple은 복약 정보를 다른 건강 데이터와 다르게 처리합니다. Health.md가 읽을 수 있는 약을 개별적으로 선택하며, 선택한 약만 내보내기에 포함됩니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Apple behandelt medicijnen anders dan andere Gezondheid-gegevens. Je kiest afzonderlijk welke medicijnen Health.md mag lezen. Alleen de geselecteerde medicijnen worden geëxporteerd."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"A Apple trata os medicamentos de forma diferente dos outros dados do Saúde. Você escolherá quais medicamentos o Health.md pode ler, e as exportações incluirão apenas os selecionados."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"Apple 对药物信息的处理方式与其他健康数据不同。你将逐一选择允许 Health.md 读取的药物，导出内容只包含你选择的药物。"}}
+      }
     },
     "Apple Watch app" : {
 
@@ -14653,7 +14891,17 @@
       }
     },
     "Change access" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Zugriff ändern"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Cambiar acceso"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Modifier l’accès"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Modifica accesso"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"アクセスを変更"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"접근 권한 변경"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Toegang wijzigen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Alterar acesso"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"更改访问权限"}}
+      }
     },
     "Change destination folder" : {
       "comment" : "macOS production UI",
@@ -14916,7 +15164,17 @@
       }
     },
     "Change Medication Access" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Medikamentenzugriff ändern"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Cambiar acceso a medicamentos"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Modifier l’accès aux médicaments"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Modifica accesso ai farmaci"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"服薬情報へのアクセスを変更"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"복약 정보 접근 권한 변경"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Toegang tot medicijnen wijzigen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Alterar acesso a medicamentos"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"更改药物访问权限"}}
+      }
     },
     "Change selected metrics from Export Settings, Health Metrics" : {
 
@@ -14987,7 +15245,17 @@
       }
     },
     "Change Vision Prescription Access" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Zugriff auf Sehhilfenverordnungen ändern"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Cambiar acceso a recetas ópticas"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Modifier l’accès aux ordonnances optiques"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Modifica accesso alle prescrizioni oculistiche"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"視力処方箋へのアクセスを変更"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"시력 처방전 접근 권한 변경"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Toegang tot brilrecepten wijzigen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Alterar acesso a receitas oftalmológicas"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"更改视力处方访问权限"}}
+      }
     },
     "Change…" : {
       "localizations" : {
@@ -16920,19 +17188,69 @@
       }
     },
     "Choose medications" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Medikamente auswählen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Elegir medicamentos"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Choisir les médicaments"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Scegli farmaci"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"薬を選択"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"약 선택"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Medicijnen kiezen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Escolher medicamentos"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"选择药物"}}
+      }
     },
     "Choose Medications" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Medikamente auswählen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Elegir medicamentos"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Choisir les médicaments"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Scegli farmaci"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"薬を選択"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"약 선택"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Medicijnen kiezen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Escolher medicamentos"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"选择药物"}}
+      }
     },
     "Choose medications before exporting" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Vor dem Export Medikamente auswählen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Elige medicamentos antes de exportar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Choisissez les médicaments avant d’exporter"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Scegli i farmaci prima di esportare"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"書き出す前に薬を選択してください"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"내보내기 전에 약을 선택하세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Kies medicijnen voordat je exporteert"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Escolha os medicamentos antes de exportar"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"请在导出前选择药物"}}
+      }
     },
     "Choose medications to export" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Zu exportierende Medikamente auswählen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Elegir medicamentos para exportar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Choisir les médicaments à exporter"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Scegli i farmaci da esportare"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"書き出す薬を選択"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"내보낼 약 선택"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Medicijnen kiezen om te exporteren"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Escolher medicamentos para exportar"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"选择要导出的药物"}}
+      }
     },
     "Choose Medications…" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Medikamente auswählen…"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Elegir medicamentos…"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Choisir les médicaments…"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Scegli farmaci…"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"薬を選択…"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"약 선택…"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Medicijnen kiezen…"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Escolher medicamentos…"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"选择药物…"}}
+      }
     },
     "Choose Metrics To Track" : {
       "extractionState" : "stale",
@@ -17257,7 +17575,17 @@
       }
     },
     "Choose Vision Prescriptions…" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Sehhilfenverordnungen auswählen…"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Elegir recetas ópticas…"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Choisir les ordonnances optiques…"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Scegli prescrizioni oculistiche…"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"視力処方箋を選択…"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"시력 처방전 선택…"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Brilrecepten kiezen…"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Escolher receitas oftalmológicas…"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"选择视力处方…"}}
+      }
     },
     "Choose what Health.md writes from Apple Health" : {
       "extractionState" : "stale",
@@ -43172,7 +43500,17 @@
       }
     },
     "Disable all standard metrics" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Alle Standardmetriken deaktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Desactivar todas las métricas estándar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Désactiver toutes les mesures standard"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Disattiva tutte le metriche standard"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"すべての標準指標を無効にする"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"모든 기본 지표 비활성화"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Alle standaardmetingen uitschakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Desativar todas as métricas padrão"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"停用所有标准指标"}}
+      }
     },
     "Disable Blood Pressure in Health.md" : {
       "comment" : "macOS production UI",
@@ -44334,7 +44672,17 @@
       }
     },
     "Double tap to %@ standard health metrics. Medications require a separate permission step." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um Standard-Gesundheitsmetriken zu %@. Medikamente erfordern einen separaten Berechtigungsschritt."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para %@ las métricas de salud estándar. Los medicamentos requieren un paso de permiso aparte."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour %@ les mesures de santé standard. Les médicaments nécessitent une autorisation distincte."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per %@ le metriche sanitarie standard. I farmaci richiedono un’autorizzazione separata."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップして標準の健康指標を%@します。服薬情報には別途許可が必要です。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 기본 건강 지표를 %@합니다. 복약 정보는 별도의 권한 허용 단계가 필요합니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om standaardgezondheidsmetingen te %@. Voor medicijnen is een aparte toestemmingsstap nodig."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para %@ as métricas de saúde padrão. Os medicamentos exigem uma etapa de permissão separada."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以%@标准健康指标。药物信息需要单独授权。"}}
+      }
     },
     "Double tap to %@ syncing health data to your Mac" : {
       "extractionState" : "stale",
@@ -44637,7 +44985,17 @@
       }
     },
     "Double tap to choose medications before enabling" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um vor dem Aktivieren Medikamente auszuwählen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para elegir medicamentos antes de activar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour choisir les médicaments avant l’activation"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per scegliere i farmaci prima di attivare"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップして、有効にする前に薬を選択します"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 활성화 전에 약을 선택하세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel om medicijnen te kiezen voordat je inschakelt"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para escolher os medicamentos antes de ativar"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以在启用前选择药物"}}
+      }
     },
     "Double tap to clear search text" : {
       "localizations" : {
@@ -44943,7 +45301,17 @@
 
     },
     "Double tap to learn more" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Doppeltippen, um mehr zu erfahren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Toca dos veces para obtener más información"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Touchez deux fois pour en savoir plus"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Tocca due volte per saperne di più"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"ダブルタップして詳細を表示します"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이중 탭하여 자세히 알아보세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Tik dubbel voor meer informatie"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Toque duas vezes para saber mais"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"轻点两下以了解更多"}}
+      }
     },
     "Double tap to open %@" : {
       "extractionState" : "stale",
@@ -46815,7 +47183,17 @@
       }
     },
     "Enable all standard metrics" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Alle Standardmetriken aktivieren"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Activar todas las métricas estándar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Activer toutes les mesures standard"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Attiva tutte le metriche standard"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"すべての標準指標を有効にする"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"모든 기본 지표 활성화"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Alle standaardmetingen inschakelen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Ativar todas as métricas padrão"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"启用所有标准指标"}}
+      }
     },
     "Enable Direct CLI Access" : {
       "localizations" : {
@@ -77681,10 +78059,30 @@
       }
     },
     "Medication access selected" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Medikamentenzugriff ausgewählt"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Acceso a medicamentos seleccionado"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Accès aux médicaments sélectionné"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Accesso ai farmaci selezionato"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"服薬情報へのアクセスを選択済み"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"복약 정보 접근 권한 선택됨"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Toegang tot medicijnen geselecteerd"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Acesso a medicamentos selecionado"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"已选择药物访问权限"}}
+      }
     },
     "Medication access unavailable" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Medikamentenzugriff nicht verfügbar"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Acceso a medicamentos no disponible"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Accès aux médicaments indisponible"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Accesso ai farmaci non disponibile"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"服薬情報へのアクセスを利用できません"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"복약 정보 접근 권한을 사용할 수 없음"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Toegang tot medicijnen niet beschikbaar"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Acesso a medicamentos indisponível"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"药物访问权限不可用"}}
+      }
     },
     "Medication exports upgraded" : {
 
@@ -78193,7 +78591,17 @@
       }
     },
     "Metric actions" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Metrikaktionen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Acciones de métricas"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Actions sur les mesures"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Azioni delle metriche"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"指標の操作"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"지표 작업"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Acties voor metingen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Ações de métricas"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"指标操作"}}
+      }
     },
     "Metric Categories" : {
       "extractionState" : "stale",
@@ -82989,7 +83397,17 @@
       }
     },
     "No matching metrics" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Keine passenden Metriken"}},
+        "es" : {"stringUnit":{"state":"translated","value":"No hay métricas coincidentes"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Aucune mesure correspondante"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Nessuna metrica corrispondente"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"一致する指標がありません"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"일치하는 지표 없음"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Geen overeenkomende metingen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Nenhuma métrica correspondente"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"没有匹配的指标"}}
+      }
     },
     "No Metrics" : {
       "localizations" : {
@@ -83053,7 +83471,17 @@
 
     },
     "No metrics in this category match your search." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"In dieser Kategorie entspricht keine Metrik deiner Suche."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Ninguna métrica de esta categoría coincide con tu búsqueda."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Aucune mesure de cette catégorie ne correspond à votre recherche."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Nessuna metrica di questa categoria corrisponde alla ricerca."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"このカテゴリに検索条件と一致する指標はありません。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"이 카테고리에 검색과 일치하는 지표가 없습니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Geen metingen in deze categorie komen overeen met je zoekopdracht."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Nenhuma métrica nesta categoria corresponde à sua busca."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"此类别中没有与搜索条件匹配的指标。"}}
+      }
     },
     "No metrics selected" : {
       "extractionState" : "stale",
@@ -86365,10 +86793,30 @@
 
     },
     "Opens actions for selecting or expanding metric groups" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Öffnet Aktionen zum Auswählen oder Aufklappen von Metrikgruppen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Abre acciones para seleccionar o expandir grupos de métricas"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Ouvre les actions de sélection ou de développement des groupes de mesures"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Apre le azioni per selezionare o espandere i gruppi di metriche"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"指標グループの選択や展開の操作を開きます"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"지표 그룹 선택 또는 펼치기 작업을 엽니다"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Opent acties om meetgroepen te selecteren of uit te vouwen"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Abre ações para selecionar ou expandir grupos de métricas"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"打开用于选择或展开指标组的操作"}}
+      }
     },
     "Opens Apple's medication selector" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Öffnet Apples Medikamentenauswahl"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Abre el selector de medicamentos de Apple"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Ouvre le sélecteur de médicaments d’Apple"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Apre il selettore dei farmaci di Apple"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"Appleの薬の選択画面を開きます"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"Apple의 약 선택 화면을 엽니다"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Opent de medicijnkiezer van Apple"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Abre o seletor de medicamentos da Apple"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"打开 Apple 的药物选择器"}}
+      }
     },
     "Opens folder picker to select export destination" : {
       "comment" : "macOS production UI",
@@ -89588,7 +90036,17 @@
       }
     },
     "Permission pending" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Berechtigung ausstehend"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Permiso pendiente"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Autorisation en attente"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Autorizzazione in attesa"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"許可待ち"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"권한 대기 중"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Toestemming in afwachting"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Permissão pendente"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"等待授权"}}
+      }
     },
     "Permissions" : {
       "localizations" : {
@@ -96485,7 +96943,17 @@
       }
     },
     "Requires a newer operating system" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Erfordert ein neueres Betriebssystem"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Requiere un sistema operativo más reciente"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Nécessite un système d’exploitation plus récent"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Richiede un sistema operativo più recente"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"より新しいOSが必要です"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"최신 운영 체제가 필요합니다"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Vereist een nieuwer besturingssysteem"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Requer um sistema operacional mais recente"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"需要更新的操作系统"}}
+      }
     },
     "Requires action" : {
       "localizations" : {
@@ -96504,7 +96972,17 @@
       }
     },
     "Requires iOS 26 or later" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Erfordert iOS 26 oder neuer"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Requiere iOS 26 o posterior"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Nécessite iOS 26 ou version ultérieure"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Richiede iOS 26 o versioni successive"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"iOS 26以降が必要です"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"iOS 26 이상이 필요합니다"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Vereist iOS 26 of nieuwer"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Requer iOS 26 ou posterior"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"需要 iOS 26 或更高版本"}}
+      }
     },
     "Reset" : {
       "extractionState" : "stale",
@@ -100992,7 +101470,17 @@
       }
     },
     "Select All Standard Metrics" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Alle Standardmetriken auswählen"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Seleccionar todas las métricas estándar"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Sélectionner toutes les mesures standard"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Seleziona tutte le metriche standard"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"すべての標準指標を選択"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"모든 기본 지표 선택"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Alle standaardmetingen selecteren"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Selecionar todas as métricas padrão"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"选择所有标准指标"}}
+      }
     },
     "Select an export to see details" : {
       "localizations" : {
@@ -102593,7 +103081,17 @@
       }
     },
     "Separate permission required" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Separate Berechtigung erforderlich"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Se requiere un permiso aparte"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Autorisation distincte requise"}},
+        "it" : {"stringUnit":{"state":"translated","value":"È richiesta un’autorizzazione separata"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"別途許可が必要です"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"별도의 권한이 필요합니다"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Aparte toestemming vereist"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Permissão separada necessária"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"需要单独授权"}}
+      }
     },
     "Separate workout notes stay optional" : {
 
@@ -113435,7 +113933,17 @@
       }
     },
     "This metric requires additional Apple permission before Health.md can export it." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Für diese Metrik ist eine zusätzliche Apple-Berechtigung erforderlich, bevor Health.md sie exportieren kann."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Esta métrica requiere un permiso adicional de Apple para que Health.md pueda exportarla."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Cette mesure nécessite une autorisation Apple supplémentaire pour que Health.md puisse l’exporter."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Questa metrica richiede un’autorizzazione aggiuntiva di Apple prima che Health.md possa esportarla."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"Health.mdでこの指標を書き出すには、Appleの追加の許可が必要です。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"Health.md가 이 지표를 내보내려면 Apple의 추가 권한이 필요합니다."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Voor deze meting is extra toestemming van Apple nodig voordat Health.md deze kan exporteren."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Esta métrica exige uma permissão adicional da Apple para que o Health.md possa exportá-la."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"Health.md 需要获得 Apple 的额外授权才能导出此指标。"}}
+      }
     },
     "This plan contains invalid items and cannot be applied." : {
 
@@ -115440,7 +115948,17 @@
 
     },
     "Try a category like Sleep or a metric like Steps." : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Versuche eine Kategorie wie Schlaf oder eine Metrik wie Schritte."}},
+        "es" : {"stringUnit":{"state":"translated","value":"Prueba una categoría como Sueño o una métrica como Pasos."}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Essayez une catégorie comme Sommeil ou une mesure comme Pas."}},
+        "it" : {"stringUnit":{"state":"translated","value":"Prova una categoria come Sonno o una metrica come Passi."}},
+        "ja" : {"stringUnit":{"state":"translated","value":"睡眠などのカテゴリや歩数などの指標で検索してください。"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"수면 같은 카테고리나 걸음 수 같은 지표로 검색해 보세요."}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Probeer een categorie zoals Slaap of een meting zoals Stappen."}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Tente uma categoria como Sono ou uma métrica como Passos."}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"请尝试搜索“睡眠”等类别或“步数”等指标。"}}
+      }
     },
     "Try Again" : {
       "localizations" : {
@@ -116074,7 +116592,17 @@
       }
     },
     "Type to filter metrics by name or category" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Tippe, um Metriken nach Name oder Kategorie zu filtern"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Escribe para filtrar métricas por nombre o categoría"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Saisissez du texte pour filtrer les mesures par nom ou catégorie"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Digita per filtrare le metriche per nome o categoria"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"入力して指標を名前やカテゴリで絞り込みます"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"입력하여 이름 또는 카테고리로 지표를 필터링하세요"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Typ om metingen op naam of categorie te filteren"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Digite para filtrar métricas por nome ou categoria"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"输入以按名称或类别筛选指标"}}
+      }
     },
     "Unable to load purchase options. Check your connection and try again." : {
       "comment" : "Error shown when StoreKit products fail to load"
@@ -119688,7 +120216,17 @@
       }
     },
     "Vision prescription access unavailable" : {
-
+      "localizations" : {
+        "de" : {"stringUnit":{"state":"translated","value":"Zugriff auf Sehhilfenverordnungen nicht verfügbar"}},
+        "es" : {"stringUnit":{"state":"translated","value":"Acceso a recetas ópticas no disponible"}},
+        "fr" : {"stringUnit":{"state":"translated","value":"Accès aux ordonnances optiques indisponible"}},
+        "it" : {"stringUnit":{"state":"translated","value":"Accesso alle prescrizioni oculistiche non disponibile"}},
+        "ja" : {"stringUnit":{"state":"translated","value":"視力処方箋へのアクセスを利用できません"}},
+        "ko" : {"stringUnit":{"state":"translated","value":"시력 처방전 접근 권한을 사용할 수 없음"}},
+        "nl" : {"stringUnit":{"state":"translated","value":"Toegang tot brilrecepten niet beschikbaar"}},
+        "pt-BR" : {"stringUnit":{"state":"translated","value":"Acesso a receitas oftalmológicas indisponível"}},
+        "zh-Hans" : {"stringUnit":{"state":"translated","value":"视力处方访问权限不可用"}}
+      }
     },
     "Vision Prescriptions" : {
       "comment" : "macOS Health metric picker UI",
