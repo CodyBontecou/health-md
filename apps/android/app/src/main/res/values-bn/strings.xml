@@ -1425,4 +1425,15 @@
     <string name="post_export_upgrade_action">আজীবন অ্যাক্সেস দেখুন</string>
     <string name="post_export_manual_action">ম্যানুয়াল রপ্তানি চালিয়ে যান</string>
     <string name="post_export_continue_free">বিনামূল্যে চালিয়ে যান</string>
+    <string name="export_sleep_date_guidance">ঘুমের সময়সীমা নির্বাচিত প্রতিটি তারিখের দুপুর থেকে পরের দিনের দুপুর পর্যন্ত। গত রাতের ঘুমের জন্য গতকাল বেছে নিন।</string>
+    <string name="export_sleep_preview_window">ঘুমের সময়সীমা: %1$s দুপুর থেকে %2$s দুপুর পর্যন্ত (%3$s)।</string>
+    <string name="export_sleep_preview_guidance">ঘুমের তথ্য না থাকলে আগের তারিখটি চেষ্টা করুন। মূল রেকর্ডের তারিখ আজ হলেও সকালের ঘুম আগের দিনের সারাংশে থাকতে পারে। কোয়েরির ব্যর্থতা আলাদা দেখানো হয়; খালি ফলাফলের অর্থ পড়ার অনুমতি না থাকাও হতে পারে।</string>
+    <string name="whoop_connection_description">রিকভারি, পরিশ্রম, ঘুম, ব্যায়াম ও শরীরের পরিমাপ রপ্তানি করতে WHOOP সংযুক্ত করুন। সাইন-ইন ব্রাউজারে হয়; Health.md এই ডিভাইসে টোকেন এনক্রিপ্ট করে রাখে। সংযোগ বিচ্ছিন্ন করলে এই ডিভাইসের সংরক্ষিত সংযোগ মুছে যায়।</string>
+    <string name="whoop_connect">WHOOP সংযুক্ত করুন</string>
+    <string name="whoop_sources_description">সরাসরি প্রদানকারীর কাছ থেকে রপ্তানি করতে WHOOP সংযুক্ত করুন অথবা স্থানীয় রেকর্ডের জন্য Health Connect ব্যবহার চালিয়ে যান।</string>
+    <string name="whoop_sign_in_failed">WHOOP সাইন-ইন শুরু করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।</string>
+    <string name="whoop_use_health_connect">রপ্তানির জন্য Health Connect ব্যবহার করুন</string>
+    <string name="whoop_reconnect">WHOOP আবার সংযুক্ত করুন</string>
+    <string name="whoop_disconnect">WHOOP সংযোগ বিচ্ছিন্ন করুন</string>
+    <string name="whoop_use_for_exports">রপ্তানির জন্য WHOOP ব্যবহার করুন</string>
 </resources>

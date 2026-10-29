@@ -1425,4 +1425,15 @@
     <string name="post_export_upgrade_action">ਜੀਵਨ ਭਰ ਪਹੁੰਚ ਵੇਖੋ</string>
     <string name="post_export_manual_action">ਦਸਤੀ ਨਿਰਯਾਤ ਜਾਰੀ ਰੱਖੋ</string>
     <string name="post_export_continue_free">ਮੁਫ਼ਤ ਜਾਰੀ ਰੱਖੋ</string>
+    <string name="export_sleep_date_guidance">ਨੀਂਦ ਦੀ ਮਿਆਦ ਹਰ ਚੁਣੀ ਤਾਰੀਖ ਦੀ ਦੁਪਹਿਰ ਤੋਂ ਅਗਲੇ ਦਿਨ ਦੀ ਦੁਪਹਿਰ ਤੱਕ ਹੁੰਦੀ ਹੈ। ਪਿਛਲੀ ਰਾਤ ਦੀ ਨੀਂਦ ਲਈ ਬੀਤਿਆ ਕੱਲ੍ਹ ਚੁਣੋ।</string>
+    <string name="export_sleep_preview_window">ਨੀਂਦ ਦੀ ਮਿਆਦ: %1$s ਦੀ ਦੁਪਹਿਰ ਤੋਂ %2$s ਦੀ ਦੁਪਹਿਰ ਤੱਕ (%3$s)।</string>
+    <string name="export_sleep_preview_guidance">ਜੇ ਨੀਂਦ ਦੇ ਡਾਟੇ ਦੀ ਘਾਟ ਹੈ, ਤਾਂ ਪਿਛਲੀ ਤਾਰੀਖ ਅਜ਼ਮਾਓ। ਮੂਲ ਰਿਕਾਰਡ ਅੱਜ ਦੇ ਹੋਣ ਦੇ ਬਾਵਜੂਦ ਸਵੇਰ ਦੀ ਨੀਂਦ ਉਸ ਤਾਰੀਖ ਦੇ ਸਾਰ ਵਿੱਚ ਹੋ ਸਕਦੀ ਹੈ। ਕਿਊਰੀ ਦੀਆਂ ਅਸਫਲਤਾਵਾਂ ਵੱਖਰੀਆਂ ਦਿਖਾਈਆਂ ਜਾਂਦੀਆਂ ਹਨ; ਖਾਲੀ ਨਤੀਜੇ ਦਾ ਮਤਲਬ ਪੜ੍ਹਨ ਦੀ ਪਹੁੰਚ ਉਪਲਬਧ ਨਾ ਹੋਣਾ ਵੀ ਹੋ ਸਕਦਾ ਹੈ।</string>
+    <string name="whoop_connection_description">ਰਿਕਵਰੀ, ਮਿਹਨਤ, ਨੀਂਦ, ਕਸਰਤਾਂ ਅਤੇ ਸਰੀਰਕ ਮਾਪ ਨਿਰਯਾਤ ਕਰਨ ਲਈ WHOOP ਕਨੈਕਟ ਕਰੋ। ਸਾਈਨ-ਇਨ ਤੁਹਾਡੇ ਬ੍ਰਾਊਜ਼ਰ ਰਾਹੀਂ ਹੁੰਦਾ ਹੈ; Health.md ਟੋਕਨਾਂ ਨੂੰ ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਇਨਕ੍ਰਿਪਟ ਕਰਕੇ ਰੱਖਦਾ ਹੈ। ਡਿਸਕਨੈਕਟ ਕਰਨ ਨਾਲ ਇਸ ਡਿਵਾਈਸ ਦਾ ਸੰਭਾਲਿਆ ਕਨੈਕਸ਼ਨ ਹਟ ਜਾਂਦਾ ਹੈ।</string>
+    <string name="whoop_connect">WHOOP ਕਨੈਕਟ ਕਰੋ</string>
+    <string name="whoop_sources_description">ਪ੍ਰਦਾਤਾ ਤੋਂ ਸਿੱਧੇ ਨਿਰਯਾਤ ਲਈ WHOOP ਕਨੈਕਟ ਕਰੋ ਜਾਂ ਸਥਾਨਕ ਰਿਕਾਰਡਾਂ ਲਈ Health Connect ਵਰਤਣਾ ਜਾਰੀ ਰੱਖੋ।</string>
+    <string name="whoop_sign_in_failed">WHOOP ਸਾਈਨ-ਇਨ ਸ਼ੁਰੂ ਨਹੀਂ ਹੋ ਸਕਿਆ। ਆਪਣਾ ਕਨੈਕਸ਼ਨ ਜਾਂਚੋ ਅਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="whoop_use_health_connect">ਨਿਰਯਾਤ ਲਈ Health Connect ਵਰਤੋ</string>
+    <string name="whoop_reconnect">WHOOP ਮੁੜ ਕਨੈਕਟ ਕਰੋ</string>
+    <string name="whoop_disconnect">WHOOP ਡਿਸਕਨੈਕਟ ਕਰੋ</string>
+    <string name="whoop_use_for_exports">ਨਿਰਯਾਤ ਲਈ WHOOP ਵਰਤੋ</string>
 </resources>

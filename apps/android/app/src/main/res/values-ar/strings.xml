@@ -1644,4 +1644,15 @@
     <string name="post_export_upgrade_action">عرض الوصول مدى الحياة</string>
     <string name="post_export_manual_action">متابعة التصدير اليدوي</string>
     <string name="post_export_continue_free">المتابعة مجانًا</string>
+    <string name="export_sleep_date_guidance">يشمل النوم الفترة من ظهر كل تاريخ محدد حتى ظهر اليوم التالي. لنوم الليلة الماضية، اختر أمس.</string>
+    <string name="export_sleep_preview_window">نافذة النوم: من ظهر %1$s إلى ظهر %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance">إذا كانت بيانات النوم مفقودة، جرّب التاريخ السابق. قد يظهر نوم الصباح في ملخص ذلك التاريخ حتى لو كانت السجلات الخام مؤرخة اليوم. تُعرض أخطاء الاستعلام بشكل منفصل؛ وقد تعني النتيجة الفارغة أيضًا عدم توفر إذن القراءة.</string>
+    <string name="whoop_connection_description">اربط WHOOP لتصدير التعافي والإجهاد والنوم والتمارين وقياسات الجسم. يتم تسجيل الدخول عبر متصفحك؛ ويخزن Health.md الرموز مشفرة على هذا الجهاز. يؤدي قطع الاتصال إلى إزالة الاتصال المحفوظ على هذا الجهاز.</string>
+    <string name="whoop_connect">ربط WHOOP</string>
+    <string name="whoop_sources_description">اربط WHOOP للتصدير مباشرة من مزود البيانات، أو واصل استخدام Health Connect للسجلات المحلية.</string>
+    <string name="whoop_sign_in_failed">تعذر بدء تسجيل الدخول إلى WHOOP. تحقق من اتصالك وحاول مجددًا.</string>
+    <string name="whoop_use_health_connect">استخدام Health Connect للتصدير</string>
+    <string name="whoop_reconnect">إعادة ربط WHOOP</string>
+    <string name="whoop_disconnect">قطع اتصال WHOOP</string>
+    <string name="whoop_use_for_exports">استخدام WHOOP للتصدير</string>
 </resources>

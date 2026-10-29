@@ -1499,4 +1499,15 @@
     <string name="post_export_upgrade_action">Ver acesso vitalício</string>
     <string name="post_export_manual_action">Continuar exportando manualmente</string>
     <string name="post_export_continue_free">Continuar grátis</string>
+    <string name="export_sleep_date_guidance">O sono abrange do meio-dia de cada data selecionada ao meio-dia seguinte. Para o sono da última noite, escolha Ontem.</string>
+    <string name="export_sleep_preview_window">Janela de sono: de %1$s ao meio-dia a %2$s ao meio-dia (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Se o sono estiver ausente, tente a data anterior. O sono da manhã pode aparecer nesse resumo mesmo quando os registros brutos têm a data de hoje. Falhas de consulta são listadas separadamente; um resultado vazio também pode indicar que o acesso de leitura está indisponível.</string>
+    <string name="whoop_connection_description">Conecte o WHOOP para exportar recuperação, esforço, sono, treinos e medidas corporais. O login usa seu navegador; o Health.md armazena os tokens criptografados neste dispositivo. Desconectar remove a conexão salva neste dispositivo.</string>
+    <string name="whoop_connect">Conectar WHOOP</string>
+    <string name="whoop_sources_description">Conecte o WHOOP para exportar diretamente do provedor ou continue usando o Health Connect para registros locais.</string>
+    <string name="whoop_sign_in_failed">Não foi possível iniciar o login no WHOOP. Verifique sua conexão e tente novamente.</string>
+    <string name="whoop_use_health_connect">Usar Health Connect para exportações</string>
+    <string name="whoop_reconnect">Reconectar WHOOP</string>
+    <string name="whoop_disconnect">Desconectar WHOOP</string>
+    <string name="whoop_use_for_exports">Usar WHOOP para exportações</string>
 </resources>

@@ -46,6 +46,10 @@ Daily Note Injection과 API Endpoint 요약도 같은 구간을 따릅니다. �
 
 원시 또는 정규 기록은 원본 시각과 자체 날짜 귀속 규칙을 유지합니다. 일일 합계에서 세션을 복원하거나 원본 구간을 추가 수면으로 합산하지 마세요.
 
+Apple의 원시 아카이브는 기록의 시작 시각을 기준으로 현지 자정부터 다음 자정까지의 날짜에 기록을 배정합니다. 반면 수면 요약은 정오부터 다음 정오까지로 구간을 잘라 계산합니다. 따라서 Sleep Analysis 쿼리가 성공해 아침 기록을 포함하더라도 해당 날짜의 수면 요약은 비어 있을 수 있습니다. 전날을 내보내고 `time_context.calendar_timezone`을 확인하세요. 예를 들어 9월 22일 04:03~11:52 UTC 기록은 UTC에서 모두 9월 21일 요약에 속하지만, Europe/Lisbon에서는 마지막 52분이 현지 정오 이후여서 9월 22일에 반영됩니다.
+
+수면 단계에는 명시적인 `inBed` 기록이 반드시 필요하지 않습니다. 없으면 Apple은 사용 가능한 수면 단계 구간의 합집합을 사용하지만, 침대에 있던 시간을 만들어 내지는 않습니다. 실패한 쿼리는 `diagnostics.partial_failures`에 표시되어야 하며, 성공한 쿼리에 해당 구간이 없는 것은 유효한 데이터 부재입니다. 안정 시 심박수는 별도의 달력 날짜 쿼리를 사용하며 실제 측정이 필요합니다. 수면 단계나 읽기 권한만으로는 제공되지 않습니다.
+
 `healthmd_sleep_sessions`는 지원되는 **Apple Health** CLI/MCP 설정이 필요합니다. Android 형식 지정 MCP 쿼리는 현재 지원되지 않습니다.[플랫폼 기능](/ko/docs/guides/platform-features/)과 [MCP](/ko/docs/mcp/)를 확인하세요.
 
 [일정](/ko/docs/scheduling/), [문제 해결](/ko/docs/troubleshooting/), [형식](/ko/docs/format/) 안내도 참고하세요.

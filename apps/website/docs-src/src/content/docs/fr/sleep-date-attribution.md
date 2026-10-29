@@ -46,6 +46,10 @@ Daily Note Injection et les résumés API Endpoint suivent la même fenêtre. Si
 
 Les enregistrements bruts ou canoniques gardent leurs horodatages et leurs propres règles d’appartenance. Ne reconstruisez pas une session depuis un total quotidien et n’y ajoutez pas les intervalles comme du sommeil supplémentaire.
 
+Sur Apple, l’archive brute attribue les enregistrements au jour local de minuit à minuit selon leur début. Le résumé du sommeil découpe plutôt les intervalles dans la fenêtre de midi à midi. Une requête Sleep Analysis réussie peut donc contenir des enregistrements matinaux alors que le résumé de cette date est vide. Exportez le jour précédent et vérifiez `time_context.calendar_timezone`. Par exemple, les enregistrements du 22 septembre de 04:03 à 11:52 UTC appartiennent au résumé du 21 en UTC ; dans Europe/Lisbon, les 52 dernières minutes sont après midi local et contribuent au 22.
+
+Les stades de sommeil ne nécessitent pas d’enregistrement explicite `inBed` : en son absence, Apple utilise l’union des stades endormis disponibles, sans inventer de durée au lit. Une requête échouée doit figurer dans `diagnostics.partial_failures` ; une requête réussie sans intervalle admissible est une absence valide. La fréquence cardiaque au repos utilise une requête distincte par jour civil et exige une mesure réelle ; les stades de sommeil ou l’autorisation de lecture ne la fournissent pas.
+
 `healthmd_sleep_sessions` exige une configuration CLI/MCP **Apple Health** prise en charge. Les requêtes MCP typées Android ne sont pas disponibles actuellement. Consultez les [capacités par plateforme](/fr/docs/guides/platform-features/) et [MCP](/fr/docs/mcp/).
 
 Voir aussi la [planification](/fr/docs/scheduling/), le [dépannage](/fr/docs/troubleshooting/) et les [formats](/fr/docs/format/).

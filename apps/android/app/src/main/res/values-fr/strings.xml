@@ -1499,4 +1499,15 @@
     <string name="post_export_upgrade_action">Voir l’accès à vie</string>
     <string name="post_export_manual_action">Continuer les exports manuels</string>
     <string name="post_export_continue_free">Continuer gratuitement</string>
+    <string name="export_sleep_date_guidance">Le sommeil couvre la période de midi à midi le lendemain pour chaque date sélectionnée. Pour la nuit dernière, choisissez Hier.</string>
+    <string name="export_sleep_preview_window">Fenêtre de sommeil : du %1$s à midi au %2$s à midi (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Si le sommeil manque, essayez la date précédente. Le sommeil du matin peut figurer dans ce résumé même si les données brutes sont datées du jour. Les erreurs de requête sont indiquées séparément ; un résultat vide peut aussi signaler un accès en lecture indisponible.</string>
+    <string name="whoop_connection_description">Connectez WHOOP pour exporter la récupération, l’effort, le sommeil, les entraînements et les mesures corporelles. La connexion utilise votre navigateur ; Health.md conserve les jetons chiffrés sur cet appareil. La déconnexion supprime la connexion enregistrée sur cet appareil.</string>
+    <string name="whoop_connect">Connecter WHOOP</string>
+    <string name="whoop_sources_description">Connectez WHOOP pour exporter directement depuis le fournisseur, ou continuez à utiliser Health Connect pour les données locales.</string>
+    <string name="whoop_sign_in_failed">La connexion à WHOOP n’a pas pu démarrer. Vérifiez votre connexion et réessayez.</string>
+    <string name="whoop_use_health_connect">Utiliser Health Connect pour les exports</string>
+    <string name="whoop_reconnect">Reconnecter WHOOP</string>
+    <string name="whoop_disconnect">Déconnecter WHOOP</string>
+    <string name="whoop_use_for_exports">Utiliser WHOOP pour les exports</string>
 </resources>

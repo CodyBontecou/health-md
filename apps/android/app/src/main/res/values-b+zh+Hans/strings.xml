@@ -1274,4 +1274,15 @@
     <string name="post_export_upgrade_action">查看终身访问</string>
     <string name="post_export_manual_action">继续手动导出</string>
     <string name="post_export_continue_free">继续免费使用</string>
+    <string name="export_sleep_date_guidance">睡眠涵盖每个所选日期的中午到次日中午。要查看昨晚的睡眠，请选择“昨天”。</string>
+    <string name="export_sleep_preview_window">睡眠时间窗口：%1$s中午至%2$s中午（%3$s）。</string>
+    <string name="export_sleep_preview_guidance">如果缺少睡眠数据，请尝试前一天。即使原始记录的日期是今天，早晨的睡眠也可能显示在前一天的摘要中。查询失败会单独列出；结果为空也可能表示无法读取数据。</string>
+    <string name="whoop_connection_description">连接WHOOP以导出恢复、负荷、睡眠、锻炼和身体测量数据。登录通过浏览器进行；Health.md将令牌加密保存在此设备上。断开连接会删除此设备上保存的连接。</string>
+    <string name="whoop_connect">连接WHOOP</string>
+    <string name="whoop_sources_description">连接WHOOP以直接从提供商导出，或继续使用Health Connect获取本地记录。</string>
+    <string name="whoop_sign_in_failed">无法开始WHOOP登录。请检查连接并重试。</string>
+    <string name="whoop_use_health_connect">使用Health Connect导出</string>
+    <string name="whoop_reconnect">重新连接WHOOP</string>
+    <string name="whoop_disconnect">断开WHOOP连接</string>
+    <string name="whoop_use_for_exports">使用WHOOP导出</string>
 </resources>

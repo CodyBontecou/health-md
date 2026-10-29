@@ -1451,4 +1451,15 @@
     <string name="post_export_upgrade_action">Lebenslangen Zugriff ansehen</string>
     <string name="post_export_manual_action">Weiter manuell exportieren</string>
     <string name="post_export_continue_free">Kostenlos fortfahren</string>
+    <string name="export_sleep_date_guidance">Schlaf umfasst den Zeitraum von mittags am gewählten Datum bis mittags am Folgetag. Wähle für die letzte Nacht „Gestern“.</string>
+    <string name="export_sleep_preview_window">Schlaffenster: %1$s mittags bis %2$s mittags (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Wenn Schlaf fehlt, versuche das vorherige Datum. Morgendlicher Schlaf kann dort zusammengefasst sein, obwohl die Rohdaten von heute sind. Abfragefehler werden separat aufgeführt; ein leeres Ergebnis kann auch auf fehlenden Lesezugriff hinweisen.</string>
+    <string name="whoop_connection_description">Verbinde WHOOP, um Erholung, Belastung, Schlaf, Trainings und Körpermessungen zu exportieren. Die Anmeldung erfolgt im Browser; Health.md speichert Tokens verschlüsselt auf diesem Gerät. Beim Trennen wird die gespeicherte Verbindung auf diesem Gerät entfernt.</string>
+    <string name="whoop_connect">WHOOP verbinden</string>
+    <string name="whoop_sources_description">Verbinde WHOOP für direkte Anbieterexporte oder nutze Health Connect weiterhin für lokale Datensätze.</string>
+    <string name="whoop_sign_in_failed">Die WHOOP-Anmeldung konnte nicht gestartet werden. Prüfe deine Verbindung und versuche es erneut.</string>
+    <string name="whoop_use_health_connect">Health Connect für Exporte verwenden</string>
+    <string name="whoop_reconnect">WHOOP erneut verbinden</string>
+    <string name="whoop_disconnect">WHOOP trennen</string>
+    <string name="whoop_use_for_exports">WHOOP für Exporte verwenden</string>
 </resources>

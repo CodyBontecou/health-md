@@ -46,6 +46,10 @@ Daily Note Injection y los resúmenes de API Endpoint usan la misma ventana. Si 
 
 Los registros originales o canónicos tienen sus propias reglas de pertenencia y conservan las marcas de tiempo. No reconstruyas sesiones a partir de un total diario ni sumes los intervalos de origen como sueño adicional.
 
+En Apple, el archivo original asigna los registros al día local de medianoche a medianoche según su hora de inicio. En cambio, el resumen de sueño recorta los intervalos a la ventana de mediodía a mediodía. Una consulta correcta de Sleep Analysis puede contener registros matutinos aunque el resumen de esa fecha esté vacío. Exporta el día anterior y comprueba `time_context.calendar_timezone`. Por ejemplo, los registros del 22 de septiembre de 04:03 a 11:52 UTC pertenecen al resumen del 21 en UTC; en Europe/Lisbon, los últimos 52 minutos quedan después del mediodía local y contribuyen al día 22.
+
+Las etapas de sueño no necesitan un registro explícito `inBed`: si falta, Apple usa la unión de las etapas de sueño disponibles, sin inventar una duración en cama. Una consulta fallida debe aparecer en `diagnostics.partial_failures`; una consulta correcta sin intervalos válidos es una ausencia válida. La frecuencia cardíaca en reposo usa otra consulta por día natural y requiere una medición real; las etapas de sueño o el permiso de lectura no la proporcionan.
+
 `healthmd_sleep_sessions` requiere una configuración CLI/MCP compatible con **Apple Health**. Las consultas MCP tipadas de Android no están disponibles actualmente. Consulta [capacidades por plataforma](/es/docs/guides/platform-features/) y [MCP](/es/docs/mcp/).
 
 Sigue las guías de [programación](/es/docs/scheduling/), [resolución de problemas](/es/docs/troubleshooting/) y [formatos](/es/docs/format/) para revisar sincronización tardía, lecturas vacías, escrituras y cobertura.
