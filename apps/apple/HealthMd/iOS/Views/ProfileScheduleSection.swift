@@ -199,8 +199,7 @@ struct ProfileScheduleSection: View {
             let weekday = weekdayName(entry.weekday)
             return String(localized: "Weekly on \(weekday) at \(time)", comment: "Profile schedule cadence summary")
         case .custom:
-            let unit = entry.customUnit.label(for: entry.customInterval)
-            return String(localized: "Every \(entry.customInterval) \(unit) at \(time)", comment: "Profile schedule cadence summary")
+            return ScheduleDisplayCopy.cadence(count: entry.customInterval, unit: entry.customUnit, at: time)
         }
     }
 
@@ -274,7 +273,7 @@ struct ProfileScheduleEditorSheet: View {
                 Section {
                     SchedulingChoicePicker(
                         title: "Frequency",
-                        choices: ScheduleFrequency.allCases.map { SchedulingChoice(value: $0, title: $0.description) },
+                        choices: ScheduleFrequency.allCases.map { SchedulingChoice(value: $0, title: $0.description, titleIsResolved: true) },
                         selection: $draft.frequency
                     )
                     .accessibilityIdentifier("schedule.profile.editor.frequency")
@@ -291,15 +290,13 @@ struct ProfileScheduleEditorSheet: View {
                         SchedulingNumberControl(
                             title: "Custom frequency interval", value: $draft.customInterval,
                             bounds: 1...365, identifier: "schedule.profile.editor.interval",
-                            valueDescription: "Every \(draft.customInterval) \(draft.customUnit.label(for: draft.customInterval))"
+                            valueDescription: ScheduleDisplayCopy.cadence(count: draft.customInterval, unit: draft.customUnit)
                         )
                         SchedulingValueMenu(
                             title: "Unit",
-                            choices: [
-                                SchedulingChoice(value: ScheduleIntervalUnit.day, title: "Days"),
-                                SchedulingChoice(value: ScheduleIntervalUnit.week, title: "Weeks"),
-                                SchedulingChoice(value: ScheduleIntervalUnit.month, title: "Months")
-                            ],
+                            choices: ScheduleIntervalUnit.allCases.map {
+                                SchedulingChoice(value: $0, title: ScheduleDisplayCopy.unitChoiceLabel($0), titleIsResolved: true)
+                            },
                             selection: $draft.customUnit
                         )
                     }
@@ -320,7 +317,9 @@ struct ProfileScheduleEditorSheet: View {
                         title: "Lookback window", value: $draft.lookbackDays,
                         bounds: ExportSchedule.minimumLookbackDays...ExportSchedule.maximumLookbackDays,
                         identifier: "schedule.profile.editor.lookback",
-                        valueDescription: "Lookback: \(draft.lookbackDays) day\(draft.lookbackDays == 1 ? "" : "s")"
+                        valueDescription: draft.lookbackDays == 1
+                            ? String(localized: "Lookback: 1 day")
+                            : String(localized: "Lookback: \(draft.lookbackDays) days")
                     )
 
                     Toggle("Today Refresh", isOn: $draft.todayRefreshEnabled)
@@ -328,7 +327,7 @@ struct ProfileScheduleEditorSheet: View {
                         SchedulingValueMenu(
                             title: "Refresh Interval",
                             choices: ExportSchedule.todayRefreshMinuteOptions.map {
-                                SchedulingChoice(value: $0, title: ExportSchedule.todayRefreshLabel($0))
+                                SchedulingChoice(value: $0, title: ExportSchedule.todayRefreshLabel($0), titleIsResolved: true)
                             },
                             selection: $draft.todayRefreshMinutes
                         )

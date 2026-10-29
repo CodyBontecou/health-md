@@ -124,7 +124,7 @@ struct OnboardingView: View {
             switch step {
             case .welcome:
                 VStack(spacing: Spacing.s2) {
-                    OnboardingPrimaryButton(title: "Start Setup", icon: "arrow.right", action: advance)
+                    OnboardingPrimaryButton(title: String(localized: "Start Setup"), icon: "arrow.right", accessibilityHint: String(localized: "Double tap to continue"), action: advance)
                     Button {
                         sharedSetupCoordinator.beginImport(source: .onboarding)
                         isSharedSetupImporterPresented = true
@@ -138,40 +138,40 @@ struct OnboardingView: View {
                 }
             case .healthAccess:
                 if healthKitManager.isAuthorized {
-                    OnboardingPrimaryButton(title: "Continue Setup", icon: "arrow.right", action: advance)
+                    OnboardingPrimaryButton(title: String(localized: "Continue Setup"), icon: "arrow.right", action: advance)
                 } else {
                     OnboardingPrimaryButton(
-                        title: isRequestingHealthAuthorization ? "Connecting…" : "Connect Apple Health",
+                        title: isRequestingHealthAuthorization ? String(localized: "Connecting…") : String(localized: "Connect Apple Health"),
                         imageAsset: "AppleHealthIcon",
-                        accessibilityHint: "Opens Apple Health permission selection",
+                        accessibilityHint: String(localized: "Opens Apple Health permission selection"),
                         isDisabled: isRequestingHealthAuthorization,
                         action: { requestHealthAuthorization(advanceWhenConnected: true) }
                     )
-                    OnboardingSecondaryButton(title: "Skip for Now", icon: "forward") {
+                    OnboardingSecondaryButton(title: String(localized: "Skip for Now"), icon: "forward") {
                         skipHealthAccess()
                     }
                 }
             case .sampleExport:
-                OnboardingPrimaryButton(title: "Continue Setup", icon: "arrow.right", action: advance)
+                OnboardingPrimaryButton(title: String(localized: "Continue Setup"), icon: "arrow.right", action: advance)
             case .folder:
                 if vaultManager.vaultURL == nil {
                     OnboardingPrimaryButton(
-                        title: "Select Export Folder",
+                        title: String(localized: "Select Export Folder"),
                         icon: "folder.badge.plus",
-                        accessibilityHint: "Opens the folder picker",
+                        accessibilityHint: String(localized: "Opens the folder picker"),
                         action: { showFolderPicker = true }
                     )
-                    OnboardingSecondaryButton(title: "Skip for Now", icon: "forward") {
+                    OnboardingSecondaryButton(title: String(localized: "Skip for Now"), icon: "forward") {
                         skipFolderSetup()
                     }
                 } else {
-                    OnboardingPrimaryButton(title: "Continue Setup", icon: "arrow.right", action: advance)
+                    OnboardingPrimaryButton(title: String(localized: "Continue Setup"), icon: "arrow.right", action: advance)
                 }
             case .ready:
                 OnboardingPrimaryButton(
-                    title: "Create My First Export",
+                    title: String(localized: "Create My First Export"),
                     icon: "doc.text.magnifyingglass",
-                    accessibilityHint: "Completes setup and opens a preview of your first export",
+                    accessibilityHint: String(localized: "Completes setup and opens a preview of your first export"),
                     action: advance
                 )
             }
@@ -414,16 +414,16 @@ private struct WelcomeStep: View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
                 eyebrow: "Health.md",
-                title: "Own Your Health Data",
-                description: "Apple Health has years of signal. Health.md turns it into private files you can keep, search, and link from Obsidian.",
+                title: String(localized: "Own Your Health Data"),
+                description: String(localized: "Apple Health has years of signal. Health.md turns it into private files you can keep, search, and link from Obsidian."),
                 icon: "heart.text.square.fill",
                 usesAppIcon: true
             )
 
             VStack(spacing: Spacing.s3) {
-                OnboardingFeatureRow(icon: "archivebox.fill", title: "Build Your Archive", description: "Create a durable copy of sleep, HRV, workouts, vitals, medications, and more.")
-                OnboardingFeatureRow(icon: "calendar.badge.clock", title: "Wake Up to a Daily Note", description: "Schedule exports so your health journal stays current automatically.")
-                OnboardingFeatureRow(icon: "lock.shield", title: "Stay Local", description: "No account or health-data cloud. Files are written to folders you choose.")
+                OnboardingFeatureRow(icon: "archivebox.fill", title: String(localized: "Build Your Archive"), description: String(localized: "Create a durable copy of sleep, HRV, workouts, vitals, medications, and more."))
+                OnboardingFeatureRow(icon: "calendar.badge.clock", title: String(localized: "Wake Up to a Daily Note"), description: String(localized: "Schedule exports so your health journal stays current automatically."))
+                OnboardingFeatureRow(icon: "lock.shield", title: String(localized: "Stay Local"), description: String(localized: "No account or health-data cloud. Files are written to folders you choose."))
             }
         }
     }
@@ -435,9 +435,9 @@ private struct HealthAccessStep: View {
     var body: some View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
-                eyebrow: "Apple Health",
-                title: "Choose What Health.md Can Read",
-                description: "Grant read access for the categories you want to export. You can adjust this later in the Health app.",
+                eyebrow: String(localized: "Apple Health"),
+                title: String(localized: "Choose What Health.md Can Read"),
+                description: String(localized: "Grant read access for the categories you want to export. You can adjust this later in the Health app."),
                 icon: "heart.fill",
                 showsIcon: false
             )
@@ -445,13 +445,13 @@ private struct HealthAccessStep: View {
             VStack(spacing: Spacing.s3) {
                 OnboardingStatusCard(
                     icon: isAuthorized ? "checkmark.circle.fill" : "circle.dotted",
-                    title: isAuthorized ? "Apple Health Connected" : "Apple Health Not Connected",
-                    description: isAuthorized ? "You’re ready to generate real previews and exports." : "You can continue now and connect before your first export.",
+                    title: isAuthorized ? String(localized: "Apple Health Connected") : String(localized: "Apple Health Not Connected"),
+                    description: isAuthorized ? String(localized: "You’re ready to generate real previews and exports.") : String(localized: "You can continue now and connect before your first export."),
                     tint: isAuthorized ? .success : .textMuted
                 )
 
-                OnboardingFeatureRow(icon: "slider.horizontal.3", title: "You Stay in Control", description: "iOS lets you approve or deny each health category.")
-                OnboardingFeatureRow(icon: "eye.slash", title: "No Account Required", description: "Health.md does not need a server account to export local files.")
+                OnboardingFeatureRow(icon: "slider.horizontal.3", title: String(localized: "You Stay in Control"), description: String(localized: "iOS lets you approve or deny each health category."))
+                OnboardingFeatureRow(icon: "eye.slash", title: String(localized: "No Account Required"), description: String(localized: "Health.md does not need a server account to export local files."))
             }
         }
     }
@@ -463,9 +463,9 @@ private struct SampleExportStep: View {
     var body: some View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
-                eyebrow: "Example File",
-                title: "See the Health Note Reveal",
-                description: "Watch Apple Health readings become a readable Markdown, CSV, JSON, or Obsidian file.",
+                eyebrow: String(localized: "Example File"),
+                title: String(localized: "See the Health Note Reveal"),
+                description: String(localized: "Watch Apple Health readings become a readable Markdown, CSV, JSON, or Obsidian file."),
                 icon: "doc.text.magnifyingglass",
                 showsIcon: false
             )
@@ -526,9 +526,9 @@ private struct FolderSetupStep: View {
     var body: some View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
-                eyebrow: "Destination",
-                title: "Choose Where Your Archive Lives",
-                description: "Save to an iPhone folder now, or connect the Mac app after onboarding to write exports to a Mac folder.",
+                eyebrow: String(localized: "Destination"),
+                title: String(localized: "Choose Where Your Archive Lives"),
+                description: String(localized: "Save to an iPhone folder now, or connect the Mac app after onboarding to write exports to a Mac folder."),
                 icon: "folder.fill",
                 showsIcon: false
             )
@@ -537,7 +537,7 @@ private struct FolderSetupStep: View {
                 OnboardingStatusCard(
                     icon: "folder.fill",
                     title: vaultName,
-                    description: "Health.md will write exports directly into this folder.",
+                    description: String(localized: "Health.md will write exports directly into this folder."),
                     tint: .success
                 )
             } else {
@@ -545,8 +545,8 @@ private struct FolderSetupStep: View {
             }
 
             VStack(spacing: Spacing.s3) {
-                OnboardingFeatureRow(icon: "iphone", title: "Local iPhone Folder", description: "Best when you keep notes in iCloud Drive, On My iPhone, or a synced app folder.")
-                OnboardingFeatureRow(icon: "desktopcomputer", title: "Connected Mac Later", description: "Install the Mac app later to send iPhone-configured exports to a Mac folder.")
+                OnboardingFeatureRow(icon: "iphone", title: String(localized: "Local iPhone Folder"), description: String(localized: "Best when you keep notes in iCloud Drive, On My iPhone, or a synced app folder."))
+                OnboardingFeatureRow(icon: "desktopcomputer", title: String(localized: "Connected Mac Later"), description: String(localized: "Install the Mac app later to send iPhone-configured exports to a Mac folder."))
             }
         }
     }
@@ -562,31 +562,31 @@ private struct ReadyStep: View {
     var body: some View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
-                eyebrow: "Ready",
-                title: "Your Health Archive Is Ready",
-                description: "Review your setup, then preview your first private export with the defaults already configured.",
+                eyebrow: String(localized: "Ready"),
+                title: String(localized: "Your Health Archive Is Ready"),
+                description: String(localized: "Review your setup, then preview your first private export with the defaults already configured."),
                 icon: "checkmark.seal.fill",
                 showsIcon: false
             )
 
             VStack(spacing: Spacing.s3) {
                 OnboardingChecklistRow(
-                    title: "Apple Health",
-                    detail: healthAuthorized ? "Connected" : "Connect to preview your health data",
+                    title: String(localized: "Apple Health"),
+                    detail: healthAuthorized ? String(localized: "Connected") : String(localized: "Connect to preview your health data"),
                     isComplete: healthAuthorized,
-                    actionTitle: healthAuthorized ? nil : "Connect",
+                    actionTitle: healthAuthorized ? nil : String(localized: "Connect"),
                     action: healthAuthorized ? nil : onConnectHealth
                 )
                 OnboardingChecklistRow(
-                    title: "Export Folder",
-                    detail: folderSelected ? folderName : "Choose now or after previewing",
+                    title: String(localized: "Export Folder"),
+                    detail: folderSelected ? folderName : String(localized: "Choose now or after previewing"),
                     isComplete: folderSelected,
-                    actionTitle: folderSelected ? nil : "Choose Folder",
+                    actionTitle: folderSelected ? nil : String(localized: "Choose Folder"),
                     action: folderSelected ? nil : onSelectFolder
                 )
                 OnboardingChecklistRow(
-                    title: "Formats",
-                    detail: "Markdown is ready by default",
+                    title: String(localized: "Formats"),
+                    detail: String(localized: "Markdown is ready by default"),
                     isComplete: true
                 )
             }

@@ -22,7 +22,7 @@ struct ReadingMetricToggle: View {
         .contentShape(Rectangle())
         .disabled(isUnavailable)
         .accessibilityLabel(detail.isEmpty ? name : "\(name), \(detail)")
-        .accessibilityValue(isOn ? "Enabled" : "Disabled")
+        .accessibilityValue(isOn ? String(localized: "Enabled") : String(localized: "Disabled"))
         .accessibilityHint(accessibilityHint)
     }
 }
@@ -94,8 +94,10 @@ struct ReadingMetricCategoryHeader<Status: View>: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-        .accessibilityHint("Double tap anywhere on the category to \(isExpanded ? "collapse" : "expand")")
+        .accessibilityValue(isExpanded ? String(localized: "Expanded") : String(localized: "Collapsed"))
+        .accessibilityHint(isExpanded
+            ? String(localized: "Double tap to collapse this category")
+            : String(localized: "Double tap to expand this category"))
     }
 }
 
@@ -391,7 +393,9 @@ struct ReadingProtectionRow: View {
         .tint(Color.accent)
         .accessibilityLabel("Prevent Accidental Changes")
         .accessibilityValue(isEnabled ? "On" : "Off")
-        .accessibilityHint("Double tap to \(isEnabled ? "allow" : "prevent") configuration changes")
+        .accessibilityHint(isEnabled
+            ? String(localized: "Double tap to allow configuration changes")
+            : String(localized: "Double tap to prevent configuration changes"))
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 
@@ -408,7 +412,9 @@ struct ReadingProtectionRow: View {
             .tint(Color.accent)
             .accessibilityLabel("Prevent Accidental Changes")
             .accessibilityValue(isEnabled ? "On" : "Off")
-            .accessibilityHint("Double tap to \(isEnabled ? "allow" : "prevent") configuration changes")
+            .accessibilityHint(isEnabled
+                ? String(localized: "Double tap to allow configuration changes")
+                : String(localized: "Double tap to prevent configuration changes"))
             .accessibilityIdentifier(accessibilityIdentifier)
 
             Text(isEnabled
@@ -451,7 +457,7 @@ struct ReadingConnectionEntry<Editor: View>: View {
                 // Use the caller's existing focus binding, not a competing
                 // private FocusState that could break submission/dismissal.
                 .simultaneousGesture(TapGesture().onEnded { focusEditor() })
-                .accessibilityLabel(title)
+                .accessibilityLabel(LocalizedStringKey(title))
                 .accessibilityIdentifier(identifier)
             if !value.isEmpty {
                 Text(verbatim: value)
