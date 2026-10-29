@@ -1684,6 +1684,81 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testUnqualifiedMorningSummaryOnlyNeverFallsBackToHistoricalRollup() async throws {
+        for background in [false, true] {
+            let store = FakeHealthStore()
+            HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+            let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+            manager.setSleepDayAttribution(.morningEnds)
+            let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/UnqualifiedMorningSummary-\(background)")
+            let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: [.range])
+            settings.executionSleepCaptureContext = nil
+            settings.summaryOnlyExport = true
+            settings.archiveExportFiles = true
+            settings.includeDataDictionary = false
+            settings.metricSelection.enabledMetrics = ["steps", "sleep_total"]
+            let result: ExportOrchestrator.ExportResult
+            if background {
+                result = await ExportOrchestrator.exportDatesBackground([HealthKitFixtures.referenceDate],
+                    healthKitManager: manager, vaultManager: vault, settings: settings)
+            } else {
+                result = await ExportOrchestrator.exportDates([HealthKitFixtures.referenceDate],
+                    healthKitManager: manager, vaultManager: vault, settings: settings)
+            }
+            XCTAssertEqual(result.successCount, 0)
+            XCTAssertEqual(result.totalFilesWritten, 0)
+            XCTAssertTrue(fileSystem.files.isEmpty)
+            XCTAssertTrue(store.queriedSumIdentifiers.isEmpty,
+                "Unsupported successor work must fail before health capture")
+            XCTAssertEqual(result.failedDateDetails.first?.errorDetails,
+                AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution.localizedDescription)
+        }
+    }
+
+    @MainActor
+    func testMorningSummaryOnlyDoesNotAcquireSuppressedConnectedProviderAuthority() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 1)))
+        let wake = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: first))
+        let start = try XCTUnwrap(calendar.date(bySettingHour: 10, minute: 0, second: 0, of: first))
+        let end = try XCTUnwrap(calendar.date(bySettingHour: 13, minute: 0, second: 0, of: wake))
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in identifier == .stepCount ? 10 : nil }
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)
+        ]
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        manager.setSleepDayAttribution(.morningEnds)
+        let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/MorningSummaryConnectedProvider")
+        let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: [.range])
+        settings.executionSleepCaptureContext = nil
+        settings.exportTimeZoneOverride = zone
+        settings.summaryOnlyExport = true
+        settings.detailPolicy = .summary
+        settings.includeDataDictionary = false
+        settings.metricSelection.enabledMetrics = ["steps", "sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
+        XCTAssertFalse(settings.writesExternalProviderSidecars)
+        let providers = SuppressedMorningProviderProbe()
+        let result = await ExportOrchestrator.exportDates([first, wake], healthKitManager: manager,
+            vaultManager: vault, settings: settings, externalIntegrations: providers)
+        XCTAssertEqual(result.successCount, 2, "\(result.failedDateDetails)")
+        XCTAssertEqual(result.rollupFileCount, 4)
+        XCTAssertEqual(result.externalRecordFileCount, 0)
+        XCTAssertEqual(fileSystem.files.count, 4)
+        XCTAssertEqual(providers.fetchCount, 0)
+        XCTAssertEqual(providers.connectedProviderCountReads, 0,
+            "Suppressed sidecars must not affect fresh renderer admission")
+        let json = try XCTUnwrap(fileSystem.files.first { $0.key.hasSuffix(".json") }?.value)
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+        XCTAssertEqual(root["schema_version"] as? Int, 11)
+        XCTAssertTrue(json.contains("morning_ends"))
+        XCTAssertTrue(json.replacingOccurrences(of: "\\/", with: "/").contains("Asia/Kathmandu"))
+        XCTAssertTrue(fileSystem.files.keys.allSatisfy { $0.contains("Rollups") })
+    }
+
+    @MainActor
     func testFreshMorningForegroundRangeCapturesWholeSessionAndCommitsEveryFormatUnderFrozenV11() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
         var calendar = Calendar(identifier: .gregorian)
@@ -1962,6 +2037,24 @@ final class ExportOrchestratorTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         return defaults
+    }
+}
+
+@MainActor
+private final class SuppressedMorningProviderProbe: ExternalIntegrationDailyRecordProviding {
+    private(set) var connectedProviderCountReads = 0
+    var connectedProviderCount: Int {
+        connectedProviderCountReads += 1
+        return 1
+    }
+    private(set) var fetchCount = 0
+    func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
+        fetchCount += 1
+        XCTFail("Summary-only exports must not capture suppressed provider sidecars")
+        return []
+    }
+    func fetchDailyRecords(for date: Date, providerIDs: Set<String>) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(for: date)
     }
 }
 

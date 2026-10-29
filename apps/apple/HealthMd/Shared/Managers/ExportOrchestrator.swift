@@ -525,7 +525,8 @@ struct ExportOrchestrator {
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var shouldWriteDataDictionary = true
-        let hasProviderSideEffects = ConnectedAppsFeature.isEnabled
+        let hasProviderSideEffects = settings.writesExternalProviderSidecars
+            && ConnectedAppsFeature.isEnabled
             && (externalIntegrations?.connectedProviderCount ?? 0) > 0
         let operationSurface: AppleExportOperationSurface = hasProviderSideEffects
             ? .legacyOnly
@@ -1871,6 +1872,13 @@ struct ExportOrchestrator {
         settings: AdvancedExportSettings,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
+        // This path emits the historical roll-up profile. A successor request must
+        // reach the pinned range planner above, never acquire historical semantics
+        // because its selected output configuration could not obtain a pin.
+        if AppleSleepCaptureContext.pinned.wrappedValue?.sleepDayAttribution == .morningEnds {
+            return unavailableSleepContextResult(dates: dates, settings: settings,
+                error: AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution)
+        }
         let totalDays = dates.count
         var partialFailures: [ExportPartialFailure] = []
         var failedDateDetails: [FailedDateDetail] = []
