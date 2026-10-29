@@ -66,18 +66,16 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         super.init()
     }
 
-    var connectedProviderCount: Int { accounts.count }
+    var connectedProviderCount: Int { tokenStore.connectedProviders.intersection(enabledProviders).count }
 
     func forCaptureOperation() -> any ExternalIntegrationDailyRecordProviding {
         OperationScopedProvider(manager: self, connections: captureConnections())
     }
 
-    private func captureConnections() -> [ExternalIntegrationProvider: UUID] {
-        Dictionary(uniqueKeysWithValues: accounts.keys.compactMap { provider in
-            guard isDisconnectingProvider != provider,
-                  let id = tokenStore.connectionID(for: provider) else { return nil }
-            return (provider, id)
-        })
+    private func captureConnections() -> [ExternalIntegrationProvider: UUID?] {
+        Dictionary(uniqueKeysWithValues: tokenStore.connectedProviders.intersection(enabledProviders)
+            .filter { isDisconnectingProvider != $0 }
+            .map { ($0, tokenStore.connectionID(for: $0)) })
     }
 
     func beginExportAction() {
@@ -186,6 +184,7 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         isDisconnectingProvider = provider
         defer { isDisconnectingProvider = nil }
 
+        let acceptedConnectionID = tokenStore.connectionID(for: provider)
         guard var token = tokenStore.token(for: provider) else {
             guard commitAllowed() else {
                 setConnectionStatus(.warning, "Disconnect cancelled because settings are locked")
@@ -201,19 +200,26 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
             return
         }
 
+        guard let acceptedConnectionID else {
+            setConnectionStatus(.error, ExternalIntegrationTokenStoreError.connectionChanged.localizedDescription)
+            return
+        }
         setConnectionStatus(.progress, "Revoking \(provider.displayName) access…")
         do {
             if token.needsRefresh(), token.refreshToken != nil {
-                token = try await refreshToken(for: provider, replacing: token)
+                token = try await refreshToken(for: provider, replacing: token, connectionID: acceptedConnectionID)
             }
             guard commitAllowed() else {
                 setConnectionStatus(.warning, "Disconnect cancelled because settings are locked")
                 return
             }
+            guard tokenStore.connectionID(for: provider) == acceptedConnectionID else {
+                throw ExternalIntegrationTokenStoreError.connectionChanged
+            }
             do {
                 try await apiClient.revokeAccess(provider: provider, token: token)
             } catch ExternalProviderAPIError.unauthorized where token.refreshToken != nil {
-                token = try await refreshToken(for: provider, replacing: token)
+                token = try await refreshToken(for: provider, replacing: token, connectionID: acceptedConnectionID)
                 guard commitAllowed() else {
                     setConnectionStatus(.warning, "Disconnect cancelled because settings are locked")
                     return
@@ -226,7 +232,7 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         }
 
         do {
-            try tokenStore.disconnect(provider: provider)
+            try tokenStore.disconnect(provider: provider, expectedConnectionID: acceptedConnectionID)
             syncAccounts()
             setConnectionStatus(.success, "Disconnected \(provider.displayName) and revoked access")
         } catch {
@@ -279,7 +285,7 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         for date: Date,
         providerIDs: Set<String>,
         calendar: Calendar,
-        connections: [ExternalIntegrationProvider: UUID]
+        connections: [ExternalIntegrationProvider: UUID?]
     ) async -> [ExternalDailyRecord] {
         guard !providerIDs.isEmpty, !enabledProviders.isEmpty else { return [] }
         var records: [ExternalDailyRecord] = []
@@ -287,7 +293,7 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         for provider in enabledProviders
             .filter({ providerIDs.contains($0.id) })
             .sorted(by: { $0.displayName < $1.displayName }) {
-            guard let connectionID = connections[provider],
+            guard let connectionID = connections[provider] ?? nil,
                   shouldKeepFetchResult(for: provider, connectionID: connectionID) else {
                 records.append(ExternalDailyRecord(
                     provider: provider,
@@ -367,7 +373,7 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
 
     private func discoverEarliestAvailableDate(
         providerIDs: Set<String>,
-        connections: [ExternalIntegrationProvider: UUID]
+        connections: [ExternalIntegrationProvider: UUID?]
     ) async -> ExternalProviderHistoryDiscovery {
         let requestedProviders = Set(connections.keys.filter {
             providerIDs.contains($0.id) && enabledProviders.contains($0)
@@ -378,7 +384,7 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         ).sorted()
 
         for provider in requestedProviders.sorted(by: { $0.id < $1.id }) {
-            guard let connectionID = connections[provider],
+            guard let connectionID = connections[provider] ?? nil,
                   shouldKeepFetchResult(for: provider, connectionID: connectionID),
                   var token = tokenStore.token(for: provider) else {
                 unresolved.append(provider.id)
@@ -426,8 +432,8 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     @MainActor
     private final class OperationScopedProvider: ExternalIntegrationDailyRecordProviding {
         let manager: ExternalIntegrationManager
-        let connections: [ExternalIntegrationProvider: UUID]
-        init(manager: ExternalIntegrationManager, connections: [ExternalIntegrationProvider: UUID]) {
+        let connections: [ExternalIntegrationProvider: UUID?]
+        init(manager: ExternalIntegrationManager, connections: [ExternalIntegrationProvider: UUID?]) {
             self.manager = manager
             self.connections = connections
         }
