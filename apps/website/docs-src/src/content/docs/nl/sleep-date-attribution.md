@@ -46,6 +46,10 @@ Daily Note Injection en API Endpoint-overzichten volgen hetzelfde venster. Herha
 
 Ruwe of canonieke records behouden hun tijdstempels en eigen dagregels. Reconstrueer geen sessies uit een dagtotaal en tel bronintervallen niet als extra slaap daarbij op.
 
+Op Apple deelt het ruwe archief records op basis van hun begintijd in bij de lokale kalenderdag van middernacht tot middernacht. De slaapsamenvatting knipt intervallen daarentegen bij op het venster van middag tot middag. Een geslaagde Sleep Analysis-query kan dus ochtendrecords bevatten terwijl de samenvatting voor die datum leeg is. Exporteer de vorige journaaldag en controleer `time_context.calendar_timezone`. Records van 22 september, 04:03–11:52 UTC, horen in UTC bijvoorbeeld volledig bij de samenvatting van 21 september; in Europe/Lisbon vallen de laatste 52 minuten na de lokale middag en dragen ze bij aan 22 september.
+
+Slaapfasen vereisen geen expliciet `inBed`-record: ontbreekt dit, dan gebruikt Apple de vereniging van beschikbare slaapfasen, zonder een duur in bed te verzinnen. Een mislukte query hoort in `diagnostics.partial_failures`; een geslaagde query zonder geschikte intervallen is geldige afwezigheid. Rusthartslag gebruikt een aparte kalenderdagquery en vereist een echte rusthartslagmeting; slaapfasen of alleen leestoestemming leveren die niet.
+
 `healthmd_sleep_sessions` vereist een ondersteunde CLI/MCP-configuratie voor **Apple Health**. Getypeerde Android-MCP-query’s worden momenteel niet ondersteund. Zie [platformmogelijkheden](/nl/docs/guides/platform-features/) en [MCP](/nl/docs/mcp/).
 
 Meer hulp: [planning](/nl/docs/scheduling/), [probleemoplossing](/nl/docs/troubleshooting/) en [formaten](/nl/docs/format/).

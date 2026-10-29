@@ -1425,4 +1425,15 @@
     <string name="post_export_upgrade_action">लाइफ़टाइम एक्सेस देखें</string>
     <string name="post_export_manual_action">मैन्युअल निर्यात जारी रखें</string>
     <string name="post_export_continue_free">निःशुल्क जारी रखें</string>
+    <string name="export_sleep_date_guidance">नींद की अवधि हर चुनी हुई तारीख की दोपहर से अगले दिन की दोपहर तक होती है। पिछली रात की नींद के लिए बीता हुआ कल चुनें।</string>
+    <string name="export_sleep_preview_window">नींद की अवधि: %1$s की दोपहर से %2$s की दोपहर तक (%3$s)।</string>
+    <string name="export_sleep_preview_guidance">अगर नींद का डेटा नहीं है, तो पिछली तारीख आज़माएँ। सुबह की नींद उस तारीख के सारांश में दिख सकती है, भले ही मूल रिकॉर्ड आज के हों। क्वेरी की विफलताएँ अलग से दिखाई जाती हैं; खाली परिणाम का मतलब पढ़ने की अनुमति उपलब्ध न होना भी हो सकता है।</string>
+    <string name="whoop_connection_description">रिकवरी, तनाव, नींद, वर्कआउट और शारीरिक माप निर्यात करने के लिए WHOOP कनेक्ट करें। साइन-इन आपके ब्राउज़र में होता है; Health.md टोकन को इस डिवाइस पर एन्क्रिप्ट करके रखता है। डिस्कनेक्ट करने से इस डिवाइस का सहेजा गया कनेक्शन हट जाता है।</string>
+    <string name="whoop_connect">WHOOP कनेक्ट करें</string>
+    <string name="whoop_sources_description">सीधे प्रदाता से निर्यात करने के लिए WHOOP कनेक्ट करें या स्थानीय रिकॉर्ड के लिए Health Connect का उपयोग जारी रखें।</string>
+    <string name="whoop_sign_in_failed">WHOOP साइन-इन शुरू नहीं हो सका। अपना कनेक्शन जाँचें और फिर कोशिश करें।</string>
+    <string name="whoop_use_health_connect">निर्यात के लिए Health Connect उपयोग करें</string>
+    <string name="whoop_reconnect">WHOOP फिर से कनेक्ट करें</string>
+    <string name="whoop_disconnect">WHOOP डिस्कनेक्ट करें</string>
+    <string name="whoop_use_for_exports">निर्यात के लिए WHOOP उपयोग करें</string>
 </resources>

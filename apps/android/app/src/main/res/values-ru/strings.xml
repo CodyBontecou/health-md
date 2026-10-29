@@ -1553,4 +1553,15 @@
     <string name="post_export_upgrade_action">Посмотреть пожизненный доступ</string>
     <string name="post_export_manual_action">Продолжить ручной экспорт</string>
     <string name="post_export_continue_free">Продолжить бесплатно</string>
+    <string name="export_sleep_date_guidance">Сон охватывает период с полудня выбранной даты до полудня следующего дня. Для сна прошлой ночи выберите «Вчера».</string>
+    <string name="export_sleep_preview_window">Окно сна: с полудня %1$s до полудня %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Если сон отсутствует, попробуйте предыдущую дату. Утренний сон может попасть в её сводку, даже если исходные записи датированы сегодняшним днём. Ошибки запросов указаны отдельно; пустой результат также может означать отсутствие доступа на чтение.</string>
+    <string name="whoop_connection_description">Подключите WHOOP для экспорта восстановления, нагрузки, сна, тренировок и измерений тела. Вход выполняется в браузере; Health.md хранит токены на этом устройстве в зашифрованном виде. Отключение удаляет сохранённое подключение на этом устройстве.</string>
+    <string name="whoop_connect">Подключить WHOOP</string>
+    <string name="whoop_sources_description">Подключите WHOOP для прямого экспорта от поставщика или продолжайте использовать Health Connect для локальных записей.</string>
+    <string name="whoop_sign_in_failed">Не удалось начать вход в WHOOP. Проверьте подключение и повторите попытку.</string>
+    <string name="whoop_use_health_connect">Использовать Health Connect для экспорта</string>
+    <string name="whoop_reconnect">Повторно подключить WHOOP</string>
+    <string name="whoop_disconnect">Отключить WHOOP</string>
+    <string name="whoop_use_for_exports">Использовать WHOOP для экспорта</string>
 </resources>

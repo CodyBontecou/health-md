@@ -59,12 +59,21 @@ class CatalogTests(unittest.TestCase):
         self.assertTrue(all(tool["annotations"]["readOnlyHint"] for tool in names.values()))
         hidden = sorted(smoke.tool_index(self.catalog).keys() - names.keys())
         messages = smoke.requests(hidden)
-        self.assertEqual([message["params"]["name"] for message in messages[5:]], hidden)
+        self.assertEqual([message["params"]["name"] for message in messages[4:]], hidden)
 
     def test_no_read_only_request_starts_an_export(self):
         messages = smoke.requests()
         self.assertEqual({message["params"]["name"] for message in messages if message["method"] == "tools/call"},
-                         {"healthmd_capabilities", "healthmd_doctor"})
+                         {"healthmd_capabilities"})
+
+    def test_hermetic_requests_never_dispatch_credential_or_device_operations(self):
+        for hidden in (None, ['healthmd_pairing_start', 'healthmd_export_raw']):
+            messages = smoke.requests(hidden)
+            # Hidden operations are sent only to the read-only profile, where
+            # they must be rejected before dispatch. The only admitted call is
+            # the static capabilities catalog, not readiness or paired devices.
+            self.assertEqual(messages[3]['params']['name'], 'healthmd_capabilities')
+            self.assertNotIn('healthmd_doctor', [m.get('params', {}).get('name') for m in messages])
 
 
 class SessionTests(unittest.TestCase):
@@ -73,16 +82,11 @@ class SessionTests(unittest.TestCase):
 
     def responses(self, read_only=False):
         tools = smoke.read_only_catalog(self.catalog) if read_only else self.catalog
-        doctor = {"schema": "healthmd.direct_readiness", "schema_version": 1,
-                  "status": "not_paired", "ready": False, "message": "Fixture is unpaired."}
-        if not read_only:
-            doctor["next_tool"] = "healthmd_pairing_start"
         result = {
             1: {"result": {"capabilities": {"extensions": {"io.modelcontextprotocol/ui": {"mimeTypes": [smoke.MIME]}}}}},
             2: {"result": {"tools": tools}},
             3: {"result": {"resources": [{"uri": smoke.UI_URI}]}},
             4: {"result": {"content": [{"type": "text", "text": json.dumps({"query_tool_guidance": {"sleep": "healthmd_sleep_sessions"}})}]}},
-            5: {"result": {"isError": False, "content": [{"type": "text", "text": json.dumps(doctor)}]}},
         }
         if read_only:
             hidden = smoke.tool_index(self.catalog).keys() - smoke.tool_index(tools).keys()
@@ -123,38 +127,64 @@ class SessionTests(unittest.TestCase):
         with self.assertRaisesRegex(smoke.SmokeError, "local-only resource"):
             smoke.check_session(responses, self.catalog, read_only=True)
 
-    def test_doctor_rejects_unexpected_payload_fields(self):
-        responses = self.responses()
-        content = responses[5]["result"]["content"][0]
-        doctor = json.loads(content["text"])
-        doctor["unexpected_payload"] = {}
-        content["text"] = json.dumps(doctor)
-        with self.assertRaisesRegex(smoke.SmokeError, "unexpected doctor readiness fields"):
-            smoke.check_session(responses, self.catalog)
-
-
-class NativeCredentialsTests(unittest.TestCase):
-    def test_empty_devices_passes_on_every_runner(self):
-        for runner in ("Linux", "macOS", "Windows"):
-            smoke.check_devices(runner, 0, {"schema": "healthmd.direct_devices", "devices": []})
-
-    def test_only_linux_may_lack_native_credentials(self):
-        error = {"error": "direct_storage_unavailable"}
-        smoke.check_devices("Linux", 1, error)
-        for runner in ("macOS", "Windows"):
-            with self.assertRaises(smoke.SmokeError):
-                smoke.check_devices(runner, 1, error)
-
-    def test_runner_override_cannot_bypass_native_host_requirement(self):
+class HarnessArgumentsTests(unittest.TestCase):
+    def test_runner_override_must_match_the_host(self):
         with mock.patch.object(smoke.sys, "platform", "darwin"), mock.patch.object(
             smoke.sys, "argv", ["smoke-cli.py", "--skip-build", "--runner", "Linux"]
         ):
             with self.assertRaisesRegex(smoke.SmokeError, "must match"):
                 smoke.main()
 
-    def test_existing_pairing_in_smoke_state_fails(self):
-        with self.assertRaisesRegex(smoke.SmokeError, "paired devices"):
-            smoke.check_devices("Linux", 0, {"schema": "healthmd.direct_devices", "devices": [{}]})
+    def test_success_reports_only_hermetic_coverage(self):
+        arguments = ['smoke-cli.py', '--skip-build', '--binary', '/fixture/healthmd']
+        with mock.patch.object(smoke.sys, 'argv', arguments), \
+             mock.patch.object(smoke, 'smoke', return_value=(20, 10)), \
+             mock.patch('builtins.print') as output:
+            self.assertEqual(smoke.main(), 0)
+            self.assertIn('Hermetic CLI/MCP smoke passed', output.call_args.args[0])
+            self.assertIn('no credentials or device contact', output.call_args.args[0])
+
+
+class SmokeBoundaryTests(unittest.TestCase):
+    def setUp(self):
+        self.session = SessionTests()
+        self.session.setUp()
+
+    def local_command(self, command, env, *, success=True):
+        arguments = command[1:]
+        payload = {}
+        if arguments == ['mcp', 'schema']:
+            payload = {'schema': 'healthmd.mcp_tool_catalog', 'schema_version': 1,
+                       'tools': self.session.catalog}
+        elif arguments == ['mcp', 'schema', 'healthmd_sleep_sessions']:
+            payload = {'schema': 'healthmd.mcp_tool_schema',
+                       'tool': smoke.tool_index(self.session.catalog)['healthmd_sleep_sessions']}
+        elif arguments == ['setup', 'codex', '--skip-pairing']:
+            path = Path(env['CODEX_HOME']) / 'config.toml'
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('[mcp_servers.healthmd]\nargs = ["mcp", "serve"]\n'
+                            '[mcp_servers.healthmd.tools.healthmd_export_files]\napproval_mode = "prompt"\n')
+            payload = {'schema': 'healthmd.codex_setup', 'configuration': {'same_executable_identity': True}}
+        else:
+            self.assertTrue('--help' in arguments or arguments == ['--version'], arguments)
+        return smoke.subprocess.CompletedProcess(command, 0 if success else 1, json.dumps(payload), '')
+
+    def test_default_smoke_never_probes_the_native_store(self):
+        def stdio(command, messages, env):
+            read_only = 'serve-read-only' in command
+            hidden = sorted(smoke.tool_index(self.session.catalog).keys()
+                            - smoke.tool_index(smoke.read_only_catalog(self.session.catalog)).keys()) if read_only else None
+            self.assertEqual(messages, smoke.requests(hidden))
+            return self.session.responses(read_only)
+
+        with mock.patch.object(smoke, 'run', side_effect=self.local_command), \
+             mock.patch.object(smoke, 'run_stdio_server', side_effect=stdio) as stdio_call, \
+             mock.patch.object(smoke.subprocess, 'run', side_effect=AssertionError('native store probe in hermetic smoke')) as native:
+            complete, read_only = smoke.smoke(Path('/fixture/healthmd'), Path('/fixture/healthmd-mcp'))
+            self.assertEqual(complete, len(self.session.catalog))
+            self.assertEqual(read_only, len(smoke.read_only_catalog(self.session.catalog)))
+            self.assertEqual(stdio_call.call_count, 3)
+            native.assert_not_called()
 
 
 class ProcessTests(unittest.TestCase):

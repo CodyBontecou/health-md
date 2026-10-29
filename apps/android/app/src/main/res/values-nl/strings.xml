@@ -1451,4 +1451,15 @@
     <string name="post_export_upgrade_action">Levenslange toegang bekijken</string>
     <string name="post_export_manual_action">Handmatig blijven exporteren</string>
     <string name="post_export_continue_free">Gratis doorgaan</string>
+    <string name="export_sleep_date_guidance">Slaap loopt van twaalf uur ’s middags op elke gekozen datum tot twaalf uur ’s middags de volgende dag. Kies Gisteren voor de slaap van afgelopen nacht.</string>
+    <string name="export_sleep_preview_window">Slaapvenster: %1$s om twaalf uur ’s middags tot %2$s om twaalf uur ’s middags (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Ontbreekt slaap? Probeer de vorige datum. Ochtendslaap kan in die samenvatting staan, ook als de ruwe records van vandaag zijn. Queryfouten worden apart vermeld; een leeg resultaat kan ook betekenen dat leestoegang ontbreekt.</string>
+    <string name="whoop_connection_description">Verbind WHOOP om herstel, belasting, slaap, trainingen en lichaamsmetingen te exporteren. Aanmelden gebeurt in je browser; Health.md bewaart tokens versleuteld op dit apparaat. Verbreken verwijdert de opgeslagen verbinding op dit apparaat.</string>
+    <string name="whoop_connect">WHOOP verbinden</string>
+    <string name="whoop_sources_description">Verbind WHOOP voor rechtstreekse providerexports of blijf Health Connect gebruiken voor lokale records.</string>
+    <string name="whoop_sign_in_failed">Aanmelden bij WHOOP kon niet worden gestart. Controleer je verbinding en probeer het opnieuw.</string>
+    <string name="whoop_use_health_connect">Health Connect gebruiken voor exports</string>
+    <string name="whoop_reconnect">WHOOP opnieuw verbinden</string>
+    <string name="whoop_disconnect">WHOOP-verbinding verbreken</string>
+    <string name="whoop_use_for_exports">WHOOP gebruiken voor exports</string>
 </resources>

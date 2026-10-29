@@ -1392,4 +1392,15 @@
     <string name="post_export_upgrade_action">Өмір бойғы қолжетімділікті көру</string>
     <string name="post_export_manual_action">Қолмен экспортты жалғастыру</string>
     <string name="post_export_continue_free">Тегін жалғастыру</string>
+    <string name="export_sleep_date_guidance">Ұйқы таңдалған күннің түскі уақытынан келесі күннің түскі уақытына дейінгі аралықты қамтиды. Өткен түнгі ұйқы үшін «Кеше» параметрін таңдаңыз.</string>
+    <string name="export_sleep_preview_window">Ұйқы аралығы: %1$s түскі уақытынан %2$s түскі уақытына дейін (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Ұйқы деректері болмаса, алдыңғы күнді таңдаңыз. Бастапқы жазбалар бүгінгі күнмен белгіленсе де, таңғы ұйқы сол күннің қорытындысында болуы мүмкін. Сұрау қателері бөлек көрсетіледі; бос нәтиже оқу рұқсатының қолжетімсіз екенін де білдіруі мүмкін.</string>
+    <string name="whoop_connection_description">Қалпына келу, жүктеме, ұйқы, жаттығулар мен дене өлшемдерін экспорттау үшін WHOOP қызметін қосыңыз. Кіру браузер арқылы орындалады; Health.md токендерді осы құрылғыда шифрлап сақтайды. Ажырату осы құрылғыда сақталған қосылымды жояды.</string>
+    <string name="whoop_connect">WHOOP қызметін қосу</string>
+    <string name="whoop_sources_description">Провайдерден тікелей экспорттау үшін WHOOP қызметін қосыңыз немесе жергілікті жазбалар үшін Health Connect қолдануды жалғастырыңыз.</string>
+    <string name="whoop_sign_in_failed">WHOOP жүйесіне кіруді бастау мүмкін болмады. Байланысты тексеріп, әрекетті қайталаңыз.</string>
+    <string name="whoop_use_health_connect">Экспорттау үшін Health Connect пайдалану</string>
+    <string name="whoop_reconnect">WHOOP қызметіне қайта қосылу</string>
+    <string name="whoop_disconnect">WHOOP қызметін ажырату</string>
+    <string name="whoop_use_for_exports">Экспорттау үшін WHOOP пайдалану</string>
 </resources>

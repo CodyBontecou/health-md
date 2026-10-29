@@ -1276,4 +1276,15 @@
     <string name="post_export_upgrade_action">永久アクセスを見る</string>
     <string name="post_export_manual_action">手動エクスポートを続ける</string>
     <string name="post_export_continue_free">無料で続ける</string>
+    <string name="export_sleep_date_guidance">睡眠は選択した各日の正午から翌日の正午までを対象とします。昨夜の睡眠には「昨日」を選択してください。</string>
+    <string name="export_sleep_preview_window">睡眠の時間枠：%1$sの正午から%2$sの正午まで（%3$s）。</string>
+    <string name="export_sleep_preview_guidance">睡眠がない場合は前日を試してください。元の記録が今日の日付でも、朝の睡眠は前日の概要に含まれることがあります。クエリエラーは別途表示されます。結果が空の場合、読み取りアクセスが利用できない可能性もあります。</string>
+    <string name="whoop_connection_description">WHOOPに接続して、回復、負荷、睡眠、ワークアウト、身体測定値をエクスポートできます。ログインにはブラウザを使用し、Health.mdはトークンをこのデバイスに暗号化して保存します。接続を解除すると、このデバイスに保存された接続が削除されます。</string>
+    <string name="whoop_connect">WHOOPに接続</string>
+    <string name="whoop_sources_description">WHOOPに接続してプロバイダーから直接エクスポートするか、ローカルの記録に引き続きHealth Connectを使用できます。</string>
+    <string name="whoop_sign_in_failed">WHOOPへのログインを開始できませんでした。接続を確認して、もう一度お試しください。</string>
+    <string name="whoop_use_health_connect">エクスポートにHealth Connectを使用</string>
+    <string name="whoop_reconnect">WHOOPに再接続</string>
+    <string name="whoop_disconnect">WHOOPの接続を解除</string>
+    <string name="whoop_use_for_exports">エクスポートにWHOOPを使用</string>
 </resources>

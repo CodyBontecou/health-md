@@ -1499,4 +1499,15 @@
     <string name="post_export_upgrade_action">Vezi accesul pe viață</string>
     <string name="post_export_manual_action">Continuă exporturile manuale</string>
     <string name="post_export_continue_free">Continuă gratuit</string>
+    <string name="export_sleep_date_guidance">Somnul acoperă intervalul de la amiaza fiecărei date selectate până la amiaza zilei următoare. Pentru somnul de azi-noapte, alege Ieri.</string>
+    <string name="export_sleep_preview_window">Interval de somn: %1$s la amiază până la %2$s la amiază (%3$s).</string>
+    <string name="export_sleep_preview_guidance">Dacă somnul lipsește, încearcă data precedentă. Somnul de dimineață poate apărea în rezumatul acelei date, chiar dacă înregistrările brute sunt datate astăzi. Erorile de interogare sunt afișate separat; un rezultat gol poate însemna și că accesul la citire nu este disponibil.</string>
+    <string name="whoop_connection_description">Conectează WHOOP pentru a exporta recuperarea, efortul, somnul, antrenamentele și măsurătorile corporale. Autentificarea folosește browserul; Health.md păstrează tokenurile criptate pe acest dispozitiv. Deconectarea elimină conexiunea salvată pe acest dispozitiv.</string>
+    <string name="whoop_connect">Conectează WHOOP</string>
+    <string name="whoop_sources_description">Conectează WHOOP pentru exporturi directe de la furnizor sau continuă să folosești Health Connect pentru înregistrările locale.</string>
+    <string name="whoop_sign_in_failed">Autentificarea WHOOP nu a putut fi pornită. Verifică conexiunea și încearcă din nou.</string>
+    <string name="whoop_use_health_connect">Folosește Health Connect pentru exporturi</string>
+    <string name="whoop_reconnect">Reconectează WHOOP</string>
+    <string name="whoop_disconnect">Deconectează WHOOP</string>
+    <string name="whoop_use_for_exports">Folosește WHOOP pentru exporturi</string>
 </resources>
