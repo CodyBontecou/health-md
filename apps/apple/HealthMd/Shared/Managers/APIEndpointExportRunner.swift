@@ -835,7 +835,7 @@ struct APIEndpointExportRunner {
         let rustPlan: NativeExportArtifactPlan?
         var sourceComposedBatches: [PreparedBatch]?
         do {
-            let aggregatePlan = try await makeRustPlan(
+            let aggregatePreparation = try await makeRustPlan(
                 outcomes: preparedOutcomes,
                 normalizedDates: normalizedDates,
                 settings: frozenSettings,
@@ -848,6 +848,7 @@ struct APIEndpointExportRunner {
                 context: context,
                 coreExecutor: coreExecutor
             )
+            let aggregatePlan = aggregatePreparation.plan
             if pin.isWakeDate, preparedOutcomes.contains(where: {
                 $0.record?.healthKitRecordArchive != nil || $0.record?.partialFailures.isEmpty == false
                     || $0.record?.providers?.isEmpty == false
@@ -855,6 +856,7 @@ struct APIEndpointExportRunner {
                     || $0.record.map { AppleWakeDateQuantityProjection(data: $0).hasRecords } == true
                     || $0.record?.sleep.stages.isEmpty == false
                     || $0.record?.vitals.bloodPressureSamples.isEmpty == false
+                    || $0.record?.workouts.isEmpty == false
             }) {
                 guard let wakeContext = captureContext else { throw EngineError.invalidPreparedPlan }
                 let boundedBatches = try materializeBatches(plan: aggregatePlan, outcomes: preparedOutcomes,
@@ -865,7 +867,8 @@ struct APIEndpointExportRunner {
                     outcomes: preparedOutcomes, identity: identity, pin: pin,
                     connectedAppsEnabled: connectedAppsEnabled, calendarTimeZone: calendarTimeZone,
                     maxBatchDaySpan: dayLimit, maxBatchPayloadBytes: byteLimit, artifactDirectory: artifactDirectory,
-                    captureContext: wakeContext)
+                    captureContext: wakeContext, timeFormatIdentifier: frozenSettings.formatCustomization.timeFormat.rawValue,
+                    sourceOutputKeys: aggregatePreparation.sourceOutputKeys)
                 rustPlan = composed.plan
                 sourceComposedBatches = composed.batches
             } else {
@@ -1047,7 +1050,7 @@ struct APIEndpointExportRunner {
         pin: AppleExportEnginePin,
         context: AppleLooseDailyCoreContext,
         coreExecutor: any AppleLooseDailyCoreExecuting
-    ) async throws -> NativeExportArtifactPlan {
+    ) async throws -> (plan: NativeExportArtifactPlan, sourceOutputKeys: Set<String>) {
         let records = outcomes.compactMap(\.record)
         if pin.isWakeDate, records.contains(where: { !$0.vitals.bloodPressureSamples.isEmpty }),
            !["blood_pressure_systolic", "blood_pressure_diastolic"].allSatisfy({ settings.formatCustomization.frontmatterConfig.isFieldEnabled($0) }) {
@@ -1135,6 +1138,7 @@ struct APIEndpointExportRunner {
         renderOptions.includeMetadata = settings.includeMetadata
         renderOptions.groupByCategory = settings.groupByCategory
         renderOptions.includePlatformExtensions = false
+        renderOptions.composeWorkoutRecordsNatively = pin.isWakeDate
         renderOptions.rawCaptureStatus = "not_requested"
         renderOptions.writeMode = "overwrite"
         renderOptions.api = HealthMdRenderInputAdapter.APIOptions(
@@ -1190,7 +1194,7 @@ struct APIEndpointExportRunner {
               }) else {
             throw EngineError.invalidPreparedPlan
         }
-        return try NativeExportArtifactPlan(
+        let plan = try NativeExportArtifactPlan(
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
@@ -1199,12 +1203,14 @@ struct APIEndpointExportRunner {
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin
         )
+        let selectedKeys = pin.isWakeDate ? try AppleWakeDateWorkoutProjection.selectedOutputKeys(from: semanticResult) : []
+        return (plan, selectedKeys)
     }
 
     private static func composeWakeDateSources(boundedBatches: [PreparedBatch], outcomes: [PreparedOutcome],
         identity: AppleExportOperationIdentity, pin: AppleExportEnginePin, connectedAppsEnabled: Bool,
         calendarTimeZone: TimeZone, maxBatchDaySpan: Int, maxBatchPayloadBytes: Int,
-        artifactDirectory: URL, captureContext: AppleSleepCaptureContext
+        artifactDirectory: URL, captureContext: AppleSleepCaptureContext, timeFormatIdentifier: String, sourceOutputKeys: Set<String>
     ) async throws -> (plan: NativeExportArtifactPlan, batches: [PreparedBatch]) {
         var aggregates: [String: Data] = [:]
         for batch in boundedBatches {
@@ -1223,7 +1229,9 @@ struct APIEndpointExportRunner {
             return AppleWakeDateAPIRecordComposer.Source(ownerDate: owner, aggregate: aggregate,
                 archive: record.healthKitRecordArchive, partialFailures: record.partialFailures,
                 captureStatus: HealthKitRecordArchiveSerializer.captureStatusString(record.healthKitRecordCaptureStatus),
-                providers: record.providers, quantities: AppleWakeDateQuantityProjection(data: record), sleepStages: AppleWakeDateSleepStageProjection(data: record), correlations: AppleWakeDateCorrelationProjection(data: record))
+                providers: record.providers, quantities: AppleWakeDateQuantityProjection(data: record), sleepStages: AppleWakeDateSleepStageProjection(data: record), correlations: AppleWakeDateCorrelationProjection(data: record),
+                workouts: AppleWakeDateWorkoutProjection(data: record, captureContext: captureContext,
+                    timeFormatIdentifier: timeFormatIdentifier, selectedOutputKeys: sourceOutputKeys))
         }
         guard sources.count == aggregates.count else { throw EngineError.invalidPreparedPlan }
         let files = try await AppleWakeDateAPIRecordComposer.compose(sources: sources,

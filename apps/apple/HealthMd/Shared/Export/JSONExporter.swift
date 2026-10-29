@@ -155,12 +155,31 @@ extension HealthData {
         return sink.data
     }
 
+    /// The same native mapper used by the established writer, without buffering
+    /// any workout or nested route/series JSON. Construct and consume on one worker.
+    func wakeDateWorkoutJSONArray(captureContext: AppleSleepCaptureContext,
+        timeFormat: TimeFormatPreference) throws -> FoundationJSONLazyArray {
+        guard captureContext.sleepDayAttribution == .morningEnds, !workouts.isEmpty else {
+            throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+        }
+        let source = HealthData(date: date, timeContext: timeContext, workouts: workouts)
+        let config = FormatCustomization()
+        config.timeFormat = timeFormat
+        let root = try source.canonicalJSONObject(snapshot: source.exportSnapshot(customization: config),
+            config: config, includeHealthKitRecordArchive: false, captureContext: captureContext,
+            includePartialFailures: false)
+        guard let records = root["workouts"] as? FoundationJSONLazyArray else {
+            throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+        }
+        return records
+    }
+
     /// Bounded daily attestation; canonical source bytes are composed independently.
     func aggregateJSONDataThrowing(customization: FormatCustomization,
-        captureContext: AppleSleepCaptureContext) throws -> Data {
+        captureContext: AppleSleepCaptureContext, includeWorkoutRecords: Bool = true) throws -> Data {
         let sink = MemoryExportByteSink(mediaType: "application/json")
         try writeJSONThrowing(to: sink, snapshot: exportSnapshot(customization: customization),
-            config: customization, captureContext: captureContext, includeCanonicalArchive: false, includePartialFailures: false)
+            config: customization, captureContext: captureContext, includeCanonicalArchive: false, includePartialFailures: false, includeWorkoutRecords: includeWorkoutRecords)
         _ = try sink.finish()
         return sink.data
     }
@@ -172,14 +191,16 @@ extension HealthData {
         outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
         captureContext: AppleSleepCaptureContext? = nil,
         includeCanonicalArchive: Bool = true,
-        includePartialFailures: Bool = true
+        includePartialFailures: Bool = true,
+        includeWorkoutRecords: Bool = true
     ) throws {
         let object = try canonicalJSONObject(
             snapshot: snapshot,
             config: config,
             includeHealthKitRecordArchive: false,
             captureContext: captureContext,
-            includePartialFailures: includePartialFailures
+            includePartialFailures: includePartialFailures,
+            includeWorkoutRecords: includeWorkoutRecords
         )
         try HealthKitRecordArchiveSerializer.writeDailyJSONObject(
             object,
@@ -286,7 +307,8 @@ extension HealthData {
         config: FormatCustomization,
         includeHealthKitRecordArchive: Bool,
         captureContext: AppleSleepCaptureContext? = nil,
-        includePartialFailures: Bool = true
+        includePartialFailures: Bool = true,
+        includeWorkoutRecords: Bool = true
     ) throws -> [String: Any] {
         let wakeDateContext = try wakeDateJSONContext(snapshot: snapshot, captureContext: captureContext)
         let canonicalDisplayConverter = UnitConverter(preference: .metric)
@@ -937,7 +959,7 @@ extension HealthData {
         }
 
         // Workouts
-        if !snapshot.workouts.isEmpty {
+        if includeWorkoutRecords, !snapshot.workouts.isEmpty {
             let workoutISOFormatter = ExportDateFormatting.utcISO8601Formatter()
             func workoutTimestamp(_ date: Date) throws -> String {
                 try wakeDateContext == nil ? workoutISOFormatter.string(from: date) : sourceTimestamp(date)

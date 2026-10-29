@@ -9,6 +9,50 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testDenseWorkoutRouteAndSeriesStayOutsideAPIHandoffWithoutInferringSDKStatistics() async throws {
+        let zone = TimeZone.gmt
+        let date = try XCTUnwrap(days(count: 1).first)
+        let samples = (0..<5_000).map { TimeSeriesSample(timestamp: date.addingTimeInterval(Double($0) * 0.5 + 0.125),
+            value: 160.125.nextUp, metadata: ["synthetic": "api-workout-point-\($0)"]) }
+        let routes = samples.map { RoutePoint(timestamp: $0.timestamp, latitude: 47.625, longitude: -122.125,
+            altitudeMeters: 42.125.nextUp, speedMps: 3.125.nextUp, courseDegrees: 180.125, horizontalAccuracyMeters: 2.875) }
+        let workout = WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000135"),
+            workoutType: .running, startTime: date.addingTimeInterval(0.125), actualEndDate: date.addingTimeInterval(5400.875),
+            metadata: ["synthetic": "dense-api-workout"], duration: 5000.5, calories: 320.125, distance: 5000.875,
+            route: routes, timeSeries: WorkoutTimeSeries(heartRate: samples))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let day = HealthData(date: date, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds), workouts: [workout])
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = context
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.detailPolicy = .detailedTimeSeries
+        settings.formatCustomization.timeFormat = .hour12
+        settings.metricSelection.enabledMetrics = ["workouts"]
+        let expected = try XCTUnwrap((try JSONSerialization.jsonObject(with: day.toJSONDataThrowing(customization: settings.formatCustomization, captureContext: context)) as? [String: Any])?["workouts"] as? NSArray)
+        let resolution = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day },
+            coreExecutor: APIRecordingCoreExecutor(events: APIEngineEventRecorder(), requireAggregateOnlyConfiguration: true))
+        guard case .prepared(let operation) = resolution else { return XCTFail("Expected streamed native workout source") }
+        XCTAssertEqual(operation.batches.count, 1)
+        let batch = try XCTUnwrap(operation.batches.first)
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+        let record = try XCTUnwrap((root["records"] as? [[String: Any]])?.first)
+        let values = try XCTUnwrap(record["workouts"] as? NSArray)
+        XCTAssertEqual(values, expected)
+        XCTAssertNil((values.firstObject as? [String: Any])?["avgHeartRate"])
+        try batch.bodyArtifact.validateIntegrity()
+        for index in settings.formatCustomization.frontmatterConfig.fields.indices {
+            let key = settings.formatCustomization.frontmatterConfig.fields[index].originalKey
+            if key == "workouts" || key.hasPrefix("workout_") { settings.formatCustomization.frontmatterConfig.fields[index].isEnabled = false }
+        }
+        do {
+            _ = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day })
+            XCTFail("All disabled workout outputs must not acquire native source authority")
+        } catch { XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed) }
+    }
+
     func testDenseBloodPressurePairsStayOutsideAPIHandoffWithoutFabricatingSummaries() async throws {
         let zone = TimeZone.gmt
         let date = try XCTUnwrap(days(count: 1).first)

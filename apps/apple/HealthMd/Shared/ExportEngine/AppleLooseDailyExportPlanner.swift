@@ -551,6 +551,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             nativePlan = nil
         }
 
+        var sourceOutputKeys: Set<String> = []
         var rustPlan: NativeExportArtifactPlan
         do {
             let semanticConfiguration = try HealthMdSemanticInputAdapter.sessionConfiguration(
@@ -592,6 +593,9 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 batches: semanticBatches.map(\.data)
             )
 
+            if wakeDateContext != nil {
+                sourceOutputKeys = try AppleWakeDateWorkoutProjection.selectedOutputKeys(from: semanticResult)
+            }
             var renderOptions = HealthMdRenderInputAdapter.Options(
                 requestID: identity.requestID,
                 formats: frozenSettings.exportFormats
@@ -605,6 +609,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             renderOptions.includeMetadata = frozenSettings.includeMetadata
             renderOptions.groupByCategory = frozenSettings.groupByCategory
             renderOptions.includePlatformExtensions = false
+            renderOptions.composeWorkoutRecordsNatively = wakeDateContext != nil
             let captureStatuses = Set(preparedExports.map {
                 Self.rawCaptureStatusIdentifier($0.filteredData.healthKitRecordCaptureStatus)
             })
@@ -724,9 +729,10 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                    || AppleWakeDateQuantityProjection(data: $0.filteredData).hasRecords
                    || !$0.filteredData.sleep.stages.isEmpty
                    || !$0.filteredData.vitals.bloodPressureSamples.isEmpty
+                   || !$0.filteredData.workouts.isEmpty
            }) {
             rustPlan = try await AppleWakeDateArchiveComposer.compose(plan: rustPlan, pin: pin,
-                prepared: preparedExports, settings: frozenSettings,
+                prepared: preparedExports, settings: frozenSettings, sourceOutputKeys: sourceOutputKeys,
                 healthSubfolder: settingsSnapshot.healthSubfolder ?? "",
                 dailyOutputOwnerDates: dailyOutputOwnerDates)
         }

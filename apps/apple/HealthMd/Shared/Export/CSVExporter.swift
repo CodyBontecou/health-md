@@ -954,6 +954,23 @@ extension HealthData {
 
 /// Independently versioned canonical source rows; no daily schema/summary serialization.
 nonisolated enum HealthKitArchiveCSVProjection {
+    static func writeWorkouts(_ projection: AppleWakeDateWorkoutProjection, ownerDate: String,
+        to sink: ExportByteSink) throws {
+        guard projection.hasRecords else { return }
+        var csv = try CSVStreamAccumulator(sink: sink)
+        try projection.records().forEach { value in
+            guard let sample = value as? [String: Any], let timestamp = sample["startTimeISO"] as? String else {
+                throw AppleWakeDateWorkoutProjection.ProjectionError.invalidAggregate
+            }
+            try appendCanonicalJSONRow(date: ownerDate, category: "Native Detail", metric: "Workout",
+                unit: "json", timestamp: timestamp, to: &csv) { output in
+                try HealthKitRecordArchiveSerializer.writeDailyJSONObject(["metric": "workout", "sample": sample],
+                    archive: nil, to: output, outputFormatting: [.sortedKeys, .withoutEscapingSlashes])
+            }
+        }
+        try csv.finish()
+    }
+
     static func writeCorrelations(_ projection: AppleWakeDateCorrelationProjection, ownerDate: String,
         to sink: ExportByteSink) throws {
         var csv = try CSVStreamAccumulator(sink: sink)

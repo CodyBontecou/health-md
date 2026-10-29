@@ -45,6 +45,96 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         XCTAssertEqual((stage["metadata"] as? [String: String])?["synthetic"], "zero-source")
     }
 
+    func testNativeWorkoutsRequireAcceptedOutputOwnerAndIgnoreUnselectedInvalidSource() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let workout = WorkoutData(workoutType: .running, startTime: owner, duration: 1800, calories: nil, distance: nil)
+        let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds), activity: ActivityData(steps: 0), workouts: [workout])
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["workouts"])
+        for index in snapshot.formatCustomization.frontmatterConfig.fields.indices {
+            let key = snapshot.formatCustomization.frontmatterConfig.fields[index].originalKey
+            if key == "workouts" || key.hasPrefix("workout_") { snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false }
+        }
+        do {
+            _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+            XCTFail("Disabled workout owners must not authorize native records")
+        } catch { XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed) }
+        snapshot.metricSelection.enabledMetricIDs = ["steps"]
+        var unselected = day
+        unselected.workouts = [WorkoutData(workoutType: .running, startTime: owner, duration: -1, calories: nil, distance: nil)]
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: unselected,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Unselected invalid source must not block selected steps") }
+        XCTAssertEqual(operation.artifacts.count, 4)
+        for artifact in operation.artifacts {
+            XCTAssertFalse(String(decoding: try artifact.artifact.content.materializedData(), as: UTF8.self).contains("Workout Details"))
+        }
+    }
+
+    func testDenseWorkoutSeriesAndRouteRetainNativeRecordsInEveryFormat() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let samples = (0..<5_000).map { index in TimeSeriesSample(timestamp: owner.addingTimeInterval(Double(index) * 0.5 + 0.125),
+            value: 160.125.nextUp, metadata: ["synthetic": "workout-point-\(index) | ` <source> &"]) }
+        let routes = (0..<5_000).map { index in RoutePoint(timestamp: samples[index].timestamp,
+            latitude: 47.625 + Double(index) * 0.000001, longitude: -122.125,
+            altitudeMeters: 42.125.nextUp, speedMps: 3.125.nextUp, courseDegrees: 180.125, horizontalAccuracyMeters: 2.875) }
+        let workout = WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000135"), workoutType: .running,
+            healthKitActivityType: "running", healthKitActivityTypeRawValue: 37, startTime: owner.addingTimeInterval(0.125),
+            actualEndDate: owner.addingTimeInterval(5400.875),
+            sourceRevision: HealthKitSourceRevision(name: "Synthetic runner", bundleIdentifier: "example.synthetic.workout"),
+            device: HealthKitDeviceProvenance(model: "Synthetic watch"), isIndoor: false,
+            metadata: ["synthetic": "dense-workout | ` <source> &"], duration: 5000.5, calories: 320.125, distance: 5000.875,
+            avgHeartRate: 160.125, maxHeartRate: 179.875, minHeartRate: 91.125,
+            laps: [WorkoutLap(startDate: owner.addingTimeInterval(0.125), endDate: owner.addingTimeInterval(1200.875), duration: 1200.5, distanceMeters: 1000.875)],
+            splits: [WorkoutSplit(index: 1, startDate: owner.addingTimeInterval(0.125), duration: 1200.5, distanceMeters: 1000.875, avgHeartRate: 160.125.nextUp)],
+            route: routes, timeSeries: WorkoutTimeSeries(heartRate: samples, speed: Array(samples.prefix(2)), power: Array(samples.prefix(2)),
+                cadence: Array(samples.prefix(2)), strideLength: Array(samples.prefix(2)), groundContactTime: Array(samples.prefix(2)),
+                verticalOscillation: Array(samples.prefix(2)), altitude: Array(samples.prefix(2))))
+        let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds), workouts: [workout])
+        let customization = FormatCustomization()
+        customization.timeFormat = .hour12
+        customization.unitPreference = .imperial
+        let expected = try XCTUnwrap((try JSONSerialization.jsonObject(with: day.toJSONDataThrowing(customization: customization, captureContext: context)) as? [String: Any])?["workouts"] as? NSArray)
+        for metadata in [true, false] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["workouts"], unitPreference: .imperial)
+            snapshot.formatCustomization.timeFormat = .hour12
+            snapshot.detailPolicy = .detailedTimeSeries
+            snapshot.includeMetadata = metadata
+            guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Dense nested workout source must remain exportable") }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            for artifact in operation.artifacts {
+                XCTAssertNotNil(artifact.artifact.fileArtifact)
+                let preview = try ExportArtifactTextPreview.make(from: artifact.artifact)
+                XCTAssertEqual(preview.originalByteCount, Int(artifact.artifact.byteCount))
+                XCTAssertLessThanOrEqual(preview.head.utf8.count + preview.tail.utf8.count, 64 * 1024)
+                XCTAssertGreaterThan(preview.omittedByteCount, 0)
+                let data = try artifact.artifact.content.materializedData()
+                let text = String(decoding: data, as: UTF8.self)
+                XCTAssertEqual(artifact.artifact.sha256, NativeExportArtifact.sha256(of: data))
+                switch artifact.format {
+                case .json:
+                    let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+                    XCTAssertEqual(root["workouts"] as? NSArray, expected)
+                case .csv:
+                    XCTAssertEqual(text.components(separatedBy: "\n").filter { $0.contains(",Native Detail,Workout,") }.count, 1)
+                case .markdown:
+                    let row = try XCTUnwrap(text.components(separatedBy: "\n").first { $0.hasPrefix("| `{") })
+                    let record = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(row.dropFirst(3).dropLast(3).utf8)) as? [String: Any])
+                    XCTAssertEqual(record["sample"] as? NSDictionary, expected.firstObject as? NSDictionary)
+                case .obsidianBases:
+                    XCTAssertTrue(text.contains("native_workout_details:"))
+                    XCTAssertTrue(text.contains("workout-point-4999"))
+                }
+                if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                    let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-dense-workout-\(metadata)").appendingPathComponent(artifact.artifact.relativePath)
+                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try data.write(to: output)
+                }
+            }
+        }
+    }
+
     func testNativeBloodPressureRejectsNonfiniteValuesAndInvalidSourceClocks() async throws {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
         let owner = ExportFixtures.referenceDate
