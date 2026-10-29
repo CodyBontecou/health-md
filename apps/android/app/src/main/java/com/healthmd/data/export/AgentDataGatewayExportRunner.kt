@@ -2,6 +2,12 @@ package com.healthmd.data.export
 
 import com.healthmd.data.health.isLikelyHealthConnectRateLimit
 import com.healthmd.data.isHealthConnectRateLimit
+import com.healthmd.domain.exportengine.ExportEnginePinCodec
+import com.healthmd.domain.exportengine.ExportEnginePinPlanner
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepDayAttribution
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.LocalDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
@@ -39,9 +45,17 @@ interface AgentDataGatewayCaptureSource {
     suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData
 }
 
+/** Resolve the device preference once, before consent or any provider capture. */
+internal interface OperationScopedAgentDataGatewayCaptureSource : AgentDataGatewayCaptureSource {
+    suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext
+}
+
 private class HealthRepositoryAgentDataGatewayCaptureSource(
     private val healthRepository: HealthRepository,
-) : AgentDataGatewayCaptureSource {
+) : OperationScopedAgentDataGatewayCaptureSource {
+    override suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext =
+        healthRepository.resolveCaptureContext(zoneId)
+
     override fun isBeforeFirstUnlock(): Boolean = healthRepository.isBeforeFirstUnlock()
 
     override suspend fun authorizeExerciseRouteConsent(dates: List<LocalDate>, settings: ExportSettings) {
@@ -51,27 +65,23 @@ private class HealthRepositoryAgentDataGatewayCaptureSource(
                 dates = dates,
                 dataTypes = effectiveSelection,
                 includeGranularData = settings.shouldFetchGranularData(),
-                zoneId = settings.executionEnginePin?.ianaTimeZone?.let(ZoneId::of)
-                    ?: ZoneId.systemDefault(),
+                zoneId = requireNotNull(settings.executionSleepCaptureContext).zoneId,
             )
         }
     }
 
     override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData {
+        val context = AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
         val effectiveSelection = settings.effectiveDataTypeSelection()
         val captured = healthRepository.fetchHealthDataRange(
             dates = listOf(date),
             dataTypes = effectiveSelection,
             includeGranularData = settings.shouldFetchGranularData(),
+            zoneId = context.zoneId,
+            sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
         ).firstOrNull() ?: HealthData(date)
-        val filtered = captured
-            .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
-        if (filtered.hasAnyData) return filtered
-
-        return healthRepository.fetchHealthData(date)
-            .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
+        // A successful empty range is valid absence, not permission to recapture under today's settings.
+        return captured.filtered(effectiveSelection).filtered(settings.metricSelection, context)
     }
 }
 
@@ -154,6 +164,18 @@ class AgentDataGatewayExportRunner private constructor(
             return configurationFailure(normalizedDates, ExportFailureReason.INVALID_API_ENDPOINT)
         }
 
+        if (captureSource.isBeforeFirstUnlock()) {
+            return configurationFailure(normalizedDates, ExportFailureReason.DEVICE_LOCKED)
+        }
+        val capturedSettings = try {
+            snapshotForCapture(settings.frozenForAPIAction())
+        } catch (_: CancellationException) {
+            return cancelledResult(normalizedDates, emptyList())
+        } catch (error: Throwable) {
+            if (error.isFatalExportEngineFailure()) throw error
+            return configurationFailure(normalizedDates, ExportFailureReason.UNKNOWN)
+        }
+
         var successCount = 0
         val failures = mutableListOf<FailedDateDetail>()
         val outcomes = mutableListOf<AgentDataArtifactOutcome>()
@@ -161,7 +183,7 @@ class AgentDataGatewayExportRunner private constructor(
 
         if (coroutineContext.allowsInteractiveRouteConsent() && !captureSource.isBeforeFirstUnlock()) {
             try {
-                captureSource.authorizeExerciseRouteConsent(normalizedDates, settings)
+                captureSource.authorizeExerciseRouteConsent(normalizedDates, capturedSettings)
             } catch (_: CancellationException) {
                 return cancelledResult(normalizedDates, outcomes)
             } catch (_: Exception) {
@@ -184,7 +206,7 @@ class AgentDataGatewayExportRunner private constructor(
             }
 
             val data = try {
-                captureSource.capture(date, settings)
+                captureSource.capture(date, capturedSettings)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: SecurityException) {
@@ -201,7 +223,7 @@ class AgentDataGatewayExportRunner private constructor(
             }
 
             val artifacts = try {
-                renderDailyJsonArtifacts(data, settings)
+                renderDailyJsonArtifacts(data, capturedSettings)
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 if (error.isFatalExportEngineFailure()) throw error
@@ -298,6 +320,19 @@ class AgentDataGatewayExportRunner private constructor(
         if (previewCandidates.isEmpty()) {
             return ExportPreview(0, 0, false, emptyList())
         }
+        if (captureSource.isBeforeFirstUnlock()) {
+            return ExportPreview(normalizedDates.size, 0, normalizedDates.size > previewCandidates.size,
+                previewCandidates.map { ExportPreviewDay(it, failureReason = ExportFailureReason.DEVICE_LOCKED) })
+        }
+        val capturedSettings = try {
+            snapshotForCapture(settings.frozenForAPIAction())
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            if (error.isFatalExportEngineFailure()) throw error
+            return ExportPreview(normalizedDates.size, 0, false,
+                previewCandidates.map { ExportPreviewDay(it, failureReason = ExportFailureReason.UNKNOWN) })
+        }
         val days = mutableListOf<ExportPreviewDay>()
         var attemptedDateCount = 0
         for (date in previewCandidates) {
@@ -310,11 +345,11 @@ class AgentDataGatewayExportRunner private constructor(
                 ExportPreviewDay(date = date, failureReason = ExportFailureReason.DEVICE_LOCKED)
             } else {
                 try {
-                    val data = captureSource.capture(date, settings)
+                    val data = captureSource.capture(date, capturedSettings)
                     if (!data.hasAnyData) {
                         ExportPreviewDay(date = date, failureReason = ExportFailureReason.NO_HEALTH_DATA)
                     } else {
-                        val artifacts = renderDailyJsonArtifacts(data, settings)
+                        val artifacts = renderDailyJsonArtifacts(data, capturedSettings)
                         if (artifacts.isEmpty()) {
                             ExportPreviewDay(
                                 date = date,
@@ -354,6 +389,36 @@ class AgentDataGatewayExportRunner private constructor(
         )
     }
 
+    private suspend fun snapshotForCapture(settings: ExportSettings): ExportSettings {
+        val zone = settings.executionSleepCaptureContext?.zoneId
+            ?: settings.executionEnginePin?.ianaTimeZone?.let(ZoneId::of) ?: ZoneId.systemDefault()
+        val context = if (settings.executionSleepCaptureAuthorityIsFrozen || settings.executionSleepCaptureContext != null) {
+            AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
+        } else (captureSource as? OperationScopedAgentDataGatewayCaptureSource)?.resolveCaptureContext(zone)
+            ?.also { it.requireShippedProfile() }
+        var captured = if (context == null) settings else settings.copy(
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val planner = ExportEnginePinPlanner()
+        captured.executionEnginePin?.let { pin ->
+            require(ExportEnginePinCodec.isStructurallyValid(pin) && pin.ianaTimeZone == zone.id) {
+                "Gateway renderer authority is incompatible"
+            }
+        }
+        if (context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
+            val pin = captured.executionEnginePin ?: if (captured.executionEngineAuthorityIsFrozen) null else
+                withContext(Dispatchers.Default) { planner.forScheduledExport(captured, ExportTarget.AGENT_DATA_GATEWAY, zone) }
+            require(pin != null && planner.persistedPinAppliesToScheduledExport(captured, ExportTarget.AGENT_DATA_GATEWAY, pin)) {
+                "Gateway capture and renderer authority are incompatible"
+            }
+            captured = captured.copy(executionEnginePin = pin, executionEngineAuthorityIsFrozen = true)
+        } else if (captured.executionEnginePin != null) {
+            require(planner.persistedPinAppliesToScheduledExport(captured, ExportTarget.AGENT_DATA_GATEWAY, captured.executionEnginePin)) {
+                "Gateway capture and renderer authority are incompatible"
+            }
+        }
+        return captured
+    }
+
     /**
      * Renders the per-day JSON artifact(s) the folder destination would write, using the same
      * planner and the same legacy fallback. Only the protocol-uploadable daily health-data
@@ -364,9 +429,13 @@ class AgentDataGatewayExportRunner private constructor(
         settings: ExportSettings,
     ): List<AgentDataPreparedArtifact> {
         val ownerDate = data.date
-        return when (val selection = dailyAggregatePlanner.plan(data, settings)) {
-            LocalDailyAggregatePlanningResult.Legacy ->
+        return when (val selection = dailyAggregatePlanner.plan(data, settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))) {
+            LocalDailyAggregatePlanningResult.Legacy -> {
+                require(settings.executionSleepCaptureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS) {
+                    "Gateway successor cannot use historical rendering"
+                }
                 legacyDailyJsonArtifact(data, settings, ownerDate)?.let { listOf(it) }.orEmpty()
+            }
             is LocalDailyAggregatePlanningResult.Failed -> emptyList()
             is LocalDailyAggregatePlanningResult.Planned ->
                 selection.plan.items.asSequence()

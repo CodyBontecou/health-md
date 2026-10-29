@@ -34,6 +34,7 @@ import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.time.Duration.Companion.minutes
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -559,6 +560,167 @@ class HostCoreDailyAggregatePlannerTest {
             assertThat(runCatching { com.healthmd.direct.requireDirectGeneratedFilesAuthority(context, invalid) }
                 .exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
         }
+    }
+
+    @Test
+    fun productionGatewayFreezesCaptureBeforeCallbacksAndKeepsBothPreferenceDirections() = runTest {
+        val first = LocalDate.of(2026, 11, 1)
+        for (initial in SleepDayAttribution.entries) {
+            var stored = initial
+            var resolutions = 0
+            var accepted: AndroidCaptureContext? = null
+            val enabled = mutableSetOf("sleep_total")
+            val observed = mutableListOf<SleepDayAttribution>()
+            val repository = mockk<com.healthmd.domain.repository.HealthRepository>()
+            io.mockk.every { repository.isBeforeFirstUnlock() } returns false
+            coEvery { repository.resolveCaptureContext(any(), any()) } coAnswers {
+                resolutions++
+                AndroidCaptureContext(arg<ZoneId>(0), stored).also { accepted = it }
+            }
+            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } coAnswers {
+                val context = checkNotNull(accepted)
+                assertThat(arg<ZoneId>(3)).isEqualTo(context.zoneId)
+                val policy = arg<com.healthmd.domain.model.SleepDayAttributionOverride>(5)
+                assertThat(policy).isEqualTo(context.explicitSleepDayAttributionOverride)
+                observed += context.sleepDayAttribution
+                val date = arg<List<LocalDate>>(0).single()
+                val start = date.atTime(1, 0, 0, 123456789).atZone(context.zoneId).toInstant()
+                val end = start.plusSeconds(3600)
+                fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, context.zoneId.rules.getOffset(value))
+                val stage = com.healthmd.domain.model.SleepStageEntry(start.atZone(context.zoneId).toLocalDateTime(),
+                    end.atZone(context.zoneId).toLocalDateTime(), "sleeping", exact(start), exact(end),
+                    com.healthmd.domain.model.ExactSourceIdentity(nativeId = "gateway-stage-$date"))
+                val parent = com.healthmd.domain.model.SleepSessionEntry(stage.startTime, stage.endTime,
+                    exactStartTime = exact(start), exactEndTime = exact(end))
+                listOf(HealthData(date, sleep = SleepData(totalDuration = 60.minutes, stages = listOf(stage), sessions = listOf(parent),
+                    sessionStart = stage.startTime, sessionEnd = stage.endTime)))
+            }
+            val client = mockk<com.healthmd.data.export.AgentDataGatewayUploadClient>()
+            val runner = com.healthmd.data.export.AgentDataGatewayExportRunner(repository, client, com.healthmd.data.export.JsonExporter(),
+                com.healthmd.data.export.MarkdownExporter(), com.healthmd.data.export.CsvExporter(), com.healthmd.data.export.ObsidianBasesExporter())
+            val settings = ExportSettings(exportTarget = com.healthmd.domain.model.ExportTarget.AGENT_DATA_GATEWAY,
+                exportFormats = setOf(ExportFormat.JSON), includeGranularData = true,
+                metricSelection = MetricSelectionState(enabledMetrics = enabled))
+            val preview = runner.previewDates(listOf(first, first.plusDays(1)), settings, onProgress = { _, _, _ ->
+                stored = if (initial == SleepDayAttribution.MORNING_ENDS) SleepDayAttribution.NIGHT_BEGINS else SleepDayAttribution.MORNING_ENDS
+                enabled.clear()
+            })
+            assertThat(resolutions).isEqualTo(1)
+            assertThat(observed).containsExactly(initial, initial)
+            assertThat(preview.previewedDateCount).isEqualTo(2)
+            for (day in preview.days) {
+                val text = day.files.single().content
+                if (initial == SleepDayAttribution.MORNING_ENDS) {
+                    assertThat(text).contains("android-sleep-v6")
+                    assertThat(text).contains("gateway-stage-${day.date}")
+                    assertThat(text).contains(checkNotNull(accepted).zoneId.id)
+                } else {
+                    assertThat(text).doesNotContain("morning_ends")
+                    assertThat(text).doesNotContain("gateway-stage-")
+                }
+            }
+            if (initial == SleepDayAttribution.MORNING_ENDS) {
+                val target = com.healthmd.domain.model.ExportTarget.AGENT_DATA_GATEWAY
+                val pinnedSettings = settings.copy(executionSleepCaptureContext = accepted, executionSleepCaptureAuthorityIsFrozen = true,
+                    scheduledExportTarget = target, agentDataGatewayUrl = "https://gateway.example.invalid",
+                    metricSelection = MetricSelectionState(enabledMetrics = setOf("sleep_total")))
+                val planner = ExportEnginePinPlanner()
+                val pin = checkNotNull(planner.forScheduledExport(pinnedSettings, target, checkNotNull(accepted).zoneId))
+                val snapshot = AndroidExportSettingsSnapshot.capture(pinnedSettings, pin, checkNotNull(accepted).zoneId)
+                val recovered = AndroidExportSettingsSnapshotCodec.decode(AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot))
+                    .restoreOnto(pinnedSettings.copy(executionSleepCaptureContext = AndroidCaptureContext(ZoneId.of("Europe/Berlin"), SleepDayAttribution.NIGHT_BEGINS)))
+                assertThat(recovered.executionSleepCaptureContext).isEqualTo(accepted)
+                assertThat(planner.persistedPinAppliesToScheduledExport(recovered, target, pin)).isTrue()
+            }
+            io.mockk.coVerify(exactly = 0) { repository.fetchHealthData(any()) }
+            io.mockk.coVerify(exactly = 0) { client.upload(any(), any(), any()) }
+        }
+    }
+
+    @Test
+    fun productionGatewayDoesNotRecaptureEmptyRangesOrAdmitMissingFrozenAuthority() = runTest {
+        val date = LocalDate.of(2026, 11, 1)
+        val repository = mockk<com.healthmd.domain.repository.HealthRepository>()
+        io.mockk.every { repository.isBeforeFirstUnlock() } returns false
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } returns emptyList()
+        val client = mockk<com.healthmd.data.export.AgentDataGatewayUploadClient>()
+        val runner = com.healthmd.data.export.AgentDataGatewayExportRunner(repository, client, com.healthmd.data.export.JsonExporter(),
+            com.healthmd.data.export.MarkdownExporter(), com.healthmd.data.export.CsvExporter(), com.healthmd.data.export.ObsidianBasesExporter())
+        val settings = ExportSettings(exportTarget = com.healthmd.domain.model.ExportTarget.AGENT_DATA_GATEWAY,
+            exportFormats = setOf(ExportFormat.JSON), executionSleepCaptureContext = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS),
+            executionSleepCaptureAuthorityIsFrozen = true)
+        val preview = runner.previewDates(listOf(date), settings)
+        assertThat(preview.previewedDateCount).isEqualTo(0)
+        assertThat(preview.days).isEmpty()
+        val missing = runner.previewDates(listOf(date), settings.copy(executionSleepCaptureContext = null))
+        assertThat(missing.days.single().failureReason).isEqualTo(com.healthmd.domain.model.ExportFailureReason.UNKNOWN)
+        val draft = runner.previewDates(listOf(date), settings.copy(executionSleepCaptureContext = settings.executionSleepCaptureContext!!.copy(exportProfileID = null)))
+        assertThat(draft.days.single().failureReason).isEqualTo(com.healthmd.domain.model.ExportFailureReason.UNKNOWN)
+        io.mockk.coVerify(exactly = 1) { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        io.mockk.coVerify(exactly = 0) { repository.resolveCaptureContext(any(), any()) }
+        io.mockk.coVerify(exactly = 0) { repository.fetchHealthData(any()) }
+        io.mockk.coVerify(exactly = 0) { client.upload(any(), any(), any()) }
+    }
+
+    @Test
+    fun productionGatewayKeepsConcurrentCapturedContextsSeparateAndRejectsWithoutDowngrading() = runTest {
+        val date = LocalDate.of(2026, 11, 1)
+        val morning = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val night = AndroidCaptureContext(ZoneId.of("Europe/Berlin"), SleepDayAttribution.NIGHT_BEGINS)
+        val contexts = mapOf(date to morning, date.plusDays(1) to night)
+        val repository = mockk<com.healthmd.domain.repository.HealthRepository>()
+        io.mockk.every { repository.isBeforeFirstUnlock() } returns false
+        var arrivals = 0
+        val barrier = kotlinx.coroutines.CompletableDeferred<Unit>()
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } coAnswers {
+            val owner = arg<List<LocalDate>>(0).single()
+            val expected = contexts.getValue(owner)
+            assertThat(arg<ZoneId>(3)).isEqualTo(expected.zoneId)
+            assertThat(arg<com.healthmd.domain.model.SleepDayAttributionOverride>(5)).isEqualTo(expected.explicitSleepDayAttributionOverride)
+            arrivals++
+            if (arrivals == 2) barrier.complete(Unit)
+            barrier.await()
+            listOf(HealthData(owner, activity = ActivityData(steps = 42)))
+        }
+        val client = mockk<com.healthmd.data.export.AgentDataGatewayUploadClient>()
+        val runner = com.healthmd.data.export.AgentDataGatewayExportRunner(repository, client, com.healthmd.data.export.JsonExporter(),
+            com.healthmd.data.export.MarkdownExporter(), com.healthmd.data.export.CsvExporter(), com.healthmd.data.export.ObsidianBasesExporter())
+        fun settings(context: AndroidCaptureContext) = ExportSettings(exportTarget = com.healthmd.domain.model.ExportTarget.AGENT_DATA_GATEWAY,
+            exportFormats = setOf(ExportFormat.JSON), agentDataGatewayUrl = "https://gateway.example.invalid",
+            metricSelection = MetricSelectionState(enabledMetrics = setOf("steps")),
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val a = async { runner.previewDates(listOf(date), settings(morning)) }
+        val b = async { runner.previewDates(listOf(date.plusDays(1)), settings(night)) }
+        val previews = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            kotlinx.coroutines.withTimeout(10_000) { listOf(a.await(), b.await()) }
+        }
+        assertThat(previews.map { it.previewedDateCount }).containsExactly(1, 1)
+        val expected = previews.first().days.single().files.single().content.encodeToByteArray()
+        coEvery { client.upload(any(), any(), any()) } coAnswers {
+            val bytes = arg<ByteArray>(2)
+            val manifest = arg<com.healthmd.data.export.AgentDataIngestManifest>(1)
+            assertThat(bytes).isEqualTo(expected)
+            assertThat(manifest.artifactSchemaVersion).isEqualTo(6)
+            assertThat(manifest.byteCount).isEqualTo(bytes.size.toLong())
+            assertThat(manifest.sha256).isEqualTo(sha256Hex(bytes))
+            System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf(String::isNotBlank)?.let { directory ->
+                val output = File(directory, "android-v6-gateway")
+                check(output.mkdirs() || output.isDirectory)
+                File(output, "artifact.json").writeBytes(bytes)
+                File(output, "manifest.json").writeText(manifest.encodeJsonLine())
+            }
+            com.healthmd.data.export.AgentDataUploadReceipt.Rejected(com.healthmd.domain.model.AgentDataRejectionCodes.MANIFEST_INCOMPLETE, 200)
+        }
+        val result = runner.exportDates(listOf(date), settings(morning))
+        assertThat(result.successCount).isEqualTo(0)
+        assertThat(result.agentDataOutcomes.single().rejectionCode).isEqualTo(com.healthmd.domain.model.AgentDataRejectionCodes.MANIFEST_INCOMPLETE)
+        io.mockk.coVerify(exactly = 1) { client.upload(any(), any(), any()) }
+        io.mockk.coVerify(exactly = 0) { repository.resolveCaptureContext(any(), any()) }
+        io.mockk.coVerify(exactly = 0) { repository.fetchHealthData(any()) }
+        io.mockk.every { repository.isBeforeFirstUnlock() } returns true
+        val locked = runner.previewDates(listOf(date), settings(morning).copy(executionSleepCaptureContext = null))
+        assertThat(locked.days.single().failureReason).isEqualTo(com.healthmd.domain.model.ExportFailureReason.DEVICE_LOCKED)
+        io.mockk.coVerify(exactly = 3) { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
