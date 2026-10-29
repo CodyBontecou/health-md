@@ -360,6 +360,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         // Wake-date contradictions have already failed above and cannot downgrade here.
         if settingsSnapshot.appleExportEnginePin == nil,
            settingsSnapshot.appleExportEngineAuthorityIsFrozen
+                || surface == .legacyOnly
                 || surface == .connectedReceivedFilesWithoutSideEffects
                 || surface == .connectedReceivedRangeWithoutSideEffects {
             return .legacy

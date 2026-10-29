@@ -717,10 +717,44 @@ nonisolated struct AppleLooseDailyMaterializedFile: Equatable, Sendable {
     let data: Data
 }
 
+nonisolated struct AppleLooseDailyRangeDestination: Sendable {
+    let rootURL: URL
+    let binding: AppleVaultDestinationBinding?
+}
+
 nonisolated struct AppleLooseDailyRangeMaterialization: Equatable, Sendable {
     let operation: AppleLooseDailyPlannedOperation
     let dataDictionary: AppleLooseDailyMaterializedFile?
     let result: AppleLooseDailyRangeWriteResult
+
+    /// Merge already materialized portions of one successor operation without reopening sources.
+    static func combining(_ parts: [Self]) throws -> Self {
+        guard let first = parts.first,
+              first.operation.pin.hasExplicitWakeDateContracts,
+              parts.allSatisfy({ $0.operation.authority == .rust
+                  && $0.operation.identity == first.operation.identity
+                  && $0.operation.pin == first.operation.pin }) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        let dictionaries = parts.compactMap(\.dataDictionary)
+        guard dictionaries.count <= 1 else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+        let artifacts = parts.flatMap { $0.operation.artifacts }
+        let total = try artifacts.reduce(UInt64(0)) { total, planned in
+            let next = total.addingReportingOverflow(planned.artifact.byteCount)
+            guard !next.overflow else { throw NativeExportArtifactPlan.ValidationError.invalidTotalByteCount }
+            return next.partialValue
+        }
+        let identity = first.operation.identity
+        let pin = first.operation.pin
+        let plan = try NativeExportArtifactPlan(artifactPlanVersion: pin.artifactPlanVersion,
+            requestID: identity.requestID, sessionID: identity.sessionID, profile: pin.coreProfile,
+            artifacts: artifacts.map(\.artifact), totalByteCount: total, pin: pin)
+        return Self(operation: AppleLooseDailyPlannedOperation(authority: .rust, identity: identity,
+            pin: pin, nativePlan: nil, selectedPlan: plan, artifacts: artifacts),
+            dataDictionary: dictionaries.first,
+            result: AppleLooseDailyRangeWriteResult(dailyFileCount: artifacts.count { $0.kind == .daily },
+                rollupFileCount: artifacts.count { $0.kind == .rollup }, dataDictionaryFileCount: dictionaries.count))
+    }
 }
 
 nonisolated struct AppleVaultDestinationBinding: Codable, Equatable, Sendable {
@@ -2561,6 +2595,13 @@ final class VaultManager: ObservableObject {
         )
     }
 
+    func freezeHealthDataRangeDestination() throws -> AppleLooseDailyRangeDestination {
+        guard destinationState == .available, let rootURL = vaultURL else { throw unavailableExportError }
+        guard bookmarkResolver.startAccessing(rootURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(rootURL) }
+        return AppleLooseDailyRangeDestination(rootURL: rootURL, binding: try productionDestinationBinding(for: rootURL))
+    }
+
     /// Plans a complete simple-summary range under one identity and commits only after every byte
     /// has been materialized. `nil` means the frozen operation is intentionally legacy.
     func exportHealthDataRange(
@@ -2575,9 +2616,7 @@ final class VaultManager: ObservableObject {
         guard !healthData.isEmpty else {
             return AppleLooseDailyRangeWriteResult(dailyFileCount: 0, rollupFileCount: 0)
         }
-        guard destinationState == .available, let vaultURL else {
-            throw unavailableExportError
-        }
+        let destination = try freezeHealthDataRangeDestination()
         guard let materialized = try await materializeHealthDataRange(
             healthData,
             settingsSnapshot: settingsSnapshot,
@@ -2588,6 +2627,29 @@ final class VaultManager: ObservableObject {
             includeDataDictionary: shouldWriteDataDictionary
         ) else { return nil }
 
+        return try await commitHealthDataRangeMaterialization(materialized, destination: destination)
+    }
+
+    /// Validate the complete retained plan again before the first destination effect.
+    func commitHealthDataRangeMaterialization(
+        _ materialized: AppleLooseDailyRangeMaterialization,
+        destination: AppleLooseDailyRangeDestination
+    ) async throws -> AppleLooseDailyRangeWriteResult {
+        guard destinationState == .available, let currentURL = vaultURL else { throw unavailableExportError }
+        guard currentURL.standardizedFileURL == destination.rootURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        let vaultURL = destination.rootURL
+        for planned in materialized.operation.artifacts {
+            switch planned.artifact.content {
+            case .inline(let data):
+                guard String(data: data, encoding: .utf8) != nil else {
+                    throw CocoaError(.fileWriteInapplicableStringEncoding)
+                }
+            case .file(let file):
+                try file.validateIntegrity()
+            }
+        }
         try preflightExportArtifactPaths(
             materialized.operation.artifacts.map(\.artifact.relativePath)
                 + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
@@ -2619,11 +2681,15 @@ final class VaultManager: ObservableObject {
                 return (planned, try Self.plannedArtifactWriteRequest(planned.artifact, fileURL: fileURL))
             }
 
-        let destinationBinding = try productionDestinationBinding(for: vaultURL)
+        let destinationBinding = destination.binding
         let barrier = ExportCommitBarrier()
         try await barrier.transition(to: .materialized)
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
+        guard self.vaultURL?.standardizedFileURL == vaultURL.standardizedFileURL,
+              try productionDestinationBinding(for: vaultURL) == destinationBinding else {
+            throw ExportError.destinationChanged
+        }
         do {
             try await barrier.transition(to: .committing)
             if let dictionaryRequest, let dictionary = materialized.dataDictionary {

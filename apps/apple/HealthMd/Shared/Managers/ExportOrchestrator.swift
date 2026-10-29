@@ -956,6 +956,12 @@ struct ExportOrchestrator {
             latestAllowedDate: max(Date(), dates.max() ?? Date())
         )
         let captureDates = sourceDates.isEmpty ? dates : sourceDates
+        let stageDailyArtifacts = !isSummaryOnly && !effectiveSettingsSnapshot.operationRollupPeriods.isEmpty
+            && effectiveSettingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+        let identity = AppleExportOperationIdentitySource().capture(calendarTimeZoneIdentifier: sourceTimeZone.identifier)
+        let dailySnapshot = effectiveSettingsSnapshot.forDailyArtifactPreview()
+        var dailyMaterializations: [AppleLooseDailyRangeMaterialization] = []
+        var preparationFailure: Error?
         var records: [HealthData] = []
         var hasRenderableCapture = false
         var selectedRecordDates: [Date] = []
@@ -966,6 +972,15 @@ struct ExportOrchestrator {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.timeZone = sourceTimeZone
+
+        let stagedDestination: AppleLooseDailyRangeDestination?
+        do {
+            stagedDestination = stageDailyArtifacts ? try vaultManager.freezeHealthDataRangeDestination() : nil
+        } catch {
+            return ExportResult(successCount: 0, totalCount: totalCount,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .fileWriteError, errorDetails: error.localizedDescription) },
+                partialFailures: partialFailures, formatsPerDate: formatsPerDate, completedDates: [])
+        }
 
         for (captureIndex, date) in captureDates.enumerated() {
             let day = calendar.startOfDay(for: date)
@@ -993,8 +1008,8 @@ struct ExportOrchestrator {
                     timeZone: sourceTimeZone
                 )
                 partialFailures.append(contentsOf: record.partialFailures)
-                // Drain Foundation render intermediates for this day before the
-                // record is retained for the range write.
+                // Drain Foundation render intermediates before staging this day's
+                // details and retaining the summary projection for range preparation.
                 let hasRenderableData = autoreleasepool {
                     record.preparedExport(settings: frozenSettings).hasAnyData
                 }
@@ -1002,11 +1017,25 @@ struct ExportOrchestrator {
                 // empty. Keep it for range-v9 source_dates/days_counted, while selecting daily
                 // output only when the prepared daily artifact has renderable data.
                 if hasRenderableData || requestedRange != nil {
-                    records.append(record)
+                    records.append(stageDailyArtifacts
+                        ? ConnectedExportDetailPolicy.sanitized(record, detailPolicy: .summary)
+                        : record)
                 }
                 if hasRenderableData {
                     hasRenderableCapture = true
                     if isSelected && !isSummaryOnly {
+                        if stageDailyArtifacts {
+                            do {
+                                guard let materialized = try await vaultManager.materializeHealthDataRange(
+                                    [record], settingsSnapshot: dailySnapshot, operationSurface: operationSurface,
+                                    operationIdentity: identity, includeDataDictionary: false
+                                ) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+                                dailyMaterializations.append(materialized)
+                            } catch {
+                                preparationFailure = error
+                                break
+                            }
+                        }
                         selectedRecordDates.append(record.date)
                         dailyOutputOwnerDates.insert(
                             HealthKitDailyOwnershipMetadata.ownerDate(
@@ -1068,6 +1097,14 @@ struct ExportOrchestrator {
             }
         }
 
+        if let preparationFailure {
+            let terminalDates = Set(completedDates).union(failures.map(\.date))
+            return ExportResult(successCount: 0, totalCount: totalCount,
+                failedDateDetails: failures + dates.filter { !terminalDates.contains($0) }.map {
+                    FailedDateDetail(date: $0, reason: .fileWriteError, errorDetails: preparationFailure.localizedDescription)
+                }, partialFailures: partialFailures, formatsPerDate: formatsPerDate, completedDates: completedDates)
+        }
+
         guard !records.isEmpty, hasRenderableCapture else {
             if isSummaryOnly && partialFailures.isEmpty && totalCount > 0 {
                 failures.append(contentsOf: terminalNoDataFailures(for: dates, calendar: calendar))
@@ -1095,15 +1132,24 @@ struct ExportOrchestrator {
         }
 
         do {
-            guard let writeResult = try await vaultManager.exportHealthDataRange(
-                records,
-                settingsSnapshot: effectiveSettingsSnapshot,
-                operationSurface: operationSurface,
-                dailyOutputOwnerDates: dailyOutputOwnerDates,
-                requestedRange: requestedRange
-            ) else {
-                // A persisted nonlegacy pin may never be delivered through per-day legacy writes.
-                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            let writeResult: AppleLooseDailyRangeWriteResult
+            if stageDailyArtifacts {
+                guard let rollups = try await vaultManager.materializeHealthDataRange(
+                    records, settingsSnapshot: effectiveSettingsSnapshot, operationSurface: operationSurface,
+                    dailyOutputOwnerDates: [], requestedRange: requestedRange, operationIdentity: identity
+                ) else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+                let materialized = try AppleLooseDailyRangeMaterialization.combining(dailyMaterializations + [rollups])
+                guard let stagedDestination else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+                writeResult = try await vaultManager.commitHealthDataRangeMaterialization(materialized, destination: stagedDestination)
+            } else {
+                guard let result = try await vaultManager.exportHealthDataRange(
+                    records, settingsSnapshot: effectiveSettingsSnapshot, operationSurface: operationSurface,
+                    dailyOutputOwnerDates: dailyOutputOwnerDates, requestedRange: requestedRange
+                ) else {
+                    // A persisted nonlegacy pin may never be delivered through per-day legacy writes.
+                    throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                }
+                writeResult = result
             }
             if isSummaryOnly {
                 let filesWritten = writeResult.rollupFileCount

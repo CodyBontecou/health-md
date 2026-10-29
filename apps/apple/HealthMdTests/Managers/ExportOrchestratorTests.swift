@@ -909,6 +909,119 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testDetailedPinnedRollupsMaterializeBeforeNextCaptureAndRetainOnlySummaries() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 15)))
+        let dates = (0..<3).map { first.addingTimeInterval(Double($0) * 86400) }
+        for background in [false, true] {
+            for policy: AppleExportDetailPolicy in [.detailedTimeSeries, .lossless] {
+                let outcomes = policy.includesCanonicalArchive ? ["success"] :
+                    ["success", "reject", "corrupt", "identity", "destination"] + (background ? ["range_unavailable"] : [])
+                for outcome in outcomes {
+                    let store = FakeHealthStore()
+                    store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = dates.flatMap { owner in
+                        let start = owner.addingTimeInterval(-2 * 3600)
+                        return (0..<2000).map { ordinal in
+                            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                                startDate: start.addingTimeInterval(Double(ordinal) * 28.8),
+                                endDate: start.addingTimeInterval(Double(ordinal + 1) * 28.8))
+                        }
+                    }
+                    let probe = DetailedPinnedDayProbe()
+                    probe.failOnRangeCall = outcome == "reject" ? 2 : nil
+                    probe.changeRangeIdentity = outcome == "identity"
+                    let planner = DetailedPinnedDayPlanner(probe: probe)
+                    let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/DetailedPinnedRollup-\(background)-\(policy)-\(outcome)", planner: planner)
+                    vault.dailyExportDidCommitForTesting = { probe.commits += 1 }
+                    store.beforeQueryCategorySamples = { identifier in
+                        guard identifier == .sleepAnalysis else { return }
+                        await MainActor.run {
+                            if outcome != "range_unavailable" {
+                            XCTAssertEqual(probe.rangeBatchSizes.count, probe.captures, "Each detailed day must materialize before the next source capture")
+                        }
+                            XCTAssertTrue(fileSystem.files.isEmpty, "The entire range must prepare before destination effects")
+                            if outcome == "corrupt", probe.captures == 1 {
+                                do {
+                                    let url = try XCTUnwrap(probe.firstArtifactURL)
+                                    var bytes = try Data(contentsOf: url)
+                                    XCTAssertFalse(bytes.isEmpty)
+                                    bytes[bytes.count - 1] ^= 1
+                                    try bytes.write(to: url)
+                                } catch { XCTFail("Could not corrupt the private synthetic staged file: \(error)") }
+                            }
+                            probe.captures += 1
+                        }
+                    }
+                    let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+                    manager.setSleepDayAttribution(.morningEnds)
+                    let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: [.range])
+                    settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+                    settings.exportTimeZoneOverride = .gmt
+                    settings.detailPolicy = policy
+                    settings.includeDataDictionary = false
+                    settings.metricSelection.enabledMetrics = ["sleep_total", "sleep_core", "sleep_bedtime", "sleep_wake"]
+                    let progress: (Int, Int, String) -> Void = { _, _, _ in
+                        settings.filenameFormat = "'changed-'yyyy-MM-dd"
+                        settings.exportTimeZoneOverride = TimeZone(identifier: "Asia/Tokyo")!
+                        settings.detailPolicy = .summary
+                        manager.setSleepDayAttribution(.nightBegins)
+                        if outcome == "destination" { vault.vaultURL = URL(fileURLWithPath: "/tmp/ChangedPinnedRangeDestination") }
+                    }
+                    let result: ExportOrchestrator.ExportResult
+                    if background {
+                        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings, healthSubfolder: "Health",
+                            calendarTimeZone: .gmt, surface: .localVaultRangeWithoutSideEffects)
+                        manager.setSleepDayAttribution(.nightBegins)
+                        result = await ExportOrchestrator.exportDatesBackground(dates, healthKitManager: manager,
+                            vaultManager: vault, settings: settings, frozenSettingsSnapshot: snapshot,
+                            requestedRollupDates: outcome == "range_unavailable" ? [first, first.addingTimeInterval(10_000 * 86400)] : nil,
+                        operationSurface: .localVaultRangeWithoutSideEffects, onProgress: progress)
+                    } else {
+                        result = await ExportOrchestrator.exportDates(dates, healthKitManager: manager,
+                            vaultManager: vault, settings: settings, onProgress: progress)
+                    }
+                    if outcome != "success" && outcome != "range_unavailable" {
+                        XCTAssertEqual(result.successCount, 0)
+                        XCTAssertTrue(fileSystem.files.isEmpty, "Preparation or integrity failure must precede every destination write")
+                        XCTAssertEqual(result.failedDateDetails.count, 3)
+                        XCTAssertEqual(Set(result.failedDateDetails.map(\.date)).count, 3)
+                        XCTAssertEqual(result.completedDates?.count, 0)
+                        XCTAssertEqual(probe.captures, outcome == "reject" ? 2 : 3)
+                        XCTAssertNotNil(probe.firstArtifactURL)
+                        continue
+                    }
+                    XCTAssertEqual(result.successCount, 3, "\(result.failedDateDetails)")
+                    XCTAssertEqual(probe.captures, 3)
+                    XCTAssertEqual(probe.commits, 0)
+                    XCTAssertEqual(probe.rangeStageCounts, outcome == "range_unavailable" ? [[2000, 2000, 2000]] : [[2000], [2000], [2000], [0, 0, 0]])
+                    XCTAssertEqual(probe.rangeBatchSizes, outcome == "range_unavailable" ? [3] : [1, 1, 1, 3])
+                    let archive = policy.includesCanonicalArchive ? 1 : 0
+                    XCTAssertEqual(probe.rangeArchiveCounts, outcome == "range_unavailable" ? [[0, 0, 0]] : [[archive], [archive], [archive], [0, 0, 0]])
+                    if policy.includesCanonicalArchive { XCTAssertFalse(store.completedCanonicalQueryIdentifiers.isEmpty) }
+                    XCTAssertEqual(probe.pins.count, outcome == "range_unavailable" ? 1 : 4)
+                    let pin = try XCTUnwrap(probe.pins.first)
+                    XCTAssertTrue(pin.hasExplicitWakeDateContracts)
+                    XCTAssertTrue(probe.pins.allSatisfy { $0 == pin })
+                    XCTAssertEqual(fileSystem.files.count, outcome == "range_unavailable" ? 12 : 16)
+                    if outcome == "range_unavailable" { XCTAssertEqual(result.partialFailures.count, 1) }
+                    for (path, text) in fileSystem.files {
+                        XCTAssertFalse(path.contains("changed-"))
+                        XCTAssertTrue(text.contains("morning_ends"))
+                        if path.hasSuffix(".json") && !path.contains("/Rollups/") {
+                            let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+                            let sleep = try XCTUnwrap(root["sleep"] as? [String: Any])
+                            XCTAssertEqual((sleep["sleepStages"] as? [[String: Any]])?.count, 2000)
+                            XCTAssertEqual(sleep["totalDuration"] as? Double, 57600)
+                            XCTAssertEqual(root["healthkit_record_archive"] != nil, policy.includesCanonicalArchive)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor
     func testDerivedOutputRetention_releasesLooseDaysAndStripsRollupArchives() {
         let date = HealthKitFixtures.referenceDate
         let end = Calendar.current.date(byAdding: .day, value: 1, to: date)!
@@ -1878,6 +1991,11 @@ private final class DetailedPinnedDayProbe {
     var stageCounts: [Int] = []
     var pins: [AppleExportEnginePin] = []
     var rangeBatchSizes: [Int] = []
+    var rangeStageCounts: [[Int]] = []
+    var rangeArchiveCounts: [[Int]] = []
+    var failOnRangeCall: Int?
+    var changeRangeIdentity = false
+    var firstArtifactURL: URL?
     nonisolated deinit {}
 }
 
@@ -1905,7 +2023,22 @@ private final class DetailedPinnedDayPlanner: AppleLooseDailyRangeExportPlanning
         settingsSnapshot: ExportSettingsSnapshot, surface: AppleExportOperationSurface,
         operationIdentity: AppleExportOperationIdentity?) async throws -> AppleLooseDailyPlanResolution {
         probe.rangeBatchSizes.append(healthData.count)
-        return try await delegate.planRange(healthData: healthData, dailyOutputOwnerDates: dailyOutputOwnerDates,
-            requestedRange: requestedRange, settingsSnapshot: settingsSnapshot, surface: surface, operationIdentity: operationIdentity)
+        probe.rangeStageCounts.append(healthData.map { $0.sleep.stages.count })
+        probe.rangeArchiveCounts.append(healthData.map { $0.healthKitRecordArchive == nil ? 0 : 1 })
+        if let pin = settingsSnapshot.appleExportEnginePin { probe.pins.append(pin) }
+        if probe.failOnRangeCall == probe.rangeBatchSizes.count { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+        var identity = operationIdentity
+        if probe.changeRangeIdentity, probe.rangeBatchSizes.count == 2, let original = identity {
+            identity = AppleExportOperationIdentity(requestID: original.requestID + "-other", sessionID: original.sessionID,
+                capturedAt: original.capturedAt, calendarTimeZoneIdentifier: original.calendarTimeZoneIdentifier)
+        }
+        let resolution = try await delegate.planRange(healthData: healthData, dailyOutputOwnerDates: dailyOutputOwnerDates,
+            requestedRange: requestedRange, settingsSnapshot: settingsSnapshot, surface: surface, operationIdentity: identity)
+        if probe.firstArtifactURL == nil, case .planned(let operation) = resolution {
+            for planned in operation.artifacts where planned.format == .json {
+                if case .file(let file) = planned.artifact.content { probe.firstArtifactURL = file.url; break }
+            }
+        }
+        return resolution
     }
 }
