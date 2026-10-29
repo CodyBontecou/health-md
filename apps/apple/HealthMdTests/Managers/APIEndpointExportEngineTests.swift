@@ -9,6 +9,33 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testMorningEndsAPIRejectsUncomposedPartialFailuresRatherThanOmittingThem() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = context
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.detailPolicy = .summary
+        settings.metricSelection.enabledMetrics = ["steps"]
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(settings,
+            calendarTimeZone: zone, surface: .apiEndpoint)
+        let frozen = snapshot.makeAdvancedExportSettings()
+        Self.retainedSettings.append(frozen)
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 42), partialFailures: [ExportPartialFailure(
+                date: ExportFixtures.referenceDate, dataType: "sleep", dateRangeDescription: "synthetic day",
+                errorDescription: "synthetic missing source")])
+        do {
+            _ = try await APIEndpointExportRunner.preparePreview(records: [day], settings: frozen,
+                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false)
+            XCTFail("An aggregate-only envelope must not silently erase native failure facts")
+        } catch {
+            XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
+        }
+    }
+
     func testMorningEndsAPIRejectsCanonicalArchiveBeforeAggregateOnlyAttestation() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)

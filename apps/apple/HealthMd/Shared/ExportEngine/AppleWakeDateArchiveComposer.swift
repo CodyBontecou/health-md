@@ -1,6 +1,6 @@
 import Foundation
 
-/// Combines bounded core aggregates with the independently versioned native source archive.
+/// Combines bounded core aggregates with native source archives and partial-capture facts.
 /// Only immutable inputs enter the worker; the returned plan hashes final, file-backed bytes.
 nonisolated enum AppleWakeDateArchiveComposer {
     struct Source: Sendable {
@@ -9,6 +9,8 @@ nonisolated enum AppleWakeDateArchiveComposer {
         let archive: HealthKitRecordArchive?
         let captureStatus: String
         let markdownDiagnostics: String
+        let partialFailures: [ExportPartialFailure]
+        let headerPrefix: String
     }
 
     @MainActor
@@ -34,7 +36,9 @@ nonisolated enum AppleWakeDateArchiveComposer {
                 guard sources.updateValue(Source(ownerDate: owner, format: target.format,
                     archive: day.snapshot.healthKitRecordArchive,
                     captureStatus: day.snapshot.losslessArchiveDiagnostics.captureStatus,
-                    markdownDiagnostics: diagnostics), forKey: target.relativePath) == nil else {
+                    markdownDiagnostics: diagnostics,
+                    partialFailures: day.snapshot.partialFailures,
+                    headerPrefix: String(repeating: "#", count: settings.formatCustomization.markdownTemplate.sectionHeaderLevel)), forKey: target.relativePath) == nil else {
                     throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                 }
             }
@@ -53,18 +57,23 @@ nonisolated enum AppleWakeDateArchiveComposer {
         }
         let artifacts = try plan.artifacts.map { artifact -> NativeExportArtifact in
             try Task.checkCancellation()
-            guard let source = sources[artifact.relativePath], source.format != .obsidianBases else { return artifact }
-            if source.format == .json, case .none = source.archive { return artifact }
-            if source.format == .markdown && source.markdownDiagnostics.isEmpty { return artifact }
+            guard let source = sources[artifact.relativePath] else { return artifact }
+            if source.format == .obsidianBases && source.partialFailures.isEmpty { return artifact }
+            if source.format == .json, case .none = source.archive, source.partialFailures.isEmpty { return artifact }
+            if source.format == .markdown && source.markdownDiagnostics.isEmpty && source.partialFailures.isEmpty { return artifact }
             let aggregate = try artifact.content.materializedData()
             let file = try ExportArtifactIO.renderTemporary(prefix: "healthmd-wake-source", mediaType: artifact.mediaType) { sink in
                 switch source.format {
                 case .json:
-                    guard let object = try JSONSerialization.jsonObject(with: aggregate) as? [String: Any],
+                    guard var object = try JSONSerialization.jsonObject(with: aggregate) as? [String: Any],
                           object["schema_profile"] as? String == "apple-v11",
                           object["healthkit_record_archive"] == nil,
+                          object["diagnostics"] == nil,
                           object["raw_capture_status"] as? String == source.captureStatus else {
                         throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                    }
+                    if !source.partialFailures.isEmpty {
+                        object["diagnostics"] = ExportDiagnosticSerializer.lazyDiagnostics(source.partialFailures)
                     }
                     try HealthKitRecordArchiveSerializer.writeDailyJSONObject(object, archive: source.archive,
                         to: sink, outputFormatting: [.prettyPrinted, .sortedKeys])
@@ -81,10 +90,13 @@ nonisolated enum AppleWakeDateArchiveComposer {
                     if let archive = source.archive {
                         try HealthKitArchiveCSVProjection.write(archive: archive, ownerDate: source.ownerDate, to: sink)
                     }
-                case .markdown:
+                    try HealthKitArchiveCSVProjection.writePartialFailures(source.partialFailures,
+                        ownerDate: source.ownerDate, to: sink)
+                case .markdown, .obsidianBases:
                     try sink.write(aggregate)
-                    try sink.write(Data(source.markdownDiagnostics.utf8))
-                case .obsidianBases: break
+                    if source.format == .markdown { try sink.write(Data(source.markdownDiagnostics.utf8)) }
+                    try ExportDiagnosticSerializer.writeMarkdownSection(source.partialFailures,
+                        headerPrefix: source.headerPrefix, to: sink)
                 }
             }
             let id = NativeExportArtifactPlan.artifactID(requestID: plan.requestID, sessionID: plan.sessionID,

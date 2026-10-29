@@ -2341,6 +2341,11 @@ final class HealthKitManager: ObservableObject {
         let end = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: start) ?? date
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        if Self.effectiveSleepDayAttribution == .morningEnds {
+            formatter.calendar = calendar
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = calendar.timeZone
+        }
         return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
     }
 

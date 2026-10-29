@@ -695,7 +695,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
 
-        if wakeDateContext != nil, settingsSnapshot.detailPolicy.includesCanonicalArchive {
+        if wakeDateContext != nil,
+           settingsSnapshot.detailPolicy.includesCanonicalArchive || preparedExports.contains(where: { !$0.snapshot.partialFailures.isEmpty }) {
             rustPlan = try await AppleWakeDateArchiveComposer.compose(plan: rustPlan, pin: pin,
                 prepared: preparedExports, settings: frozenSettings,
                 healthSubfolder: settingsSnapshot.healthSubfolder ?? "",

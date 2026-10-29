@@ -1066,6 +1066,18 @@ nonisolated enum HealthKitArchiveCSVProjection {
         try csv.finish()
     }
 
+    static func writePartialFailures(_ failures: [ExportPartialFailure], ownerDate: String,
+        to sink: ExportByteSink) throws {
+        var csv = try CSVStreamAccumulator(sink: sink)
+        for failure in ExportDiagnosticSerializer.sorted(failures) {
+            try appendCanonicalJSONRow(date: ownerDate, category: "Diagnostics", metric: "Partial Failure",
+                unit: "json", timestamp: CanonicalRFC3339UTC.string(from: failure.date), to: &csv) {
+                try ExportDiagnosticSerializer.write(failure, to: $0)
+            }
+        }
+        try csv.finish()
+    }
+
     fileprivate static func appendCanonicalJSONRow(date: String, category: String,
         metric: String, unit: String, timestamp: String, to csv: inout CSVStreamAccumulator,
         render: (ExportByteSink) throws -> Void) throws {

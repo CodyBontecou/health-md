@@ -160,7 +160,7 @@ extension HealthData {
         captureContext: AppleSleepCaptureContext) throws -> Data {
         let sink = MemoryExportByteSink(mediaType: "application/json")
         try writeJSONThrowing(to: sink, snapshot: exportSnapshot(customization: customization),
-            config: customization, captureContext: captureContext, includeCanonicalArchive: false)
+            config: customization, captureContext: captureContext, includeCanonicalArchive: false, includePartialFailures: false)
         _ = try sink.finish()
         return sink.data
     }
@@ -171,13 +171,15 @@ extension HealthData {
         config: FormatCustomization,
         outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys],
         captureContext: AppleSleepCaptureContext? = nil,
-        includeCanonicalArchive: Bool = true
+        includeCanonicalArchive: Bool = true,
+        includePartialFailures: Bool = true
     ) throws {
         let object = try canonicalJSONObject(
             snapshot: snapshot,
             config: config,
             includeHealthKitRecordArchive: false,
-            captureContext: captureContext
+            captureContext: captureContext,
+            includePartialFailures: includePartialFailures
         )
         try HealthKitRecordArchiveSerializer.writeDailyJSONObject(
             object,
@@ -283,7 +285,8 @@ extension HealthData {
         snapshot: ExportDataSnapshot,
         config: FormatCustomization,
         includeHealthKitRecordArchive: Bool,
-        captureContext: AppleSleepCaptureContext? = nil
+        captureContext: AppleSleepCaptureContext? = nil,
+        includePartialFailures: Bool = true
     ) throws -> [String: Any] {
         let wakeDateContext = try wakeDateJSONContext(snapshot: snapshot, captureContext: captureContext)
         let canonicalDisplayConverter = UnitConverter(preference: .metric)
@@ -1261,9 +1264,8 @@ extension HealthData {
             json["healthkit_record_archive"] = try HealthKitRecordArchiveSerializer.jsonObject(for: archive)
         }
 
-        let sortedPartialFailures = ExportDiagnosticSerializer.sorted(snapshot.partialFailures)
-        if !sortedPartialFailures.isEmpty {
-            let failures = try sortedPartialFailures.map {
+        if includePartialFailures, !snapshot.partialFailures.isEmpty {
+            let failures = try ExportDiagnosticSerializer.sorted(snapshot.partialFailures).map {
                 try ExportDiagnosticSerializer.jsonObject(for: $0)
             }
             json["diagnostics"] = ["partial_failures": failures]

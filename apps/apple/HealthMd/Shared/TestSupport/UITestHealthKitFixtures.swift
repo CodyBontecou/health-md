@@ -3,7 +3,7 @@ import Foundation
 
 enum UITestHealthKitFixtures {
     static func exportPreviewHealthData(for date: Date, includeGranularData: Bool,
-        includeLargeSourceArchive: Bool = false) -> HealthData {
+        includeLargeSourceArchive: Bool = false, includePartialFailures: Bool = false) -> HealthData {
         let context = AppleSleepCaptureContext.resolve(attribution: HealthKitManager.shared.sleepDayAttribution)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = context.timeZone
@@ -180,6 +180,17 @@ enum UITestHealthKitFixtures {
                 minHeartRate: 118
             )
         ]
+
+        if includePartialFailures {
+            data.vitals.bloodGlucoseAvg = nil
+            data.vitals.bloodGlucoseMin = nil
+            data.vitals.bloodGlucoseMax = nil
+            data.vitals.bloodGlucoseSamples = []
+            data.partialFailures = [ExportPartialFailure(date: day, dataType: "blood_glucose",
+                dateRangeDescription: HealthKitDailyOwnershipMetadata.ownerDate(for: day,
+                    calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier),
+                errorDescription: "Synthetic blood glucose query unavailable")]
+        }
 
         if includeLargeSourceArchive {
             let source = HealthKitRecord(originalUUID: UUID(uuidString: "10000000-0000-0000-0000-000000000091")!,

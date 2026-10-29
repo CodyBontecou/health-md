@@ -285,7 +285,8 @@ struct ExportTabView: View {
                             includeGranularData: capturedSettings.effectiveDetailPolicy
                                 .includesSelectedTimeSeries,
                             includeLargeSourceArchive: TestMode.healthKitExportPreviewLargeArchive
-                                && capturedSettings.effectiveDetailPolicy.includesCanonicalArchive
+                                && capturedSettings.effectiveDetailPolicy.includesCanonicalArchive,
+                            includePartialFailures: TestMode.healthKitExportPreviewPartialCapture
                         )
                     }
                     #endif

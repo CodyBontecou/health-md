@@ -297,6 +297,78 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    func testLargePartialFailureStaysOutsideBoundedHandoffAndProducesFileBackedOutput() async throws {
+        let context = AppleSleepCaptureContext(timeZone: try XCTUnwrap(TimeZone(identifier: "UTC")), sleepDayAttribution: .morningEnds)
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: context.timeZone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 42), partialFailures: [ExportPartialFailure(
+                date: ExportFixtures.referenceDate, dataType: "synthetic source", dateRangeDescription: "one day",
+                errorDescription: String(repeating: "x", count: 9 * 1024 * 1024))])
+        var snapshot = try acceptedSnapshot(context: context, formats: [.json], selectionIDs: ["steps"])
+        snapshot.detailPolicy = .summary
+        let settings = snapshot.makeAdvancedExportSettings()
+        Self.retainedSettings.append(settings)
+        let aggregate = try day.aggregateJSONDataThrowing(customization: settings.formatCustomization, captureContext: context)
+        XCTAssertLessThan(aggregate.count, 64 * 1024)
+        XCTAssertFalse(String(decoding: aggregate, as: UTF8.self).contains("partial_failures"))
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+            return XCTFail("Large native diagnostics must not cross the bounded aggregate boundary")
+        }
+        let artifact = try XCTUnwrap(operation.artifacts.first?.artifact)
+        XCTAssertGreaterThan(artifact.byteCount, 9 * 1024 * 1024)
+        try XCTUnwrap(artifact.fileArtifact).validateIntegrity()
+        let preview = try await AppleLooseDailyExportPreviewPlanner.textPreviews(for: [artifact])
+        XCTAssertEqual(preview.first?.originalByteCount, Int(artifact.byteCount))
+        XCTAssertGreaterThan(preview.first?.omittedByteCount ?? 0, 8 * 1024 * 1024)
+    }
+
+    func testWakeDatePartialFailureFactsSurviveEveryDetailPolicyFormatAndMetadataChoice() async throws {
+        let context = AppleSleepCaptureContext(timeZone: try XCTUnwrap(TimeZone(identifier: "UTC")), sleepDayAttribution: .morningEnds)
+        let date = ExportFixtures.referenceDate
+        let failures = [ExportPartialFailure(date: date.addingTimeInterval(0.1255), dataType: "sleep | <source>",
+            dateRangeDescription: "synthetic range", errorDescription: "synthetic `failure` & quote \"kept\"\n🌙")]
+        for policy: AppleExportDetailPolicy in [.summary, .detailedTimeSeries, .archiveOnly, .lossless] {
+            for metadata in [true, false] {
+                let archive = policy.includesCanonicalArchive ? HealthKitRecordArchive(captureStatus: .partial,
+                    dailyOwnership: HealthKitDailyOwnershipMetadata(ownerDate: "2026-03-15", intervalStart: date,
+                        intervalEnd: date.addingTimeInterval(86400), calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier)) : nil
+                let day = HealthData(date: date,
+                    timeContext: ExportTimeContext(timeZone: context.timeZone, sleepDayAttribution: .morningEnds),
+                    activity: ActivityData(steps: 42), partialFailures: failures, healthKitRecordArchive: archive)
+                var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["steps"])
+                snapshot.detailPolicy = policy
+                snapshot.includeMetadata = metadata
+                guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                    settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+                    return XCTFail("Partial capture requires successor artifacts, not a historical fallback")
+                }
+                XCTAssertEqual(operation.artifacts.count, 4)
+                for planned in operation.artifacts {
+                    let data = try planned.artifact.content.materializedData()
+                    XCTAssertEqual(planned.artifact.sha256, NativeExportArtifact.sha256(of: data))
+                    XCTAssertNotNil(planned.artifact.fileArtifact)
+                    let text = String(decoding: data, as: UTF8.self)
+                    let expected = try ExportDiagnosticSerializer.jsonObject(for: failures[0]) as NSDictionary
+                    switch planned.format {
+                    case .json:
+                        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+                        let actual = try XCTUnwrap(((root["diagnostics"] as? [String: Any])?["partial_failures"] as? [NSDictionary])?.first)
+                        XCTAssertEqual(actual, expected)
+                        XCTAssertEqual(root["healthkit_record_archive"] != nil, policy.includesCanonicalArchive)
+                    case .csv:
+                        XCTAssertTrue(text.contains(",Diagnostics,Partial Failure," + CSVFieldEscaper.escape(try ExportDiagnosticSerializer.string(for: failures[0])) + ",json,"))
+                    case .markdown, .obsidianBases:
+                        XCTAssertTrue(text.contains("Capture Diagnostics"))
+                        let row = try XCTUnwrap(text.components(separatedBy: "\n").first { $0.hasPrefix("| `{") && $0.contains("error_description") })
+                        let actual = try JSONSerialization.jsonObject(with: Data(row.dropFirst(3).dropLast(3).utf8)) as? NSDictionary
+                        XCTAssertEqual(actual, expected)
+                    }
+                }
+            }
+        }
+    }
+
     func testWakeDateRangeRetainsEachDaysArchiveCaptureStatus() async throws {
         let context = AppleSleepCaptureContext(timeZone: try XCTUnwrap(TimeZone(identifier: "UTC")),
             sleepDayAttribution: .morningEnds)

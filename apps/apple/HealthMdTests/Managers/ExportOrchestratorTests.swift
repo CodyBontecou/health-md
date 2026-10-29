@@ -1550,6 +1550,47 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testMorningPartialCaptureCommitsSuccessfulMetricsAndFailureFactsAcrossFormats() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let date = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 15)))
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in identifier == .stepCount ? 42 : nil }
+        store.errorsForCategorySamples[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = HealthKitFixtures.genericQueryError
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        manager.setSleepDayAttribution(.morningEnds)
+        let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/PartialMorningActualPipeline")
+        let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: [])
+        settings.executionSleepCaptureContext = nil
+        settings.exportTimeZoneOverride = zone
+        settings.metricSelection.enabledMetrics = ["steps", "sleep_total"]
+        settings.detailPolicy = .summary
+        settings.includeDataDictionary = false
+        let result = await ExportOrchestrator.exportDates([date],
+            healthKitManager: manager, vaultManager: vault, settings: settings)
+        XCTAssertEqual(result.successCount, 1, "\(result.failedDateDetails)")
+        XCTAssertTrue(result.failedDateDetails.isEmpty)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertEqual(result.partialFailures.count, 1)
+        XCTAssertEqual(result.partialFailures.first?.dataType, "sleep")
+        XCTAssertEqual(fileSystem.files.count, 4)
+        for content in fileSystem.files.values {
+            XCTAssertTrue(content.contains("morning_ends"))
+            XCTAssertTrue(content.contains(HealthKitFixtures.genericQueryError.localizedDescription))
+        }
+        let json = try XCTUnwrap(fileSystem.files.first { $0.key.hasSuffix(".json") }?.value)
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+        XCTAssertEqual((root["activity"] as? [String: Any])?["steps"] as? Int, 42)
+        let failures = try XCTUnwrap((root["diagnostics"] as? [String: Any])?["partial_failures"] as? [[String: Any]])
+        XCTAssertEqual(failures.count, 1)
+        XCTAssertEqual(failures.first?["data_type"] as? String, "sleep")
+        XCTAssertEqual(failures.first?["date_range_description"] as? String,
+            "2026-03-15 00:00:00 - 2026-03-15 23:59:59")
+        XCTAssertNil(root["healthkit_record_archive"])
+    }
+
+    @MainActor
     func testEmptyMorningOperationsKeepPinnedCaptureAndCompleteEveryDateWithoutFiles() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
         let expected = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)

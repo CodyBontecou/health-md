@@ -68,6 +68,10 @@ Apple successor local-file preparation composes canonical source archives after 
 
 Raw archive payloads do not cross the bounded semantic/render handoff. Native composition streams the accepted source into file-backed artifacts, then binds the final byte count and digest into the immutable plan before opening a destination. The secure file commit verifies those bytes before atomic replacement. This does not change a shipped schema, archive version, registry or wire identity, and does not establish complete preview, remote-route or recovery qualification.
 
+Apple v11 local artifacts retain native partial-capture facts independently of archive capture status. JSON uses the established sorted `diagnostics.partial_failures` records (`date`, `data_type`, `date_range_description`, `error_description`); CSV uses the equivalent canonical `Diagnostics` / `Partial Failure` rows. Markdown and Bases expose the same records as escaped JSON code cells under Capture Diagnostics, including when optional metadata is disabled. These facts do not authorize a missing summary value or imply that a separately captured archive is incomplete. Morning ends failure range descriptions use the captured Gregorian calendar timezone; historical Night begins formatting and canonical diagnostic timestamp encoding remain unchanged.
+
+Native failure facts are composed with the final local artifacts after bounded aggregate rendering and before final plan hashing. An API route without an equivalent composition phase must reject these inputs rather than omit their diagnostics. This does not change a shipped schema, archive version, registry or wire identity.
+
 ## Native workout projection
 
 Successor daily preparation preserves the complete emitted native compatibility-workout objects across JSON, CSV, Markdown and Bases. Workout start-day ownership stays independent of sleep end-day ownership. Source metadata, native type identity, laps/splits, routes and series retain their platform fields. This does not claim canonical HealthKit archive completeness, provider capture or production admission.

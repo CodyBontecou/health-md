@@ -125,6 +125,10 @@ enum TestMode {
         env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FORMATS") == "all" ? Set(ExportFormat.allCases) : [.markdown]
     }
 
+    static var healthKitExportPreviewPartialCapture: Bool {
+        useHealthKitExportPreviewFixtures && env("UITEST_HEALTHKIT_EXPORT_PREVIEW_PARTIAL_CAPTURE") == "true"
+    }
+
     /// Explicit synthetic large-source scenario; never reads or creates HealthKit records.
     static var healthKitExportPreviewLargeArchive: Bool {
         useHealthKitExportPreviewFixtures && env("UITEST_HEALTHKIT_EXPORT_PREVIEW_LARGE_ARCHIVE") == "true"
