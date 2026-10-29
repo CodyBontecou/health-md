@@ -987,7 +987,7 @@ struct ExportOrchestrator {
         let identity = AppleExportOperationIdentitySource().capture(calendarTimeZoneIdentifier: sourceTimeZone.identifier)
         let dailySnapshot = effectiveSettingsSnapshot.forDailyArtifactPreview()
         var dailyMaterializations: [AppleLooseDailyRangeMaterialization] = []
-        var providerSidecars: [AppleLooseDailyMaterializedFile] = []
+        var providerSidecars: [AppleLooseDailyProviderSidecar] = []
         var preparationFailure: Error?
         var records: [HealthData] = []
         var hasRenderableCapture = false
@@ -1056,9 +1056,15 @@ struct ExportOrchestrator {
                 // empty. Keep it for range-v9 source_dates/days_counted, while selecting daily
                 // output only when the prepared daily artifact has renderable data.
                 if hasRenderableData || requestedRange != nil {
-                    records.append(stageDailyArtifacts
-                        ? ConnectedExportDetailPolicy.sanitized(record, detailPolicy: .summary)
-                        : record)
+                    if stageDailyArtifacts {
+                        var summary = ConnectedExportDetailPolicy.sanitized(record, detailPolicy: .summary)
+                        // Provider-native facts are already represented in this
+                        // day's artifacts and sidecar. Rollups do not reduce them.
+                        summary.providers = nil
+                        records.append(summary)
+                    } else {
+                        records.append(record)
+                    }
                 }
                 if hasRenderableData {
                     hasRenderableCapture = true

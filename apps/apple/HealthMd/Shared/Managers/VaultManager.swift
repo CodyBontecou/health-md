@@ -720,6 +720,12 @@ nonisolated struct AppleLooseDailyMaterializedFile: Equatable, Sendable {
     let data: Data
 }
 
+/// Exact provider bytes live behind a cleanup lease, not in the retained range corpus.
+nonisolated struct AppleLooseDailyProviderSidecar: Equatable, Sendable {
+    let relativePath: String
+    let artifact: ExportArtifactFile
+}
+
 nonisolated struct AppleLooseDailyRangeDestination: Sendable {
     let rootURL: URL
     let binding: AppleVaultDestinationBinding?
@@ -729,17 +735,17 @@ nonisolated struct AppleLooseDailyRangeMaterialization: Equatable, Sendable {
     let operation: AppleLooseDailyPlannedOperation
     let dataDictionary: AppleLooseDailyMaterializedFile?
     let result: AppleLooseDailyRangeWriteResult
-    let providerSidecars: [AppleLooseDailyMaterializedFile]
+    let providerSidecars: [AppleLooseDailyProviderSidecar]
 
     init(operation: AppleLooseDailyPlannedOperation, dataDictionary: AppleLooseDailyMaterializedFile?,
-         result: AppleLooseDailyRangeWriteResult, providerSidecars: [AppleLooseDailyMaterializedFile] = []) {
+         result: AppleLooseDailyRangeWriteResult, providerSidecars: [AppleLooseDailyProviderSidecar] = []) {
         self.operation = operation
         self.dataDictionary = dataDictionary
         self.result = result
         self.providerSidecars = providerSidecars
     }
 
-    func addingProviderSidecars(_ files: [AppleLooseDailyMaterializedFile]) -> Self {
+    func addingProviderSidecars(_ files: [AppleLooseDailyProviderSidecar]) -> Self {
         let all = providerSidecars + files
         return Self(operation: operation, dataDictionary: dataDictionary,
             result: AppleLooseDailyRangeWriteResult(dailyFileCount: result.dailyFileCount,
@@ -1593,6 +1599,7 @@ final class VaultManager: ObservableObject {
     private let bookmarkResolver: BookmarkResolving
     private let identityProbe: VaultFolderIdentityProbing
     private let appleLooseDailyPlanner: any AppleLooseDailyExportPlanning
+    private let providerSidecarStagingDirectory: URL
 
     #if DEBUG
     var archiveEntryWillAppendForTesting: (() -> Void)?
@@ -1671,7 +1678,8 @@ final class VaultManager: ObservableObject {
         fileCoordinator: FileCoordinating? = nil,
         bookmarkResolver: BookmarkResolving = SystemBookmarkResolver(),
         identityProbe: VaultFolderIdentityProbing = SystemVaultFolderIdentityProbe(),
-        appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil
+        appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil,
+        providerSidecarStagingDirectory: URL? = nil
     ) {
         self.defaults = defaults
         self.fileSystem = fileSystem
@@ -1691,6 +1699,7 @@ final class VaultManager: ObservableObject {
         self.bookmarkResolver = bookmarkResolver
         self.identityProbe = identityProbe
         self.appleLooseDailyPlanner = appleLooseDailyPlanner ?? AppleLooseDailyExportPlanner()
+        self.providerSidecarStagingDirectory = providerSidecarStagingDirectory ?? FileManager.default.temporaryDirectory
         loadSavedSettings()
     }
 
@@ -2677,12 +2686,13 @@ final class VaultManager: ObservableObject {
         guard Set(allPaths).count == allPaths.count else { throw AppleExactDestinationError.unsafeRelativePath }
         try preflightExportArtifactPaths(allPaths)
         let providerRequests = try materialized.providerSidecars.map { file in
-            guard String(data: file.data, encoding: .utf8) != nil else {
-                throw CocoaError(.fileWriteInapplicableStringEncoding)
+            guard file.artifact.descriptor.mediaType == "application/json" else {
+                throw CocoaError(.fileReadCorruptFile)
             }
+            try file.artifact.validateIntegrity()
             let url = ExportPathPlanner.appendingRelativePath(file.relativePath, to: vaultURL, isDirectory: false)
             return AggregateFileWriteRequest(fileURL: url, filename: url.lastPathComponent,
-                newContent: String(decoding: file.data, as: UTF8.self), behavior: .overwrite)
+                artifact: file.artifact, behavior: .overwrite)
         }
 
         let dictionaryRequest = try materialized.dataDictionary.map { file in
@@ -3336,16 +3346,34 @@ final class VaultManager: ObservableObject {
     /// Encodes provider-native v1 sidecars without destination effects. They join
     /// the daily/range materialization's path and destination-binding preflight.
     func materializeExternalDailyRecords(_ records: [ExternalDailyRecord],
-                                        healthSubfolder: String) throws -> [AppleLooseDailyMaterializedFile] {
+                                        healthSubfolder: String) throws -> [AppleLooseDailyProviderSidecar] {
+        let exportable = records.filter(\.shouldExport)
+        guard !exportable.isEmpty else { return [] }
+        let root = providerSidecarStagingDirectory.appendingPathComponent(
+            "healthmd-provider-sidecars-" + UUID().uuidString, isDirectory: true)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
-        return try records.filter(\.shouldExport).map { record in
-            guard record.hasValidExportDate else { throw ExternalProviderExportError.invalidDate(record.date) }
-            let path = [healthSubfolder, "integrations", record.provider.exportFolderName, "\(record.date).json"]
-                .filter { !$0.isEmpty }.joined(separator: "/")
-            return AppleLooseDailyMaterializedFile(relativePath: path, mediaType: "application/json",
-                                                   data: try encoder.encode(record))
+        do {
+            return try exportable.map { record in
+                try Task.checkCancellation()
+                guard record.hasValidExportDate else { throw ExternalProviderExportError.invalidDate(record.date) }
+                let path = [healthSubfolder, "integrations", record.provider.exportFolderName, "\(record.date).json"]
+                    .filter { !$0.isEmpty }.joined(separator: "/")
+                return try autoreleasepool {
+                    // Encoding is per provider/day. Drain its Foundation buffers
+                    // before retaining only this exact file's descriptor/lease.
+                    let data = try encoder.encode(record)
+                    let artifact = try ExportArtifactIO.renderTemporary(in: root, prefix: "provider-sidecar",
+                        mediaType: "application/json") { try $0.write(data) }
+                    return AppleLooseDailyProviderSidecar(relativePath: path, artifact: artifact)
+                }
+            }
+        } catch {
+            // A failed batch never transfers cleanup ownership to its caller.
+            // Only this invocation's private UUID directory can be removed.
+            try? FileManager.default.removeItem(at: root)
+            throw error
         }
     }
 

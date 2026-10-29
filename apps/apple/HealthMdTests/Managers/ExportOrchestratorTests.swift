@@ -1832,7 +1832,7 @@ final class ExportOrchestratorTests: XCTestCase {
         let start = try XCTUnwrap(calendar.date(bySettingHour: 10, minute: 0, second: 0, of: first))
         let end = try XCTUnwrap(calendar.date(bySettingHour: 13, minute: 0, second: 0, of: wake))
         for background in [false, true] {
-            for scenario in ["daily", "range", "primary", "primary_daily", "destination", "cancel", "invalid"] {
+            for scenario in ["daily", "range", "primary", "primary_daily", "destination", "cancel", "invalid", "sidecar_corrupt"] {
                 let includeRange = !["daily", "primary_daily"].contains(scenario)
                 let includesProvider = !["primary", "primary_daily"].contains(scenario)
                 let expectedSidecars = includesProvider ? 2 : 0
@@ -1843,7 +1843,13 @@ final class ExportOrchestratorTests: XCTestCase {
                 ]
                 let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
                 manager.setSleepDayAttribution(.morningEnds)
-                let (vault, files) = makeVaultManager(vaultPath: "/tmp/MorningProvider-\(includeRange)")
+                let staging = FileManager.default.temporaryDirectory.appendingPathComponent("MorningProviderSpool-" + UUID().uuidString)
+                try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+                defer { try? FileManager.default.removeItem(at: staging) }
+                var corruptedSidecar = false
+                let retention = DetailedPinnedDayProbe()
+                let (vault, files) = makeVaultManager(vaultPath: "/tmp/MorningProvider-\(includeRange)",
+                    planner: DetailedPinnedDayPlanner(probe: retention), providerStagingDirectory: staging)
                 let settings = makeExportSettings(formats: Set(ExportFormat.allCases), rollupPeriods: includeRange ? [.range] : [])
                 settings.executionSleepCaptureContext = nil
                 settings.exportTimeZoneOverride = zone
@@ -1854,6 +1860,17 @@ final class ExportOrchestratorTests: XCTestCase {
                 let providers = MorningProviderRangeProbe()
                 providers.invalidDate = scenario == "invalid"
                 let progress: (Int, Int, String) -> Void = { _, _, _ in
+                    if scenario == "sidecar_corrupt", !corruptedSidecar {
+                        let urls = FileManager.default.enumerator(at: staging, includingPropertiesForKeys: nil)?.allObjects.compactMap { $0 as? URL } ?? []
+                        do {
+                            let url = try XCTUnwrap(urls.first { $0.pathExtension == "tmp" })
+                            var bytes = try Data(contentsOf: url)
+                            XCTAssertFalse(bytes.isEmpty)
+                            bytes[bytes.count - 1] ^= 1
+                            try bytes.write(to: url)
+                            corruptedSidecar = true
+                        } catch { XCTFail("Could not corrupt owned synthetic sidecar: \(error)") }
+                    }
                     providers.strain = 999
                     vault.healthSubfolder = "Changed"
                     if scenario == "destination" { vault.vaultURL = URL(fileURLWithPath: "/tmp/MorningProviderChanged") }
@@ -1870,7 +1887,9 @@ final class ExportOrchestratorTests: XCTestCase {
                         vaultManager: vault, settings: settings, externalIntegrations: includesProvider ? providers : nil, onProgress: progress)
                 }
                 let result = await pending.value
-                if ["destination", "cancel", "invalid"].contains(scenario) {
+                XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: staging.path).isEmpty,
+                              "Completed, cancelled and failed captures must release their private sidecar files")
+                if ["destination", "cancel", "invalid", "sidecar_corrupt"].contains(scenario) {
                     XCTAssertEqual(result.successCount, 0, scenario)
                     XCTAssertEqual(result.totalFilesWritten, 0, scenario)
                     XCTAssertTrue(files.files.isEmpty, "Every byte must be staged and preflighted before destination effects: " + scenario)
@@ -1882,6 +1901,10 @@ final class ExportOrchestratorTests: XCTestCase {
                 }
                 XCTAssertFalse(files.files.keys.contains { $0.contains("/Changed/") })
                 XCTAssertEqual(result.successCount, 2, "\(result.failedDateDetails)")
+                if includesProvider && includeRange {
+                    XCTAssertEqual(retention.rangeProviderCounts, [[1], [1], [0, 0]],
+                                   "Provider collections must leave the retained corpus after daily materialization")
+                }
                 XCTAssertEqual(result.externalRecordFileCount, expectedSidecars)
                 XCTAssertEqual(result.looseAggregateFileCount, 8)
                 XCTAssertEqual(result.rollupFileCount, includeRange ? 4 : 0)
@@ -1932,6 +1955,65 @@ final class ExportOrchestratorTests: XCTestCase {
                 XCTAssertEqual((owned["sleep"] as? [String: Any])?["totalDuration"] as? Double, 27 * 60 * 60)
             }
         }
+    }
+
+    @MainActor
+    func testProviderSidecarsPreserveV1BytesWithBorrowedFileCleanup() throws {
+        let parent = FileManager.default.temporaryDirectory.appendingPathComponent("ProviderSidecarLeaseTests-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: parent) }
+        let (vault, destination) = makeVaultManager(providerStagingDirectory: parent)
+        let payload = ExternalProviderPayload(name: "cycles", endpoint: "https://redacted.invalid/cycles", statusCode: 200,
+            fetchedAt: Date(timeIntervalSince1970: 0), data: .object(["padding": .string(String(repeating: "x", count: 1_100_000))]))
+        let first = ExternalDailyRecord(provider: .whoop, date: "2026-07-01", fetchedAt: Date(timeIntervalSince1970: 0), payloads: [payload])
+        var second = first
+        second.date = "2026-07-02"
+        var files: [AppleLooseDailyProviderSidecar]? = try vault.materializeExternalDailyRecords([first, second], healthSubfolder: "Health")
+        XCTAssertEqual(files?.count, 2)
+        let urls = try XCTUnwrap(files).map { $0.artifact.url }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let expected = try encoder.encode(first)
+        XCTAssertEqual(files?[0].relativePath, "Health/integrations/whoop/2026-07-01.json")
+        XCTAssertEqual(try files?[0].artifact.materializedData(), expected)
+        XCTAssertEqual(files?[0].artifact.descriptor.byteCount, UInt64(expected.count))
+        XCTAssertEqual(files?[0].artifact.descriptor.mediaType, "application/json")
+        XCTAssertEqual((try FileManager.default.attributesOfItem(atPath: urls[0].path)[.posixPermissions] as? NSNumber)?.intValue, 0o600)
+        XCTAssertEqual((try FileManager.default.attributesOfItem(atPath: urls[0].deletingLastPathComponent().path)[.posixPermissions] as? NSNumber)?.intValue, 0o700)
+        var total = 0
+        try files?[0].artifact.forEachChunk(chunkSize: 8192) { chunk in
+            XCTAssertLessThanOrEqual(chunk.count, 8192)
+            total += chunk.count
+        }
+        XCTAssertEqual(total, expected.count)
+        XCTAssertTrue(destination.files.isEmpty)
+        var borrowed = files?[0].artifact
+        files = nil
+        XCTAssertNotNil(borrowed)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: urls[0].path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: urls[1].path))
+        XCTAssertNoThrow(try borrowed?.validateIntegrity())
+        borrowed = nil
+        XCTAssertFalse(FileManager.default.fileExists(atPath: urls[0].path))
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: parent.path).isEmpty)
+    }
+
+    @MainActor
+    func testProviderSidecarBatchFailureRemovesOnlyItsOwnedStagingDirectory() throws {
+        let parent = FileManager.default.temporaryDirectory.appendingPathComponent("ProviderSidecarFailureTests-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: parent) }
+        let sentinel = parent.appendingPathComponent("sentinel")
+        try Data("keep".utf8).write(to: sentinel)
+        let (vault, destination) = makeVaultManager(providerStagingDirectory: parent)
+        let first = ExternalDailyRecord(provider: .whoop, date: "2026-07-01", payloads: [], warnings: ["Synthetic missing resource"])
+        var invalid = first
+        invalid.date = "2026-13-99"
+        XCTAssertThrowsError(try vault.materializeExternalDailyRecords([first, invalid], healthSubfolder: "Health"))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: parent.path), ["sentinel"])
+        XCTAssertEqual(try Data(contentsOf: sentinel), Data("keep".utf8))
+        XCTAssertTrue(destination.files.isEmpty)
     }
 
     @MainActor
@@ -2253,7 +2335,8 @@ final class ExportOrchestratorTests: XCTestCase {
     @MainActor
     private func makeVaultManager(
         vaultPath: String = "/tmp/PartialFailureVault",
-        planner: (any AppleLooseDailyExportPlanning)? = nil
+        planner: (any AppleLooseDailyExportPlanning)? = nil,
+        providerStagingDirectory: URL? = nil
     ) -> (VaultManager, FakeFileSystem) {
         let defaults = FakeUserDefaults()
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
@@ -2269,7 +2352,8 @@ final class ExportOrchestratorTests: XCTestCase {
             fileSystem: fileSystem,
             bookmarkResolver: bookmarkResolver,
             identityProbe: FakeVaultFolderIdentityProbe(),
-            appleLooseDailyPlanner: planner
+            appleLooseDailyPlanner: planner,
+            providerSidecarStagingDirectory: providerStagingDirectory
         )
         manager.healthSubfolder = "Health"
         Self.retainedManagers.append(manager)
@@ -2434,6 +2518,7 @@ private final class DetailedPinnedDayProbe {
     var pins: [AppleExportEnginePin] = []
     var rangeBatchSizes: [Int] = []
     var rangeStageCounts: [[Int]] = []
+    var rangeProviderCounts: [[Int]] = []
     var rangeArchiveCounts: [[Int]] = []
     var failOnRangeCall: Int?
     var changeRangeIdentity = false
@@ -2466,6 +2551,7 @@ private final class DetailedPinnedDayPlanner: AppleLooseDailyRangeExportPlanning
         operationIdentity: AppleExportOperationIdentity?) async throws -> AppleLooseDailyPlanResolution {
         probe.rangeBatchSizes.append(healthData.count)
         probe.rangeStageCounts.append(healthData.map { $0.sleep.stages.count })
+        probe.rangeProviderCounts.append(healthData.map { $0.providers?.whoop?.cycles.count ?? 0 })
         probe.rangeArchiveCounts.append(healthData.map { $0.healthKitRecordArchive == nil ? 0 : 1 })
         if let pin = settingsSnapshot.appleExportEnginePin { probe.pins.append(pin) }
         if probe.failOnRangeCall == probe.rangeBatchSizes.count { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
