@@ -1002,6 +1002,50 @@ final class ExportMetricSelectionTests: XCTestCase {
         XCTAssertFalse(output.contains("\"averageValence\""))
     }
 
+    func testExport_stateOfMindPercentagesDoNotTrapOnInvalidValence() {
+        let timestamp = Date(timeIntervalSince1970: 1_800_000_000)
+        for valence in [Double.nan, .infinity, -.infinity, .greatestFiniteMagnitude, -.greatestFiniteMagnitude] {
+            var data = HealthData(date: timestamp)
+            data.mindfulness.stateOfMind = [
+                StateOfMindEntry(timestamp: timestamp, kind: .dailyMood, valence: valence, labels: [], associations: [])
+            ]
+
+            for averageEnabled in [true, false] {
+                data.mindfulness.isAverageValenceExportEnabled = averageEnabled
+                let snapshot = data.exportSnapshot(customization: TestCustomizations.default)
+
+                XCTAssertNil(snapshot.mindfulness.averageValencePercent)
+                XCTAssertNil(snapshot.frontmatterMetrics["average_mood_percent"])
+                XCTAssertNil(snapshot.frontmatterMetrics["daily_mood_percent"])
+                // Invalid source values must remain available to downstream validation;
+                // a missing percentage is not a replacement with a fabricated mood.
+                XCTAssertEqual(snapshot.mindfulness.stateOfMindEntries.count, 1)
+                let retainedValence = snapshot.mindfulness.stateOfMindEntries[0].valence
+                if valence.isNaN {
+                    XCTAssertTrue(retainedValence.isNaN)
+                } else {
+                    XCTAssertEqual(retainedValence, valence)
+                }
+            }
+        }
+    }
+
+    func testExport_stateOfMindPercentagesPreserveTruncation() {
+        let timestamp = Date(timeIntervalSince1970: 1_800_000_000)
+        for (valence, percentage) in [(-1.0, 0), (-0.375, 31), (0.0, 50), (0.375, 68), (1.0, 100)] {
+            var data = HealthData(date: timestamp)
+            data.mindfulness.stateOfMind = [
+                StateOfMindEntry(timestamp: timestamp, kind: .dailyMood, valence: valence, labels: [], associations: [])
+            ]
+
+            let snapshot = data.exportSnapshot(customization: TestCustomizations.default)
+
+            XCTAssertEqual(snapshot.mindfulness.averageValencePercent, percentage)
+            XCTAssertEqual(snapshot.frontmatterMetrics["average_mood_percent"], String(percentage))
+            XCTAssertEqual(snapshot.frontmatterMetrics["daily_mood_percent"], String(percentage))
+        }
+    }
+
     func testExport_stateOfMindEveryViewSubsetIsIndependentAcrossFormats() throws {
         let (settings, defaults, suiteName) = makeSettings()
         defer { defaults.removePersistentDomain(forName: suiteName) }
