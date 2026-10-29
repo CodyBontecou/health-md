@@ -94,12 +94,12 @@ struct SyncSettingsView: View {
             let announcement: String
             switch newValue {
             case .connected:
-                announcement = "Connected to Mac"
+                announcement = String(localized: "Connected to Mac")
                 if syncService.activeTransport == .manualIP {
                     manualPairingCode = ""
                 }
-            case .connecting: announcement = "Connecting to Mac"
-            case .disconnected: announcement = "Disconnected from Mac"
+            case .connecting: announcement = String(localized: "Connecting to Mac")
+            case .disconnected: announcement = String(localized: "Disconnected from Mac")
             }
             UIAccessibility.post(notification: .announcement, argument: announcement)
         }
@@ -182,19 +182,21 @@ struct SyncSettingsView: View {
                         syncService.startAdvertising()
                         syncService.restoreSavedManualIPConnectionIfNeeded(afterUserEnabledSync: true)
                     }
-                    UIAccessibility.post(notification: .announcement, argument: "Mac destination enabled")
+                    UIAccessibility.post(notification: .announcement, argument: String(localized: "Mac destination enabled"))
                 } else {
                     if !TestMode.isUITesting {
                         syncService.stopAdvertising()
                         syncService.disconnect()
                     }
-                    UIAccessibility.post(notification: .announcement, argument: "Mac destination disabled")
+                    UIAccessibility.post(notification: .announcement, argument: String(localized: "Mac destination disabled"))
                 }
             }
             .accessibilityIdentifier(AccessibilityID.Sync.syncToggle)
             .accessibilityLabel("Mac export destination")
-            .accessibilityValue(syncEnabled ? "Enabled" : "Disabled")
-            .accessibilityHint("Double tap to \(syncEnabled ? "disable" : "enable") this Mac as an export destination")
+            .accessibilityValue(syncEnabled ? String(localized: "Enabled") : String(localized: "Disabled"))
+            .accessibilityHint(syncEnabled
+                ? String(localized: "Double tap to disable this Mac as an export destination")
+                : String(localized: "Double tap to enable this Mac as an export destination"))
         }
     }
 
@@ -642,11 +644,11 @@ struct SyncSettingsView: View {
                 title: "Export to Mac",
                 subtitle: "The Mac writes files using the setup you choose on iPhone."
             ) {
-                SyncStepRow(number: 1, text: "Open Health.md on Mac and choose a destination folder")
+                SyncStepRow(number: 1, text: String(localized: "Open Health.md on Mac and choose a destination folder"))
                 SyncRowDivider()
-                SyncStepRow(number: 2, text: "Return to the iPhone Export tab")
+                SyncStepRow(number: 2, text: String(localized: "Return to the iPhone Export tab"))
                 SyncRowDivider()
-                SyncStepRow(number: 3, text: "Choose Connected Mac and tap Export")
+                SyncStepRow(number: 3, text: String(localized: "Choose Connected Mac and tap Export"))
             }
         }
     }
@@ -657,7 +659,7 @@ struct SyncSettingsView: View {
             SyncCard(title: "Needs Attention") {
                 SyncInfoRow(
                     icon: "exclamationmark.triangle.fill",
-                    title: "Connection Error",
+                    title: String(localized: "Connection Error"),
                     subtitle: error,
                     tone: .warning,
                     isLoading: false
@@ -675,15 +677,15 @@ struct SyncSettingsView: View {
         switch configurationTarget {
         case .macDestination:
             if syncEnabled {
-                return "Mac destination enabled. Connection status: \(connectionStatusLabel)."
+                return String(localized: "Mac destination enabled. Connection status: \(connectionStatusLabel).")
             }
-            return "Mac destination disabled."
+            return String(localized: "Mac destination disabled.")
         case .cli:
-            guard directCLIEnabled else { return "Direct CLI access disabled." }
-            if directCLIService.isConnected { return "Direct CLI access enabled and connected." }
-            if directCLIService.isConnecting { return "Direct CLI access enabled and connecting." }
-            if directCLIService.hasPairedCLI { return "Direct CLI access enabled and ready." }
-            return "Direct CLI access enabled and waiting to pair."
+            guard directCLIEnabled else { return String(localized: "Direct CLI access disabled.") }
+            if directCLIService.isConnected { return String(localized: "Direct CLI access enabled and connected.") }
+            if directCLIService.isConnecting { return String(localized: "Direct CLI access enabled and connecting.") }
+            if directCLIService.hasPairedCLI { return String(localized: "Direct CLI access enabled and ready.") }
+            return String(localized: "Direct CLI access enabled and waiting to pair.")
         }
     }
 
@@ -786,13 +788,15 @@ struct SyncSettingsView: View {
     private func pairingHandoffMessage(
         for pairingLink: IPhoneDirectCLIPairingLink
     ) -> String {
+        // A port is an address component, not a locale-formatted quantity.
+        let port = String(pairingLink.port)
         if directCLIService.isConnecting {
-            return "Connecting automatically to healthmd at \(pairingLink.host):\(pairingLink.port). Keep Health.md open until pairing completes."
+            return String(localized: "Connecting automatically to healthmd at \(pairingLink.host):\(port). Keep Health.md open until pairing completes.")
         }
         if directCLIService.isPairingHandoffWaitingForActiveOperation {
-            return "Waiting for the active direct operation to finish, then Health.md will connect automatically to \(pairingLink.host):\(pairingLink.port)."
+            return String(localized: "Waiting for the active direct operation to finish, then Health.md will connect automatically to \(pairingLink.host):\(port).")
         }
-        return "Scanning this QR inside Health.md authorizes a one-time connection to healthmd at \(pairingLink.host):\(pairingLink.port)."
+        return String(localized: "Scanning this QR inside Health.md authorizes a one-time connection to healthmd at \(pairingLink.host):\(port).")
     }
 
     private var directCLIStatusIcon: String {
@@ -803,27 +807,27 @@ struct SyncSettingsView: View {
 
     private var directCLIStatusTitle: String {
         if directCLIService.isConnected {
-            return "Connected to \(directCLIService.connectedCLIName ?? "healthmd")"
+            return String(localized: "Connected to \(directCLIService.connectedCLIName ?? "healthmd")")
         }
-        if directCLIService.isConnecting { return "Pairing with healthmd…" }
-        return directCLIService.hasPairedCLI ? "Ready for healthmd" : "Pair a healthmd CLI"
+        if directCLIService.isConnecting { return String(localized: "Pairing with healthmd…") }
+        return directCLIService.hasPairedCLI ? String(localized: "Ready for healthmd") : String(localized: "Pair a healthmd CLI")
     }
 
     private var directCLIStatusSubtitle: String {
         if directCLIService.isConnected {
-            return "The authenticated CLI can request status, raw data, or generated export files."
+            return String(localized: "The authenticated CLI can request status, raw data, or generated export files.")
         }
         if directCLIService.isConnecting {
-            return "Keep this screen open while the first authenticated connection completes."
+            return String(localized: "Keep this screen open while the first authenticated connection completes.")
         }
         if directCLIService.hasPairedCLI {
-            return "Access is on. The paired CLI can connect when you run a direct command; no new code is required."
+            return String(localized: "Access is on. The paired CLI can connect when you run a direct command; no new code is required.")
         }
-        return "Scan a fresh QR from healthmd above, or choose the same transport and enter its one-time code manually."
+        return String(localized: "Scan a fresh QR from healthmd above, or choose the same transport and enter its one-time code manually.")
     }
 
     private var directCLITransportLabel: String {
-        directCLITransport == DirectTransportKind.nearby.rawValue ? "Nearby" : "Manual IP"
+        directCLITransport == DirectTransportKind.nearby.rawValue ? String(localized: "Nearby") : String(localized: "Manual IP")
     }
 
     private var canConnectDirectCLI: Bool {
@@ -876,18 +880,18 @@ struct SyncSettingsView: View {
         }
         guard capabilities.platform == .macOS,
               capabilities.isCompatibleWithMacExportJobs else {
-            return "Update Health.md on Mac to receive iPhone-configured export jobs."
+            return String(localized: "Update Health.md on Mac to receive iPhone-configured export jobs.")
         }
         guard let status = syncService.macDestinationStatus else {
             return String(localized: "Waiting for destination status from Mac.")
         }
-        if status.activeJobID != nil { return "Mac is currently writing another export." }
-        if !status.destinationFolderSelected { return "Choose a destination folder in Health.md on Mac." }
+        if status.activeJobID != nil { return String(localized: "Mac is currently writing another export.") }
+        if !status.destinationFolderSelected { return String(localized: "Choose a destination folder in Health.md on Mac.") }
         if !status.folderAccessHealthy {
             let destination = status.destinationPathForDisplay
                 ?? status.destinationDisplayName
-                ?? "the saved Mac folder"
-            return "Saved Mac destination \(destination) needs access. Re-select it in Health.md on Mac."
+                ?? String(localized: "the saved Mac folder")
+            return String(localized: "Saved Mac destination \(destination) needs access. Re-select it in Health.md on Mac.")
         }
         return status.lastError ?? syncService.macExportReadinessMessage
     }
@@ -896,11 +900,11 @@ struct SyncSettingsView: View {
 // MARK: - Sync Components
 
 private struct SyncCard<Content: View>: View {
-    let title: String
-    let subtitle: String?
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey?
     let content: Content
 
-    init(title: String, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+    init(title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
         self.subtitle = subtitle
         self.content = content()
@@ -909,12 +913,12 @@ private struct SyncCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(LocalizedStringKey(title))
+                Text(title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
 
                 if let subtitle {
-                    Text(LocalizedStringKey(subtitle))
+                    Text(subtitle)
                         .font(.footnote)
                         .foregroundStyle(Color.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -985,7 +989,7 @@ private struct SyncStatusPill: View {
     let tone: SyncStatusTone
 
     var body: some View {
-        Text(LocalizedStringKey(text))
+        Text(text)
             .font(.caption.weight(.semibold))
             .foregroundStyle(tone.foreground)
             .lineLimit(1)
@@ -1020,11 +1024,11 @@ private struct SyncInfoRow: View {
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(LocalizedStringKey(title))
+                Text(title)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text(LocalizedStringKey(subtitle))
+                Text(subtitle)
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1069,6 +1073,6 @@ private struct SyncStepRow: View {
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Step \(number): \(text)")
+        .accessibilityLabel(String(localized: "Step \(number): \(text)"))
     }
 }

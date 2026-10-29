@@ -234,7 +234,7 @@ struct FormatTextFieldControl: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Color.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -269,7 +269,7 @@ struct FormatTextFieldControl: View {
                 // The native glyph editor keeps its intrinsic height. The entire
                 // padded 44pt-or-larger control must also acquire editing focus.
                 .simultaneousGesture(TapGesture().onEnded { isFocused = true })
-                .accessibilityLabel(accessibilityLabel)
+                .accessibilityLabel(LocalizedStringKey(accessibilityLabel))
                 .accessibilityValue(text.isEmpty ? defaultValue : text)
                 .accessibilityIdentifier("format.input.\(title)")
 
@@ -543,7 +543,7 @@ struct FormatStatPill: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -588,11 +588,11 @@ struct FormatEmptyState: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(message)
+            Text(LocalizedStringKey(message))
                 .font(.footnote)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -610,7 +610,7 @@ struct FormatActionLabel: View {
         HStack(spacing: Spacing.xs) {
             Image(systemName: systemImage)
                 .accessibilityHidden(true)
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.footnote.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
         }

@@ -408,42 +408,42 @@ struct ExportTabView: View {
 
     private var localTargetSubtitle: String {
         if vaultManager.requiresVaultReselection {
-            return "Saved folder changed. Review it in Files, then re-select the intended folder."
+            return String(localized: "Saved folder changed. Review it in Files, then re-select the intended folder.")
         }
         if vaultManager.vaultURL != nil {
             return String(localized: "Exports to \(vaultManager.vaultName) on this iPhone.")
         }
         if vaultManager.hasSavedVaultFolder {
-            return "Saved folder unavailable. Reconnect it in Files or tap to re-select."
+            return String(localized: "Saved folder unavailable. Reconnect it in Files or tap to re-select.")
         }
-        return "Local iPhone folder. Tap to choose a folder."
+        return String(localized: "Local iPhone folder. Tap to choose a folder.")
     }
 
     private var macTargetSubtitle: String {
         if canExportToConnectedMacWithCurrentSettings {
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
-                return "Ready on Mac: \(path)"
+                return String(localized: "Ready on Mac: \(path)")
             }
             if let name = syncService.macDestinationStatus?.destinationDisplayName {
-                return "Ready on Mac: \(name)"
+                return String(localized: "Ready on Mac: \(name)")
             }
-            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+            return macReadinessDisplayText
         }
         return macTargetUnavailableMessage
     }
 
     private var apiTargetSubtitle: String {
         if apiExportSettings.isConfigured {
-            return "POSTs JSON exports to \(apiExportSettings.displayName). Tap to edit."
+            return String(localized: "POSTs JSON exports to \(apiExportSettings.displayName). Tap to edit.")
         }
-        return "Send JSON directly to your HTTP(S) endpoint. Tap to configure."
+        return String(localized: "Send JSON directly to your HTTP(S) endpoint. Tap to configure.")
     }
 
     private var agentDataGatewayTargetSubtitle: String {
         if agentDataGatewaySettings.isConfigured {
-            return "Uploads export artifacts to \(agentDataGatewaySettings.displayName). Tap to edit."
+            return String(localized: "Uploads export artifacts to \(agentDataGatewaySettings.displayName). Tap to edit.")
         }
-        return "Upload exact export artifacts to your Agent Data gateway. Tap to configure."
+        return String(localized: "Upload exact export artifacts to your Agent Data gateway. Tap to configure.")
     }
 
     private var canExportToConnectedMacWithCurrentSettings: Bool {
@@ -452,35 +452,62 @@ struct ExportTabView: View {
 
     private var macTargetUnavailableMessage: String {
         guard syncService.connectionState == .connected else {
-            return "No Mac connected. Open Health.md on your Mac to connect."
+            return String(localized: "No Mac connected. Open Health.md on your Mac to connect.")
         }
         guard let capabilities = syncService.remoteCapabilities else {
-            return syncService.macExportReadinessMessage
+            return String(localized: "Waiting for Mac destination status")
         }
         guard capabilities.platform == .macOS,
               capabilities.isCompatibleWithMacExportJobs else {
-            return "Incompatible Mac. Update Health.md on Mac."
+            return String(localized: "Incompatible Mac. Update Health.md on Mac.")
         }
         if syncService.canExportToConnectedMac,
            !syncService.canExportToConnectedMac(requiring: advancedSettings) {
-            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+            return macReadinessDisplayText
         }
         guard let status = syncService.macDestinationStatus else {
-            return syncService.macExportReadinessMessage(requiring: advancedSettings)
+            return String(localized: "Waiting for Mac destination status")
         }
         if status.activeJobID != nil {
-            return "Mac busy. Wait for the current export to finish."
+            return String(localized: "Mac busy. Wait for the current export to finish.")
         }
         if !status.destinationFolderSelected {
-            return "No folder selected. Choose a folder on Mac."
+            return String(localized: "No folder selected. Choose a folder on Mac.")
         }
         if !status.folderAccessHealthy {
             let destination = status.destinationPathForDisplay
                 ?? status.destinationDisplayName
-                ?? "the saved Mac folder"
-            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
+                ?? String(localized: "the saved Mac folder")
+            return String(localized: "Saved Mac destination \(destination) needs access. Re-select it on Mac.")
         }
-        return syncService.macExportReadinessMessage(requiring: advancedSettings)
+        return macReadinessDisplayText
+    }
+
+    private var macReadinessDisplayText: String {
+        let message = syncService.macExportReadinessMessage(requiring: advancedSettings)
+        // Only the locally generated ready/feature-compatibility copy is known
+        // here. Unavailable destination reasons may contain remote error prose.
+        guard syncService.canExportToConnectedMac else { return message }
+        switch message {
+        case "Ready to export to Mac":
+            return String(localized: "Ready to export to Mac")
+        case "Update Health.md on Mac to omit the data dictionary":
+            return String(localized: "Update Health.md on Mac to omit the data dictionary")
+        case "Update Health.md on Mac to use Daily Notes Only":
+            return String(localized: "Update Health.md on Mac to use Daily Notes Only")
+        case "Update Health.md on Mac to export summary-only roll-ups":
+            return String(localized: "Update Health.md on Mac to export summary-only roll-ups")
+        case "Update Health.md on Mac to export range summaries":
+            return String(localized: "Update Health.md on Mac to export range summaries")
+        case "Update Health.md on Mac to use this data detail setting":
+            return String(localized: "Update Health.md on Mac to use this data detail setting")
+        case "Update Health.md on Mac to export Lossless Health Records":
+            return String(localized: "Update Health.md on Mac to export Lossless Health Records")
+        case "Update Health.md on Mac":
+            return String(localized: "Update Health.md on Mac")
+        default:
+            return message
+        }
     }
 
     // MARK: - History evidence (outside exported records)
@@ -780,7 +807,7 @@ struct ExportTabView: View {
 
                 VStack(spacing: 0) {
                 ForEach(ExportFormat.allCases, id: \.self) { format in
-                    Toggle(format.rawValue, isOn: Binding(
+                    Toggle(format.localizedDisplayName, isOn: Binding(
                         get: { advancedSettings.exportFormats.contains(format) },
                         set: { isOn in
                             if isOn { advancedSettings.exportFormats.insert(format) }
@@ -790,7 +817,7 @@ struct ExportTabView: View {
                     .tint(Color.accent)
                     .font(.body.weight(.semibold))
                     .padding(.vertical, Spacing.s2)
-                    .accessibilityLabel(format.rawValue)
+                    .accessibilityLabel(format.localizedDisplayName)
                     .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
 
                     if format != ExportFormat.allCases.last {
@@ -1030,11 +1057,11 @@ struct ExportTabView: View {
                     inlineEditorRowLabel(
                         icon: "folder",
                         title: "Subfolder",
-                        value: vaultManager.healthSubfolder.isEmpty ? "Selected folder" : vaultManager.healthSubfolder
+                        value: vaultManager.healthSubfolder.isEmpty ? String(localized: "Selected folder") : vaultManager.healthSubfolder
                     )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Subfolder: \(vaultManager.healthSubfolder.isEmpty ? "Selected folder" : vaultManager.healthSubfolder)")
+                .accessibilityLabel("Subfolder: \(vaultManager.healthSubfolder.isEmpty ? String(localized: "Selected folder") : vaultManager.healthSubfolder)")
                 .accessibilityHint("Double tap to change subfolder name")
 
                 rowDivider()
@@ -1272,7 +1299,7 @@ struct ExportTabView: View {
     }
 
     private var previewRequirementsMessage: String {
-        "To preview your export, connect Apple Health so Health.md can read your data."
+        String(localized: "To preview your export, connect Apple Health so Health.md can read your data.")
     }
 
     private func handlePreviewTapped() {
@@ -1561,11 +1588,11 @@ struct ExportTabView: View {
     }
 
     private var folderStructureDisplayText: String {
-        let dateFolders = advancedSettings.folderStructure.isEmpty ? "Flat (no date subfolders)" : advancedSettings.folderStructure
+        let dateFolders = advancedSettings.folderStructure.isEmpty ? String(localized: "Flat (no date subfolders)") : advancedSettings.folderStructure
         if advancedSettings.organizeFormatsIntoFolders {
-            return "File type folders / \(dateFolders)"
+            return String(localized: "File type folders / \(dateFolders)")
         }
-        return advancedSettings.folderStructure.isEmpty ? "Flat (no subfolders)" : advancedSettings.folderStructure
+        return advancedSettings.folderStructure.isEmpty ? String(localized: "Flat (no subfolders)") : advancedSettings.folderStructure
     }
 
     private var formatExtensionsList: String {
@@ -1652,6 +1679,7 @@ struct ExportTargetSectionView: View {
     let title: String
     let localTitle: String
     let localIcon: String
+    // Callers resolve controlled prose; paths and already-localized copy stay verbatim.
     let localSubtitle: String
     let macSubtitle: String
     let apiSubtitle: String
@@ -1808,7 +1836,7 @@ private struct ExportTargetOptionRow: View {
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
-                    Text(LocalizedStringKey(subtitle))
+                    Text(verbatim: subtitle)
                         .font(.footnote)
                         .foregroundStyle(isEnabled ? Color.textSecondary : Color.textMuted)
                         .lineLimit(3)
@@ -1836,9 +1864,9 @@ private struct ExportTargetOptionRow: View {
         .disabled(!isEnabled)
         .accessibilityIdentifier(accessibilityIdentifier)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title): \(subtitle)")
-        .accessibilityValue(isSelected ? "Selected" : (isEnabled ? "Available" : "Unavailable"))
-        .accessibilityHint(isEnabled ? "Double tap to select this export target" : subtitle)
+        .accessibilityLabel(Text("\(Text(LocalizedStringKey(title))): \(Text(verbatim: subtitle))"))
+        .accessibilityValue(isSelected ? String(localized: "Selected") : (isEnabled ? String(localized: "Available") : String(localized: "Unavailable")))
+        .accessibilityHint(Text(verbatim: isEnabled ? String(localized: "Double tap to select this export target") : subtitle))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -1911,7 +1939,7 @@ struct APIExportSettingsSheet: View {
                     HStack {
                         Image(systemName: settings.isConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                             .foregroundStyle(settings.isConfigured ? Color.success : Color.warning)
-                        Text(settings.isConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL")
+                        Text(LocalizedStringKey(settings.isConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL"))
                     }
                 } footer: {
                     Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting.")
@@ -1968,7 +1996,7 @@ struct AgentDataGatewaySettingsSheet: View {
                     HStack {
                         Image(systemName: settings.isConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                             .foregroundStyle(settings.isConfigured ? Color.success : Color.warning)
-                        Text(settings.isConfigured ? "Ready to export to the gateway" : "Enter a valid HTTP or HTTPS URL")
+                        Text(LocalizedStringKey(settings.isConfigured ? "Ready to export to the gateway" : "Enter a valid HTTP or HTTPS URL"))
                     }
                 } footer: {
                     Text("Only send Apple Health data to gateways you control or trust. Gateway uploads use your selected metrics and Data Detail setting, and always include the JSON daily export.")
