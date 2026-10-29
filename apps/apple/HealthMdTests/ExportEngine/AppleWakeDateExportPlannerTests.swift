@@ -13,6 +13,99 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedManagers: [VaultManager] = []
 
+    func testLargeNativeQuantityMetadataStaysFileBackedWithBoundedPreview() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let payload = String(repeating: "x", count: 9 * 1024 * 1024)
+        var day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds))
+        day.heart.heartRateSamples = [TimeSample(timestamp: day.date.addingTimeInterval(0.125),
+            value: 72.125.nextUp, metadata: ["synthetic": payload])]
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["heart_rate_avg"])
+        snapshot.detailPolicy = .detailedTimeSeries
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Large native sample must stay complete") }
+        for artifact in operation.artifacts {
+            XCTAssertNotNil(artifact.artifact.fileArtifact)
+            if artifact.format == .json {
+                let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: artifact.artifact.content.materializedData()) as? [String: Any])
+                let samples = try XCTUnwrap((root["heart"] as? [String: Any])?["heartRateSamples"] as? [[String: Any]])
+                XCTAssertTrue((samples.first?["metadata"] as? [String: String])?["synthetic"] == payload)
+            }
+            let preview = try ExportArtifactTextPreview.make(from: artifact.artifact)
+            XCTAssertEqual(preview.originalByteCount, Int(artifact.artifact.byteCount))
+            if artifact.format != .markdown {
+                XCTAssertGreaterThan(artifact.artifact.byteCount, UInt64(payload.utf8.count))
+                XCTAssertLessThanOrEqual(preview.head.utf8.count + preview.tail.utf8.count, 64 * 1024)
+                XCTAssertGreaterThan(preview.omittedByteCount, 0)
+            }
+        }
+    }
+
+    func testInvalidNativeQuantityRejectsPlanWithoutSilentlyDroppingTheSample() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["blood_oxygen"])
+        var detailed = snapshot
+        detailed.detailPolicy = .detailedTimeSeries
+        for value in [Double.nan, Double.infinity, -0.01, 1.01] {
+            var day = HealthData(date: ExportFixtures.referenceDate,
+                timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds))
+            day.vitals.bloodOxygenSamples = [TimeSample(timestamp: day.date, value: value)]
+            do {
+                _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: detailed,
+                    surface: .localVaultWithoutSideEffects)
+                XCTFail("Invalid sample must reject the complete artifact plan")
+            } catch {}
+        }
+    }
+
+    func testDenseSelectedQuantitySamplesSurviveAllLocalFormatsWithoutSummaries() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let date = ExportFixtures.referenceDate
+        let samples = (0..<2_000).map { index in TimeSample(timestamp: date.addingTimeInterval(Double(index) + 0.125),
+            value: 72.125.nextUp, metadata: ["synthetic": "dense-\(index)"]) }
+        var day = HealthData(date: date, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds))
+        day.heart.heartRateSamples = samples
+        for metadata in [true, false] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["heart_rate_avg"])
+            snapshot.detailPolicy = .detailedTimeSeries
+            snapshot.includeMetadata = metadata
+            guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Dense selected source must remain exportable") }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            for artifact in operation.artifacts {
+                let data = try artifact.artifact.content.materializedData()
+                XCTAssertEqual(artifact.artifact.sha256, NativeExportArtifact.sha256(of: data))
+                let text = String(decoding: data, as: UTF8.self)
+                if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                    let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-dense-quantities-\(metadata)")
+                        .appendingPathComponent(artifact.artifact.relativePath)
+                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try data.write(to: output)
+                }
+                switch artifact.format {
+                case .json:
+                    let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+                    let heart = try XCTUnwrap(root["heart"] as? [String: Any])
+                    let values = try XCTUnwrap(heart["heartRateSamples"] as? [[String: Any]])
+                    XCTAssertEqual(values.count, samples.count)
+                    XCTAssertEqual((values.last?["value"] as? Double)?.bitPattern, 72.125.nextUp.bitPattern)
+                    XCTAssertEqual((values.last?["metadata"] as? [String: String])?["synthetic"], "dense-1999")
+                    XCTAssertNil(heart["averageHeartRate"])
+                case .csv:
+                    XCTAssertEqual(text.components(separatedBy: "\n").filter { $0.contains(",Native Detail,Quantity Sample,") }.count, samples.count)
+                    XCTAssertTrue(text.contains("dense-1999"))
+                case .markdown:
+                    XCTAssertEqual(text.components(separatedBy: "\n").filter { $0.hasPrefix("| 2026-") }.count, samples.count)
+                    XCTAssertTrue(text.contains("| \(72.125.nextUp) | bpm |"))
+                case .obsidianBases:
+                    XCTAssertTrue(text.contains("native_quantity_details:"))
+                    XCTAssertEqual(text.components(separatedBy: "\"metric\":\"heart_rate\"").count - 1, samples.count)
+                    XCTAssertTrue(text.contains("dense-1999"))
+                }
+            }
+        }
+    }
+
     func testWHOOPLabelsCannotIntroduceFrontmatterKeysOrBreakNativeJSONCells() async throws {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
         let label = "run | ` <&\n---\nforged: true 🌙"

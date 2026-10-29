@@ -9,6 +9,45 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testDenseSelectedQuantityOnlyDayKeepsAllFiveFamiliesOutsideAPICoreInput() async throws {
+        let zone = TimeZone.gmt
+        let date = try XCTUnwrap(days(count: 1).first)
+        func samples(_ value: Double) -> [TimeSample] {
+            (0..<2_000).map { TimeSample(timestamp: date.addingTimeInterval(Double($0) + 0.125),
+                value: value, metadata: ["synthetic": "quantity-\($0)"]) }
+        }
+        var day = HealthData(date: date, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        day.heart.heartRateSamples = samples(72.125.nextUp)
+        day.heart.hrvSamples = samples(31.875.nextUp)
+        day.vitals.bloodOxygenSamples = samples(0.97125.nextUp)
+        day.vitals.bloodGlucoseSamples = samples(101.875.nextUp)
+        day.vitals.respiratoryRateSamples = samples(16.125.nextUp)
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.detailPolicy = .detailedTimeSeries
+        settings.metricSelection.enabledMetrics = ["heart_rate_avg", "hrv", "blood_oxygen", "blood_glucose", "respiratory_rate"]
+        let resolution = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false,
+            fetchHealthData: { _, _, _ in day },
+            coreExecutor: APIRecordingCoreExecutor(events: APIEngineEventRecorder(), requireAggregateOnlyConfiguration: true))
+        guard case .prepared(let operation) = resolution else { return XCTFail("Expected dense native quantities") }
+        let batch = try XCTUnwrap(operation.batches.first)
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+        let record = try XCTUnwrap((root["records"] as? [[String: Any]])?.first)
+        XCTAssertTrue((record["summary"] as? [String: Any])?.isEmpty == true)
+        for (category, field, value) in [("heart", "heartRateSamples", 72.125.nextUp), ("heart", "hrvSamples", 31.875.nextUp),
+            ("vitals", "bloodOxygenSamples", 0.97125.nextUp), ("vitals", "bloodGlucoseSamples", 101.875.nextUp),
+            ("vitals", "respiratoryRateSamples", 16.125.nextUp)] {
+            let values = try XCTUnwrap((record[category] as? [String: Any])?[field] as? [[String: Any]])
+            XCTAssertEqual(values.count, 2_000)
+            XCTAssertEqual((values.last?["value"] as? Double)?.bitPattern, value.bitPattern)
+            XCTAssertEqual((values.last?["metadata"] as? [String: String])?["synthetic"], "quantity-1999")
+        }
+        try batch.bodyArtifact.validateIntegrity()
+    }
+
     func testNativeConnectedSourcesRejectWrongDateOrUnknownSchemaBeforePreparing() async throws {
         let zone = TimeZone.gmt
         let date = try XCTUnwrap(days(count: 1).first)

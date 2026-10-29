@@ -852,6 +852,7 @@ struct APIEndpointExportRunner {
                 $0.record?.healthKitRecordArchive != nil || $0.record?.partialFailures.isEmpty == false
                     || $0.record?.providers?.isEmpty == false
                     || !$0.externalRecordData.isEmpty
+                    || $0.record.map { AppleWakeDateQuantityProjection(data: $0).hasRecords } == true
             }) {
                 guard let wakeContext = captureContext else { throw EngineError.invalidPreparedPlan }
                 let boundedBatches = try materializeBatches(plan: aggregatePlan, outcomes: preparedOutcomes,
@@ -1048,7 +1049,10 @@ struct APIEndpointExportRunner {
         let records = outcomes.compactMap(\.record)
         let aggregateRecords = records.map { record in
             var aggregate = record
-            if pin.isWakeDate { aggregate.providers = nil }
+            if pin.isWakeDate {
+                aggregate.providers = nil
+                aggregate = AppleWakeDateQuantityProjection.aggregateRecord(from: aggregate)
+            }
             return aggregate
         }
         let captureContext = settings.executionSleepCaptureContext
@@ -1151,6 +1155,7 @@ struct APIEndpointExportRunner {
                 aggregate.healthKitRecordArchive = nil
                 aggregate.partialFailures = []
                 aggregate.providers = nil
+                aggregate = AppleWakeDateQuantityProjection.aggregateRecord(from: aggregate)
             }
             return (APIExportClient.dayString(from: record.date, timeZone: calendarTimeZone), aggregate)
         })
@@ -1209,7 +1214,7 @@ struct APIEndpointExportRunner {
             return AppleWakeDateAPIRecordComposer.Source(ownerDate: owner, aggregate: aggregate,
                 archive: record.healthKitRecordArchive, partialFailures: record.partialFailures,
                 captureStatus: HealthKitRecordArchiveSerializer.captureStatusString(record.healthKitRecordCaptureStatus),
-                providers: record.providers)
+                providers: record.providers, quantities: AppleWakeDateQuantityProjection(data: record))
         }
         guard sources.count == aggregates.count else { throw EngineError.invalidPreparedPlan }
         let files = try await AppleWakeDateAPIRecordComposer.compose(sources: sources,

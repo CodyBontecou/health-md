@@ -568,7 +568,10 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 sessionID: identity.sessionID,
                 healthData: orderedRecords.map { record in
                     var aggregate = record
-                    if wakeDateContext != nil { aggregate.providers = nil }
+                    if wakeDateContext != nil {
+                        aggregate.providers = nil
+                        aggregate = AppleWakeDateQuantityProjection.aggregateRecord(from: aggregate)
+                    }
                     return aggregate
                 },
                 registry: context.registry,
@@ -632,7 +635,10 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 presentationByOwnerDate = Dictionary(
                     uniqueKeysWithValues: zip(ownerDates, preparedExports.map { prepared in
                         var aggregate = prepared.filteredData
-                        if wakeDateContext != nil { aggregate.providers = nil }
+                        if wakeDateContext != nil {
+                            aggregate.providers = nil
+                            aggregate = AppleWakeDateQuantityProjection.aggregateRecord(from: aggregate)
+                        }
                         return aggregate
                     })
                 )
@@ -706,6 +712,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         if wakeDateContext != nil,
            settingsSnapshot.detailPolicy.includesCanonicalArchive || preparedExports.contains(where: {
                !$0.snapshot.partialFailures.isEmpty || $0.snapshot.providers?.isEmpty == false
+                   || AppleWakeDateQuantityProjection(data: $0.filteredData).hasRecords
            }) {
             rustPlan = try await AppleWakeDateArchiveComposer.compose(plan: rustPlan, pin: pin,
                 prepared: preparedExports, settings: frozenSettings,

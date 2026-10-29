@@ -9,6 +9,7 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
         let partialFailures: [ExportPartialFailure]
         let captureStatus: String
         let providers: HealthProviderSections?
+        let quantities: AppleWakeDateQuantityProjection
     }
 
     @MainActor
@@ -40,6 +41,7 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
                     }
                 }
                 root["raw_capture_status"] = source.captureStatus
+                try source.quantities.addJSON(to: &root)
                 if let providers = source.providers, !providers.isEmpty {
                     root["providers"] = try AppleWakeDateProviderProjection.lazyJSONObject(providers)
                 }
