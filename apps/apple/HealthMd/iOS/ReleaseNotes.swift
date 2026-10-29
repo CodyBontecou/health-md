@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.4.5",
+            items: [
+                .list(
+                    title: "More connections and date formats",
+                    rows: [
+                        .init(
+                            symbolSystemName: "calendar",
+                            title: "EU Dot date format",
+                            description: "Choose DD.MM.YYYY in Format Customization. Your choice is saved and included in shared setups."
+                        ),
+                        .init(
+                            symbolSystemName: "link",
+                            title: "Connect WHOOP",
+                            description: "Include recovery, strain, sleep, and workout data in your exports."
+                        ),
+                        .init(
+                            symbolSystemName: "moon",
+                            title: "Clearer sleep dates",
+                            description: "Sleep-date guidance explains which night each export covers."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.4.4",
             items: [
                 .list(
