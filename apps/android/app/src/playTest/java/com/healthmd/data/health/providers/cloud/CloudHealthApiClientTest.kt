@@ -282,6 +282,32 @@ class CloudHealthApiClientTest {
         assertThat(second).isEqualTo(0)
     }
 
+    @Test
+    fun boundClientKeepsGrantAcrossPagesAndUnavailableGrantCannotRepairItself() = runTest {
+        val store = InMemoryOAuthTokenStore(listOf(OAuthToken("whoop", "accepted")))
+        val manager = OAuthAuthorizationManager(OAuthConfigRegistry(emptyList()), store)
+        val requests = mutableListOf<CloudHttpRequest>()
+        val live = CloudHealthApiClient.forTesting(manager, transport = CloudHttpTransport {
+            requests += it
+            CloudHttpResponse(200, body = "{}".toByteArray())
+        })
+        val bound = live.forCaptureOperation("whoop")
+        assertThat(bound.forCaptureOperation("whoop")).isSameInstanceAs(bound)
+        bound.getRawJsonResponse("whoop", "https://api.example.test/page1")
+        store.saveToken(OAuthToken("whoop", "replacement"))
+        assertThat(bound.token("whoop")).isNull()
+        assertThat(runCatching { bound.getRawJsonResponse("whoop", "https://api.example.test/page2") }.isFailure).isTrue()
+        assertThat(requests).hasSize(1)
+        live.forCaptureOperation("whoop").getRawJsonResponse("whoop", "https://api.example.test/fresh")
+        assertThat(requests.last().authorization).isEqualTo("Bearer replacement")
+        store.clearToken("whoop")
+        val missing = live.forCaptureOperation("whoop")
+        store.saveToken(OAuthToken("whoop", "repaired"))
+        assertThat(missing.token("whoop")).isNull()
+        assertThat(runCatching { missing.getRawJsonResponse("whoop", "https://api.example.test/repaired") }.isFailure).isTrue()
+        assertThat(requests).hasSize(2)
+    }
+
     private fun client(
         response: CloudHttpResponse = CloudHttpResponse(200, body = "{}".toByteArray()),
         observer: CloudRawResponseObserver? = null,

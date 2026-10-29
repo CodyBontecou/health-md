@@ -28,7 +28,9 @@ class HealthRepositoryImpl private constructor(
         val selectedId = settingsRepository.getSelectedHealthProviderId()
         val connectedIds = if (selectedId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID)
             settingsRepository.getConnectedHealthProviderIds().distinct().sorted() else emptyList()
-        return HealthRepositoryImpl(providerRegistry, settingsRepository, ProviderSelection(selectedId, connectedIds))
+        val acceptedIds = if (selectedId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID) connectedIds.toSet() else setOf(selectedId)
+        val boundRegistry = providerRegistry.forCaptureOperation(acceptedIds)
+        return HealthRepositoryImpl(boundRegistry, settingsRepository, ProviderSelection(selectedId, connectedIds))
     }
 
     private suspend fun selectedProviderId(): String =

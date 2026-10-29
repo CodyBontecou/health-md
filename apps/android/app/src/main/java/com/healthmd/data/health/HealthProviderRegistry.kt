@@ -14,6 +14,13 @@ class HealthProviderRegistry(
         (listOf(healthConnectDataProvider) + additionalProviders)
             .distinctBy(HealthDataProvider::providerId)
 
+    suspend fun forCaptureOperation(providerIds: Set<String>): HealthProviderRegistry = HealthProviderRegistry(
+        healthConnectDataProvider,
+        exportProviders.filter { it.providerId != healthConnectDataProvider.providerId }.map { provider ->
+            if (provider.providerId in providerIds && provider is OperationScopedHealthDataProvider) provider.forCaptureOperation() else provider
+        },
+    )
+
     fun primaryExportProvider(): HealthDataProvider = healthConnectDataProvider
 
     fun providerFor(providerId: String): HealthDataProvider =

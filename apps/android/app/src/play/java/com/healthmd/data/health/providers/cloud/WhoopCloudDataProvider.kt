@@ -32,6 +32,8 @@ class WhoopCloudDataProvider(
     private val baseUrl: String = BASE_URL,
     private val clock: Clock? = null,
 ) : CloudHealthDataProvider("whoop", apiClient), CloudNativeRawPageProvider {
+    protected override fun withClient(client: CloudHealthApiClient): CloudHealthDataProvider = WhoopCloudDataProvider(client, baseUrl, clock)
+
     override val rawProviderId: String = providerId
     override val rawFidelityDeclaration: CloudProviderFidelityDeclaration = fidelityDeclaration
     override val rawEndpointDefinitions: List<RawProviderTypeDefinition> = RAW_ENDPOINTS

@@ -47,3 +47,8 @@ interface HealthDataProvider {
     suspend fun getEarliestDataDate(): LocalDate?
     fun isBeforeFirstUnlock(): Boolean
 }
+
+/** Optional source-identity binding; SDK providers without account state keep their existing view. */
+interface OperationScopedHealthDataProvider {
+    suspend fun forCaptureOperation(): HealthDataProvider
+}

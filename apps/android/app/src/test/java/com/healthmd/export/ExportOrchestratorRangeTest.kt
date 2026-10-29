@@ -348,6 +348,7 @@ class ExportOrchestratorRangeTest {
             val manager = mockk<HealthConnectManager>()
             val provider = HealthConnectDataProvider(manager)
             val registry = mockk<HealthProviderRegistry>()
+            coEvery { registry.forCaptureOperation(any()) } returns registry
             val settingsRepository = mockk<SettingsRepository>()
             coEvery { settingsRepository.getSelectedHealthProviderId() } returns "health_connect"
             coEvery { settingsRepository.getSleepDayAttribution() } answers { storedAttribution }
@@ -440,6 +441,7 @@ class ExportOrchestratorRangeTest {
                 firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 999)) }
             }
             val registry = mockk<HealthProviderRegistry>()
+            coEvery { registry.forCaptureOperation(any()) } returns registry
             val primary = HealthConnectDataProvider(manager)
             every { registry.providerFor("health_connect") } returns primary
             every { registry.providerFor("whoop") } returns alternate

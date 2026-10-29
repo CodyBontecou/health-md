@@ -119,6 +119,7 @@ class APIEndpointExportRunnerTest {
             val manager = mockk<HealthConnectManager>()
             val provider = HealthConnectDataProvider(manager)
             val registry = mockk<HealthProviderRegistry>()
+            coEvery { registry.forCaptureOperation(any()) } returns registry
             val settings = mockk<SettingsRepository>()
             coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
             coEvery { settings.getSleepDayAttribution() } answers { storedAttribution }

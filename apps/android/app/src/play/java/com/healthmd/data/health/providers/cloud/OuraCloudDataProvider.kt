@@ -21,6 +21,8 @@ class OuraCloudDataProvider(
     apiClient: CloudHealthApiClient,
     private val baseUrl: String = BASE_URL,
 ) : CloudHealthDataProvider("oura", apiClient), CloudNativeRawPageProvider {
+    protected override fun withClient(client: CloudHealthApiClient): CloudHealthDataProvider = OuraCloudDataProvider(client, baseUrl)
+
     override val rawProviderId: String = providerId
     override val rawFidelityDeclaration: CloudProviderFidelityDeclaration = fidelityDeclaration
     override val rawEndpointDefinitions: List<RawProviderTypeDefinition> = RAW_ENDPOINTS

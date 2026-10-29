@@ -23,6 +23,7 @@ class CloudHealthApiClient private constructor(
     private val transport: CloudHttpTransport,
     private val clock: () -> Instant,
     private val maxResponseBytes: Int,
+    private val acceptedConnections: Map<String, String?>? = null,
 ) {
     constructor(oauthAuthorizationManager: OAuthAuthorizationManager) : this(
         oauthAuthorizationManager = oauthAuthorizationManager,
@@ -45,11 +46,25 @@ class CloudHealthApiClient private constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun isConfigured(providerId: String): Boolean =
-        oauthAuthorizationManager.isConfigured(providerId)
+    suspend fun forCaptureOperation(providerId: String): CloudHealthApiClient {
+        if (acceptedConnections != null) {
+            check(providerId in acceptedConnections) { "Provider was not accepted for this capture" }
+            return this
+        }
+        return CloudHealthApiClient(oauthAuthorizationManager, responseObserver, transport, clock, maxResponseBytes,
+            mapOf(providerId to oauthAuthorizationManager.connectionId(providerId)))
+    }
 
-    suspend fun token(providerId: String): OAuthToken? =
-        oauthAuthorizationManager.validAccessToken(providerId)
+    suspend fun isConfigured(providerId: String): Boolean =
+        (acceptedConnections == null || providerId in acceptedConnections) && oauthAuthorizationManager.isConfigured(providerId)
+
+    private suspend fun acceptedConnectionId(providerId: String): String? =
+        if (acceptedConnections == null) oauthAuthorizationManager.connectionId(providerId) else acceptedConnections[providerId]
+
+    suspend fun token(providerId: String): OAuthToken? {
+        val id = acceptedConnectionId(providerId) ?: return null
+        return oauthAuthorizationManager.validAccessToken(providerId, id)
+    }
 
     /** Existing parsed-JSON entry point. Successful responses are also sent to the observer. */
     suspend fun getJson(
@@ -80,7 +95,7 @@ class CloudHealthApiClient private constructor(
         val endpoint = parseAndValidateEndpoint(url)
         val endpointIdentifier = CloudRequestSanitizer.endpointIdentifier(safeProviderId, endpoint)
         val queryMetadata = CloudRequestSanitizer.queryMetadata(query)
-        val connectionId = oauthAuthorizationManager.connectionId(safeProviderId)
+        val connectionId = acceptedConnectionId(safeProviderId)
             ?: throw SecurityException("$safeProviderId is not connected")
         val token = oauthAuthorizationManager.validAccessToken(safeProviderId, connectionId)
             ?: throw SecurityException("$safeProviderId is not connected")

@@ -19,6 +19,8 @@ class WithingsCloudDataProvider(
     apiClient: CloudHealthApiClient,
     private val baseUrl: String = BASE_URL,
 ) : CloudHealthDataProvider("withings", apiClient), CloudNativeRawPageProvider {
+    protected override fun withClient(client: CloudHealthApiClient): CloudHealthDataProvider = WithingsCloudDataProvider(client, baseUrl)
+
     override val rawProviderId: String = providerId
     override val rawFidelityDeclaration: CloudProviderFidelityDeclaration = fidelityDeclaration
     override val rawEndpointDefinitions: List<RawProviderTypeDefinition> = RAW_ENDPOINTS

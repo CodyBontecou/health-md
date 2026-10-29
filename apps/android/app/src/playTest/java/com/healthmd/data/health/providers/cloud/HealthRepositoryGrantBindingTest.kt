@@ -1,0 +1,117 @@
+package com.healthmd.data.health.providers.cloud
+
+import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.health.HealthConnectDataProvider
+import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.HealthDataMerger
+import com.healthmd.data.health.HealthProviderRegistry
+import com.healthmd.data.health.HealthRepositoryImpl
+import com.healthmd.data.health.oauth.InMemoryOAuthTokenStore
+import com.healthmd.data.health.oauth.OAuthAuthorizationManager
+import com.healthmd.data.health.oauth.OAuthConfigRegistry
+import com.healthmd.data.health.oauth.OAuthProviderConfig
+import com.healthmd.data.health.oauth.OAuthToken
+import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
+import com.healthmd.domain.repository.SettingsRepository
+import io.mockk.coEvery
+import io.mockk.mockk
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import kotlinx.coroutines.test.runTest
+import org.junit.Test
+
+class HealthRepositoryGrantBindingTest {
+    private val first = LocalDate.of(2026, 7, 1)
+    private val next = first.plusDays(1)
+
+    @Test
+    fun acceptedRepositoryKeepsGrantAcrossDaysAndRotationButCannotAdoptReplacement() = runTest {
+        for (mode in SleepDayAttribution.entries) {
+            val tokens = InMemoryOAuthTokenStore(listOf(OAuthToken("whoop", "accepted")))
+            val requests = mutableListOf<CloudHttpRequest>()
+            val repository = repository(tokens, requests)
+            val accepted = repository.forCaptureOperation()
+            val context = SleepDayAttributionOverride.Value(mode)
+            accepted.fetchHealthDataRange(listOf(first), zoneId = ZoneOffset.UTC, sleepDayAttributionOverride = context)
+            assertThat(requests).isNotEmpty()
+            assertThat(requests.all { it.authorization == "Bearer accepted" }).isTrue()
+            val credential = requireNotNull(tokens.getCredential("whoop"))
+            assertThat(tokens.saveRotatedToken(OAuthToken("whoop", "rotated"), credential)).isTrue()
+            requests.clear()
+            accepted.fetchHealthDataRange(listOf(next), zoneId = ZoneOffset.UTC, sleepDayAttributionOverride = context)
+            assertThat(requests).isNotEmpty()
+            assertThat(requests.all { it.authorization == "Bearer rotated" }).isTrue()
+            assertThat(requests.any { it.url.path.endsWith("/body") }).isTrue()
+            assertThat(requests.all { it.url.host == "provider.example.test" && it.url.path.startsWith("/custom/") }).isTrue()
+            tokens.saveToken(OAuthToken("whoop", "replacement"))
+            requests.clear()
+            assertThat(accepted.hasPermissions()).isFalse()
+            accepted.fetchHealthDataRange(listOf(next), zoneId = ZoneOffset.UTC, sleepDayAttributionOverride = context)
+            assertThat(requests).isEmpty()
+            repository.forCaptureOperation().fetchHealthDataRange(listOf(next), zoneId = ZoneOffset.UTC,
+                sleepDayAttributionOverride = context)
+            assertThat(requests).isNotEmpty()
+            assertThat(requests.all { it.authorization == "Bearer replacement" }).isTrue()
+        }
+    }
+
+    @Test
+    fun unavailableAcceptedGrantCannotAdoptLaterLogin() = runTest {
+        val tokens = InMemoryOAuthTokenStore()
+        val requests = mutableListOf<CloudHttpRequest>()
+        val repository = repository(tokens, requests)
+        val accepted = repository.forCaptureOperation()
+        tokens.saveToken(OAuthToken("whoop", "late-login"))
+        assertThat(accepted.hasPermissions()).isFalse()
+        accepted.fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
+            SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS))
+        assertThat(requests).isEmpty()
+        repository.forCaptureOperation().fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
+            SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS))
+        assertThat(requests).isNotEmpty()
+    }
+
+    @Test
+    fun allConnectedKeepsAcceptedFailureFactsInsteadOfReadingReplacementAccount() = runTest {
+        val tokens = InMemoryOAuthTokenStore(listOf(OAuthToken("whoop", "accepted")))
+        val requests = mutableListOf<CloudHttpRequest>()
+        val repository = repository(tokens, requests, allConnected = true)
+        val accepted = repository.forCaptureOperation()
+        tokens.saveToken(OAuthToken("whoop", "replacement"))
+        val captured = accepted.fetchHealthDataRange(listOf(first), sleepDayAttributionOverride =
+            SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS)).single()
+        assertThat(captured.activity.steps).isEqualTo(10)
+        assertThat(captured.compatibilityProvenance?.providerIdsAttempted).containsExactly("health_connect", "whoop")
+        assertThat(captured.compatibilityProvenance?.providerFailures?.single()?.providerId).isEqualTo("whoop")
+        assertThat(captured.compatibilityProvenance?.providerFailures?.single()?.errorType).isEqualTo("PermissionDenied")
+        assertThat(requests).isEmpty()
+    }
+
+    private fun repository(tokens: InMemoryOAuthTokenStore, requests: MutableList<CloudHttpRequest>,
+        allConnected: Boolean = false): HealthRepositoryImpl {
+        val sdk = mockk<HealthConnectManager>()
+        coEvery { sdk.isAvailable() } returns true
+        coEvery { sdk.hasAllPermissions() } returns true
+        coEvery { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 10)) }
+        }
+        val settings = mockk<SettingsRepository>()
+        coEvery { settings.getSelectedHealthProviderId() } returns if (allConnected) HealthDataMerger.ALL_CONNECTED_PROVIDER_ID else "whoop"
+        coEvery { settings.getConnectedHealthProviderIds() } returns setOf("health_connect", "whoop")
+        val config = OAuthProviderConfig("whoop", "WHOOP", "https://auth.example.test", "https://token.example.test",
+            "synthetic-client", scopes = listOf("read:sleep"))
+        val client = CloudHealthApiClient.forTesting(OAuthAuthorizationManager(OAuthConfigRegistry(listOf(config)), tokens),
+            transport = CloudHttpTransport { request ->
+                requests += request
+                CloudHttpResponse(200, "application/json", body = "{\"records\":[]}".toByteArray())
+            })
+        val provider = WhoopCloudDataProvider(client, baseUrl = "https://provider.example.test/custom",
+            clock = Clock.fixed(Instant.parse("2026-07-02T12:00:00Z"), ZoneOffset.UTC))
+        return HealthRepositoryImpl(HealthProviderRegistry(HealthConnectDataProvider(sdk), listOf(provider)), settings)
+    }
+}
