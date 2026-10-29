@@ -14,7 +14,13 @@ struct DailyNoteInjectionView: View {
     var healthSubfolder: String = ""
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.locale) private var locale
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+
+    private var copy: DailyNoteInjectionPresentation {
+        DailyNoteInjectionPresentation(isEnabled: settings.enabled, dailyNotesOnly: settings.dailyNotesOnly,
+                                       metricCount: enabledMetricCount, locale: locale)
+    }
 
     private var usesAccessibilityLayout: Bool {
         dynamicTypeSize.isAccessibilitySize
@@ -55,12 +61,12 @@ struct DailyNoteInjectionView: View {
                     .foregroundStyle(Color.textMuted)
 
                 DailyNoteStatePill(
-                    title: settings.enabled ? "Enabled" : "Disabled",
+                    title: copy.statusTitle,
                     color: settings.enabled ? Color.accent : Color.textMuted
                 )
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Daily Note Injection, \(settings.enabled ? "enabled" : "disabled")")
+            .accessibilityLabel(copy.headerLabel)
         }
     }
 
@@ -73,9 +79,7 @@ struct DailyNoteInjectionView: View {
                     Text("Inject Into Daily Notes")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
-                    Text(settings.dailyNotesOnly
-                         ? "Exports update only your daily notes. Other generated files stay configured but are skipped."
-                         : "Exports update YAML frontmatter in the daily notes you already keep, while normal export files still follow your selected formats.")
+                    Text(verbatim: copy.modeExplanation)
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -83,8 +87,8 @@ struct DailyNoteInjectionView: View {
             }
             .tint(Color.accent)
             .accessibilityLabel("Inject health metrics into daily notes")
-            .accessibilityValue(settings.enabled ? "Enabled" : "Disabled")
-            .accessibilityHint("Double tap to \(settings.enabled ? "disable" : "enable") daily note injection")
+            .accessibilityValue(copy.statusTitle)
+            .accessibilityHint(copy.toggleHint)
         }
     }
 
@@ -128,7 +132,7 @@ struct DailyNoteInjectionView: View {
                         infoRow(
                             icon: "folder.badge.questionmark",
                             title: "Vault Root Location",
-                            message: "With Folder set to Daily, notes are written to Daily/… at the vault root, not \(healthSubfolder)/Daily/…."
+                            message: DailyNoteInjectionPresentation.vaultRootWarning(healthSubfolder, locale: locale)
                         )
                     }
                 }
@@ -193,13 +197,13 @@ struct DailyNoteInjectionView: View {
             Spacer(minLength: Spacing.sm)
 
             DailyNoteStatePill(
-                title: enabledMetricCount == 0 ? "No Metrics" : "\(enabledMetricCount) Metric\(enabledMetricCount == 1 ? "" : "s")",
+                title: copy.metricsTitle,
                 color: enabledMetricCount > 0 ? Color.accent : Color.warning
             )
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Metrics to inject")
-        .accessibilityValue(enabledMetricCount == 0 ? "No metrics enabled" : "\(enabledMetricCount) metrics enabled")
+        .accessibilityValue(copy.metricsAccessibilityValue)
         .accessibilityHint("Change selected metrics from Export Settings, Health Metrics")
     }
 
@@ -216,7 +220,7 @@ struct DailyNoteInjectionView: View {
                 Text("Preview Path")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
-                Text(settings.previewPath(for: Date()))
+                Text(verbatim: settings.previewPath(for: Date()))
                     .font(.footnote.monospaced())
                     .foregroundStyle(Color.accent)
                     .lineLimit(3)
@@ -273,7 +277,7 @@ struct DailyNoteInjectionView: View {
         accessibilityLabel: String,
         accessibilityHint: String
     ) -> some View {
-        TextField(placeholder, text: configurationProtection.protecting(text))
+        TextField(placeholder, text: configurationProtection.protecting(text), prompt: Text(verbatim: placeholder))
             .font(.footnote.monospaced())
             .foregroundStyle(Color.textPrimary)
             .multilineTextAlignment(usesAccessibilityLayout ? .leading : .trailing)
@@ -289,8 +293,8 @@ struct DailyNoteInjectionView: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
-            .accessibilityLabel(accessibilityLabel)
-            .accessibilityHint(accessibilityHint)
+            .accessibilityLabel(LocalizedStringKey(accessibilityLabel))
+            .accessibilityHint(LocalizedStringKey(accessibilityHint))
     }
 
     private func toggleRow(
@@ -311,8 +315,10 @@ struct DailyNoteInjectionView: View {
             }
         }
         .tint(Color.accent)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(isOn.wrappedValue ? "Enabled" : "Disabled")
+        .accessibilityLabel(LocalizedStringKey(accessibilityLabel))
+        .accessibilityValue(isOn.wrappedValue
+            ? String(localized: "Enabled", locale: locale)
+            : String(localized: "Disabled", locale: locale))
     }
 
     private func infoRow(icon: String, title: String, message: String) -> some View {
@@ -327,7 +333,7 @@ struct DailyNoteInjectionView: View {
                 Text(LocalizedStringKey(title))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
-                Text(LocalizedStringKey(message))
+                Text(verbatim: message)
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -412,7 +418,7 @@ private struct DailyNoteStatePill: View {
     let color: Color
 
     var body: some View {
-        Text(LocalizedStringKey(title))
+        Text(verbatim: title)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
             .padding(.horizontal, 8)

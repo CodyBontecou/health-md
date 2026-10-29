@@ -1,0 +1,46 @@
+{
+  "HealthMd/iOS/Components/ReadingA11yComponents.swift": {
+    "required": ["String(localized: \"Double tap to allow configuration changes\")", "String(localized: \"Double tap to prevent configuration changes\")", ".accessibilityLabel(LocalizedStringKey(title))"],
+    "forbidden": ["? \"allow\" : \"prevent\""]
+  },
+  "HealthMd/iOS/Components/AnimatedButton.swift": {
+    "required": [".accessibilityLabel(LocalizedStringKey(isLoading ? \"Exporting\" : title))", "String(localized: \"Double tap to activate\")"],
+    "forbidden": ["title.lowercased()"]
+  },
+  "HealthMd/iOS/Components/ExportModal.swift": {
+    "required": ["Text(verbatim: folderStructureDisplayText)", "Text(verbatim: exportPath)", "Text(verbatim: previewFilename)", "Text(verbatim: previewPath)", "prompt: Text(verbatim: \"{date}\")", "Text(LocalizedStringKey(caption))", ".accessibilityValue(placeholder)"],
+    "forbidden": ["LocalizedStringKey(folderStructureDisplayText)", "LocalizedStringKey(exportPath)", "LocalizedStringKey(previewPath)", "LocalizedStringKey(previewFilename)"]
+  },
+  "HealthMd/iOS/Components/OnboardingA11yComponents.swift": {
+    "required": ["var accessibilityHint: String = String(localized: \"Double tap to continue\")", ".accessibilityHint(Text(verbatim: accessibilityHint))"],
+    "forbidden": ["LocalizedStringKey(detail)"]
+  },
+  "HealthMd/iOS/Components/SchedulingA11yComponents.swift": {
+    "required": ["var titleIsResolved = false", "titleIsResolved ? Text(title) : Text(LocalizedStringKey(title))", "valueDescription.map { Text($0) }", ".accessibilityHint(Text(LocalizedStringKey(previewHint)))"],
+    "forbidden": ["LocalizedStringKey(valueDescription ?? title)"]
+  },
+  "HealthMd/iOS/Views/OnboardingView.swift": {
+    "required": ["OnboardingPrimaryButton(title: String(localized: \"Continue Setup\")", "detail: folderSelected ? folderName : String(localized: \"Choose now or after previewing\")", "title: vaultName,"],
+    "forbidden": ["LocalizedStringKey(folderName)", "LocalizedStringKey(vaultName)"]
+  },
+  "HealthMd/iOS/Views/ExportTabView.swift": {
+    "required": ["Text(verbatim: subtitle)", "return String(localized: \"Ready on Mac: \\(path)\")", "Toggle(format.localizedDisplayName, isOn: Binding("],
+    "forbidden": ["Text(LocalizedStringKey(subtitle))", "LocalizedStringKey(path)", "LocalizedStringKey(settings.displayName)"]
+  },
+  "HealthMd/iOS/Views/ProfileScheduleSection.swift": {
+    "required": ["ScheduleDisplayCopy.cadence(count: entry.customInterval, unit: entry.customUnit, at: time)", "String(localized: \"Lookback: 1 day\")"],
+    "forbidden": ["label(for:", "day\\(draft.lookbackDays == 1"]
+  },
+  "HealthMd/iOS/Views/ScheduleSettingsView.swift": {
+    "required": ["ScheduleDisplayCopy.cadenceStartingSummary(", "ScheduleDisplayCopy.unitChoiceLabel($0)", "String(localized: \"Double tap to enable scheduled exports\")", "String(localized: \"Double tap to disable scheduled exports\")", "String(localized: \"Double tap to enable Today Refresh\")", "String(localized: \"Double tap to disable Today Refresh\")", "return String(localized: \"Scheduled exports upload artifacts to \\(settings.displayName).\")", "return String(localized: \"Scheduled JSON exports POST to \\(apiExportSettings.displayName). Tap to edit.\")"],
+    "forbidden": ["label(for:", "? \"disable\" : \"enable\""]
+  },
+  "HealthMd/iOS/Views/SyncSettingsView.swift": {
+    "required": ["let port = String(pairingLink.port)", "String(localized: \"Step \\(number): \\(text)\")", "String(localized: \"Open Health.md on Mac and choose a destination folder\")", "return status.lastError ?? syncService.macExportReadinessMessage", "String(localized: \"Double tap to enable this Mac as an export destination\")", "String(localized: \"Double tap to disable this Mac as an export destination\")"],
+    "forbidden": ["? \"disable\" : \"enable\"", "LocalizedStringKey(subtitle)", "LocalizedStringKey(text)", "LocalizedStringKey(pairingLink.host)"]
+  },
+  "HealthMd/iOS/Views/ExportProfilesView.swift": {
+    "required": ["ScheduleDisplayCopy.cadence(count: interval, unit: unit, at: cadence.timeLabel)", "Button(LocalizedStringKey(editingProfile == nil ? \"Create\" : \"Save\"))"],
+    "forbidden": ["label(for:", "LocalizedStringKey(profile.name)"]
+  }
+}

@@ -203,6 +203,7 @@ struct SharedSetupV2: Codable, Equatable, Sendable {
         case iso8601
         case usShort = "us_short"
         case usLong = "us_long"
+        case euDot = "eu_dot"
         case euShort = "eu_short"
         case euLong = "eu_long"
         case compact

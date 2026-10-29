@@ -13,6 +13,7 @@ enum class DateFormatPreference(val pattern: String) {
     ISO8601("yyyy-MM-dd"),
     US_SHORT("MM/dd/yyyy"),
     US_LONG("MMMM d, yyyy"),
+    EU_DOT("dd.MM.yyyy"),
     EU_SHORT("dd/MM/yyyy"),
     EU_LONG("d MMMM yyyy"),
     COMPACT("yyyyMMdd"),

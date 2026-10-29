@@ -73,6 +73,30 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(snapshot.metricSelection.enabledCategoryIDs, [HealthMetricCategory.activity.rawValue, HealthMetricCategory.sleep.rawValue])
     }
 
+    func testEUDotPersistsInFrozenProfilesAndFormatsCalendarDates() throws {
+        let settings = makeConfiguredSettings()
+        settings.formatCustomization.dateFormat = .euDot
+        let snapshot = ExportSettingsSnapshot.from(settings)
+        settings.formatCustomization.dateFormat = .iso8601
+        let profile = ExportProfile(name: "EU Dot", settings: snapshot, target: .localIPhoneFolder)
+        let decoded = try JSONDecoder().decode(ExportProfile.self, from: JSONEncoder().encode(profile))
+        let restored = decoded.settings.makeAdvancedExportSettings()
+        Self.retainedSettings.append(restored)
+        XCTAssertEqual(restored.formatCustomization.dateFormat, .euDot)
+        XCTAssertEqual(DateFormatPreference.euDot.rawValue, "dd.MM.yyyy")
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        for (year, month, day, expected) in [
+            (2026, 1, 13, "13.01.2026"),
+            (2024, 2, 29, "29.02.2024"),
+            (2025, 12, 31, "31.12.2025"),
+            (2026, 1, 1, "01.01.2026")
+        ] {
+            let date = try XCTUnwrap(calendar.date(from: DateComponents(year: year, month: month, day: day)))
+            XCTAssertEqual(restored.formatCustomization.dateFormat.format(date: date, timeZone: calendar.timeZone), expected)
+        }
+    }
+
     func testWorkoutTablePreferenceDefaultsOnForLegacySnapshotsAndPreservesCanonicalEncoding() throws {
         let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
         let encoded = try JSONEncoder().encode(snapshot)
@@ -103,6 +127,30 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(reconstructed.detailPolicy, settings.detailPolicy, "Presentation must not disable source archives")
         XCTAssertEqual(reconstructed.metricSelection.enabledMetrics, settings.metricSelection.enabledMetrics)
         XCTAssertEqual(decoded, snapshot)
+    }
+
+    func testEUDotPersistsAcrossSettingsReloadAndResetKeepsISODefault() throws {
+        let suiteName = "ExportSettingsSnapshotTests.eu-dot.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        XCTAssertEqual(settings.formatCustomization.dateFormat, .iso8601)
+        settings.formatCustomization.dateFormat = .euDot
+        let deadline = Date(timeIntervalSinceNow: 2)
+        repeat {
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.01))
+            if let bytes = defaults.data(forKey: "advancedExportSettings.formatCustomization"),
+               let stored = try? JSONDecoder().decode(FormatCustomizationSnapshot.self, from: bytes),
+               stored.dateFormat == .euDot {
+                break
+            }
+        } while Date() < deadline
+        let reloaded = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(reloaded)
+        XCTAssertEqual(reloaded.formatCustomization.dateFormat, .euDot)
+        reloaded.formatCustomization.reset()
+        XCTAssertEqual(reloaded.formatCustomization.dateFormat, .iso8601)
     }
 
     func testWorkoutTablePreferencePersistsBothStatesAcrossSettingsReload() throws {

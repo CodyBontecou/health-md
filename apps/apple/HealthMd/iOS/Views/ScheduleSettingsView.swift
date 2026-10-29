@@ -138,7 +138,7 @@ struct ScheduleSettingsView: View {
                         _ = await schedulingManager.requestNotificationPermissions()
                         configurationProtection.performConfigurationChange {
                             self.enableFirstProfileEntry()
-                            UIAccessibility.post(notification: .announcement, argument: "Schedule enabled")
+                            UIAccessibility.post(notification: .announcement, argument: String(localized: "Schedule enabled"))
                         }
                     }
                 } else {
@@ -146,7 +146,7 @@ struct ScheduleSettingsView: View {
                         self.disableAllSchedules()
                     }
                     if wasEnabled && !newValue {
-                        UIAccessibility.post(notification: .announcement, argument: "Schedule disabled")
+                        UIAccessibility.post(notification: .announcement, argument: String(localized: "Schedule disabled"))
                     }
                 }
             }
@@ -382,7 +382,7 @@ struct ScheduleSettingsView: View {
                 )
 
                 if schedulingManager.isSchedulingActive, let nextExport = schedulingManager.getNextExportDescription() {
-                    statusPill(label: String(localized: "Next"), value: nextExport, icon: "clock", tint: Color.accent)
+                    statusPill(label: String(localized: "Next: \(nextExport)"), icon: "clock", tint: Color.accent)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -451,8 +451,10 @@ struct ScheduleSettingsView: View {
                 .tint(Color.accent)
                 .accessibilityIdentifier(AccessibilityID.Schedule.enableToggle)
                 .accessibilityLabel("Automatic export schedule")
-                .accessibilityValue(schedulingManager.isSchedulingActive ? "Enabled" : "Disabled")
-                .accessibilityHint("Double tap to \(schedulingManager.isSchedulingActive ? "disable" : "enable") scheduled exports")
+                .accessibilityValue(schedulingManager.isSchedulingActive ? String(localized: "Enabled") : String(localized: "Disabled"))
+                .accessibilityHint(schedulingManager.isSchedulingActive
+                    ? String(localized: "Double tap to disable scheduled exports")
+                    : String(localized: "Double tap to enable scheduled exports"))
         }
         .padding(.vertical, Spacing.s3)
     }
@@ -503,8 +505,8 @@ struct ScheduleSettingsView: View {
         guidanceRow(
             icon: "pause.circle",
             title: "Schedule Off",
-            message: "Scheduled exports are paused. Manual exports remain available from the Export tab.",
-            status: "Manual Only",
+            message: String(localized: "Scheduled exports are paused. Manual exports remain available from the Export tab."),
+            status: String(localized: "Manual Only"),
             statusTint: Color.textMuted
         )
     }
@@ -514,12 +516,12 @@ struct ScheduleSettingsView: View {
             controlHeader(
                 icon: "repeat",
                 title: "Frequency",
-                message: "Choose how often Health.md prepares an export."
+                message: String(localized: "Choose how often Health.md prepares an export.")
             )
 
             SchedulingChoicePicker(
                 title: "Frequency",
-                choices: ScheduleFrequency.allCases.map { SchedulingChoice(value: $0, title: $0.description) },
+                choices: ScheduleFrequency.allCases.map { SchedulingChoice(value: $0, title: $0.description, titleIsResolved: true) },
                 selection: frequencyBinding
             )
             .accessibilityIdentifier(AccessibilityID.Schedule.frequencyPicker)
@@ -539,14 +541,15 @@ struct ScheduleSettingsView: View {
                 title: "Custom frequency interval", value: customIntervalBinding,
                 bounds: ExportSchedule.minimumCustomInterval...ExportSchedule.maximumCustomInterval,
                 identifier: AccessibilityID.Schedule.customIntervalStepper,
-                valueDescription: "Every"
+                valueDescription: String(localized: "Every")
             )
 
             SchedulingValueMenu(
                 title: "Custom frequency unit",
-                choices: ScheduleIntervalUnit.allCases.map { SchedulingChoice(value: $0, title: $0.label(for: 2).capitalized) },
-                selection: customUnitBinding,
-                selectedTitle: schedulingManager.schedule.customUnit.label(for: schedulingManager.schedule.customInterval).capitalized
+                choices: ScheduleIntervalUnit.allCases.map {
+                    SchedulingChoice(value: $0, title: ScheduleDisplayCopy.unitChoiceLabel($0), titleIsResolved: true)
+                },
+                selection: customUnitBinding
             )
             .accessibilityIdentifier(AccessibilityID.Schedule.customUnitPicker)
 
@@ -580,11 +583,8 @@ struct ScheduleSettingsView: View {
     private var customCadenceSummary: String {
         let interval = schedulingManager.schedule.customInterval
         let unit = schedulingManager.schedule.customUnit
-        let cadence = interval == 1
-            ? "Every \(unit.label(for: interval))"
-            : "Every \(interval) \(unit.label(for: interval))"
         let start = schedulingManager.schedule.customAnchorDate.formatted(date: .abbreviated, time: .omitted)
-        return "\(cadence) starting \(start). Monthly schedules use the last day when a month is shorter."
+        return ScheduleDisplayCopy.cadenceStartingSummary(count: interval, unit: unit, starting: start)
     }
 
     private enum DayPeriod: String { case am = "AM", pm = "PM" }
@@ -616,7 +616,7 @@ struct ScheduleSettingsView: View {
             controlHeader(
                 icon: "clock",
                 title: "Preferred Time",
-                message: "iOS uses this as the target time for notifications and background scheduling."
+                message: String(localized: "iOS uses this as the target time for notifications and background scheduling.")
             )
 
             SchedulingTimeControls(
@@ -694,8 +694,10 @@ struct ScheduleSettingsView: View {
                     .tint(Color.accent)
                     .accessibilityIdentifier("schedule.todayRefresh.toggle")
                     .accessibilityLabel("Today Refresh")
-                    .accessibilityValue(schedulingManager.schedule.todayRefreshEnabled ? "Enabled" : "Disabled")
-                    .accessibilityHint("Double tap to \(schedulingManager.schedule.todayRefreshEnabled ? "disable" : "enable") Today Refresh")
+                    .accessibilityValue(schedulingManager.schedule.todayRefreshEnabled ? String(localized: "Enabled") : String(localized: "Disabled"))
+                    .accessibilityHint(schedulingManager.schedule.todayRefreshEnabled
+                        ? String(localized: "Double tap to disable Today Refresh")
+                        : String(localized: "Double tap to enable Today Refresh"))
             }
             .accessibilityElement(children: .contain)
 
@@ -703,7 +705,7 @@ struct ScheduleSettingsView: View {
                 SchedulingChoicePicker(
                     title: "Today Refresh interval",
                     choices: ExportSchedule.todayRefreshMinuteOptions.map {
-                        SchedulingChoice(value: $0, title: ExportSchedule.todayRefreshLabel($0))
+                        SchedulingChoice(value: $0, title: ExportSchedule.todayRefreshLabel($0), titleIsResolved: true)
                     },
                     selection: todayRefreshIntervalBinding
                 )
@@ -757,11 +759,11 @@ struct ScheduleSettingsView: View {
         let interval = schedulingManager.schedule.todayRefreshMinutes
         let refreshBehavior: String
         if schedulingManager.schedule.target == .apiEndpoint {
-            refreshBehavior = "For API Endpoint exports, each run fetches the day again and sends a complete replacement snapshot. The endpoint should upsert the latest snapshot by date."
+            refreshBehavior = String(localized: "For API Endpoint exports, each run fetches the day again and sends a complete replacement snapshot. The endpoint should upsert the latest snapshot by date.")
         } else {
-            refreshBehavior = "For file exports, Update or Overwrite replaces the current JSON snapshot with the latest data."
+            refreshBehavior = String(localized: "For file exports, Update or Overwrite replaces the current JSON snapshot with the latest data.")
         }
-        return """
+        return String(localized: """
         Today Refresh rewrites today's export while the day is still in progress.
 
         \(refreshBehavior)
@@ -769,7 +771,7 @@ struct ScheduleSettingsView: View {
         \(ExportSchedule.todayRefreshLabel(interval)) is relative to your Preferred Time (\(preferredTimeText)). Health.md targets \(preferredTimeText), then repeats at that interval until midnight. If you enable it after a target time has passed, the next future slot is used.
 
         Automatic background exports depend on iOS. If Health.md needs your attention, unlock your device and tap the notification to run the pending export.
-        """
+        """)
     }
 
     private var scheduledDestinationSection: some View {
@@ -797,20 +799,20 @@ struct ScheduleSettingsView: View {
     private var scheduledAgentDataGatewayTargetSubtitle: String {
         let settings = AgentDataGatewaySettings()
         if settings.isConfigured {
-            return "Scheduled exports upload artifacts to \(settings.displayName)."
+            return String(localized: "Scheduled exports upload artifacts to \(settings.displayName).")
         }
-        return "Scheduled exports upload artifacts to your Agent Data gateway."
+        return String(localized: "Scheduled exports upload artifacts to your Agent Data gateway.")
     }
 
     private var scheduledLocalTargetSubtitle: String {
         if vaultManager.requiresVaultReselection {
-            return "Saved folder changed. Review it in Files, then re-select the intended folder."
+            return String(localized: "Saved folder changed. Review it in Files, then re-select the intended folder.")
         }
         if vaultManager.vaultURL != nil {
             return String(localized: "Scheduled exports write to \(vaultManager.vaultName) on this iPhone.")
         }
         if vaultManager.hasSavedVaultFolder {
-            return "Saved folder unavailable. Reconnect it in Files or tap to re-select."
+            return String(localized: "Saved folder unavailable. Reconnect it in Files or tap to re-select.")
         }
         return String(localized: "Local iPhone folder. Tap to choose a folder.")
     }
@@ -818,19 +820,19 @@ struct ScheduleSettingsView: View {
     private var scheduledMacTargetSubtitle: String {
         if canScheduleToConnectedMac {
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
-                return "Ready on Mac: \(path). Keep the Mac awake with Health.md open at schedule time."
+                return String(localized: "Ready on Mac: \(path). Keep the Mac awake with Health.md open at schedule time.")
             }
             if let name = syncService.macDestinationStatus?.destinationDisplayName {
-                return "Ready on Mac: \(name). Keep the Mac awake with Health.md open at schedule time."
+                return String(localized: "Ready on Mac: \(name). Keep the Mac awake with Health.md open at schedule time.")
             }
-            return "Ready now. Keep the Mac awake with Health.md open at schedule time."
+            return String(localized: "Ready now. Keep the Mac awake with Health.md open at schedule time.")
         }
         return scheduledMacTargetUnavailableMessage
     }
 
     private var scheduledAPITargetSubtitle: String {
         if apiExportSettings.isConfigured {
-            return "Scheduled JSON exports POST to \(apiExportSettings.displayName). Tap to edit."
+            return String(localized: "Scheduled JSON exports POST to \(apiExportSettings.displayName). Tap to edit.")
         }
         return String(localized: "Send scheduled JSON exports to your HTTP(S) endpoint. Tap to configure.")
     }
@@ -841,14 +843,14 @@ struct ScheduleSettingsView: View {
 
     private var scheduledMacTargetUnavailableMessage: String {
         guard syncService.connectionState == .connected else {
-            return "No Mac connected. Open Health.md on your Mac before choosing this target."
+            return String(localized: "No Mac connected. Open Health.md on your Mac before choosing this target.")
         }
         guard let capabilities = syncService.remoteCapabilities else {
             return syncService.macExportReadinessMessage(requiring: advancedSettings)
         }
         guard capabilities.platform == .macOS,
               capabilities.isCompatibleWithMacExportJobs else {
-            return "Incompatible Mac. Update Health.md on Mac."
+            return String(localized: "Incompatible Mac. Update Health.md on Mac.")
         }
         if syncService.canExportToConnectedMac,
            !syncService.canExportToConnectedMac(requiring: advancedSettings) {
@@ -858,16 +860,16 @@ struct ScheduleSettingsView: View {
             return syncService.macExportReadinessMessage(requiring: advancedSettings)
         }
         if status.activeJobID != nil {
-            return "Mac busy. Wait for the current export to finish."
+            return String(localized: "Mac busy. Wait for the current export to finish.")
         }
         if !status.destinationFolderSelected {
-            return "No folder selected. Choose a folder on Mac."
+            return String(localized: "No folder selected. Choose a folder on Mac.")
         }
         if !status.folderAccessHealthy {
             let destination = status.destinationPathForDisplay
                 ?? status.destinationDisplayName
-                ?? "the saved Mac folder"
-            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
+                ?? String(localized: "the saved Mac folder")
+            return String(localized: "Saved Mac destination \(destination) needs access. Re-select it on Mac.")
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
@@ -876,8 +878,8 @@ struct ScheduleSettingsView: View {
         guidanceRow(
             icon: "bell.badge",
             title: "Background Timing",
-            message: "Your iPhone must be unlocked when Health.md reads Health data. If data is locked, tap the notification to run the export.",
-            status: "iOS Managed",
+            message: String(localized: "Your iPhone must be unlocked when Health.md reads Health data. If data is locked, tap the notification to run the export."),
+            status: String(localized: "iOS Managed"),
             statusTint: Color.warning
         )
     }
@@ -988,14 +990,15 @@ struct ScheduleSettingsView: View {
             .padding(.leading, leading)
     }
 
-    private func controlHeader(icon: String, title: String, message: String) -> some View {
+    /// Titles are controlled keys; messages are resolved prose, never lookup keys.
+    private func controlHeader(icon: String, title: LocalizedStringKey, message: String) -> some View {
         VStack(alignment: .leading, spacing: Spacing.s1) {
-            Label(LocalizedStringKey(title), systemImage: icon)
+            Label(title, systemImage: icon)
                 .font(Typography.bodyEmphasis())
                 .foregroundStyle(Color.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(LocalizedStringKey(message))
+            Text(message)
                 .font(Typography.caption())
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1004,7 +1007,7 @@ struct ScheduleSettingsView: View {
 
     private func guidanceRow(
         icon: String,
-        title: String,
+        title: LocalizedStringKey,
         message: String,
         status: String,
         statusTint: Color
@@ -1017,7 +1020,8 @@ struct ScheduleSettingsView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func statusPill(label: String, value: String? = nil, icon: String? = nil, tint: Color) -> some View {
+    /// Callers resolve controlled copy; interpolated values are never looked up.
+    private func statusPill(label: String, icon: String? = nil, tint: Color) -> some View {
         HStack(spacing: Spacing.s1) {
             if let icon {
                 Image(systemName: icon)
@@ -1025,15 +1029,9 @@ struct ScheduleSettingsView: View {
                     .accessibilityHidden(true)
             }
 
-            if let value {
-                (Text(LocalizedStringKey(label)) + Text(": \(value)"))
-                    .font(.caption2.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text(LocalizedStringKey(label))
-                    .font(.caption2.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(tint == Color.success ? Color.successText : Color.textSecondary)
         .padding(.horizontal, Spacing.s2)
@@ -1053,7 +1051,7 @@ struct ScheduleSettingsView: View {
     private func retryExport(_ entry: ExportHistoryEntry) {
         isRetrying = true
         retryProgress = 0.0
-        retryStatusMessage = "Preparing…"
+        retryStatusMessage = String(localized: "Preparing…")
 
         Task {
             await HealthKitQueryExecutionController.withController {
@@ -1094,7 +1092,7 @@ struct ScheduleSettingsView: View {
 
         guard !datesToExport.isEmpty else {
             await MainActor.run {
-                retryErrorMessage = "No dates to retry"
+                retryErrorMessage = String(localized: "No dates to retry")
                 showRetryError = true
             }
             return
@@ -1102,7 +1100,7 @@ struct ScheduleSettingsView: View {
 
         guard purchaseManager.canExport else {
             await MainActor.run {
-                retryErrorMessage = "Free export limit reached. Unlock Full Access to retry this export."
+                retryErrorMessage = String(localized: "Free export limit reached. Unlock Full Access to retry this export.")
                 showRetryError = true
             }
             return
@@ -1149,7 +1147,7 @@ struct ScheduleSettingsView: View {
 
         for (index, date) in datesToExport.enumerated() {
             await MainActor.run {
-                retryStatusMessage = "Preparing \(dateFormatter.string(from: date))… (\(index)/\(totalDays) complete)"
+                retryStatusMessage = String(localized: "Preparing \(dateFormatter.string(from: date))… (\(index)/\(totalDays) complete)")
                 retryProgress = Double(index) / Double(totalDays)
             }
 

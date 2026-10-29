@@ -692,6 +692,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US সংক্ষিপ্ত (01/13/2026)</string>
     <string name="date_format_display_us_long">US দীর্ঘ (জানুয়ারি 13, 2026)</string>
+    <string name="date_format_display_eu_dot">EU ডট বিভাজক (13.01.2026)</string>
     <string name="date_format_display_eu_short">EU সংক্ষিপ্ত (13/01/2026)</string>
     <string name="date_format_display_eu_long">EU দীর্ঘ (13 জানুয়ারি 2026)</string>
     <string name="date_format_display_compact">কম্প্যাক্ট (20260113)</string>

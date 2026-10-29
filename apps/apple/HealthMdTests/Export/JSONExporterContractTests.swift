@@ -17,6 +17,12 @@ private enum JSONContractCustomizations {
         return c
     }()
 
+    static let euDot: FormatCustomization = {
+        let c = FormatCustomization()
+        c.dateFormat = .euDot
+        return c
+    }()
+
     static let imperial: FormatCustomization = {
         let c = FormatCustomization()
         c.unitPreference = .imperial
@@ -25,6 +31,17 @@ private enum JSONContractCustomizations {
 }
 
 final class JSONExporterContractTests: XCTestCase {
+
+    func testEUDotIsUsedAcrossReadableExportDates() {
+        let data = ExportFixtures.fullDay
+        let customization = JSONContractCustomizations.euDot
+        XCTAssertEqual(parseJSON(data, customization: customization)["date"] as? String, "15.03.2026")
+        XCTAssertTrue(data.toMarkdown(customization: customization).contains("# Health Data — 15.03.2026"))
+        XCTAssertTrue(data.toObsidianBases(customization: customization).contains("date: 15.03.2026"))
+        for line in data.toCSV(customization: customization).split(separator: "\n").dropFirst() {
+            XCTAssertTrue(line.hasPrefix("15.03.2026,"))
+        }
+    }
 
     // MARK: - Helpers
 

@@ -277,12 +277,12 @@ struct ExportProfilesView: View {
             return String(localized: "Connected Mac", comment: "Profile row destination line for the Mac target")
         case .apiEndpoint(let url):
             return String(
-                localized: "API: \(url ?? "not configured")",
+                localized: "API: \(url ?? String(localized: "not configured"))",
                 comment: "Profile row destination line for an API endpoint target"
             )
         case .agentDataGateway(let url):
             return String(
-                localized: "Agent Data gateway: \(url ?? "not configured")",
+                localized: "Agent Data gateway: \(url ?? String(localized: "not configured"))",
                 comment: "Profile row destination line for an Agent Data gateway target"
             )
         }
@@ -302,7 +302,7 @@ struct ExportProfilesView: View {
             if let weekdayIndex = cadence.weekdayIndex {
                 line += " · " + ExportProfileCadenceSummary.weekdayName(weekdayIndex)
             } else if let interval = cadence.customInterval, let unit = cadence.customUnit {
-                line += " · \(interval) \(unit.rawValue.lowercased())"
+                return ScheduleDisplayCopy.cadence(count: interval, unit: unit, at: cadence.timeLabel)
             }
             line += " · \(cadence.timeLabel)"
             return line
@@ -794,7 +794,7 @@ struct ExportProfileDetailView: View {
         if let weekdayIndex = cadence.weekdayIndex {
             line += " · " + ExportProfileCadenceSummary.weekdayName(weekdayIndex)
         } else if let interval = cadence.customInterval, let unit = cadence.customUnit {
-            line += " · \(interval) \(unit.rawValue.lowercased())"
+            return ScheduleDisplayCopy.cadence(count: interval, unit: unit, at: cadence.timeLabel)
         }
         line += " · \(cadence.timeLabel)"
         return line
@@ -1075,14 +1075,14 @@ struct ExportProfileEditorSheet: View {
                 individualTrackingSection
                 overlapSection
             }
-            .navigationTitle(Text(editingProfile == nil ? "New Profile" : "Edit Profile"))
+            .navigationTitle(Text(LocalizedStringKey(editingProfile == nil ? "New Profile" : "Edit Profile")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(editingProfile == nil ? "Create" : "Save") {
+                    Button(LocalizedStringKey(editingProfile == nil ? "Create" : "Save")) {
                         // The draft stays inspectable, but persisting a profile
                         // is a configuration mutation, so the shared lock can
                         // reject an editor that was already open when
@@ -1199,9 +1199,9 @@ struct ExportProfileEditorSheet: View {
         } header: {
             Text("Profile")
         } footer: {
-            Text(editingProfile == nil
+            Text(LocalizedStringKey(editingProfile == nil
                 ? "Starts from the current export settings."
-                : "Scheduled exports pick up the new settings on their next run.")
+                : "Scheduled exports pick up the new settings on their next run."))
         }
     }
 
@@ -1634,7 +1634,7 @@ private struct ExportProfileGatewayFormSheet: View {
                     HStack {
                         Image(systemName: canAdd ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                             .foregroundStyle(canAdd ? Color.success : Color.warning)
-                        Text(canAdd ? "Valid gateway URL" : "Enter a valid HTTP or HTTPS URL")
+                        Text(LocalizedStringKey(canAdd ? "Valid gateway URL" : "Enter a valid HTTP or HTTPS URL"))
                     }
                 } footer: {
                     Text("Health.md uploads each exported artifact file unchanged to this gateway's /v1/ingest endpoint using the Agent Data protocol. Gateways need no token in this version.")

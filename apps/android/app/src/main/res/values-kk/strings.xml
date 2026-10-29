@@ -660,6 +660,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">АҚШ қысқа (01/13/2026)</string>
     <string name="date_format_display_us_long">АҚШ ұзын (қаңтар 13, 2026)</string>
+    <string name="date_format_display_eu_dot">ЕО нүктемен (13.01.2026)</string>
     <string name="date_format_display_eu_short">ЕО қысқа (13/01/2026)</string>
     <string name="date_format_display_eu_long">ЕО ұзын (13 қаңтар 2026)</string>
     <string name="date_format_display_compact">Ықшам (20260113)</string>

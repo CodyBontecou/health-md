@@ -1563,7 +1563,17 @@ def validate_shared_setup_v2_freeze(root: Path) -> None:
     directory = "packages/contracts/shared-setup/v2"
     for relative_path, expected_hash in baseline["frozen_assets"].items():
         path = repository_path(root, f"{directory}/{relative_path}", context)
-        if hashlib.sha256(path.read_bytes()).hexdigest() != expected_hash:
+        frozen_bytes = path.read_bytes()
+        # Owner-approved 2026-10-28 amendment: only the EU Dot date preset may
+        # extend v2. Removing that exact addition must recover the byte-frozen
+        # schema; historical baseline hashes and every fixture stay unchanged.
+        if relative_path == "shared-setup.schema.json":
+            frozen_bytes = frozen_bytes.replace(
+                b'            "eu_short",\n            "eu_dot",\n',
+                b'            "eu_short",\n',
+                1,
+            )
+        if hashlib.sha256(frozen_bytes).hexdigest() != expected_hash:
             fail(f"{context}: public schema or fixture changed: {relative_path}")
 
     def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:

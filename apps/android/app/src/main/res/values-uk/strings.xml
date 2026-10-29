@@ -339,6 +339,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">Короткий формат США (01/13/2026)</string>
     <string name="date_format_display_us_long">Довгий формат США (січень 13, 2026)</string>
+    <string name="date_format_display_eu_dot">Європейський із крапками (13.01.2026)</string>
     <string name="date_format_display_eu_short">Короткий формат ЄС (13/01/2026)</string>
     <string name="date_format_display_eu_long">Довгий формат ЄС (13 січня 2026)</string>
     <string name="date_format_display_compact">Компактний (20260113)</string>

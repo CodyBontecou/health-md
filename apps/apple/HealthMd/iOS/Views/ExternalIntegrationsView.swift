@@ -213,7 +213,7 @@ struct ExternalIntegrationsView: View {
             Circle()
                 .fill(connected ? Color.success : Color.textMuted)
                 .frame(width: 6, height: 6)
-            Text(connected ? "Connected" : "Not connected")
+            Text(LocalizedStringKey(connected ? "Connected" : "Not connected"))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(connected ? Color.success : Color.textSecondary)
                 .lineLimit(1)
@@ -224,10 +224,10 @@ struct ExternalIntegrationsView: View {
             Capsule().fill(connected ? Color.success.opacity(0.12) : Color.bgSecondary)
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(connected ? "Connected" : "Not connected")
+        .accessibilityLabel(LocalizedStringKey(connected ? "Connected" : "Not connected"))
     }
 
-    private func providerActionLabel(title: String, isWorking: Bool) -> some View {
+    private func providerActionLabel(title: LocalizedStringKey, isWorking: Bool) -> some View {
         HStack(spacing: Spacing.sm) {
             if isWorking {
                 ProgressView()

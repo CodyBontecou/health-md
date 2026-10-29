@@ -417,6 +417,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US Curto (01/13/2026)</string>
     <string name="date_format_display_us_long">US Longo (janeiro 13, 2026)</string>
+    <string name="date_format_display_eu_dot">EU com pontos (13.01.2026)</string>
     <string name="date_format_display_eu_short">EU Curto (13/01/2026)</string>
     <string name="date_format_display_eu_long">EU Longo (13 de janeiro de 2026)</string>
     <string name="date_format_display_compact">Compacto (20260113)</string>

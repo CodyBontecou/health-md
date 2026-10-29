@@ -692,6 +692,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US ਛੋਟਾ (01/13/2026)</string>
     <string name="date_format_display_us_long">US ਲੰਬਾ (ਜਨਵਰੀ 13, 2026)</string>
+    <string name="date_format_display_eu_dot">EU ਬਿੰਦੀ ਵਿਭਾਜਕ (13.01.2026)</string>
     <string name="date_format_display_eu_short">EU ਛੋਟਾ (13/01/2026)</string>
     <string name="date_format_display_eu_long">EU ਲੰਬਾ (13 ਜਨਵਰੀ 2026)</string>
     <string name="date_format_display_compact">ਸੰਖੇਪ (20260113)</string>
