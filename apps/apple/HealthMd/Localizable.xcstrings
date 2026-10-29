@@ -142130,6 +142130,84 @@
         "pt-BR": {"stringUnit":{"state":"translated","value":"Desconectar WHOOP"}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"断开 WHOOP 连接"}}
       }
+    },
+    "Choose DD.MM.YYYY in Format Customization. Your choice is saved and included in shared setups." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Wählen Sie DD.MM.YYYY unter Formatanpassung. Ihre Auswahl wird gespeichert und in geteilte Konfigurationen aufgenommen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Elige DD.MM.YYYY en Personalización del formato. Tu elección se guarda y se incluye en las configuraciones compartidas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Choisissez DD.MM.YYYY dans Personnalisation du format. Votre choix est enregistré et inclus dans les configurations partagées."}},
+        "it": {"stringUnit":{"state":"translated","value":"Scegli DD.MM.YYYY in Personalizzazione formato. La scelta viene salvata e inclusa nelle configurazioni condivise."}},
+        "ja": {"stringUnit":{"state":"translated","value":"「形式のカスタマイズ」でDD.MM.YYYYを選択できます。選択内容は保存され、共有設定にも含まれます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"형식 사용자화에서 DD.MM.YYYY를 선택하세요. 선택 사항은 저장되며 공유 설정에도 포함됩니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Kies DD.MM.YYYY bij Opmaak aanpassen. Je keuze wordt opgeslagen en opgenomen in gedeelde instellingen."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Escolha DD.MM.YYYY em Personalização de formato. Sua escolha é salva e incluída nas configurações compartilhadas."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"在“格式自定义”中选择DD.MM.YYYY。您的选择会被保存，并包含在共享设置中。"}}
+      }
+    },
+    "Clearer sleep dates" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Klarere Schlafdaten"}},
+        "es": {"stringUnit":{"state":"translated","value":"Fechas de sueño más claras"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Des dates de sommeil plus claires"}},
+        "it": {"stringUnit":{"state":"translated","value":"Date del sonno più chiare"}},
+        "ja": {"stringUnit":{"state":"translated","value":"睡眠の日付をより分かりやすく"}},
+        "ko": {"stringUnit":{"state":"translated","value":"더 명확한 수면 날짜"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Duidelijkere slaapdatums"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Datas de sono mais claras"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"更清晰的睡眠日期"}}
+      }
+    },
+    "EU Dot date format" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"EU-Datumsformat mit Punkten"}},
+        "es": {"stringUnit":{"state":"translated","value":"Formato de fecha europeo con puntos"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Format de date européen avec des points"}},
+        "it": {"stringUnit":{"state":"translated","value":"Formato data europeo con punti"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ドット区切りの欧州式日付形式"}},
+        "ko": {"stringUnit":{"state":"translated","value":"점을 사용하는 유럽식 날짜 형식"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Europese datumnotatie met punten"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Formato de data europeu com pontos"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"欧式点分隔日期格式"}}
+      }
+    },
+    "Include recovery, strain, sleep, and workout data in your exports." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Nehmen Sie Erholungs-, Belastungs-, Schlaf- und Trainingsdaten in Ihre Exporte auf."}},
+        "es": {"stringUnit":{"state":"translated","value":"Incluye datos de recuperación, esfuerzo, sueño y entrenamientos en tus exportaciones."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Incluez les données de récupération, d’effort, de sommeil et d’entraînement dans vos exports."}},
+        "it": {"stringUnit":{"state":"translated","value":"Includi i dati di recupero, sforzo, sonno e allenamento nelle esportazioni."}},
+        "ja": {"stringUnit":{"state":"translated","value":"回復、負荷、睡眠、ワークアウトのデータをエクスポートに含められます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"내보내기에 회복, 운동 부하, 수면 및 운동 데이터를 포함하세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Neem herstel-, inspannings-, slaap- en trainingsgegevens op in je exports."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Inclua dados de recuperação, esforço, sono e treinos nas exportações."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"在导出中包含恢复、运动负荷、睡眠和锻炼数据。"}}
+      }
+    },
+    "More connections and date formats" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Mehr Verbindungen und Datumsformate"}},
+        "es": {"stringUnit":{"state":"translated","value":"Más conexiones y formatos de fecha"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Plus de connexions et de formats de date"}},
+        "it": {"stringUnit":{"state":"translated","value":"Più connessioni e formati di data"}},
+        "ja": {"stringUnit":{"state":"translated","value":"接続と日付形式の選択肢を追加"}},
+        "ko": {"stringUnit":{"state":"translated","value":"더 다양한 연결 및 날짜 형식"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Meer verbindingen en datumnotaties"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Mais conexões e formatos de data"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"更多连接和日期格式"}}
+      }
+    },
+    "Sleep-date guidance explains which night each export covers." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Die Hinweise zum Schlafdatum erklären, welche Nacht jeder Export abdeckt."}},
+        "es": {"stringUnit":{"state":"translated","value":"Las indicaciones sobre las fechas de sueño explican qué noche abarca cada exportación."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Les indications sur les dates de sommeil précisent la nuit couverte par chaque export."}},
+        "it": {"stringUnit":{"state":"translated","value":"Le indicazioni sulle date del sonno spiegano a quale notte si riferisce ogni esportazione."}},
+        "ja": {"stringUnit":{"state":"translated","value":"睡眠の日付に関する案内で、各エクスポートがどの夜を対象とするかを確認できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"수면 날짜 안내에서 각 내보내기가 어느 날 밤의 수면을 포함하는지 설명합니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"De uitleg over slaapdatums geeft aan op welke nacht elke export betrekking heeft."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"As orientações sobre as datas de sono explicam a qual noite cada exportação se refere."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"睡眠日期说明会解释每次导出涵盖哪一晚的睡眠。"}}
+      }
     }
   },
   "version" : "1.0"
