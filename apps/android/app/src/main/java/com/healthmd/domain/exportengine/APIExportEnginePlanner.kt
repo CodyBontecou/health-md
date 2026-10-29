@@ -68,7 +68,7 @@ class FrozenAPIExportRequest private constructor(
     val requestedDates: List<LocalDate> =
         Collections.unmodifiableList(requestedDates.toList())
     val records: List<HealthData> = Collections.unmodifiableList(if (profile == AndroidExportProfile.android_sleep_v6)
-            records.map { it.filtered(this.settings.metricSelection).immutableWakeDateSource() } else records.toList())
+            records.map { it.filtered(this.settings.metricSelection, captureContext).immutableWakeDateSource() } else records.toList())
     val failedDateDetails: List<FailedDateDetail> =
         Collections.unmodifiableList(failedDateDetails.map { it.copy() })
     val dateRangeStart: LocalDate = this.requestedDates.first()

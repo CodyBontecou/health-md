@@ -139,7 +139,7 @@ class DirectGeneratedFilesProducer private constructor(
                 currentCoroutineContext().ensureActive()
                 val data = (byDate[date] ?: HealthData(date))
                     .filtered(effectiveSelection)
-                    .filtered(capturedSettings.metricSelection)
+                    .filtered(capturedSettings.metricSelection, captureContext)
                 if (data.hasAnyData) {
                     (plannedAggregateFiles(data, capturedSettings) +
                         dailyNote(data, capturedSettings) +

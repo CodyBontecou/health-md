@@ -562,6 +562,60 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
+    fun successorApiAndDirectPreserveSelectedSleepingStageThroughProductionPlanners() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 11, 1)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z"); val end = Instant.parse("2026-11-01T06:30:00.987654321Z")
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, context.zoneId.rules.getOffset(value))
+        val stage = com.healthmd.domain.model.SleepStageEntry(start.atZone(context.zoneId).toLocalDateTime(), end.atZone(context.zoneId).toLocalDateTime(),
+            "sleeping", exact(start), exact(end), com.healthmd.domain.model.ExactSourceIdentity(nativeId = "api-sleeping-stage"))
+        val stages = mutableListOf(stage)
+        val parent = com.healthmd.domain.model.SleepSessionEntry(stage.startTime, stage.endTime, exactStartTime = exact(start), exactEndTime = exact(end),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "api-sleeping-parent"))
+        val selection = MetricSelectionState(enabledMetrics = setOf("sleep_total"))
+        val data = HealthData(date, sleep = SleepData(totalDuration = 60.minutes, stages = stages, sessions = listOf(parent),
+            sessionStart = stage.startTime, sessionEnd = stage.endTime))
+        val settings = ExportSettings(includeGranularData = true, metricSelection = selection,
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val request = FrozenAPIExportRequest.capture(listOf(date), listOf(data), emptyList(), settings,
+            ExportEngineMode.rust, APIExportIds("sleeping-api", "sleeping-api-session"), context.zoneId.id, end.plusSeconds(1))
+        assertThat(request.records.single().sleep.stages).containsExactly(stage)
+        stages.clear()
+        val result = HealthMdRustAPIExportPlanner().plan(request)
+        validateAPIPlan(result.plan, request)
+        val native = Json.parseToJsonElement(com.healthmd.data.export.JsonExporter().export(request.records.single(),
+            request.settings.formatCustomization, true, captureContext = context)).jsonObject.getValue("sleep").jsonObject
+        val record = Json.parseToJsonElement(result.plan.items.single().content.decodeToString()).jsonObject.getValue("records").jsonArray.single().jsonObject
+        val sleep = record.getValue("sleep").jsonObject
+        assertThat(sleep.getValue("sleepStages")).isEqualTo(native.getValue("sleepStages"))
+        assertThat(sleep.getValue("sleepSessions")).isEqualTo(native.getValue("sleepSessions"))
+        assertThat(sleep.getValue("bedtimeISO")).isEqualTo(native.getValue("bedtimeISO"))
+        assertThat(sleep.getValue("wakeTimeISO")).isEqualTo(native.getValue("wakeTimeISO"))
+        assertThat(record.getValue("summary").jsonObject.getValue("sleep").jsonObject["sleep_light_hours"]).isNull()
+        val repository = mockk<com.healthmd.domain.repository.HealthRepository>()
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } coAnswers {
+            assertThat(arg<ZoneId>(3)).isEqualTo(context.zoneId)
+            assertThat(arg<com.healthmd.domain.model.SleepDayAttributionOverride>(5)).isEqualTo(context.explicitSleepDayAttributionOverride)
+            request.records
+        }
+        val producer = com.healthmd.direct.DirectGeneratedFilesProducer(repository,
+            com.healthmd.data.export.MarkdownExporter(), com.healthmd.data.export.JsonExporter(),
+            com.healthmd.data.export.CsvExporter(), com.healthmd.data.export.ObsidianBasesExporter())
+        val directory = java.nio.file.Files.createTempDirectory("morning-sleeping-direct-").toFile()
+        try {
+            val directSettings = settings.copy(exportFormats = ExportFormat.entries.toSet(),
+                executionEnginePin = result.pin, executionEngineAuthorityIsFrozen = true)
+            val files = producer.produce(directory, listOf(date), directSettings, context)
+            assertThat(files).hasSize(4)
+            for (file in files) assertThat(file.file.readText()).contains("api-sleeping-stage")
+            val directSleep = Json.parseToJsonElement(files.single { it.format == com.healthmd.direct.protocol.ArtifactFormat.JSON }.file.readText())
+                .jsonObject.getValue("sleep").jsonObject
+            assertThat(directSleep.getValue("sleepStages")).isEqualTo(native.getValue("sleepStages"))
+            assertThat(directSleep.getValue("sleepSessions")).isEqualTo(native.getValue("sleepSessions"))
+        } finally { directory.deleteRecursively() }
+    }
+
+    @Test
     fun successorApiUsesProductionNativeRecordsAndKeepsFailedBatchAuthority() = runTest {
         val zone = ZoneId.of("America/New_York")
         val context = AndroidCaptureContext(zone, SleepDayAttribution.MORNING_ENDS)
