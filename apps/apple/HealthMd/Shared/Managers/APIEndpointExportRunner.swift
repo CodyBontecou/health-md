@@ -118,7 +118,7 @@ struct APIEndpointExportRunner {
             }
             failure = outcome.failure
             failureData = try outcome.failure.map {
-                try APIExportClient.makeJSONData(from: $0)
+                return try APIExportClient.makeJSONData(from: $0)
             }
             // Keep compatibility callbacks and result counts on the complete
             // collected record set. Only the immutable wire fragments apply
@@ -126,7 +126,14 @@ struct APIEndpointExportRunner {
             // filtering behavior.
             externalRecords = outcome.externalDailyRecords
             externalRecordData = try externalRecords.filter(\.shouldExport).map {
-                try APIExportClient.makeJSONData(from: $0)
+                if let capture = settings.executionSleepCaptureContext, capture.sleepDayAttribution == .morningEnds {
+                    guard outcome.record != nil, $0.schema == ExternalDailyRecord.schema,
+                          $0.schemaVersion == ExternalDailyRecord.schemaVersion, $0.hasValidExportDate,
+                          $0.date == APIExportClient.dayString(from: outcome.sourceDate, timeZone: capture.timeZone) else {
+                        throw EngineError.invalidPreparedPlan
+                    }
+                }
+                return try APIExportClient.makeJSONData(from: $0)
             }
         }
 
@@ -844,12 +851,13 @@ struct APIEndpointExportRunner {
             if pin.isWakeDate, preparedOutcomes.contains(where: {
                 $0.record?.healthKitRecordArchive != nil || $0.record?.partialFailures.isEmpty == false
                     || $0.record?.providers?.isEmpty == false
+                    || !$0.externalRecordData.isEmpty
             }) {
                 guard let wakeContext = captureContext else { throw EngineError.invalidPreparedPlan }
                 let boundedBatches = try materializeBatches(plan: aggregatePlan, outcomes: preparedOutcomes,
                     normalizedDates: normalizedDates, exportedAt: identity.capturedAt,
                     connectedAppsEnabled: connectedAppsEnabled, calendarTimeZone: calendarTimeZone,
-                    requestID: identity.requestID)
+                    requestID: identity.requestID, includesNativeExternalRecords: false)
                 let composed = try await composeWakeDateSources(boundedBatches: boundedBatches,
                     outcomes: preparedOutcomes, identity: identity, pin: pin,
                     connectedAppsEnabled: connectedAppsEnabled, calendarTimeZone: calendarTimeZone,
@@ -1089,7 +1097,9 @@ struct APIEndpointExportRunner {
                 errorDetails: object["errorDetails"] as? String ?? failure.errorDetails
             )
         }
-        let externalOptions = outcomes.flatMap { outcome in
+        // Successor source payloads remain native and are composed into the final
+        // file-backed envelope after aggregate attestation, independently of size.
+        let externalOptions: [HealthMdRenderInputAdapter.APIExternalRecordOptions] = pin.isWakeDate ? [] : outcomes.flatMap { outcome in
             let ownerDate = APIExportClient.dayString(
                 from: outcome.sourceDate,
                 timeZone: calendarTimeZone
@@ -1222,7 +1232,8 @@ struct APIEndpointExportRunner {
         exportedAt: Date,
         connectedAppsEnabled: Bool,
         calendarTimeZone: TimeZone,
-        requestID: String
+        requestID: String,
+        includesNativeExternalRecords: Bool = true
     ) throws -> [PreparedBatch] {
         guard outcomes.count == normalizedDates.count else {
             throw EngineError.invalidPreparedPlan
@@ -1274,8 +1285,10 @@ struct APIEndpointExportRunner {
                 throw EngineError.invalidPreparedPlan
             }
             if connectedAppsEnabled {
-                let wireExternalCount = slice.reduce(0) { $0 + $1.externalRecordData.count }
-                guard object["external_record_count"] as? Int == wireExternalCount else {
+                let wireExternalCount = includesNativeExternalRecords
+                    ? slice.reduce(0) { $0 + $1.externalRecordData.count } : 0
+                guard object["external_record_count"] as? Int == wireExternalCount,
+                      includesNativeExternalRecords || (object["external_records"] as? [Any])?.isEmpty == true else {
                     throw EngineError.invalidPreparedPlan
                 }
             }

@@ -9,6 +9,94 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testNativeConnectedSourcesRejectWrongDateOrUnknownSchemaBeforePreparing() async throws {
+        let zone = TimeZone.gmt
+        let date = try XCTUnwrap(days(count: 1).first)
+        for invalid in ["owner", "date", "schema", "version"] {
+            var external = ExternalDailyRecord(provider: .oura,
+                date: APIExportClient.dayString(from: date, timeZone: zone), payloads: [
+                    ExternalProviderPayload(name: "synthetic", endpoint: "https://synthetic.invalid/source", statusCode: 200,
+                        data: .object(["records": .array([.object(["id": .number(1)])])]))
+                ])
+            switch invalid {
+            case "owner": external.date = "1900-01-01"
+            case "date": external.date = "2026-02-30"
+            case "schema": external.schema = "unknown.source"
+            default: external.schemaVersion = 999
+            }
+            let settings = makeSettings()
+            settings.exportTimeZoneOverride = zone
+            settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+            settings.executionSleepCaptureContextIsFrozen = true
+            settings.metricSelection.enabledMetrics = ["steps"]
+            do {
+                _ = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+                    destination: destination, calendarTimeZone: zone, connectedAppsEnabled: true,
+                    fetchHealthData: { date, _, _ in HealthData(date: date,
+                        timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                        activity: ActivityData(steps: 42)) }, fetchExternalDailyRecords: { _ in [external] })
+                XCTFail("Unbound native source must reject: \(invalid)")
+            } catch {
+                XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .invalidPreparedPlan)
+            }
+        }
+    }
+
+    func testLargeConnectedProviderSourceFactsReachFinalBodyWithoutEnteringCoreConfiguration() async throws {
+        let zone = TimeZone.gmt
+        let date = try XCTUnwrap(days(count: 1).first)
+        let padding = String(repeating: "synthetic-source-", count: 600_000)
+        for provider in [ExternalIntegrationProvider.whoop, .oura] {
+            let external = ExternalDailyRecord(provider: provider,
+                date: APIExportClient.dayString(from: date, timeZone: zone), payloads: [
+                    ExternalProviderPayload(name: "cycles", endpoint: "https://synthetic.invalid/cycles", statusCode: 200,
+                        data: .object(["records": .array([.object(["id": .string("synthetic-cycle"),
+                            "start": .string("2026-07-01T00:00:00Z"),
+                            "score": .object(["strain": .number(12.875.nextUp)])])]),
+                            "synthetic_source": .string(padding)]))
+                ])
+            let settings = makeSettings()
+            settings.exportTimeZoneOverride = zone
+            settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+            settings.executionSleepCaptureContextIsFrozen = true
+            settings.detailPolicy = .summary
+            settings.metricSelection.enabledMetrics = ["steps"]
+            let events = APIEngineEventRecorder()
+            let resolution = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: true,
+                fetchHealthData: { date, _, _ in HealthData(date: date,
+                    timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                    activity: ActivityData(steps: 42)) }, fetchExternalDailyRecords: { _ in [external] },
+                coreExecutor: APIRecordingCoreExecutor(events: events, requireAggregateOnlyConfiguration: true))
+            guard case .prepared(let operation) = resolution else { return XCTFail("Expected native connected source composition") }
+            XCTAssertEqual(operation.batches.count, 1)
+            let batch = try XCTUnwrap(operation.batches.first)
+            XCTAssertGreaterThan(batch.bodyByteCount, UInt64(APIEndpointExportRunner.defaultMaxBatchPayloadBytes))
+            let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+            XCTAssertEqual(root["external_record_count"] as? Int, 1)
+            let sidecar = try XCTUnwrap((root["external_records"] as? [[String: Any]])?.first)
+            let payload = try XCTUnwrap((sidecar["payloads"] as? [[String: Any]])?.first)
+            let source = try XCTUnwrap(payload["data"] as? [String: Any])
+            XCTAssertEqual(source["synthetic_source"] as? String, padding)
+            let cycle = try XCTUnwrap((source["records"] as? [[String: Any]])?.first)
+            XCTAssertEqual(((cycle["score"] as? [String: Any])?["strain"] as? Double)?.bitPattern, 12.875.nextUp.bitPattern)
+            let record = try XCTUnwrap((root["records"] as? [[String: Any]])?.first)
+            XCTAssertEqual(record["providers"] != nil, provider == .whoop)
+            try batch.bodyArtifact.validateIntegrity()
+            XCTAssertEqual(operation.selectedPlan.artifacts.first?.sha256, batch.bodyArtifact.descriptor.sha256)
+            var uploads = 0
+            let result = await APIEndpointExportRunner.commitPreparedOperation(operation) { prepared, _ in
+                uploads += 1
+                XCTAssertEqual(prepared.bodyArtifact.descriptor, batch.bodyArtifact.descriptor)
+                XCTAssertEqual(prepared.externalRecordPayloadCount, 1)
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }
+            XCTAssertEqual(uploads, 1)
+            XCTAssertEqual(result.successCount, 1)
+            XCTAssertTrue(result.didCompleteAllRequestedDates)
+        }
+    }
+
     func testMorningConnectedCaptureKeepsTypedPartialProviderAndIndependentSidecar() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let date = try XCTUnwrap(days(count: 1).first)
@@ -1116,6 +1204,7 @@ private actor APIEngineEventRecorder {
 
 nonisolated private struct APIRecordingCoreExecutor: AppleLooseDailyCoreExecuting, Sendable {
     let events: APIEngineEventRecorder
+    var requireAggregateOnlyConfiguration = false
     private let base = SystemAppleLooseDailyCoreExecutor()
 
     func loadContext() async throws -> AppleLooseDailyCoreContext {
@@ -1145,6 +1234,13 @@ nonisolated private struct APIRecordingCoreExecutor: AppleLooseDailyCoreExecutin
         semanticResult: Data,
         batches: [Data]
     ) async throws -> CoreArtifactPlan {
+        if requireAggregateOnlyConfiguration {
+            XCTAssertLessThan(configuration.count, 64 * 1024)
+            XCTAssertTrue(batches.allSatisfy { $0.count < 64 * 1024 })
+            let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: configuration) as? [String: Any])
+            let api = try XCTUnwrap(root["api"] as? [String: Any])
+            XCTAssertEqual((api["external_records"] as? [Any])?.count, 0)
+        }
         if let directory = ProcessInfo.processInfo.environment["HEALTHMD_API_V11_FIXTURE_DIR"],
            let config = try JSONSerialization.jsonObject(with: configuration) as? [String: Any],
            config["profile"] as? String == AppleExportEnginePin.wakeDateProfileID {
