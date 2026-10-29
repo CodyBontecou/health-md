@@ -564,6 +564,12 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 requestedRange: requestedRange,
                 captureContext: wakeDateContext
             )
+            if wakeDateContext != nil, preparedExports.contains(where: { !$0.filteredData.vitals.bloodPressureSamples.isEmpty }),
+               !["blood_pressure_systolic", "blood_pressure_diastolic"].allSatisfy({ frozenSettings.formatCustomization.frontmatterConfig.isFieldEnabled($0) }) {
+                // A paired source cannot bypass the same disabled-output authority
+                // previously enforced by the bounded native-detail adapter.
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
             let semanticBatches = try HealthMdSemanticInputAdapter.boundedBatches(
                 sessionID: identity.sessionID,
                 healthData: orderedRecords.map { record in
@@ -571,6 +577,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                     if wakeDateContext != nil {
                         aggregate.providers = nil
                         aggregate = AppleWakeDateQuantityProjection.aggregateRecord(from: aggregate)
+                        aggregate = AppleWakeDateCorrelationProjection.aggregateRecord(from: aggregate)
                     }
                     return aggregate
                 },
@@ -638,6 +645,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                         if wakeDateContext != nil {
                             aggregate.providers = nil
                             aggregate = AppleWakeDateQuantityProjection.aggregateRecord(from: aggregate)
+                            aggregate = AppleWakeDateCorrelationProjection.aggregateRecord(from: aggregate)
                             aggregate = AppleWakeDateSleepStageProjection.aggregatePresentation(from: aggregate)
                         }
                         return aggregate
@@ -715,6 +723,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                !$0.snapshot.partialFailures.isEmpty || $0.snapshot.providers?.isEmpty == false
                    || AppleWakeDateQuantityProjection(data: $0.filteredData).hasRecords
                    || !$0.filteredData.sleep.stages.isEmpty
+                   || !$0.filteredData.vitals.bloodPressureSamples.isEmpty
            }) {
             rustPlan = try await AppleWakeDateArchiveComposer.compose(plan: rustPlan, pin: pin,
                 prepared: preparedExports, settings: frozenSettings,

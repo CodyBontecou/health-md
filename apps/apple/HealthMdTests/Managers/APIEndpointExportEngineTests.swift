@@ -9,6 +9,57 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testDenseBloodPressurePairsStayOutsideAPIHandoffWithoutFabricatingSummaries() async throws {
+        let zone = TimeZone.gmt
+        let date = try XCTUnwrap(days(count: 1).first)
+        let samples = (0..<2_000).map { index in BloodPressureSample(
+            correlationUUID: UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", index)),
+            systolic: 120.125.nextUp, diastolic: 80.875.nextDown,
+            startDate: date.addingTimeInterval(Double(index) + 0.125), endDate: date.addingTimeInterval(Double(index) + (index == 0 ? 0.125 : 0.875)),
+            sourceRevision: HealthKitSourceRevision(name: "Synthetic cuff", bundleIdentifier: "example.synthetic.bp"),
+            device: HealthKitDeviceProvenance(model: "Synthetic"), metadata: ["synthetic": "api-pair-\(index)"]) }
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let day = HealthData(date: date, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 0), vitals: VitalsData(bloodPressureSamples: samples))
+        let expected = try XCTUnwrap((try JSONSerialization.jsonObject(with: day.toJSONDataThrowing(captureContext: context)) as? [String: Any])?["vitals"] as? [String: Any])
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = context
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.detailPolicy = .detailedTimeSeries
+        settings.metricSelection.enabledMetrics = ["blood_pressure_systolic", "blood_pressure_diastolic"]
+        let resolution = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day },
+            coreExecutor: APIRecordingCoreExecutor(events: APIEngineEventRecorder(), requireAggregateOnlyConfiguration: true))
+        guard case .prepared(let operation) = resolution else { return XCTFail("Expected native paired-record composition") }
+        let batch = try XCTUnwrap(operation.batches.first)
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+        let record = try XCTUnwrap((root["records"] as? [[String: Any]])?.first)
+        let vitals = try XCTUnwrap(record["vitals"] as? [String: Any])
+        XCTAssertEqual(vitals["bloodPressureSamples"] as? NSArray, expected["bloodPressureSamples"] as? NSArray)
+        XCTAssertEqual((vitals["bloodPressureSamples"] as? NSArray)?.count, 2_000)
+        XCTAssertNil(vitals["bloodPressureSystolic"])
+        XCTAssertNil(vitals["bloodPressureDiastolic"])
+        try batch.bodyArtifact.validateIntegrity()
+        let index = try XCTUnwrap(settings.formatCustomization.frontmatterConfig.fields.firstIndex { $0.originalKey == "blood_pressure_systolic" })
+        settings.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+        do {
+            _ = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day })
+            XCTFail("API composition must not bypass disabled paired-output authority")
+        } catch { XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed) }
+        settings.metricSelection.enabledMetrics = ["steps"]
+        let filtered = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day })
+        guard case .prepared(let filteredOperation) = filtered else { return XCTFail("Unselected paired source must not block API steps") }
+        XCTAssertEqual(filteredOperation.batches.count, 1)
+        for batch in filteredOperation.batches {
+            XCTAssertFalse(String(decoding: batch.body, as: UTF8.self).contains("bloodPressureSamples"))
+        }
+
+
+    }
+
     func testDenseSleepStagesRemainOutsideAPIRenderInputAndKeepOriginalSessionClocks() async throws {
         let zone = TimeZone.gmt
         let date = try XCTUnwrap(days(count: 1).first)

@@ -45,6 +45,108 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         XCTAssertEqual((stage["metadata"] as? [String: String])?["synthetic"], "zero-source")
     }
 
+    func testNativeBloodPressureRejectsNonfiniteValuesAndInvalidSourceClocks() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        for sample in [
+            BloodPressureSample(systolic: .nan, diastolic: 80, startDate: owner, endDate: owner),
+            BloodPressureSample(systolic: 120, diastolic: .infinity, startDate: owner, endDate: owner),
+            BloodPressureSample(systolic: 120, diastolic: 80, startDate: owner, endDate: owner.addingTimeInterval(-1)),
+            BloodPressureSample(systolic: 120, diastolic: 80, startDate: Date(timeIntervalSinceReferenceDate: .infinity), endDate: owner)
+        ] {
+            let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+                vitals: VitalsData(bloodPressureSamples: [sample]))
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                selectionIDs: ["blood_pressure_systolic", "blood_pressure_diastolic"])
+            snapshot.detailPolicy = .detailedTimeSeries
+            do {
+                _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot,
+                    surface: .localVaultWithoutSideEffects)
+                XCTFail("Invalid paired source measurements must reject the plan")
+            } catch { XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed) }
+        }
+    }
+
+    func testNativeBloodPressureCannotBypassDisabledOutputAuthority() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 0), vitals: VitalsData(bloodPressureSamples: [BloodPressureSample(systolic: 120, diastolic: 80, startDate: owner, endDate: owner)]))
+        for disabled in ["blood_pressure_systolic", "blood_pressure_diastolic"] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                selectionIDs: ["blood_pressure_systolic", "blood_pressure_diastolic"])
+            snapshot.detailPolicy = .detailedTimeSeries
+            let index = try XCTUnwrap(snapshot.formatCustomization.frontmatterConfig.fields.firstIndex { $0.originalKey == disabled })
+            snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+            do {
+                _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot,
+                    surface: .localVaultWithoutSideEffects)
+                XCTFail("Native pairing cannot export an explicitly disabled output")
+            } catch { XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed) }
+            snapshot.metricSelection.enabledMetricIDs = ["steps"]
+            guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Unselected pairs must not block selected steps") }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            for artifact in operation.artifacts {
+                let text = String(decoding: try artifact.artifact.content.materializedData(), as: UTF8.self)
+                XCTAssertFalse(text.contains("bloodPressureSamples"))
+                XCTAssertFalse(text.contains("Blood Pressure Correlation"))
+            }
+
+        }
+    }
+
+    func testDenseBloodPressureCorrelationsKeepPairingAndPrecisionAcrossAllFormats() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let source = HealthKitSourceRevision(name: "Synthetic, \"cuff\"", bundleIdentifier: "example.synthetic.bp", version: "1", productType: "cuff",
+            operatingSystemVersion: HealthKitOperatingSystemVersion(majorVersion: 1, minorVersion: 2, patchVersion: 3))
+        let device = HealthKitDeviceProvenance(name: "Synthetic cuff", manufacturer: "Synthetic", model: "test", hardwareVersion: "1", firmwareVersion: "2", softwareVersion: "3", localIdentifier: "local", udiDeviceIdentifier: "udi")
+        let samples = (0..<2_000).map { index in BloodPressureSample(
+            correlationUUID: UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", index)),
+            systolic: 120.125.nextUp, diastolic: 80.875.nextDown,
+            startDate: owner.addingTimeInterval(Double(index) + 0.125), endDate: owner.addingTimeInterval(Double(index) + (index == 0 ? 0.125 : 0.875)),
+            sourceRevision: source, device: device, metadata: ["synthetic": "paired-\(index) | ` <source> &"]) }
+        var day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            vitals: VitalsData(bloodPressureSamples: samples))
+        day.heart.heartRateSamples = [TimeSample(timestamp: owner.addingTimeInterval(0.125), value: 72.125.nextUp)]
+        let expected = try XCTUnwrap((try JSONSerialization.jsonObject(with: day.toJSONDataThrowing(captureContext: context)) as? [String: Any])?["vitals"] as? [String: Any])
+        for metadata in [true, false] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                selectionIDs: ["blood_pressure_systolic", "blood_pressure_diastolic", "heart_rate_avg"])
+            snapshot.detailPolicy = .detailedTimeSeries
+            snapshot.includeMetadata = metadata
+            guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Dense paired correlations must remain exportable") }
+            for artifact in operation.artifacts {
+                let data = try artifact.artifact.content.materializedData()
+                let text = String(decoding: data, as: UTF8.self)
+                XCTAssertEqual(artifact.artifact.sha256, NativeExportArtifact.sha256(of: data))
+                switch artifact.format {
+                case .json:
+                    let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+                    let vitals = try XCTUnwrap(root["vitals"] as? [String: Any])
+                    XCTAssertEqual(vitals["bloodPressureSamples"] as? NSArray, expected["bloodPressureSamples"] as? NSArray)
+                    XCTAssertNil(vitals["bloodPressureSystolic"])
+                case .csv:
+                    XCTAssertEqual(text.components(separatedBy: "\n").filter { $0.contains(",Native Detail,Blood Pressure Correlation,") }.count, 2_000)
+                case .markdown:
+                    XCTAssertTrue(text.contains("| \(120.125.nextUp) | \(80.875.nextDown) | mmHg |"))
+                    XCTAssertEqual(text.components(separatedBy: "\n").filter { $0.hasPrefix("| 2026-") }.count, 2_001)
+                case .obsidianBases:
+                    XCTAssertTrue(text.contains("native_correlation_details:"))
+                    XCTAssertTrue(text.contains("native_quantity_details:"))
+                    XCTAssertEqual(text.components(separatedBy: "\"metric\":\"blood_pressure\"").count - 1, 2_000)
+                }
+                if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                    let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-dense-correlations-\(metadata)").appendingPathComponent(artifact.artifact.relativePath)
+                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try data.write(to: output)
+                }
+            }
+        }
+    }
+
     func testDenseCapturedSleepStagesKeepWholeDSTSessionAcrossAllFormats() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)

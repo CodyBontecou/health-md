@@ -16,6 +16,7 @@ nonisolated enum AppleWakeDateArchiveComposer {
         let includeMetadata: Bool
         let quantities: AppleWakeDateQuantityProjection
         let sleepStages: AppleWakeDateSleepStageProjection
+        let correlations: AppleWakeDateCorrelationProjection
     }
 
     @MainActor
@@ -40,6 +41,7 @@ nonisolated enum AppleWakeDateArchiveComposer {
                 headerPrefix: String(repeating: "#", count: settings.formatCustomization.markdownTemplate.sectionHeaderLevel))
             let quantities = AppleWakeDateQuantityProjection(data: day.filteredData)
             let sleepStages = AppleWakeDateSleepStageProjection(data: day.filteredData)
+            let correlations = AppleWakeDateCorrelationProjection(data: day.filteredData)
             for target in ExportPathPlanner.aggregateOutputTargets(vaultURL: root,
                 healthSubfolder: healthSubfolder, settings: settings, date: day.filteredData.date) {
                 guard sources.updateValue(Source(ownerDate: owner, format: target.format,
@@ -50,7 +52,7 @@ nonisolated enum AppleWakeDateArchiveComposer {
                     headerPrefix: String(repeating: "#", count: settings.formatCustomization.markdownTemplate.sectionHeaderLevel),
                     providers: day.snapshot.providers,
                     providerMarkdown: providerMarkdown,
-                    includeMetadata: settings.includeMetadata, quantities: quantities, sleepStages: sleepStages), forKey: target.relativePath) == nil else {
+                    includeMetadata: settings.includeMetadata, quantities: quantities, sleepStages: sleepStages, correlations: correlations), forKey: target.relativePath) == nil else {
                     throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                 }
             }
@@ -59,7 +61,11 @@ nonisolated enum AppleWakeDateArchiveComposer {
         let worker = Task.detached(priority: .utility) {
             try composeFrozen(plan: plan, pin: pin, sources: frozenSources)
         }
-        return try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
+        do {
+            return try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
+        } catch is AppleWakeDateCorrelationProjection.ProjectionError {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
     }
 
     private static func composeFrozen(plan: NativeExportArtifactPlan, pin: AppleExportEnginePin,
@@ -73,9 +79,10 @@ nonisolated enum AppleWakeDateArchiveComposer {
             let hasProviders = source.providers?.isEmpty == false
             let hasQuantities = source.quantities.hasRecords
             let hasSleepStages = source.sleepStages.hasRecords
-            if source.format == .obsidianBases && source.partialFailures.isEmpty && !hasProviders && !hasQuantities && !hasSleepStages { return artifact }
-            if source.format == .json, case .none = source.archive, source.partialFailures.isEmpty && !hasProviders && !hasQuantities && !hasSleepStages { return artifact }
-            if source.format == .markdown && source.markdownDiagnostics.isEmpty && source.partialFailures.isEmpty && !hasProviders && !hasQuantities && !hasSleepStages { return artifact }
+            let hasCorrelations = source.correlations.hasRecords
+            if source.format == .obsidianBases && source.partialFailures.isEmpty && !hasProviders && !hasQuantities && !hasSleepStages && !hasCorrelations { return artifact }
+            if source.format == .json, case .none = source.archive, source.partialFailures.isEmpty && !hasProviders && !hasQuantities && !hasSleepStages && !hasCorrelations { return artifact }
+            if source.format == .markdown && source.markdownDiagnostics.isEmpty && source.partialFailures.isEmpty && !hasProviders && !hasQuantities && !hasSleepStages && !hasCorrelations { return artifact }
             var aggregate = try artifact.content.materializedData()
             if let providers = source.providers, hasProviders {
                 _ = try AppleWakeDateProviderProjection.lazyJSONObject(providers)
@@ -103,6 +110,7 @@ nonisolated enum AppleWakeDateArchiveComposer {
                     }
                     try source.quantities.addJSON(to: &object)
                     try source.sleepStages.addJSON(to: &object)
+                    try source.correlations.addJSON(to: &object)
                     try HealthKitRecordArchiveSerializer.writeDailyJSONObject(object, archive: source.archive,
                         to: sink, outputFormatting: [.prettyPrinted, .sortedKeys])
                 case .csv:
@@ -123,17 +131,20 @@ nonisolated enum AppleWakeDateArchiveComposer {
                     if let providers = source.providers { try WHOOPCSVProjection.write(providers, ownerDate: source.ownerDate, to: sink) }
                     try HealthKitArchiveCSVProjection.writeQuantities(source.quantities, ownerDate: source.ownerDate, to: sink)
                     try HealthKitArchiveCSVProjection.writeSleepStages(source.sleepStages, ownerDate: source.ownerDate, to: sink)
+                    try HealthKitArchiveCSVProjection.writeCorrelations(source.correlations, ownerDate: source.ownerDate, to: sink)
                 case .markdown, .obsidianBases:
-                    if source.format == .obsidianBases && (hasQuantities || hasSleepStages) {
-                        let keys = (hasQuantities ? ["native_quantity_details"] : []) + (hasSleepStages ? ["sleep_stage_details"] : [])
+                    if source.format == .obsidianBases && (hasQuantities || hasSleepStages || hasCorrelations) {
+                        let keys = (hasQuantities ? ["native_quantity_details"] : []) + (hasSleepStages ? ["sleep_stage_details"] : []) + (hasCorrelations ? ["native_correlation_details"] : [])
                         try AppleWakeDateSourceFrontmatter.write(aggregate: aggregate, keys: keys, to: sink) { output in
                             try source.quantities.writeFrontmatterBlock(to: output)
                             try source.sleepStages.writeFrontmatterBlock(to: output)
+                            try source.correlations.writeFrontmatterBlock(to: output)
                         }
                     } else { try sink.write(aggregate) }
                     if source.format == .markdown { try sink.write(Data(source.markdownDiagnostics.utf8)) }
                     if source.format == .markdown { try source.quantities.writeMarkdown(headerPrefix: source.headerPrefix, to: sink) }
                     if source.format == .markdown { try source.sleepStages.writeMarkdown(headerPrefix: source.headerPrefix, to: sink) }
+                    if source.format == .markdown { try source.correlations.writeMarkdown(headerPrefix: source.headerPrefix, to: sink) }
                     try ExportDiagnosticSerializer.writeMarkdownSection(source.partialFailures,
                         headerPrefix: source.headerPrefix, to: sink)
                     if let providers = source.providers, hasProviders {

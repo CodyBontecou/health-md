@@ -854,6 +854,7 @@ struct APIEndpointExportRunner {
                     || !$0.externalRecordData.isEmpty
                     || $0.record.map { AppleWakeDateQuantityProjection(data: $0).hasRecords } == true
                     || $0.record?.sleep.stages.isEmpty == false
+                    || $0.record?.vitals.bloodPressureSamples.isEmpty == false
             }) {
                 guard let wakeContext = captureContext else { throw EngineError.invalidPreparedPlan }
                 let boundedBatches = try materializeBatches(plan: aggregatePlan, outcomes: preparedOutcomes,
@@ -1048,11 +1049,16 @@ struct APIEndpointExportRunner {
         coreExecutor: any AppleLooseDailyCoreExecuting
     ) async throws -> NativeExportArtifactPlan {
         let records = outcomes.compactMap(\.record)
+        if pin.isWakeDate, records.contains(where: { !$0.vitals.bloodPressureSamples.isEmpty }),
+           !["blood_pressure_systolic", "blood_pressure_diastolic"].allSatisfy({ settings.formatCustomization.frontmatterConfig.isFieldEnabled($0) }) {
+            throw EngineError.invalidPreparedPlan
+        }
         let aggregateRecords = records.map { record in
             var aggregate = record
             if pin.isWakeDate {
                 aggregate.providers = nil
                 aggregate = AppleWakeDateQuantityProjection.aggregateRecord(from: aggregate)
+                aggregate = AppleWakeDateCorrelationProjection.aggregateRecord(from: aggregate)
             }
             return aggregate
         }
@@ -1157,6 +1163,7 @@ struct APIEndpointExportRunner {
                 aggregate.partialFailures = []
                 aggregate.providers = nil
                 aggregate = AppleWakeDateQuantityProjection.aggregateRecord(from: aggregate)
+                aggregate = AppleWakeDateCorrelationProjection.aggregateRecord(from: aggregate)
                 aggregate = AppleWakeDateSleepStageProjection.aggregatePresentation(from: aggregate)
             }
             return (APIExportClient.dayString(from: record.date, timeZone: calendarTimeZone), aggregate)
@@ -1216,7 +1223,7 @@ struct APIEndpointExportRunner {
             return AppleWakeDateAPIRecordComposer.Source(ownerDate: owner, aggregate: aggregate,
                 archive: record.healthKitRecordArchive, partialFailures: record.partialFailures,
                 captureStatus: HealthKitRecordArchiveSerializer.captureStatusString(record.healthKitRecordCaptureStatus),
-                providers: record.providers, quantities: AppleWakeDateQuantityProjection(data: record), sleepStages: AppleWakeDateSleepStageProjection(data: record))
+                providers: record.providers, quantities: AppleWakeDateQuantityProjection(data: record), sleepStages: AppleWakeDateSleepStageProjection(data: record), correlations: AppleWakeDateCorrelationProjection(data: record))
         }
         guard sources.count == aggregates.count else { throw EngineError.invalidPreparedPlan }
         let files = try await AppleWakeDateAPIRecordComposer.compose(sources: sources,

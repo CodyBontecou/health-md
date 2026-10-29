@@ -11,6 +11,7 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
         let providers: HealthProviderSections?
         let quantities: AppleWakeDateQuantityProjection
         let sleepStages: AppleWakeDateSleepStageProjection
+        let correlations: AppleWakeDateCorrelationProjection
     }
 
     @MainActor
@@ -44,6 +45,7 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
                 root["raw_capture_status"] = source.captureStatus
                 try source.quantities.addJSON(to: &root)
                 try source.sleepStages.addJSON(to: &root)
+                try source.correlations.addJSON(to: &root)
                 if let providers = source.providers, !providers.isEmpty {
                     root["providers"] = try AppleWakeDateProviderProjection.lazyJSONObject(providers)
                 }
@@ -58,6 +60,10 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
             }
             return files
         }
-        return try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
+        do {
+            return try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
+        } catch is AppleWakeDateCorrelationProjection.ProjectionError {
+            throw APIEndpointExportRunner.EngineError.invalidPreparedPlan
+        }
     }
 }
