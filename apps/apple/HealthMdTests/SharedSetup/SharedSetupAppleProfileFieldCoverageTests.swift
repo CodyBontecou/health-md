@@ -230,8 +230,8 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
     }
 
     func testSleepCaptureAuditDoesNotGrantPortableAuthority() throws {
-        XCTAssertEqual(Self.sleepCapturePersistenceFields.count, 1)
-        let row = try XCTUnwrap(Self.sleepCapturePersistenceFields.first)
+        XCTAssertEqual(Self.sleepCapturePersistenceFields.count, 2)
+        let row = try XCTUnwrap(Self.sleepCapturePersistenceFields.first { $0.field == "sleepCaptureContext" })
         XCTAssertEqual(row.sourceType, "ExportSettingsSnapshot")
         XCTAssertEqual(row.field, "sleepCaptureContext")
         XCTAssertEqual(row.serializedKey, row.field)
@@ -243,6 +243,12 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
     // A frozen job's sleep authority belongs only to its durable journal.
     // Ordinary profile/wire exclusion is exercised by AppleSleepCaptureContextTests.
     private static let sleepCapturePersistenceFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "ExportSettingsSnapshot", field: "externalProviderCaptureAuthority",
+            fieldKind: .stored, serializedKey: "externalProviderCaptureAuthority",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Private accepted provider connections belong only to local job journals; portable profiles and wire settings cannot carry account authority."
+        ),
         .init(
             sourceType: "ExportSettingsSnapshot", field: "sleepCaptureContext",
             fieldKind: .stored, serializedKey: "sleepCaptureContext",
@@ -388,6 +394,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             appleExportEngineAuthorityIsFrozen: true,
             calendarTimeZoneIdentifier: "America/Los_Angeles"
         )
+        snapshot.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: ["whoop": UUID()])
         snapshot.sleepCaptureContext = AppleSleepCaptureContext(
             timeZone: TimeZone(identifier: "America/Los_Angeles")!, sleepDayAttribution: .nightBegins
         )

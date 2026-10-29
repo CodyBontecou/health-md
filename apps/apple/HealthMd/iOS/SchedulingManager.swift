@@ -1430,16 +1430,19 @@ class SchedulingManager: ObservableObject {
         let calendarTimeZone = calendarTimeZone ?? TimeZone.current
         switch target {
         case .localIPhoneFolder:
-            let hasNativeOnlyCompanionAction = settings.writesExternalProviderSidecars
-                && ConnectedAppsFeature.isEnabled
-                && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
-            return await ExportSettingsSnapshot.forNewAppleOperation(
+            let providers = settings.writesExternalProviderSidecars && ConnectedAppsFeature.isEnabled
+                ? scheduledExternalIntegrations?.forCaptureOperation() : nil
+            let hasNativeOnlyCompanionAction = (providers?.connectedProviderCount ?? 0) > 0
+            var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
                 settings,
                 healthSubfolder: VaultManager().healthSubfolder,
                 calendarTimeZone: calendarTimeZone,
                 surface: .localVaultRangeWithoutSideEffects,
                 hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
             )
+            snapshot.externalProviderCaptureAuthority = providers?.captureAuthority
+                ?? (hasNativeOnlyCompanionAction ? nil : ExternalProviderCaptureAuthority(connections: [:]))
+            return snapshot
         case .apiEndpoint:
             return await ExportSettingsSnapshot.forNewAppleOperation(
                 settings,

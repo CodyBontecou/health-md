@@ -1049,6 +1049,58 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         XCTAssertEqual(manager.connectionStatus?.kind, .error)
     }
 
+    func testSerializedAuthorityRestoresAcceptedGrantAndRejectsReplacement() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "accepted", refreshToken: "refresh"), provider: .whoop)
+        let accepted = try XCTUnwrap(makeManager().forCaptureOperation().captureAuthority)
+        let bytes = try JSONEncoder().encode(accepted)
+        let recovered = try JSONDecoder().decode(ExternalProviderCaptureAuthority.self, from: bytes)
+        let reloaded = ExternalIntegrationTokenStore(keychain: secureStore, userDefaults: defaults)
+        let manager = ExternalIntegrationManager(tokenStore: reloaded, enabledProviders: [.whoop],
+            brokerClient: ExternalOAuthBrokerClient(baseURL: URL(string: "https://broker.example")!, clientToken: "test-client", session: session),
+            apiClient: ExternalProviderAPIClient(session: session))
+        var calls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            calls += 1
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer accepted")
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let restored = try manager.forCaptureOperation(authority: recovered)
+        _ = await restored.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertGreaterThan(calls, 0, "Reloaded accepted connection remains usable")
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "replacement"), provider: .whoop)
+        calls = 0
+        let afterReplacement = try manager.forCaptureOperation(authority: recovered)
+        let records = await afterReplacement.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertEqual(calls, 0)
+        XCTAssertFalse(try XCTUnwrap(records.first).warnings.isEmpty)
+        XCTAssertEqual(afterReplacement.captureAuthority, recovered)
+    }
+
+    func testRecoveredEmptyAndUnavailableAuthorityNeverAdoptsCurrentGrant() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(accessToken: "current"), provider: .whoop)
+        var calls = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            calls += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let manager = makeManager()
+        let empty = try manager.forCaptureOperation(authority: ExternalProviderCaptureAuthority(connections: [:]))
+        XCTAssertEqual(empty.connectedProviderCount, 0)
+        let none = await empty.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertTrue(none.isEmpty)
+        let missing = ExternalProviderCaptureAuthority(connections: ["whoop": nil])
+        let restored = try manager.forCaptureOperation(authority: JSONDecoder().decode(
+            ExternalProviderCaptureAuthority.self, from: JSONEncoder().encode(missing)))
+        XCTAssertEqual(restored.connectedProviderCount, 1)
+        let unavailable = await restored.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        XCTAssertFalse(try XCTUnwrap(unavailable.first).warnings.isEmpty)
+        XCTAssertEqual(calls, 0)
+        XCTAssertThrowsError(try manager.forCaptureOperation(authority:
+            ExternalProviderCaptureAuthority(connections: ["unknown-future-provider": UUID()])))
+        let future = Data(#"{"version":2,"connections":{}}"#.utf8)
+        XCTAssertThrowsError(try JSONDecoder().decode(ExternalProviderCaptureAuthority.self, from: future))
+    }
+
     private func makeManager(
         authenticate: (@MainActor (URL) async throws -> URL)? = nil
     ) -> ExternalIntegrationManager {

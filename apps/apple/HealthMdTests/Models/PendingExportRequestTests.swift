@@ -23,6 +23,40 @@ final class PendingExportRequestTests: XCTestCase {
         super.tearDown()
     }
 
+    @MainActor
+    func testProviderAuthoritySurvivesJournalReloadButNeverEntersWireSettings() throws {
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let authority = ExternalProviderCaptureAuthority(connections: ["whoop": UUID(), "fitbit": nil])
+        var snapshot = ExportSettingsSnapshot.from(settings)
+        snapshot.externalProviderCaptureAuthority = authority
+        snapshot.sleepCaptureContext = AppleSleepCaptureContext(timeZone: TimeZone(identifier: "UTC")!,
+            sleepDayAttribution: .morningEnds)
+        let request = PendingExportRequest(dates: [Date(timeIntervalSince1970: 1_793_505_600)],
+            source: .shortcut, settingsSnapshot: snapshot)
+        let store = PendingExportStore(userDefaults: defaults)
+        try store.upsert(request)
+        let recovered = try XCTUnwrap(PendingExportStore(userDefaults: defaults).loadAll().first)
+        XCTAssertEqual(recovered.settingsSnapshot?.externalProviderCaptureAuthority, authority)
+        let bytes = try JSONEncoder().encode(snapshot)
+        let wire = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        XCTAssertNil(wire["externalProviderCaptureAuthority"])
+        var injected = wire
+        injected["externalProviderCaptureAuthority"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(authority))
+        let untrusted = try JSONDecoder().decode(ExportSettingsSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: injected))
+        XCTAssertNil(untrusted.externalProviderCaptureAuthority, "Transport decoders cannot accept local connection authority")
+
+        var replacement = snapshot
+        replacement.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(connections: ["whoop": UUID()])
+        let changed = PendingExportRequest(id: request.id, dates: request.dates,
+            source: .shortcut, settingsSnapshot: replacement)
+        XCTAssertThrowsError(try store.upsert(changed)) {
+            XCTAssertEqual($0 as? PendingExportStoreError, .incompatibleRequestAuthority)
+        }
+        XCTAssertEqual(try store.loadAll().first?.settingsSnapshot?.externalProviderCaptureAuthority, authority)
+    }
+
     func testUnsupportedSavedAuthorityNeverBecomesAnEmptyStoreOrGetsOverwritten() throws {
         let store = PendingExportStore(userDefaults: defaults)
         let request = PendingExportRequest(dates: [Date(timeIntervalSince1970: 1_793_505_600)], source: .shortcut,

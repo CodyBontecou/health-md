@@ -72,6 +72,22 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         OperationScopedProvider(manager: self, connections: captureConnections())
     }
 
+    var captureAuthority: ExternalProviderCaptureAuthority? {
+        forCaptureOperation().captureAuthority
+    }
+
+    func forCaptureOperation(authority: ExternalProviderCaptureAuthority) throws -> any ExternalIntegrationDailyRecordProviding {
+        var connections: [ExternalIntegrationProvider: UUID?] = [:]
+        for (id, connection) in authority.connections {
+            guard let provider = enabledProviders.first(where: { $0.id == id }) else {
+                throw ExternalProviderCaptureAuthority.RecoveryError.unavailable
+            }
+            // updateValue preserves an explicitly unavailable (nil) accepted connection.
+            connections.updateValue(connection, forKey: provider)
+        }
+        return OperationScopedProvider(manager: self, connections: connections)
+    }
+
     private func captureConnections() -> [ExternalIntegrationProvider: UUID?] {
         Dictionary(uniqueKeysWithValues: tokenStore.connectedProviders.intersection(enabledProviders)
             .filter { isDisconnectingProvider != $0 }
@@ -438,6 +454,13 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
             self.connections = connections
         }
         var connectedProviderCount: Int { connections.count }
+        var captureAuthority: ExternalProviderCaptureAuthority? {
+            ExternalProviderCaptureAuthority(connections: Dictionary(uniqueKeysWithValues:
+                connections.map { ($0.key.id, $0.value) }))
+        }
+        func forCaptureOperation(authority: ExternalProviderCaptureAuthority) throws -> any ExternalIntegrationDailyRecordProviding {
+            try manager.forCaptureOperation(authority: authority)
+        }
         func forCaptureOperation() -> any ExternalIntegrationDailyRecordProviding { self }
         func beginExportAction() { manager.beginExportAction() }
         func endExportAction(succeeded: Bool) { manager.endExportAction(succeeded: succeeded) }

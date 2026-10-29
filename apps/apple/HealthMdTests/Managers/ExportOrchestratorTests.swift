@@ -350,6 +350,36 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testBackgroundRecoveryHonorsFrozenEmptyProviderSelectionAndRejectsUnsupportedBinding() async throws {
+        for unavailable in [false, true] {
+            let date = HealthKitFixtures.referenceDate
+            let store = FakeHealthStore()
+            HealthKitFixtures.populateAllCategories(store, date: date)
+            let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+            let (vault, files) = makeVaultManager(vaultPath: "/tmp/FrozenProviderRecovery-\(unavailable)")
+            let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+            settings.includeDataDictionary = false
+            var snapshot = ExportSettingsSnapshot.from(settings)
+            snapshot.externalProviderCaptureAuthority = ExternalProviderCaptureAuthority(
+                connections: unavailable ? ["unknown-future-provider": UUID()] : [:])
+            let providers = BoundProviderAdapterProbe()
+            let result = await ExportOrchestrator.exportDatesBackground([date], healthKitManager: manager,
+                vaultManager: vault, settings: snapshot.makeAdvancedExportSettings(),
+                frozenSettingsSnapshot: snapshot, externalIntegrations: providers)
+            XCTAssertEqual(providers.bindCount, 0, "Recovery cannot select current connections")
+            XCTAssertEqual(providers.fetchCount, 0)
+            XCTAssertEqual(providers.bound.fetchCount, 0)
+            if unavailable {
+                XCTAssertEqual(result.successCount, 0)
+                XCTAssertTrue(files.files.isEmpty)
+            } else {
+                XCTAssertEqual(result.successCount, 1, "\(result.failedDateDetails)")
+                XCTAssertEqual(files.files.count, 1)
+            }
+        }
+    }
+
+    @MainActor
     func testBackgroundExportUsesFrozenSnapshotAndAsyncEnginePlanner() async {
         let date = HealthKitFixtures.referenceDate
         let store = FakeHealthStore()

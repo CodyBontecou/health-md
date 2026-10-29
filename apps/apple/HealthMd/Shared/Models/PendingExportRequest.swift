@@ -171,6 +171,9 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         if let settingsSnapshot {
             return try settingsSnapshot.recoveredSleepCaptureContext(captureContext: sleepCaptureContext)
         }
+        guard sleepCaptureContext?.sleepDayAttribution != .morningEnds else {
+            throw AppleSleepCaptureContext.AvailabilityError.missingDurableAttribution
+        }
         return try AppleSleepCaptureContext.recovered(sleepCaptureContext)
     }
 
@@ -231,6 +234,7 @@ struct PendingExportStore: PendingExportStoring {
         self.encoder = encoder
         self.encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         self.decoder = decoder
+        self.decoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
     }
 
     func loadAll() throws -> [PendingExportRequest] {
@@ -273,7 +277,8 @@ struct PendingExportStore: PendingExportStoring {
     }
 
     private func sameCaptureAuthority(_ lhs: PendingExportRequest, _ rhs: PendingExportRequest) -> Bool {
-        lhs.sleepCaptureContext == rhs.sleepCaptureContext
+        lhs.settingsSnapshot?.externalProviderCaptureAuthority == rhs.settingsSnapshot?.externalProviderCaptureAuthority
+            && lhs.sleepCaptureContext == rhs.sleepCaptureContext
             && lhs.settingsSnapshot?.sleepCaptureContext == rhs.settingsSnapshot?.sleepCaptureContext
             && lhs.settingsSnapshot?.appleExportEnginePin == rhs.settingsSnapshot?.appleExportEnginePin
             && lhs.originalCalendarTimeZoneIdentifier == rhs.originalCalendarTimeZoneIdentifier

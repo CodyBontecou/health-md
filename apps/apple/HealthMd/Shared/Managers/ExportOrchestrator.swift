@@ -1363,7 +1363,19 @@ struct ExportOrchestrator {
             )
         }
         #endif
-        let externalIntegrations = externalIntegrations?.forCaptureOperation()
+        let acceptedProviders: (any ExternalIntegrationDailyRecordProviding)?
+        if let authority = frozenSettingsSnapshot?.externalProviderCaptureAuthority {
+            do {
+                if authority.connections.isEmpty { acceptedProviders = nil }
+                else if let externalIntegrations {
+                    acceptedProviders = try externalIntegrations.forCaptureOperation(authority: authority)
+                } else { throw ExternalProviderCaptureAuthority.RecoveryError.unavailable }
+            } catch {
+                return unavailableSleepContextResult(dates: dates, settings: settings,
+                    error: ExternalProviderCaptureAuthority.RecoveryError.unavailable)
+            }
+        } else { acceptedProviders = externalIntegrations?.forCaptureOperation() }
+        let externalIntegrations = acceptedProviders
         let wakeDateContext = AppleSleepCaptureContext.pinned.wrappedValue
         let isWakeDate = wakeDateContext?.sleepDayAttribution == .morningEnds
         let sourceSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings() ?? settings

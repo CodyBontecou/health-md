@@ -224,6 +224,8 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     /// Internal durable capture authority. Missing remains missing on decode;
     /// a pending job cannot acquire today's mutable preference during recovery.
     var sleepCaptureContext: AppleSleepCaptureContext? = nil
+    /// Private local job source selection. Never included in wire settings or exports.
+    var externalProviderCaptureAuthority: ExternalProviderCaptureAuthority? = nil
     /// Journal stores opt in explicitly. Wire packets, canonical request
     /// fingerprints and portable configuration retain their historical bytes.
     static let durableSleepContextEncoding = CodingUserInfoKey(rawValue: "healthmd.durable_sleep_context")!
@@ -255,6 +257,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case appleExportEngineAuthorityIsFrozen
         case calendarTimeZoneIdentifier
         case sleepCaptureContext
+        case externalProviderCaptureAuthority
     }
 
     private enum LegacyCodingKeys: String, CodingKey {
@@ -396,6 +399,10 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             forKey: .calendarTimeZoneIdentifier
         )
         sleepCaptureContext = try container.decodeIfPresent(AppleSleepCaptureContext.self, forKey: .sleepCaptureContext)
+        if decoder.userInfo[Self.durableSleepContextEncoding] as? Bool == true {
+            externalProviderCaptureAuthority = try container.decodeIfPresent(ExternalProviderCaptureAuthority.self,
+                forKey: .externalProviderCaptureAuthority)
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -446,6 +453,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         )
         if encoder.userInfo[Self.durableSleepContextEncoding] as? Bool == true {
             try container.encodeIfPresent(sleepCaptureContext, forKey: .sleepCaptureContext)
+            try container.encodeIfPresent(externalProviderCaptureAuthority, forKey: .externalProviderCaptureAuthority)
         }
     }
 

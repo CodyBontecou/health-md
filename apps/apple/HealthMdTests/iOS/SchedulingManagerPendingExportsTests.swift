@@ -1480,6 +1480,7 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             if target == .localIPhoneFolder {
                 XCTAssertTrue(try XCTUnwrap(withSuppressedProvider.appleExportEnginePin).isWakeDate)
                 XCTAssertEqual(withSuppressedProvider.sleepCaptureContext, context)
+                XCTAssertEqual(withSuppressedProvider.externalProviderCaptureAuthority?.connections.count, 0)
             }
         }
         settings.summaryOnlyExport = false
@@ -1490,6 +1491,7 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         }
         XCTAssertNil(requiresProvider.appleExportEnginePin,
                      "Requested provider work still needs durable account authority before scheduling")
+        XCTAssertEqual(requiresProvider.externalProviderCaptureAuthority, provider.captureAuthority)
         XCTAssertGreaterThan(provider.countReads, 0)
         XCTAssertEqual(provider.fetches, 0)
     }
@@ -1673,6 +1675,10 @@ private final class ScheduledSummaryProviderProbe: ExternalIntegrationDailyRecor
     var count = 1
     var countReads = 0
     var fetches = 0
+    let acceptedConnection = UUID()
+    var captureAuthority: ExternalProviderCaptureAuthority? {
+        ExternalProviderCaptureAuthority(connections: count > 0 ? ["whoop": acceptedConnection] : [:])
+    }
     var connectedProviderCount: Int { countReads += 1; return count }
     func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
         fetches += 1
