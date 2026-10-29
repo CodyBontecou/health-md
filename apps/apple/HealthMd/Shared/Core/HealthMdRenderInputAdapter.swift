@@ -22,6 +22,7 @@ enum HealthMdRenderInputAdapter {
         var includePlatformExtensions: Bool = false
         // Native preparation composes this typed source family after aggregate attestation.
         var composeWorkoutRecordsNatively: Bool = false
+        var composeStateOfMindRecordsNatively: Bool = false
         var rawCaptureStatus: String = "not_requested"
         var writeMode: String = "overwrite"
         var useEmoji: Bool = true
@@ -424,7 +425,7 @@ enum HealthMdRenderInputAdapter {
         guard let ownerDate = day["owner_date"] as? String,
               let values = day["values"] as? [[String: Any]]
         else { throw AdapterError.invalidSemanticResult }
-        guard !options.composeWorkoutRecordsNatively || captureContext?.sleepDayAttribution == .morningEnds else {
+        guard !(options.composeWorkoutRecordsNatively || options.composeStateOfMindRecordsNatively) || captureContext?.sleepDayAttribution == .morningEnds else {
             throw AdapterError.invalidPresentation
         }
         let outputByKey = Dictionary(uniqueKeysWithValues: registry.outputs.map { ($0.key, $0) })
@@ -562,7 +563,8 @@ enum HealthMdRenderInputAdapter {
         if let data = presentationData, let captureContext,
            captureContext.sleepDayAttribution == .morningEnds {
             let bytes = try data.aggregateJSONDataThrowing(customization: presentationCustomization, captureContext: captureContext,
-                includeWorkoutRecords: !options.composeWorkoutRecordsNatively)
+                includeWorkoutRecords: !options.composeWorkoutRecordsNatively,
+                includeStateOfMindRecords: !options.composeStateOfMindRecordsNatively)
             guard let root = try JSONSerialization.jsonObject(with: bytes) as? [String: Any],
                   !hasUnqualifiedDetailArrays(root, path: []) else {
                 throw AdapterError.invalidPresentation
@@ -822,7 +824,8 @@ enum HealthMdRenderInputAdapter {
             let json: Any
             do {
                 let bytes = try data.aggregateJSONDataThrowing(customization: customization, captureContext: captureContext,
-                    includeWorkoutRecords: !options.composeWorkoutRecordsNatively)
+                    includeWorkoutRecords: !options.composeWorkoutRecordsNatively,
+                includeStateOfMindRecords: !options.composeStateOfMindRecordsNatively)
                 guard var root = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
                     throw AdapterError.invalidPresentation
                 }

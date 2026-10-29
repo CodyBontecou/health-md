@@ -13,6 +13,7 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
         let sleepStages: AppleWakeDateSleepStageProjection
         let correlations: AppleWakeDateCorrelationProjection
         let workouts: AppleWakeDateWorkoutProjection
+        let mindfulness: AppleWakeDateMindfulnessProjection
     }
 
     @MainActor
@@ -48,6 +49,7 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
                 try source.sleepStages.addJSON(to: &root)
                 try source.correlations.addJSON(to: &root)
                 try source.workouts.addJSON(to: &root)
+                try source.mindfulness.addJSON(to: &root)
                 if let providers = source.providers, !providers.isEmpty {
                     root["providers"] = try AppleWakeDateProviderProjection.lazyJSONObject(providers)
                 }
@@ -64,6 +66,8 @@ nonisolated enum AppleWakeDateAPIRecordComposer {
         }
         do {
             return try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
+        } catch is AppleWakeDateMindfulnessProjection.ProjectionError {
+            throw APIEndpointExportRunner.EngineError.invalidPreparedPlan
         } catch is AppleWakeDateWorkoutProjection.ProjectionError {
             throw APIEndpointExportRunner.EngineError.invalidPreparedPlan
         } catch is AppleWakeDateCorrelationProjection.ProjectionError {

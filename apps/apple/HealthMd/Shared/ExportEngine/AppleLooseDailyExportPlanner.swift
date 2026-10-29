@@ -511,8 +511,14 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         frozenSettings.exportTimeZoneOverride = TimeZone(
             identifier: calendarTimeZoneIdentifier
         )
-        let preparedExports = orderedRecords.map {
-            $0.preparedExport(settings: frozenSettings)
+        let preparedExports = try orderedRecords.map { record in
+            guard wakeDateContext != nil else { return record.preparedExport(settings: frozenSettings) }
+            let selected = record.filtered(by: frozenSettings.metricSelection)
+            do { try AppleWakeDateMindfulnessProjection.validateCapture(selected) }
+            catch is AppleWakeDateMindfulnessProjection.ProjectionError {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+            return selected.preparedExportAssumingSelectionApplied(settings: frozenSettings)
         }
         guard preparedExports.contains(where: \.hasAnyData),
               zip(ownerDates, preparedExports).allSatisfy({ pair in
@@ -573,7 +579,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             }
             let semanticBatches = try HealthMdSemanticInputAdapter.boundedBatches(
                 sessionID: identity.sessionID,
-                healthData: orderedRecords.map { record in
+                healthData: (wakeDateContext == nil ? orderedRecords : preparedExports.map(\.filteredData)).map { record in
+                    // Unselected native views must not calculate unused summaries before core filtering.
                     var aggregate = record
                     if wakeDateContext != nil {
                         aggregate.providers = nil
@@ -610,6 +617,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             renderOptions.groupByCategory = frozenSettings.groupByCategory
             renderOptions.includePlatformExtensions = false
             renderOptions.composeWorkoutRecordsNatively = wakeDateContext != nil
+            renderOptions.composeStateOfMindRecordsNatively = wakeDateContext != nil
             let captureStatuses = Set(preparedExports.map {
                 Self.rawCaptureStatusIdentifier($0.filteredData.healthKitRecordCaptureStatus)
             })
@@ -730,6 +738,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                    || !$0.filteredData.sleep.stages.isEmpty
                    || !$0.filteredData.vitals.bloodPressureSamples.isEmpty
                    || !$0.filteredData.workouts.isEmpty
+                   || !$0.filteredData.mindfulness.exportedStateOfMindEntries.isEmpty
            }) {
             rustPlan = try await AppleWakeDateArchiveComposer.compose(plan: rustPlan, pin: pin,
                 prepared: preparedExports, settings: frozenSettings, sourceOutputKeys: sourceOutputKeys,

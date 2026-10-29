@@ -174,12 +174,27 @@ extension HealthData {
         return records
     }
 
+    func wakeDateStateOfMindJSONArray(captureContext: AppleSleepCaptureContext,
+        timeFormat: TimeFormatPreference) throws -> FoundationJSONLazyArray {
+        guard captureContext.sleepDayAttribution == .morningEnds, !mindfulness.exportedStateOfMindEntries.isEmpty else {
+            throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+        }
+        let config = FormatCustomization()
+        config.timeFormat = timeFormat
+        let root = try canonicalJSONObject(snapshot: exportSnapshot(customization: config), config: config,
+            includeHealthKitRecordArchive: false, captureContext: captureContext, includePartialFailures: false)
+        guard let mood = root["mindfulness"] as? [String: Any], let records = mood["stateOfMindEntries"] as? FoundationJSONLazyArray else {
+            throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+        }
+        return records
+    }
+
     /// Bounded daily attestation; canonical source bytes are composed independently.
     func aggregateJSONDataThrowing(customization: FormatCustomization,
-        captureContext: AppleSleepCaptureContext, includeWorkoutRecords: Bool = true) throws -> Data {
+        captureContext: AppleSleepCaptureContext, includeWorkoutRecords: Bool = true, includeStateOfMindRecords: Bool = true) throws -> Data {
         let sink = MemoryExportByteSink(mediaType: "application/json")
         try writeJSONThrowing(to: sink, snapshot: exportSnapshot(customization: customization),
-            config: customization, captureContext: captureContext, includeCanonicalArchive: false, includePartialFailures: false, includeWorkoutRecords: includeWorkoutRecords)
+            config: customization, captureContext: captureContext, includeCanonicalArchive: false, includePartialFailures: false, includeWorkoutRecords: includeWorkoutRecords, includeStateOfMindRecords: includeStateOfMindRecords)
         _ = try sink.finish()
         return sink.data
     }
@@ -192,7 +207,8 @@ extension HealthData {
         captureContext: AppleSleepCaptureContext? = nil,
         includeCanonicalArchive: Bool = true,
         includePartialFailures: Bool = true,
-        includeWorkoutRecords: Bool = true
+        includeWorkoutRecords: Bool = true,
+        includeStateOfMindRecords: Bool = true
     ) throws {
         let object = try canonicalJSONObject(
             snapshot: snapshot,
@@ -200,7 +216,8 @@ extension HealthData {
             includeHealthKitRecordArchive: false,
             captureContext: captureContext,
             includePartialFailures: includePartialFailures,
-            includeWorkoutRecords: includeWorkoutRecords
+            includeWorkoutRecords: includeWorkoutRecords,
+            includeStateOfMindRecords: includeStateOfMindRecords
         )
         try HealthKitRecordArchiveSerializer.writeDailyJSONObject(
             object,
@@ -308,7 +325,8 @@ extension HealthData {
         includeHealthKitRecordArchive: Bool,
         captureContext: AppleSleepCaptureContext? = nil,
         includePartialFailures: Bool = true,
-        includeWorkoutRecords: Bool = true
+        includeWorkoutRecords: Bool = true,
+        includeStateOfMindRecords: Bool = true
     ) throws -> [String: Any] {
         let wakeDateContext = try wakeDateJSONContext(snapshot: snapshot, captureContext: captureContext)
         let canonicalDisplayConverter = UnitConverter(preference: .metric)
@@ -881,33 +899,35 @@ extension HealthData {
                     mindfulnessDict["associations"] = snapshot.mindfulness.associations
                 }
 
-                let entriesArray = FoundationJSONLazyArray(snapshot.mindfulness.stateOfMindEntries) { entry -> [String: Any] in
-                    var entryDict: [String: Any] = [
-                        "id": entry.id.uuidString,
-                        "timestamp": try sourceTimestamp(entry.timestamp),
-                        "endDate": try sourceTimestamp(entry.endDate),
-                        "displayTime": snapshot.formatCalendarTime(entry.timestamp),
-                        "kind": entry.kind.rawValue,
-                        "valence": entry.valence,
-                        "valencePercent": entry.valencePercent,
-                        "valenceDescription": entry.valenceDescription
-                    ]
-                    if let source = entry.sourceRevision {
-                        entryDict["sourceRevision"] = encodedSourceRevision(source)
+                if includeStateOfMindRecords {
+                    let entriesArray = FoundationJSONLazyArray(snapshot.mindfulness.stateOfMindEntries) { entry -> [String: Any] in
+                        var entryDict: [String: Any] = [
+                            "id": entry.id.uuidString,
+                            "timestamp": try sourceTimestamp(entry.timestamp),
+                            "endDate": try sourceTimestamp(entry.endDate),
+                            "displayTime": snapshot.formatCalendarTime(entry.timestamp),
+                            "kind": entry.kind.rawValue,
+                            "valence": entry.valence,
+                            "valencePercent": entry.valencePercent,
+                            "valenceDescription": entry.valenceDescription
+                        ]
+                        if let source = entry.sourceRevision {
+                            entryDict["sourceRevision"] = encodedSourceRevision(source)
+                        }
+                        if let device = entry.device {
+                            entryDict["device"] = encodedDevice(device)
+                        }
+                        if !entry.labels.isEmpty {
+                            entryDict["labels"] = entry.labels
+                        }
+                        if !entry.associations.isEmpty {
+                            entryDict["associations"] = entry.associations
+                        }
+                        attachMetadata(entry.metadata, to: &entryDict)
+                        return entryDict
                     }
-                    if let device = entry.device {
-                        entryDict["device"] = encodedDevice(device)
-                    }
-                    if !entry.labels.isEmpty {
-                        entryDict["labels"] = entry.labels
-                    }
-                    if !entry.associations.isEmpty {
-                        entryDict["associations"] = entry.associations
-                    }
-                    attachMetadata(entry.metadata, to: &entryDict)
-                    return entryDict
+                    mindfulnessDict["stateOfMindEntries"] = entriesArray
                 }
-                mindfulnessDict["stateOfMindEntries"] = entriesArray
             }
 
             json["mindfulness"] = mindfulnessDict

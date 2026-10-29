@@ -9,6 +9,54 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testDenseStateOfMindRecordsRemainOutsideAPIHandoffAndRetainNativeSource() async throws {
+        let zone = TimeZone.gmt
+        let date = try XCTUnwrap(days(count: 1).first)
+        let entries = (0..<2_000).map { index in StateOfMindEntry(
+            id: UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", index))!, timestamp: date.addingTimeInterval(Double(index) + 0.125),
+            endDate: date.addingTimeInterval(Double(index) + (index == 0 ? 0.125 : 0.875)), kind: .momentaryEmotion, valence: -0.123456789,
+            labels: ["Calm | alert"], associations: ["Work"], sourceRevision: HealthKitSourceRevision(name: "Synthetic", bundleIdentifier: "example.synthetic.mood"),
+            device: HealthKitDeviceProvenance(model: "Synthetic watch"), metadata: ["synthetic": "api-mood-\(index)"]) }
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let day = HealthData(date: date, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds), mindfulness: MindfulnessData(stateOfMind: entries))
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = zone
+        settings.executionSleepCaptureContext = context
+        settings.executionSleepCaptureContextIsFrozen = true
+        settings.detailPolicy = .detailedTimeSeries
+        settings.formatCustomization.timeFormat = .hour12
+        settings.metricSelection.enabledMetrics = ["state_of_mind_entries"]
+        let expected = try XCTUnwrap(((try JSONSerialization.jsonObject(with: day.toJSONDataThrowing(customization: settings.formatCustomization, captureContext: context)) as? [String: Any])?["mindfulness"] as? [String: Any])?["stateOfMindEntries"] as? NSArray)
+        let resolution = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day },
+            coreExecutor: APIRecordingCoreExecutor(events: APIEngineEventRecorder(), requireAggregateOnlyConfiguration: true))
+        guard case .prepared(let operation) = resolution else { return XCTFail("Expected native State of Mind record composition") }
+        XCTAssertEqual(operation.batches.count, 1)
+        let batch = try XCTUnwrap(operation.batches.first)
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: batch.body) as? [String: Any])
+        let record = try XCTUnwrap((root["records"] as? [[String: Any]])?.first)
+        let mood = try XCTUnwrap(record["mindfulness"] as? [String: Any])
+        XCTAssertEqual(mood["stateOfMindEntries"] as? NSArray, expected)
+        XCTAssertNil(mood["averageValence"])
+        try batch.bodyArtifact.validateIntegrity()
+        settings.metricSelection.enabledMetrics = ["average_valence"]
+        let summary = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day })
+        guard case .prepared(let summaryOperation) = summary else { return XCTFail("Summary-only selection must remain available") }
+        XCTAssertEqual(summaryOperation.batches.count, 1)
+        XCTAssertFalse(String(decoding: try XCTUnwrap(summaryOperation.batches.first).body, as: UTF8.self).contains("api-mood-1999"))
+        for valence in [Double.nan, Double.infinity] {
+            let invalid = HealthData(date: date, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+                mindfulness: MindfulnessData(stateOfMind: [StateOfMindEntry(timestamp: date, kind: .dailyMood, valence: valence, labels: [], associations: [])]))
+            do {
+                _ = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+                    destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in invalid })
+                XCTFail("Invalid selected averages must reject before integer-percent conversion")
+            } catch { XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .invalidPreparedPlan) }
+        }
+
+    }
+
     func testDenseWorkoutRouteAndSeriesStayOutsideAPIHandoffWithoutInferringSDKStatistics() async throws {
         let zone = TimeZone.gmt
         let date = try XCTUnwrap(days(count: 1).first)

@@ -106,6 +106,10 @@ struct APIEndpointExportRunner {
             sourceDate = outcome.sourceDate
             record = outcome.record
             if settings.executionSleepCaptureContext?.sleepDayAttribution == .morningEnds {
+                if let record {
+                    do { try AppleWakeDateMindfulnessProjection.validateCapture(record) }
+                    catch is AppleWakeDateMindfulnessProjection.ProjectionError { throw EngineError.invalidPreparedPlan }
+                }
                 recordArtifact = nil
             } else {
                 recordArtifact = try outcome.record.map {
@@ -857,6 +861,7 @@ struct APIEndpointExportRunner {
                     || $0.record?.sleep.stages.isEmpty == false
                     || $0.record?.vitals.bloodPressureSamples.isEmpty == false
                     || $0.record?.workouts.isEmpty == false
+                    || $0.record?.mindfulness.exportedStateOfMindEntries.isEmpty == false
             }) {
                 guard let wakeContext = captureContext else { throw EngineError.invalidPreparedPlan }
                 let boundedBatches = try materializeBatches(plan: aggregatePlan, outcomes: preparedOutcomes,
@@ -1139,6 +1144,7 @@ struct APIEndpointExportRunner {
         renderOptions.groupByCategory = settings.groupByCategory
         renderOptions.includePlatformExtensions = false
         renderOptions.composeWorkoutRecordsNatively = pin.isWakeDate
+        renderOptions.composeStateOfMindRecordsNatively = pin.isWakeDate
         renderOptions.rawCaptureStatus = "not_requested"
         renderOptions.writeMode = "overwrite"
         renderOptions.api = HealthMdRenderInputAdapter.APIOptions(
@@ -1231,6 +1237,8 @@ struct APIEndpointExportRunner {
                 captureStatus: HealthKitRecordArchiveSerializer.captureStatusString(record.healthKitRecordCaptureStatus),
                 providers: record.providers, quantities: AppleWakeDateQuantityProjection(data: record), sleepStages: AppleWakeDateSleepStageProjection(data: record), correlations: AppleWakeDateCorrelationProjection(data: record),
                 workouts: AppleWakeDateWorkoutProjection(data: record, captureContext: captureContext,
+                    timeFormatIdentifier: timeFormatIdentifier, selectedOutputKeys: sourceOutputKeys),
+                mindfulness: AppleWakeDateMindfulnessProjection(data: record, captureContext: captureContext,
                     timeFormatIdentifier: timeFormatIdentifier, selectedOutputKeys: sourceOutputKeys))
         }
         guard sources.count == aggregates.count else { throw EngineError.invalidPreparedPlan }

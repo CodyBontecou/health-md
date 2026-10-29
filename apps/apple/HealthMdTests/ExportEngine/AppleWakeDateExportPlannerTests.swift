@@ -45,6 +45,94 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         XCTAssertEqual((stage["metadata"] as? [String: String])?["synthetic"], "zero-source")
     }
 
+    func testNativeStateOfMindHonorsDisabledOwnersAndSummaryOnlySelection() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            mindfulness: MindfulnessData(stateOfMind: [StateOfMindEntry(timestamp: owner, kind: .dailyMood, valence: 0.5,
+                labels: ["synthetic-private-label"], associations: [], metadata: ["synthetic": "private-entry-marker"])]))
+        var disabled = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["state_of_mind_entries"])
+        for index in disabled.formatCustomization.frontmatterConfig.fields.indices {
+            if ["mood_entries", "mood_labels", "mood_associations"].contains(disabled.formatCustomization.frontmatterConfig.fields[index].originalKey) {
+                disabled.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+            }
+        }
+        do {
+            _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: disabled, surface: .localVaultWithoutSideEffects)
+            XCTFail("Disabled mood owners must not authorize source records")
+        } catch { XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed) }
+        let summary = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["average_valence"])
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: summary,
+            surface: .localVaultWithoutSideEffects) else { return XCTFail("Selected mood summaries must remain independent of source record export") }
+        XCTAssertEqual(operation.artifacts.count, 4)
+        for artifact in operation.artifacts {
+            let bytes = try artifact.artifact.content.materializedData()
+            let text = String(decoding: bytes, as: UTF8.self)
+            XCTAssertFalse(text.contains("private-entry-marker"))
+            XCTAssertFalse(text.contains("synthetic-private-label"))
+            XCTAssertFalse(text.contains("State of Mind Details"))
+            if artifact.format == .json {
+                let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+                let mood = try XCTUnwrap(root["mindfulness"] as? [String: Any])
+                XCTAssertEqual(mood["averageValence"] as? Double, 0.5)
+                XCTAssertNil(mood["stateOfMindEntries"])
+            }
+        }
+    }
+
+    func testDenseStateOfMindRecordsPreserveNativeFactsAcrossAllFormats() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let entries = (0..<2_000).map { index in StateOfMindEntry(
+            id: UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", index))!,
+            timestamp: owner.addingTimeInterval(Double(index) + 0.125), endDate: owner.addingTimeInterval(Double(index) + (index == 0 ? 0.125 : 0.875)),
+            kind: index.isMultiple(of: 2) ? .dailyMood : .momentaryEmotion, valence: -0.123456789,
+            labels: ["Calm|alert", "quoted \"label\""], associations: ["Work <test>"],
+            sourceRevision: HealthKitSourceRevision(name: "Synthetic mood", bundleIdentifier: "example.synthetic.mood"),
+            device: HealthKitDeviceProvenance(model: "Synthetic watch"), metadata: ["synthetic": "mood-\(index) | ` <source> &"]) }
+        let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds), mindfulness: MindfulnessData(stateOfMind: entries))
+        let config = FormatCustomization()
+        config.timeFormat = .hour12
+        let expected = try XCTUnwrap(((try JSONSerialization.jsonObject(with: day.toJSONDataThrowing(customization: config, captureContext: context)) as? [String: Any])?["mindfulness"] as? [String: Any])?["stateOfMindEntries"] as? NSArray)
+        for metadata in [true, false] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["state_of_mind_entries"])
+            snapshot.formatCustomization.timeFormat = .hour12
+            snapshot.detailPolicy = .detailedTimeSeries
+            snapshot.includeMetadata = metadata
+            guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Dense selected State of Mind source must remain exportable") }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            for artifact in operation.artifacts {
+                let data = try artifact.artifact.content.materializedData()
+                let text = String(decoding: data, as: UTF8.self)
+                XCTAssertNotNil(artifact.artifact.fileArtifact)
+                XCTAssertEqual(artifact.artifact.sha256, NativeExportArtifact.sha256(of: data))
+                switch artifact.format {
+                case .json:
+                    let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+                    XCTAssertEqual((root["mindfulness"] as? [String: Any])?["stateOfMindEntries"] as? NSArray, expected)
+                case .csv:
+                    XCTAssertEqual(text.components(separatedBy: "\n").filter { $0.contains(",Native Detail,Mindfulness Record,") }.count, 2_000)
+                case .markdown:
+                    let rows = text.components(separatedBy: "\n").filter { $0.hasPrefix("| `{") }
+                    let values = try rows.map { row -> Any in
+                        let record = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(row.dropFirst(3).dropLast(3).utf8)) as? [String: Any])
+                        return try XCTUnwrap(record["sample"])
+                    }
+                    XCTAssertEqual(values as NSArray, expected)
+                case .obsidianBases:
+                    XCTAssertTrue(text.contains("native_mindfulness_details:"))
+                    XCTAssertTrue(text.contains("mood-1999"))
+                }
+                if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                    let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-dense-mindfulness-\(metadata)").appendingPathComponent(artifact.artifact.relativePath)
+                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try data.write(to: output)
+                }
+            }
+        }
+    }
+
     func testNativeWorkoutsRequireAcceptedOutputOwnerAndIgnoreUnselectedInvalidSource() async throws {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
         let owner = ExportFixtures.referenceDate
@@ -573,18 +661,19 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         let instant = ExportFixtures.referenceDate.addingTimeInterval(0.1255)
         var day = HealthData(date: instant, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
             activity: ActivityData(steps: 1), mindfulness: MindfulnessData(stateOfMind: [
-                StateOfMindEntry(timestamp: instant, kind: .dailyMood, valence: 0.5,
+                StateOfMindEntry(timestamp: instant, kind: .dailyMood, valence: .nan,
                     labels: ["disabled-source-marker"], associations: [])]))
         var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["steps"])
         snapshot.detailPolicy = .detailedTimeSeries
         guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
             settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Disabled source records must not block selected steps") }
+        XCTAssertEqual(operation.artifacts.count, 4)
         for artifact in operation.artifacts {
             XCTAssertFalse(String(decoding: artifact.artifact.inlineData, as: UTF8.self).contains("disabled-source-marker"))
         }
         snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["state_of_mind_entries"])
         snapshot.detailPolicy = .detailedTimeSeries
-        for (end, valence) in [(instant.addingTimeInterval(-1), 0.5), (instant.addingTimeInterval(-0.0001), 0.5), (instant, 1.25)] {
+        for (end, valence) in [(instant.addingTimeInterval(-1), 0.5), (instant.addingTimeInterval(-0.0001), 0.5), (instant, 1.25), (instant, Double.nan), (instant, Double.infinity)] {
             day.mindfulness.stateOfMind = [StateOfMindEntry(timestamp: instant, endDate: end,
                 kind: .dailyMood, valence: valence, labels: [], associations: [])]
             do {
