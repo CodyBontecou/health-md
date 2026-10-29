@@ -23,36 +23,8 @@ internal object AndroidWakeDateSourceProjection {
         require(plan.profile == request.profile)
         val context = requireNotNull(request.captureContext)
         require(request.profile == AndroidExportProfile.android_sleep_v6 && context.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS)
-        val selected = request.data.filtered(request.metricSelection, context)
-        val source = HealthData(date = selected.date, sleep = selected.sleep, workouts = selected.workouts,
-            // Preserve the adapter's fail-closed admission of raw interval arrays with no selected owner.
-            activity = ActivityData(stepSamples = request.data.activity.stepSamples, activityIntensityEntries = request.data.activity.activityIntensityEntries),
-            mindfulness = MindfulnessData(sessions = request.data.mindfulness.sessions),
-            heart = HeartData(samples = selected.heart.samples, hrvSamples = selected.heart.hrvSamples),
-            vitals = VitalsData(bloodPressureSamples = request.data.vitals.bloodPressureSamples, bloodOxygenSamples = selected.vitals.bloodOxygenSamples,
-                bloodGlucoseSamples = selected.vitals.bloodGlucoseSamples, respiratoryRateSamples = selected.vitals.respiratoryRateSamples))
-        if (!source.heart.hasData && !source.vitals.hasData && !source.activity.hasData && !source.mindfulness.hasData &&
-            source.sleep.stages.isEmpty() && source.sleep.sessions.isEmpty() && source.workouts.isEmpty()) return plan
-        val root = Json.parseToJsonElement(JsonExporter().export(source, request.customization, request.includeGranularData, context)).jsonObject
-        val keys = Json.parseToJsonElement(semanticResult.decodeToString()).jsonObject.getValue("selected_output_keys").jsonArray
-            .map { it.jsonPrimitive.content }
-        require(keys.distinct().size == keys.size)
-        // Reuse native unit, clock, numeric and frozen-output-owner validation.
-        val enabledKeys = keys.filter { request.customization.frontmatterConfig.outputKey(it) != null }
-        val sleep = root["sleep"]?.jsonObject
-        val details = listOf(
-            HealthMdRenderInputAdapter.quantityDetails(root, source.date.toString(), enabledKeys),
-            HealthMdRenderInputAdapter.sleepDetails(sleep?.get("sleepStages")?.jsonArray ?: JsonArray(emptyList()),
-                sleep?.get("sleepSessions")?.jsonArray ?: JsonArray(emptyList()), source.date.toString(), enabledKeys),
-            HealthMdRenderInputAdapter.workoutDetails(root, source.date.toString(), enabledKeys),
-            HealthMdRenderInputAdapter.bloodPressureDetails(root, source.date.toString(), enabledKeys),
-            HealthMdRenderInputAdapter.activityDetails(root, source.date.toString(), enabledKeys),
-            HealthMdRenderInputAdapter.mindfulnessDetails(root, source.date.toString(), enabledKeys),
-        ).reduce(HealthMdRenderInputAdapter::mergeDetails)
-        val sourceArrays = listOf("heart" to "heartRateSamples", "heart" to "hrvSamples", "vitals" to "bloodOxygenSamples",
-            "vitals" to "bloodGlucoseSamples", "vitals" to "respiratoryRateSamples",
-            "sleep" to "sleepStages", "sleep" to "sleepSessions", "vitals" to "bloodPressureSamples",
-            "activity" to "stepSamples", "activity" to "activityIntensity", "mindfulness" to "sessions")
+        val (root, details) = nativeParts(request.data, request.metricSelection, request.customization,
+            request.includeGranularData, context, semanticResult) ?: return plan
         val formats = request.formats.associateBy(request::relativePath)
         val items = plan.items.map { item ->
             coroutineContext.ensureActive()
@@ -60,19 +32,7 @@ internal object AndroidWakeDateSourceProjection {
             val aggregate = item.content.decodeToString()
             val text = when (format) {
                 ExportFormat.JSON -> {
-                    val result = Json.parseToJsonElement(aggregate).jsonObject.toMutableMap()
-                    for ((category, field) in sourceArrays) {
-                        val samples = root[category]?.jsonObject?.get(field) ?: continue
-                        val values = result[category]?.jsonObject?.toMutableMap() ?: mutableMapOf()
-                        require(field !in values)
-                        values[field] = samples
-                        result[category] = JsonObject(values)
-                    }
-                    root["workouts"]?.let { workouts ->
-                        require("workouts" !in result)
-                        result["workouts"] = workouts
-                    }
-                    json.encodeToString(JsonElement.serializer(), JsonObject(result))
+                    json.encodeToString(JsonElement.serializer(), composeJson(Json.parseToJsonElement(aggregate).jsonObject, root))
                 }
                 ExportFormat.CSV -> buildString {
                     append(aggregate)
@@ -117,6 +77,67 @@ internal object AndroidWakeDateSourceProjection {
                 item.mediaType, item.writeMode, hash), content = bytes, sha256 = hash)
         }
         return ExportArtifactPlan(plan.schema, plan.artifactPlanVersion, plan.requestId, plan.sessionId, plan.profile, items)
+    }
+
+    /** API and loose files share source validation and ownership; arrays never enter aggregate FFI. */
+    suspend fun composeAPIRecord(data: HealthData, settings: ExportSettings, context: AndroidCaptureContext,
+        semanticResult: ByteArray, aggregate: JsonObject): JsonObject {
+        coroutineContext.ensureActive()
+        val (root, _) = nativeParts(data, settings.metricSelection, settings.formatCustomization.copy(
+            unitPreference = UnitPreference.METRIC, includeLegacyAndroidAliases = false),
+            settings.includeGranularData, context, semanticResult) ?: return aggregate
+        return composeJson(aggregate, root)
+    }
+
+    private fun nativeParts(data: HealthData, selection: MetricSelectionState, customization: FormatCustomization,
+        includeGranularData: Boolean, context: AndroidCaptureContext, semanticResult: ByteArray): Pair<JsonObject, JsonObject>? {
+        val selected = data.filtered(selection, context)
+        val source = HealthData(date = selected.date, sleep = selected.sleep, workouts = selected.workouts,
+            // Preserve the adapter's fail-closed admission of raw interval arrays with no selected owner.
+            activity = ActivityData(stepSamples = data.activity.stepSamples, activityIntensityEntries = data.activity.activityIntensityEntries),
+            mindfulness = MindfulnessData(sessions = data.mindfulness.sessions),
+            heart = HeartData(samples = selected.heart.samples, hrvSamples = selected.heart.hrvSamples),
+            vitals = VitalsData(bloodPressureSamples = data.vitals.bloodPressureSamples, bloodOxygenSamples = selected.vitals.bloodOxygenSamples,
+                bloodGlucoseSamples = selected.vitals.bloodGlucoseSamples, respiratoryRateSamples = selected.vitals.respiratoryRateSamples))
+        if (!source.heart.hasData && !source.vitals.hasData && !source.activity.hasData && !source.mindfulness.hasData &&
+            source.sleep.stages.isEmpty() && source.sleep.sessions.isEmpty() && source.workouts.isEmpty()) return null
+        val root = Json.parseToJsonElement(JsonExporter().export(source, customization, includeGranularData, context)).jsonObject
+        val keys = Json.parseToJsonElement(semanticResult.decodeToString()).jsonObject.getValue("selected_output_keys").jsonArray
+            .map { it.jsonPrimitive.content }
+        require(keys.distinct().size == keys.size)
+        // Reuse native unit, clock, numeric and frozen-output-owner validation.
+        val enabledKeys = keys.filter { customization.frontmatterConfig.outputKey(it) != null }
+        val sleep = root["sleep"]?.jsonObject
+        val details = listOf(
+            HealthMdRenderInputAdapter.quantityDetails(root, source.date.toString(), enabledKeys),
+            HealthMdRenderInputAdapter.sleepDetails(sleep?.get("sleepStages")?.jsonArray ?: JsonArray(emptyList()),
+                sleep?.get("sleepSessions")?.jsonArray ?: JsonArray(emptyList()), source.date.toString(), enabledKeys),
+            HealthMdRenderInputAdapter.workoutDetails(root, source.date.toString(), enabledKeys),
+            HealthMdRenderInputAdapter.bloodPressureDetails(root, source.date.toString(), enabledKeys),
+            HealthMdRenderInputAdapter.activityDetails(root, source.date.toString(), enabledKeys),
+            HealthMdRenderInputAdapter.mindfulnessDetails(root, source.date.toString(), enabledKeys),
+        ).reduce(HealthMdRenderInputAdapter::mergeDetails)
+        return root to details
+    }
+
+    private fun composeJson(aggregate: JsonObject, root: JsonObject): JsonObject {
+        val sourceArrays = listOf("heart" to "heartRateSamples", "heart" to "hrvSamples", "vitals" to "bloodOxygenSamples",
+            "vitals" to "bloodGlucoseSamples", "vitals" to "respiratoryRateSamples",
+            "sleep" to "sleepStages", "sleep" to "sleepSessions", "vitals" to "bloodPressureSamples",
+            "activity" to "stepSamples", "activity" to "activityIntensity", "mindfulness" to "sessions")
+        val result = aggregate.toMutableMap()
+        for ((category, field) in sourceArrays) {
+            val samples = root[category]?.jsonObject?.get(field) ?: continue
+            val values = result[category]?.jsonObject?.toMutableMap() ?: mutableMapOf()
+            require(field !in values)
+            values[field] = samples
+            result[category] = JsonObject(values)
+        }
+        root["workouts"]?.let { workouts ->
+            require("workouts" !in result)
+            result["workouts"] = workouts
+        }
+        return JsonObject(result)
     }
 
     private fun csv(value: String): String = if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {

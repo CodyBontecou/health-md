@@ -680,7 +680,7 @@ object HealthMdSemanticInputAdapter {
         }
     }
 
-    private fun internalUnitId(unit: String): String = when (unit.lowercase()) {
+    internal fun internalUnitId(unit: String): String = when (unit.lowercase()) {
         "steps", "count", "entries", "drinks", "events", "falls", "floors", "pushes",
         "sessions", "strokes", "uses" -> "count"
         "sec", "second", "seconds" -> "second"

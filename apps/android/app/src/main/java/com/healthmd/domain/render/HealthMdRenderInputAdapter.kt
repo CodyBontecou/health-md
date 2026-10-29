@@ -369,9 +369,13 @@ object HealthMdRenderInputAdapter {
                 val output = outputs[key] ?: throw AdapterException("registry output is invalid")
                 output.unit.ifEmpty {
                     if (options.api != null) {
-                        // One workout selection emits quantities with different units.
-                        day.getValue("values").jsonArray.first { it.jsonObject["output_key"]?.jsonPrimitive?.content == key }
+                        // Match the core API's canonical public unit only when the pinned
+                        // selection proves exact equivalence; derived outputs retain their own unit.
+                        val semanticUnit = day.getValue("values").jsonArray.first { it.jsonObject["output_key"]?.jsonPrimitive?.content == key }
                             .jsonObject.getValue("value").jsonObject["unit"]?.jsonObject?.get("id")?.jsonPrimitive?.content.orEmpty()
+                        output.selectionIds.mapNotNull { metricsBySelection[it]?.unit }.distinct().singleOrNull()
+                            ?.takeIf { com.healthmd.domain.semantic.HealthMdSemanticInputAdapter.internalUnitId(it) == semanticUnit }
+                            ?: semanticUnit
                     } else {
                         val units = output.selectionIds.map { selection ->
                             metricsBySelection[selection]?.unit ?: throw AdapterException("registry unit is invalid")

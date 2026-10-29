@@ -50,6 +50,71 @@ import org.junit.Test
  */
 class HostCoreDailyAggregatePlannerTest {
     @Test
+    fun denseSuccessorApiRetainsNativeRecordsAndBatchesFinalBytes() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val first = LocalDate.of(2026, 3, 15)
+        val dates = listOf(first, first.plusDays(1))
+        val source = dates.map { date ->
+            val start = date.atStartOfDay(context.zoneId).toInstant()
+            HealthData(date, heart = HeartData(averageHeartRate = 72.0, samples = (0..<2200).map { index ->
+                val instant = start.plusSeconds(index.toLong())
+                com.healthmd.domain.model.TimestampedSample(instant.atZone(context.zoneId).toLocalDateTime(),
+                    Math.nextUp(72.125), source = "synthetic", metadata = mapOf("synthetic" to "x".repeat(600)),
+                    exactTime = com.healthmd.domain.model.ExactSourceTimestamp.from(instant, ZoneOffset.UTC),
+                    identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "dense-api-$date-$index"))
+            }))
+        }
+        val settings = ExportSettings(includeGranularData = true, includeMetadata = true,
+            formatCustomization = FormatCustomization.analyticalDefault().copy(unitPreference = UnitPreference.IMPERIAL),
+            metricSelection = MetricSelectionState(enabledMetrics = setOf("avg_hr")),
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val request = FrozenAPIExportRequest.capture(dates, source, emptyList(), settings, ExportEngineMode.rust,
+            APIExportIds("dense-api", "dense-api-session"), context.zoneId.id, Instant.parse("2026-03-18T00:00:00Z"),
+            maxEncodedBytes = 4_000_000uL)
+        val result = HealthMdRustAPIExportPlanner().plan(request)
+        validateAPIPlan(result.plan, request)
+        assertThat(result.plan.items).hasSize(2)
+        result.plan.items.forEachIndexed { index, item ->
+            System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf { it.isNotBlank() }?.let { folder ->
+                val output = File(folder, "android-v6-dense-api/batch-$index.json")
+                check(output.parentFile.mkdirs() || output.parentFile.isDirectory)
+                output.writeBytes(item.content)
+            }
+            val root = Json.parseToJsonElement(item.content.decodeToString()).jsonObject
+            val record = root.getValue("records").jsonArray.single().jsonObject
+            val oracle = Json.parseToJsonElement(com.healthmd.data.export.JsonExporter().export(source[index],
+                request.settings.formatCustomization, true, captureContext = context)).jsonObject
+            assertThat(record.getValue("heart").jsonObject.getValue("heartRateSamples"))
+                .isEqualTo(oracle.getValue("heart").jsonObject.getValue("heartRateSamples"))
+            assertThat(record.getValue("summary").jsonObject.getValue("heart").jsonObject
+                .getValue("average_heart_rate").jsonPrimitive.content.toDouble()).isEqualTo(72.0)
+            assertThat(record.getValue("units").jsonObject.getValue("average_heart_rate").jsonPrimitive.content).isEqualTo("bpm")
+            assertThat(record.getValue("unit_system").jsonPrimitive.content).isEqualTo("metric")
+            assertThat(item.byteCount <= request.maxEncodedBytes).isTrue()
+            assertThat(item.byteCount).isEqualTo(item.content.size.toULong())
+            assertThat(item.sha256).isEqualTo(sha256Hex(item.content))
+            val mutable = item.content
+            mutable.fill(0)
+            assertThat(item.sha256).isEqualTo(sha256Hex(item.content))
+            assertThat(root.getValue("date_range").jsonObject.getValue("start").jsonPrimitive.content).isEqualTo(dates[index].toString())
+        }
+        assertThat(result.plan.items.sumOf { it.byteCount } > request.maxEncodedBytes).isTrue()
+        val summaryRequest = FrozenAPIExportRequest.capture(dates, source, emptyList(), settings.copy(includeGranularData = false),
+            ExportEngineMode.rust, APIExportIds("dense-summary-api", "dense-summary-session"), context.zoneId.id,
+            request.exportedAt, maxEncodedBytes = request.maxEncodedBytes)
+        val summary = HealthMdRustAPIExportPlanner().plan(summaryRequest)
+        validateAPIPlan(summary.plan, summaryRequest)
+        assertThat(summary.plan.items).hasSize(1)
+        val records = Json.parseToJsonElement(summary.plan.items.single().content.decodeToString()).jsonObject.getValue("records").jsonArray
+        assertThat(records).hasSize(2)
+        records.forEach { record ->
+            assertThat(record.jsonObject.getValue("heart").jsonObject["heartRateSamples"]).isNull()
+            assertThat(record.jsonObject.getValue("summary").jsonObject.getValue("heart").jsonObject
+                .getValue("average_heart_rate").jsonPrimitive.content.toDouble()).isEqualTo(72.0)
+        }
+    }
+
+    @Test
     fun denseWakeDatePressureActivityAndMindfulnessRemainCompleteAcrossFormats() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val start = Instant.parse("2026-11-01T01:00:00.123456789Z")

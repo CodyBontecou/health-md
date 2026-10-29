@@ -19,6 +19,9 @@ import java.util.UUID
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.coroutineContext
+import kotlinx.serialization.json.*
 
 /** Stable request/session identity shared by the native and Rust API-v1 plans. */
 data class APIExportIds(
@@ -297,6 +300,8 @@ class HealthMdRustAPIExportPlanner(
                 options = HealthMdRenderInputAdapter.Options(
                     renderProfileRevision = pin.renderProfileRevision,
                     requestId = request.ids.requestId,
+                    composeSleepRecordsNatively = wakeDate,
+                    composeWorkoutRecordsNatively = wakeDate,
                     formats = listOf("json"),
                     unitSystem = when (frozenCustomization.unitPreference) {
                         UnitPreference.METRIC -> "metric"
@@ -329,7 +334,8 @@ class HealthMdRustAPIExportPlanner(
                         maxEncodedBytes = request.maxEncodedBytes,
                     ),
                 ),
-                presentationByOwnerDate = request.records.associateBy { it.date.toString() },
+                presentationByOwnerDate = request.records.associate { it.date.toString() to
+                    if (wakeDate) AndroidWakeDateSourceProjection.aggregate(it) else it },
                 presentationCustomization = frozenCustomization,
                 captureContext = request.captureContext,
             )
@@ -357,9 +363,59 @@ class HealthMdRustAPIExportPlanner(
             }
             APIExportRustPlan(
                 pin = pin,
-                plan = fullPlan.copy(items = apiItems),
+                plan = if (wakeDate) composeSuccessorAPI(request, fullPlan.copy(items = apiItems), semanticResult)
+                    else fullPlan.copy(items = apiItems),
             )
         }
+
+    /** Bind complete native records before applying API batch limits and final artifact identities. */
+    private suspend fun composeSuccessorAPI(request: FrozenAPIExportRequest, plan: ExportArtifactPlan,
+        semanticResult: ByteArray): ExportArtifactPlan {
+        val encoder = Json { prettyPrint = true }
+        val envelopes = plan.items.map { Json.parseToJsonElement(it.content.decodeToString()).jsonObject }
+        val aggregateRecords = envelopes.flatMap { it.getValue("records").jsonArray }.map { it.jsonObject }
+        val aggregates = aggregateRecords.associateBy { it.getValue("date").jsonPrimitive.content }
+        require(aggregates.size == aggregateRecords.size && aggregates.keys == request.records.map { it.date.toString() }.toSet())
+        val records = request.records.associate { source ->
+            source.date to AndroidWakeDateSourceProjection.composeAPIRecord(source, request.settings,
+                requireNotNull(request.captureContext), semanticResult, aggregates.getValue(source.date.toString()))
+        }
+        val failureRecords = envelopes.flatMap { it.getValue("failed_date_details").jsonArray }.map { it.jsonObject }
+        val failures = failureRecords.associateBy { it.getValue("date").jsonPrimitive.content }
+        require(failures.size == failureRecords.size && failures.keys == request.failedDateDetails.map {
+            APIExportEnvelopeBuilder.failureTimestamp(it.date, request.calendarTimeZone) }.toSet())
+        fun body(dates: List<LocalDate>): ByteArray {
+            val envelope = envelopes.first().toMutableMap()
+            envelope["date_range"] = buildJsonObject { put("start", dates.first().toString()); put("end", dates.last().toString()) }
+            val daily = dates.mapNotNull(records::get)
+            envelope["records"] = JsonArray(daily)
+            envelope["record_count"] = JsonPrimitive(daily.size)
+            envelope["failed_date_details"] = JsonArray(dates.mapNotNull { date ->
+                failures[APIExportEnvelopeBuilder.failureTimestamp(date, request.calendarTimeZone)] })
+            return encoder.encodeToString(JsonObject.serializer(), JsonObject(envelope)).encodeToByteArray()
+        }
+        val items = mutableListOf<ExportArtifactPlanItem>()
+        var start = 0
+        while (start < request.requestedDates.size) {
+            coroutineContext.ensureActive()
+            var end = start + 1
+            var content = body(request.requestedDates.subList(start, end))
+            while (end < minOf(request.requestedDates.size, start + request.maxDaysPerBatch) &&
+                content.size.toULong() <= request.maxEncodedBytes) {
+                val candidate = body(request.requestedDates.subList(start, end + 1))
+                if (candidate.size.toULong() > request.maxEncodedBytes) break
+                content = candidate
+                end += 1
+            }
+            val path = apiArtifactPath(request.ids.requestId, items.size)
+            val hash = sha256Hex(content)
+            items += ExportArtifactPlanItem(artifactIdHex(request.ids.requestId, request.ids.sessionId,
+                request.profile, path, API_MEDIA_TYPE, ExportArtifactWriteMode.api_post, hash),
+                path, API_MEDIA_TYPE, ExportArtifactWriteMode.api_post, content, sha256 = hash)
+            start = end
+        }
+        return plan.copy(items = items)
+    }
 
     /** Render each requested run without inventing outcomes for omitted retry dates. */
     private suspend fun planSparseSuccessor(request: FrozenAPIExportRequest): APIExportRustPlan {
