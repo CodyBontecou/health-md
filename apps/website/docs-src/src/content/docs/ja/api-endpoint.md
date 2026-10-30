@@ -1,9 +1,22 @@
 ---
-title: "APIエンドポイント"
-description: "選択したApple HealthのJSONを、iPhoneから独自のHTTP(S)エンドポイントへ直接送信します。"
+title: "Apple HealthのJSONを自分のAPIにエクスポート"
+description: "Health.mdを使って、選択したApple HealthデータをiPhoneから自分のエンドポイントへJSONで送信します。設定手順、ペイロードの例、リクエストの制限を確認できます。"
 ---
 
 <p>APIエンドポイントは、Health.mdのデータを独自のサーバー、Webhook、データベース、ダッシュボード、または自動処理へ送信したいユーザー向けのエクスポート先です。Apple Healthの読み取りは引き続きiPhoneで行われますが、ファイルへ書き込む代わりに、設定したエンドポイントへJSONをPOSTします。</p>
+
+## APIの用途を選ぶ
+
+| 目的 | 開始方法 |
+| --- | --- |
+| 選択したデータを自分のサーバーに送る | このガイドに従ってください。iPhoneは設定したURLにJSONをPOSTします。 |
+| Mac上でデータをローカルに照会する | <a href="/ja/docs/agent-api/">ループバック照会API</a>。 APIはこのMac内だけで使用し、ネットワークに公開しないでください。 |
+| iOSのヘルスケアアプリを開発する | <a href="https://developer.apple.com/documentation/healthkit" target="_blank" rel="noopener">Apple HealthKitの開発者向けドキュメント</a>。 |
+
+<div class="callout">
+<strong>まず1日分から始める</strong>
+<p><a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">iPhoneにHealth.mdをインストール</a>。 <a href="/docs/reference/generated/automation/api-export-v1.json">架空のJSONサンプルを確認</a>してから受信側を設定してください。</p>
+</div>
 
 <div class="callout">
 <strong>プライバシーに関する注意</strong>
