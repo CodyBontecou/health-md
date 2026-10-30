@@ -136,6 +136,7 @@ a {
 
 .nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 18px;
   color: var(--ink-2);
   font-family: var(--mono);
@@ -145,6 +146,7 @@ a {
 
 .header-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
 }

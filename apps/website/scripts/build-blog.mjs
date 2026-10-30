@@ -326,7 +326,7 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="${prefix}assets/theme.js"></script>
-  <link rel="stylesheet" href="${depth === 2 ? '../styles.css' : 'styles.css'}">
+  <link rel="stylesheet" href="${depth === 2 ? '../styles.css' : 'styles.css'}?v=20261030-header-wrap">
   <link rel="stylesheet" href="${prefix}assets/theme-icons.css">
   <script type="application/ld+json">${escapeJsonForHtml(jsonLd)}</script>${breadcrumbJsonLd ? `
   <script type="application/ld+json">${escapeJsonForHtml(breadcrumbJsonLd)}</script>` : ''}`;
@@ -354,7 +354,7 @@ function renderIndex(posts) {
   ${documentHead({ title, description, canonical: `${SITE_URL}/blog/` })}
 </head>
 <body>
-  ${headerHtml()}
+  ${headerHtml(1, 'both')}
   <main>
     <section class="hero">
       <div class="container hero-grid">

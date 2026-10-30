@@ -10,6 +10,18 @@ import { funnelPage } from '../assets/funnel-contract.js';
 const ORIGIN = 'https://healthmd.app';
 const ANDROID = 'export-health-connect-to-obsidian';
 
+test('guide directory offers both phone stores recognized by the existing funnel', async t => {
+  const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'healthmd-directory-downloads-'));
+  t.after(() => rm(outputRoot, { recursive: true, force: true }));
+  await buildBlog({ outputRoot });
+  const html = await readFile(path.join(outputRoot, 'blog/index.html'), 'utf8');
+  const header = html.match(/<header[\s\S]*?<\/header>/)[0];
+  const destinations = [...header.matchAll(/<a[^>]+href="([^"]+)"/g)]
+    .map(match => funnelLink(new URL(match[1], ORIGIN).href, ORIGIN))
+    .filter(target => target?.action === 'store_click').map(target => target.target);
+  assert.deepEqual(destinations, ['app_store', 'google_play']);
+});
+
 test('Oura chooser offers both phone stores while preserving the native-download-first decision', async t => {
   const outputRoot = await mkdtemp(path.join(os.tmpdir(), 'healthmd-oura-downloads-'));
   t.after(() => rm(outputRoot, { recursive: true, force: true }));
