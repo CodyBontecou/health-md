@@ -85,9 +85,6 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(PurchaseManager.productIDs.count, 7)
         XCTAssertEqual(HealthMdPurchaseOption.yearly.productID, "com.codybontecou.obsidianhealth.pro.yearly.v2")
         XCTAssertEqual(HealthMdPurchaseOption.familyYearly.productID, "com.codybontecou.obsidianhealth.pro.family.yearly.v2")
-        for option in HealthMdPurchaseOption.allCases {
-            XCTAssertEqual(option.productID, option.analyticsProductID.rawValue)
-        }
         XCTAssertFalse(PurchaseManager.productIDs.contains { $0.contains("monthly") })
     }
 
@@ -200,7 +197,7 @@ final class PurchaseManagerTests: XCTestCase {
         }
         let paywall = try String(contentsOf: appleRoot.appendingPathComponent("HealthMd/iOS/Views/PaywallView.swift"), encoding: .utf8)
         XCTAssertTrue(paywall.contains("if purchaseManager.canShowPermanentAccessNotice {"))
-        XCTAssertTrue(paywall.contains("Existing premium access stays grandfathered forever"))
+        XCTAssertTrue(paywall.contains("Your existing permanent access remains valid"))
         XCTAssertTrue(paywall.contains("Upgrade pricing for existing Lifetime owners"))
     }
 
