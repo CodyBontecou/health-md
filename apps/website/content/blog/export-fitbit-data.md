@@ -12,7 +12,7 @@ category: "Workflow guide"
 related:
   - export-health-connect-to-obsidian
   - export-oura-data
-  - export-samsung-health-data
+  - export-google-fit-data
 draft: false
 tags:
   - fitbit

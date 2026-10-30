@@ -6,6 +6,8 @@ No Fitbit/Google account access, phone, permission flow, export, spreadsheet or 
 
 ## Claims
 
+- [x] October30: related recommendation now links the distinct Google Fit chooser, avoiding GoogleHealth/GoogleFit name conflation. Fitbit body unchanged; three recommendations and incoming Samsung coverage preserved elsewhere.
+
 - [x] Google Account Takeout route selecting Google Health, account-specific legacy instructions and separate native GPS TCX export follow https://support.google.com/googlehealth/answer/14236615?hl=en, read October30. Article scopes the Google Account route rather than promising legacy Fitbit login. No universal native CSV/date selector, archive conversion, migration or completeness claim. Both native options precede the body install CTA.
 - [x] Android9+, adult Google Account, Connections/Partner apps/Add connections/Sync your favorite health apps/Set up, selective fitness permissions and write/read roles follow https://support.google.com/googlehealth/answer/14506680?hl=en, read October30. No medical-record permission required for this fictional fitness CSV example. The guide checks an actual shared record and does not promise all metrics or historical backfill. A sync badge is not treated as complete coverage.
 - [x] October30,2026 Fitbit Web API support transition and unaffected Health Connect/Apple Health connections are attributed to Google's current https://support.google.com/googlehealth/answer/14236613?hl=en. No obsolete API integration or direct Fitbit cloud-provider availability is advertised. Health.md's configured-provider catalog is not equated to a released direct integration.
