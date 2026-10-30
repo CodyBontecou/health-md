@@ -1221,10 +1221,10 @@ struct MorningDailyNoteTests {
                 destinationBinding: destination.binding)
             guard case .updated = replaced else { Issue.record("Expected Night begins replacement"); return }
             let updated = try String(contentsOf: base, encoding: .utf8)
-            #expect(updated.contains("healthmd_injection_kind: null\n"))
-            #expect(updated.contains("healthmd_daily_injection_v1: null\n"))
+            #expect(updated.contains("healthmd_injection_kind: daily_capture_v1\n"))
+            #expect(!updated.contains("healthmd_daily_injection_v1: null\n"))
             #expect(updated.contains("sleep_deep_hours: 9 # historical field\n"))
-            #expect(!updated.contains("healthmd_daily_capture"))
+            #expect(updated.contains("healthmd_daily_capture"))
             if let directory = ProcessInfo.processInfo.environment["HEALTHMD_DAILY_NOTE_FIXTURE_DIR"] {
                 try Data(updated.utf8).write(to: URL(fileURLWithPath: directory).appendingPathComponent("night-replacement.md"))
             }
@@ -1243,5 +1243,109 @@ struct MorningDailyNoteTests {
             metricSelection: f.settings.metricSelection, calendarTimeZone: f.context.timeZone)
         guard case .failed = result else { Issue.record("Expected missing-plan failure"); return }
         #expect((try FileManager.default.contentsOfDirectory(atPath: f.root.path)).isEmpty)
+    }
+}
+
+@MainActor
+struct DailyNoteAttributionTransitionTests {
+    @Test(arguments: ["0-0-steps", "0-1-steps", "1-0-steps", "1-1-steps",
+        "0-0-sleep", "0-1-sleep", "1-0-sleep", "1-1-sleep",
+        "0-0-both", "0-1-both", "1-0-both", "1-1-both"])
+    func attributionAndSectionChangesKeepOnlyTheNewCaptureAuthoritative(mode: String) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let parts = mode.split(separator: "-")
+        f.settings.archiveExportFiles = false
+        var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .localVaultRangeWithoutSideEffects)
+        snapshot.dailyNoteInjection.enabled = true
+        snapshot.dailyNoteInjection.folderPath = "Journal"
+        snapshot.dailyNoteInjection.createIfMissing = true
+        snapshot.dailyNoteInjection.injectMarkdownSections = parts[0] == "1"
+        let settings = snapshot.makeAdvancedExportSettings()
+        let morning = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .detailedTimeSeries,
+            metricSelection: settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let prepared = try await f.vault.prepareWakeDateDailyNote(morning, settingsSnapshot: snapshot)
+        let path = f.root.appendingPathComponent("Journal/2026-03-08.md")
+        let personal = "---\ndate: 2026-03-08\ntitle: Personal\nsleep_deep_hours: 9 # unselected history\n---\nMy introduction.\n\n## Thoughts\nPreserve this text.\n"
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(personal.utf8).write(to: path)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let first = DailyNoteInjector.inject(healthData: morning, into: f.root, settings: settings.dailyNoteInjection,
+            customization: settings.formatCustomization, metricSelection: settings.metricSelection,
+            calendarTimeZone: f.context.timeZone, preparedContent: prepared, destinationBinding: destination.binding)
+        guard case .updated = first else { Issue.record("Expected Morning injection"); return }
+        let firstContent = try String(contentsOf: path, encoding: .utf8)
+
+        let nightSettings = snapshot.makeAdvancedExportSettings()
+        nightSettings.dailyNoteInjection.injectMarkdownSections = parts[1] == "1"
+        nightSettings.metricSelection.enabledMetrics = parts[2] == "steps" ? ["steps"]
+            : parts[2] == "sleep" ? ["sleep_total"] : ["steps", "sleep_total"]
+        let nightContext = AppleSleepCaptureContext(timeZone: f.context.timeZone, sleepDayAttribution: .nightBegins)
+        let night = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: nightSettings.metricSelection, timeZone: f.context.timeZone, captureContext: nightContext)
+        let result = DailyNoteInjector.inject(healthData: night, into: f.root, settings: nightSettings.dailyNoteInjection,
+            customization: nightSettings.formatCustomization, metricSelection: nightSettings.metricSelection,
+            calendarTimeZone: f.context.timeZone, destinationBinding: destination.binding)
+        guard case .updated = result else { Issue.record("Expected scoped Night injection"); return }
+        let nightContent = try String(contentsOf: path, encoding: .utf8)
+        let nightJSON = try captureJSON(nightContent)
+        let nightRecord = try #require(JSONSerialization.jsonObject(with: Data(nightJSON.utf8)) as? [String: Any])
+        #expect(nightRecord["schema_version"] as? Int == 8)
+        #expect(nightRecord["schema_profile"] == nil)
+        #expect(nightRecord["healthkit_record_archive"] == nil)
+        #expect((nightRecord["time_context"] as? [String: String])?["calendar_timezone"] == f.context.calendarTimeZoneIdentifier)
+        let sleep = nightRecord["sleep"] as? [String: Any]
+        let activity = nightRecord["activity"] as? [String: Any]
+        #expect(sleep?["deepSleep"] == nil)
+        if parts[2] == "steps" {
+            #expect((sleep?["totalDuration"] as? Double ?? 0) == 0)
+            #expect(nightContent.contains("sleep_total_hours:"), "The old personal property remains outside the new capture")
+        } else {
+            #expect(sleep?["totalDuration"] as? Double == 3600.5)
+        }
+        if parts[2] == "sleep" { #expect(activity?["steps"] == nil) }
+        else { #expect(activity?["steps"] as? Int == 42) }
+        if parts[0] == "1", parts[1] == "0" {
+            #expect(nightContent.contains("## Sleep Stage Details"), "Sections disabled: preserve the user's existing body")
+        }
+        #expect(nightContent.contains("sleep_deep_hours: 9 # unselected history"))
+        #expect(nightContent.contains("## Thoughts\nPreserve this text."))
+        guard case .preview(let preview) = DailyNoteInjector.preview(healthData: night, base: .existingContent(firstContent),
+            settings: nightSettings.dailyNoteInjection, customization: nightSettings.formatCustomization,
+            metricSelection: nightSettings.metricSelection, calendarTimeZone: f.context.timeZone) else {
+            Issue.record("Expected scoped Night preview"); return
+        }
+        #expect(preview.content == nightContent)
+
+        // The reverse transition restores whole-session ownership, including
+        // its fractional source duration, without adopting retained old facts.
+        let restored = DailyNoteInjector.inject(healthData: morning, into: f.root, settings: settings.dailyNoteInjection,
+            customization: settings.formatCustomization, metricSelection: settings.metricSelection,
+            calendarTimeZone: f.context.timeZone, preparedContent: prepared, destinationBinding: destination.binding)
+        guard case .updated = restored else { Issue.record("Expected Morning restoration"); return }
+        let restoredContent = try String(contentsOf: path, encoding: .utf8)
+        let restoredJSON = try captureJSON(restoredContent)
+        let restoredRecord = try #require(JSONSerialization.jsonObject(with: Data(restoredJSON.utf8)) as? [String: Any])
+        #expect(restoredRecord["schema_profile"] as? String == "apple-v11")
+        #expect((restoredRecord["sleep"] as? [String: Any])?["totalDuration"] as? Double == 93600.5)
+        #expect(restoredContent.contains("sleep_deep_hours: 9 # unselected history"))
+        if let directory = ProcessInfo.processInfo.environment["HEALTHMD_DAILY_NOTE_TRANSITION_FIXTURE_DIR"] {
+            let output = URL(fileURLWithPath: directory, isDirectory: true)
+            try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            for (name, content) in ["night-\(mode).md": nightContent, "night-\(mode).json": nightJSON,
+                "restored-\(mode).md": restoredContent, "restored-\(mode).json": restoredJSON] {
+                try Data(content.utf8).write(to: output.appendingPathComponent(name))
+            }
+        }
+    }
+
+    private func captureJSON(_ note: String) throws -> String {
+        let properties = try #require(MarkdownMerger.frontmatterProperties(named: ["healthmd_daily_injection_v1"], in: note))
+        #expect(properties.count == 1)
+        let value = try #require(properties.first?.split(separator: ":", maxSplits: 1).last)
+        let string = try JSONDecoder().decode(String.self, from: Data(value.trimmingCharacters(in: .whitespacesAndNewlines).utf8))
+        let envelope = try #require(JSONSerialization.jsonObject(with: Data(string.utf8)) as? [String: Any])
+        return try #require(envelope["record_json"] as? String)
     }
 }

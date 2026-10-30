@@ -48,11 +48,14 @@ struct DailyNoteInjector {
         let frontmatter: String
         let body: String
         let isWakeDateCapture: Bool
+        let nightCaptureJSON: (() throws -> String)?
 
-        init(frontmatter: String, body: String, isWakeDateCapture: Bool = false) {
+        init(frontmatter: String, body: String, isWakeDateCapture: Bool = false,
+             nightCaptureJSON: (() throws -> String)? = nil) {
             self.frontmatter = frontmatter
             self.body = body
             self.isWakeDateCapture = isWakeDateCapture
+            self.nightCaptureJSON = nightCaptureJSON
         }
     }
 
@@ -118,18 +121,22 @@ struct DailyNoteInjector {
         }
         // Preserve the accepted JSON bytes inside a YAML-safe quoted string.
         // The record applies only to this injected capture, not to other fields.
-        let envelope = try JSONSerialization.data(withJSONObject: [
-            "kind": "healthmd_daily_capture", "version": 1, "record_json": json
-        ], options: [.sortedKeys, .withoutEscapingSlashes])
-        let quoted = try JSONEncoder().encode(String(decoding: envelope, as: UTF8.self))
-        let frontmatter = "---\n" + properties.joined() + "\(captureKindKey): daily_capture_v1\n\(captureKey): "
-            + String(decoding: quoted, as: UTF8.self) + "\n---\n"
+        let frontmatter = "---\n" + properties.joined() + (try scopedCaptureProperties(json: json)) + "---\n"
         let markdown = try text(.markdown)
         let body = settings.dailyNoteInjection.injectMarkdownSections
             ? (MarkdownMerger.splitFrontmatter(from: markdown)?.body ?? markdown) : ""
         return PreparedContent(ownerDate: healthData.date, context: healthData.timeContext,
             settings: settingsSnapshot.dailyNoteInjection,
             content: InjectionContent(frontmatter: frontmatter, body: body, isWakeDateCapture: true))
+    }
+
+    private static func scopedCaptureProperties(json: String) throws -> String {
+        let envelope = try JSONSerialization.data(withJSONObject: [
+            "kind": "healthmd_daily_capture", "version": 1, "record_json": json
+        ], options: [.sortedKeys, .withoutEscapingSlashes])
+        let quoted = try JSONEncoder().encode(String(decoding: envelope, as: UTF8.self))
+        return "\(captureKindKey): daily_capture_v1\n\(captureKey): "
+            + String(decoding: quoted, as: UTF8.self) + "\n"
     }
 
     private static func resolvedContent(
@@ -378,7 +385,20 @@ struct DailyNoteInjector {
         }
 
         guard hasFrontmatterContent || hasBodySections else { return nil }
-        return InjectionContent(frontmatter: injectionFrontmatter, body: injectionBody)
+        // Freeze the possible successor-to-historical transition before a file
+        // coordinator can invoke callbacks. Ordinary historical notes do not
+        // render this extra record or acquire a new annotation.
+        let source = ConnectedExportDetailPolicy.sanitized(healthData.filtered(by: metricSelection), detailPolicy: .summary)
+        let format = FormatCustomizationSnapshot.from(customization)
+        return InjectionContent(frontmatter: injectionFrontmatter, body: injectionBody, nightCaptureJSON: {
+            let config = FormatCustomization()
+            format.apply(to: config)
+            guard let zone = TimeZone(identifier: source.timeContext.calendarTimeZoneIdentifier) else {
+                throw AppleWakeDateJSONError.incompatibleCaptureAuthority
+            }
+            let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .nightBegins)
+            return try source.toJSONThrowing(customization: config, captureContext: context)
+        })
     }
 
     private static func mergedContent(
@@ -390,10 +410,12 @@ struct DailyNoteInjector {
         if !injectionContent.isWakeDateCapture,
            let properties = MarkdownMerger.frontmatterProperties(named: [captureKey, captureKindKey], in: existing),
            !properties.isEmpty {
-            // A later Night begins injection invalidates the old scoped capture.
-            // It must never leave Morning facts authoritative beside new values.
-            let invalidation = "---\n\(captureKindKey): null\n\(captureKey): null\n---\n"
-            switch MarkdownMerger.mergeFrontmatterOutcome(existing: injectionContent.frontmatter, new: invalidation) {
+            // The personal note can retain unselected Morning properties and
+            // sections. Keep the new Night capture scoped too, so none of those
+            // retained values are adopted by a generic legacy-note parser.
+            guard let makeRecord = injectionContent.nightCaptureJSON else { throw ExportError.markdownMergeRejected }
+            let annotation = "---\n" + (try scopedCaptureProperties(json: makeRecord())) + "---\n"
+            switch MarkdownMerger.mergeFrontmatterOutcome(existing: injectionContent.frontmatter, new: annotation) {
             case .merged(let frontmatter):
                 injectionContent = InjectionContent(frontmatter: frontmatter, body: injectionContent.body)
             case .rejected: throw ExportError.markdownMergeRejected
